@@ -15,10 +15,25 @@
 
 /**@file   sepa_aggregation.h
  * @ingroup SEPARATORS
- * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
+ * @brief  flow cover and complemented mixed integer rounding cuts separator (Marchand's version)
  * @author Robert Lion Gottwald
  * @author Kati Wolter
  * @author Tobias Achterberg
+ *
+ * For an overview see:
+ *
+ * Marchand, H., & Wolsey, L. A. (2001).@n
+ * Aggregation and mixed integer rounding to solve MIPs.@n
+ * Operations research, 49(3), 363-371.
+ *
+ * Some remarks:
+ * - In general, continuous variables are less prefered than integer variables, since their cut
+ *   coefficient is worse.
+ * - We seek for aggregations that project out continuous variables that are far away from their bound,
+ *   since if it is at its bound then it doesn't contribute to the violation
+ * - These aggregations are also useful for the flowcover separation, so after building an aggregation
+ *   we try to generate a MIR cut and a flowcover cut.
+ * - We only keep the best cut.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
