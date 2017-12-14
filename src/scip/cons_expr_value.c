@@ -175,7 +175,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityValue)
    assert(result != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);
 
-   *result = SCIP_MONOTONE_INC;
+   *result = SCIP_MONOTONE_CONST;
 
    return SCIP_OKAY;
 }

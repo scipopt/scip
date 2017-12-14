@@ -419,9 +419,10 @@ typedef enum
 /** monotonicity of an expression */
 typedef enum
 {
-   SCIP_MONOTONE_INC,                       /**< increasing */
-   SCIP_MONOTONE_DEC,                       /**< decreasing */
-   SCIP_MONOTONE_UNKNOWN,                   /**< unknown */
+   SCIP_MONOTONE_UNKNOWN      = 0,          /**< unknown */
+   SCIP_MONOTONE_INC          = 1,          /**< increasing */
+   SCIP_MONOTONE_DEC          = 2,          /**< decreasing */
+   SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
 
 } SCIP_MONOTONE;
 

@@ -376,7 +376,7 @@ Test(monotonicity, sum)
 Test(monotonicity, value)
 {
    SCIP_CALL( createExpr("-1.3", "val") );
-   SCIP_CALL( testMonotonicity(-1, SCIP_MONOTONE_INC) );
+   SCIP_CALL( testMonotonicity(-1, SCIP_MONOTONE_CONST) );
 }
 
 /* check for var expression */

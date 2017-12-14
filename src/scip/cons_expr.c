@@ -1872,8 +1872,11 @@ SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
    /* handle variable and constant expressions as monotone increasing */
    if( SCIPgetConsExprExprNChildren(expr) == 0 )
    {
-      assert(strcmp(expr->exprhdlr->name, "var") == 0 || strcmp(expr->exprhdlr->name, "val") == 0);
-      return SCIP_MONOTONE_INC;
+      if( strcmp(expr->exprhdlr->name, "var") == 0 )
+         return SCIP_MONOTONE_INC;
+      else if( strcmp(expr->exprhdlr->name, "val") == 0 )
+         return SCIP_MONOTONE_CONST;
+      return SCIP_MONOTONE_UNKNOWN;
    }
 
    assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
