@@ -223,7 +223,7 @@ while [ $PERM -le $PERMUTE ]; do
   if [ "${EVALFILE}" == "" ]; then
       echo "Couldn't find eval file, sending email"
       SUBJECT="ERROR ${SUBJECTINFO}"
-      echo -e "Aborting because the .eval file cannot be found.\n\nTried:\n${BASEFILE}.eval\ncheck/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}eval\n\nDirectory: `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+      echo -e "Aborting because the .eval file cannot be found.\n\nTried:\n${BASEFILE}.eval\ncheck/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}*eval\n\nDirectory: `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
       exit 1
   fi
 
@@ -235,6 +235,17 @@ while [ $PERM -le $PERMUTE ]; do
       exit 1
   fi
 
+  # at this point we have exactly one evalfile
+  BASENAME=${EVALFILE%.*} # remove extension
+  WORKINGDIR=`pwd -P`
+
+  # Store paths of err out res and set file
+  ERRFILE="${WORKINGDIR}/${BASENAME}.err"
+  OUTFILE="${WORKINGDIR}/${BASENAME}.out"
+  RESFILE="${WORKINGDIR}/${BASENAME}.res"
+  SETFILE="${WORKINGDIR}/${BASENAME}.set"
+  EVALFILE="${WORKINGDIR}/${BASENAME}.eval"
+
   ############################################
   # Process evalfile and upload to ruberband #
   ############################################
@@ -244,21 +255,15 @@ while [ $PERM -le $PERMUTE ]; do
   cd check/
   PERF_MAIL=""
   if [ "${PERFORMANCE}" == "performance" ]; then
-    ./evalcheck_cluster.sh -R ../${EVALFILE} > ${OUTPUT}
+    ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
     NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
     echo "${RUNTIMESTAMP} ${NEWRBID} p=${PERM}" >> $RBDB
   else
-    ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE} > ${OUTPUT}
+    ./evalcheck_cluster.sh -r "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
   fi
   cat ${OUTPUT}
   rm ${OUTPUT}
   cd ..
-
-  # Store paths of err out res and set file
-  ERRFILE=`pwd`/`ls $BASEFILE*err`
-  OUTFILE=`pwd`/`ls $BASEFILE*out`
-  RESFILE=`pwd`/`ls $BASEFILE*res`
-  SETFILE=`pwd`/`ls $BASEFILE*set`
 
   # check for fixed instances
   echo "Checking for fixed instances."
@@ -361,7 +366,7 @@ Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFRO
   PERM=$((PERM + 1))
 done
 
-
+# construct the rubberband link
 if [ "${PERFORMANCE}" == "performance" ]; then
   # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
   RBDB_STRS=`grep -e "\(${OLDTIMESTAMP}\|${NEWTIMESTAMP}\)" ${RBDB}|cut -d ' ' -f 2`
@@ -379,4 +384,7 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   URLSTR=`echo ${IDSTR} | sed 's/,/?compare=/'`
 
   PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}"`
+
+  SUBJECT="WEEKLYPERF ${SUBJECTINFO}"
+  echo -e "$PERF_MAIL" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
