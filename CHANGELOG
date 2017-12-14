@@ -59,6 +59,69 @@ data structures:
 - new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
 - new red black tree data structure defined in src/scip/rbtree.{c,h}
 
+deleted and modified API functions:
+- removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx
+- new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
+  in the public SCIP API
+- new interface methods SCIPcreateDigraph, SCIPcopyDigraph that replace SCIPdigraphCreate and SCIPdigraphCopy
+  in the public SCIP API
+- generalized SCIPcreate{Cons,ConsBasic}Orbitope() method to three orbitope types (full, partitioning, packing)
+- added additional parameter for statistics tables to SCIPcopyPlugins
+- added parameter "objval" to SCIPnlpiGetSolution() and the NLPIGETSOLUTION callback of NLPIs for returning the optimal
+  objective value (can be set to NULL)
+- removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
+  SCIPsetRelaxSolValsSol(); removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
+- new method SCIPaddRow() to replace deprecated SCIPaddCut()
+- changed function signature of SCIPcalcMIR()
+- changed function signature of SCIPcalcStrongCG()
+- replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
+- SCIPnlpStatisticsCreate() and SCIPnlpStatisticsFree() now require a pointer to blockmemory as argument
+- SCIPsolveParallel() has been deprecated, use the new method SCIPsolveConcurrent() instead
+- return type of SCIPcliqueGetId() changed from int to unsigned int
+- removed parameter "allowaddcons" from SCIPselectVarPseudoStrongBranching(), SCIPselectVarStrongBranching(), and
+  SCIPincludeBranchruleRelpscost()
+- removed parameter "scaling" from SCIPgetRowprepViolation()
+- SCIPheurPassIndicator has a new parameter which allows to pass the objective of the solution
+- new parameter "allowlocal" for SEPAEXEC{LP,SOL} callbacks to switch generation of locally valid cuts
+- added parameter "dstatssize" to NLPIDELVARSET and NLPIDELCONSSET callbacks of NLPIs
+
+new API functions:
+- new interface methods to create and use bandit algorithms implemented as SCIP core plugins
+- new interface methods for aggregating rows and computating MIP cuts, see cuts.h
+- new public methods SCIPvariableGraphBreadthFirst() and SCIPvariableGraph{Create,Free}() to
+  perform breadth-first search on the variable constraint graph used by the GINS and ALNS heuristics
+- new interface method SCIPsetRandomSeed to (re)set a random number generator seed
+- added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
+- added functions SCIPbranchcandGetLPMaxPrio() and SCIPbranchcandGetExternMaxPrio() to query the maximal branching priority of given
+  branching candidates; also added SCIPbranchcandGetNPrioLPCands() to access the number of LP candidates with this priority.
+- added methods SCIPupdateSolIntegralityViolation(), SCIPupdateSolBoundViolation(), SCIPupdateSolLPRowViolation(),
+  SCIPupdateSolConsViolation() and SCIPupdateSolLPConsViolation() for updating numerical solution violations, as well as
+  SCIPactivateSolViolationUpdates() and SCIPdeactivateSolViolationUpdates() for activating/deactivating violation updates globally
+- added method SCIPcliqueGetIndex() which returns the unique identifier for the given clique
+- added method SCIPgetNCliquesCreated() which returns the number of cliques created so far
+- new method SCIPsetSubscipDepth() to set the depth of SCIP as a copied subproblem during problem stage
+- added SCIPgetAllBilinearTermsQuadratic to access data of all existing bilinear terms in quadratic constraints
+- added SCIPaddBilinearIneqQuadratic to propose an inequality with two variables that appear in a bilinear term
+- added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
+- added method SCIPgetSepaMinEfficacy() to access separating/minefficacy(root)
+- new method SCIPdivesetGetNSols to query the number of found solutions from a diveset.
+- new method SCIPnextafter that wraps different nextafter methods to return the next representable value after a given value
+- new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
+  to work with linear constraint classification through the C API
+- added method SCIPgetRowNumIntCols() that returns the number of integer columns in a row
+- new method SCIPisCutNew() that returns whether a cut is already present in the global cut pool
+- add function SCIPsetSlackVarUb() to control upper bound of slack variable in cons_indicator
+
+command line interface:
+- new command line parameter "-r" to pass a nonnegative integer as random seed.
+
+interfaces to external software:
+- added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
+- added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
+- added interface to graph automorphism algorithms in src/symmetry/ (initially only to BLISS)
+- unify handling of objective limit in LPIs by replacing LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
+- dropped support for MOSEK < 7.0.0.0
+
 deleted and modified parameters:
 - fixed typo: "heuristics/completesol/maxunkownrate" has changed to heuristics/completesol/maxunknownrate
 - removed parameters "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling"
@@ -124,69 +187,6 @@ new parameters:
 - parameter "conflict/useboundlp" has new values 'd' (only dual solution analysis) and 'b' (both, conflict and dual solution analysis)
 - new parameter "conflict/prefinfproof" (prefer infeasibility proof to boundexceeding proof)
 
-deleted and modified API functions:
-- removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx
-- new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
-  in the public SCIP API
-- new interface methods SCIPcreateDigraph, SCIPcopyDigraph that replace SCIPdigraphCreate and SCIPdigraphCopy
-  in the public SCIP API
-- generalized SCIPcreate{Cons,ConsBasic}Orbitope() method to three orbitope types (full, partitioning, packing)
-- added additional parameter for statistics tables to SCIPcopyPlugins
-- added parameter "objval" to SCIPnlpiGetSolution() and the NLPIGETSOLUTION callback of NLPIs for returning the optimal
-  objective value (can be set to NULL)
-- removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
-  SCIPsetRelaxSolValsSol(); removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
-- new method SCIPaddRow() to replace deprecated SCIPaddCut()
-- changed function signature of SCIPcalcMIR()
-- changed function signature of SCIPcalcStrongCG()
-- replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
-- SCIPnlpStatisticsCreate() and SCIPnlpStatisticsFree() now require a pointer to blockmemory as argument
-- SCIPsolveParallel() has been deprecated, use the new method SCIPsolveConcurrent() instead
-- return type of SCIPcliqueGetId() changed from int to unsigned int
-- removed parameter "allowaddcons" from SCIPselectVarPseudoStrongBranching(), SCIPselectVarStrongBranching(), and
-  SCIPincludeBranchruleRelpscost()
-- removed parameter "scaling" from SCIPgetRowprepViolation()
-- SCIPheurPassIndicator has a new parameter which allows to pass the objective of the solution
-- new parameter "allowlocal" for SEPAEXEC{LP,SOL} callbacks to switch generation of locally valid cuts
-- added parameter "dstatssize" to NLPIDELVARSET and NLPIDELCONSSET callbacks of NLPIs
-
-new API functions:
-- new interface methods to create and use bandit algorithms implemented as SCIP core plugins
-- new interface methods for aggregating rows and computating MIP cuts, see cuts.h
-- new public methods SCIPvariableGraphBreadthFirst() and SCIPvariableGraph{Create,Free}() to
-  perform breadth-first search on the variable constraint graph used by the GINS and ALNS heuristics
-- new interface method SCIPsetRandomSeed to (re)set a random number generator seed
-- added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
-- added functions SCIPbranchcandGetLPMaxPrio() and SCIPbranchcandGetExternMaxPrio() to query the maximal branching priority of given
-  branching candidates; also added SCIPbranchcandGetNPrioLPCands() to access the number of LP candidates with this priority.
-- added methods SCIPupdateSolIntegralityViolation(), SCIPupdateSolBoundViolation(), SCIPupdateSolLPRowViolation(),
-  SCIPupdateSolConsViolation() and SCIPupdateSolLPConsViolation() for updating numerical solution violations, as well as
-  SCIPactivateSolViolationUpdates() and SCIPdeactivateSolViolationUpdates() for activating/deactivating violation updates globally
-- added method SCIPcliqueGetIndex() which returns the unique identifier for the given clique
-- added method SCIPgetNCliquesCreated() which returns the number of cliques created so far
-- new method SCIPsetSubscipDepth() to set the depth of SCIP as a copied subproblem during problem stage
-- added SCIPgetAllBilinearTermsQuadratic to access data of all existing bilinear terms in quadratic constraints
-- added SCIPaddBilinearIneqQuadratic to propose an inequality with two variables that appear in a bilinear term
-- added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
-- added method SCIPgetSepaMinEfficacy() to access separating/minefficacy(root)
-- new method SCIPdivesetGetNSols to query the number of found solutions from a diveset.
-- new method SCIPnextafter that wraps different nextafter methods to return the next representable value after a given value
-- new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
-  to work with linear constraint classification through the C API
-- added method SCIPgetRowNumIntCols() that returns the number of integer columns in a row
-- new method SCIPisCutNew() that returns whether a cut is already present in the global cut pool
-- add function SCIPsetSlackVarUb() to control upper bound of slack variable in cons_indicator
-
-command line interface:
-- new command line parameter "-r" to pass a nonnegative integer as random seed.
-
-interfaces to external software:
-- added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
-- added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
-- added interface to graph automorphism algorithms in src/symmetry/ (initially only to BLISS)
-- unify handling of objective limit in LPIs by replacing LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
-- dropped support for MOSEK < 7.0.0.0
-
 fixed bugs:
 - fix wrong statistic display of diving leaf solutions
 - fix linear knapsack relaxation during separation if a binary variable does not have a solution value in [0,1].
@@ -221,10 +221,6 @@ unit tests:
 - added tests for objective function changes in probing
 - added tests for computing envelopes of bilinear function
 - added tests for relaxation enforcement
-
-misc:
-
-
 
 CMake build system
 - added support for sanitizers in debug mode and options SANITIZE_ADDRESS, SANITIZE_MEMORY, SANITIZE_UNDEFINED, SANITIZE_THREAD
