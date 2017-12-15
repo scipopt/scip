@@ -140,12 +140,13 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    expr->enfos[0]->nlhdlr = nlhdlr;
    expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
    expr->nenfos = 1;
+   expr->enfos[0]->issepainit = FALSE;
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-/* detects x^2 + 2*x exp(y x^2) <= 1 as quadratic expression:
- * simplify yields x^2 + 2 * x exp(x^2 y) <= 1 --> should detect x^2 + 2 x * w
+/* detects x^2 + 2*x exp(y x^2) + exp(y x^2)^2 <= 1 as convex quadratic expression:
+ * simplify yields x^2 + 2 * x exp(x^2 y) + exp(x^2 y)^2 <= 1 --> should detect x^2 + 2 x * w + w^2
  */
 Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 {
@@ -156,29 +157,29 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CONS* cons;
    SCIP_Bool success;
 
-   /* create expression and simplify it */
+   /* create expression, simplify it and find common subexpressions*/
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * exp(<y> * <x>^2) <= 1", TRUE, TRUE,
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * exp(<y> * <x>^2) + exp(<y> * <x>^2)^2 <= 1", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
    success = FALSE;
    SCIP_CALL( simplifyConstraints(scip, &cons, 1, &success) );
    cr_assert(success);
+   SCIP_CALL( replaceCommonSubexpressions(scip, &cons, 1) );
 
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
 
    /* get exp expression */
-   cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 2);
-   expexpr = SCIPgetConsExprExprChildren(expr)[1]; /* pow < product since x < exp(x^2 y) (var < anything) */
-   expexpr = SCIPgetConsExprExprChildren(expexpr)[1]; /* var < anything */
+   cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 3);
+   expexpr = SCIPgetConsExprExprChildren(expr)[1]; /*  x * exp(x^2 y) */
+   expexpr = SCIPgetConsExprExprChildren(expexpr)[1]; /* exp(x^2 y) */
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expexpr)), "exp", "expecting exp got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expexpr)));
-
    /* detect */
    SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, SCIP_CONSEXPR_EXPRENFO_ALL, &provided, &nlhdlrexprdata) );
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPAUNDER);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nlinvars, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->nlinvars);
@@ -199,7 +200,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(SCIPgetConsExprExprLinearizationVar(expexpr), quad.var, "Expecting var %s in quad term, got %s\n",
          SCIPvarGetName(SCIPgetConsExprExprLinearizationVar(expexpr)), SCIPvarGetName(quad.var));
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
-   cr_expect_eq(0.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
+   cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
 
    SCIP_BILINTERM bilin;
    bilin = nlhdlrexprdata->bilinterms[0];
@@ -216,6 +217,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    expr->enfos[0]->nlhdlr = nlhdlr;
    expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
    expr->nenfos = 1;
+   expr->enfos[0]->issepainit = FALSE;
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -238,7 +240,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( simplifyConstraints(scip, &cons, 1, &success) );
    cr_assert(success);
 
-   /* call detection method */
+   /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
    cr_assert_not(infeasible);
 
@@ -280,7 +282,6 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
       cr_expect_null(child->auxvar);
    }
 #endif
-
 
    /* quadratic terms */
    SCIP_QUADVARTERM quad;

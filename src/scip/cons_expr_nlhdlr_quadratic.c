@@ -82,16 +82,16 @@ void freeNlhdlrExprData(
 {
    int i;
 
-   SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->linvars), nlhdlrexprdata->linvarssize);
-   SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->lincoefs), nlhdlrexprdata->linvarssize);
-   SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->bilinterms), nlhdlrexprdata->bilintermssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->linvars), nlhdlrexprdata->linvarssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->lincoefs), nlhdlrexprdata->linvarssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->bilinterms), nlhdlrexprdata->bilintermssize);
 
    for( i = 0; i < nlhdlrexprdata->nquadvars; ++i )
    {
-      SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->quadvarterms[i].adjbilin),
-            nlhdlrexprdata->quadvarterms[i].nadjbilin);
+      SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->quadvarterms[i].adjbilin),
+            nlhdlrexprdata->quadvarterms[i].adjbilinsize);
    }
-   SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->quadvarterms), nlhdlrexprdata->quadvarssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->quadvarterms), nlhdlrexprdata->quadvarssize);
 }
 
 /** ensures, that linear vars and coefs arrays can store at least num entries */
@@ -426,7 +426,6 @@ SCIP_RETCODE checkCurvature(
 
       assert(!SCIPhashmapExists(var2matrix, (void*)quadterm.var));
 
-      //printf("quadvarterm = %s^2 * %g\n", SCIPvarGetName(quadterm.var), quadterm.sqrcoef);
       if( quadterm.sqrcoef == 0.0 )
       {
          SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadterm.var));
@@ -533,8 +532,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    assert(nlhdlrexprdata != NULL);
 
    *provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   printf("Detecting expression\n");
-   SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
 
    /* if it is not a sum of at least two terms, it cannot be a proper quadratic expressions */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
