@@ -46,11 +46,6 @@
  * Data structures
  */
 
-/** nonlinear handler data */
-struct SCIP_ConsExpr_NlhdlrData
-{
-};
-
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
@@ -449,20 +444,6 @@ SCIP_RETCODE addVarToQuadterms(
  * Callback methods of nonlinear handler
  */
 
-/** callback to free data of handler */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrDataQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define freeHdlrDataQuadratic NULL
-#endif
-
 /** callback to free expression specific data */
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
@@ -472,34 +453,6 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
 
    return SCIP_OKAY;
 }
-
-/** callback to be called in initialization */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlrQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define initHdlrQuadratic NULL
-#endif
-
-/** callback to be called in deinitialization */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldrQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define exitHldrQuadratic NULL
-#endif
 
 /** callback to detect structure in expression tree
  *
@@ -872,22 +825,16 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    )
 {
    SCIP_CONSEXPR_NLHDLR* nlhdlr;
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
 
-   /* SCIP_CALL( SCIPallocClearMemory(scip, &nlhdlrdata) ); */
-   nlhdlrdata = NULL;
-
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY,
-            detectHdlrQuadratic, nlhdlrdata) );
+            detectHdlrQuadratic, NULL) );
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrsepaHdlrQuadratic, NULL);
-
-
 
    /* TODO: create and store expression specific data here */
 
