@@ -36,7 +36,7 @@ extern "C" {
 EXTERN
 SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr       /**< expression constraint handler */
+   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 #ifdef __cplusplus
