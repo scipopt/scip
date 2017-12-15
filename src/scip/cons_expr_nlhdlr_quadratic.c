@@ -17,6 +17,9 @@
  * @brief  nonlinear handler to handle quadratic constraints
  * @author Felipe Serrano
  *
+ * Some definitions:
+ * - a SCIP_QUADVARTERM stores a variable that is known to appear in a nonlinear, quadratic term:
+ * it stores its sqrcoef (that can be 0), its linear coef and all the bilinear terms in which the variable appears.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -77,7 +80,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 static
 void freeNlhdlrExprData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata    /**< nlhdlr expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< nlhdlr expression data */
    )
 {
    int i;
@@ -98,7 +101,7 @@ void freeNlhdlrExprData(
 static
 SCIP_RETCODE nlhdlrexprdataEnsureLinearVarsSize(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< nlhdlr expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
    int                   num                 /**< minimum number of entries to store */
    )
 {
@@ -124,7 +127,7 @@ SCIP_RETCODE nlhdlrexprdataEnsureLinearVarsSize(
 static
 SCIP_RETCODE nlhdlrexprdataEnsureQuadVarTermsSize(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< nlhdlr expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
    int                   num                 /**< minimum number of entries to store */
    )
 {
@@ -174,7 +177,7 @@ SCIP_RETCODE nlhdlrexprdataEnsureAdjBilinSize(
 static
 SCIP_RETCODE nlhdlrexprdataEnsureBilinSize(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< nlhdlr expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
    int                   num                 /**< minimum number of entries to store */
    )
 {
@@ -195,8 +198,155 @@ SCIP_RETCODE nlhdlrexprdataEnsureBilinSize(
    return SCIP_OKAY;
 }
 
+/** if expr is in seenexpr then sets seen to TRUE, otherwise, inserts expr to seenexpr */
+/* TODO: better name for this function? or nice way to factorize the code? */
 static
-SCIP_RETCODE addVarToQuadterms(SCIP* scip, SCIP_VAR* var, SCIP_Real sqrcoef, int bilintermidx, SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, SCIP_HASHMAP* varidx)
+SCIP_RETCODE checkProperQuadratic(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< the expression */
+   SCIP_HASHMAP*         seenexpr,           /**< hash map */
+   SCIP_Bool*            seen                /**< buffer to store whether expr is in hashmap */
+   )
+{
+   if( SCIPhashmapExists(seenexpr, (void *)expr) )
+      *seen = TRUE;
+   else
+   {
+      SCIP_CALL( SCIPhashmapInsert(seenexpr, (void *)expr, NULL) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in nlhdlrexprdata; for this, it builds the
+ * matrix Q and computes its eigenvalues using via LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ */
+/* TODO: make more simple test; like diagonal entries don't change sign, etc */
+static
+SCIP_RETCODE checkCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* provided   /**< buffer to store which enfo methods are provided by the nlhandler */
+   )
+{
+   SCIP_HASHMAP* var2matrix;
+   double* matrix;
+   double* alleigval;
+   int nvars;
+   int nn;
+   int n;
+   int i;
+
+   *provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   n  = nlhdlrexprdata->nquadvars;
+   nn = n * n;
+
+   /* do not check curvature if nn is too large */
+   if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "nlhdr_quadratic - number of quadratic variables is too large (%d) to check the curvature; will not handle this expression\n", n);
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix, nn) );
+   BMSclearMemoryArray(matrix, nn);
+
+   SCIP_CALL( SCIPhashmapCreate(&var2matrix, SCIPblkmem(scip), n) );
+
+   /* fill matrix's diagonal */
+   nvars = 0;
+   for( i = 0; i < n; ++i )
+   {
+      SCIP_QUADVARTERM quadterm;
+
+      quadterm = nlhdlrexprdata->quadvarterms[i];
+
+      assert(!SCIPhashmapExists(var2matrix, (void*)quadterm.var));
+
+      if( quadterm.sqrcoef == 0.0 )
+      {
+         SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadterm.var));
+         goto CLEANUP;
+      }
+
+      matrix[nvars * n + nvars] = quadterm.sqrcoef;
+
+      /* remember row of variable in matrix */
+      SCIP_CALL( SCIPhashmapInsert(var2matrix, (void *)quadterm.var, (void *)(size_t)nvars) );
+      nvars++;
+   }
+
+   /* fill matrix's upper-diagonal */
+   for( i = 0; i < nlhdlrexprdata->nbilinterms; ++i )
+   {
+      SCIP_BILINTERM bilinterm;
+      int col;
+      int row;
+
+      bilinterm = nlhdlrexprdata->bilinterms[i];
+
+      assert(SCIPhashmapExists(var2matrix, (void*)bilinterm.var1));
+      assert(SCIPhashmapExists(var2matrix, (void*)bilinterm.var2));
+      row = (int)(size_t)SCIPhashmapGetImage(var2matrix, bilinterm.var1);
+      col = (int)(size_t)SCIPhashmapGetImage(var2matrix, bilinterm.var2);
+
+      assert(row != col);
+
+      if( row < col )
+         matrix[row * n + col] = bilinterm.coef / 2.0;
+      else
+         matrix[col * n + row] = bilinterm.coef / 2.0;
+   }
+
+   /* compute eigenvalues */
+   if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
+   {
+      SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
+      goto CLEANUP;
+   }
+
+   /* check convexity */
+   if( !SCIPisNegative(scip, alleigval[0]) )
+   {
+      *provided = SCIP_CONSEXPR_EXPRENFO_SEPAUNDER;
+      nlhdlrexprdata->curvature = SCIP_EXPRCURV_CONVEX;
+   }
+   else if( !SCIPisPositive(scip, alleigval[n-1]) )
+   {
+      *provided = SCIP_CONSEXPR_EXPRENFO_SEPAOVER;
+      nlhdlrexprdata->curvature = SCIP_EXPRCURV_CONCAVE;
+   }
+
+CLEANUP:
+   SCIPhashmapFree(&var2matrix);
+   SCIPfreeBufferArray(scip, &matrix);
+   SCIPfreeBufferArray(scip, &alleigval);
+
+   return SCIP_OKAY;
+}
+
+
+/** add variable to quadratic terms: this means several things depending on what is known about var
+ * - if is the first time seeing this var -> creates new quadratic term
+ * - if it has been seen linearly before -> removes it from the linear vars and creates a new quadatic term
+ * - if it has been seen quadratically before, then
+ *    - if is the first time seeing the var quadratically (i.e sqrcoef * var^2) -> add sqrcoef to existing quad term
+ *    - var is being seen in a bilinear term (var * other_var) -> add bilinear information to quadvarterm
+ */
+static
+SCIP_RETCODE addVarToQuadterms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to add to quadratic terms */
+   SCIP_Real             sqrcoef,            /**< coefficient of variable in quadartic term */
+   int                   bilintermidx,       /**< index of bilin term where var was seen: -1 if not coming from bilin term */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data (where the quadratic terms live) */
+   SCIP_HASHMAP*         varidx              /**< map between variable and its position in linear vars (if positive) or
+                                              * quadratic vars (if negative) */
+   )
 {
    SCIP_QUADVARTERM* quadterm;
 
@@ -301,16 +451,23 @@ SCIP_RETCODE addVarToQuadterms(SCIP* scip, SCIP_VAR* var, SCIP_Real sqrcoef, int
  */
 
 /** callback to free data of handler */
+#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrDataQuadratic)
-{
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of quadratic nonlinear handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
    return SCIP_OKAY;
 }
+#else
+#define freeHdlrDataQuadratic NULL
+#endif
 
 /** callback to free expression specific data */
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(freeExprDataQuadratic)
-{
+{  /*lint --e{715}*/
    freeNlhdlrExprData(scip, *nlhdlrexprdata);
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
 
@@ -318,184 +475,44 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(freeExprDataQuadratic)
 }
 
 /** callback to be called in initialization */
+#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlrQuadratic)
-{
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of quadratic nonlinear handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
    return SCIP_OKAY;
 }
+#else
+#define initHdlrQuadratic NULL
+#endif
 
 /** callback to be called in deinitialization */
+#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldrQuadratic)
-{
-   return SCIP_OKAY;
-}
-
-
-static
-SCIP_Bool isTwoVarsProduct(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SCIP_VAR** var1, SCIP_VAR** var2)
-{
-   assert(var1 != NULL && var2 != NULL);
-
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
-      return FALSE;
-
-   if( SCIPgetConsExprExprNChildren(expr) != 2 )
-      return FALSE;
-
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], var1) );
-   assert(*var1 != NULL);
-
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[1], var2) );
-   assert(*var2 != NULL);
-
-   return TRUE;
-}
-
-static
-SCIP_Bool isVarSquare(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SCIP_VAR** var)
-{
-   if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) != 0 )
-      return FALSE;
-
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-
-   if( SCIPgetConsExprExprPowExponent(expr) != 2.0 )
-      return FALSE;
-
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], var) );
-   assert(*var != NULL);
-
-   return TRUE;
-}
-
-static
-SCIP_RETCODE checkProperQuadratic(SCIP_CONSEXPR_EXPR* expr, SCIP_HASHMAP* seenexpr, SCIP_Bool* properquadratic)
-{
-
-   if( SCIPhashmapExists(seenexpr, (void *)expr) )
-      *properquadratic = TRUE;
-   else
-   {
-      SCIP_CALL( SCIPhashmapInsert(seenexpr, (void *)expr, NULL) );
-   }
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of quadratic nonlinear handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
+#else
+#define exitHldrQuadratic NULL
+#endif
 
-/* TODO: make more simple test; like diagonal entries don't change sign, etc */
-static
-SCIP_RETCODE checkCurvature(
-   SCIP* scip,
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,
-   SCIP_CONSEXPR_EXPRENFO_METHOD* provided
-   )
-{
-   SCIP_HASHMAP* var2matrix;
-   double* matrix;
-   double* alleigval;
-   int nvars;
-   int nn;
-   int n;
-   int i;
-
-   n  = nlhdlrexprdata->nquadvars;
-   nn = n * n;
-
-   /* do not check curvature if nn is too large */
-   if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "nlhdr_quadratic - number of quadratic variables is too large (%d) to check the curvature; will not handle this expression\n", n);
-
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix, nn) );
-   BMSclearMemoryArray(matrix, nn);
-
-   SCIP_CALL( SCIPhashmapCreate(&var2matrix, SCIPblkmem(scip), n) );
-
-   /* fill matrix's diagonal */
-   nvars = 0;
-   for( i = 0; i < n; ++i )
-   {
-      SCIP_QUADVARTERM quadterm;
-
-      quadterm = nlhdlrexprdata->quadvarterms[i];
-
-      assert(!SCIPhashmapExists(var2matrix, (void*)quadterm.var));
-
-      if( quadterm.sqrcoef == 0.0 )
-      {
-         SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadterm.var));
-         goto CLEANUP;
-      }
-
-      matrix[nvars * n + nvars] = quadterm.sqrcoef;
-
-      /* remember row of variable in matrix */
-      SCIP_CALL( SCIPhashmapInsert(var2matrix, (void *)quadterm.var, (void *)(size_t)nvars) );
-      nvars++;
-   }
-
-   /* fill matrix's upper-diagonal */
-   for( i = 0; i < nlhdlrexprdata->nbilinterms; ++i )
-   {
-      SCIP_BILINTERM bilinterm;
-      int col;
-      int row;
-
-      bilinterm = nlhdlrexprdata->bilinterms[i];
-
-      assert(SCIPhashmapExists(var2matrix, (void*)bilinterm.var1));
-      assert(SCIPhashmapExists(var2matrix, (void*)bilinterm.var2));
-      row = (int)(size_t)SCIPhashmapGetImage(var2matrix, bilinterm.var1);
-      col = (int)(size_t)SCIPhashmapGetImage(var2matrix, bilinterm.var2);
-
-      assert(row != col);
-
-      if( row < col )
-         matrix[row * n + col] = bilinterm.coef / 2.0;
-      else
-         matrix[col * n + row] = bilinterm.coef / 2.0;
-   }
-
-   /* compute eigenvalues */
-   if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
-   {
-      SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
-      goto CLEANUP;
-   }
-
-   /* check convexity */
-   if( !SCIPisNegative(scip, alleigval[0]) )
-   {
-      *provided = SCIP_CONSEXPR_EXPRENFO_SEPAUNDER;
-      nlhdlrexprdata->curvature = SCIP_EXPRCURV_CONVEX;
-   }
-   else if( !SCIPisPositive(scip, alleigval[n-1]) )
-   {
-      *provided = SCIP_CONSEXPR_EXPRENFO_SEPAOVER;
-      nlhdlrexprdata->curvature = SCIP_EXPRCURV_CONCAVE;
-   }
-
-CLEANUP:
-   SCIPhashmapFree(&var2matrix);
-   SCIPfreeBufferArray(scip, &matrix);
-   SCIPfreeBufferArray(scip, &alleigval);
-
-   return SCIP_OKAY;
-}
-
-/** callback to detect structure in expression tree */
-/*
+/** callback to detect structure in expression tree
+ *
  * A term is quadratic if:
  * - It is a product expression of two expressions
  * - It is power expression of an expression with exponent 2.0
  *
- * An proper quadratic expression (i.e the only quadratic expressions that can be handled by this nlhdlr) is a sum
- * expression such that there is at least one (aux) variable that appears in at least two quadratic terms.
+ * A proper quadratic expression (i.e the only quadratic expressions that can be handled by this nlhdlr) is a sum
+ * expression such that there is at least one (aux) variable that appears at least twice, in a quadratic terms and
+ * somewhere else. In addition, it has to be convex or concave.
+ * For example: x^2 + y^2 is not a proper quadratic expression; x^2 + x is proper quadratic expression;
+ * x^2 + x * y is not a proper quadratic expression because it is not convex nor concave.
  *
  * @note:
  * - the expression needs to be simplified (in particular, it is assumed to be sorted)
@@ -516,12 +533,10 @@ CLEANUP:
 /* TODO: capture variables? */
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata;
    SCIP_HASHMAP*  varidx;
    SCIP_HASHMAP*  seenexpr;
-   SCIP_VAR* var1 = NULL;
-   SCIP_VAR* var2 = NULL;
    SCIP_Bool properquadratic;
    int c;
 
@@ -596,18 +611,30 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
       assert(child != NULL);
       assert(! SCIPisZero(scip, coef));
 
-      var1 = NULL;
-      var2 = NULL;
-      if( isVarSquare(scip, conshdlr, child, &var1) ) /* quadratic term */
+      if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
+            SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
       {
-         assert(var1 != NULL);
-         SCIP_CALL( addVarToQuadterms(scip, var1, coef, -1, nlexprdata, varidx) );
+         SCIP_VAR* var;
+
+         assert(SCIPgetConsExprExprNChildren(child) == 1);
+
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(child)[0], &var) );
+         assert(var != NULL);
+         SCIP_CALL( addVarToQuadterms(scip, var, coef, -1, nlexprdata, varidx) );
       }
-      else if( isTwoVarsProduct(scip, conshdlr, child, &var1, &var2) ) /* bilinear term */
+      else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
+            SCIPgetConsExprExprNChildren(child) == 2 ) /* bilinear term */
       {
          SCIP_BILINTERM* bilinterm;
+         SCIP_VAR* var1;
+         SCIP_VAR* var2;
+
          assert(SCIPgetConsExprExprProductCoef(child) == 1.0);
-         assert(var1 != NULL && var2 != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(child)[0], &var1) );
+         assert(var1 != NULL);
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(child)[1], &var2) );
+         assert(var2 != NULL);
 
          SCIP_CALL( nlhdlrexprdataEnsureBilinSize(scip, nlexprdata, nlexprdata->nbilinterms + 1) );
 
@@ -626,15 +653,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
       }
       else
       {
+         SCIP_VAR* var;
+
          /* not a product of exprs nor square of an expr --> create aux var */
-         var1 = SCIPgetConsExprExprLinearizationVar(child);
-         assert(var1 != NULL);
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, child, &var) );
+         assert(var != NULL);
 
          SCIP_CALL( nlhdlrexprdataEnsureLinearVarsSize(scip, nlexprdata, nlexprdata->nlinvars + 1) );
 
          /* store its index in linvars in case we see this var again later in a bilinear or quadratic term */
-         SCIP_CALL( SCIPhashmapInsert(varidx, var1, (void *)(size_t)nlexprdata->nlinvars) );
-         nlexprdata->linvars[nlexprdata->nlinvars] = var1;
+         SCIP_CALL( SCIPhashmapInsert(varidx, var, (void *)(size_t)nlexprdata->nlinvars) );
+         nlexprdata->linvars[nlexprdata->nlinvars] = var;
          nlexprdata->lincoefs[nlexprdata->nlinvars] = coef;
          nlexprdata->nlinvars++;
       }
@@ -656,7 +685,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 /** nonlinear handler separation callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlrQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
    SCIP_Real constant;
    SCIP_Real coef;
@@ -830,7 +859,7 @@ CLEANUP:
  */
 static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlrQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
