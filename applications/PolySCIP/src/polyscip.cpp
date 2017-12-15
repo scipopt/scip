@@ -85,7 +85,7 @@ namespace polyscip {
     /**
      * Ostream operator
      * @param os Output stream
-     * @param proj Projection to write to stream
+     * @param p Projection to write to stream
      * @return Output stream
      */
     ostream& operator<<(ostream& os, const TwoDProj& p) {
@@ -96,7 +96,7 @@ namespace polyscip {
     /**
      * Ostream operator
      * @param os Output stream
-     * @param nd_proj Non-dominated projections to write to stream
+     * @param nd Non-dominated projections to write to stream
      * @return Output stream
      */
     ostream& operator<<(ostream& os, const NondomProjections& nd) {

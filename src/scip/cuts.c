@@ -5513,6 +5513,10 @@ SCIP_RETCODE constructSNFRelaxation(
          }
       }
 
+      /* make sure the coefficient is not negative due to small numerical rounding errors */
+      assert(snf->transvarvubcoefs[snf->ntransvars] > -QUAD_EPSILON);
+      snf->transvarvubcoefs[snf->ntransvars] = MAX(snf->transvarvubcoefs[snf->ntransvars], 0.0);
+
       ++snf->ntransvars;
    }
 
@@ -7894,7 +7898,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute a flow cover cut for */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute a strong CG cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
    SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */

@@ -267,10 +267,10 @@ SCIP_RETCODE cut_add(
 static
 int graph_next_term(
    const GRAPH*          g,                  /**< graph data structure */
-   int                   terms,
-   int*                  term,
-   const int*            w,
-   const SCIP_Bool       firstrun
+   int                   terms,              /**< number of terminals */
+   int*                  term,               /**< terminal array */
+   const int*            w,                  /**< awake level */
+   const SCIP_Bool       firstrun            /**< first run?  */
    )
 {
    int i;

@@ -13,12 +13,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reduce.c
+/**@file   grphload.c
  * @brief  Methods for loading Steiner problems in .stp format
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  *
- * This file includes methods for reading a Steiner problem in .stp format
+ * This file includes methods for reading a Steiner problem in .stp format.
  *
  * A list of all interface methods can be found in grph.h.
  *

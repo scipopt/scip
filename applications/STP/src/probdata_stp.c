@@ -49,6 +49,7 @@
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
 
+#define STP_AGG_SYM
 #define CENTER_OK    0           /**< do nothing */
 #define CENTER_DEG   1           /**< find maximum degree */
 #define CENTER_SUM   2           /**< find the minimum distance sum */
@@ -112,7 +113,7 @@ struct SCIP_ProbData
    int                   minelims;           /**< minimal number of eliminations per reduction method */
    SCIP_Bool             emitgraph;          /**< emitgraph */
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
-   SCIP_Bool             usecyclecons;        /**< use 2-cycle inequalities for (R)PCSPG? */
+   SCIP_Bool             usecyclecons;       /**< use 2-cycle inequalities for (R)PCSPG? */
    SCIP_Bool             usesymcons;         /**< use symmetry inequalities for PCSPG and MWCSP? */
    FILE*                 logfile;            /**< logfile for DIMACS challenge */
    FILE**                origlogfile;        /**< pointer to original problem data logfile pointer */
@@ -410,10 +411,15 @@ SCIP_RETCODE probdataFree(
       {
          if( (*probdata)->usesymcons )
          {
-            e = (((*probdata)->realnterms - 1) * (*probdata)->realnterms) / 2;
-            /* release degree constraints */
-            for( t = 0; t < e; ++t)
+#ifdef STP_AGG_SYM
+            e = (*probdata)->realnterms - 1;
+            for( t = 0; t < e; ++t )
                SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizesymcons[t])) );
+#else
+            e = (((*probdata)->realnterms - 1) * (*probdata)->realnterms) / 2;
+            for( t = 0; t < e; ++t )
+               SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizesymcons[t])) );
+#endif
 
             SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizesymcons));
          }
@@ -638,8 +644,13 @@ SCIP_RETCODE createPrizeConstraints(
 
    if( probdata->usesymcons && graph->stp_type != STP_RPCSPG )
    {
+#ifdef STP_AGG_SYM
+      ro2 = realnterms - 1;
+#else
       ro2 = (realnterms * (realnterms - 1)) / 2;
+#endif
       SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizesymcons), ro2) );
+
       for( r = 0; r < ro2; r++ )
       {
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeSymConstraint%d", r);
@@ -649,7 +660,6 @@ SCIP_RETCODE createPrizeConstraints(
          SCIP_CALL(SCIPaddCons(scip, probdata->prizesymcons[r]));
       }
    }
-
 
    if( graph->stp_type != STP_RPCSPG )
    {
@@ -991,18 +1001,18 @@ SCIP_RETCODE createVariables(
             }
 #endif
 
-
 	      /* PRIZECOLLECTING STP */
-         if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RPCSPG )
+         if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
          {
-            int head;
             int* pseudoterms;
+
+            assert(graph->extended);
 
             pseudoterms = NULL;
 
             if( probdata->usesymcons )
             {
-               SCIP_CALL(SCIPallocBufferArray(scip, &pseudoterms, probdata->realnterms));
+               SCIP_CALL( SCIPallocBufferArray(scip, &pseudoterms, probdata->realnterms) );
                t = 0;
                k2 = 0;
             }
@@ -1011,7 +1021,7 @@ SCIP_RETCODE createVariables(
             {
                for( e = 0; e < nedges; e++ )
                {
-                  head = graph->head[e];
+                  const int head = graph->head[e];
                   SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[e], 1.0));
                   SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[flipedge(e)], 1.0));
                   if( root != head )
@@ -1026,33 +1036,48 @@ SCIP_RETCODE createVariables(
 
             for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
             {
-               head = graph->head[e];
+               const int head = graph->head[e];
                if( !Is_term(graph->term[head]) )
                {
-                  if( graph->stp_type != STP_RPCSPG )
-                     SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0));
+                  SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0));
+
+                  assert(graph->prize != NULL);
 
                   /* variables are preferred to be branched on */
-                  SCIP_CALL(SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10));
+                  SCIP_CALL( SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10 + (int)(10.0 * graph->prize[head])) );
+
                   if( probdata->usesymcons )
                   {
-                     if( graph->stp_type != STP_RPCSPG )
+                     assert(pseudoterms != NULL);
+
+                     pseudoterms[t] = head;
+#ifdef STP_AGG_SYM
+                     /* skip the last term */
+                     if( t == graph->terms - 2 )
                      {
-                        assert(pseudoterms != NULL);
-
-                        pseudoterms[t] = head;
-                        for( k = 0; k < t; k++ )
-                        {
-                           for( a = graph->inpbeg[pseudoterms[k]]; a != EAT_LAST; a = graph->ieat[a] )
-                           {
-                              SCIP_CALL(SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[a]));
-                           }
-
-                           SCIP_CALL(SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[e]));
-                           k2++;
-                        }
-                        t++;
+                        assert(t == probdata->realnterms - 1);
+                        continue;
                      }
+
+                     for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
+                        SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[t], probdata->edgevars[a]) );
+
+                     for( int prev = 0; prev < t; prev++ )
+                        SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[prev], probdata->edgevars[e]) );
+
+#else
+                     for( k = 0; k < t; k++ )
+                     {
+                        for( a = graph->inpbeg[pseudoterms[k]]; a != EAT_LAST; a = graph->ieat[a] )
+                        {
+                           SCIP_CALL(SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[a]));
+                        }
+
+                        SCIP_CALL(SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[e]));
+                        k2++;
+                     }
+#endif
+                     t++;
                   }
                }
             }
@@ -1363,7 +1388,11 @@ SCIP_DECL_PROBCOPY(probcopyStp)
 
             if( sourcedata->usesymcons && sourcedata->stp_type != STP_RPCSPG )
             {
+#ifdef STP_AGG_SYM
+               v = sourcedata->realnterms - 1;
+#else
                v = ((sourcedata->realnterms - 1) * sourcedata->realnterms ) / 2;
+#endif
                SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, v) );
                for( c = v - 1; c >= 0; --c )
                {
@@ -1672,15 +1701,15 @@ SCIP_DECL_PROBTRANS(probtransStp)
       {
          (*targetdata)->edgecons = NULL;
          (*targetdata)->pathcons = NULL;
-	 if( sourcedata->stp_type == STP_DCSTP )
-	 {
-	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->degcons, sourcedata->nnodes) );
+
+	      if( sourcedata->stp_type == STP_DCSTP )
+	      {
+	         SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->degcons, sourcedata->nnodes) );
             SCIP_CALL( SCIPtransformConss(scip, sourcedata->nnodes, sourcedata->degcons, (*targetdata)->degcons) );
-	 }
+	      }
 
-	 if( sourcedata->stp_type == STP_PCSPG || sourcedata->stp_type == STP_RPCSPG || sourcedata->stp_type == STP_MWCSP )
-	 {
-
+         if( sourcedata->stp_type == STP_PCSPG || sourcedata->stp_type == STP_MWCSP )
+         {
 #if FLOWB
             SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowbcons, sourcedata->nnonterms) );
             SCIP_CALL( SCIPtransformConss(scip, sourcedata->nnonterms, sourcedata->flowbcons, (*targetdata)->flowbcons) );
@@ -1692,18 +1721,18 @@ SCIP_DECL_PROBTRANS(probtransStp)
                SCIP_CALL( SCIPtransformConss(scip, sourcedata->nedges, sourcedata->prizecyclecons, (*targetdata)->prizecyclecons) );
             }
 
-	    if( sourcedata->stp_type != STP_RPCSPG )
-	    {
-               if( sourcedata->usesymcons )
-               {
-                  i = ((sourcedata->realnterms - 1) * (sourcedata->realnterms)) / 2;
-                  SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, i) );
-                  SCIP_CALL( SCIPtransformConss(scip, i, sourcedata->prizesymcons, (*targetdata)->prizesymcons) );
-               }
-               SCIP_CALL( SCIPtransformCons(scip, sourcedata->prizecons, &(*targetdata)->prizecons) );
-	    }
-
-	 }
+            if( sourcedata->usesymcons )
+            {
+#ifdef STP_AGG_SYM
+               i = sourcedata->realnterms - 1;
+#else
+               i = ((sourcedata->realnterms - 1) * (sourcedata->realnterms)) / 2;
+#endif
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, i) );
+               SCIP_CALL( SCIPtransformConss(scip, i, sourcedata->prizesymcons, (*targetdata)->prizesymcons) );
+            }
+            SCIP_CALL( SCIPtransformCons(scip, sourcedata->prizecons, &(*targetdata)->prizecons) );
+         }
 
       }
       /* Price or Flow mode */
@@ -2125,10 +2154,12 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    if( symcons == CONS_ALWAYS )
       probdata->usesymcons = TRUE;
-   else if( symcons == CONS_SPECIFIC && (0.5 * (graph->terms - 1) * graph->terms) <= SYM_CONS_LIMIT )
+   else if( symcons == CONS_SPECIFIC && graph->terms <= SYM_CONS_LIMIT )
       probdata->usesymcons = TRUE;
    else
       probdata->usesymcons = FALSE;
+
+   probdata->usesymcons = probdata->usesymcons && (mw || pc);
 
    if( probdata->usesymcons  )
       SCIPdebugMessage("USE SYM CONS: %d \n", (int) (0.5 * (graph->terms - 1) * graph->terms));

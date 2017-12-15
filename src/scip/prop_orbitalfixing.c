@@ -102,8 +102,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
    if ( tabledata->propdata->enabled )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Orbital fixing     :\n");
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :\t%7d\n", tabledata->propdata->nfixedzero);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :\t%7d\n", tabledata->propdata->nfixedone);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :%11d\n", tabledata->propdata->nfixedzero);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :%11d\n", tabledata->propdata->nfixedone);
    }
 
    return SCIP_OKAY;

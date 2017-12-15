@@ -139,7 +139,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    int l;
    int ncuts;
    int rounds;
-   int ncluster;
 
    ncuts = 0;
    edgevars = SCIPcycGetEdgevars(scip);

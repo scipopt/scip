@@ -1559,19 +1559,18 @@ SCIP_RETCODE createBandit(
  */
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-#if 0
 static
 SCIP_DECL_HEURCOPY(heurCopyAlns)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of alns primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurAlns(scip) );
 
    return SCIP_OKAY;
 }
-#else
-#define heurCopyAlns NULL
-#endif
 
 /** unfix some of the variables because there are too many fixed
  *

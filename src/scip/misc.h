@@ -341,7 +341,7 @@ void SCIPdisjointsetFree(
 
 /** SCIP digraph functions
  *
- * internal digraph functions (see \ref DigraphMethods for public digraph methods)
+ * internal digraph functions (see \ref DirectedGraph for public digraph methods)
  */
 
 /** creates directed graph structure */

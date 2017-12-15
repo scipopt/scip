@@ -57,7 +57,8 @@ void markPcMwRoots(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const int*            roots,              /**< root array */
-   int                   nroots              /**< number of roots */
+   int                   nroots,             /**< number of roots */
+   SCIP_Real             prizesum            /**< sum of positive prizes */
 )
 {
    const int root = graph->source;
@@ -85,8 +86,8 @@ void markPcMwRoots(
       assert(e != EAT_LAST);
       assert(SCIPisEQ(scip, graph->prize[term], graph->cost[e]));
 
-      graph->prize[term] += TERMBLOCKED;
-      graph->cost[e] += TERMBLOCKED;
+      graph->prize[term] = prizesum;
+      graph->cost[e] = prizesum;
    }
 }
 
@@ -597,7 +598,6 @@ void computeTransVoronoi(
 
    for( int e = 0; e < transnedges; e++ )
       costrev[e] = cost[flipedge(e)];
-
 
    /* no paths should go back to the root */
    for( int e = transgraph->outbeg[root]; e != EAT_LAST; e = transgraph->oeat[e] )
@@ -2115,7 +2115,8 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Bool             shiftcosts,         /**< should costs be shifted to try to reduce number of terminals? */
    SCIP_Bool             markroots,          /**< should terminals proven to be part of an opt. sol. be marked as such? */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
-   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             prizesum            /**< sum of positive prizes */
 )
 {
    STPSOLPOOL* pool;
@@ -2288,6 +2289,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
+
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
       nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
@@ -2397,7 +2399,7 @@ SCIP_RETCODE reduce_daPcMw(
             vnoi[i].dist = FARAWAY;
             vnoi[i].edge = UNKNOWN;
 
-            if( Is_term(graph->term[i]) && !nodearrchar[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < TERMBLOCKED )
+            if( Is_term(graph->term[i]) && !nodearrchar[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
                maxprize = graph->prize[i];
          }
 
@@ -2459,7 +2461,14 @@ SCIP_RETCODE reduce_daPcMw(
       /* should prize of terminals be changed? */
       if( nroots > 0 && markroots  )
       {
-         markPcMwRoots(scip, graph, roots, nroots);
+         if( userec )
+         {
+            userec = FALSE;
+            SCIPStpHeurRecFreePool(scip, &pool);
+            pool = NULL;
+         }
+
+         markPcMwRoots(scip, graph, roots, nroots, prizesum);
       }
 
       if( nroots > 0 && varyroot )
@@ -2606,7 +2615,7 @@ SCIP_RETCODE reduce_daPcMw(
    *nelims = nfixed;
 
    /* free memory */
-   if( userec )
+   if( pool != NULL )
       SCIPStpHeurRecFreePool(scip, &pool);
    SCIPfreeBufferArrayNull(scip, &roots);
    SCIPfreeBufferArray(scip, &bestcost);

@@ -13989,7 +13989,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxdisaggrsize",
          "maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)",
-         &conshdlrdata->maxdisaggrsize, TRUE, 127, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxdisaggrsize, FALSE, 127, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/disaggrmergemethod",
          "strategy how to merge independent blocks to reach maxdisaggrsize limit (keep 'b'iggest blocks and merge others; keep 's'mallest blocks and merge other; merge small blocks into bigger blocks to reach 'm'ean sizes)",
