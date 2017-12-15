@@ -5178,6 +5178,7 @@ SCIP_RETCODE SCIPcreateProbBasic(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
+EXTERN
 SCIP_RETCODE SCIPsetProbDelorig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
@@ -21873,7 +21874,7 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
  *
  * @pre The value of relaxfeastol is reset to SCIP_INVALID when initializing the solve (INITSOL).
  * Therefore, this method can only be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOL
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
  * @return previous value of relaxfeastol
@@ -23140,7 +23141,7 @@ int SCIPgetPtrarrayMaxIdx(
  */
 
 /** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
@@ -23148,7 +23149,7 @@ SCIP_RETCODE SCIPcreateDisjointset(
    );
 
 /** frees the disjoint set (union find) data structure */
-extern
+EXTERN
 void SCIPfreeDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DISJOINTSET**    djset               /**< pointer to disjoint set (union find) data structure */

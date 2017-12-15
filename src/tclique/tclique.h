@@ -128,20 +128,20 @@ typedef enum TCLIQUE_Status TCLIQUE_STATUS;
  */
 
 /** gets number of nodes in the graph */
-extern
+EXTERN
 TCLIQUE_GETNNODES(tcliqueGetNNodes);
 
 /** gets weight of nodes in the graph */
-extern
+EXTERN
 TCLIQUE_GETWEIGHTS(tcliqueGetWeights);
 
 /** returns, whether the edge (node1, node2) is in the graph */
-extern
+EXTERN
 TCLIQUE_ISEDGE(tcliqueIsEdge);
 
 /** selects all nodes from a given set of nodes which are adjacent to a given node
  *  and returns the number of selected nodes */
-extern
+EXTERN
 TCLIQUE_SELECTADJNODES(tcliqueSelectAdjnodes);
 
 

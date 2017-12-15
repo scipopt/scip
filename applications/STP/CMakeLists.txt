@@ -43,6 +43,8 @@ endif()
 
 target_link_libraries(scipstp ${SCIP_LIBRARIES} ${LIBM})
 
+set_property(TARGET scipstp PROPERTY C_STANDARD 99)
+
 if( TARGET applications )
     add_dependencies( applications scipstp )
 endif()

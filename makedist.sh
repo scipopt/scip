@@ -20,7 +20,7 @@ echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
-chmod 750 bin/* scripts/* interfaces/ampl/get.ASL check/cmpres.awk
+chmod 750 bin/* scripts/* interfaces/ampl/get.ASL check/cmpres.awk cmake/Modules/asan-wrapper applications/PolySCIP/mult_zimpl/mult_zimpl_to_mop.py
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*~" \
@@ -79,6 +79,7 @@ $NAME/applications/CycleClustering/check/testset/short.test \
 $NAME/applications/CycleClustering/src/*.c $NAME/applications/CycleClustering/src/*.h \
 $NAME/applications/Coloring/src/*.h \
 $NAME/applications/Scheduler/doc/* \
+$NAME/applications/Scheduler/INSTALL.md \
 $NAME/applications/Scheduler/check/CMakeLists.txt \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
 $NAME/applications/Scheduler/src/depend.* \
@@ -94,6 +95,7 @@ $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
 $NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh \
 $NAME/applications/MinIISC/check/testset/short.* \
+$NAME/applications/PolySCIP/INSTALL.md \
 $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
 $NAME/applications/PolySCIP/src/tclap/* \
@@ -109,6 +111,7 @@ $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
 $NAME/applications/PolySCIP/src/CMakeLists.txt \
 $NAME/applications/PolySCIP/CMakeLists.txt     \
 $NAME/applications/PolySCIP/cmake/PolySCIPConfig.h.in \
+$NAME/applications/STP/INSTALL.md \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \

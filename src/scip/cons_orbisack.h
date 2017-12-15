@@ -33,6 +33,16 @@
 extern "C" {
 #endif
 
+
+/** creates the handler for orbisack constraints and includes it in SCIP
+ *
+ *  @ingroup ConshdlrIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrOrbisack(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@addtogroup CONSHDLRS
  *
  * @{
@@ -77,14 +87,6 @@ SCIP_RETCODE SCIPcheckSolutionOrbisack(
    SCIP_Bool          printreason,        /**< whether reason for infeasibility should be printed */
    SCIP_Bool*         feasible            /**< memory address to store whether sol is feasible */
    );
-
-
-/** creates the handler for orbisack constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrOrbisack(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 
 /** creates and captures a orbisack constraint
  *

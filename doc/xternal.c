@@ -359,19 +359,19 @@
  * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface for IPOPT and WORHP can be
  * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
  *
- * @subsection NLPISOLVERS_IPOPT IPOPT
+ * @section NLPISOLVERS_IPOPT IPOPT
  *
  * <b>IPOPT</b> implements a primal-dual interior point method and uses line searches based on filter methods. It has
  * been developed by Andreas W&auml;chter and Carl Laird and is available under the Eclipse Public License on <a
  * href="https://www.coin-or.org/">COIN-OR</a>.
  *
- * @subsection NLPISOLVERS_WORHP WORHP
+ * @section NLPISOLVERS_WORHP WORHP
  *
  * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
  * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
  * purposes.
  *
- * @subsection NLPISOLVERS_FILTERSQP FilterSQP
+ * @section NLPISOLVERS_FILTERSQP FilterSQP
  *
  * <b>FilterSQP</b> implements a sequential quadratic programming method. It has been developed by Roger Fletcher
  * and Sven Leyffer. It is not publicly available, but may be obtained from Sven Leyffer on request.
@@ -707,6 +707,7 @@
  * GMP                  | on, off                        | GMP=[true, false]      |                                            |
  * READLINE             | on, off                        | READLINE=[true, false] |                                            |
  * ZIMPL                | on, off                        | ZIMPL=[true, false]    |                                            |
+ * SYM                  | bliss, none                    | --                     |                                            |
  * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
  * SHARED               | on, off                        | SHARED=[true, false]   |                                            |
  * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --                     |                                            |
@@ -714,6 +715,17 @@
  * ..._DIR              | <custom/path/to/.../package>   | --                     |                                            |
  * COVERAGE             | on, off                        | --                     | use with gcc, lcov, gcov in **debug** mode |
  * COVERAGE_CTEST_ARGS  | ctest argument string          | --                     | see `ctest --help` for arguments           |
+ * DEBUGSOL             | on, off                        | DEBUGSOL=[true,false]  | specify a debugging solution by setting the "misc/debugsol" parameter of SCIP |
+ * CXXONLY              | on, off                        | --                     | use a C++ compiler for all source files    |
+ * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0           |
+ * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked                     |
+ * LPSCHECK             | on, off                        | LPSCHECK=[true,false]  | double check SoPlex results with CPLEX     |
+ * NOBLKMEM             | on, off                        | NOBLKMEM=[true,false]  |                                            |
+ * NOBUFMEM             | on, off                        | NOBUFMEM=[true,false]  |                                            |
+ * NOBLKBUFMEM          | on, off                        | NOBLKBUFMEM=[true,false] |                                          |
+ * MT                   | on, off                        |                        | use static runtime libraries for Visual Studio compiler on Windows |
+ * PARASCIP             | on, off                        | PARASCIP=[true,false]  | thread safe compilation                    |
+ * SANITIZE_...         | on, off                        | --                     | enable sanitizer in debug mode if available |
  *
  * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
  * configuration.
@@ -7320,16 +7332,16 @@
   * @section CHGCALLBACKS10 New and changed callbacks
   *
   * - <b>New types</b>:
-  *   - Added new abstract selection algorithm SCIP_BANDIT together with callbacks
-  *   - Added new type SCIP_TABLE together with callbacks to output SCIP statistics
-  *   - Added new types for symmetry handling
+  *   - added new abstract selection algorithm SCIP_BANDIT together with callbacks
+  *   - added new type SCIP_TABLE together with callbacks to output SCIP statistics
+  *   - added new types for symmetry handling
   *
   * - <b>Separation callbacks</b>:
-  *   - Added parameter "allowlocal" to SCIP_DECL_SEPAEXECLP and SCIP_DECL_SEPAEXECSOL
+  *   - added parameter "allowlocal" to SCIP_DECL_SEPAEXECLP and SCIP_DECL_SEPAEXECSOL
   *
   * - <b>NLP callbacks</b>
-  *   - Added parameter "dstatssize" to SCIP_DECL_NLPIDELVARSET and SCIP_DECL_NLPIDELCONSSET
-  *   - Added parameter "objval" to SCIP_DECL_NLPIGETSOLUTION
+  *   - added parameter "dstatssize" to SCIP_DECL_NLPIDELVARSET and SCIP_DECL_NLPIDELCONSSET
+  *   - added parameter "objval" to SCIP_DECL_NLPIGETSOLUTION
   *
   *
   * <br>
@@ -7337,49 +7349,86 @@
   *
   * <br>
   * - <b>Cutting plane separation methods</b>:
-  *   - Changed function signature of SCIPcalcMir()
-  *   - Changed function signature of SCIPcalcStrongCG()
-  *   - Added parameter "allowlocal" to SCIPseparateSol()
-  *   - Removed solution pointer argument from SCIPaddCut()
-  *   - New method SCIPaddRow() to replace deprecated SCIPaddCut()
+  *   - changed function signature of SCIPcalcMIR()
+  *   - changed function signature of SCIPcalcStrongCG()
+  *   - added parameter "allowlocal" to SCIPseparateSol()
+  *   - new method SCIPaddRow() to replace deprecated SCIPaddCut()
+  *   - removed parameter "scaling" from SCIPgetRowprepViolation()
   *
   * <br>
   * - <b>Relaxator methods</b>:
-  *   - Removed parameter "includeslp" from SCIPincludeRelax()
-  *   - Added parameter "includeslp" to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals(), and SCIPsetRelaxSolValsSol()
-  *   - Removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
-  *   - Replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
+  *   - removed parameter "includeslp" from SCIPincludeRelax()
+  *   - added parameter "includeslp" to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals(), and SCIPsetRelaxSolValsSol()
+  *   - removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
+  *   - replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
   *
   * <br>
   * - <b>LP interface</b>:
-  *   - Replaced LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM.
+  *   - replaced LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM
+  *
+  * <br>
+  * - <b>Branching rules</b>:
+  *   - removed parameter "allowaddcons" from SCIPselectVarPseudoStrongBranching(), SCIPselectVarStrongBranching(), and
+  *     SCIPincludeBranchruleRelpscost()
+  *
+  * <br>
+  * - <b>Primal heuristics</b>:
+  *   - SCIPheurPassIndicator() has a new parameter which allows to pass the objective of the solution
+  *
+  * <br>
+  * - <b>Constraint Handlers</b>:
+  *   - generalized SCIPcreateConsOrbitope() and SCIPcreateConsBasicOrbitope() method to three orbitope types (full, partitioning, packing)
   *
   * <br>
   * - <b>NLP interface</b>:
-  *   - Added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet()
-  *   - Added modifier const to "exprtree" argument of SCIPnlpiChgExprtree()
-  *   - Added parameter "objval" to SCIPnlpiGetSolution()
-  *   - Added argument "varnameslength" to SCIPexprParse()
-  *   - Dropped NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
+  *   - added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet()
+  *   - added modifier const to "exprtree" argument of SCIPnlpiChgExprtree()
+  *   - added parameter "objval" to SCIPnlpiGetSolution()
+  *   - added argument "varnameslength" to SCIPexprParse()
+  *   - dropped NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
+  *   - SCIPnlpStatisticsCreate() and SCIPnlpStatisticsFree() now require a pointer to the block memory as argument
   *
   * <br>
   * - <b>Data structures</b>:
-  *   - Methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced
-  *     by SCIPcreateRandom() and SCIPfreeRandom(), respectively. The new methods respect
-  *     the global parameter "randomization/randomseedshift" automatically.
-  *   - Methods SCIPdigraphCreate() and SCIPdigraphFree() are no longer public and should be replaced
-  *     by SCIPcreateDigraph() and SCIPfreeDigraph(), respectively, which receive a \SCIP argument
-  *     and are more robust towards future interface changes.
+  *   - methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced
+  *     by SCIPcreateRandom() and SCIPfreeRandom(), respectively (the new methods respect
+  *     the global parameter "randomization/randomseedshift" automatically)
+  *   - methods SCIPdigraphCreate() and SCIPdigraphCopy() are no longer public and should be replaced
+  *     by SCIPcreateDigraph() and SCIPcopyDigraph(), respectively, which receive a \SCIP argument
+  *     and are more robust towards future interface changes
   *
   * <br>
   * - <b>Misc</b>:
-  *   - Added parameter "copytables" to SCIPcopyPlugins()
-  *   - Allowed SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
-  *   - SCIPsolveConcurrent() is deprecated. Use SCIPsolveParallel() instead.
-  *   - Changed return type of SCIPcliqueGetId() from "int" to "unsigned int".
-  *   - Removed SCIPvarGetCliqueComponentIdx(). The connectedness information
-  *     of the clique table is now stored as a SCIP_DISJOINTSET member of the cliquetable
-  *     and cannot be publicly accessed.
+  *   - added parameter "copytables" to SCIPcopyPlugins()
+  *   - allowed SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
+  *   - SCIPsolveParallel() is deprecated; use SCIPsolveConcurrent() instead
+  *   - changed return type of SCIPcliqueGetId() from "int" to "unsigned int"
+  *   - removed SCIPvarGetCliqueComponentIdx(); the connectedness information
+  *     of the clique table is now stored as a SCIP_DISJOINTSET member of the clique table
+  *     and cannot be publicly accessed
+  *
+  * <br>
+  * @section CHGPARAMS10 Changed parameters
+  *
+  * - fixed typo: "heuristics/completesol/maxunkownrate" has changed to "heuristics/completesol/maxunknownrate"
+  * - removed parameters "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling"
+  * - replaced "constraints/quadratic/disaggregate" by "constraints/quadratic/maxdisaggrsize" to bound
+  *   the total number of created constraints when disaggregating a quadratic constraint
+  * - removed parameters "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacysepa",
+  *   "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and "constraints/soc/minefficacy"
+  * - removed parameters "conflict/usemir" and "conflict/prefermir"
+  * - removed parameter "separating/feastolfac"
+  * - removed parameter "separating/orthofac"
+  * - parameter "separating/maxstallrounds" only applies to nodes in the tree (not the root node, anymore); use the new
+  *   parameter "separating/maxstallroundsroot" for the root node
+  * - removed parameters "heuristics/clique/{multiplier,initseed}"
+  * - replaced parameter "heuristics/{clique,vbounds}/minfixingrate" by "heuristics/{clique,vbounds}/minintfixingrate" and
+  *   "heuristics/{clique,vbounds}/minmipfixingrate", which check the fixing rate before LP solving and after sub-MIP presolve
+  * - removed parameter "separating/cgmip/allowlocal" (use parameter passed to separation callback instead)
+  * - removed parameter "separating/{gomory,strongcg}/maxweightrange"
+  * - changed and removed several parameters for zerohalf separator
+  * - moved parameters for flowcover and cmir separators to "separating/aggregation"
+  *
   *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
