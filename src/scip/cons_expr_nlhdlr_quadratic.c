@@ -49,7 +49,6 @@
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
-   SCIP_Bool             initialized;        /**< whether handler has been initialized and not yet de-initialized */
 };
 
 /** nonlinear handler expression data */
@@ -466,7 +465,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrDataQuadratic)
 
 /** callback to free expression specific data */
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(freeExprDataQuadratic)
+SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
 {  /*lint --e{715}*/
    freeNlhdlrExprData(scip, *nlhdlrexprdata);
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
@@ -558,13 +557,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       SCIP_CONSEXPR_EXPR* child;
-      SCIP_Real coef;
 
       child = SCIPgetConsExprExprChildren(expr)[c];
-      coef = SCIPgetConsExprExprSumCoefs(expr)[c];
 
       assert(child != NULL);
-      assert(! SCIPisZero(scip, coef));
 
       if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
             SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
@@ -676,7 +672,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    /* if we can't handle this expression, free data */
    if( *provided == SCIP_CONSEXPR_EXPRENFO_NONE )
    {
-      SCIP_CALL( freeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
+      SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
    }
 
    return SCIP_OKAY;
@@ -684,7 +680,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 
 /** nonlinear handler separation callback */
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlrQuadratic)
+SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
 {  /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
    SCIP_Real constant;
@@ -755,22 +751,19 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlrQuadratic)
          goto CLEANUP;
    }
 
-   /* compute cut */
-   success = TRUE;
-   SCIP_BILINTERM* bilinterm;
-
    /*
-    * do first-order Taylor for each term
+    * compute cut: quadfun(sol) + \nabla quadfun(sol) (x - sol) - auxvar
     */
 
    /* constat */
    SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprSumConstant(expr));
 
-   /* purely linear variables */
+   /* handle purely linear variables */
    SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nlhdlrexprdata->nlinvars, nlhdlrexprdata->linvars,
             nlhdlrexprdata->lincoefs) );
 
    /* quadratic variables */
+   success = TRUE;
    for( j = 0; j < nlhdlrexprdata->nquadvars && success; ++j )
    {
       var = nlhdlrexprdata->quadvarterms[j].var;
@@ -790,6 +783,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlrQuadratic)
       /* add linearization of bilinear terms that have var as first variable */
       for( k = 0; k < nlhdlrexprdata->quadvarterms[j].nadjbilin && success; ++k )
       {
+         SCIP_BILINTERM* bilinterm;
+
          bilinterm = &nlhdlrexprdata->bilinterms[nlhdlrexprdata->quadvarterms[j].adjbilin[k]];
          if( bilinterm->var1 != var )
             continue;
@@ -858,28 +853,14 @@ CLEANUP:
  * This method is usually called when doing a copy of an expression constraint handler.
  */
 static
-SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlrQuadratic)
+SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrcopyHdlrQuadratic)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-
    assert(targetscip != NULL);
    assert(targetconsexprhdlr != NULL);
-   assert(sourceconsexprhdlr != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), "testhdlr") == 0);
+   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), NLHDLR_NAME) == 0);
 
-   SCIP_CALL( SCIPallocClearMemory(targetscip, &nlhdlrdata) );
-
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
-            SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr),
-            SCIPgetConsExprNlhdlrPriority(sourcenlhdlr), detectHdlrQuadratic, nlhdlrdata) );
-
-   SCIPsetConsExprNlhdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrDataQuadratic);
-   SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprDataQuadratic);
-   SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlrQuadratic);
-   SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlrQuadratic, exitHldrQuadratic);
-   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlrQuadratic, NULL); // TODO: init exit sepa callbacks
+   SCIP_CALL( SCIPincludeConsExprNlhdlrQuadratic(targetscip, targetconsexprhdlr) );
 
    return SCIP_OKAY;
 }
@@ -902,8 +883,9 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY,
             detectHdlrQuadratic, nlhdlrdata) );
 
-   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprDataQuadratic);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlrQuadratic, NULL);
+   SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
+   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrsepaHdlrQuadratic, NULL);
 
 
 
