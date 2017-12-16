@@ -3692,6 +3692,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    SCIP_Bool enforcedbelow;
    SCIP_Bool enforcedabove;
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethods;
+   SCIP_Bool nlhdlrenforcedbelow;
+   SCIP_Bool nlhdlrenforcedabove;
+   SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrenforcemethods;
    SCIP_Bool success;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
    int nsuccess;
@@ -3754,22 +3757,39 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       /* call detect routine of nlhdlr */
       nlhdlrexprdata = NULL;
       success = FALSE;
-      SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &enforcemethods, &enforcedbelow, &enforcedabove, &success, &nlhdlrexprdata) );
+      nlhdlrenforcemethods = enforcemethods;
+      nlhdlrenforcedbelow = enforcedbelow;
+      nlhdlrenforcedabove = enforcedabove;
+      SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
+
+      /* detection is only allowed to augment to the various parameters (enforce "more", add "more" methods) */
+      assert(nlhdlrenforcemethods >= enforcemethods);
+      assert(nlhdlrenforcedbelow >= enforcedbelow);
+      assert(nlhdlrenforcedabove >= enforcedabove);
 
       if( !success )
       {
          /* nlhdlrexprdata can only be non-NULL if it provided some functionality */
          assert(nlhdlrexprdata == NULL);
-         /* TODO check that enforcement flags were not modified */
+         assert(nlhdlrenforcemethods == enforcemethods);
+         assert(nlhdlrenforcedbelow == enforcedbelow);
+         assert(nlhdlrenforcedabove == enforcedabove);
 
          continue;
       }
 
+      /* if the nldhlr enforces, then it must have added at least one enforcement method */
+      assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
+
       /* remember nlhdlr and its data */
       detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
       detectdata->nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
-
       ++nsuccess;
+
+      /* update enforcement flags */
+      enforcemethods = nlhdlrenforcemethods;
+      enforcedbelow = nlhdlrenforcedbelow;
+      enforcedabove = nlhdlrenforcedabove;
    }
 
    /* stop if the expression cannot be enforced
