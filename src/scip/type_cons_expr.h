@@ -436,9 +436,9 @@ typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 /** @} */
 
 #define SCIP_CONSEXPR_EXPRENFO_NONE           0x0u /**< no enforcement */
-#define SCIP_CONSEXPR_EXPRENFO_SEPAUNDER      0x1u /**< separates for expr <= auxvar, thus might underestimate expr */
-#define SCIP_CONSEXPR_EXPRENFO_SEPAOVER       0x2u /**< separates for expr >= auxvar, thus might overestimate expr */
-#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPAUNDER | SCIP_CONSEXPR_EXPRENFO_SEPAOVER)  /**< separates for expr == auxvar */
+#define SCIP_CONSEXPR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
+#define SCIP_CONSEXPR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
+#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
 #define SCIP_CONSEXPR_EXPRENFO_ALL            SCIP_CONSEXPR_EXPRENFO_SEPABOTH  /**< all enforcement methods */
 
 /** type for exprenfo bitflags */

@@ -126,7 +126,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    enforceabove = FALSE;
    success = FALSE;
    SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPAUNDER, "expecting sepaunder got %d\n", provided);
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow got %d\n", provided);
    cr_assert(enforcebelow);
    cr_assert(!enforceabove);
    cr_assert(success);
@@ -195,7 +195,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    enforceabove = FALSE;
    success = FALSE;
    SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPAUNDER, "expecting sepaunder got %d\n", provided);
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow got %d\n", provided);
    cr_assert(enforcebelow);
    cr_assert(!enforceabove);
    cr_assert(success);

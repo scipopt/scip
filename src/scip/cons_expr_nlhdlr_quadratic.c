@@ -631,14 +631,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
       /* we will estimate the expression from below, that is handle expr <= auxvar */
       *enforcedbelow = TRUE;
       *success = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAUNDER;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
    }
    else if( nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
    {
       /* we will estimate the expression from above, that is handle expr >= auxvar */
       *enforcedabove = TRUE;
       *success = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAOVER;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
    }
    else
    {
