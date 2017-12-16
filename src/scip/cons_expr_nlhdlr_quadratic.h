@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_nlhdlr_quadratic.h
- * @brief  nonlinear handler to handle quadratic constraints
+ * @brief  nonlinear handler to handle quadratic expressions
  * @author Felipe Serrano
  *
  */

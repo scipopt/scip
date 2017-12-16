@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_nlhdlr_quadratic.c
- * @brief  nonlinear handler to handle quadratic constraints
+ * @brief  nonlinear handler to handle quadratic expressions
  * @author Felipe Serrano
  *
  * Some definitions:
@@ -212,7 +212,7 @@ SCIP_RETCODE checkProperQuadratic(
 }
 
 /** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in nlhdlrexprdata; for this, it builds the
- * matrix Q and computes its eigenvalues using via LAPACK; if Q is
+ * matrix Q and computes its eigenvalues using LAPACK; if Q is
  * - semidefinite positive -> provided is set to sepaunder
  * - semidefinite negative -> provided is set to sepaover
  * - otherwise -> provided is set to none
@@ -246,8 +246,7 @@ SCIP_RETCODE checkCurvature(
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix, nn) );
-   BMSclearMemoryArray(matrix, nn);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &matrix, nn) );
 
    SCIP_CALL( SCIPhashmapCreate(&var2matrix, SCIPblkmem(scip), n) );
 
@@ -263,6 +262,7 @@ SCIP_RETCODE checkCurvature(
 
       if( quadterm.sqrcoef == 0.0 )
       {
+         assert(quadterm.nadjbilin > 0);
          SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadterm.var));
          goto CLEANUP;
       }
@@ -326,7 +326,7 @@ CLEANUP:
 
 /** add variable to quadratic terms: this means several things depending on what is known about var
  * - if is the first time seeing this var -> creates new quadratic term
- * - if it has been seen linearly before -> removes it from the linear vars and creates a new quadatic term
+ * - if it has been seen linearly before -> removes it from the linear vars and creates a new quadratic term
  * - if it has been seen quadratically before, then
  *    - if is the first time seeing the var quadratically (i.e sqrcoef * var^2) -> add sqrcoef to existing quad term
  *    - var is being seen in a bilinear term (var * other_var) -> add bilinear information to quadvarterm
@@ -482,7 +482,6 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
  *
  * It also implies that x^-2 < x^-1, but since, so far, we do not interpret x^-2 as (x^-1)^2, it is not a problem.
  */
-/* TODO: capture variables? */
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 {  /*lint --e{715}*/
@@ -558,7 +557,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
       coef = SCIPgetConsExprExprSumCoefs(expr)[c];
 
       assert(child != NULL);
-      assert(! SCIPisZero(scip, coef));
+      assert(! SCIPisZero(scip, coef)); /* TODO maybe this should be only coef != 0.0, since the original problem might have bad numerics */
 
       if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
             SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
@@ -622,7 +621,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    /* check curvature of quadratic function stored in nlexprdata */
    SCIP_CALL( checkCurvature(scip, nlexprdata, provided) );
 
-   /* if we can't handle this expression, free data */
+   /* if we can't handle this expression, free data
+    * TODO it would be good if one could now undo the creation of auxvars above
+    */
    if( *provided == SCIP_CONSEXPR_EXPRENFO_NONE )
    {
       SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
@@ -653,7 +654,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
 
    *ncuts = 0;
-   *result = SCIP_DIDNOTFIND; /* TODO: is this ok? */
+   *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
 
@@ -694,7 +695,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", activity,
             SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
             "concave");
-      //SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
 
       if( activity > side && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
          rowprep->sidetype = SCIP_SIDETYPE_RIGHT;
@@ -708,7 +708,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
     * compute cut: quadfun(sol) + \nabla quadfun(sol) (x - sol) - auxvar
     */
 
-   /* constat */
+   /* constant */
    SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprSumConstant(expr));
 
    /* handle purely linear variables */
@@ -734,7 +734,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       SCIPaddRowprepConstant(rowprep, constant);
 
       /* add linearization of bilinear terms that have var as first variable */
-      for( k = 0; k < nlhdlrexprdata->quadvarterms[j].nadjbilin && success; ++k )
+      for( k = 0; k < nlhdlrexprdata->quadvarterms[j].nadjbilin; ++k )
       {
          SCIP_BILINTERM* bilinterm;
 
@@ -748,9 +748,14 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
          constant = 0.0;
          SCIPaddBilinLinearization(scip, bilinterm->coef, SCIPgetSolVal(scip, sol, var), SCIPgetSolVal(scip, sol,
                   bilinterm->var2), &coef, &coef2, &constant, &success);
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, bilinterm->var2, coef2) );
-         SCIPaddRowprepConstant(rowprep, constant);
+         if( success )
+         {
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, bilinterm->var2, coef2) );
+            SCIPaddRowprepConstant(rowprep, constant);
+         }
+         else
+            break;
       }
    }
    if( !success )
@@ -758,8 +763,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
 
    /* add auxiliary variable */
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprLinearizationVar(expr), -1.0) );
-
-   SCIPaddRowprepSide(rowprep, 0.0);
 
    /* check build cut and check violation */
    {
@@ -770,7 +773,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
 
       viol = SCIPgetRowprepViolation(scip, rowprep, sol);
 
-      if( viol <= 0 )
+      if( viol <= 0.0 )
          goto CLEANUP;
 
       SCIPmergeRowprepTerms(scip, rowprep);
@@ -835,8 +838,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrsepaHdlrQuadratic, NULL);
-
-   /* TODO: create and store expression specific data here */
 
    return SCIP_OKAY;
 }
