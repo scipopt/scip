@@ -221,8 +221,7 @@ SCIP_RETCODE checkProperQuadratic(
 static
 SCIP_RETCODE checkCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
-   SCIP_CONSEXPR_EXPRENFO_METHOD* provided   /**< buffer to store which enfo methods are provided by the nlhandler */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< nlhdlr expression data */
    )
 {
    SCIP_HASHMAP* var2matrix;
@@ -233,7 +232,8 @@ SCIP_RETCODE checkCurvature(
    int n;
    int i;
 
-   *provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   nlhdlrexprdata->curvature = SCIP_EXPRCURV_UNKNOWN;
+
    n  = nlhdlrexprdata->nquadvars;
    nn = n * n;
 
@@ -306,12 +306,10 @@ SCIP_RETCODE checkCurvature(
    /* check convexity */
    if( !SCIPisNegative(scip, alleigval[0]) )
    {
-      *provided = SCIP_CONSEXPR_EXPRENFO_SEPAUNDER;
       nlhdlrexprdata->curvature = SCIP_EXPRCURV_CONVEX;
    }
    else if( !SCIPisPositive(scip, alleigval[n-1]) )
    {
-      *provided = SCIP_CONSEXPR_EXPRENFO_SEPAOVER;
       nlhdlrexprdata->curvature = SCIP_EXPRCURV_CONCAVE;
    }
 
@@ -494,10 +492,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(provided != NULL);
+   assert(enforcemethods != NULL);
+   assert(enforcedbelow != NULL);
+   assert(enforcedabove != NULL);
+   assert(success != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   *provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   *success = FALSE;
+
+   /* don't check if enforcement is already ensured */
+   if( *enforcedbelow && *enforcedabove )
+      return SCIP_OKAY;
 
    /* if it is not a sum of at least two terms, it cannot be a proper quadratic expressions */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
@@ -619,13 +624,27 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    SCIPhashmapFree(&varidx);
 
    /* check curvature of quadratic function stored in nlexprdata */
-   SCIP_CALL( checkCurvature(scip, nlexprdata, provided) );
+   SCIP_CALL( checkCurvature(scip, nlexprdata) );
 
-   /* if we can't handle this expression, free data
-    * TODO it would be good if one could now undo the creation of auxvars above
-    */
-   if( *provided == SCIP_CONSEXPR_EXPRENFO_NONE )
+   if( nlexprdata->curvature == SCIP_EXPRCURV_CONVEX )
    {
+      /* we will estimate the expression from below, that is handle expr <= auxvar */
+      *enforcedbelow = TRUE;
+      *success = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+   }
+   else if( nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
+   {
+      /* we will estimate the expression from above, that is handle expr >= auxvar */
+      *enforcedabove = TRUE;
+      *success = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   }
+   else
+   {
+      /* we can't handle this expression, free data
+       * TODO it would be good if one could now undo the creation of auxvars above
+       */
       SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
    }
 

@@ -110,6 +110,9 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <x>", NULL, &expr) );
@@ -118,8 +121,15 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, SCIP_CONSEXPR_EXPRENFO_ALL, &provided, &nlhdlrexprdata) );
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPAUNDER, "expecting sepaunder got %d\n", provided);
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow got %d\n", provided);
+   cr_assert(enforcebelow);
+   cr_assert(!enforceabove);
+   cr_assert(success);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nlinvars, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->nlinvars);
@@ -155,6 +165,8 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* expexpr;
    SCIP_CONS* cons;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
    SCIP_Bool success;
 
    /* create expression, simplify it and find common subexpressions*/
@@ -178,8 +190,15 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expexpr)), "exp", "expecting exp got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expexpr)));
    /* detect */
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, SCIP_CONSEXPR_EXPRENFO_ALL, &provided, &nlhdlrexprdata) );
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPAUNDER);
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow got %d\n", provided);
+   cr_assert(enforcebelow);
+   cr_assert(!enforceabove);
+   cr_assert(success);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nlinvars, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->nlinvars);
@@ -321,6 +340,9 @@ Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <y>^2 + <w>*<z>", NULL, &expr) );
@@ -329,10 +351,17 @@ Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, SCIP_CONSEXPR_EXPRENFO_ALL, &provided, &nlhdlrexprdata) );
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
 
    /* shouldn't have detected anything -> provides nothing */
    cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_assert(!enforcebelow);
+   cr_assert(!enforceabove);
+   cr_assert(!success);
    cr_expect_null(nlhdlrexprdata);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

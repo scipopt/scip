@@ -436,9 +436,9 @@ typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 /** @} */
 
 #define SCIP_CONSEXPR_EXPRENFO_NONE           0x0u /**< no enforcement */
-#define SCIP_CONSEXPR_EXPRENFO_SEPAUNDER      0x1u /**< separates for expr <= auxvar, thus might underestimate expr */
-#define SCIP_CONSEXPR_EXPRENFO_SEPAOVER       0x2u /**< separates for expr >= auxvar, thus might overestimate expr */
-#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPAUNDER | SCIP_CONSEXPR_EXPRENFO_SEPAOVER)  /**< separates for expr == auxvar */
+#define SCIP_CONSEXPR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
+#define SCIP_CONSEXPR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
+#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
 #define SCIP_CONSEXPR_EXPRENFO_ALL            SCIP_CONSEXPR_EXPRENFO_SEPABOTH  /**< all enforcement methods */
 
 /** type for exprenfo bitflags */
@@ -512,11 +512,42 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 
 /** callback to detect structure in expression tree
  *
+ * The nonlinear handler shall analyze the current expression and decide whether it wants to contribute
+ * in enforcing the relation between this expression (expr) and its auxiliary variable (auxvar).
+ * We distinguish the relations expr <= auxvar (denoted as "below") and expr >= auxvar (denoted as "above").
+ * Parameters enforcedbelow and enforcedabove indicate on input whether nonlinear handlers for these
+ * relations already exist, or none is necessary.
+ * Parameter enforcemethods indicates on input which enforcement methods are already provided by some
+ * nonlinear handler.
+ *
+ * If the detect callback decides to become active at an expression, it shall
+ * - set enforcedbelow to TRUE if it will enforce expr <= auxvar
+ * - set enforcedabove to TRUE if it will enforce expr >= auxvar
+ * - signal the enforcement methods it aims to provide by setting the corresponding bit in enforcemethods
+ * - set success to TRUE
+ *
+ * A nonlinear handler can also return TRUE in success if it will not enforce any relation between expr and auxvar.
+ * This can be useful for nonlinear handlers that do not implement a complete enforcement, e.g.,
+ * a handler that only contributes cutting planes in some situations.
+ * Note, that all (non-NULL) enforcement callbacks of the nonlinear handler are potentially called,
+ * not only those that are signaled via enforcemethods.
+ *
+ * A nonlinear handler can still enforce if both enforcedbelow and enforcedabove are TRUE on input.
+ * For example, another nonlinear handler may implement propagation and branching, while this handler could
+ * provide separation. In this case, the detect callback should update the enforcemethods argument and
+ * set success to TRUE.
+ *
+ * If a nonlinear handler decides to become active in an expression (success == TRUE), then it shall
+ * create auxiliary variables for those subexpressions where they will be required.
+ *
  * - scip SCIP data structure
  * - conshdlr expr-constraint handler
  * - nlhdlr nonlinear handler
  * - expr expression to analyze
- * - success buffer to return whether a nlhdlr specific structure has been found
+ * - enforcemethods enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
+ * - enforcedbelow indicates whether an enforcement method for expr <= auxvar exists (to be updated by detect callback) or is not necessary
+ * - enforcedabove indicates whether an enforcement method for expr >= auxvar exists (to be updated by detect callback) or is not necessary
+ * - success buffer to store whether the nonlinear handler should be called for this expression
  * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRDETECT(x) SCIP_RETCODE x (\
@@ -524,8 +555,10 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPR_EXPRENFO_METHOD desired, \
-   SCIP_CONSEXPR_EXPRENFO_METHOD* provided, \
+   SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods, \
+   SCIP_Bool* enforcedbelow, \
+   SCIP_Bool* enforcedabove, \
+   SCIP_Bool* success, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** separation initialization method of a nonlinear handler (called during CONSINITLP)
