@@ -529,6 +529,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  * A nonlinear handler can also return TRUE in success if it will not enforce any relation between expr and auxvar.
  * This can be useful for nonlinear handlers that do not implement a complete enforcement, e.g.,
  * a handler that only contributes cutting planes in some situations.
+ * Note, that all (non-NULL) enforcement callbacks of the nonlinear handler are potentially called,
+ * not only those that are signaled via enforcemethods.
  *
  * A nonlinear handler can still enforce if both enforcedbelow and enforcedabove are TRUE on input.
  * For example, another nonlinear handler may implement propagation and branching, while this handler could

@@ -263,7 +263,6 @@ typedef struct
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess;   /**< buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /**< buffer for exprdata of nlhdlrs */
-   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrssuccessprovided; /**< buffer for methods provided by nlhdlrs */
 } NLHDLR_DETECT_DATA;
 
 /*
@@ -3790,7 +3789,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );  /*lint !e866 */
       expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
       expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
-      expr->enfos[e]->methods = detectdata->nlhdlrssuccessprovided[e];
       expr->enfos[e]->issepainit = FALSE;
    }
    expr->nenfos = nsuccess;
@@ -3824,7 +3822,6 @@ SCIP_RETCODE detectNlhdlrs(
    /* allocate some buffer for temporary storage of nlhdlr detect result */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessprovided, conshdlrdata->nnlhdlrs) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -3880,7 +3877,6 @@ SCIP_RETCODE detectNlhdlrs(
       }
    }
 
-   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessprovided);
    SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata);
    SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess);
 
@@ -3968,14 +3964,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
    {
       assert(expr->enfos[e] != NULL);
 
-      /* if nlhdlr will not separate, then don't init separation */
-      if( (expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
-         continue;
-
       nlhdlr = expr->enfos[e]->nlhdlr;
       assert(nlhdlr != NULL);
 
-      /* even if the nlhdlr provides separation, it does not need to have an initsepa callback */
+      /* only init sepa if there is an initsepa callback */
       if( nlhdlr->initsepa == NULL )
          continue;
 
@@ -4062,13 +4054,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       {
          SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
-         /* skip nlhdlrs that do not provide separation */
-         if( (expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
-            continue;
-
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
-         assert(nlhdlr->sepa != NULL);
+
+         /* skip nlhdlr that does not have a sepa callback */
+         if( nlhdlr->sepa == NULL )
+            continue;
 
          /* call the separation callback of the nonlinear handler */
          SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol, sepadata->minviolation, separated, &separesult, &ncuts) );
