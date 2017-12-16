@@ -40,6 +40,7 @@
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_cos.h"
 #include "scip/cons_expr_nlhdlr_default.h"
+#include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -1195,10 +1196,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
             SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
             SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
          }
-         else if( strcmp(type, "prod") == 0 )
-         {
-            SCIPinfoMessage(scip, NULL, "%*s   \n", nspaces, "");
-         }
          break;
       }
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
@@ -1423,19 +1420,22 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *
  * Different type expressions:
  * OR6: u value, v other: u < v always
- * OR9: u sum, v var or func: u < v <=> u < 0+v
+ * OR7: u sum, v var or func: u < v <=> u < 0+v
  *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
- * OR7: u product, v pow, sum, var or func: u < v <=> u < 1*v
+ * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
  *      In other words, u = \Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
  *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
  *             do *not* have constant coefficients
- * OR8: u pow, v sum, var or func: u < v <=> u < v^1
+ * OR9: u pow, v sum, var or func: u < v <=> u < v^1
  * OR10: u var, v func: u < v always
  * OR11: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
  * OR12: none of the rules apply: u < v <=> ! v < u
  * Examples:
  * OR12: x < x^2 ?:  x is var and x^2 product, so none applies.
  *       Hence, we try to answer x^2 < x ?: x^2 < x <=> x < x or if x = x and 2 < 1 <=> 2 < 1 <=> False, so x < x^2 is True
+ *       x < x^-1 --OR12--> ~(x^-1 < x) --OR9--> ~(x^-1 < x^1) --OR4--> ~(x < x or -1 < 1) --> ~True --> False
+ *       x*y < x --OR8--> x*y < 1*x --OR3--> y < x --OR2--> False
+ *       x*y < y --OR8--> x*y < 1*y --OR3--> y < x --OR2--> False
  *
  * Algorithm
  * ^^^^^^^^^
@@ -7723,6 +7723,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* include default nonlinear handler */
    SCIP_CALL( SCIPincludeConsExprNlhdlrDefault(scip, conshdlr) );
+
+   /* include nonlinear handler for quadratics */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrQuadratic(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
