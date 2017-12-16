@@ -38,12 +38,19 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(provided != NULL);
+   assert(enforcemethods != NULL);
+   assert(enforcedbelow != NULL);
+   assert(enforcedabove != NULL);
+   assert(success != NULL);
 
-   *provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   *success = FALSE;
 
-   /* return sepa possibility if exprhdlr for expr has a sepa callback and separation is still desired */
-   if( (desired & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != 0 && SCIPgetConsExprExprHdlr(expr)->sepa != NULL )
+   /* if enforcement is already ensured, then do nothing */
+   if( *enforcedbelow && *enforcedabove )
+      return SCIP_OKAY;
+
+   /* return sepa possibility if exprhdlr for expr has a sepa callback */
+   if( SCIPgetConsExprExprHdlr(expr)->sepa != NULL )
    {
       /* make sure that an (auxiliary) variable exists for every child */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -52,7 +59,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
       }
 
-      *provided = *provided | SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      /* communicate back what the nlhdlr will do
+       * - it will enforce via separation
+       * - it will enforce from both below and above
+       * - it needs to be called for this expression
+       */
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      *enforcedbelow = TRUE;
+      *enforcedabove = TRUE;
+      *success = TRUE;
    }
 
    return SCIP_OKAY;
