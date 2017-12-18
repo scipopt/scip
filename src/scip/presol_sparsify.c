@@ -280,7 +280,7 @@ SCIP_RETCODE cancelRow(
 
             scale = -rowvarpair.varcoef1 / eqrowvarpair->varcoef1;
 
-            if( scale > MAXSCALE )
+            if( REALABS(scale) > MAXSCALE )
                continue;
 
             a = 0;
