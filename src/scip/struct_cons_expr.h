@@ -144,7 +144,6 @@ struct SCIP_ConsExpr_ExprEnfo
 {
    SCIP_CONSEXPR_NLHDLR*         nlhdlr;          /**< nonlinear handler */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;  /**< data of nonlinear handler */
-   SCIP_CONSEXPR_EXPRENFO_METHOD methods;         /**< the enforcement methods implemented by the handler */
    SCIP_Bool                     issepainit;      /**< was the initsepa callback of nlhdlr called */
 };
 

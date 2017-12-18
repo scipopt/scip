@@ -133,10 +133,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(success != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(enforcemethods != NULL);
+   assert(enforcedbelow != NULL);
+   assert(enforcedabove != NULL);
+   assert(success != NULL);
 
    *success = FALSE;
+
+   /* if already enforced by separation, then nothing we would contribute here */
+   if( *enforcedbelow && *enforcedabove && (*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) )
+      return SCIP_OKAY;
 
    /* only look at sum expressions */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
@@ -291,6 +298,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    else
       return SCIP_OKAY; /* indefinite */
 
+   /* communicate that we will enforce by separation */
+   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+   *enforcedbelow = TRUE;
+   *enforcedabove = TRUE;
    *success = TRUE;
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 

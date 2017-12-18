@@ -40,6 +40,7 @@
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_cos.h"
 #include "scip/cons_expr_nlhdlr_default.h"
+#include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -1201,10 +1202,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
             SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
             SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
          }
-         else if( strcmp(type, "prod") == 0 )
-         {
-            SCIPinfoMessage(scip, NULL, "%*s   \n", nspaces, "");
-         }
          break;
       }
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
@@ -1429,19 +1426,22 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *
  * Different type expressions:
  * OR6: u value, v other: u < v always
- * OR9: u sum, v var or func: u < v <=> u < 0+v
+ * OR7: u sum, v var or func: u < v <=> u < 0+v
  *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
- * OR7: u product, v pow, sum, var or func: u < v <=> u < 1*v
+ * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
  *      In other words, u = \Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
  *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
  *             do *not* have constant coefficients
- * OR8: u pow, v sum, var or func: u < v <=> u < v^1
+ * OR9: u pow, v sum, var or func: u < v <=> u < v^1
  * OR10: u var, v func: u < v always
  * OR11: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
  * OR12: none of the rules apply: u < v <=> ! v < u
  * Examples:
  * OR12: x < x^2 ?:  x is var and x^2 product, so none applies.
  *       Hence, we try to answer x^2 < x ?: x^2 < x <=> x < x or if x = x and 2 < 1 <=> 2 < 1 <=> False, so x < x^2 is True
+ *       x < x^-1 --OR12--> ~(x^-1 < x) --OR9--> ~(x^-1 < x^1) --OR4--> ~(x < x or -1 < 1) --> ~True --> False
+ *       x*y < x --OR8--> x*y < 1*x --OR3--> y < x --OR2--> False
+ *       x*y < y --OR8--> x*y < 1*y --OR3--> y < x --OR2--> False
  *
  * Algorithm
  * ^^^^^^^^^
@@ -3634,13 +3634,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       {
          SCIP_CALL( (*expr->exprhdlr->brscore)(scip, expr, brscoredata->sol, &violation) );
       }
-      else
+      else if( SCIPgetConsExprExprLinearizationVar(expr) != NULL )
       {
          /* define |f(x*) - z*| as the violation if the branch score callback does not have been implemented where f is
           * the expression, x* solution values of original variables, and z* be the solution value of the linearization
           * variable attached to expression f
           */
-         assert(SCIPgetConsExprExprLinearizationVar(expr) != NULL);
          violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol,SCIPgetConsExprExprLinearizationVar(expr))
             - expr->evalvalue);
       }
@@ -3787,6 +3786,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    NLHDLR_DETECT_DATA* detectdata;
+   SCIP_Bool enforcedbelow;
+   SCIP_Bool enforcedabove;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethods;
+   SCIP_Bool nlhdlrenforcedbelow;
+   SCIP_Bool nlhdlrenforcedabove;
+   SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrenforcemethods;
+   SCIP_Bool success;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
    int nsuccess;
    int e, h;
 
@@ -3826,44 +3833,70 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
 
       return SCIP_OKAY;
    }
-
-   /* analyze expression with nonlinear handlers */
    assert(expr->enfos == NULL);
+
+   /* analyze expression with nonlinear handlers
+    * we start with no enforcement methods and requiring enforcement from below and above
+    * (change the latter when we have better locks and have to enforce inequalities only)
+    */
    nsuccess = 0;
+   enforcemethods = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcedbelow = FALSE;
+   enforcedabove = FALSE;
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
-      SCIP_Bool success = FALSE;
 
       nlhdlr = conshdlrdata->nlhdlrs[h];
       assert(nlhdlr != NULL);
       assert(nlhdlr->detect != NULL); /* detect callback is mandatory */
 
       /* call detect routine of nlhdlr */
-      detectdata->nlhdlrssuccessexprdata[nsuccess] = NULL;
-      SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &success, &detectdata->nlhdlrssuccessexprdata[nsuccess]) );
+      nlhdlrexprdata = NULL;
+      success = FALSE;
+      nlhdlrenforcemethods = enforcemethods;
+      nlhdlrenforcedbelow = enforcedbelow;
+      nlhdlrenforcedabove = enforcedabove;
+      SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
 
-      if( success )
-      {
-         /* remember nlhdlr and success */
-         detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
-         ++nsuccess;
+      /* detection is only allowed to augment to the various parameters (enforce "more", add "more" methods) */
+      assert(nlhdlrenforcemethods >= enforcemethods);
+      assert(nlhdlrenforcedbelow >= enforcedbelow);
+      assert(nlhdlrenforcedabove >= enforcedabove);
 
-         /* TODO continuing with the next nlhdlr will always call the detection of the default hdlr, eventually -- sometimes, one might want to skip this*/
-      }
-      else
+      if( !success )
       {
-         /* nlhdlrexprdata can be non-NULL only if success is TRUE */
-         assert(detectdata->nlhdlrssuccessexprdata[nsuccess] == NULL);
+         /* nlhdlrexprdata can only be non-NULL if it provided some functionality */
+         assert(nlhdlrexprdata == NULL);
+         assert(nlhdlrenforcemethods == enforcemethods);
+         assert(nlhdlrenforcedbelow == enforcedbelow);
+         assert(nlhdlrenforcedabove == enforcedabove);
+
+         continue;
       }
+
+      /* if the nldhlr enforces, then it must have added at least one enforcement method */
+      assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
+
+      /* remember nlhdlr and its data */
+      detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
+      detectdata->nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
+      ++nsuccess;
+
+      /* update enforcement flags */
+      enforcemethods = nlhdlrenforcemethods;
+      enforcedbelow = nlhdlrenforcedbelow;
+      enforcedabove = nlhdlrenforcedabove;
    }
 
-   if( nsuccess == 0 )
+   /* stop if the expression cannot be enforced
+    * (as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods)
+    */
+   if( !enforcedbelow || !enforcedabove )
    {
-      /* at least the default nlhdlr should have recognized success */
-      SCIPerrorMessage("no nonlinear handler found responsible for expression\n");
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      return SCIP_OKAY;
+      SCIPerrorMessage("no nonlinear handler provided enforcement for expression %s auxvar\n",
+         (!enforcedbelow && !enforcedabove) ? "==" : (!enforcedbelow ? "<=" : ">="));
+      return SCIP_ERROR;
    }
 
    /* copy collected nlhdlrs into expr->enfos */
@@ -3873,7 +3906,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );  /*lint !e866 */
       expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
       expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
-      expr->enfos[e]->methods = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
       expr->enfos[e]->issepainit = FALSE;
    }
    expr->nenfos = nsuccess;
@@ -3927,12 +3959,14 @@ SCIP_RETCODE detectNlhdlrs(
          SCIP_SOL* debugsol;
 
          SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
-         assert(debugsol != NULL);
 
-         /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
-          * in SCIPcreateConsExprExprAuxVar()
-          */
-         SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, debugsol, 0) );
+         if( debugsol != NULL ) /* it can be compiled WITH_DEBUG_SOLUTION, but still no solution given */
+         {
+            /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
+             * in SCIPcreateConsExprExprAuxVar()
+             */
+            SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, debugsol, 0) );
+         }
       }
 #endif
 
@@ -3960,8 +3994,8 @@ SCIP_RETCODE detectNlhdlrs(
       }
    }
 
-   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess);
    SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata);
+   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess);
 
    return SCIP_OKAY;
 }
@@ -4050,6 +4084,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       nlhdlr = expr->enfos[e]->nlhdlr;
       assert(nlhdlr != NULL);
 
+      /* only init sepa if there is an initsepa callback */
       if( nlhdlr->initsepa == NULL )
          continue;
 
@@ -4131,12 +4166,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       ncuts = 0;
       separated = FALSE;
 
-      /* call the separation callbacks of the nonlinear handlers, if any, then the expression handler */
+      /* call the separation callbacks of the nonlinear handlers */
       for( e = 0; e < expr->nenfos; ++e )
       {
          SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
          nlhdlr = expr->enfos[e]->nlhdlr;
+         assert(nlhdlr != NULL);
+
+         /* skip nlhdlr that does not have a sepa callback */
          if( nlhdlr->sepa == NULL )
             continue;
 
@@ -6590,7 +6628,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
    if( (*expr)->nuses == 1 )
    {
-      /* handle the root expr separately: enfodata and expression data here */
+      /* handle the root expr separately: free enfodata and expression data here */
       SCIP_CALL( freeEnfoData(scip, *expr, TRUE) );
 
       if( (*expr)->exprdata != NULL && (*expr)->exprhdlr->freedata != NULL )
@@ -7812,6 +7850,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* include default nonlinear handler */
    SCIP_CALL( SCIPincludeConsExprNlhdlrDefault(scip, conshdlr) );
+
+   /* include nonlinear handler for quadratics */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrQuadratic(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
