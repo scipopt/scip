@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   portab.h
+/**@file   validate.c
  * @brief  Method to validate Steiner problem solutions
  * @author Thorsten Koch
  * @author Gerald Gamrath

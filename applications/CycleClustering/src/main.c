@@ -25,7 +25,12 @@
 #include "scip/scipshell.h"
 #include "scip/message_default.h"
 #include <string.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 #include "cycplugins.h"
 #include "probdata_cyc.h"

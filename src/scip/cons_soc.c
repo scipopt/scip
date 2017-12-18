@@ -3683,7 +3683,9 @@ GENERALUPG:
 
          rhsoffset = bp[i] / (2 * eigvals[i]);
 
-         /* rhs var is going to be a multiaggregated variable, compute rhsvar bounds */
+         /* the constraint can only be a soc if the resulting rhs var does not change var; the rhs var is going to be a
+          * multiaggregated variable, so estimate its bounds
+          */
          rhsvarlb = 0.0;
          rhsvarub = 0.0;
          for( j = 0; j < nquadvars; ++j )
@@ -3735,6 +3737,15 @@ GENERALUPG:
                rhsvarub += a[i * nquadvars + j] * aux;
          }
          rhsvarub += rhsoffset;
+
+         /* since we are just interested in obtaining an interval that contains the real bounds and is tight enough so
+          * that we can identify that the rhsvar does not change sign, we swap the bounds in case of numerical troubles
+          */
+         if( rhsvarub < rhsvarlb )
+         {
+            assert(SCIPisEQ(scip, rhsvarub, rhsvarlb));
+            SCIPswapReals(&rhsvarub, &rhsvarlb);
+         }
 
          /* check whether rhsvar changes sign */
          if( SCIPisGE(scip, rhsvarlb, 0.0) || SCIPisLE(scip, rhsvarub, 0.0) )

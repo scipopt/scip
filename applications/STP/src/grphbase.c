@@ -936,6 +936,26 @@ void graph_pc_2transcheck(
    graph_pc_2trans(graph);
 }
 
+/* returns sum of positive vertex weights */
+SCIP_Real graph_pc_getPosPrizeSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph               /**< the graph */
+   )
+{
+   SCIP_Real prizesum = 0.0;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(graph->prize != NULL);
+   assert(!graph->extended);
+
+   for( int i = 0; i < graph->knots; i++ )
+      if( Is_term(graph->term[i]) && i != graph->source && graph->prize[i] < BLOCKED )
+         prizesum += graph->prize[i];
+
+   return prizesum;
+}
+
 
 /** alters the graph for prize collecting problems */
 SCIP_RETCODE graph_pc_getSap(
@@ -1671,7 +1691,8 @@ SCIP_RETCODE graph_pc_2rmw(
 /** transforms MWCSP to RMWCSP if possible */
 SCIP_RETCODE graph_pc_mw2rmw(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph               /**< the graph */
+   GRAPH*                graph,              /**< the graph */
+   SCIP_Real             prizesum            /**< sum of positive prizes */
    )
 {
    int e;
@@ -1692,7 +1713,7 @@ SCIP_RETCODE graph_pc_mw2rmw(
    while( e != EAT_LAST )
    {
       const int enext = graph->oeat[e];
-      if( SCIPisGE(scip, graph->cost[e], TERMBLOCKED) )
+      if( SCIPisGE(scip, graph->cost[e], prizesum) )
       {
          int e2;
          const int k = graph->head[e];
@@ -1708,7 +1729,7 @@ SCIP_RETCODE graph_pc_mw2rmw(
          assert(e2 == graph->term2edge[k]);
 
          assert(Is_pterm(graph->term[p]));
-         assert(SCIPisGE(scip, graph->prize[p], TERMBLOCKED));
+         assert(SCIPisGE(scip, graph->prize[p], prizesum));
 
          /* delete terminal */
          graph_knot_chg(graph, k, -1);

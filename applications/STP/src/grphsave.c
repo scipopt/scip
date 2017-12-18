@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reduce.c
+/**@file   grphsave.c
  * @brief  Saving routines for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch

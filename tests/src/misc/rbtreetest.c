@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   select.c
- * @brief  unit tests for selection of unweighted and weighted median
+ * @brief  unit tests for red black tree datastructure
  * @author Robert Lion Gottwald
  */
 
