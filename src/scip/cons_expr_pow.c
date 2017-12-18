@@ -886,7 +886,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
 
    if( expisint )
    {
-      SCIP_Bool expisodd = ceil(exponent/2) != exponent/2;
+      SCIP_Bool expisodd = ceil(exponent/2) != exponent/2; /*lint !e777*/
 
       /* ..., x^-3, x^-1, x^1, x^3, ... */
       if( expisodd )
