@@ -21589,59 +21589,6 @@ SCIP_RETCODE SCIPaddVarLocks(
    }  /*lint !e788*/
 }
 
-/** adds given values to soft lock numbers of variable for rounding
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_RETCODE SCIPaddVarLocksSoft(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< problem variable */
-   int                   nlocksdown,         /**< modification in number of rounding down locks */
-   int                   nlocksup            /**< modification in number of rounding up locks */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPaddVarLocksSoft", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-
-   assert( var->scip == scip );
-
-   switch( scip->set->stage )
-   {
-   case SCIP_STAGE_PROBLEM:
-      assert(!SCIPvarIsTransformed(var));
-      /*lint -fallthrough*/
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocksSoft(var, scip->mem->probmem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
-      return SCIP_OKAY;
-
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_INVALIDCALL;
-   }  /*lint !e788*/
-}
-
 /** locks rounding of variable with respect to the lock status of the constraint and its negation;
  *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
  *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
@@ -21717,80 +21664,6 @@ SCIP_RETCODE SCIPlockVarCons(
    }  /*lint !e788*/
 }
 
-/** soft locks rounding of variable with respect to the lock status of the constraint and its negation;
- *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
- *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
- *  added or removed
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_RETCODE SCIPlockVarConsSoft(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
-   SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
-   )
-{
-   int nlocksdown;
-   int nlocksup;
-
-   SCIP_CALL( checkStage(scip, "SCIPlockVarConsSoft", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-
-   assert( var->scip == scip );
-
-   nlocksdown = 0;
-   nlocksup = 0;
-   if( SCIPconsIsLockedPos(cons) )
-   {
-      if( lockdown )
-         nlocksdown++;
-      if( lockup )
-         nlocksup++;
-   }
-   if( SCIPconsIsLockedNeg(cons) )
-   {
-      if( lockdown )
-         nlocksup++;
-      if( lockup )
-         nlocksdown++;
-   }
-
-   switch( scip->set->stage )
-   {
-   case SCIP_STAGE_PROBLEM:
-      assert(!SCIPvarIsTransformed(var));
-      /*lint -fallthrough*/
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocksSoft(var, scip->mem->probmem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
-      return SCIP_OKAY;
-
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_INVALIDCALL;
-   }  /*lint !e788*/
-}
-
 /** unlocks rounding of variable with respect to the lock status of the constraint and its negation;
  *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
  *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
@@ -21857,79 +21730,6 @@ SCIP_RETCODE SCIPunlockVarCons(
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
       SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, locktype, -nlocksdown, -nlocksup) );
-      return SCIP_OKAY;
-
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_INVALIDCALL;
-   }  /*lint !e788*/
-}
-
-/** unlocks soft rounding of variable with respect to the lock status of the constraint and its negation;
- *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
- *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
- *  added or removed
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_RETCODE SCIPunlockVarConsSoft(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             lockdown,           /**< should the rounding be unlocked in downwards direction? */
-   SCIP_Bool             lockup              /**< should the rounding be unlocked in upwards direction? */
-   )
-{
-   int nlocksdown;
-   int nlocksup;
-
-   SCIP_CALL( checkStage(scip, "SCIPunlockVarConsSoft", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-
-   assert( var->scip == scip );
-
-   nlocksdown = 0;
-   nlocksup = 0;
-   if( SCIPconsIsLockedPos(cons) )
-   {
-      if( lockdown )
-         nlocksdown++;
-      if( lockup )
-         nlocksup++;
-   }
-   if( SCIPconsIsLockedNeg(cons) )
-   {
-      if( lockdown )
-         nlocksup++;
-      if( lockup )
-         nlocksdown++;
-   }
-
-   switch( scip->set->stage )
-   {
-   case SCIP_STAGE_PROBLEM:
-      assert(!SCIPvarIsTransformed(var));
-      /*lint -fallthrough*/
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocksSoft(var, scip->mem->probmem, scip->set, scip->eventqueue, -nlocksdown, -nlocksup) );
       return SCIP_OKAY;
 
    default:
@@ -28760,36 +28560,6 @@ SCIP_RETCODE SCIPaddConsLocks(
    SCIP_CALL( checkStage(scip, "SCIPaddConsLocks", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    SCIP_CALL( SCIPconsAddLocks(cons, scip->set, nlockspos, nlocksneg) );
-
-   return SCIP_OKAY;
-}
-
-/** adds given values to softlock status of the constraint and updates the rounding softlocks of the involved variables
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_RETCODE SCIPaddConsLocksSoft(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   int                   nlockspos,          /**< increase in number of rounding locks for constraint */
-   int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPaddConsLocksSoft", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-
-   SCIP_CALL( SCIPconsAddLocksSoft(cons, scip->set, nlockspos, nlocksneg) );
 
    return SCIP_OKAY;
 }

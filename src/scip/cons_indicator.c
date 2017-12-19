@@ -6458,7 +6458,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
 
    if( softlock )
    {
-      SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->binvar, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, SCIP_LOCKTYPE_CONFLICT, nlocksneg, nlockspos) );
    }
    else
    {
@@ -6471,7 +6471,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
 
       if( softlock )
       {
-         SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->slackvar, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, SCIP_LOCKTYPE_CONFLICT, nlocksneg, nlockspos) );
       }
       else
       {
@@ -6505,7 +6505,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
             {
                if( softlock )
                {
-                  SCIP_CALL( SCIPaddVarLocksSoft(scip, linvars[j], nlockspos, nlocksneg) );
+                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], SCIP_LOCKTYPE_CONFLICT, nlockspos, nlocksneg) );
                }
                else
                {
@@ -6516,7 +6516,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
             {
                if( softlock )
                {
-                  SCIP_CALL( SCIPaddVarLocksSoft(scip, linvars[j], nlocksneg, nlockspos) );
+                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], SCIP_LOCKTYPE_CONFLICT, nlocksneg, nlockspos) );
                }
                else
                {
@@ -6530,7 +6530,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
             {
                if( softlock )
                {
-                  SCIP_CALL( SCIPaddVarLocksSoft(scip, linvars[j], nlocksneg, nlockspos) );
+                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], SCIP_LOCKTYPE_CONFLICT, nlocksneg, nlockspos) );
                }
                else
                {
@@ -6541,7 +6541,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
             {
                if( softlock )
                {
-                  SCIP_CALL( SCIPaddVarLocksSoft(scip, linvars[j], nlockspos, nlocksneg) );
+                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], SCIP_LOCKTYPE_CONFLICT, nlockspos, nlocksneg) );
                }
                else
                {

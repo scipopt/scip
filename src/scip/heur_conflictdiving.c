@@ -256,8 +256,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    nlocksup = SCIPvarGetNLocksUp(cand);
    nlocksdown = SCIPvarGetNLocksDown(cand);
 
-   nconflictlocksup = SCIPvarGetNLocksSoftUp(cand);
-   nconflictlocksdown = SCIPvarGetNLocksSoftDown(cand);
+   nconflictlocksup = SCIPvarGetNConflictLocksUp(cand);
+   nconflictlocksdown = SCIPvarGetNConflictLocksDown(cand);
 
    softlocksum = nconflictlocksup + nconflictlocksdown;
    locksum = nlocksdown + nlocksup;

@@ -58,21 +58,21 @@ int SCIPvarGetNLocksDown(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets number of softlocks for rounding down */
-EXTERN
-int SCIPvarGetNLocksSoftDown(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 /** gets number of locks for rounding up */
 EXTERN
 int SCIPvarGetNLocksUp(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets number of softlocks for rounding up */
+/** gets number of conflict locks for rounding down */
 EXTERN
-int SCIPvarGetNLocksSoftUp(
+int SCIPvarGetNConflictLocksDown(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets number of conflict locks for rounding up */
+EXTERN
+int SCIPvarGetNConflictLocksUp(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

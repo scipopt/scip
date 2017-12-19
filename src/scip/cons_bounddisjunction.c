@@ -2720,7 +2720,7 @@ SCIP_DECL_CONSLOCK(consLockBounddisjunction)
       {
          if( softlock )
          {
-            SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlockspos, nlocksneg) );
          }
          else
          {
@@ -2731,7 +2731,7 @@ SCIP_DECL_CONSLOCK(consLockBounddisjunction)
       {
          if( softlock )
          {
-            SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlocksneg, nlockspos) );
          }
          else
          {
