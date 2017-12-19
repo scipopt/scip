@@ -631,10 +631,28 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    else
    {
-      /* we can't handle this expression, free data
-       * TODO it would be good if one could now undo the creation of auxvars above
-       */
+      /* we can't handle this expression, free data */
       SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
+      return SCIP_OKAY;
+   }
+
+   {
+      int i;
+
+      /* create auxiliary variables for all expressions stored in nlhdlrexprdata */
+      for( i = 0; i < nlexprdata->nlinexprs; ++i ) /* expressions appearing linearly */
+      {
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexprdata->linexprs[i], NULL) );
+      }
+      for( i = 0; i < nlexprdata->nquadexprs; ++i ) /* quadratic terms */
+      {
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexprdata->quadexprterms[i].expr, NULL) );
+      }
+      for( i = 0; i < nlexprdata->nbilinexprterms; ++i ) /* bilinear terms */
+      {
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexprdata->bilinexprterms[i].expr1, NULL) );
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexprdata->bilinexprterms[i].expr2, NULL) );
+      }
    }
 
    return SCIP_OKAY;
