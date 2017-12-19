@@ -118,6 +118,7 @@ struct SCIP_ConsExpr_Expr
 
    /* monotonicity information of each child */
    SCIP_MONOTONE*          monotonicity;  /**< array containing monotonicity of expression w.r.t. each children */
+   int                     monotonicitysize;
 };
 
 /** generic data and callback methods of an nonlinear handler */

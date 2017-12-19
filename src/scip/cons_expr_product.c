@@ -1953,7 +1953,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(result != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) > 1);
+   assert(SCIPgetConsExprExprNChildren(expr) >= 1);
    assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
 
    coef = SCIPgetConsExprExprProductCoef(expr);
