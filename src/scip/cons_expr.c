@@ -1117,22 +1117,70 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 {
-   EXPRLOCK_DATA* lockdata;
+   SCIP_CONSEXPR_EXPRHDLR* varhdlr;
+   int ncurrlockspos;
+   int ncurrlocksneg;
+   int nlockspos;
+   int nlocksneg;
+   int i;
 
    assert(expr != NULL);
    assert(data != NULL);
    assert(result != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
 
-   lockdata = (EXPRLOCK_DATA*)data;
+   varhdlr = (SCIP_CONSEXPR_EXPRHDLR*)data;
+   assert(varhdlr != NULL);
 
-   expr->nlockspos += lockdata->nlockspos;
-   expr->nlocksneg += lockdata->nlocksneg;
+   /* get locks of the current expression */
+   ncurrlockspos = expr->walkio.intvals[0];
+   ncurrlocksneg = expr->walkio.intvals[1];
+   assert(ncurrlockspos != 0 || ncurrlocksneg != 0);
 
-   if( SCIPgetConsExprExprHdlr(expr) == lockdata->exprvarhdlr )
+   /* add locks to expression */
+   expr->nlockspos += ncurrlockspos;
+   expr->nlocksneg += ncurrlocksneg;
+
+   if( SCIPgetConsExprExprHdlr(expr) == varhdlr )
    {
-      /* if a variable, then also add nlockspos/nlocksneg from lockdata via SCIPaddVarLocks() */
-      SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), lockdata->nlockspos, lockdata->nlocksneg) );
+      /* if a variable, then also add nlockspos/nlocksneg via SCIPaddVarLocks() */
+      SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), ncurrlockspos, ncurrlocksneg) );
+   }
+
+   /* set locks of all children */
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_MONOTONE monotonicity;
+
+      /* get monotonicity of child */
+      monotonicity = SCIPgetMonotonicityExprExpr(expr, i);
+
+      /* compute resulting locks of the child expression */
+      switch( monotonicity )
+      {
+         case SCIP_MONOTONE_INC:
+            nlockspos = ncurrlockspos;
+            nlocksneg = ncurrlocksneg;
+            break;
+         case SCIP_MONOTONE_DEC:
+            nlockspos = ncurrlocksneg;
+            nlocksneg = ncurrlockspos;
+            break;
+         case SCIP_MONOTONE_UNKNOWN:
+            nlockspos = ncurrlockspos + ncurrlocksneg;
+            nlocksneg = ncurrlockspos + ncurrlocksneg;
+            break;
+         case SCIP_MONOTONE_CONST:
+            nlockspos = 0;
+            nlocksneg = 0;
+            break;
+      }
+
+      /* store locks in the IO data of each child */
+      child = SCIPgetConsExprExprChildren(expr)[i];
+      child->walkio.intvals[0] = nlockspos;
+      child->walkio.intvals[1] = nlocksneg;
    }
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -2676,7 +2724,7 @@ SCIP_RETCODE propagateLocks(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   EXPRLOCK_DATA lockdata;
+   int oldintvals[2];
 
    assert(expr != NULL);
 
@@ -2687,11 +2735,22 @@ SCIP_RETCODE propagateLocks(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   lockdata.exprvarhdlr = SCIPgetConsExprExprHdlrVar(conshdlr);
-   lockdata.nlockspos = nlockspos;
-   lockdata.nlocksneg = nlocksneg;
+   /* remember old IO data */
+   oldintvals[0] = expr->walkio.intvals[0];
+   oldintvals[1] = expr->walkio.intvals[1];
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, NULL, NULL, NULL, &lockdata) );
+   /* store locks in root node */
+   expr->walkio.intvals[0] = nlockspos;
+   expr->walkio.intvals[1] = nlocksneg;
+
+   assert(nlockspos != 0 || nlocksneg != 0);
+
+   /* propagate locks */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, NULL, NULL, NULL, (void*)SCIPgetConsExprExprHdlrVar(conshdlr)) );
+
+   /* restore old IO data */
+   expr->walkio.intvals[0] = oldintvals[0];
+   expr->walkio.intvals[1] = oldintvals[1];
 
    return SCIP_OKAY;
 }
@@ -5385,15 +5444,12 @@ SCIP_DECL_CONSRESPROP(consRespropExpr)
 static
 SCIP_DECL_CONSLOCK(consLockExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   EXPRLOCK_DATA lockdata;
+   int npos;
+   int nneg;
 
    assert(conshdlr != NULL);
    assert(cons != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5401,15 +5457,21 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    if( consdata->expr == NULL )
       return SCIP_OKAY;
 
-   lockdata.exprvarhdlr = conshdlrdata->exprvarhdlr;
-   lockdata.nlockspos = nlockspos + nlocksneg;
-   lockdata.nlocksneg = nlockspos + nlocksneg;
+   npos = !SCIPisInfinity(scip, consdata->rhs) ? nlockspos + nlocksneg : 0;
+   nneg = !SCIPisInfinity(scip, -consdata->lhs) ? nlockspos + nlocksneg : 0;
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, lockVar, NULL, NULL, NULL, &lockdata) );
+   /* compute monotonicity information if not done so far */
+   if( consdata->expr->monotonicity == NULL )
+   {
+      SCIP_CALL( SCIPcomputeMonotonicityExprExpr(scip, consdata->expr) );
+   }
+
+   /* propagate locks */
+   SCIP_CALL( propagateLocks(scip, consdata->expr, npos, nneg) );
 
    /* remember how the constraint was locked */
-   consdata->nlockspos += nlockspos + nlocksneg;
-   consdata->nlocksneg += nlockspos + nlocksneg;
+   consdata->nlockspos += npos;
+   consdata->nlocksneg += nneg;
 
    return SCIP_OKAY;
 }

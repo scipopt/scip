@@ -406,6 +406,7 @@ typedef union
 {
    SCIP_Real             realval;            /**< a floating-point value */
    int                   intval;             /**< an integer value */
+   int                   intvals[2];         /**< two integer values */
    void*                 ptrval;             /**< a pointer */
 } SCIP_CONSEXPREXPRWALK_IO;
 
