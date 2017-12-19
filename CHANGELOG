@@ -174,7 +174,7 @@ new parameters:
   binary and non-binary variables
 - new parameter "conflict/sepaaltproofs"
 - new parameters "separating/maxlocalbounddist", "separating/maxcoefratio", and "separating/intsupportfac"
-- new parameter "separating/maxincround"
+- new parameter "separating/maxincrounds"
 - new parameters "constraints/quadratic/{usebilinineqbranch,minscorebilinterms,bilinineqmaxseparounds}"
 - new parameter "constraints/indicator/maxsepanonviolated" to stop separation after separation of non violated cuts
 - new parameter "heuristics/{clique,vbounds}/maxbacktracks" to limit the number of backtracks in the fix-and-propagate phase
