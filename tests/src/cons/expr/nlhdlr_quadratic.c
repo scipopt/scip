@@ -185,7 +185,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
 
-   /* get exp expression */
+   /* get exponential expression */
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 3);
    expexpr = SCIPgetConsExprExprChildren(expr)[1]; /*  x * exp(x^2 y) */
    expexpr = SCIPgetConsExprExprChildren(expexpr)[1]; /* exp(x^2 y) */
@@ -216,12 +216,14 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
-   /* auxiliary var for exp(x^2 y) */
+   /* expr exp(x^2 y) is quadratic */
    quad = nlhdlrexprdata->quadexprterms[1];
    cr_assert_not_null(quad.expr);
    cr_expect_eq(expexpr, quad.expr, "Expecting expr %p in quad term, got %p\n", expexpr, quad.expr);
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
+   cr_expect_not_null(SCIPgetConsExprExprLinearizationVar(quad.expr), "exp expr should have auxiliary variable!\n");
+
 
    SCIP_BILINEXPRTERM bilin;
    bilin = nlhdlrexprdata->bilinexprterms[0];
@@ -268,7 +270,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
 
-   /* expr is exp expr */
+   /* expr is exponential expr */
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 1);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp", "expecting exp got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
@@ -367,6 +369,45 @@ Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
    cr_assert(!enforceabove);
    cr_assert(!success);
    cr_expect_null(nlhdlrexprdata);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* log^2 x + sin^2 y + cos^2 z should not be handled by this nlhandler */
+Test(nlhdlrquadratic, noproperquadratic2, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success;
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x>)^2 + sin(<y>)^2 + cos(<z>)^2", NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
+
+   /* detect */
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+
+   /* shouldn't have detected anything -> provides nothing */
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_assert(!enforcebelow);
+   cr_assert(!enforceabove);
+   cr_assert(!success);
+   cr_expect_null(nlhdlrexprdata);
+
+   /* no auxiliary variables */
+   cr_expect_eq(3, SCIPgetConsExprExprNChildren(expr));
+   for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); i++ )
+      cr_expect_null(SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[i]));
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
