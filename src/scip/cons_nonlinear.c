@@ -325,11 +325,11 @@ SCIP_RETCODE lockLinearVariable(
 
    if( coef > 0.0 )
    {
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
    }
    else
    {
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -356,11 +356,11 @@ SCIP_RETCODE unlockLinearVariable(
 
    if( coef > 0.0 )
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
    }
    else
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -817,7 +817,7 @@ SCIP_DECL_EXPRGRAPHVARADDED( exprgraphVarAdded )
       );
    SCIPexprgraphSetVarNodeBounds(exprgraph, varnode, varbounds);
 
-   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, 1, 1) );
+   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, 1, 1) );
    SCIPdebugMessage("increased up- and downlocks of variable <%s>\n", SCIPvarGetName(var_));
 
    SCIP_CALL( SCIPcaptureVar(conshdlrdata->scip, var_) );
@@ -849,7 +849,7 @@ SCIP_DECL_EXPRGRAPHVARREMOVE( exprgraphVarRemove )
    SCIP_CALL( SCIPdropVarEvent(conshdlrdata->scip, var_, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, conshdlrdata->nonlinvareventhdlr, (SCIP_EVENTDATA*)varnode, -1) );
    SCIPdebugMessage("drop boundchange events on expression graph variable <%s>\n", SCIPvarGetName(var_));
 
-   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, -1, -1) );
+   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, -1, -1) );
    SCIPdebugMessage("decreased up- and downlocks of variable <%s>\n", SCIPvarGetName(var_));
 
    SCIPdebugMessage("release variable <%s>\n", SCIPvarGetName(var_));
@@ -8309,22 +8309,22 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
       {
          if( havelhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
          }
          if( haverhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( havelhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
          }
          if( haverhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
          }
       }
    }

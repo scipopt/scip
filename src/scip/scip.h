@@ -8583,6 +8583,7 @@ EXTERN
 SCIP_RETCODE SCIPaddVarLocks(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    int                   nlocksdown,         /**< modification in number of rounding down locks */
    int                   nlocksup            /**< modification in number of rounding up locks */
    );
@@ -8637,6 +8638,7 @@ SCIP_RETCODE SCIPlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
    SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
    );
@@ -8693,6 +8695,7 @@ SCIP_RETCODE SCIPunlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
    SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
    );

@@ -156,7 +156,7 @@ SCIP_RETCODE lockRounding(
    )
 {
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -170,7 +170,7 @@ SCIP_RETCODE unlockRounding(
    )
 {
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -4610,12 +4610,12 @@ SCIP_DECL_CONSLOCK(consLockAnd)
    assert(consdata != NULL);
 
    /* resultant variable */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->resvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocks(scip, consdata->resvar, SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* operand variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

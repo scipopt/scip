@@ -160,12 +160,12 @@ SCIP_RETCODE lockRounding(
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
    {
       /* rounding down may violate the constraint */
-      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, TRUE, FALSE) );
+      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
    }
    else
    {
       /* rounding up may violate the constraint */
-      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, FALSE, TRUE) );
+      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -186,12 +186,12 @@ SCIP_RETCODE unlockRounding(
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
    {
       /* rounding down may violate the constraint */
-      SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, TRUE, FALSE) );
+      SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
    }
    else
    {
       /* rounding up may violate the constraint */
-      SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, FALSE, TRUE) );
+      SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -2724,7 +2724,7 @@ SCIP_DECL_CONSLOCK(consLockBounddisjunction)
          }
          else
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
          }
       }
       else
@@ -2735,7 +2735,7 @@ SCIP_DECL_CONSLOCK(consLockBounddisjunction)
          }
          else
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
          }
       }
    }

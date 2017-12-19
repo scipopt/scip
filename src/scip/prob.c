@@ -977,7 +977,7 @@ SCIP_RETCODE SCIPprobAddVar(
       /* set varlocks to ensure that no dual reduction can be performed */
       if( set->reopt_enable || !set->misc_allowdualreds )
       {
-         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, 1, 1) );
+         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_MODEL, 1, 1) );
       }
 
       /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all

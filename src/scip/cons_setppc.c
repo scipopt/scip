@@ -291,15 +291,15 @@ SCIP_RETCODE lockRounding(
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
       /* rounding in both directions may violate the constraint */
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_PACKING:
       /* rounding up may violate the constraint */
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_COVERING:
       /* rounding down may violate the constraint */
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -326,15 +326,15 @@ SCIP_RETCODE unlockRounding(
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
       /* rounding in both directions may violate the constraint */
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_PACKING:
       /* rounding up may violate the constraint */
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_COVERING:
       /* rounding down may violate the constraint */
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -8407,7 +8407,7 @@ SCIP_DECL_CONSLOCK(consLockSetppc)
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksdown, nlocksup) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlocksdown, nlocksup) );
       }
    }
 

@@ -15552,7 +15552,7 @@ SCIP_RETCODE freeTransform(
       /* unlock all variables */
       for(v = 0; v < scip->transprob->nvars; v++)
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], -1, -1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], SCIP_LOCKTYPE_MODEL, -1, -1) );
       }
    }
 
@@ -21556,6 +21556,7 @@ int SCIPgetVarNStrongbranchs(
 SCIP_RETCODE SCIPaddVarLocks(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    int                   nlocksdown,         /**< modification in number of rounding down locks */
    int                   nlocksup            /**< modification in number of rounding up locks */
    )
@@ -21579,7 +21580,7 @@ SCIP_RETCODE SCIPaddVarLocks(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
+      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, locktype, nlocksdown, nlocksup) );
       return SCIP_OKAY;
 
    default:
@@ -21664,6 +21665,7 @@ SCIP_RETCODE SCIPlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
    SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
    )
@@ -21706,7 +21708,7 @@ SCIP_RETCODE SCIPlockVarCons(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
+      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, locktype, nlocksdown, nlocksup) );
       return SCIP_OKAY;
 
    default:
@@ -21812,6 +21814,7 @@ SCIP_RETCODE SCIPunlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    SCIP_Bool             lockdown,           /**< should the rounding be unlocked in downwards direction? */
    SCIP_Bool             lockup              /**< should the rounding be unlocked in upwards direction? */
    )
@@ -21853,7 +21856,7 @@ SCIP_RETCODE SCIPunlockVarCons(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, -nlocksdown, -nlocksup) );
+      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, locktype, -nlocksdown, -nlocksup) );
       return SCIP_OKAY;
 
    default:

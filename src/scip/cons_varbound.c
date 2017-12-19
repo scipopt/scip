@@ -1084,28 +1084,28 @@ SCIP_RETCODE chgLhs(
       /* the left hand side switched from -infinity to a non-infinite value -> install rounding locks */
       if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -lhs) )
       {
-	 SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
+	 SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
 
 	 if( SCIPisPositive(scip, consdata->vbdcoef) )
 	 {
-	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
 	 }
 	 else
 	 {
-	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
 	 }
       }
       /* the left hand side switched from a non-infinite value to -infinity -> remove rounding locks */
       else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -lhs) )
       {
-	 SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
+	 SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
 	 if( SCIPisPositive(scip, consdata->vbdcoef) )
 	 {
-	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
 	 }
 	 else
 	 {
-	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
 	 }
       }
    }
@@ -1167,28 +1167,28 @@ SCIP_RETCODE chgRhs(
       /* the right hand side switched from infinity to a non-infinite value -> install rounding locks */
       if( SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, rhs) )
       {
-	 SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
+	 SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
 
 	 if( SCIPisPositive(scip, consdata->vbdcoef) )
 	 {
-	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
 	 }
 	 else
 	 {
-	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
 	 }
       }
       /* the right hand side switched from a non-infinite value to infinity -> remove rounding locks */
       else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, rhs) )
       {
-	 SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
+	 SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
 	 if( SCIPisPositive(scip, consdata->vbdcoef) )
 	 {
-	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
 	 }
 	 else
 	 {
-	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
 	 }
       }
    }
@@ -2464,16 +2464,16 @@ SCIP_RETCODE preprocessConstraintPairs(
              */
             if( SCIPisPositive(scip, consdata0->vbdcoef) )
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0,
+               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, SCIP_LOCKTYPE_MODEL,
                      !SCIPisInfinity(scip, -consdata0->lhs), !SCIPisInfinity(scip, consdata0->rhs)) );
-               SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0,
+               SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, SCIP_LOCKTYPE_MODEL,
                      !SCIPisInfinity(scip, consdata0->rhs), !SCIPisInfinity(scip, -consdata0->lhs)) );
             }
             else
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0,
+               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, SCIP_LOCKTYPE_MODEL,
                      !SCIPisInfinity(scip, consdata0->rhs), !SCIPisInfinity(scip, -consdata0->lhs)) );
-               SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0,
+               SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, SCIP_LOCKTYPE_MODEL,
                      !SCIPisInfinity(scip, -consdata0->lhs), !SCIPisInfinity(scip, consdata0->rhs)) );
             }
          }
@@ -4402,27 +4402,27 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
       if( consdata->vbdcoef > 0.0 )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
       }
    }
 
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
       if( consdata->vbdcoef > 0.0 )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
       }
    }
 

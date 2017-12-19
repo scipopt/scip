@@ -590,11 +590,11 @@ SCIP_RETCODE lockLinearVariable(
 
    if( coef > 0.0 )
    {
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
    }
    else
    {
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -621,11 +621,11 @@ SCIP_RETCODE unlockLinearVariable(
 
    if( coef > 0.0 )
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
    }
    else
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -639,7 +639,7 @@ SCIP_RETCODE lockQuadraticVariable(
    SCIP_VAR*             var                 /**< variable to lock */
    )
 {
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -652,7 +652,7 @@ SCIP_RETCODE unlockQuadraticVariable(
    SCIP_VAR*             var                 /**< variable to unlock */
    )
 {
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -12193,22 +12193,22 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
          }
       }
    }
@@ -12216,7 +12216,7 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       /* @todo try to be more clever, but variable locks that depend on the bounds of other variables are not trival to maintain */
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->quadvarterms[i].var, nlockspos+nlocksneg, nlockspos+nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->quadvarterms[i].var, SCIP_LOCKTYPE_MODEL, nlockspos+nlocksneg, nlockspos+nlocksneg) );
    }
 
    return SCIP_OKAY;

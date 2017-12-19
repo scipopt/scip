@@ -1556,7 +1556,7 @@ SCIP_DECL_CONSLOCK(consLockSuperindicator)
    assert(consdata != NULL);
 
    /* lock binvar up */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, nlocksneg, nlockspos) );
+   SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
 
    /* call lock method for the slack constraint */
    SCIP_CALL( SCIPaddConsLocks(scip, consdata->slackcons, nlockspos, nlocksneg) );

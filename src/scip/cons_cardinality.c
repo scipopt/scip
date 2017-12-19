@@ -322,9 +322,9 @@ SCIP_RETCODE lockVariableCardinality(
    assert(var != NULL);
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)),
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)),
          SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
-   SCIP_CALL( SCIPlockVarCons(scip, indvar, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPlockVarCons(scip, indvar, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -343,9 +343,9 @@ SCIP_RETCODE unlockVariableCardinality(
    assert(var != NULL);
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)),
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)),
          SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
-   SCIP_CALL( SCIPunlockVarCons(scip, indvar, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, indvar, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2822,17 +2822,17 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
       /* if lower bound is negative, rounding down may violate constraint */
       if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
       if( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
       }
 
       /* add lock on indicator variable; @todo write constraint handler to handle down locks */
-      SCIP_CALL( SCIPaddVarLocks(scip, indvar, nlockspos, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, indvar, SCIP_LOCKTYPE_MODEL, nlockspos, nlockspos) );
    }
 
    return SCIP_OKAY;

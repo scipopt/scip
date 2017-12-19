@@ -241,8 +241,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    SCIP_Bool mayroundup;
    int nlocksup;
    int nlocksdown;
-   int nsoftlocksup;
-   int nsoftlocksdown;
+   int nconflictlocksup;
+   int nconflictlocksdown;
 
    rng = SCIPdivesetGetRandnumgen(diveset);
    assert(rng != NULL);
@@ -256,14 +256,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    nlocksup = SCIPvarGetNLocksUp(cand);
    nlocksdown = SCIPvarGetNLocksDown(cand);
 
-   nsoftlocksup = SCIPvarGetNLocksSoftUp(cand);
-   nsoftlocksdown = SCIPvarGetNLocksSoftDown(cand);
+   nconflictlocksup = SCIPvarGetNLocksSoftUp(cand);
+   nconflictlocksdown = SCIPvarGetNLocksSoftDown(cand);
 
-   softlocksum = nsoftlocksup + nsoftlocksdown;
+   softlocksum = nconflictlocksup + nconflictlocksdown;
    locksum = nlocksdown + nlocksup;
 
-   mayrounddown = (nsoftlocksdown == 0);
-   mayroundup = (nsoftlocksup == 0);
+   mayrounddown = (nconflictlocksdown == 0);
+   mayroundup = (nconflictlocksup == 0);
 
    /* variable can be rounded in exactly one direction */
    if( mayrounddown != mayroundup )
@@ -278,11 +278,11 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    {
       assert(!mayrounddown);
 
-      if( nsoftlocksup != nsoftlocksdown || nlocksup != nlocksdown )
+      if( nconflictlocksup != nconflictlocksdown || nlocksup != nlocksdown )
       {
-         if( nsoftlocksup != nsoftlocksdown )
+         if( nconflictlocksup != nconflictlocksdown )
          {
-            *roundup = (nsoftlocksup > nsoftlocksdown);
+            *roundup = (nconflictlocksup > nconflictlocksdown);
          }
          else
          {
@@ -301,7 +301,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    /* the variable is not locked by conflict constraints */
    else
    {
-      assert(nsoftlocksdown == 0 && nsoftlocksup == 0);
+      assert(nconflictlocksdown == 0 && nconflictlocksup == 0);
 
 //      if( nlocksup != nlocksdown )
 //      {
@@ -334,8 +334,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
 
-      if( nsoftlocksup > 0 )
-         *score = nsoftlocksup /* /MAX(1.0, softlocksum) */
+      if( nconflictlocksup > 0 )
+         *score = nconflictlocksup /* /MAX(1.0, softlocksum) */
             + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * nlocksup/MAX(1.0, locksum);
       else
          *score = LOCKFRAC * (nlocksup / MAX(1.0, locksum));
@@ -345,8 +345,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
 
-      if( nsoftlocksdown > 0 )
-         *score = nsoftlocksdown /* /MAX(1.0, softlocksum) */
+      if( nconflictlocksdown > 0 )
+         *score = nconflictlocksdown /* /MAX(1.0, softlocksum) */
                + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * nlocksdown/MAX(1.0, locksum);
       else
          *score = LOCKFRAC * (nlocksdown / MAX(1.0, locksum));
@@ -368,7 +368,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 //   if( mayrounddown || mayroundup )
 //      (*score) -= SCIPgetNLPRows(scip);
 
-//   printf("cand <%s> has score: %.10g and slocks [%d,%d]\n", SCIPvarGetName(cand), *score, nsoftlocksdown, nsoftlocksup);
+//   printf("cand <%s> has score: %.10g and slocks [%d,%d]\n", SCIPvarGetName(cand), *score, nconflictlocksdown, nconflictlocksup);
 
    /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
    assert( (0.0 < candsfrac && candsfrac < 1.0) || SCIPvarIsBinary(cand) || divetype == SCIP_DIVETYPE_SOS1VARIABLE );

@@ -1071,8 +1071,8 @@ SCIP_RETCODE createCipFormulation(
 
          if( !dualreduction )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, binvars[i][nvars], 1, 1) );
-            SCIP_CALL( SCIPaddVarLocks(scip, vars[i][nvars], 1, 1) );
+            SCIP_CALL( SCIPaddVarLocks(scip, binvars[i][nvars], SCIP_LOCKTYPE_MODEL, 1, 1) );
+            SCIP_CALL( SCIPaddVarLocks(scip, vars[i][nvars], SCIP_LOCKTYPE_MODEL, 1, 1) );
          }
 
          /* add choice variable to set partitioning constraint */

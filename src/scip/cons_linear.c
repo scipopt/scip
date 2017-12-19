@@ -647,12 +647,12 @@ SCIP_RETCODE lockRounding(
 
    if( SCIPisPositive(scip, val) )
    {
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons,
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL,
             !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
    }
    else
    {
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons,
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL,
             !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
@@ -680,12 +680,12 @@ SCIP_RETCODE unlockRounding(
 
    if( SCIPisPositive(scip, val) )
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons,
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL,
             !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
    }
    else
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons,
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL,
             !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
@@ -3465,11 +3465,11 @@ SCIP_RETCODE chgLhs(
 
             if( SCIPisPositive(scip, vals[v]) )
             {
-               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
             }
             else
             {
-               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
             }
          }
       }
@@ -3490,11 +3490,11 @@ SCIP_RETCODE chgLhs(
 
             if( SCIPisPositive(scip, vals[v]) )
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
             }
             else
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
             }
          }
       }
@@ -3588,11 +3588,11 @@ SCIP_RETCODE chgRhs(
 
             if( SCIPisPositive(scip, vals[v]) )
             {
-               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
             }
             else
             {
-               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
             }
          }
       }
@@ -3613,11 +3613,11 @@ SCIP_RETCODE chgRhs(
 
             if( SCIPisPositive(scip, vals[v]) )
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
             }
             else
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
             }
          }
       }
@@ -16275,7 +16275,7 @@ SCIP_DECL_CONSLOCK(consLockLinear)
             }
             else
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
             }
          }
          if( hasrhs )
@@ -16286,7 +16286,7 @@ SCIP_DECL_CONSLOCK(consLockLinear)
             }
             else
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
             }
          }
       }
@@ -16300,7 +16300,7 @@ SCIP_DECL_CONSLOCK(consLockLinear)
             }
             else
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
             }
          }
          if( hasrhs )
@@ -16311,7 +16311,7 @@ SCIP_DECL_CONSLOCK(consLockLinear)
             }
             else
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
             }
          }
       }

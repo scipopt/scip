@@ -146,7 +146,7 @@ SCIP_RETCODE lockRounding(
    )
 {
    /* rounding down may violate the constraint */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -160,7 +160,7 @@ SCIP_RETCODE unlockRounding(
    )
 {
    /* rounding down may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -4656,7 +4656,7 @@ SCIP_DECL_CONSLOCK(consLockLogicor)
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
       }
    }
 

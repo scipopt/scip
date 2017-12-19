@@ -143,7 +143,7 @@ SCIP_RETCODE lockRounding(
 
    for( b = 0; b < nbinvars; ++b )
    {
-      SCIP_CALL( SCIPlockVarCons(scip, binvars[b], cons, TRUE, TRUE) );
+      SCIP_CALL( SCIPlockVarCons(scip, binvars[b], cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -938,7 +938,7 @@ SCIP_RETCODE delCoefPos(
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(var));
 
    /* remove the rounding locks for the deleted variable */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
 
    /* if we are in transformed problem, delete the event data of the variable */
    if( SCIPconsIsTransformed(cons) )
@@ -2875,12 +2875,12 @@ SCIP_DECL_CONSLOCK(consLockLinking)
    assert(consdata != NULL);
 
    /* look integer variable in both directions */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* look binary variables in both directions */
    for( b = 0; b < consdata->nbinvars; ++b )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[b], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[b], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

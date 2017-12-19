@@ -3461,8 +3461,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
          /* change binvary variable */
          consdata->binvar = var;
@@ -3512,8 +3512,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
@@ -6462,7 +6462,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
    }
    else
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
    }
 
    if ( consdata->linconsactive )
@@ -6475,7 +6475,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
       }
    }
    else
@@ -6509,7 +6509,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
                }
                else
                {
-                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlockspos, nlocksneg) );
+                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
                }
             }
             if ( hasrhs )
@@ -6520,7 +6520,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
                }
                else
                {
-                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlocksneg, nlockspos) );
+                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
                }
             }
          }
@@ -6534,7 +6534,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
                }
                else
                {
-                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlocksneg, nlockspos) );
+                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
                }
             }
             if ( hasrhs )
@@ -6545,7 +6545,7 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
                }
                else
                {
-                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlockspos, nlocksneg) );
+                  SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
                }
             }
          }

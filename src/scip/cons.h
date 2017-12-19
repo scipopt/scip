@@ -1223,8 +1223,8 @@ extern
 SCIP_RETCODE SCIPconsAddLocksSoft(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   nsoftlockspos,      /**< increase in number of rounding locks for constraint */
-   int                   nsoftlocksneg       /**< increase in number of rounding locks for constraint's negation */
+   int                   nconflictlockspos,  /**< increase in number of rounding locks for constraint */
+   int                   nconflictlocksneg   /**< increase in number of rounding locks for constraint's negation */
    );
 
 /*

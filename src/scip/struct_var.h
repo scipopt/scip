@@ -255,12 +255,8 @@ struct SCIP_Var
    int                   nuses;              /**< number of times, this variable is referenced */
    int                   nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int                   nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
-   int                   nsoftlocksdown;     /**< number of locks for rounding down in non-check constrints; if zero,
-                                              *   rounding down is always feasible
-                                              */
-   int                   nsoftlocksup;       /**< number of locks for rounding up in non-check constraints; if zero,
-                                              *   rounding up is always feasible
-                                              */
+   int                   nconflictlocksdown; /**< number of locks for rounding down in conflict constraints; if zero */
+   int                   nconflictlocksup;   /**< number of locks for rounding up in conflict constraints; if zero */
    int                   branchpriority;     /**< priority of the variable for branching */
    int                   lbchginfossize;     /**< available slots in lbchginfos array */
    int                   nlbchginfos;        /**< number of lower bound changes from root node to current node */

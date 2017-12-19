@@ -468,10 +468,10 @@ SCIP_RETCODE unlockRounding(
    )
 {
    /* rounding up may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, binvar, cons, FALSE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, binvar, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
 
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, downlock, uplock) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, downlock, uplock) );
 
    return SCIP_OKAY;
 }
@@ -3781,20 +3781,20 @@ SCIP_DECL_CONSLOCK(consLockOptcumulative)
       if( consdata->downlocks[v] && consdata->uplocks[v] )
       {
          /* the integer start variable should not get rounded in both direction  */
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
       }
       else if( consdata->downlocks[v]  )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
       }
       else if( consdata->uplocks[v] )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
       }
 
       /* the binary decision variable should not get rounded up; rounding down does not influence the feasibility */
       assert(consdata->binvars[v] != NULL);
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[v], nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

@@ -5784,8 +5784,8 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
-   (*cons)->nsoftlockspos = 0;
-   (*cons)->nsoftlocksneg = 0;
+   (*cons)->nconflictlockspos = 0;
+   (*cons)->nconflictlocksneg = 0;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
@@ -7203,36 +7203,36 @@ SCIP_RETCODE SCIPconsAddLocks(
 SCIP_RETCODE SCIPconsAddLocksSoft(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   nsoftlockspos,      /**< increase in number of rounding locks for constraint */
-   int                   nsoftlocksneg       /**< increase in number of rounding locks for constraint's negation */
+   int                   nconflictlockspos,  /**< increase in number of rounding locks for constraint */
+   int                   nconflictlocksneg   /**< increase in number of rounding locks for constraint's negation */
    )
 {
-   int oldnsoftlockspos;
-   int oldnsoftlocksneg;
+   int oldnconflictlockspos;
+   int oldnconflictlocksneg;
    int updlockpos;
    int updlockneg;
 
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert(cons->nsoftlockspos >= 0);
-   assert(cons->nsoftlocksneg >= 0);
-   assert(-2 <= nsoftlockspos && nsoftlockspos <= 2);
-   assert(-2 <= nsoftlocksneg && nsoftlocksneg <= 2);
+   assert(cons->nconflictlockspos >= 0);
+   assert(cons->nconflictlocksneg >= 0);
+   assert(-2 <= nconflictlockspos && nconflictlockspos <= 2);
+   assert(-2 <= nconflictlocksneg && nconflictlocksneg <= 2);
    assert(set != NULL);
    assert(cons->scip == set->scip);
 
    /* update the rounding locks */
-   oldnsoftlockspos = cons->nsoftlockspos;
-   oldnsoftlocksneg = cons->nsoftlocksneg;
-   cons->nsoftlockspos += nsoftlockspos;
-   cons->nsoftlocksneg += nsoftlocksneg;
-   assert(cons->nsoftlockspos >= 0);
-   assert(cons->nsoftlocksneg >= 0);
+   oldnconflictlockspos = cons->nconflictlockspos;
+   oldnconflictlocksneg = cons->nconflictlocksneg;
+   cons->nconflictlockspos += nconflictlockspos;
+   cons->nconflictlocksneg += nconflictlocksneg;
+   assert(cons->nconflictlockspos >= 0);
+   assert(cons->nconflictlocksneg >= 0);
 
    /* check, if the constraint switched from unlocked to locked, or from locked to unlocked */
-   updlockpos = (int)(cons->nsoftlockspos > 0) - (int)(oldnsoftlockspos > 0);
-   updlockneg = (int)(cons->nsoftlocksneg > 0) - (int)(oldnsoftlocksneg > 0);
+   updlockpos = (int)(cons->nconflictlockspos > 0) - (int)(oldnconflictlockspos > 0);
+   updlockneg = (int)(cons->nconflictlocksneg > 0) - (int)(oldnconflictlocksneg > 0);
 
    /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked
     *
