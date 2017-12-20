@@ -97,7 +97,7 @@
 
 
 #define DEFAULT_USEBENDERS       TRUE
-#define DEFAULT_NUMSCENARIOS      500
+#define DEFAULT_NUMSCENARIOS      250
 
 #define MAXNCOSTS                   7
 

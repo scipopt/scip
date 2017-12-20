@@ -71,7 +71,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
-   SCIP_CALL( SCIPsetIntParam(scip, "benders/default/lnsmaxdepth", 10) );
+   //SCIP_CALL( SCIPsetIntParam(scip, "benders/default/lnsmaxdepth", 10) );
    //SCIP_CALL( SCIPsetIntParam(scip, "heuristics/proximity/priority", 10000) );
    //SCIP_CALL( SCIPsetIntParam(scip, "heuristics/proximity/freq", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trysol/freq", 1) );

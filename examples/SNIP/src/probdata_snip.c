@@ -67,6 +67,9 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
+#define NODENUM_MULT       1000
+#define OBJ_MULT           1000
+
 /** @brief Problem data which is accessible in all places
  *
  * This problem data is used to store the input of the snip, all variables which are created, and all
@@ -499,7 +502,7 @@ SCIP_RETCODE createSubproblems(
 
          coeff = 0.0;
          if( i == nodemapping[edgetail] )
-            coeff = scenariocost[j] * 1000;
+            coeff = scenariocost[j] * OBJ_MULT;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "node_%d_%d", i, j);
          SCIP_CALL( SCIPcreateVarBasic(subproblems[j], &var, name, 0, SCIPinfinity(subproblems[j]), coeff, SCIP_VARTYPE_CONTINUOUS) );
