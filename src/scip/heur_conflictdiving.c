@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_conflictdiving.c
- * @brief  LP diving heuristic that chooses fixings w.r.t. soft locks
+ * @brief  LP diving heuristic that chooses fixings w.r.t. conflict locks
  * @author Jakob Witzig
  */
 
@@ -26,7 +26,7 @@
 #include "scip/heur_conflictdiving.h"
 
 #define HEUR_NAME                    "conflictdiving"
-#define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. soft locks"
+#define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. conflict locks"
 #define HEUR_DISPCHAR                '~'
 #define HEUR_PRIORITY                -1000250
 #define HEUR_FREQ                    10
