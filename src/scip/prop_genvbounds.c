@@ -672,7 +672,7 @@ SCIP_RETCODE freeGenVBounds(
       /* release the cutoffboundvar and undo the locks */
       if( propdata->cutoffboundvar != NULL )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
          SCIP_CALL( SCIPreleaseVar(scip, &(propdata->cutoffboundvar)) );
          propdata->cutoffboundvar = NULL;
          SCIPdebugMsg(scip, "release cutoffboundvar!\n");

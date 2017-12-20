@@ -89,7 +89,7 @@ SCIP_RETCODE selectNextDiving(
    SCIP_Bool*            lpcandroundup,      /**< array to remember whether the preferred branching direction is upwards */
    int*                  nviollpcands,       /**< pointer to store the number of LP candidates whose solution value already violates local bounds */
    int                   nlpcands,           /**< number of current LP cands */
-   SCIP_Bool*            enfosuccess,        /**< pointer to store whether a candidate was successfully found */
+   SCIP_Bool*            enfosuccess,        /**< pointer to store whether a candidate was sucessfully found */
    SCIP_Bool*            infeasible          /**< pointer to store whether the diving can be immediately aborted because it is infeasible */
    )
 {
@@ -446,7 +446,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
 
          /* succesfully rounded solutions are tried for primal feasibility */
-         if( success && SCIPdivesetGetAddSolution(diveset) )
+         if( success )
          {
             SCIP_Bool changed = FALSE;
             SCIPdebugMsg(scip, "%s found roundable primal solution: obj=%g\n", SCIPdivesetGetName(diveset), SCIPgetSolOrigObj(scip, worksol));
@@ -793,7 +793,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    success = FALSE;
    /* check if a solution has been found */
-   if( !enfosuccess && !lperror && !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL && SCIPdivesetGetAddSolution(diveset) )
+   if( !enfosuccess && !lperror && !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* create solution from diving LP */
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );

@@ -389,7 +389,7 @@ SCIP_RETCODE delPosDualray(
 #endif
 
    /* remove conflict locks */
-   SCIP_CALL( SCIPconsAddConflictLocks(dualray, set, -1, 0) );
+   SCIP_CALL( SCIPconsAddConflictLocks(dualproof, set, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualproof) )
