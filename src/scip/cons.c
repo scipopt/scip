@@ -4087,7 +4087,7 @@ SCIP_RETCODE SCIPconshdlrLockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
-   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, FALSE, +1, 0) );
+   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, SCIP_LOCKTYPE_MODEL, +1, 0) );
 
    return SCIP_OKAY;
 }
@@ -4102,7 +4102,7 @@ SCIP_RETCODE SCIPconshdlrUnlockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
-   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, FALSE, -1, 0) );
+   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, SCIP_LOCKTYPE_MODEL, -1, 0) );
 
    return SCIP_OKAY;
 }
@@ -7193,14 +7193,14 @@ SCIP_RETCODE SCIPconsAddLocks(
    /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked */
    if( updlockpos != 0 || updlockneg != 0 )
    {
-      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, FALSE, updlockpos, updlockneg) );
+      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, SCIP_LOCKTYPE_MODEL, updlockpos, updlockneg) );
    }
 
    return SCIP_OKAY;
 }
 
-/** adds given values to softlock status of the constraint and updates the rounding softlocks of the involved variables */
-SCIP_RETCODE SCIPconsAddLocksSoft(
+/** adds given values to conflict lock status of the constraint and updates the rounding conflict locks of the involved variables */
+SCIP_RETCODE SCIPconsAddConflictLocks(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   nconflictlockspos,  /**< increase in number of rounding locks for constraint */
@@ -7240,7 +7240,7 @@ SCIP_RETCODE SCIPconsAddLocksSoft(
     */
    if( updlockpos != 0 || updlockneg != 0 )
    {
-      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, TRUE, updlockpos, updlockneg) );
+      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, SCIP_LOCKTYPE_CONFLICT, updlockpos, updlockneg) );
    }
 
    return SCIP_OKAY;

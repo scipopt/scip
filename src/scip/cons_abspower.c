@@ -6456,6 +6456,7 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6467,11 +6468,11 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
    {
       if( haslb )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->x, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->x, locktype, nlockspos, nlocksneg) );
       }
       if( hasub )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->x, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->x, locktype, nlocksneg, nlockspos) );
       }
    }
 
@@ -6481,22 +6482,22 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
       }
    }

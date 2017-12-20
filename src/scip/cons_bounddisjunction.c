@@ -2718,25 +2718,11 @@ SCIP_DECL_CONSLOCK(consLockBounddisjunction)
    {
       if( consdata->boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
       {
-         if( softlock )
-         {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlockspos, nlocksneg) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
-         }
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
       }
       else
       {
-         if( softlock )
-         {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlocksneg, nlockspos) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
-         }
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
       }
    }
 

@@ -2802,6 +2802,8 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2822,17 +2824,17 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
       /* if lower bound is negative, rounding down may violate constraint */
       if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
       if( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, var, locktype, nlocksneg, nlockspos) );
       }
 
       /* add lock on indicator variable; @todo write constraint handler to handle down locks */
-      SCIP_CALL( SCIPaddVarLocks(scip, indvar, SCIP_LOCKTYPE_MODEL, nlockspos, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, indvar, locktype, nlockspos, nlockspos) );
    }
 
    return SCIP_OKAY;

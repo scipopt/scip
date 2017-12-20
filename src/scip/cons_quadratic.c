@@ -12180,6 +12180,7 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -12193,22 +12194,22 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
       }
    }

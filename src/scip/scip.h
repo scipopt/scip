@@ -11927,6 +11927,7 @@ EXTERN
 SCIP_RETCODE SCIPaddConsLocks(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    int                   nlockspos,          /**< increase in number of rounding locks for constraint */
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    );

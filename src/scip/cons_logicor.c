@@ -4650,14 +4650,7 @@ SCIP_DECL_CONSLOCK(consLockLogicor)
    /* lock every single coefficient */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      if( softlock )
-      {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlockspos, nlocksneg) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
-      }
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;

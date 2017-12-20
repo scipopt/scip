@@ -4397,32 +4397,34 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, locktype, nlockspos, nlocksneg) );
       if( consdata->vbdcoef > 0.0 )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, locktype, nlockspos, nlocksneg) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, locktype, nlocksneg, nlockspos) );
       }
    }
 
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, locktype, nlocksneg, nlockspos) );
       if( consdata->vbdcoef > 0.0 )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, locktype, nlocksneg, nlockspos) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, locktype, nlockspos, nlocksneg) );
       }
    }
 

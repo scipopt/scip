@@ -7056,6 +7056,7 @@ SCIP_DECL_CONSLOCK(consLockBivariate)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7066,22 +7067,22 @@ SCIP_DECL_CONSLOCK(consLockBivariate)
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
          if( !SCIPisInfinity(scip,  consdata->rhs) )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
          if( !SCIPisInfinity(scip,  consdata->rhs) )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
       }
    }

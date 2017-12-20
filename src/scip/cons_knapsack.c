@@ -12762,12 +12762,14 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
    SCIP_CONSDATA* consdata;
    int i;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

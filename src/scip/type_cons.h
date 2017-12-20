@@ -624,11 +624,11 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that should lock rounding of its variables, or NULL if the constraint handler
  *                      does not need constraints
- *  - softlock        : true if the locks are soft, e.g., non-check constraints, conflicts, etc.
+ *  - locktype        : type of rounding locks, i.e, SCIP_LOCKTYPE_MODEL or SCIP_LOCKTYPE_CONFLICT
  *  - nlockspos       : number of times, the roundings should be locked for the constraint (may be negative)
  *  - nlocksneg       : number of times, the roundings should be locked for the constraint's negation (may be negative)
  */
-#define SCIP_DECL_CONSLOCK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, SCIP_Bool softlock, int nlockspos, int nlocksneg)
+#define SCIP_DECL_CONSLOCK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, SCIP_LOCKTYPE locktype, int nlockspos, int nlocksneg)
 
 /** constraint activation notification method of constraint handler
  *

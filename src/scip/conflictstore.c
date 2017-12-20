@@ -326,7 +326,7 @@ SCIP_RETCODE delPosConflict(
    SCIPsetDebugMsg(set, "-> remove conflict at pos=%d with age=%g\n", pos, SCIPconsGetAge(conflict));
 #endif
 
-//   SCIP_CALL( SCIPconsAddLocksSoft(conflict, set, -1, -1) );
+//   SCIP_CALL( SCIPconsAddConflictLocks(conflict, set, -1, -1) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
@@ -387,7 +387,7 @@ SCIP_RETCODE delPosDualray(
    SCIPsetDebugMsg(set, "-> remove dual proof (ray) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
 
-//   SCIP_CALL( SCIPconsAddLocksSoft(dualray, set, -1, -1) );
+//   SCIP_CALL( SCIPconsAddConflictLocks(dualray, set, -1, -1) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualproof) )
@@ -965,7 +965,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    ++conflictstore->ndualrayconfs;
 
    /* add soft locks */
-   SCIP_CALL( SCIPconsAddLocksSoft(dualproof, set, +1, 0) );
+   SCIP_CALL( SCIPconsAddConflictLocks(dualproof, set, +1, 0) );
 
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
@@ -1043,7 +1043,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    ++conflictstore->ndualsolconfs;
 
    /* add soft locks */
-   SCIP_CALL( SCIPconsAddLocksSoft(dualproof, set, +1, 0) );
+   SCIP_CALL( SCIPconsAddConflictLocks(dualproof, set, +1, 0) );
 
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
@@ -1139,7 +1139,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    ++conflictstore->nconflictsfound;
 
    /* add softlocks */
-   SCIP_CALL( SCIPconsAddLocksSoft(cons, set, +1, 0) );
+   SCIP_CALL( SCIPconsAddConflictLocks(cons, set, +1, 0) );
 
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->nconflicts-1);
@@ -1436,7 +1436,7 @@ SCIP_RETCODE SCIPconflictstoreTransform(
          ++ntransconss;
       }
 
-      SCIP_CALL( SCIPconsAddLocksSoft(transcons, set, +1, 0) );
+      SCIP_CALL( SCIPconsAddConflictLocks(transcons, set, +1, 0) );
 
       SCIP_CALL( SCIPconsRelease(&conflictstore->origconfs[i], blkmem, set) );
    }

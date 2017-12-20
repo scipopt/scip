@@ -16269,50 +16269,22 @@ SCIP_DECL_CONSLOCK(consLockLinear)
       {
          if( haslhs )
          {
-            if( softlock )
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlockspos, nlocksneg) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
-            }
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
          }
          if( hasrhs )
          {
-            if( softlock )
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlocksneg, nlockspos) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
-            }
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslhs )
          {
-            if( softlock )
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlocksneg, nlockspos) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
-            }
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
          }
          if( hasrhs )
          {
-            if( softlock )
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_CONFLICT, nlockspos, nlocksneg) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
-            }
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
          }
       }
    }

@@ -8291,6 +8291,7 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    /* variable locking for nonlinear part is done w.r.t. variables in the expression graph
     * since only active constraints have their nonlinear part in the expression graph, we can lock only active constraints
@@ -8309,22 +8310,22 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
       {
          if( havelhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
          if( haverhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( havelhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
          if( haverhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
       }
    }

@@ -4630,10 +4630,12 @@ SCIP_DECL_CONSLOCK(consLockSOC)
    SCIP_CONSDATA* consdata;
    int            i;
 
-   assert(scip     != NULL);
+   assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(cons     != NULL);
+   assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4642,13 +4644,13 @@ SCIP_DECL_CONSLOCK(consLockSOC)
    /* Changing variables x_i, i <= n, in both directions can lead to an infeasible solution. */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    /* Rounding x_{n+1} up will not violate a solution. */
    if( consdata->rhsvar != NULL )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->rhsvar, SCIP_LOCKTYPE_MODEL, consdata->rhscoeff > 0.0 ? nlockspos : nlocksneg, consdata->rhscoeff > 0.0 ? nlocksneg : nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->rhsvar, locktype, consdata->rhscoeff > 0.0 ? nlockspos : nlocksneg, consdata->rhscoeff > 0.0 ? nlocksneg : nlockspos) );
    }
 
    return SCIP_OKAY;

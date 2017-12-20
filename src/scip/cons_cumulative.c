@@ -13258,10 +13258,12 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
    SCIP_VAR** vars;
    int v;
 
-   SCIPdebugMsg(scip, "lock cumulative constraint <%s> with nlockspos = %d, nlocksneg = %d\n", SCIPconsGetName(cons), nlockspos, nlocksneg);
+   SCIPdebugMsg(scip, "lock cumulative constraint <%s> with nlockspos = %d, nlocksneg = %d (type: %u)\n",
+         SCIPconsGetName(cons), nlockspos, nlocksneg, locktype);
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13274,15 +13276,15 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
       if( consdata->downlocks[v] && consdata->uplocks[v] )
       {
          /* the integer start variable should not get rounded in both direction  */
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
       }
       else if( consdata->downlocks[v]  )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], locktype, nlockspos, nlocksneg) );
       }
       else if( consdata->uplocks[v] )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], locktype, nlocksneg, nlockspos) );
       }
    }
 

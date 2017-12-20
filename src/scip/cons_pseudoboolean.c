@@ -8356,6 +8356,7 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
    assert(cons != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -8431,9 +8432,9 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
          {
             for( v = nandvars - 1; v >= 0; --v )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, andvars[v], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocks(scip, andvars[v], locktype, nlockspos, nlocksneg) );
             }
-            SCIP_CALL( SCIPaddVarLocks(scip, andres, SCIP_LOCKTYPE_MODEL, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+            SCIP_CALL( SCIPaddVarLocks(scip, andres, locktype, nlocksneg + nlockspos, nlocksneg + nlockspos) );
 
             SCIP_CALL( checkLocksAndRes(scip, andres) );
          }
@@ -8441,12 +8442,12 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
          {
             for( v = nandvars - 1; v >= 0; --v )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, andvars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocks(scip, andvars[v], locktype, nlocksneg, nlockspos) );
             }
             /* don't double the locks on the and-resultant */
             if( !haslhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, andres, SCIP_LOCKTYPE_MODEL, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+               SCIP_CALL( SCIPaddVarLocks(scip, andres, locktype, nlocksneg + nlockspos, nlocksneg + nlockspos) );
 
                SCIP_CALL( checkLocksAndRes(scip, andres) );
             }

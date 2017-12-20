@@ -2871,16 +2871,18 @@ SCIP_DECL_CONSLOCK(consLockLinking)
    SCIP_CONSDATA* consdata;
    int b;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* look integer variable in both directions */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* look binary variables in both directions */
    for( b = 0; b < consdata->nbinvars; ++b )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[b], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[b], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

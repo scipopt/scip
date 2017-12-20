@@ -1785,16 +1785,18 @@ SCIP_DECL_CONSLOCK(consLockOr)
    SCIP_CONSDATA* consdata;
    int i;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* lock resultant variable */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->resvar, SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocks(scip, consdata->resvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* lock all operand variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

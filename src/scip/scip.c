@@ -28553,13 +28553,24 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
 SCIP_RETCODE SCIPaddConsLocks(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    int                   nlockspos,          /**< increase in number of rounding locks for constraint */
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConsLocks", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( SCIPconsAddLocks(cons, scip->set, nlockspos, nlocksneg) );
+   switch (locktype) {
+      case SCIP_LOCKTYPE_MODEL:
+         SCIP_CALL( SCIPconsAddLocks(cons, scip->set, nlockspos, nlocksneg) );
+         break;
+      case SCIP_LOCKTYPE_CONFLICT:
+         SCIP_CALL( SCIPconsAddConflictLocks(cons, scip->set, nlockspos, nlocksneg) );
+         break;
+      default:
+         SCIPdebugMessagePrint(scip, "unknown type of rounding locks: %u\n", locktype);
+         return SCIP_INVALIDDATA;
+   }
 
    return SCIP_OKAY;
 }
