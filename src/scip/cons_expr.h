@@ -780,6 +780,18 @@ SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
    int                   idx                 /**< index of child */
    );
 
+/** returns the number of positive rounding locks of an expression */
+EXTERN
+int SCIPgetNLocksPosExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** returns the number of negative rounding locks of an expression */
+EXTERN
+int SCIPgetNLocksNegExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 /** @} */
 
 

@@ -311,14 +311,6 @@ SCIP_RETCODE freeEnfoData(
 {
    int e;
 
-   /* remove monotonicity information */
-   if( expr->monotonicity != NULL )
-   {
-      assert(expr->monotonicitysize > 0);
-      SCIPfreeBlockMemoryArray(scip, &expr->monotonicity, expr->monotonicitysize);
-      expr->monotonicitysize = 0;
-   }
-
    /* free auxiliary variable */
    if( freeauxvar )
    {
@@ -1117,70 +1109,66 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 {
-   SCIP_CONSEXPR_EXPRHDLR* varhdlr;
-   int ncurrlockspos;
-   int ncurrlocksneg;
    int nlockspos;
    int nlocksneg;
-   int i;
 
    assert(expr != NULL);
    assert(data != NULL);
    assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
 
-   varhdlr = (SCIP_CONSEXPR_EXPRHDLR*)data;
-   assert(varhdlr != NULL);
+   /* collect locks */
+   nlockspos = expr->walkio.intvals[0];
+   nlocksneg = expr->walkio.intvals[1];
 
-   /* get locks of the current expression */
-   ncurrlockspos = expr->walkio.intvals[0];
-   ncurrlocksneg = expr->walkio.intvals[1];
-   assert(ncurrlockspos != 0 || ncurrlocksneg != 0);
-
-   /* add locks to expression */
-   expr->nlockspos += ncurrlockspos;
-   expr->nlocksneg += ncurrlocksneg;
-
-   if( SCIPgetConsExprExprHdlr(expr) == varhdlr )
+   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
    {
-      /* if a variable, then also add nlockspos/nlocksneg via SCIPaddVarLocks() */
-      SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), ncurrlockspos, ncurrlocksneg) );
-   }
+      SCIP_CONSEXPR_EXPRHDLR* varhdlr = (SCIP_CONSEXPR_EXPRHDLR*)data;
+      assert(varhdlr != NULL);
 
-   /* set locks of all children */
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+      if( SCIPgetConsExprExprHdlr(expr) == varhdlr )
+      {
+         /* if a variable, then also add nlocksneg/nlockspos via SCIPaddVarLocks() */
+         SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), nlocksneg, nlockspos) );
+      }
+
+      /* add locks to expression */
+      expr->nlockspos += nlockspos;
+      expr->nlocksneg += nlocksneg;
+   }
+   else
    {
       SCIP_CONSEXPR_EXPR* child;
       SCIP_MONOTONE monotonicity;
+      int idx;
+
+      assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
 
       /* get monotonicity of child */
-      monotonicity = SCIPgetMonotonicityExprExpr(expr, i);
+      idx = SCIPgetConsExprExprWalkCurrentChild(expr);
+      child = SCIPgetConsExprExprChildren(expr)[idx];
+      monotonicity = SCIPgetMonotonicityExprExpr(expr, idx);
 
       /* compute resulting locks of the child expression */
       switch( monotonicity )
       {
          case SCIP_MONOTONE_INC:
-            nlockspos = ncurrlockspos;
-            nlocksneg = ncurrlocksneg;
+            child->walkio.intvals[0] = nlockspos;
+            child->walkio.intvals[1] = nlocksneg;
             break;
          case SCIP_MONOTONE_DEC:
-            nlockspos = ncurrlocksneg;
-            nlocksneg = ncurrlockspos;
+            child->walkio.intvals[0] = nlocksneg;
+            child->walkio.intvals[1] = nlockspos;
             break;
          case SCIP_MONOTONE_UNKNOWN:
-            nlockspos = ncurrlockspos + ncurrlocksneg;
-            nlocksneg = ncurrlockspos + ncurrlocksneg;
+            child->walkio.intvals[0] = nlockspos + nlocksneg;
+            child->walkio.intvals[1] = nlockspos + nlocksneg;
             break;
          case SCIP_MONOTONE_CONST:
-            nlockspos = 0;
-            nlocksneg = 0;
+            child->walkio.intvals[0] = 0;
+            child->walkio.intvals[1] = 0;
             break;
       }
-
-      /* store locks in the IO data of each child */
-      child = SCIPgetConsExprExprChildren(expr)[i];
-      child->walkio.intvals[0] = nlockspos;
-      child->walkio.intvals[1] = nlocksneg;
    }
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -1937,6 +1925,24 @@ SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
       return SCIP_MONOTONE_UNKNOWN;
 
    return expr->monotonicity[idx];
+}
+
+/** returns the number of positive rounding locks of an expression */
+int SCIPgetNLocksPosExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->nlockspos;
+}
+
+/** returns the number of negative rounding locks of an expression */
+int SCIPgetNLocksNegExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->nlocksneg;
 }
 
 /**@} */  /* end of simplifying methods */
@@ -2746,11 +2752,80 @@ SCIP_RETCODE propagateLocks(
    assert(nlockspos != 0 || nlocksneg != 0);
 
    /* propagate locks */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, NULL, NULL, NULL, (void*)SCIPgetConsExprExprHdlrVar(conshdlr)) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, lockVar, NULL, NULL, (void*)SCIPgetConsExprExprHdlrVar(conshdlr)) );
 
    /* restore old IO data */
    expr->walkio.intvals[0] = oldintvals[0];
    expr->walkio.intvals[1] = oldintvals[1];
+
+   return SCIP_OKAY;
+}
+
+/** adds locks to all expressions and variables of an expression constraints; store the locks in the constraint data */
+static
+SCIP_RETCODE addLocks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   int                   nlockspos,          /**< number of positive rounding locks */
+   int                   nlocksneg           /**< number of negative rounding locks */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   printf("ADD LOCKS %s = %d %d\n", SCIPconsGetName(cons), nlockspos, nlocksneg);
+
+   if( nlockspos == 0 && nlocksneg == 0 )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* no constraint sides -> nothing to lock */
+   if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
+      return SCIP_OKAY;
+
+   /* compute monotonicity information only if no locks are available */
+   if( consdata->nlockspos == 0 && consdata->nlocksneg == 0 )
+   {
+      SCIP_CALL( SCIPcomputeMonotonicityExprExpr(scip, consdata->expr) );
+   }
+
+   /* remember locks */
+   consdata->nlockspos += nlockspos;
+   consdata->nlocksneg += nlocksneg;
+
+   assert(consdata->nlockspos >= 0);
+   assert(consdata->nlocksneg >= 0);
+
+   /* compute locks for lock propagation */
+   if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos + nlocksneg, nlockspos + nlocksneg));
+   }
+   else if( !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos, nlocksneg));
+   }
+   else
+   {
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlocksneg, nlockspos));
+   }
+
+   /* remove monotonicity information when constraint has been unlocked */
+   if( consdata->nlockspos == 0 && consdata->nlocksneg == 0 )
+   {
+      //
+      //   /* remove monotonicity information */
+      //   if( expr->monotonicity != NULL )
+      //   {
+      //      assert(expr->monotonicitysize > 0);
+      //      SCIPfreeBlockMemoryArray(scip, &expr->monotonicity, expr->monotonicitysize);
+      //      expr->monotonicitysize = 0;
+      //   }
+   }
 
    return SCIP_OKAY;
 }
@@ -2867,16 +2942,10 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
          SCIPdebugMsg(scip, "replacing common root expression of constraint <%s>: %p -> %p\n", SCIPconsGetName(conss[i]), (void*)consdata->expr, (void*)newroot);
 
-         /* remove locks on old expression */
-         SCIP_CALL( propagateLocks(scip, consdata->expr, -consdata->nlockspos, -consdata->nlocksneg) );
-
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
 
          consdata->expr = newroot;
          SCIPcaptureConsExprExpr(newroot);
-
-         /* add locks on new expression */
-         SCIP_CALL( propagateLocks(scip, consdata->expr, consdata->nlockspos, consdata->nlocksneg) );
       }
       else
       {
@@ -2892,27 +2961,34 @@ SCIP_RETCODE replaceCommonSubexpressions(
    return SCIP_OKAY;
 }
 
-/** simplifies expressions in constraints */
-/* @todo put the constant to the constraint sides
+/** simplifies expressions and replaces common subexpressions for a set of constraints
+ * @todo put the constant to the constraint sides
  * @todo call removeFixedAndBoundConstraints() from here and remove it from CONSPRESOL
  */
 static
-SCIP_RETCODE simplifyConstraints(
+SCIP_RETCODE canonicalizeConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss,             /**< total number of constraints */
-   SCIP_Bool*            success             /**< pointer to store whether an expression has been simplified */
+   int                   nconss              /**< total number of constraints */
    )
 {
    SCIP_CONSDATA* consdata;
+   int* nlockspos;
+   int* nlocksneg;
+   SCIP_Bool success;
    int i;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
-   assert(success != NULL);
 
-   *success = FALSE;
+   success = FALSE;
+
+   /* allocate memory for storing locks of each constraint */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksneg, nconss) );
 
    /* simplify each constraint's expression */
    for( i = 0; i < nconss; ++i )
@@ -2922,12 +2998,21 @@ SCIP_RETCODE simplifyConstraints(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
+      /* remember locks */
+      nlockspos[i] = consdata->nlockspos;
+      nlocksneg[i] = consdata->nlocksneg;
+
+      /* remove locks */
+      SCIP_CALL( addLocks(scip, conss[i], -consdata->nlockspos, -consdata->nlocksneg) );
+      assert(consdata->nlockspos == 0);
+      assert(consdata->nlocksneg == 0);
+
       if( !consdata->issimplified && consdata->expr != NULL )
       {
          SCIP_CONSEXPR_EXPR* simplified;
 
          /* TODO check whether something has changed because of SCIPsimplifyConsExprExpr */
-         *success = TRUE;
+         success = TRUE;
 
          SCIP_CALL( SCIPsimplifyConsExprExpr(scip, consdata->expr, &simplified) );
          consdata->issimplified = TRUE;
@@ -2937,17 +3022,11 @@ SCIP_RETCODE simplifyConstraints(
           */
          if( simplified != consdata->expr )
          {
-            /* remove locks on old expression */
-            SCIP_CALL( propagateLocks(scip, consdata->expr, -consdata->nlockspos, -consdata->nlocksneg) );
-
             /* release old expression */
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
 
             /* store simplified expression */
             consdata->expr = simplified;
-
-            /* add locks on new expression */
-            SCIP_CALL( propagateLocks(scip, consdata->expr, consdata->nlockspos, consdata->nlocksneg) );
          }
          else
          {
@@ -2958,6 +3037,39 @@ SCIP_RETCODE simplifyConstraints(
          }
       }
    }
+
+   /* replace common subexpressions */
+   if( success )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+
+      /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
+       * been changed after simplification; now we completely recollect all variable expression and variable events
+       */
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+         SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
+      }
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+      }
+   }
+
+   /* restore locks */
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( addLocks(scip, conss[i], nlockspos[i], nlocksneg[i]) );
+   }
+
+   /* free allocated memory */
+   SCIPfreeBufferArray(scip, &nlocksneg);
+   SCIPfreeBufferArray(scip, &nlockspos);
 
    return SCIP_OKAY;
 }
@@ -4918,34 +5030,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 
    if( nconss > 0 )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata;
-      SCIP_Bool success;
       int i;
 
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
       /* simplify constraints */
-      SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
-
-      /* replace common subexpressions; note that replacing common subexpressions requires to have simplified expressions */
-      if( success )
-      {
-         SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
-
-         /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
-          * been changed after simplification; now we completely recollect all variable expression and variable events
-          */
-         for( i = 0; i < nconss; ++i )
-         {
-            SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-            SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
-         }
-         for( i = 0; i < nconss; ++i )
-         {
-            SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
-            SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-         }
-      }
+      SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss) );
 
       /* call curvature detection of expression handlers */
       for( i = 0; i < nconss; ++i )
@@ -5365,8 +5453,6 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
-   SCIP_Bool success;
-   int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5374,27 +5460,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    *result = SCIP_DIDNOTFIND;
 
    /* simplify constraints */
-   SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
-
-   /* replace common subexpressions */
-   if( success )
-   {
-      SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
-
-      /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
-       * been changed after simplification; now we completely recollect all variable expression and variable events
-       */
-      for( i = 0; i < nconss; ++i )
-      {
-         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-         SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
-      }
-      for( i = 0; i < nconss; ++i )
-      {
-         SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
-         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-      }
-   }
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss) );
 
    /* propagate constraints */
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, nchgbds, ndelconss) );
@@ -5445,8 +5511,6 @@ static
 SCIP_DECL_CONSLOCK(consLockExpr)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   int npos;
-   int nneg;
 
    assert(conshdlr != NULL);
    assert(cons != NULL);
@@ -5457,21 +5521,44 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    if( consdata->expr == NULL )
       return SCIP_OKAY;
 
-   npos = !SCIPisInfinity(scip, consdata->rhs) ? nlockspos + nlocksneg : 0;
-   nneg = !SCIPisInfinity(scip, -consdata->lhs) ? nlockspos + nlocksneg : 0;
+   printf("----------------------------------\n");
 
-   /* compute monotonicity information if not done so far */
-   if( consdata->expr->monotonicity == NULL )
+   printf("BEFORE\n");
    {
-      SCIP_CALL( SCIPcomputeMonotonicityExprExpr(scip, consdata->expr) );
+      SCIP_CONSEXPR_ITERATOR* bfs;
+      SCIP_CONSEXPR_EXPR* expr;
+
+      SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
+
+      for( expr = SCIPexpriteratorInit(bfs, consdata->expr); !SCIPexpriteratorIsEnd(bfs); expr = SCIPexpriteratorGetNext(bfs) )
+      {
+         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, "    (%d,%d)\n", expr->nlockspos, expr->nlocksneg);
+      }
+
+      SCIPexpriteratorFree(&bfs);
    }
 
-   /* propagate locks */
-   SCIP_CALL( propagateLocks(scip, consdata->expr, npos, nneg) );
+   printf("%s (%d,%d)\n", SCIPconsGetName(cons), nlockspos, nlocksneg);
 
-   /* remember how the constraint was locked */
-   consdata->nlockspos += npos;
-   consdata->nlocksneg += nneg;
+   /* add locks */
+   SCIP_CALL( addLocks(scip, cons, nlockspos, nlocksneg) );
+
+   printf("AFTER\n");
+   {
+      SCIP_CONSEXPR_ITERATOR* bfs;
+      SCIP_CONSEXPR_EXPR* expr;
+
+      SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
+
+      for( expr = SCIPexpriteratorInit(bfs, consdata->expr); !SCIPexpriteratorIsEnd(bfs); expr = SCIPexpriteratorGetNext(bfs) )
+      {
+         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, "    (%d,%d)\n", expr->nlockspos, expr->nlocksneg);
+      }
+
+      SCIPexpriteratorFree(&bfs);
+   }
 
    return SCIP_OKAY;
 }
@@ -8090,9 +8177,6 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    /* capture child */
    SCIPcaptureConsExprExpr(child);
 
-   /* update locks in child */
-   SCIP_CALL( propagateLocks(scip, child, expr->nlockspos, expr->nlocksneg) );
-
    return SCIP_OKAY;
 }
 
@@ -8172,14 +8256,8 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    /* capture new child (do this before releasing the old child in case there are equal */
    SCIPcaptureConsExprExpr(newchild);
 
-   /* update locks in old child */
-   SCIP_CALL( propagateLocks(scip, expr->children[childidx], -expr->nlockspos, -expr->nlocksneg) );
-
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(expr->children[childidx])) );
    expr->children[childidx] = newchild;
-
-   /* update locks in new child */
-   SCIP_CALL( propagateLocks(scip, expr->children[childidx], expr->nlockspos, expr->nlocksneg) );
 
    return SCIP_OKAY;
 }

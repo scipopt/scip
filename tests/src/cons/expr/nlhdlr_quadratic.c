@@ -176,9 +176,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( simplifyConstraints(scip, &cons, 1, &success) );
-   cr_assert(success);
-   SCIP_CALL( replaceCommonSubexpressions(scip, &cons, 1) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1) );
 
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
@@ -255,9 +253,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
-   success = FALSE;
-   SCIP_CALL( simplifyConstraints(scip, &cons, 1, &success) );
-   cr_assert(success);
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1) );
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
