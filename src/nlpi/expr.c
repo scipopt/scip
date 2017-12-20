@@ -3906,7 +3906,7 @@ SCIP_RETCODE exprUnconvertPolynomial(
             polynomialdataFree(blkmem, &polynomialdata);
             data->data = NULL;
 
-            /* change operator type to MINUS */
+            /* change operator type to SUM */
             *op = SCIP_EXPR_SUM;
 
             return SCIP_OKAY;
