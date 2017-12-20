@@ -369,14 +369,12 @@ extern "C" {
  *
  * input:
  *  - scip : SCIP main data structure
- *  - conshdlr : expression constraint handler
  *  - expr : expression to the curvature for
  *  - idx : index of the considered child expression
  *  - result : buffer to store the monotonicity
  */
 #define SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    int idx, \
    SCIP_MONOTONE* result)

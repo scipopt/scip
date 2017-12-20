@@ -138,11 +138,14 @@ SCIP_RETCODE testMonotonicity(
 {
    cr_assert(i < SCIPgetConsExprExprNChildren(expr));
 
-   /* compute curvature */
-   SCIP_CALL( SCIPcomputeMonotonicityExprExpr(scip, expr) );
+   /* evaluate all subexpressions */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
 
    /* check curvature */
-   cr_expect(SCIPgetMonotonicityExprExpr(expr, i) == expectedres, "expect %d, got %d", SCIPgetMonotonicityExprExpr(expr, i), expectedres);
+   cr_expect(SCIPgetMonotonicityExprExpr(scip, expr, i) == expectedres, "expect %d, got %d",
+      SCIPgetMonotonicityExprExpr(scip, expr, i), expectedres);
+
+   assert(SCIPgetMonotonicityExprExpr(scip, expr, i) == expectedres);
 
    return SCIP_OKAY;
 }
@@ -162,7 +165,6 @@ Test(monotonicity, abs)
 
    SCIP_CALL( chgBounds(x, -2.0, -1.0) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
-
 }
 
 /* check for cosine expression */

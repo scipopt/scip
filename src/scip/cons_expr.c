@@ -189,14 +189,6 @@ typedef struct
    SCIP_Real             varboundrelax;      /**< by how much to relax variable bounds (at most) */
 } EXPRINTEVAL_DATA;
 
-/** data passed on during variable locking  */
-typedef struct
-{
-   SCIP_CONSEXPR_EXPRHDLR* exprvarhdlr;      /**< handler for variable expressions (to recognize variable expressions) */
-   int                     nlockspos;        /**< number of positive locks */
-   int                     nlocksneg;        /**< number of negative locks */
-} EXPRLOCK_DATA;
-
 /** data passed on during collecting all expression variables */
 typedef struct
 {
@@ -1115,7 +1107,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
    assert(expr != NULL);
    assert(data != NULL);
    assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
 
    /* collect locks */
    nlockspos = expr->walkio.intvals[0];
@@ -1135,19 +1127,57 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
       /* add locks to expression */
       expr->nlockspos += nlockspos;
       expr->nlocksneg += nlocksneg;
+
+      /* add monotonicity information if expression has been locked for the first time */
+      if( expr->nlockspos == nlockspos && expr->nlocksneg == nlocksneg && expr->nchildren > 0
+         && expr->exprhdlr->monotonicity != NULL )
+      {
+         int i;
+
+         assert(expr->monotonicity == NULL);
+         assert(expr->monotonicitysize == 0);
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->monotonicity, expr->nchildren) );
+         expr->monotonicitysize = expr->nchildren;
+
+         /* store the monotonicity for each child */
+         for( i = 0; i < expr->nchildren; ++i )
+         {
+            SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, expr, i, &expr->monotonicity[i]) );
+         }
+      }
    }
-   else
+   else if( stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR )
+   {
+      /* remove monotonicity information of expression has been unlocked */
+      if( expr->nlockspos == 0 && expr->nlocksneg == 0 && expr->monotonicity != NULL )
+      {
+         assert(expr->monotonicitysize > 0);
+         /* keep this assert for checking whether someone changed an expression without updating locks properly */
+         assert(expr->monotonicitysize == expr->nchildren);
+
+         SCIPfreeBlockMemoryArray(scip, &expr->monotonicity, expr->monotonicitysize);
+         expr->monotonicitysize = 0;
+      }
+   }
+   else if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD )
    {
       SCIP_CONSEXPR_EXPR* child;
       SCIP_MONOTONE monotonicity;
       int idx;
 
       assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+      assert(expr->nchildren > 0);
+      assert(expr->monotonicity != NULL || expr->exprhdlr->monotonicity == NULL);
 
       /* get monotonicity of child */
       idx = SCIPgetConsExprExprWalkCurrentChild(expr);
       child = SCIPgetConsExprExprChildren(expr)[idx];
-      monotonicity = SCIPgetMonotonicityExprExpr(expr, idx);
+
+      /* NOTE: the monotonicity stored in an expression might be different from the result obtained by
+       * SCIPgetMonotonicityExprExpr
+       */
+      monotonicity = expr->monotonicity != NULL ? expr->monotonicity[idx] : SCIP_MONOTONE_UNKNOWN;
 
       /* compute resulting locks of the child expression */
       switch( monotonicity )
@@ -1833,98 +1863,27 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    return SCIP_OKAY;
 }
 
-/** expression walk callback for computing monotonicity information */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeMonotonicity)
-{
-   SCIP_CONSHDLR* conshdlr;
-
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
-   assert(result != NULL);
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   conshdlr = (SCIP_CONSHDLR*)data;
-   assert(conshdlr != NULL);
-
-   /* allocate memory to store monotonicity information of each child */
-   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && expr->nchildren > 0 && (expr->monotonicity == NULL || expr->monotonicitysize < expr->nchildren) )
-   {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &expr->monotonicity, expr->monotonicitysize, expr->nchildren) );
-      expr->monotonicitysize = expr->nchildren;
-   }
-   else if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD && expr->nchildren > 0 )
-   {
-      assert(expr->walkcurrentchild < expr->nchildren);
-      assert(expr->children != NULL);
-      assert(expr->monotonicity != NULL);
-      assert(expr->monotonicitysize >= expr->nchildren);
-
-      expr->monotonicity[expr->walkcurrentchild] = SCIP_MONOTONE_UNKNOWN;
-
-      /* call monotonicity detection callback */
-      if( expr->exprhdlr->monotonicity != NULL )
-      {
-         SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, conshdlr, expr, expr->walkcurrentchild,
-            &expr->monotonicity[expr->walkcurrentchild]) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** computes the monotonicity of an expression w.r.t. to each child
+/** returns the monotonicity of an expression w.r.t. to a given child
  *
- * @note the result is stored inside of an expression and can be accessed via SCIPgetMonotonicityExprExpr
+ *  @note Call SCIPevalConsExprExprInterval before using this function.
  */
-SCIP_RETCODE SCIPcomputeMonotonicityExprExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-
-   /* evaluate all subexpressions */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
-
-   /* compute monotonicity information */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, computeMonotonicity, computeMonotonicity, NULL, NULL, conshdlr) );
-
-   return SCIP_OKAY;
-}
-
-/** returns the monotonicity of an expression w.r.t. to a given child */
 SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    int                   idx                 /**< index of child */
    )
 {
+   SCIP_MONOTONE monotonicity = SCIP_MONOTONE_UNKNOWN;
+
    assert(expr != NULL);
 
-   /* handle variable and constant expressions as monotone increasing */
-   if( SCIPgetConsExprExprNChildren(expr) == 0 )
+   /* check whether the expression handler implements the monotonicity callback */
+   if( expr->exprhdlr->monotonicity != NULL )
    {
-      if( strcmp(expr->exprhdlr->name, "var") == 0 )
-         return SCIP_MONOTONE_INC;
-      else if( strcmp(expr->exprhdlr->name, "val") == 0 )
-         return SCIP_MONOTONE_CONST;
-      return SCIP_MONOTONE_UNKNOWN;
+      SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, expr, idx, &monotonicity) );
    }
 
-   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
-
-   /* check whether monotonicity information are available */
-   if( expr->monotonicity == NULL )
-      return SCIP_MONOTONE_UNKNOWN;
-
-   return expr->monotonicity[idx];
+   return monotonicity;
 }
 
 /** returns the number of positive rounding locks of an expression */
@@ -2741,6 +2700,9 @@ SCIP_RETCODE propagateLocks(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
+   /* call interval evaluation of the expression to ensure correct monotonicity information */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+
    /* remember old IO data */
    oldintvals[0] = expr->walkio.intvals[0];
    oldintvals[1] = expr->walkio.intvals[1];
@@ -2749,10 +2711,9 @@ SCIP_RETCODE propagateLocks(
    expr->walkio.intvals[0] = nlockspos;
    expr->walkio.intvals[1] = nlocksneg;
 
-   assert(nlockspos != 0 || nlocksneg != 0);
-
    /* propagate locks */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, lockVar, NULL, NULL, (void*)SCIPgetConsExprExprHdlrVar(conshdlr)) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, lockVar, NULL, lockVar,
+      (void*)SCIPgetConsExprExprHdlrVar(conshdlr)) );
 
    /* restore old IO data */
    expr->walkio.intvals[0] = oldintvals[0];
@@ -2774,8 +2735,6 @@ SCIP_RETCODE addLocks(
 
    assert(cons != NULL);
 
-   printf("ADD LOCKS %s = %d %d\n", SCIPconsGetName(cons), nlockspos, nlocksneg);
-
    if( nlockspos == 0 && nlocksneg == 0 )
       return SCIP_OKAY;
 
@@ -2785,12 +2744,6 @@ SCIP_RETCODE addLocks(
    /* no constraint sides -> nothing to lock */
    if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
       return SCIP_OKAY;
-
-   /* compute monotonicity information only if no locks are available */
-   if( consdata->nlockspos == 0 && consdata->nlocksneg == 0 )
-   {
-      SCIP_CALL( SCIPcomputeMonotonicityExprExpr(scip, consdata->expr) );
-   }
 
    /* remember locks */
    consdata->nlockspos += nlockspos;
@@ -2812,19 +2765,6 @@ SCIP_RETCODE addLocks(
    {
       assert(!SCIPisInfinity(scip, -consdata->lhs));
       SCIP_CALL( propagateLocks(scip, consdata->expr, nlocksneg, nlockspos));
-   }
-
-   /* remove monotonicity information when constraint has been unlocked */
-   if( consdata->nlockspos == 0 && consdata->nlocksneg == 0 )
-   {
-      //
-      //   /* remove monotonicity information */
-      //   if( expr->monotonicity != NULL )
-      //   {
-      //      assert(expr->monotonicitysize > 0);
-      //      SCIPfreeBlockMemoryArray(scip, &expr->monotonicity, expr->monotonicitysize);
-      //      expr->monotonicitysize = 0;
-      //   }
    }
 
    return SCIP_OKAY;
@@ -5521,44 +5461,10 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    if( consdata->expr == NULL )
       return SCIP_OKAY;
 
-   printf("----------------------------------\n");
-
-   printf("BEFORE\n");
-   {
-      SCIP_CONSEXPR_ITERATOR* bfs;
-      SCIP_CONSEXPR_EXPR* expr;
-
-      SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
-
-      for( expr = SCIPexpriteratorInit(bfs, consdata->expr); !SCIPexpriteratorIsEnd(bfs); expr = SCIPexpriteratorGetNext(bfs) )
-      {
-         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-         SCIPinfoMessage(scip, NULL, "    (%d,%d)\n", expr->nlockspos, expr->nlocksneg);
-      }
-
-      SCIPexpriteratorFree(&bfs);
-   }
-
    printf("%s (%d,%d)\n", SCIPconsGetName(cons), nlockspos, nlocksneg);
 
    /* add locks */
    SCIP_CALL( addLocks(scip, cons, nlockspos, nlocksneg) );
-
-   printf("AFTER\n");
-   {
-      SCIP_CONSEXPR_ITERATOR* bfs;
-      SCIP_CONSEXPR_EXPR* expr;
-
-      SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
-
-      for( expr = SCIPexpriteratorInit(bfs, consdata->expr); !SCIPexpriteratorIsEnd(bfs); expr = SCIPexpriteratorGetNext(bfs) )
-      {
-         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-         SCIPinfoMessage(scip, NULL, "    (%d,%d)\n", expr->nlockspos, expr->nlocksneg);
-      }
-
-      SCIPexpriteratorFree(&bfs);
-   }
 
    return SCIP_OKAY;
 }
