@@ -5460,8 +5460,6 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    if( consdata->expr == NULL )
       return SCIP_OKAY;
 
-   printf("%s (%d,%d)\n", SCIPconsGetName(cons), nlockspos, nlocksneg);
-
    /* add locks */
    SCIP_CALL( addLocks(scip, cons, nlockspos, nlocksneg) );
 
