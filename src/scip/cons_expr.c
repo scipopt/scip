@@ -4988,7 +4988,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
    {
       int i;
 
-      /* simplify constraints */
+      /* simplify constraints and replace common subexpressions */
       SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss) );
 
       /* call curvature detection of expression handlers */
@@ -5411,7 +5411,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* simplify constraints */
+   /* simplify constraints and replace common subexpressions */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss) );
 
    /* propagate constraints */
