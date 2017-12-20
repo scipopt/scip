@@ -23,7 +23,6 @@
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"
-#include "scip/cons_expr_iterator.h"
 
 #include "include/scip_test.h"
 
