@@ -41,6 +41,7 @@
 #include "scip/cons_expr_cos.h"
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
+#include "scip/cons_expr_iterator.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -143,6 +144,8 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
+
+   SCIP_CONSEXPR_ITERATOR*  iterator;        /**< expression iterator */
 
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
@@ -4683,6 +4686,10 @@ SCIP_DECL_CONSFREE(consFreeExpr)
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
    conshdlrdata->nlhdlrssize = 0;
 
+   /* free expression iterator */
+   assert(conshdlrdata->iterator != NULL);
+   SCIPexpriteratorFree(&conshdlrdata->iterator);
+
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -7575,6 +7582,9 @@ SCIP_RETCODE includeConshdlrExprBasic(
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
    conshdlrdata->lastsoltag = 1;
+
+   /* create expression iterator */
+   SCIP_CALL( SCIPexpriteratorCreate(&conshdlrdata->iterator, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
 
    conshdlr = NULL;
 
