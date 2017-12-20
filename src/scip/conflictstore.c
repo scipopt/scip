@@ -326,7 +326,8 @@ SCIP_RETCODE delPosConflict(
    SCIPsetDebugMsg(set, "-> remove conflict at pos=%d with age=%g\n", pos, SCIPconsGetAge(conflict));
 #endif
 
-//   SCIP_CALL( SCIPconsAddConflictLocks(conflict, set, -1, -1) );
+   /* remove conflict locks */
+   SCIP_CALL( SCIPconsAddConflictLocks(conflict, set, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
@@ -387,7 +388,8 @@ SCIP_RETCODE delPosDualray(
    SCIPsetDebugMsg(set, "-> remove dual proof (ray) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
 
-//   SCIP_CALL( SCIPconsAddConflictLocks(dualray, set, -1, -1) );
+   /* remove conflict locks */
+   SCIP_CALL( SCIPconsAddConflictLocks(dualray, set, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualproof) )
@@ -446,6 +448,9 @@ SCIP_RETCODE delPosDualsol(
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "-> remove dual proof (sol) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
+
+   /* remove conflict locks */
+   SCIP_CALL( SCIPconsAddConflictLocks(dualproof, set, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualproof) )
@@ -1435,8 +1440,6 @@ SCIP_RETCODE SCIPconflictstoreTransform(
 
          ++ntransconss;
       }
-
-      SCIP_CALL( SCIPconsAddConflictLocks(transcons, set, +1, 0) );
 
       SCIP_CALL( SCIPconsRelease(&conflictstore->origconfs[i], blkmem, set) );
    }
