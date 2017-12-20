@@ -8515,7 +8515,7 @@ SCIP_Longint SCIPcalcGreComDiv(
             return (val2 << t);  /*lint !e647 !e703*/
 
          /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
-          * and otherwise                        gcd(val1, val2) = gcd((val1 ??? val2)/4, val2)
+          * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
           */
          if( ((val1 ^ val2) & 2) == 2 )
             val1 += val2;
@@ -8536,7 +8536,7 @@ SCIP_Longint SCIPcalcGreComDiv(
             return (val1 << t);  /*lint !e647 !e703*/
 
          /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
-          * and otherwise                        gcd(val2, val1) = gcd((val2 ??? val1)/4, val1)
+          * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
           */
          if( ((val2 ^ val1) & 2) == 2 )
             val2 += val1;
