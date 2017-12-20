@@ -208,191 +208,42 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-
-/*
- * Callback methods of primal heuristic
- */
-
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+/** setup and solve mutation sub-SCIP */
 static
-SCIP_DECL_HEURCOPY(heurCopyMutation)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurMutation(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeMutation)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* free heuristic data */
-   SCIPfreeBlockMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitMutation)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* initialize data */
-   heurdata->usednodes = 0;
-
-   /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
-
-   return SCIP_OKAY;
-}
-
-/** deinitialization method of primal heuristic */
-static
-SCIP_DECL_HEUREXIT(heurExitMutation)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* free random number generator */
-   SCIPfreeRandom(scip, &heurdata->randnumgen);
-
-   return SCIP_OKAY;
-}
-
-
-/** execution method of primal heuristic */
-static
-SCIP_DECL_HEUREXEC(heurExecMutation)
-{  /*lint --e{715}*/
-   SCIP_Longint maxnnodes;
-   SCIP_Longint nsubnodes;                   /* node limit for the subproblem                       */
-
-   SCIP_HEURDATA* heurdata;                  /* heuristic's data                                    */
-   SCIP* subscip;                            /* the subproblem created by mutation                  */
-   SCIP_VAR** vars;                          /* original problem's variables                        */
-   SCIP_VAR** fixedvars;                     /* array to store variables that should be fixed in the subproblem */
-   SCIP_Real* fixedvals;                     /* array to store fixing values for the variables */
+SCIP_RETCODE setupAndSolveSubscipMutation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SCIP_HEUR*            heur,               /**< mutation heuristic */
+   SCIP_VAR**            fixedvars,          /**< array to store the variables that should be fixed in the subproblem */
+   SCIP_Real*            fixedvals,          /**< array to store the fixing values to fix variables in the subproblem */
+   int                   nfixedvars,         /**< the number of variables that should be fixed */
+   SCIP_Longint          nsubnodes,          /**< node limit for the subproblem */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   )
+{
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
+   SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-
+   SCIP_HEURDATA* heurdata;
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
-   SCIP_Real maxnnodesr;
    SCIP_Real upperbound;
-
-   int nfixedvars;
-   int nbinvars;
-   int nintvars;
    int nvars;                                /* number of original problem's variables              */
    int i;
-
    SCIP_Bool success;
 
-   SCIP_RETCODE retcode;
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(heur != NULL);
+   assert(fixedvars != NULL);
+   assert(fixedvals != NULL);
 
-   assert( heur != NULL );
-   assert( scip != NULL );
-   assert( result != NULL );
-
-   /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   *result = SCIP_DELAYED;
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
-   /* only call heuristic, if feasible solution is available */
-   if( SCIPgetNSols(scip) <= 0 )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if the best solution comes from transformed problem */
-   assert(SCIPgetBestSol(scip) != NULL);
-   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes)
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTRUN;
-
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-
-   /* only call heuristic, if discrete variables are present */
-   if( nbinvars + nintvars == 0 )
-      return SCIP_OKAY;
-
-   /* calculate the maximal number of branching nodes until heuristic is aborted */
-   maxnnodesr = heurdata->nodesquot * SCIPgetNNodes(scip);
-
-   /* reward mutation if it succeeded often, count the setup costs for the sub-MIP as 100 nodes */
-   maxnnodesr *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0);
-   maxnnodes = (SCIP_Longint) maxnnodesr - 100 * SCIPheurGetNCalls(heur);
-   maxnnodes += heurdata->nodesofs;
-
-   /* determine the node limit for the current process */
-   nsubnodes = maxnnodes - heurdata->usednodes;
-   nsubnodes = MIN(nsubnodes, heurdata->maxnodes);
-
-   /* check whether we have enough nodes left to call subproblem solving */
-   if( nsubnodes < heurdata->minnodes )
-       return SCIP_OKAY;
-
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
-
-   /* determine variables that should be fixed in the mutation subproblem */
-   SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata->minfixingrate, heurdata->randnumgen, &success) );
-
-   /* terminate if it is not possible to create the subproblem */
-   if( !success )
-   {
-      SCIPdebugMsg(scip, "Could not create the subproblem -> skip call\n");
-      goto TERMINATE;
-   }
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
-
-   if( !success )
-      goto TERMINATE;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* initializing the subproblem */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-   SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
@@ -402,7 +253,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
          heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
@@ -487,7 +338,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
    {
       cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip)
-            + heurdata->minimprove * SCIPgetLowerbound(scip);
+                     + heurdata->minimprove * SCIPgetLowerbound(scip);
    }
    else
    {
@@ -499,23 +350,16 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    cutoff = MIN(upperbound, cutoff);
    SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
 
-   /* solve the subproblem */
-   SCIPdebugMsg(scip, "Solve Mutation subMIP\n");
-   retcode = SCIPsolve(subscip);
-
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+   /* solve the subproblem
+    *
+    * Errors in solving the subproblem should not kill the overall solving process
+    * Hence, the return code is caught but only in debug mode, SCIP will stop.
     */
-   if( retcode != SCIP_OKAY )
-   {
-      SCIPwarningMessage(scip, "Error while solving subproblem in Mutation heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-      SCIPABORT();
-   }
-   else
-   {
-      /* transfer variable statistics from sub-SCIP */
-      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
-   }
+   SCIPdebugMsg(scip, "Solve Mutation subMIP\n");
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+   /* transfer variable statistics from sub-SCIP */
+   SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
@@ -544,7 +388,194 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Callback methods of primal heuristic
+ */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyMutation)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurMutation(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeMutation)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free heuristic data */
+   SCIPfreeBlockMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitMutation)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+   heurdata->usednodes = 0;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic */
+static
+SCIP_DECL_HEUREXIT(heurExitMutation)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
+
+   return SCIP_OKAY;
+}
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecMutation)
+{  /*lint --e{715}*/
+   SCIP_Longint maxnnodes;
+   SCIP_Longint nsubnodes;                   /* node limit for the subproblem                       */
+
+   SCIP_HEURDATA* heurdata;                  /* heuristic's data                                    */
+   SCIP* subscip;                            /* the subproblem created by mutation                  */
+   SCIP_VAR** fixedvars;                     /* array to store variables that should be fixed in the subproblem */
+   SCIP_Real* fixedvals;                     /* array to store fixing values for the variables */
+
+   SCIP_Real maxnnodesr;
+
+   int nfixedvars;
+   int nbinvars;
+   int nintvars;
+
+   SCIP_Bool success;
+
+   SCIP_RETCODE retcode;
+
+   assert( heur != NULL );
+   assert( scip != NULL );
+   assert( result != NULL );
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   *result = SCIP_DELAYED;
+
+   /* only call heuristic, if feasible solution is available */
+   if( SCIPgetNSols(scip) <= 0 )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the best solution comes from transformed problem */
+   assert(SCIPgetBestSol(scip) != NULL);
+   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if enough nodes were processed since last incumbent */
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes)
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTRUN;
+
+   SCIP_CALL( SCIPgetVarsData(scip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
+
+   /* only call heuristic, if discrete variables are present */
+   if( nbinvars + nintvars == 0 )
+      return SCIP_OKAY;
+
+   /* calculate the maximal number of branching nodes until heuristic is aborted */
+   maxnnodesr = heurdata->nodesquot * SCIPgetNNodes(scip);
+
+   /* reward mutation if it succeeded often, count the setup costs for the sub-MIP as 100 nodes */
+   maxnnodesr *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+   maxnnodes = (SCIP_Longint) maxnnodesr - 100 * SCIPheurGetNCalls(heur);
+   maxnnodes += heurdata->nodesofs;
+
+   /* determine the node limit for the current process */
+   nsubnodes = maxnnodes - heurdata->usednodes;
+   nsubnodes = MIN(nsubnodes, heurdata->maxnodes);
+
+   /* check whether we have enough nodes left to call subproblem solving */
+   if( nsubnodes < heurdata->minnodes )
+       return SCIP_OKAY;
+
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   if( !success )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
+
+   /* determine variables that should be fixed in the mutation subproblem */
+   SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata->minfixingrate, heurdata->randnumgen, &success) );
+
+   /* terminate if it is not possible to create the subproblem */
+   if( !success )
+   {
+      SCIPdebugMsg(scip, "Could not create the subproblem -> skip call\n");
+      goto TERMINATE;
+   }
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* initializing the subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   /* setup and solve the subproblem and catch the return code */
+   retcode = setupAndSolveSubscipMutation(scip, subscip, heur, fixedvars, fixedvals, nfixedvars, nsubnodes, result);
+
+   /* free the subscip in any case */
    SCIP_CALL( SCIPfree(&subscip) );
+   SCIP_CALL( retcode );
+
    /* free storage for subproblem fixings */
  TERMINATE:
    SCIPfreeBufferArray(scip, &fixedvals);

@@ -380,7 +380,7 @@ void generateMskBoundkeys(
          {
             bk[i] = MSK_BK_LO;
          }
-         else if (lb[i] == ub[i])/*lint !e777*/  /** No epsilon-test since MOSEK will also test for exact equality */
+         else if (lb[i] == ub[i])/*lint !e777*/  /* No epsilon-test since MOSEK will also test for exact equality */
          {
             assert(lb[i] - ub[i] == 0);
             assert(ub[i] - lb[i] == 0);
@@ -698,6 +698,17 @@ SCIP_RETCODE SCIPlpiCreate(
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_DEGEN, DEGEN_LEVEL) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_SWITCH_OPTIMIZER, MSK_ON) );
    MOSEK_CALL( MSK_puttaskname((*lpi)->task, (char*) name) );
+
+   /* disable errors for huge values */
+   MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_AIJ_HUGE, MSK_INFINITY * 2)); /* not clear why the *2 is needed */
+   MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_C_HUGE, MSK_INFINITY));
+
+   /* disable warnings for large values */
+   MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_AIJ_LARGE, MSK_INFINITY * 2));
+   MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_CJ_LARGE, MSK_INFINITY));
+
+   /* disable warnings for large bounds */
+   MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_BOUND_WRN, MSK_INFINITY));
 
    (*lpi)->termcode = MSK_RES_OK;
    (*lpi)->itercount = 0;
@@ -1588,7 +1599,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -1616,7 +1627,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -3562,6 +3573,9 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       inds[0]= c;
       coef[c] = 1; /* Unit vector e_col */
 
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
       assert( *ninds <= nrows );
    }
@@ -3578,6 +3592,9 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       numnz = 1;
       sub[0]= c;
       coef[c] = 1; /* Unit vector e_col */
+
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
 
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
       assert( numnz <= nrows );
@@ -3629,6 +3646,9 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       inds[0]= row;
       coef[row] = 1; /* Unit vector e_row */
 
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, ninds, inds, coef) );
       assert( *ninds <= nrows );
    }
@@ -3645,6 +3665,9 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       numnz = 1;
       sub[0] = row;
       coef[row] = 1; /* Unit vector e_row */
+
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
 
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, &numnz, sub, coef) );
 
@@ -3777,6 +3800,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
       *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
+
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
       assert( *ninds <= nrows );
    }
@@ -3793,6 +3820,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       if ( ninds != NULL )
          *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
+
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 
       BMSfreeMemoryArray(&sub);

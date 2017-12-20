@@ -27,7 +27,7 @@
 
 typedef struct SCIP_ThreadPool SCIP_THREADPOOL;
 static SCIP_THREADPOOL* _threadpool = NULL;
-_Thread_local int _threadnumber;
+_Thread_local int _threadnumber; /*lint !e129*/
 
 /** A job added to the queue */
 struct SCIP_Job
@@ -79,7 +79,7 @@ struct SCIP_ThreadPool
 
 /** this function controls the execution of each of the threads */
 static
-int threadPoolThread(
+SCIP_RETCODE threadPoolThreadRetcode(
    void*                 threadnum           /**< thread number is passed in as argument stored inside a void pointer */
    )
 {
@@ -87,7 +87,7 @@ int threadPoolThread(
    SCIP_JOB* prevjob;
    SCIP_JOB* currjob;
 
-   _threadnumber = (int)(size_t) threadnum;
+   _threadnumber = (int)(uintptr_t) threadnum;
 
    /* Increase the number of active threads */
    SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
@@ -95,7 +95,7 @@ int threadPoolThread(
    SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
 
    /* this is an endless loop that runs until the thrd_exit function is called */
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
 
@@ -112,7 +112,7 @@ int threadPoolThread(
          _threadpool->currworkingthreads -= 1;
          SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
 
-         thrd_exit(SCIP_OKAY);
+         thrd_exit((int)SCIP_OKAY);
       }
 
       /* getting the next job in the queue */
@@ -176,7 +176,7 @@ int threadPoolThread(
       if( currjob == _threadpool->currentjobs->firstjob )
          _threadpool->currentjobs->firstjob = currjob->nextjob;
       else
-         prevjob->nextjob = currjob->nextjob;
+         prevjob->nextjob = currjob->nextjob; /*lint !e794*/
 
       if( currjob == _threadpool->currentjobs->lastjob )
          _threadpool->currentjobs->lastjob = prevjob;
@@ -204,6 +204,15 @@ int threadPoolThread(
    }
 }
 
+/** this function controls the execution of each of the threads */
+static
+int threadPoolThread(
+   void*                 threadnum           /**< thread number is passed in as argument stored inside a void pointer */
+   )
+{
+   return (int) threadPoolThreadRetcode(threadnum);
+}
+
 /** creates a threadpool */
 static
 SCIP_RETCODE createThreadPool(
@@ -213,7 +222,7 @@ SCIP_RETCODE createThreadPool(
    SCIP_Bool             blockwhenfull       /**< should the jobqueue block if it is full */
    )
 {
-   int i;
+   uintptr_t i;
 
    assert(nthreads >= 0);
    assert(qsize >= 0);
@@ -261,9 +270,9 @@ SCIP_RETCODE createThreadPool(
    SCIP_ALLOC( BMSallocMemoryArray(&((*thrdpool)->threads), nthreads) );
 
    /* create the threads */
-   for( i = 0; i < nthreads; i++ )
+   for( i = 0; i < (unsigned)nthreads; i++ )
    {
-      if( thrd_create(&((*thrdpool)->threads[i]), threadPoolThread, (void*)(size_t)i) != thrd_success )
+      if( thrd_create(&((*thrdpool)->threads[i]), threadPoolThread, (void*)i) != thrd_success )
          return SCIP_ERROR;
    }
 
@@ -364,7 +373,7 @@ SCIP_RETCODE threadPoolAddWork(
    SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
 
    *status = SCIP_SUBMIT_SUCCESS;
-   return SCIP_OKAY;;
+   return SCIP_OKAY;
 }
 
 /** frees the jobqueue of the threadpool */
@@ -449,9 +458,9 @@ SCIP_RETCODE freeThreadPool(
       int thrdretcode;
 
       if( thrd_join((*thrdpool)->threads[i], &thrdretcode) != thrd_success )
-         retcode = (SCIP_RETCODE) MIN(SCIP_ERROR, retcode);
+         retcode = (SCIP_RETCODE) MIN((int)SCIP_ERROR, (int)retcode);
       else
-         retcode = (SCIP_RETCODE) MIN(thrdretcode, retcode);
+         retcode = (SCIP_RETCODE) MIN(thrdretcode, (int)retcode);
    }
 
    /* freeing memory and data structures */

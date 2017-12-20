@@ -61,6 +61,8 @@ SCIP_RETCODE SCIPmemFree(
    )
 {
    assert(mem != NULL);
+   if( *mem == NULL )
+      return SCIP_OKAY;
 
    /* free memory buffers */
    BMSdestroyBufferMemory(&(*mem)->cleanbuffer);

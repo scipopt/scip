@@ -894,7 +894,7 @@ SCIP_RETCODE createRow(
       if( SCIPgetDepth(scip) == 0 || SCIPisCutEfficacious(scip, NULL, row) )
       {
          SCIPdebug( SCIPprintRow(scip, row, NULL) );
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
          (*rowadded) = TRUE;
       }
 

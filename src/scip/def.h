@@ -58,11 +58,15 @@
  */
 
 #ifndef SCIP_Bool
-#define SCIP_Bool unsigned int                    /**< type used for boolean values */
+#define SCIP_Bool unsigned int               /**< type used for Boolean values */
 #ifndef TRUE
-#define TRUE  1                         /**< boolean value TRUE */
-#define FALSE 0                         /**< boolean value FALSE */
+#define TRUE  1                              /**< Boolean value TRUE */
+#define FALSE 0                              /**< Boolean value FALSE */
 #endif
+#endif
+
+#ifndef SCIP_Shortbool
+#define SCIP_Shortbool uint8_t               /**< type used for Boolean values with less space */
 #endif
 
 /*
@@ -103,9 +107,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                401 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
-#define SCIP_APIVERSION              17 /**< SCIP API version number */
+#define SCIP_VERSION                500 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
+#define SCIP_APIVERSION              21 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 

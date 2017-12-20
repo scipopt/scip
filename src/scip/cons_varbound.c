@@ -413,7 +413,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMsg(scip, "adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -524,7 +524,8 @@ SCIP_RETCODE resolvePropagation(
           * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
           * arithmetics, so we explicitly check this here.
           */
-         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
+               && REALABS(consdata->lhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
             relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2.0* SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
@@ -584,7 +585,8 @@ SCIP_RETCODE resolvePropagation(
              * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
              * arithmetics, so we explicitly check this here.
              */
-            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
+                  && REALABS(consdata->rhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
                relaxedub = consdata->lhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedub = consdata->lhs - inferbd * vbdcoef;
@@ -600,7 +602,8 @@ SCIP_RETCODE resolvePropagation(
              * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
              * arithmetics, so we explicitly check this here.
              */
-            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
+                  && REALABS(consdata->lhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
                relaxedub = consdata->lhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedub = consdata->lhs - inferbd * vbdcoef;
@@ -639,7 +642,8 @@ SCIP_RETCODE resolvePropagation(
           * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
           * arithmetics, so we explicitly check this here.
           */
-         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
+               && REALABS(consdata->rhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
             relaxedbd = (consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
@@ -699,7 +703,8 @@ SCIP_RETCODE resolvePropagation(
              * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
              * arithmetics, so we explicitly check this here.
              */
-            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
+                  && REALABS(consdata->rhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
                relaxedlb = consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedlb = consdata->rhs - inferbd * vbdcoef;
@@ -715,7 +720,8 @@ SCIP_RETCODE resolvePropagation(
              * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
              * arithmetics, so we explicitly check this here.
              */
-            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
+                  && REALABS(consdata->lhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
                relaxedlb = consdata->rhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedlb = consdata->rhs - inferbd * vbdcoef;
@@ -1031,7 +1037,7 @@ SCIP_RETCODE separateCons(
          {
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, &infeasible) );
             if ( infeasible )
                *result = SCIP_CUTOFF;
             else

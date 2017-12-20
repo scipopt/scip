@@ -1,0 +1,28 @@
+# SCIP version 2.1.1.6
+
+# frequency for calling separator <oddcycle> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/oddcycle/freq = 0
+
+# should the search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/oddcycle/usegls = FALSE
+
+# should odd cycle cuts be lifted?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/oddcycle/liftoddcycles = TRUE
+
+# SCIP version 3.1.0.1
+
+# should statistics be collected for variable domain value pairs?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+history/valuebased = TRUE
+
+# should an iterative round-and-propagate scheme be used to find the integral points?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/feaspump/usefp20 = TRUE
+
+# should we solve a local branching sub-MIP if no solution could be found?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/feaspump/stage3 = TRUE
+

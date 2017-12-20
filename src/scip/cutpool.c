@@ -540,7 +540,10 @@ SCIP_RETCODE cutpoolDelCut(
 
    /* if this is the global cut pool of SCIP, mark the row to not be member anymore */
    if( cutpool->globalcutpool )
+   {
+      assert(cut->row->inglobalcutpool);
       cut->row->inglobalcutpool = FALSE;
+   }
 
    /* remove the cut from the hash table */
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
@@ -698,7 +701,11 @@ SCIP_RETCODE SCIPcutpoolAddRow(
       if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
       {
          SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, othercut) );
-         SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, stat, lp, row) );
+
+         /* use recursion, since in rare cases new cut might compare equal to multiple other cuts
+          * that do not compare equal themselve due to non-transitivity of epsilon comparisons
+          */
+         SCIP_CALL( SCIPcutpoolAddRow(cutpool, blkmem, set, stat, lp, row) );
       }
    }
 
@@ -733,6 +740,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
       return SCIP_INVALIDDATA;
    }
 
+   assert(! row->inglobalcutpool);
+
    /* only called to ensure that minidx and maxidx are up-to-date */
    (void) SCIProwGetMaxidx(row, set);
    assert(row->validminmaxidx);
@@ -756,8 +765,11 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
 
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
 
-   thisefficacy = SCIProwGetLPEfficacy(row, set, stat, lp);
-   stat->bestefficacy = MAX(thisefficacy, stat->bestefficacy);
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      thisefficacy = SCIProwGetLPEfficacy(row, set, stat, lp);
+      stat->bestefficacy = MAX(thisefficacy, stat->bestefficacy);
+   }
 
    /* if this is the global cut pool of SCIP, mark the row to be member of the pool */
    if( cutpool->globalcutpool )

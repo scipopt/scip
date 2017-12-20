@@ -1,0 +1,1 @@
+../../../check/configuration_set.sh

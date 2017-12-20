@@ -522,6 +522,9 @@ SCIP_RETCODE SCIPapplyLockFixings(
 
       if( updatelocks )
       {
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+            continue;
+
          col = SCIPvarGetCol(var);
          assert(col != NULL);
 

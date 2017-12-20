@@ -1351,6 +1351,21 @@ int SCIPgetSubscipDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets depth of scip instance
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note SCIP stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+void SCIPsetSubscipDepth(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   newdepth            /**< new subscip depth */
+   );
+
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
  *  1) copy the plugins
  *  2) copy the settings
@@ -3470,7 +3485,6 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
-   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
@@ -3496,7 +3510,6 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
-   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    );
@@ -3710,6 +3723,22 @@ SCIP_RETCODE SCIPsetSepaPriority(
    SCIP_SEPA*            sepa,               /**< separator */
    int                   priority            /**< new priority of the separator */
    );
+
+/** gets value of minimal efficacy for a cut to enter the LP
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @return value of "separating/minefficacyroot" if at root node, otherwise value of "separating/minefficacy"
+ */
+EXTERN
+SCIP_Real SCIPgetSepaMinEfficacy(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+#ifdef NDEBUG
+#define SCIPgetSepaMinEfficacy(scip)         (SCIPtreeGetCurrentDepth((scip)->tree) == 0 ? (scip)->set->sepa_minefficacyroot : (scip)->set->sepa_minefficacy)
+#endif
 
 /* @} */
 
@@ -5150,6 +5179,7 @@ SCIP_RETCODE SCIPcreateProbBasic(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
+EXTERN
 SCIP_RETCODE SCIPsetProbDelorig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
@@ -6428,6 +6458,7 @@ int SCIPgetNConss(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
@@ -6914,7 +6945,36 @@ SCIP_RETCODE SCIPsolve(
    );
 
 /** transforms, presolves, and solves problem using additional solvers which emphasize on
- * finding solutions.
+ *  finding solutions.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
+ *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
+ *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @deprecated Please use SCIPsolveConcurrent() instead.
+ */
+EXTERN
+SCIP_RETCODE SCIPsolveParallel(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** transforms, presolves, and solves problem using additional solvers which emphasize on
+ *  finding solutions.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6936,7 +6996,7 @@ SCIP_RETCODE SCIPsolve(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
-SCIP_RETCODE SCIPsolveParallel(
+SCIP_RETCODE SCIPsolveConcurrent(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -8138,6 +8198,10 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This method incrementally updates the objective value of the relaxation solution. If the whole solution
+ *        should be updated, using SCIPsetRelaxSolVals() instead or calling SCIPclearRelaxSolVals() before setting
+ *        the first value to reset the solution and the objective value to 0 may help the numerics.
  */
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolVal(
@@ -8146,7 +8210,8 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
    SCIP_Real             val                 /**< solution value of variable */
    );
 
-/** sets the values of the given variables in the global relaxation solution;
+/** sets the values of the given variables in the global relaxation solution and informs SCIP about the validity
+ *  and whether the solution can be enforced via linear cuts;
  *  this solution can be filled by the relaxation handlers  and can be used by heuristics and for separation;
  *  the solution is automatically cleared, s.t. all other variables get value 0.0
  *
@@ -8162,12 +8227,13 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables to set relaxation solution value for */
    SCIP_VAR**            vars,               /**< array with variables to set value for */
-   SCIP_Real*            vals                /**< array with solution values of variables */
+   SCIP_Real*            vals,               /**< array with solution values of variables */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
-/** sets the values of the variables in the global relaxation solution to the values
- *  in the given primal solution; the relaxation solution can be filled by the relaxation hanlders
- *  and might be used by heuristics and for separation
+/** sets the values of the variables in the global relaxation solution to the values in the given primal solution
+ *  and informs SCIP about the validity and whether the solution can be enforced via linear cuts;
+ *  the relaxation solution can be filled by the relaxation handlers and might be used by heuristics and for separation
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -8179,7 +8245,8 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal relaxation solution */
+   SCIP_SOL*             sol,                /**< primal relaxation solution */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
 /** returns whether the relaxation solution is valid
@@ -8195,7 +8262,7 @@ SCIP_Bool SCIPisRelaxSolValid(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** informs SCIP, that the relaxation solution is valid
+/** informs SCIP that the relaxation solution is valid and whether the relaxation can be enforced through linear cuts
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -8206,7 +8273,8 @@ SCIP_Bool SCIPisRelaxSolValid(
  */
 EXTERN
 SCIP_RETCODE SCIPmarkRelaxSolValid(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
 /** informs SCIP, that the relaxation solution is invalid
@@ -10006,7 +10074,11 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP_VAR*             var                 /**< variable x to aggregate */
    );
 
-/** returns whether dual reductions propagation methods and presolvers is allowed */
+/** returns whether dual reduction are allowed during propagation and presolving
+ *
+ *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs and/or dual LPs.
+ */
 EXTERN
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -14999,6 +15071,62 @@ void SCIPaddBilinMcCormick(
    SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    );
 
+/** computes coefficients of linearization of a bilinear term in a reference point when given a linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ */
+EXTERN
+void SCIPcomputeBilinEnvelope1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             xcoef,              /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef,              /**< y coefficient of linear inequality */
+   SCIP_Real             constant,           /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
+   );
+
+/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ *
+ */
+EXTERN
+void SCIPcomputeBilinEnvelope2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             alpha1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             beta1,              /**< y coefficient of linear inequality */
+   SCIP_Real             gamma1,             /**< constant of linear inequality */
+   SCIP_Real             alpha2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             beta2,              /**< y coefficient of linear inequality */
+   SCIP_Real             gamma2,             /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
+   );
+
 /** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
  *  number of non-linearly occurrences and stores it in the nlscore array
  *
@@ -15033,6 +15161,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
    );
 
 /** adds linear rows to the NLP relaxation */
+EXTERN
 SCIP_RETCODE SCIPaddNlpiProbRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
@@ -15135,13 +15264,33 @@ SCIP_Bool SCIPisCutApplicable(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut and it might be useful to keep it for future use,
+ *  consider adding it to the global cutpool with SCIPaddPoolCut().
  */
 EXTERN
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
+   );
+
+/** adds row to separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPaddRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< row */
+   SCIP_Bool             forcecut,           /**< should the row be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether row has been detected to be infeasible for local bounds */
    );
 
 /** checks if cut is already existing in global cutpool
@@ -15492,20 +15641,6 @@ SCIP_RETCODE SCIPclearCuts(
  */
 EXTERN
 SCIP_RETCODE SCIPremoveInefficaciousCuts(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns current factor on cut infeasibility to limit feasibility tolerance for relaxation solver
- *
- *  Gives value of separating/feastolfac parameter.
- *
- *  @return factor on cut infeasibility to limit feasibility tolerance for relaxation solver
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-SCIP_Real SCIPgetRelaxFeastolFactor(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -15992,9 +16127,6 @@ SCIP_RETCODE SCIPchgVarObjProbing(
 /** returns whether the objective function has changed during probing mode
  *
  *  @return \ref TRUE if objective has changed, \ref FALSE otherwise
- *
- *  @note this function should not be used during probing mode when some objective coefficients have been changed via
- *        SCIPchgVarObjProbing()
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -20152,6 +20284,9 @@ SCIP_Longint SCIPgetNBacktracks(
  *  @return the total number of active constraints at the current node
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
@@ -20629,9 +20764,9 @@ SCIP_Real SCIPgetAvgConflictScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average conflict score value over all variables, only using the pseudo cost information of the current run
+/** gets the average conflict score value over all variables, only using the conflict information of the current run
  *
- *  @return the average conflict score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average conflict score value over all variables, only using the conflict information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -20655,10 +20790,10 @@ SCIP_Real SCIPgetAvgConflictlengthScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the
+/** gets the average conflictlength score value over all variables, only using the conflictlength information of the
  *  current run
  *
- *  @return the average conflictlength score value over all variables, only using the pseudo cost information of the
+ *  @return the average conflictlength score value over all variables, only using the conflictlength information of the
  *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -20685,10 +20820,10 @@ SCIP_Real SCIPgetAvgInferences(
    );
 
 /** returns the average number of inferences found after branching in given direction over all variables,
- *  only using the pseudo cost information of the current run
+ *  only using the inference information of the current run
  *
  *  @return the average number of inferences found after branching in given direction over all variables,
- *          only using the pseudo cost information of the current run
+ *          only using the inference information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -20713,10 +20848,10 @@ SCIP_Real SCIPgetAvgInferenceScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average inference score value over all variables, only using the inference information information of the
+/** gets the average inference score value over all variables, only using the inference information of the
  *  current run
  *
- *  @return the average inference score value over all variables, only using the inference information information of the
+ *  @return the average inference score value over all variables, only using the inference information of the
  *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -20743,10 +20878,10 @@ SCIP_Real SCIPgetAvgCutoffs(
    );
 
 /** returns the average number of cutoffs found after branching in given direction over all variables,
- *  only using the pseudo cost information of the current run
+ *  only using the cutoff information of the current run
  *
  *  @return the average number of cutoffs found after branching in given direction over all variables,
- *          only using the pseudo cost information of the current run
+ *          only using the cutoff information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -20771,9 +20906,9 @@ SCIP_Real SCIPgetAvgCutoffScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average cutoff score value over all variables, only using the pseudo cost information of the current run
+/** gets the average cutoff score value over all variables, only using the cutoff information of the current run
  *
- *  @return the average cutoff score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average cutoff score value over all variables, only using the cutoff information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -21679,6 +21814,16 @@ SCIP_Real SCIPcutoffbounddelta(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** return the relaxation primal feasibility tolerance
+ *
+ *  @see SCIPchgRelaxfeastol
+ *  @return relaxfeastol
+ */
+EXTERN
+SCIP_Real SCIPrelaxfeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** sets the feasibility tolerance for constraints
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -21722,6 +21867,27 @@ EXTERN
 SCIP_RETCODE SCIPchgBarrierconvtol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
+   );
+
+/** sets the primal feasibility tolerance of relaxations
+ *
+ * This tolerance value is used by the SCIP core and plugins to tighten then feasibility tolerance on relaxations
+ * (especially the LP relaxation) during a solve. It is set to SCIP_INVALID initially, which means that only the
+ * feasibility tolerance of the particular relaxation is taken into account. If set to a valid value, however,
+ * then this value should be used to reduce the primal feasibility tolerance of a relaxation (thus, use the
+ * minimum of relaxfeastol and the relaxations primal feastol).
+ *
+ * @pre The value of relaxfeastol is reset to SCIP_INVALID when initializing the solve (INITSOL).
+ * Therefore, this method can only be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ * @return previous value of relaxfeastol
+ */
+EXTERN
+SCIP_Real SCIPchgRelaxfeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             relaxfeastol        /**< new primal feasibility tolerance of relaxations */
    );
 
 /** marks that some limit parameter was changed */
@@ -22357,7 +22523,6 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPgetStage(scip)                        (((scip)->set)->stage)
 #define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
 #define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
-
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */
@@ -22975,13 +23140,13 @@ int SCIPgetPtrarrayMaxIdx(
 
 /**@} */
 
-/**@addtogroup DisjoinedSet
+/**@addtogroup DisjointSet
  *
  * @{
  */
 
 /** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
@@ -22989,7 +23154,7 @@ SCIP_RETCODE SCIPcreateDisjointset(
    );
 
 /** frees the disjoint set (union find) data structure */
-extern
+EXTERN
 void SCIPfreeDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DISJOINTSET**    djset               /**< pointer to disjoint set (union find) data structure */
@@ -22997,7 +23162,7 @@ void SCIPfreeDisjointset(
 
 /* @} */
 
-/**@addtogroup DigraphMethods
+/**@addtogroup DirectedGraph
  *
  * @{
  */

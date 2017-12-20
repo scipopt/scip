@@ -712,7 +712,6 @@ SCIP_RETCODE sepastoreApplyBdchg(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_ROW*             cut,                /**< cut with a single variable */
-   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base feasibility computation on */
    SCIP_Bool*            applied,            /**< pointer to store whether the domain change was applied */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
@@ -790,39 +789,6 @@ SCIP_RETCODE sepastoreApplyBdchg(
    if( *applied && !sepastore->initiallp )
       sepastore->ncutsapplied++;
 
-   if( *applied && !sepastore->initiallp && set->sepa_feastolfac > 0.0 )
-   {
-      SCIP_Real infeasibility;
-
-      /* calculate cut's infeasibility */
-      switch ( efficiacychoice )
-      {
-      case SCIP_EFFICIACYCHOICE_LP:
-         infeasibility = -SCIProwGetLPFeasibility(cut, set, stat, lp);
-         break;
-      case SCIP_EFFICIACYCHOICE_RELAX:
-         infeasibility = -SCIProwGetRelaxFeasibility(cut, set, stat);
-         break;
-      case SCIP_EFFICIACYCHOICE_NLP:
-         infeasibility = -SCIProwGetNLPFeasibility(cut, set, stat);
-         break;
-      default:
-         SCIPerrorMessage("Invalid efficiacy choice.\n");
-         return SCIP_INVALIDCALL;
-      }
-      /* a cut a*x<=b is applied as boundchange x<=b/a, so also the infeasibility needs to be divided by a (aka. scaled) */
-      infeasibility /= REALABS(vals[0]);
-
-      /* reduce relaxation feasibility tolerance */
-      if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) ) /*lint !e777*/
-      {
-         SCIP_Real epsilon = SCIPsetEpsilon(set);
-
-         set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, epsilon);
-         SCIPsetDebugMsg(set, "reduced feasibility tolerance for relaxations to %g due to cut <%s>\n", set->sepa_primfeastol, SCIProwGetName(cut));
-      }
-   }
-
    return SCIP_OKAY;
 }
 
@@ -852,7 +818,7 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
       /* update orthogonality */
       thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[pos], set->sepa_orthofunc);
 
-      if( thisortho < 0.5 || (thisortho < mincutorthogonality && sepastore->scores[pos] < 0.9 * bestscore) )
+      if( thisortho < MIN(mincutorthogonality, 0.5) || (thisortho < mincutorthogonality && sepastore->scores[pos] < 0.9 * bestscore) )
       {
          /* cut is too parallel: release the row and delete the cut */
          SCIPsetDebugMsg(set, "    -> deleting parallel cut <%s> after adding <%s> (pos=%d, len=%d, orthogonality=%g, score=%g)\n",
@@ -873,7 +839,6 @@ SCIP_RETCODE sepastoreApplyCut(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp,                 /**< LP data */
@@ -881,7 +846,6 @@ SCIP_RETCODE sepastoreApplyCut(
    SCIP_Real             mincutorthogonality,/**< minimal orthogonality of cuts to apply to LP */
    SCIP_Real             bestscore,          /**< best score in this round */
    int                   depth,              /**< depth of current node */
-   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base feasibility computation on */
    int*                  ncutsapplied        /**< pointer to count the number of applied cuts */
    )
 {
@@ -923,37 +887,6 @@ SCIP_RETCODE sepastoreApplyCut(
       /* update the orthogonalities */
       SCIP_CALL( sepastoreUpdateOrthogonalities(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, bestscore) );
       (*ncutsapplied)++;
-
-      if( !sepastore->initiallp && set->sepa_feastolfac > 0.0 )
-      {
-         SCIP_Real infeasibility;
-
-         /* calculate cut's infeasibility */
-         switch ( efficiacychoice )
-         {
-         case SCIP_EFFICIACYCHOICE_LP:
-            infeasibility = -SCIProwGetLPFeasibility(cut, set, stat, lp);
-            break;
-         case SCIP_EFFICIACYCHOICE_RELAX:
-            infeasibility = -SCIProwGetRelaxFeasibility(cut, set, stat);
-            break;
-         case SCIP_EFFICIACYCHOICE_NLP:
-            infeasibility = -SCIProwGetNLPFeasibility(cut, set, stat);
-            break;
-         default:
-            SCIPerrorMessage("Invalid efficiacy choice.\n");
-            return SCIP_INVALIDCALL;
-         }
-
-         /* reduce relaxation feasibility tolerance */
-         if( infeasibility > 0.0 && (set->sepa_primfeastol == SCIP_INVALID || set->sepa_primfeastol > set->sepa_feastolfac * infeasibility) ) /*lint !e777*/
-         {
-            SCIP_Real epsilon = SCIPsetEpsilon(set);
-
-            set->sepa_primfeastol = MAX(set->sepa_feastolfac * infeasibility, epsilon);
-            SCIPsetDebugMsg(set, "reduced feasibility tolerance for relaxations to %g due to cut <%s>\n", set->sepa_primfeastol, SCIProwGetName(cut));
-         }
-      }
    }
 
    return SCIP_OKAY;
@@ -970,10 +903,12 @@ int sepastoreGetBestCut(
    int pos;
 
    assert(sepastore != NULL);
+   assert(sepastore->nforcedcuts < sepastore->ncuts);
 
-   bestscore = SCIP_REAL_MIN;
-   bestpos = -1;
-   for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
+   bestpos = sepastore->nforcedcuts;
+   bestscore = sepastore->scores[bestpos];
+   assert( bestscore != SCIP_INVALID ); /*lint !e777*/
+   for( pos = sepastore->nforcedcuts + 1; pos < sepastore->ncuts; pos++ )
    {
       /* check if cut is current best cut */
       assert( sepastore->scores[pos] != SCIP_INVALID ); /*lint !e777*/
@@ -1114,7 +1049,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       {
          SCIPsetDebugMsg(set, " -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
          SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-               eventqueue, cliquetable, cut, efficiacychoice, &applied, cutoff) );
+               eventqueue, cliquetable, cut, &applied, cutoff) );
 
          assert(applied || !sepastoreIsBdchgApplicable(set, cut));
       }
@@ -1124,7 +1059,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          /* add cut to the LP and update orthogonalities */
          SCIPsetDebugMsg(set, " -> applying forced cut <%s>\n", SCIProwGetName(cut));
          /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, bestscore, depth, efficiacychoice, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, bestscore, depth, &ncutsapplied) );
       }
    }
 
@@ -1162,7 +1097,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       if( SCIPsetIsFeasPositive(set, efficacy) )
       {
          /* add cut to the LP and update orthogonalities */
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, bestscore, depth, efficiacychoice, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, bestscore, depth, &ncutsapplied) );
       }
 
       /* release cut */

@@ -1,12 +1,12 @@
 find_path(CPLEX_INCLUDE_DIRS
     NAMES cplex.h
-    HINTS ${CPLEX_DIR}
+    HINTS ${CPLEX_DIR} $ENV{CPLEX_DIR}
     PATH_SUFFIXES include/ilcplex include)
 
 # todo: enable recursive search
 find_library(CPLEX_LIBRARY
     NAMES cplex
-    HINTS ${CPLEX_DIR}
+    HINTS ${CPLEX_DIR} $ENV{CPLEX_DIR}
     PATH_SUFFIXES lib/x86-64_linux/static_pic lib)
 
 # todo properly check when pthread is necessary

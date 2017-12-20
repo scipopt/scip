@@ -159,7 +159,7 @@ do
 
       # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
       SOLUFILE=""
-      for f in $TSTNAME ${TSTNAME%%_*} all
+      for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
       do
           if test -f testset/${f}.solu
           then
@@ -193,7 +193,7 @@ do
       then
           if test "$EXPIRE" = "1"
           then
-              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+3 months"`
+              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+2 weeks"`
               rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
           else
               rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE

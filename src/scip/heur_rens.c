@@ -271,8 +271,8 @@ SCIP_RETCODE restrictToBinaryBounds(
       else
       {
          /* the variable bounds should be already fixed to this solution value */
-         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(subvars[i]), solval));
-         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(subvars[i]), solval));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPfloor(scip, solval+0.5)));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPfloor(scip, solval+0.5)));
       }
    }
 
@@ -356,93 +356,48 @@ SCIP_DECL_EVENTEXEC(eventExecRens)
    return SCIP_OKAY;
 }
 
-/* ---------------- external methods of RENS heuristic ---------------- */
-
-/** main procedure of the RENS heuristic, creates and solves a sub-SCIP */
-SCIP_RETCODE SCIPapplyRens(
-   SCIP*                 scip,               /**< original SCIP data structure                                        */
-   SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
-   SCIP_RESULT*          result,             /**< result data structure                                               */
+/** setup and solve the RENS sub-SCIP */
+static
+SCIP_RETCODE setupAndSolveSubscip(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub SCIP data structure */
+   SCIP_RESULT*          result,             /**< result pointer */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_VAR**            fixedvars,          /**< array of variables that should be fixed */
+   SCIP_Real*            fixedvals,          /**< array of fixing values */
+   int                   nfixedvars,         /**< number of variables that should be fixed */
+   SCIP_Real             intfixingrate,      /**< percentage of integer variables fixed           */
    SCIP_Real             minfixingrate,      /**< minimum percentage of integer variables that have to be fixed       */
    SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent          */
    SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                         */
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                         */
    char                  startsol,           /**< solution used for fixing values ('l'p relaxation, 'n'lp relaxation) */
    SCIP_Bool             binarybounds,       /**< should general integers get binary bounds [floor(.),ceil(.)]?       */
-   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
+   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows? */
    )
 {
-   SCIP* subscip;                            /* the subproblem created by RENS                  */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_VAR** vars;                          /* original problem's variables                    */
    SCIP_VAR** subvars;                       /* subproblem's variables                          */
-   SCIP_HEURDATA* heurdata;                  /* heuristic's private data structure              */
-   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
-
+   SCIP_HEURDATA* heurdata;                  /* heuristic data */
+   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
-   SCIP_Real intfixingrate;                  /* percentage of integer variables fixed           */
-
-   int nvars;                                /* number of original problem's variables          */
-   int i;
-   SCIP_VAR** fixedvars;
-   SCIP_Real* fixedvals;
-   int nfixedvars;
-   int fixedvarssize;
-   int nbinvars;
-   int nintvars;
-
    SCIP_Bool success;
+   int i;
+   int nvars;              /**< number of original problem's variables */
    SCIP_RETCODE retcode;
 
    assert(scip != NULL);
+   assert(subscip != NULL);
    assert(heur != NULL);
    assert(result != NULL);
 
-   assert(maxnodes >= 0);
-   assert(nstallnodes >= 0);
-
-   assert(0.0 <= minfixingrate && minfixingrate <= 1.0);
-   assert(0.0 <= minimprove && minimprove <= 1.0);
-   assert(startsol == 'l' || startsol == 'n');
-
-   *result = SCIP_DIDNOTRUN;
-
-   nbinvars = SCIPgetNBinVars(scip);
-   nintvars = SCIPgetNIntVars(scip);
-
-   /* allocate buffer storage to keep fixings for the variables in the sub SCIP */
-   fixedvarssize = nbinvars + nintvars;
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
-   nfixedvars = 0;
-
-   /* compute the number of initial fixings and check if the fixing rate exceeds the minimum fixing rate */
-   SCIP_CALL( computeFixingrate(scip, fixedvars, fixedvals, &nfixedvars, fixedvarssize, minfixingrate, &startsol, &intfixingrate, &success) );
-
-   if( !success )
-   {
-      SCIPstatisticPrintf("RENS statistic: fixed only %5.2f integer variables --> abort \n", intfixingrate);
-      goto TERMINATE;
-   }
-
-   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
-
-   if( !success )
-      goto TERMINATE;
-
-   *result = SCIP_DIDNOTFIND;
-
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* initialize the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
@@ -463,7 +418,7 @@ SCIP_RETCODE SCIPapplyRens(
    /* copy subproblem variables into the same order as the source SCIP variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
@@ -566,7 +521,7 @@ SCIP_RETCODE SCIPapplyRens(
       if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
       {
          cutoff = (1 - minimprove) * SCIPgetUpperbound(scip)
-               + minimprove * SCIPgetLowerbound(scip);
+                       + minimprove * SCIPgetLowerbound(scip);
       }
       else
       {
@@ -592,9 +547,8 @@ SCIP_RETCODE SCIPapplyRens(
 
       /* free sub problem data */
       SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL( SCIPfree(&subscip) );
 
-      goto TERMINATE;
+      return retcode;
    }
 
    SCIPdebugMsg(scip, "RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
@@ -631,6 +585,11 @@ SCIP_RETCODE SCIPapplyRens(
       {
          SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
          SCIPABORT();
+
+         /* free sub problem data */
+         SCIPfreeBufferArray(scip, &subvars);
+
+         return retcode;
       }
       else
       {
@@ -655,17 +614,97 @@ SCIP_RETCODE SCIPapplyRens(
       }
 
       SCIPstatisticPrintf("RENS statistic: fixed %6.3f integer variables, %6.3f all variables, needed %6.1f seconds, %" SCIP_LONGINT_FORMAT " nodes, solution %10.4f found at node %" SCIP_LONGINT_FORMAT "\n",
-         intfixingrate, allfixingrate, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
-         nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
+            intfixingrate, allfixingrate, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
+                  nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
    }
    else
    {
       SCIPstatisticPrintf("RENS statistic: fixed only %6.3f integer variables, %6.3f all variables --> abort \n", intfixingrate, allfixingrate);
    }
 
-   /* free subproblem */
+   /* free sub problem data */
    SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+}
+
+/* ---------------- external methods of RENS heuristic ---------------- */
+
+/** main procedure of the RENS heuristic, creates and solves a sub-SCIP */
+SCIP_RETCODE SCIPapplyRens(
+   SCIP*                 scip,               /**< original SCIP data structure                                        */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
+   SCIP_RESULT*          result,             /**< result data structure                                               */
+   SCIP_Real             minfixingrate,      /**< minimum percentage of integer variables that have to be fixed       */
+   SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent          */
+   SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                         */
+   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                         */
+   char                  startsol,           /**< solution used for fixing values ('l'p relaxation, 'n'lp relaxation) */
+   SCIP_Bool             binarybounds,       /**< should general integers get binary bounds [floor(.),ceil(.)]?       */
+   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
+   )
+{
+   SCIP* subscip;                            /* the subproblem created by RENS                  */
+
+   SCIP_Real intfixingrate;                  /* percentage of integer variables fixed           */
+
+   SCIP_VAR** fixedvars;
+   SCIP_Real* fixedvals;
+   int nfixedvars;
+   int fixedvarssize;
+   int nbinvars;
+   int nintvars;
+
+   SCIP_Bool success;
+   SCIP_RETCODE retcode;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(result != NULL);
+
+   assert(maxnodes >= 0);
+   assert(nstallnodes >= 0);
+
+   assert(0.0 <= minfixingrate && minfixingrate <= 1.0);
+   assert(0.0 <= minimprove && minimprove <= 1.0);
+   assert(startsol == 'l' || startsol == 'n');
+
+   *result = SCIP_DIDNOTRUN;
+
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
+
+   /* allocate buffer storage to keep fixings for the variables in the sub SCIP */
+   fixedvarssize = nbinvars + nintvars;
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, fixedvarssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, fixedvarssize) );
+   nfixedvars = 0;
+
+   /* compute the number of initial fixings and check if the fixing rate exceeds the minimum fixing rate */
+   SCIP_CALL( computeFixingrate(scip, fixedvars, fixedvals, &nfixedvars, fixedvarssize, minfixingrate, &startsol, &intfixingrate, &success) );
+
+   if( !success )
+   {
+      SCIPstatisticPrintf("RENS statistic: fixed only %5.2f integer variables --> abort \n", intfixingrate);
+      goto TERMINATE;
+   }
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   if( !success )
+      goto TERMINATE;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* initialize the subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = setupAndSolveSubscip(scip, subscip, result, heur, fixedvars, fixedvals, nfixedvars, intfixingrate, minfixingrate, minimprove, maxnodes, nstallnodes, startsol, binarybounds, uselprows);
+
    SCIP_CALL( SCIPfree(&subscip) );
+
+   SCIP_CALL( retcode );
 
 TERMINATE:
    /* free buffer storage for variable fixings */

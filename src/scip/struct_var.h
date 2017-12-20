@@ -32,6 +32,7 @@
 #include "scip/type_implics.h"
 #include "scip/type_cons.h"
 #include "scip/type_prop.h"
+#include "scip/type_lp.h"
 
 #ifdef __cplusplus
 extern "C" {

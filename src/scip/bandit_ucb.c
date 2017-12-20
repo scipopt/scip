@@ -196,7 +196,6 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectUcb)
 
    assert(*selection >= 0);
    assert(*selection < nactions);
-   banditdata->nselections++;
 
    return SCIP_OKAY;
 }
@@ -218,6 +217,8 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateUcb)
    delta = score - banditdata->meanscores[selection];
    ++banditdata->counter[selection];
    banditdata->meanscores[selection] += delta / (SCIP_Real)banditdata->counter[selection];
+
+   banditdata->nselections++;
 
    return SCIP_OKAY;
 }
@@ -336,6 +337,7 @@ SCIP_RETCODE SCIPcreateBanditUcb(
    if( vtable == NULL )
    {
       SCIPerrorMessage("Could not find virtual function table for %s bandit algorithm\n", BANDIT_NAME);
+      return SCIP_INVALIDDATA;
    }
 
    SCIP_CALL( SCIPbanditCreateUcb(SCIPblkmem(scip), SCIPbuffer(scip), vtable, ucb,

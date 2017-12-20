@@ -25,7 +25,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -58,7 +57,6 @@
 #define SLACKPRUNE_MAXREDROUNDS      10          /**< maximum number of reduction rounds in slack-prune heuristic */
 #define SLACKPRUNE_MINSTALLPROPORTION   0.25      /**< minimum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define SLACKPRUNE_MAXSTALLPROPORTION   0.5       /**< maximum proportion of arcs to be fixed before restarting slack-prune heuristic */
-#define PRINTDEBUG FALSE
 #define BREAKONERROR FALSE
 #define MAXNTERMINALS 500
 #define MAXNEDGES     10000
@@ -87,7 +85,7 @@ struct SCIP_HeurData
 
 /* get reduction bound */
 static
-inline int getRedBound(
+int getRedBound(
    int nrounds,
    int nedges
    )
@@ -125,11 +123,9 @@ void setMinMaxElims(
 
    anedges = anedges / 2;
 
-   totminnelims = MAX(SLACKPRUNE_MINREDELIMS, (anedges / 20));
+   totminnelims = MAX(SLACKPRUNE_MINREDELIMS, (anedges / 25));
 
-   min = (int) (anedges * 0.12);
-
-
+   min = (int) (anedges * 0.15);
    min -= (int) (((double) min * anterms) / (annodes));
    min = MAX(min, 1);
 
@@ -190,7 +186,7 @@ static
 SCIP_RETCODE printGraph(
    SCIP* scip,
    const GRAPH*          graph,              /**< Graph to be printed */
-   const char*           filename,           /**< Name of the output file */
+   const char           filename,           /**< Name of the output file */
    int*                  result
    )
 {
@@ -199,7 +195,7 @@ SCIP_RETCODE printGraph(
    int e;
    int n;
    int m;
-   char* stnodes;
+   STP_Bool* stnodes;
    SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, graph->knots ) );
 
    assert(graph != NULL);
@@ -228,7 +224,7 @@ SCIP_RETCODE printGraph(
    {
       if( stnodes[n] )
       {
-         if( n == graph->source[0] )
+         if( n == graph->source )
          {
             (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
             SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
@@ -275,7 +271,7 @@ SCIP_DECL_HEURCOPY(heurCopySlackPrune)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurSlackPrune(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurSlackPrune(scip) );
 
    return SCIP_OKAY;
 }
@@ -425,11 +421,11 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    /* execute slackprune heuristic */
    if( graph->stp_type == STP_MWCSP )
    {
-      SCIP_CALL( SCIPheurSlackPrunePcMw(scip, vars, graph, soledge, &success) );
+      SCIP_CALL( SCIPStpHeurSlackPruneRunPcMw(scip, vars, graph, soledge, &success) );
    }
    else
    {
-      SCIP_CALL( SCIPheurSlackPrune(scip, vars, graph, soledge, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE) );
    }
 
    /* solution found by slackprune heuristic? */
@@ -457,8 +453,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
          }
       }
 
-      if( PRINTDEBUG )
-         printf("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
+      SCIPdebugMessage("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
 
       /* try to add new solution to pool */
       sol = NULL;
@@ -467,9 +462,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
       /* has solution been added? */
       if( success )
       {
-#if PRINTDEBUG
-            printf("better solution added by SLACKPRUNE %f \n", pobj + SCIPprobdataGetOffset(scip));
-#endif
+         SCIPdebugMessage("better solution added by SLACKPRUNE %f \n", pobj + SCIPprobdataGetOffset(scip));
          *result = SCIP_FOUNDSOL;
 
          assert(graph_sol_valid(scip, graph, soledge));
@@ -491,9 +484,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    }
    else
    {
-#if PRINTDEBUG
-         printf("slack-prune: solution not valid \n");
-#endif
+      SCIPdebugMessage("slack-prune: solution not valid \n");
    }
 
    /* solution could not be found, added or is not best? */
@@ -516,7 +507,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
  */
 
 /** execute slack-and-prune heuristic on given graph */
-SCIP_RETCODE SCIPheurSlackPrune(
+SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */
    GRAPH*                g,                  /**< graph data structure */
@@ -532,6 +523,7 @@ SCIP_RETCODE SCIPheurSlackPrune(
    SCIP_Real    ubnew;
    SCIP_Real    ubbest;
    SCIP_Real    offsetnew;
+   SCIP_Real    globalobj;
    SCIP_Real*    cost;
    SCIP_Real*    costrev;
    SCIP_Real*    nodearrreal;
@@ -548,19 +540,16 @@ SCIP_RETCODE SCIPheurSlackPrune(
    int     minnelims;
    int     lminnelims;
    int     reductbound;
-   int     nprunenodes;
-   int     npruneedges;
-   int*     mark;
    int*     heap;
    int*     state;
    int*     vbase;
    int*     solnode;
-   int*     edgearrint;
    int*     edgearrint2;
    int*     nodearrint;
    int*     nodearrint2;
-   char*     nodearrchar;
-   char*     edgearrchar;
+   int*     globalsoledge;
+   STP_Bool*     nodearrchar;
+   STP_Bool*     edgearrchar;
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -594,6 +583,8 @@ SCIP_RETCODE SCIPheurSlackPrune(
       }
    }
 
+   globalobj = ubbest;
+
    /* set offset (within new graph) to 0.0 */
    offsetnew = 0.0;
 
@@ -601,8 +592,10 @@ SCIP_RETCODE SCIPheurSlackPrune(
    SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
    for( i = 0; i < nterms - 1; i++ )
    {
-      SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(gnodearr[i])) ); /*lint !e866*/
    }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &globalsoledge, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrchar, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
@@ -614,6 +607,9 @@ SCIP_RETCODE SCIPheurSlackPrune(
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint2, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
+
+   BMScopyMemoryArray(globalsoledge, soledge, nedges);
+
 
    if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
       g->stp_type = STP_SPG;
@@ -627,10 +623,7 @@ SCIP_RETCODE SCIPheurSlackPrune(
    /* set ancestors of the new graph */
    SCIP_CALL( graph_init_history(scip, prunegraph) );
 
-   mark = prunegraph->mark;
-
    reductbound = getRedBound(0, nedges);
-   edgearrint = soledge;
 
    /* variables given? */
    if( vars != NULL )
@@ -648,13 +641,11 @@ SCIP_RETCODE SCIPheurSlackPrune(
             nfixedges++;
          }
       }
-#if PRINTDEBUG
-         printf("fixed edges in slack and prune: %d \n", nfixedges);
-#endif
+      SCIPdebugMessage("fixed edges in slack and prune: %d \n", nfixedges);
 
       if( nfixedges > reductbound && reducegraph )
       {
-         graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);
       }
    }
@@ -665,14 +656,11 @@ SCIP_RETCODE SCIPheurSlackPrune(
    if( reducegraph )
    {
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
    }
 
-   npruneedges = prunegraph->edges;
-   nprunenodes = prunegraph->knots;
-
    /* get number of remaining vertices, edges and terminals */
-   graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+   graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
    /* main reduction loop */
    for( i = 0; i < SLACKPRUNE_MAXREDROUNDS && anterms > 2; i++ )
@@ -689,226 +677,75 @@ SCIP_RETCODE SCIPheurSlackPrune(
 #endif
 
       /*  perform reductions */
-      SCIP_CALL( da_reduceSlackPrune(scip, vars, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, &ubnew,
-            edgearrint, edgearrint2, vbase, nodearrint, state, solnode, nodearrchar, edgearrchar, &danelims, minnelims, ((i == 0) && !reducegraph)) );
+      SCIP_CALL( reduce_daSlackPrune(scip, vars, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, &ubnew,
+            soledge, edgearrint2, vbase, nodearrint, state, solnode, nodearrchar, edgearrchar, &danelims, minnelims, ((i == 0) && !reducegraph)) );
 
       /* delete all vertices not reachable from the root */
       SCIP_CALL( level0(scip, prunegraph) );
 
-      if( anterms <= 2 )
-         break;
-
-#if PRINTDEBUG
-      if( graph_valid(prunegraph) )
-      {
-         printf("SP: is after valid \n");
-      }
-      else
-      {
-         printf("SP: is NOT after valid \n");
-      }
-#endif
-
       assert(graph_valid(prunegraph));
 
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
       if( anterms <= 2 )
          break;
 
-#if PRINTDEBUG
-         printf("SP: minelimsx %d really reduced: %d \n", minnelims, danelims);
-#endif
+      SCIPdebugMessage("minelims %d really reduced: %d \n", minnelims, danelims);
 
       /* not enough reductions possible? */
       if( danelims < lminnelims )
       {
-#if PRINTDEBUG
-            printf("too little elims in DA OUT !! %d < %d\n\n", danelims, lminnelims);
-#endif
+         SCIPdebugMessage("too little elims in DA, break %d < %d\n\n", danelims, lminnelims);
          i = SLACKPRUNE_MAXREDROUNDS;
       }
-      /* compute new guiding solution */
-      SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, prunegraph, cost, edgearrint, nodearrint, prunegraph->source[0], nodearrchar, &apsuccess, (i != 0), FALSE) );
+
+      /* compute potential new guiding solution */
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, soledge, nodearrint, prunegraph->source, nodearrchar, &apsuccess, FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )
       {
-         int j;
+         SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, prunegraph->cost, soledge) );
+
+         assert(graph_sol_valid(scip, prunegraph, soledge));
+
+         SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, path, nodearrint, edgearrint2, solnode, soledge,
+               globalsoledge, nodearrchar, &globalobj, TRUE, success) );
 
          /* calculate objective value of solution */
-         obj = graph_computeSolVal(prunegraph->cost, edgearrint, offsetnew, npruneedges);
+         obj = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
-#if PRINTDEBUG
-            printf("SP: old solution: %f new solution %f \n\n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
-#endif
          /* obj <= incumbent objective value? */
-         if( SCIPisLT(scip, obj, ubbest) )
-         {
+         if( SCIPisLE(scip, obj, ubbest) )
             ubbest = obj;
 
-            for( j = 0; j < nprunenodes; j++ )
-               solnode[j] = UNKNOWN;
-#if PRINTDEBUG
-               printf("new improved solution found by ascend and prune for slack and prune \n\n");
-#endif
-
-            assert(nprunenodes == nnodes);
-            assert(npruneedges == nedges);
-
-            /* reset vertices that are to be kept */
-            for( e = 0; e < npruneedges; e++ )
-            {
-               if( edgearrint[e] == CONNECT )
-               {
-                  solnode[prunegraph->tail[e]] = CONNECT;
-                  solnode[prunegraph->head[e]] = CONNECT;
-               }
-            }
-         }
+         SCIPdebugMessage("old solution: %f new solution %f \n\n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
       }
 
       /* get number of remaining edges */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
       reductbound = getRedBound(i, anedges);
 
       /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
 
       /* graph vanished? */
-      if( prunegraph->grad[prunegraph->source[0]] == 0 )
+      if( prunegraph->grad[prunegraph->source] == 0 )
          break;
 
       /* get number of remaining edges */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
    } /* reduction loop */
 
-   SCIP_CALL( level0(scip, prunegraph) );
+   SCIP_CALL(SCIPStpHeurLocalRun(scip, g, g->cost, globalsoledge));
 
-   for( k = 0; k < nnodes; k++ )
-      nodearrchar[k] = FALSE;
+   graph_path_exit(scip, prunegraph);
 
-   /* if graph not vanished, compute solution */
-   if( prunegraph->grad[prunegraph->source[0]] > 0 )
-   {
-      IDX** ancestors = prunegraph->ancestors;
-      SCIP_Real objorg = 0.0;
-      SCIP_Real objprune = 0.0;
-
-      int proot = prunegraph->source[0];
-
-      /* try to build MST on solnode nodes */
-
-      for( k = 0; k < nnodes; k++ )
-         mark[k] = (solnode[k] == CONNECT);
-
-      assert(mark[proot]);
-
-#if BREAKONERROR
-      if( !mark[proot] )
-         return SCIP_ERROR;
-#endif
-
-      graph_path_exec(scip, prunegraph, MST_MODE, proot, prunegraph->cost, path);
-
-      /* check whether all terminals are connected and compute weight of tree */
-      for( k = 0; k < nnodes; k++ )
-      {
-         if( prunegraph->grad[k] > 0 && k != proot )
-         {
-            e = path[k].edge;
-
-            if( e >= 0 )
-            {
-               nodearrchar[prunegraph->tail[e]] = TRUE;
-               nodearrchar[prunegraph->head[e]] = TRUE;
-            }
-            else if( Is_term(prunegraph->term[k]) )
-            {
-               objorg = FARAWAY;
-               SCIPdebugMessage("slack prune: terminal %d not contained in final solution, prune will be performed \n", k);
-               break;
-            }
-         }
-      }
-
-      /* solution valid? */
-      if( k == nnodes )
-      {
-         for( e = 0; e < nedges; e++ )
-            soledge[e] = UNKNOWN;
-
-         SCIP_CALL( SCIPheurPruneSteinerTree(scip, prunegraph, prunegraph->cost, 0, soledge, nodearrchar) );
-
-         for( k = 0; k < nnodes; k++ )
-            nodearrchar[k] = FALSE;
-
-         for( e = 0; e < nedges; e++ )
-         {
-            if( soledge[e] == CONNECT )
-            {
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
-               objorg += prunegraph->cost[e];
-            }
-         }
-      }
-#if PRINTDEBUG
-         printf("slack-prune: org weight %f \n", objorg + offsetnew +  SCIPprobdataGetOffset(scip));
-#endif
-      /* compute new solution on heuristically reduced graph */
-
-      SCIP_CALL( SCIPheurPrune(scip, NULL, prunegraph, soledge, success, FALSE, TRUE) );
-
-      graph_path_exit(scip, prunegraph);
-
-      if( !(*success) )
-      {
-#if BREAKONERROR
-         printf("failed to build tree\n");
-         return SCIP_ERROR;
-#endif
-         goto TERMINATE;
-      }
-
-      for( e = 0; e < nedges; e++ )
-         if( soledge[e] == CONNECT )
-            objprune += prunegraph->cost[e];
-
-#if PRINTDEBUG
-         printf("slack-prune: new weight %f \n", objprune);
-#endif
-
-      if( SCIPisLT(scip, objprune, objorg) )
-      {
-         /* mark vertices of solution found by prune heuristic */
-
-         for( k = 0; k < nnodes; k++ )
-            nodearrchar[k] = FALSE;
-
-         for( e = 0; e < nedges; e++ )
-            if( soledge[e] == CONNECT )
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
-      }
-   }
-   else
-   {
-      graph_path_exit(scip, prunegraph);
-   }
-
-   /* retransform edges fixed during graph reduction */
-   graph_listSetSolNode(g, nodearrchar, prunegraph->fixedges);
-
-   /* prune the solution tree (in the original graph) */
-
-   for( e = 0; e < nedges; e++ )
-      soledge[e] = UNKNOWN;
-
-   SCIP_CALL( SCIPheurPruneSteinerTree(scip, g, g->cost, 0, soledge, nodearrchar) );
-
-   *success = graph_sol_valid(scip, g, soledge);
+   *success = graph_sol_valid(scip, g, globalsoledge);
+   BMScopyMemoryArray(soledge, globalsoledge, nedges);
 
 #if BREAKONERROR
    if( !(*success) )
@@ -917,8 +754,6 @@ SCIP_RETCODE SCIPheurSlackPrune(
       return SCIP_ERROR;
    }
 #endif
-
- TERMINATE:
 
    /* free memory */
    graph_free(scip, prunegraph, TRUE);
@@ -934,9 +769,10 @@ SCIP_RETCODE SCIPheurSlackPrune(
    SCIPfreeBufferArray(scip, &heap);
    SCIPfreeBufferArray(scip, &edgearrchar);
    SCIPfreeBufferArray(scip, &nodearrchar);
+   SCIPfreeBufferArray(scip, &globalsoledge);
 
    for( i = nterms - 2; i >= 0; i-- )
-      SCIPfreeBuffer(scip, &gnodearr[i]);
+      SCIPfreeBlockMemory(scip, &(gnodearr[i]));
    SCIPfreeBufferArray(scip, &gnodearr);
 
    SCIPfreeBufferArray(scip, &costrev);
@@ -948,7 +784,7 @@ SCIP_RETCODE SCIPheurSlackPrune(
 
 
 /** execute slack-and-prune heuristic on given graph */
-SCIP_RETCODE SCIPheurSlackPrunePcMw(
+SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */
    GRAPH*                g,                  /**< graph data structure */
@@ -969,7 +805,6 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
    int     i;
    int     k;
    int     e;
-   int     root;
    int     nterms;
    int     nnodes;
    int     nedges;
@@ -988,14 +823,13 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
    int*     nodearrint;
    int*     nodearrint2;
    int*     nodearrint3;
-   char*     nodearrchar;
+   STP_Bool*     nodearrchar;
 
    assert(g != NULL);
    assert(scip != NULL);
    assert(soledge != NULL);
    assert(graph_sol_valid(scip, g, soledge));
 
-   root = g->source[0];
    nterms = g->terms;
    nedges = g->edges;
    nnodes = g->knots;
@@ -1053,8 +887,6 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
    /* variables given? */
    if( vars != NULL )
    {
-      int nfixedges = 0;
-
       /* delete fixed edges from the new graph */
       for( e = 0; e < nedges; e += 2 )
       {
@@ -1063,7 +895,6 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
             && soledge[e] != CONNECT && soledge[e + 1] != CONNECT && !Is_term(g->term[g->tail[e]]) && !Is_term(g->term[g->head[e]]) )
          {
             graph_edge_del(scip, prunegraph, e, TRUE);
-            nfixedges++;
          }
       }
    }
@@ -1076,7 +907,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
    prunegraph->norgmodelknots = nprunenodes;
 
    /* get number of remaining vertices, edges and terminals */
-   graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+   graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
    /* main reduction loop */
    for( i = 0; i < SLACKPRUNE_MAXREDROUNDS && anterms > 3; i++ )
@@ -1097,13 +928,13 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
 #endif
 
       /*  perform heuristic reductions */
-      SCIP_CALL( da_reduceSlackPruneMw(scip, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, vbase, nodearrint,
+      SCIP_CALL( reduce_daSlackPruneMw(scip, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, vbase, nodearrint,
             edgearrint, nodearrint2, solnode, nodearrchar, &danelims, minnelims, ((i == 0))) );
 
       updateSolNodeArray(prunegraph, edgearrint, solnode, nprunenodes, npruneedges);
 
       /* calculate objective value of solution */
-      obj = graph_computeSolVal(prunegraph->cost, edgearrint, offsetnew, npruneedges);
+      obj = graph_sol_getObj(prunegraph->cost, edgearrint, offsetnew, npruneedges);
 
       ubbest = obj;
 
@@ -1111,53 +942,39 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
       SCIP_CALL( level0(scip, prunegraph) );
 
       assert(graph_valid(prunegraph));
-      if( !graph_valid(prunegraph) )
-      {
-#if BREAKONERROR
-         printf("SP: not valid %d \n", 0);
-         return SCIP_ERROR;
-#endif
-      }
 
       /* get number of remaining vertices, edges and terminals */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
       /* update reduction bounds */
       setMinMaxElims(scip, &minnelims, &lminnelims, annodes, anedges, anterms, i + 1, SLACKPRUNE_MAXREDROUNDS);
 
       if( anterms <= 3 )
       {
-#if PRINTDEBUG
-            printf("graph vanished in SLACKPRUNE \n\n");
-#endif
+         SCIPdebugMessage("graph vanished in SLACKPRUNE \n\n");
          break;
       }
 
-      if( PRINTDEBUG )
-         printf("SP: minelimsx %d really reduced: %d \n", minnelims, danelims);
+      SCIPdebugMessage("SP: minelimsx %d really reduced: %d \n", minnelims, danelims);
 
       /* not enough reductions possible? */
       if( danelims < lminnelims )
       {
-#if PRINTDEBUG
-            printf("too little elims in DA OUT !! %d < %d\n\n", danelims, lminnelims);
-#endif
+         SCIPdebugMessage("too little elims in DA OUT !! %d < %d\n\n", danelims, lminnelims);
          i = SLACKPRUNE_MAXREDROUNDS;
       }
 
       /* compute new guiding solution */
-      SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, prunegraph, cost, edgearrint, vbase, root, nodearrchar, &apsuccess, TRUE, FALSE) );
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, edgearrint, vbase, -1, nodearrchar, &apsuccess, FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )
       {
          /* calculate objective value of solution */
-         obj = graph_computeSolVal(prunegraph->cost, edgearrint, offsetnew, npruneedges);
+         obj = graph_sol_getObj(prunegraph->cost, edgearrint, offsetnew, npruneedges);
 
-#if PRINTDEBUG
-            printf(" old solution: %f AP solution %f \n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
-            printf("offsetnew %f \n", offsetnew);
-#endif
+         SCIPdebugMessage(" old solution: %f AP solution %f \n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
+         SCIPdebugMessage("offsetnew %f \n", offsetnew);
 
          /* obj <= incumbent objective value? */
          if( SCIPisLT(scip, obj, ubbest) )
@@ -1165,13 +982,13 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
       }
 
       /* get number of remaining edges */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
       reductbound = getRedBound(i, anedges);
 
       /* reduction loop */
       SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, path, NULL, NULL, NULL, NULL, state,
-            vbase, nodearrint, NULL, nodearrint2, nodearrint3, solnode, nodearrchar, &offsetnew, FALSE, FALSE, FALSE, reductbound) );
+            vbase, nodearrint, NULL, nodearrint2, nodearrint3, solnode, nodearrchar, &offsetnew, FALSE, FALSE, FALSE, reductbound, TRUE) );
 
       assert(graph_valid(prunegraph));
 
@@ -1184,11 +1001,11 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
 #endif
 
       /* get number of remaining edges */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
    } /* reduction loop */
 
    /* if graph not vanished, compute solution */
-   if( prunegraph->grad[prunegraph->source[0]] > 0 )
+   if( prunegraph->grad[prunegraph->source] > 0 )
    {
       IDX** ancestors = prunegraph->ancestors;
       SCIP_Real objorg;
@@ -1202,30 +1019,28 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
       for( k = 0; k < nnodes; k++ )
          nodearrchar[k] = (solnode[k] == CONNECT);
 
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, prunegraph, prunegraph->cost, soledge, nodearrchar) );
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, prunegraph, prunegraph->cost, soledge, nodearrchar) );
 
       for( k = 0; k < nnodes; k++ )
          nodearrchar[k] = FALSE;
 
-         for( e = 0; e < nedges; e++ )
-            if( soledge[e] == CONNECT )
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
+      for( e = 0; e < nedges; e++ )
+         if( soledge[e] == CONNECT )
+            graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
 
          /* calculate objective value of solution */
-         objorg = graph_computeSolVal(prunegraph->cost, soledge, offsetnew, nedges);
+         objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
       printf("\n\n obj of solution from solnode %f \n", objorg + SCIPprobdataGetOffset(scip));
 
       /* compute new solution on heuristically reduced graph */
 
-#if PRINTDEBUG
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+#ifdef SCIP_DEBUG
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
       printf("final SP anedges: %d anterms: %d \n", anedges, anterms);
 #endif
 
-      SCIP_CALL( SCIPheurPrune(scip, NULL, prunegraph, soledge, success, FALSE, TRUE) );
-
-     // SCIP_CALL( extendSteinerTreePcMw(scip, prunegraph, vnoi, costrev, vbase, soledge, nodearrchar, &e) );
+      SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, prunegraph, soledge, success, FALSE, TRUE) );
 
       if( !(*success) )
       {
@@ -1237,17 +1052,8 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
       }
 
       /* calculate objective value of solution */
-      objprune = graph_computeSolVal(prunegraph->cost, soledge, offsetnew, nedges);
+      objprune = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
-      if( PRINTDEBUG )
-         printf("SCIPheurPrune:  weight %f \n", objprune + SCIPprobdataGetOffset(scip));
-
-      printf("root %d \n", prunegraph->source[0]);
-#if 0
-      for( e = 0; e < nedges; e++ )
-         if( soledge[e] == CONNECT )
-            printf("sol org edge %d %d \n", prunegraph->tail[e], prunegraph->head[e]);
-#endif
       if( SCIPisLT(scip, objprune, objorg) )
       {
          /* mark vertices of solution found by prune heuristic */
@@ -1257,7 +1063,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
 
          for( e = 0; e < nedges; e++ )
             if( soledge[e] == CONNECT )
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
+               graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
 
       }
    }
@@ -1268,7 +1074,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
    }
 
    /* retransform edges fixed during graph reduction */
-   graph_listSetSolNode(g, nodearrchar, prunegraph->fixedges);
+   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
 
    /* prune the solution tree (in the original graph) */
    for( k = 0; k < nnodes; k++ )
@@ -1295,53 +1101,8 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
    for( e = 0; e < nedges; e++ )
       soledge[e] = UNKNOWN;
 
-   SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, soledge, nodearrchar) );
+   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, soledge, nodearrchar) );
    *success = graph_sol_valid(scip, g, soledge);
-
-#if 0
-
-   for( e = g->outbeg[g->source[0]]; e != EAT_LAST; e = g->oeat[e] )
-   {
-        if( !Is_term(g->term[g->head[e]]) && soledge[e] == CONNECT )
-           printf("head to %d-> %d \n", g->source[0], g->head[e]);
-   }
-
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( Is_term(g->term[k]) && k != g->source[0] )
-      {
-         int l = TRUE;
-         for( e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
-         {
-            if( soledge[e] == CONNECT )
-            {
-               if( l == FALSE )
-                  return SCIP_ERROR;
-               l = FALSE;
-            }
-         }
-      }
-   }
-
-
-   if( (*success) )
-   {
-      SCIP_Real objf = 0.0;
-
-      for( e = 0; e < nedges; e++ )
-         if( soledge[e] == CONNECT )
-            objf += g->cost[e];
-      printf("slack prune solution IS valid cost %f \n", objf + SCIPprobdataGetOffset(scip));
-   }
-#endif
-
-#if BREAKONERROR
-   if( !(*success) )
-   {
-      printf("slack prune solution not valid %d \n", 0);
-      return SCIP_ERROR;
-   }
-#endif
 
  TERMINATE:
 
@@ -1372,7 +1133,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
 
 
 /** creates the slackprune primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurSlackPrune(
+SCIP_RETCODE SCIPStpIncludeHeurSlackPrune(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

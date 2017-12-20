@@ -34,12 +34,12 @@
 #define TABLE_POSITION_TIMING            1000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_TIMING      SCIP_STAGE_PROBLEM     /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_ORIGPROB              "original problem"
+#define TABLE_NAME_ORIGPROB              "origprob"
 #define TABLE_DESC_ORIGPROB              "original problem statistics table"
 #define TABLE_POSITION_ORIGPROB          2000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_ORIGPROB    SCIP_STAGE_PROBLEM     /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_TRANSPROB             "presolved problem"
+#define TABLE_NAME_TRANSPROB             "presolvedprob"
 #define TABLE_DESC_TRANSPROB             "presolved problem statistics table"
 #define TABLE_POSITION_TRANSPROB         3000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_TRANSPROB   SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -54,7 +54,7 @@
 #define TABLE_POSITION_CONS              5000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONS        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_CONSTIMING            "constraint timing"
+#define TABLE_NAME_CONSTIMING            "constiming"
 #define TABLE_DESC_CONSTIMING            "constraint timing statistics table"
 #define TABLE_POSITION_CONSTIMING        6000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONSTIMING  SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -79,7 +79,7 @@
 #define TABLE_POSITION_PRICER            10000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_PRICER      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_BRANCH                "branching rules"
+#define TABLE_NAME_BRANCH                "branchrules"
 #define TABLE_DESC_BRANCH                "branching rules statistics table"
 #define TABLE_POSITION_BRANCH            11000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BRANCH      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
@@ -124,7 +124,7 @@
 #define TABLE_POSITION_SOL               19000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_SOL         SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_CONC                  "concurrent solver"
+#define TABLE_NAME_CONC                  "concurrentsolver"
 #define TABLE_DESC_CONC                  "concurrent solver statistics table"
 #define TABLE_POSITION_CONC              20000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONC        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -140,8 +140,11 @@ SCIP_DECL_TABLECOPY(tableCopyDefault)
    assert(scip != NULL);
    assert(table != NULL);
 
-   /* call inclusion method of statistics tables */
-   SCIP_CALL( SCIPincludeTableDefault(scip) );
+   /* call inclusion method of statistics tables (unless it has already been included by the copy call of the first default table) */
+   if( SCIPfindTable(scip, SCIPtableGetName(table)) == NULL )
+   {
+      SCIP_CALL( SCIPincludeTableDefault(scip) );
+   }
 
    return SCIP_OKAY;
 }
@@ -411,172 +414,138 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_TABLE* tmptable;
 
    tmptable = SCIPfindTable(scip, TABLE_NAME_STATUS);
-   if( tmptable == NULL )
+
+   /* since the default statistics tables are always included all at once in this method,
+    * they should all be included already if the first one is */
+   if( tmptable != NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_STATUS, TABLE_DESC_STATUS, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputStatus,
-            NULL, TABLE_POSITION_STATUS, TABLE_EARLIEST_STAGE_STATUS) );
+      assert(SCIPfindTable(scip, TABLE_NAME_TIMING) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_ORIGPROB) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_TRANSPROB) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_PRESOL) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_CONS) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_CONSTIMING) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_PROP) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_CONFLICT) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_SEPA) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_PRICER) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_BRANCH) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_HEUR) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_COMPRESSION) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_LP) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_NLP) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_RELAX) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_TREE) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_ROOT) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_SOL) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_CONC) != NULL );
+
+      return SCIP_OKAY;
    }
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_TIMING);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TIMING, TABLE_DESC_TIMING, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTiming,
-            NULL, TABLE_POSITION_TIMING, TABLE_EARLIEST_STAGE_TIMING) );
-   }
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_STATUS, TABLE_DESC_STATUS, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputStatus,
+         NULL, TABLE_POSITION_STATUS, TABLE_EARLIEST_STAGE_STATUS) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_ORIGPROB);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORIGPROB, TABLE_DESC_ORIGPROB, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputOrigProb,
-            NULL, TABLE_POSITION_ORIGPROB, TABLE_EARLIEST_STAGE_ORIGPROB) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_TIMING) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TIMING, TABLE_DESC_TIMING, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTiming,
+         NULL, TABLE_POSITION_TIMING, TABLE_EARLIEST_STAGE_TIMING) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_TRANSPROB);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TRANSPROB, TABLE_DESC_TRANSPROB, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTransProb,
-            NULL, TABLE_POSITION_TRANSPROB, TABLE_EARLIEST_STAGE_TRANSPROB) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_ORIGPROB) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORIGPROB, TABLE_DESC_ORIGPROB, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputOrigProb,
+         NULL, TABLE_POSITION_ORIGPROB, TABLE_EARLIEST_STAGE_ORIGPROB) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_PRESOL);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRESOL, TABLE_DESC_PRESOL, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPresol,
-            NULL, TABLE_POSITION_PRESOL, TABLE_EARLIEST_STAGE_PRESOL) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_TRANSPROB) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TRANSPROB, TABLE_DESC_TRANSPROB, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTransProb,
+         NULL, TABLE_POSITION_TRANSPROB, TABLE_EARLIEST_STAGE_TRANSPROB) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_CONS);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONS, TABLE_DESC_CONS, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCons,
-            NULL, TABLE_POSITION_CONS, TABLE_EARLIEST_STAGE_CONS) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_PRESOL) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRESOL, TABLE_DESC_PRESOL, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPresol,
+         NULL, TABLE_POSITION_PRESOL, TABLE_EARLIEST_STAGE_PRESOL) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_CONSTIMING);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONSTIMING, TABLE_DESC_CONSTIMING, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConstiming,
-            NULL, TABLE_POSITION_CONSTIMING, TABLE_EARLIEST_STAGE_CONSTIMING) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_CONS) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONS, TABLE_DESC_CONS, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCons,
+         NULL, TABLE_POSITION_CONS, TABLE_EARLIEST_STAGE_CONS) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_PROP);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PROP, TABLE_DESC_PROP, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputProp,
-            NULL, TABLE_POSITION_PROP, TABLE_EARLIEST_STAGE_PROP) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_CONSTIMING) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONSTIMING, TABLE_DESC_CONSTIMING, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConstiming,
+         NULL, TABLE_POSITION_CONSTIMING, TABLE_EARLIEST_STAGE_CONSTIMING) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_CONFLICT);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONFLICT, TABLE_DESC_CONFLICT, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConflict,
-            NULL, TABLE_POSITION_CONFLICT, TABLE_EARLIEST_STAGE_CONFLICT) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_PROP) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PROP, TABLE_DESC_PROP, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputProp,
+         NULL, TABLE_POSITION_PROP, TABLE_EARLIEST_STAGE_PROP) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_SEPA);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SEPA, TABLE_DESC_SEPA, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSepa,
-            NULL, TABLE_POSITION_SEPA, TABLE_EARLIEST_STAGE_SEPA) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_CONFLICT) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONFLICT, TABLE_DESC_CONFLICT, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConflict,
+         NULL, TABLE_POSITION_CONFLICT, TABLE_EARLIEST_STAGE_CONFLICT) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_PRICER);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRICER, TABLE_DESC_PRICER, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPricer,
-            NULL, TABLE_POSITION_PRICER, TABLE_EARLIEST_STAGE_PRICER) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_SEPA) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SEPA, TABLE_DESC_SEPA, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSepa,
+         NULL, TABLE_POSITION_SEPA, TABLE_EARLIEST_STAGE_SEPA) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_BRANCH);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BRANCH, TABLE_DESC_BRANCH, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBranch,
-            NULL, TABLE_POSITION_BRANCH, TABLE_EARLIEST_STAGE_BRANCH) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_PRICER) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRICER, TABLE_DESC_PRICER, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPricer,
+         NULL, TABLE_POSITION_PRICER, TABLE_EARLIEST_STAGE_PRICER) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_HEUR);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_HEUR, TABLE_DESC_HEUR, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputHeur,
-            NULL, TABLE_POSITION_HEUR, TABLE_EARLIEST_STAGE_HEUR) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_BRANCH) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BRANCH, TABLE_DESC_BRANCH, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBranch,
+         NULL, TABLE_POSITION_BRANCH, TABLE_EARLIEST_STAGE_BRANCH) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_COMPRESSION);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_COMPRESSION, TABLE_DESC_COMPRESSION, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCompression,
-            NULL, TABLE_POSITION_COMPRESSION, TABLE_EARLIEST_STAGE_COMPRESSION) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_HEUR) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_HEUR, TABLE_DESC_HEUR, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputHeur,
+         NULL, TABLE_POSITION_HEUR, TABLE_EARLIEST_STAGE_HEUR) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_LP);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_LP, TABLE_DESC_LP, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputLP,
-            NULL, TABLE_POSITION_LP, TABLE_EARLIEST_STAGE_LP) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_COMPRESSION) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_COMPRESSION, TABLE_DESC_COMPRESSION, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCompression,
+         NULL, TABLE_POSITION_COMPRESSION, TABLE_EARLIEST_STAGE_COMPRESSION) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_NLP);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLP, TABLE_DESC_NLP, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNLP,
-            NULL, TABLE_POSITION_NLP, TABLE_EARLIEST_STAGE_NLP) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_LP) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_LP, TABLE_DESC_LP, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputLP,
+         NULL, TABLE_POSITION_LP, TABLE_EARLIEST_STAGE_LP) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_RELAX);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RELAX, TABLE_DESC_RELAX, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRelax,
-            NULL, TABLE_POSITION_RELAX, TABLE_EARLIEST_STAGE_RELAX) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_NLP) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLP, TABLE_DESC_NLP, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNLP,
+         NULL, TABLE_POSITION_NLP, TABLE_EARLIEST_STAGE_NLP) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_TREE);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TREE, TABLE_DESC_TREE, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTree,
-            NULL, TABLE_POSITION_TREE, TABLE_EARLIEST_STAGE_TREE) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_RELAX) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RELAX, TABLE_DESC_RELAX, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRelax,
+         NULL, TABLE_POSITION_RELAX, TABLE_EARLIEST_STAGE_RELAX) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_ROOT);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ROOT, TABLE_DESC_ROOT, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRoot,
-            NULL, TABLE_POSITION_ROOT, TABLE_EARLIEST_STAGE_ROOT) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_TREE) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TREE, TABLE_DESC_TREE, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTree,
+         NULL, TABLE_POSITION_TREE, TABLE_EARLIEST_STAGE_TREE) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_SOL);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SOL, TABLE_DESC_SOL, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSol,
-            NULL, TABLE_POSITION_SOL, TABLE_EARLIEST_STAGE_SOL) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_ROOT) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ROOT, TABLE_DESC_ROOT, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRoot,
+         NULL, TABLE_POSITION_ROOT, TABLE_EARLIEST_STAGE_ROOT) );
 
-   tmptable = SCIPfindTable(scip, TABLE_NAME_CONC);
-   if( tmptable == NULL )
-   {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONC, TABLE_DESC_CONC, TRUE,
-            tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc,
-            NULL, TABLE_POSITION_CONC, TABLE_EARLIEST_STAGE_CONC) );
-   }
+   assert(SCIPfindTable(scip, TABLE_NAME_SOL) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SOL, TABLE_DESC_SOL, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSol,
+         NULL, TABLE_POSITION_SOL, TABLE_EARLIEST_STAGE_SOL) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_CONC) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONC, TABLE_DESC_CONC, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc,
+         NULL, TABLE_POSITION_CONC, TABLE_EARLIEST_STAGE_CONC) );
 
    return SCIP_OKAY;
 }

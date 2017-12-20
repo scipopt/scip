@@ -1,0 +1,12 @@
+# SCIP version 2.1.1.6
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 0]
+presolving/convertinttobin/maxrounds = -1
+
+# SCIP version 2.1.1.6
+
+# priority of branching rule <mostinf>
+# [type: int, range: [-536870912,536870911], default: 100]
+branching/mostinf/priority = 100000000
+

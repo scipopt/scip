@@ -401,11 +401,8 @@ SCIP_RETCODE separateCuts(
       /* if coefficient is too large, don't separate */
       if( SCIPisHugeValue(scip, REALABS(linvals[i])) )
       {
-         SCIPfreeBufferArray(scip, &lininds);
-         SCIPfreeBufferArray(scip, &linvals);
          SCIPdebugMsg(scip, "Don't separate points too close to infinity\n");
-
-         return SCIP_OKAY;
+         goto CLEANUP;
       }
    }
 
@@ -423,7 +420,7 @@ SCIP_RETCODE separateCuts(
       if( timelimit <= 1.0 )
       {
          SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-         return SCIP_OKAY;
+         goto CLEANUP;
       }
    }
    if( sepadata->nlptimelimit > 0.0 )
@@ -511,7 +508,7 @@ SCIP_RETCODE separateCuts(
                {
                   SCIP_Bool infeasible;
 
-                  SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
                   if( infeasible )
                   {
@@ -594,6 +591,7 @@ SCIP_RETCODE separateCuts(
    BMSclearMemoryArray(linvals, nlpinvars);
    SCIP_CALL( SCIPnlpiChgLinearCoefs(sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
 
+CLEANUP:
    /* free memory */
    SCIPfreeBufferArray(scip, &lininds);
    SCIPfreeBufferArray(scip, &linvals);

@@ -109,8 +109,6 @@ struct SCIP_ConshdlrData
 {
    SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter (computer gradients and hessians) */
 
-   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfo; /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored) */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
@@ -515,6 +513,9 @@ SCIP_RETCODE removeFixedVariables(
    assert(SCIPexprtreeGetNVars(consdata->f) == 2);
    vars[0] = SCIPexprtreeGetVars(consdata->f)[0];
    vars[1] = SCIPexprtreeGetVars(consdata->f)[1];
+
+   if( vars[0] == NULL || vars[1] == NULL )
+      return SCIP_INVALIDDATA;
 
    if( SCIPvarGetStatus(SCIPvarGetProbvar(vars[0])) == SCIP_VARSTATUS_FIXED ||
       SCIPvarGetStatus(SCIPvarGetProbvar(vars[1])) == SCIP_VARSTATUS_FIXED ||
@@ -1337,7 +1338,7 @@ SCIP_RETCODE solveDerivativeEquation(
          break;
       }
 
-      SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) );
+      SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
 
       /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g hess = %g\n", s, lb, ub, fval, hess); */
 
@@ -3028,6 +3029,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, SCIPgetMessagehdlr(scip), NULL) ) );
          SCIPdebugMsgPrint(scip, "\n");
 
+         assert(SCIPexprtreeGetNVars(f_yfixed) == 1);
+
          /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
          SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
 
@@ -3039,8 +3042,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             /* if we could not find an xtilde such that f'(xtilde,yub) = f'(xval,ylb), then probably because f'(x,yub) is constant
              * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
              */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
 
             SCIPdebugMsg(scip, "couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
                xlb, ylb, grad[0], xlb, fxlb - grad[0] * xlb,
@@ -3064,7 +3067,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          if( *success )
          {
             /* compute f(xtilde, yub) */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
 
             SCIPdebugMsg(scip, "xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, yub, ftilde);
 
@@ -3109,6 +3112,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          SCIPexprtreeSetParamVal(f_yfixed, 0, ylb);
          SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
 
+         assert(SCIPexprtreeGetNVars(f_yfixed) == 1);
+
          /* find xtilde in [xlb, xub] such that f'(x,ylb) = f'(xval,yub) */
          SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
 
@@ -3120,8 +3125,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             /* if we could not find an xtilde such that f'(xtilde,ylb) = f'(xval,yub), then probably because f'(x,ylb) is constant
              * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
              */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
 
             SCIPdebugMsg(scip, "couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
                xlb, yub, grad[0], xlb, fxlb - grad[0] * xlb,
@@ -3145,7 +3150,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          if( *success )
          {
             /* compute f(xtilde, yub) */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );  /* coverity ignore ARRAY_VS_SINGLETON warning */
 
             SCIPdebugMsg(scip, "xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, ylb, ftilde);
 
@@ -4653,13 +4658,13 @@ SCIP_RETCODE separatePoint(
 
          /* if cut is strong enough or it's weak but we separate on a convex function and accept weak cuts there, add cut to SCIP */
          if( (SCIPisGT(scip, efficacy, minefficacy) ||
-              (inenforcement && SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip)) && isConvexLocal(scip, conss[c], violside))) &&
+              (inenforcement && SCIPisGT(scip, efficacy, SCIPfeastol(scip)) && isConvexLocal(scip, conss[c], violside))) &&
              SCIPisCutApplicable(scip, row) )
          {
             SCIP_Bool infeasible;
 
             /* cut cuts off solution sufficiently */
-            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
             if( infeasible )
             {
                SCIPdebugMsg(scip, "cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
@@ -6007,13 +6012,13 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol) however, if the maximal
-    * violation is very small, also the best cut efficacy cannot be large thus, in the latter case, we are also happy if
-    * the efficacy is at least, say, 75% of the maximal violation but in any case we need an efficacy that is at least
-    * feastol
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
+    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
+    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
+    * but in any case we need an efficacy that is at least lpfeastol
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfo);  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
+   minefficacy = MIN(0.75*maxviol, 2.0 * SCIPlpfeastol(scip));  /*lint !e666*/
+   minefficacy = MAX(minefficacy, SCIPlpfeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, &separateresult,
          &sepaefficacy) );
    if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
@@ -6034,8 +6039,7 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conss, nconss, &nnotify) );
 
-   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
+   leastpossibleefficacy = SCIPlpfeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
@@ -6666,7 +6670,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                /* add row to LP */
                else
                {
-                  SCIP_CALL( SCIPaddCut(scip, row1, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddRow(scip, row1, FALSE /* forcecut */, infeasible) );
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
                }
                SCIP_CALL( SCIPreleaseRow(scip, &row1) );
@@ -6688,7 +6692,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                /* add row to LP */
                else if( !(*infeasible) )
                {
-                  SCIP_CALL( SCIPaddCut(scip, row2, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddRow(scip, row2, FALSE /* forcecut */, infeasible) );
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
                }
                SCIP_CALL( SCIPreleaseRow(scip, &row2) );
@@ -6707,7 +6711,6 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
 static
 SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
 
    assert(scip     != NULL);
@@ -6717,16 +6720,13 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 
    *result = SCIP_DIDNOTFIND;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
    SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcon) );
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
    /* @todo add separation of convex (only?) constraints in nlp relaxation solution */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6735,7 +6735,6 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
 
    assert(scip     != NULL);
@@ -6744,16 +6743,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
    assert(sol      != NULL);
    assert(result   != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &maxviolcon) );
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -7874,14 +7870,6 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, NULL, exprgraphnodeReformBivariate, NONLINCONSUPGD_PRIORITY, FALSE, CONSHDLR_NAME) );
 
    /* add bivariate constraint handler parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
-         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfo",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored)",
-         &conshdlrdata->mincutefficacyenfo, FALSE, 2.0*SCIPfeastol(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, TRUE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );

@@ -3217,6 +3217,14 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
    }
 
+   /* explicitly forbid the use of implications in logicor presolving */
+#ifndef NDEBUG
+   if( SCIPsetFindConshdlr(set, "logicor") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/logicor/implications", 0, quiet) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -3996,8 +4004,8 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
 
 /** sets heuristic parameters values to 
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
- *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on heuristics is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristics are called more aggressively
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  */
 SCIP_RETCODE SCIPparamsetSetHeuristics(
@@ -4032,8 +4040,8 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
 
 /** sets presolving parameters to 
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters 
- *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on presolving is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
  */
 SCIP_RETCODE SCIPparamsetSetPresolving(
@@ -4068,8 +4076,8 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
 
 /** sets separating parameters to 
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters 
- *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on separating is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that separating is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
  */
 SCIP_RETCODE SCIPparamsetSetSeparating(

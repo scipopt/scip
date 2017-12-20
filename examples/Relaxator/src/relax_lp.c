@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "relax_lp.h"
 
@@ -28,7 +29,6 @@
 #define RELAX_DESC             "relaxator solving LP relaxation"
 #define RELAX_PRIORITY         0
 #define RELAX_FREQ             0
-#define RELAX_FULLLPINFO       TRUE
 
 
 /*
@@ -51,12 +51,40 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
 {  /*lint --e{715}*/
    SCIP* relaxscip;
    SCIP_HASHMAP* varmap;
+   SCIP_CONS** conss;
    SCIP_Real relaxval;
    SCIP_Bool valid;
+   int nconss;
    int i;
+   int c;
 
    *lowerbound = -SCIPinfinity(scip);
    *result = SCIP_DIDNOTRUN;
+
+   /* we can only run if none of the present constraints expect their variables to be binary or integer during transformation */
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      const char* conshdlrname;
+
+      conshdlrname = SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c]));
+
+      /* skip if there are any "and", "linking", or", "orbitope", "pseudoboolean", "superindicator", "xor" or new/unknown constraints */
+      if( strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0 && strcmp(conshdlrname, "abspower") != 0
+            && strcmp(conshdlrname, "bivariate") != 0 && strcmp(conshdlrname, "bounddisjunction") != 0
+            && strcmp(conshdlrname, "cardinality") != 0 && strcmp(conshdlrname, "components") != 0
+            && strcmp(conshdlrname, "conjunction") != 0 && strcmp(conshdlrname, "countsols") != 0
+            && strcmp(conshdlrname, "cumulative") != 0 && strcmp(conshdlrname, "disjunction") != 0
+            && strcmp(conshdlrname, "indicator") != 0 && strcmp(conshdlrname, "integral") != 0
+            && strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "linear") != 0
+            && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "nonlinear") != 0
+            && strcmp(conshdlrname, "orbisack") != 0 && strcmp(conshdlrname, "quadratic") != 0
+            && strcmp(conshdlrname, "setppc") != 0 && strcmp(conshdlrname, "soc") != 0
+            && strcmp(conshdlrname, "symresack") != 0 && strcmp(conshdlrname, "varbound") != 0 )
+         return SCIP_OKAY;
+   }
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPcreate(&relaxscip) );
@@ -80,31 +108,37 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
    SCIPsetMessagehdlrQuiet(relaxscip, TRUE);
    SCIP_CALL( SCIPtransformProb(relaxscip) );
    SCIP_CALL( SCIPsolve(relaxscip) );
-
    relaxval = SCIPgetPrimalbound(relaxscip);
    SCIPdebugMessage("relaxation bound = %e status = %d\n", relaxval, SCIPgetStatus(relaxscip));
 
    if( SCIPgetStatus(relaxscip) == SCIP_STATUS_OPTIMAL )
    {
-      *lowerbound = relaxval;
-      *result = SCIP_SUCCESS;
-
-      /* store relaxation solution in original SCIP */
-      for( i = 0; i < SCIPgetNVars(scip); ++i )
+      /* store relaxation solution in original SCIP if it improves the best relaxation solution thus far */
+      if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
-         SCIP_VAR* relaxvar;
-         SCIP_Real solval;
+         SCIPdebugMsg(scip, "Setting LP relaxation solution, which improved upon earlier solution\n");
+         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
 
-         relaxvar = SCIPhashmapGetImage(varmap, SCIPgetVars(scip)[i]);
-         assert(relaxvar != NULL);
+         for( i = 0; i < SCIPgetNVars(scip); ++i )
+         {
+            SCIP_VAR* relaxvar;
+            SCIP_Real solval;
 
-         solval = SCIPgetSolVal(relaxscip, SCIPgetBestSol(relaxscip), relaxvar);
+            relaxvar = SCIPhashmapGetImage(varmap, SCIPgetVars(scip)[i]);
+            assert(relaxvar != NULL);
 
-         SCIP_CALL( SCIPsetRelaxSolVal(scip, SCIPgetVars(scip)[i], solval) );
+            solval = SCIPgetSolVal(relaxscip, SCIPgetBestSol(relaxscip), relaxvar);
+
+            SCIP_CALL( SCIPsetRelaxSolVal(scip, SCIPgetVars(scip)[i], solval) );
+         }
+
+         /* mark relaxation solution to be valid and inform SCIP that the relaxation included all LP rows */
+         SCIP_CALL( SCIPmarkRelaxSolValid(scip, TRUE) );
       }
 
-      /* mark relaxation solution to be valid */
-      SCIP_CALL( SCIPmarkRelaxSolValid(scip) );
+      SCIPdebugMsg(scip, "LP lower bound = %g\n", relaxval);
+      *lowerbound = relaxval;
+      *result = SCIP_SUCCESS;
    }
 
    /* free memory */
@@ -132,7 +166,7 @@ SCIP_RETCODE SCIPincludeRelaxLp(
    relax = NULL;
 
    /* include relaxator */
-   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, RELAX_FULLLPINFO,
+   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
          relaxExecLp, relaxdata) );
    assert(relax != NULL);
 

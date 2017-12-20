@@ -81,7 +81,8 @@ SCIP_RETCODE SCIPsyncstoreRelease(
    int references;
 
    assert(syncstore != NULL);
-   assert(*syncstore != NULL);
+   if( *syncstore == NULL )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPtpiAcquireLock(&(*syncstore)->lock) );
    (*syncstore)->nuses -= 1;

@@ -645,7 +645,7 @@ SCIP_RETCODE collectSolution(
    SCIPdebugMsg(scip, "creating solution number %d\n", conshdlrdata->nsolutions);
 
    /* create a solution */
-   SCIP_CALL( SCIPsparseSolCreate(&solution, conshdlrdata->vars, nvars, FALSE) );
+   SCIP_CALL_FINALLY( SCIPsparseSolCreate(&solution, conshdlrdata->vars, nvars, FALSE), SCIPsparseSolFree(&solution) );
    assert(solution != NULL);
 
    lbvalues = SCIPsparseSolGetLbs(solution);
