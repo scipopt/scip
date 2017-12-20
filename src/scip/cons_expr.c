@@ -2700,9 +2700,6 @@ SCIP_RETCODE propagateLocks(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   /* call interval evaluation of the expression to ensure correct monotonicity information */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
-
    /* remember old IO data */
    oldintvals[0] = expr->walkio.intvals[0];
    oldintvals[1] = expr->walkio.intvals[1];
@@ -2744,6 +2741,12 @@ SCIP_RETCODE addLocks(
    /* no constraint sides -> nothing to lock */
    if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
       return SCIP_OKAY;
+
+   /* call interval evaluation when root expression is locked for the first time */
+   if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
+   {
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, FALSE, 0, 0.0) );
+   }
 
    /* remember locks */
    consdata->nlockspos += nlockspos;
