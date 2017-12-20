@@ -265,7 +265,7 @@ SCIP_RETCODE checkCurvature(
       if( quadexprterm.sqrcoef == 0.0 )
       {
          assert(quadexprterm.nadjbilin > 0);
-         //SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var));
+         /* SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var)); */
          goto CLEANUP;
       }
 

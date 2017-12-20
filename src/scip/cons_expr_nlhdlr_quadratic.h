@@ -50,8 +50,6 @@ struct SCIP_QuadExprTerm
    int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
    int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
    int*                  adjbilin;           /**< indices of associated bilinear terms */
-
-   //SCIP_QUADVAREVENTDATA* eventdata;          /**< event data for bound change events */
 };
 typedef struct SCIP_QuadExprTerm SCIP_QUADEXPRTERM;
 
