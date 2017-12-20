@@ -1098,6 +1098,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    return SCIP_OKAY;
 }
 
+/** expression walker callback for propagating expression locks */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 {
@@ -2719,7 +2720,19 @@ SCIP_RETCODE propagateLocks(
    return SCIP_OKAY;
 }
 
-/** adds locks to all expressions and variables of an expression constraints; store the locks in the constraint data */
+/** main function for adding locks to expressions and variables; locks for an expression constraint are used to update
+ *  locks for all sub-expressions and variables; locks of expressions depend on the monotonicity of expressions
+ *  w.r.t. their children, e.g., consider the constraint x^2 <= 1 with x in [-2,-1] implies an up-lock for the root
+ *  expression (pow) and a down-lock for its child x because x^2 is decreasing [-2,-1]; since the monotonicity (and thus
+ *  the locks) might also depend on variable bounds, the function remembers the computed monotonicity information of
+ *  each expression until all locks of an expression have been removed, which implies that updating the monotonicity
+ *  information during the next locking of this expression does not break other locks
+ *
+ *  @note when modifying the structure of an expression, e.g., during simplification, it is necessary to remove all
+ *        locks from an expression and repropagating them after the structural changes have been applied; because of
+ *        existing common sub-expressions, it might be necessary to remove the locks of all constraints to ensure
+ *        that an expression is unlocked (see canonicalizeConstraints() for an example)
+ */
 static
 SCIP_RETCODE addLocks(
    SCIP*                 scip,               /**< SCIP data structure */
