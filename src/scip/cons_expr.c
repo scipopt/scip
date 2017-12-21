@@ -3961,7 +3961,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
 {
    SCIP_CONSEXPR_NLHDLR* nlhdlr;
    INITSEPA_DATA* initsepadata;
-   SCIP_Bool infeasible;
    int e;
 
    assert(expr != NULL);
@@ -3985,6 +3984,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
    /* call initsepa of all nlhdlrs in expr */
    for( e = 0; e < expr->nenfos; ++e )
    {
+      SCIP_Bool infeasible;
       assert(expr->enfos[e] != NULL);
 
       nlhdlr = expr->enfos[e]->nlhdlr;
@@ -3997,6 +3997,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       assert(!expr->enfos[e]->issepainit);
 
       /* call the separation initialization callback of the nonlinear handler */
+      infeasible = FALSE;
       SCIP_CALL( nlhdlr->initsepa(scip, initsepadata->conshdlr, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr, &infeasible) );
       expr->enfos[e]->issepainit = TRUE;
 
