@@ -4804,6 +4804,15 @@ SCIP_DECL_CONSFREE(consFreeExpr)
    assert(conshdlrdata->iterator != NULL);
    SCIPexpriteratorFree(&conshdlrdata->iterator);
 
+   /* free upgrade functions */
+   for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
+   {
+      assert(conshdlrdata->exprconsupgrades[i] != NULL);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->exprconsupgrades[i]);  /*lint !e866*/
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->exprconsupgrades, conshdlrdata->exprconsupgradessize);
+
+
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
