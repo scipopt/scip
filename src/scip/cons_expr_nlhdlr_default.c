@@ -144,6 +144,46 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalDefault)
+{ /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   if( exprhdlr->inteval == NULL )
+      return SCIP_OKAY;
+
+   /* call the interval evaluation callback of the expression handler */
+   SCIP_CALL( exprhdlr->inteval(scip, expr, interval, varboundrelax) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
+{ /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   if( exprhdlr->reverseprop == NULL )
+      return SCIP_OKAY;
+
+   /* call the reverse propagation callback of the expression handler */
+   SCIP_CALL( exprhdlr->reverseprop(scip, expr, infeasible, nreductions, force) );
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrDefault)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
@@ -172,6 +212,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrExitSepaDefault);
+   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
 
    return SCIP_OKAY;
 }
