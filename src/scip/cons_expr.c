@@ -2089,7 +2089,7 @@ SCIP_RETCODE reversePropConss(
          continue;
 
       /* skip expressions that could not have been tightened or do not implement the reverseprop callback; */
-      if( !consdata->expr->hastightened || consdata->expr->exprhdlr->reverseprop == NULL )
+      if( !consdata->expr->hastightened || (consdata->expr->exprhdlr->reverseprop == NULL && consdata->expr->nenfos == 0) )
          continue;
 
       /* add expressions which are not in the queue so far */
@@ -2104,13 +2104,11 @@ SCIP_RETCODE reversePropConss(
    while( !SCIPqueueIsEmpty(queue) && !(*infeasible) )
    {
       SCIP_CONSEXPR_EXPR* expr;
-      int nreds;
+      int e;
 
       expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(queue);
       assert(expr != NULL);
       assert(expr->exprhdlr->reverseprop != NULL);
-
-      nreds = 0;
 
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
@@ -2121,16 +2119,31 @@ SCIP_RETCODE reversePropConss(
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-      /* call reverse propagation callback */
-      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, infeasible, &nreds, force) );
-      assert(nreds >= 0);
-      *ntightenings += nreds;
+      /* call reverse propagation callbacks of nlhdlrs */
+      for( e = 0; e < expr->nenfos && !*infeasible; ++e )
+      {
+         SCIP_CONSEXPR_NLHDLR* nlhdlr;
+         int nreds;
+
+         nlhdlr = expr->enfos[e]->nlhdlr;
+         assert(nlhdlr != NULL);
+
+         /* skip nlhdlr that does not implement reverseprop */
+         if( nlhdlr->reverseprop == NULL )
+            continue;
+
+         nreds = 0;
+         SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, infeasible, &nreds, force) );
+         assert(nreds >= 0);
+         *ntightenings += nreds;
+      }
 
       /* stop propagation if the problem is infeasible */
       if( *infeasible )
          break;
 
       /* add tightened children with at least one child to the queue */
+      /* @todo this assumes that the nlhdlr will tighten immediate children of the expression, probably the nlhdlr prop should add expression to the queue */
       for( i = 0; i < expr->nchildren; ++i )
       {
          SCIP_CONSEXPR_EXPR* child;
