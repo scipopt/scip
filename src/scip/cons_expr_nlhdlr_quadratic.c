@@ -827,6 +827,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
          *result = SCIP_CUTOFF;
       else
          *result = SCIP_SEPARATED;
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
 
 CLEANUP:
