@@ -625,11 +625,10 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 
 /** nonlinear handler interval evaluation callback
  *
- * The method evaluates an expression by taking the intervals of its successors into account.
+ * The methods computes an interval that contains the image (range) of the expression.
  *
  * input:
  *  - scip : SCIP main data structure
- *  - conshdlr : cons expr handler
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
@@ -646,12 +645,12 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 
 /** nonlinear handler callback for reverse propagation
  *
- * The method propagates successors of an expression by taking the intervals of all other successors into account.
- * The tighter interval is stored inside the interval variable of the corresponding successor expression.
+ * The method propagates bounds over the arguments of an expression.
+ * The arguments of an expression are other expressions and the tighter intervals should be stored inside the interval variable
+ * of the corresponding argument (expression) by using SCIPtightenConsExprExprInterval().
  *
  * input:
  *  - scip : SCIP main data structure
- *  - conshdlr : cons expr handler
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
