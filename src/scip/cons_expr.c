@@ -8114,7 +8114,6 @@ SCIP_Real SCIPgetRhsConsExpr(
 }
 
 /** returns an equivalent linear constraint if possible */
-EXTERN
 SCIP_RETCODE SCIPgetLinearConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
