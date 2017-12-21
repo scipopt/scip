@@ -75,6 +75,9 @@ void setup(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
+   /* go to TRANSFORMED stage */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, TRUE) );
+
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -1.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -1.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
@@ -83,9 +86,6 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIP_CALL( SCIPaddVar(scip, z) );
-
-   /* go to TRANSFORMED stage */
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, TRUE) );
 }
 
 /* releases variables, frees scip */
@@ -236,6 +236,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    expr->nenfos = 1;
    expr->enfos[0]->issepainit = FALSE;
 
+   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -326,6 +327,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_expect_eq(bilin.var1, x);
    cr_expect_eq(bilin.var2, y);
 
+   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
