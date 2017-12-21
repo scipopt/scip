@@ -219,7 +219,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    /* expr exp(x^2 y) is quadratic */
    quad = nlhdlrexprdata->quadexprterms[1];
    cr_assert_not_null(quad.expr);
-   cr_expect_eq(expexpr, quad.expr, "Expecting expr %p in quad term, got %p\n", expexpr, quad.expr);
+   cr_expect_eq(expexpr, quad.expr, "Expecting expr %p in quad term, got %p\n", (void*)expexpr, (void*)quad.expr);
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
    cr_expect_not_null(SCIPgetConsExprExprLinearizationVar(quad.expr), "exp expr should have auxiliary variable!\n");
