@@ -55,6 +55,7 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_expr.h"
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
 
@@ -138,6 +139,7 @@
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
+#define EXPRCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of expressions constraints */
 
 /* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue),
  *       maybe in fullDualPresolve(), see convertLongEquality()
@@ -17156,6 +17158,37 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
    return SCIP_OKAY;
 }
 
+/** tries to upgrade an expression constraint into a linear constraint */
+static
+SCIP_DECL_EXPRCONSUPGD(upgradeConsExpr)
+{
+   SCIP_CONSDATA* upgdconsdata;
+
+   assert(nupgdconss != NULL);
+   assert(upgdconss != NULL);
+   assert(upgdconsssize > 0);
+
+   /* ask for an equivalent linear constraint */
+   SCIP_CALL( SCIPgetLinearConsExpr(scip, cons, &upgdconss[0]) );
+
+   /* check whether upgrade was successful */
+   if( upgdconss[0] != NULL )
+   {
+      *nupgdconss = 1;
+
+      upgdconsdata = SCIPconsGetData(upgdconss[0]);
+      assert(upgdconsdata != NULL);
+
+      /* check violation of this linear constraint with absolute tolerances, to be consistent with the original expression constraint */
+      upgdconsdata->checkabsolute = TRUE;
+
+      SCIPdebugMsg(scip, "created linear constraint:\n");
+      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * constraint specific interface methods
  */
@@ -17225,6 +17258,12 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    {
       /* include the linear constraint upgrade in the nonlinear constraint handler */
       SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, upgradeConsNonlinear, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+   }
+
+   if( SCIPfindConshdlr(scip, "expr") != NULL )
+   {
+      /* include the linear constraint upgrade in the expression constraint handler */
+      SCIP_CALL( SCIPincludeExprconsUpgrade(scip, upgradeConsExpr, EXPRCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
 
    /* add linear constraint handler parameters */
