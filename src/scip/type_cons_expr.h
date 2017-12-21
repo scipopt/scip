@@ -633,16 +633,15 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - interval : buffer where to store interval
+ *  - interval : buffer where to store interval (on input: current interval for expr, on output: computed interval for expr)
  *  - varboundrelax : a suggested amount by which to relax variable bounds
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_INTERVAL* interval, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_INTERVAL* interval, \
    SCIP_Real varboundrelax)
 
 /** nonlinear handler callback for reverse propagation

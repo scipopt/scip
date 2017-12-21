@@ -1056,8 +1056,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLR* nlhdlr;
    EXPRINTEVAL_DATA* propdata;
    SCIP_INTERVAL interval;
+   SCIP_INTERVAL nlhdlrinterval;
+   int e;
 
    assert(expr != NULL);
    assert(data != NULL);
@@ -1067,40 +1070,49 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    /* set tag in any case */
    expr->intevaltag = propdata->boxtag;
 
-   /* mark expression as not tightened if we do not intersect expression intervals; this happens onces before calling
+   /* mark expression as not tightened if we do not intersect expression intervals; this happens once before calling
     * the reverse propagation
     */
    if( !propdata->intersect )
       expr->hastightened = FALSE;
 
-   /* set interval to [-inf,+inf] if interval evaluation callback is not implemented */
-   if( expr->exprhdlr->inteval == NULL )
+   if( propdata->intersect )
    {
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-      return SCIP_OKAY;
+      /* start with interval that is stored in expression */
+      interval = expr->interval;
+   }
+   else
+   {
+      /* start with infinite interval [-inf,+inf] */
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
    }
 
-   /* evaluate current expression and move on */
-   SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &interval, propdata->varboundrelax) );
+   for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
+   {
+      nlhdlr = expr->enfos[e]->nlhdlr;
+      assert(nlhdlr != NULL);
 
-   /* update expression interval */
+      /* skip nlhdlr if it does not provide interval evaluation */
+      if( nlhdlr->inteval == NULL )
+         continue;
+
+      /* let nlhdlr evaluate current expression */
+      nlhdlrinterval = interval;
+      SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, &nlhdlrinterval, expr, expr->enfos[e]->nlhdlrexprdata, propdata->varboundrelax) );
+
+      /* intersect with interval */
+      SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+   }
+
    if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
    {
-      /* intersect new interval with the previous one */
-      if( propdata->intersect )
-         SCIPintervalIntersect(&expr->interval, expr->interval, interval);
-      else
-         SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
-
+      /* update expression interval */
+      SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
       *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    }
-
-   /* stop if the computed or resulting interval is empty */
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval)
-      || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval) )
+   else
    {
+      /* stop if interval is empty */
       SCIPintervalSetEmpty(&expr->interval);
       propdata->aborted = TRUE;
       *result = SCIP_CONSEXPREXPRWALK_ABORT;
