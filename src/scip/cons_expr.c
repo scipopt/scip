@@ -318,8 +318,8 @@ SCIP_RETCODE freeEnfoData(
    if( freeauxvar )
    {
       SCIP_CALL( freeAuxVar(scip, expr) );
+      assert(expr->auxvar == NULL);
    }
-   assert(expr->auxvar == NULL);
 
    /* free data stored by nonlinear handlers */
    for( e = 0; e < expr->nenfos; ++e )
