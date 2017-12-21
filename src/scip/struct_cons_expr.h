@@ -133,6 +133,8 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)); /**< separation initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa));         /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa)); /**< separation deinitialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval)); /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
 };
 
 /** enforcement data of an expression */

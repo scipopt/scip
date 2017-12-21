@@ -940,7 +940,7 @@ void SCIPsetConsExprNlhdlrInitExit(
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
 );
 
-/** set the separation callback of a nonlinear handler */
+/** set the separation callbacks of a nonlinear handler */
 EXTERN
 void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
@@ -948,6 +948,15 @@ void SCIPsetConsExprNlhdlrSepa(
    SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (must not be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
+);
+
+/** set the propagation callbacks of a nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrProp(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval)), /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
 /** gives name of nonlinear handler */

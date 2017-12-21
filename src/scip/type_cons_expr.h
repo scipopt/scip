@@ -623,6 +623,53 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_RESULT* result, \
    int* ncuts)
 
+/** nonlinear handler interval evaluation callback
+ *
+ * The method evaluates an expression by taking the intervals of its successors into account.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - conshdlr : cons expr handler
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - interval : buffer where to store interval
+ *  - varboundrelax : a suggested amount by which to relax variable bounds
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_INTERVAL* interval, \
+   SCIP_Real varboundrelax)
+
+/** nonlinear handler callback for reverse propagation
+ *
+ * The method propagates successors of an expression by taking the intervals of all other successors into account.
+ * The tighter interval is stored inside the interval variable of the corresponding successor expression.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - conshdlr : cons expr handler
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
+ *  - nreductions : buffer to store the number of interval reductions of all children
+ *  - force : force tightening even if it is below the bound strengthening tolerance
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_Bool* infeasible, \
+   int* nreductions, \
+   SCIP_Bool force)
+
 typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
