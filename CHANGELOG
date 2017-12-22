@@ -185,8 +185,11 @@ new parameters:
   clique table analysis
 - new parameters "propagating/vbounds/{maxcliquesmedium,maxcliquesexhaustive}" to limit the number of cliques relative to the
   number of binary variable for performing clique table analysis
-- added parameter "expbackoff" to all separators which increases the frequency exponentially over the depth in the tree
+- added parameter "expbackoff" to all separators, which increases the frequency exponentially over the depth in the tree
 - new parameter "conflict/prefinfproof" (prefer infeasibility proof to boundexceeding proof)
+- new parameters "heuristics/mpec/*"
+- new parameters "heuristics/alns/*"
+- new parameters "presolving/sparsify/*"
 
 fixed bugs:
 - fix wrong statistic display of diving leaf solutions
