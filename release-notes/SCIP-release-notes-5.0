@@ -46,7 +46,7 @@ Performance Improvements
 
 - improved cut selection and management
 
-- enabled cutting plane separation in the tree
+- enabled MIP cutting plane separation in the tree
 
 - disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
 
