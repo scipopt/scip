@@ -158,7 +158,7 @@ new parameters:
 - new parameter: "presolving/symbreak/detectorbitopes" (whether it should be checked if some symmetries can be handled by orbitopes)
 - new parameter: "constraints/symresack/ppsymresack" (check whether symresacks can be strengthend by packing/partitining constraints)
 - new parameter: "constraints/symresack/checkalwaysfeas" (whether conscheck returns always SCIP_FEASIBLE)
-- new parameter: "constraints/orbisack/coverseparation" (whether orbisack cover inequalities should be separated)
+- new parameter: "constraints/orbisack/orbisack/coverseparation" (whether orbisack cover inequalities should be separated)
 - new parameter: "constraints/orbisack/orbiSeparation" (whether facet defining inequalities for orbisack should be separated)
 - new parameter: "constraints/orbisack/coeffbound" (maximal value of coefficients in orbisack facet inequalities)
 - new parameter: "constraints/orbisack/checkpporbisack" (check whether orbisacks can be strengthened by packing/partitioning constraints)
