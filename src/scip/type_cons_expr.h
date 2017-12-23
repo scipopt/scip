@@ -442,7 +442,9 @@ typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 #define SCIP_CONSEXPR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
 #define SCIP_CONSEXPR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
 #define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
-#define SCIP_CONSEXPR_EXPRENFO_ALL            SCIP_CONSEXPR_EXPRENFO_SEPABOTH  /**< all enforcement methods */
+#define SCIP_CONSEXPR_EXPRENFO_INTEVAL        0x4u /**< interval evaluation */
+#define SCIP_CONSEXPR_EXPRENFO_REVERSEPROP    0x8u /**< reverse propagation */
+#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) /**< all enforcement methods */
 
 /** type for exprenfo bitflags */
 typedef unsigned int SCIP_CONSEXPR_EXPRENFO_METHOD;

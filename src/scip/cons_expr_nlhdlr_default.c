@@ -42,15 +42,29 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    assert(enforcedbelow != NULL);
    assert(enforcedabove != NULL);
    assert(success != NULL);
+   assert(nlhdlrexprdata != NULL);
 
    *success = FALSE;
 
-   /* if enforcement is already ensured, then do nothing */
-   if( *enforcedbelow && *enforcedabove )
-      return SCIP_OKAY;
+   /* return interval evaluation possibility if exprhdlr for expr has a inteval callback */
+   if( SCIPgetConsExprExprHdlr(expr)->inteval != NULL )
+   {
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
+      *success = TRUE;
+   }
 
-   /* return sepa possibility if exprhdlr for expr has a sepa callback */
-   if( SCIPgetConsExprExprHdlr(expr)->sepa != NULL )
+   /* return reverse propagation possibility if exprhdlr for expr has a reverseprop callback */
+   if( SCIPgetConsExprExprHdlr(expr)->reverseprop != NULL )
+   {
+      /* one could claim that reverse propagation is sufficient for enforcement, but separation is probably stronger
+       * so, not setting enforcedbelow/above to TRUE here for now
+       */
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
+      *success = TRUE;
+   }
+
+   /* return sepa possibility if exprhdlr for expr has a sepa callback and enforcement is not ensured already */
+   if( SCIPgetConsExprExprHdlr(expr)->sepa != NULL && (!*enforcedbelow || !*enforcedabove) )
    {
       /* make sure that an (auxiliary) variable exists for every child */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -70,6 +84,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *success = TRUE;
    }
 
+   if( *success )
+   {
+      /* remember in the nlhdlr exprdata (pointer) which enforcemethod we advertised */
+      *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)(*enforcemethods);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -83,6 +103,10 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
    assert(exprhdlr != NULL);
+
+   /* if we will not separate, then don't call initsepa */
+   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+      return SCIP_OKAY;
 
    if( exprhdlr->initsepa == NULL )
       return SCIP_OKAY;
@@ -102,6 +126,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
    assert(expr != NULL);
    assert(result != NULL);
    assert(ncuts != NULL);
+
+   /* if we did not say that we will separate, then stay to it */
+   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+      return SCIP_OKAY;
 
    if( separated )
    {
@@ -131,6 +159,10 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
    assert(scip != NULL);
    assert(expr != NULL);
 
+   /* if we have not separated, then don't call exitsepa */
+   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+      return SCIP_OKAY;
+
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
    assert(exprhdlr != NULL);
 
@@ -157,6 +189,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalDefault)
    if( exprhdlr->inteval == NULL )
       return SCIP_OKAY;
 
+   assert((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_INTEVAL);
+
    /* call the interval evaluation callback of the expression handler */
    SCIP_CALL( exprhdlr->inteval(scip, expr, interval, varboundrelax) );
 
@@ -176,6 +210,8 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
 
    if( exprhdlr->reverseprop == NULL )
       return SCIP_OKAY;
+
+   assert((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP);
 
    /* call the reverse propagation callback of the expression handler */
    SCIP_CALL( exprhdlr->reverseprop(scip, expr, reversepropqueue, infeasible, nreductions, force) );
