@@ -1918,7 +1918,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
          SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
 
          /* try to tighten the bounds of the expression */
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force,
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
                infeasible, nreductions) );
       }
    }

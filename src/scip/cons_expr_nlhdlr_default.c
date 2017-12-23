@@ -178,7 +178,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
       return SCIP_OKAY;
 
    /* call the reverse propagation callback of the expression handler */
-   SCIP_CALL( exprhdlr->reverseprop(scip, expr, infeasible, nreductions, force) );
+   SCIP_CALL( exprhdlr->reverseprop(scip, expr, reversepropqueue, infeasible, nreductions, force) );
 
    return SCIP_OKAY;
 }

@@ -2027,7 +2027,7 @@ SCIP_RETCODE forwardPropCons(
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, force, infeasible, ntightenings) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, force, NULL, infeasible, ntightenings) );
    }
 
 #ifdef SCIP_DEBUG
@@ -2108,7 +2108,7 @@ SCIP_RETCODE reversePropConss(
 
       expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(queue);
       assert(expr != NULL);
-      assert(expr->exprhdlr->reverseprop != NULL);
+      assert(expr->exprhdlr->reverseprop != NULL || expr->nenfos > 0);
 
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
@@ -2133,7 +2133,7 @@ SCIP_RETCODE reversePropConss(
             continue;
 
          nreds = 0;
-         SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, infeasible, &nreds, force) );
+         SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
          assert(nreds >= 0);
          *ntightenings += nreds;
       }
@@ -2141,26 +2141,9 @@ SCIP_RETCODE reversePropConss(
       /* stop propagation if the problem is infeasible */
       if( *infeasible )
          break;
-
-      /* add tightened children with at least one child to the queue */
-      /* @todo this assumes that the nlhdlr will tighten immediate children of the expression, probably the nlhdlr prop should add expression to the queue */
-      for( i = 0; i < expr->nchildren; ++i )
-      {
-         SCIP_CONSEXPR_EXPR* child;
-
-         child = expr->children[i];
-         assert(child != NULL);
-
-         /* add child to the queue */
-         /* @todo put children which are in the queue to the end of it! */
-         if( !child->inqueue && child->hastightened && child->nchildren > 0 && child->exprhdlr->reverseprop != NULL )
-         {
-            SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
-            child->inqueue = TRUE;
-         }
-      }
    }
 
+   /* TODO reset expr->inqueue for all remaining expr's in queue (in case of early stop due to infeasibility) */
    /* free the queue */
    SCIPqueueFree(&queue);
 
@@ -6973,12 +6956,15 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
 
 /** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
  *  expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED
+ *
+ *  If a reversepropqueue is given, then the expression will be added to the queue if its bounds could be tightened without detecting infeasibility.
  */
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to add the total number of tightenings */
    )
@@ -7069,6 +7055,21 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          {
             SCIP_CALL( SCIPtightenVarUb(scip, var, newub, force, cutoff, &tightened) );
             (*ntightenings) += tightened ? 1 : 0;
+         }
+      }
+
+      /* if a reversepropagation queue is given, then add expression to that queue if it has at least child and could have a reverseprop callback */
+      if( reversepropqueue != NULL )
+      {
+         if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && expr->nenfos > 0) ||
+             (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && expr->exprhdlr->reverseprop != NULL) )
+         {
+            /* @todo put children which are in the queue to the end of it! */
+            if( !expr->inqueue && expr->nchildren > 0 )
+            {
+               SCIP_CALL( SCIPqueueInsert(reversepropqueue, (void*) expr) );
+               expr->inqueue = TRUE;
+            }
          }
       }
    }

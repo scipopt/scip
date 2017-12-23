@@ -1140,7 +1140,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &childbounds, childbounds, exprdata->coefficients[c]);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, force,
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, force, reversepropqueue,
             infeasible, nreductions) );
    }
 

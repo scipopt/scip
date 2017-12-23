@@ -410,7 +410,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropCos)
    newbounds.sup -= M_PI_2;
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, newbounds, force, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, newbounds, force, reversepropqueue, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
