@@ -5394,9 +5394,6 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
             continue;
 
          SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
-
-         if( upgraded )
-            ++(*nupgdconss);
       }
    }
 
