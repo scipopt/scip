@@ -537,8 +537,10 @@ SCIP_RETCODE presolveUpgrade(
    /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
    {
-      if( !conshdlrdata->exprconsupgrades[i]->active || conshdlrdata->exprconsupgrades[i]->exprconsupgd == NULL )
+      if( !conshdlrdata->exprconsupgrades[i]->active )
          continue;
+
+      assert(conshdlrdata->exprconsupgrades[i]->exprconsupgd != NULL);
 
       SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
 
