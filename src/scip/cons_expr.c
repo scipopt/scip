@@ -7941,7 +7941,7 @@ SCIP_RETCODE SCIPincludeExprconsUpgrade(
       }
    }
 
-   /* create a expression constraint upgrade data object */
+   /* create an expression constraint upgrade data object */
    SCIP_CALL( SCIPallocBlockMemory(scip, &exprconsupgrade) );
    exprconsupgrade->exprconsupgd = exprconsupgd;
    exprconsupgrade->priority   = priority;
@@ -8179,11 +8179,11 @@ SCIP_RETCODE SCIPgetLinearConsExpr(
    }
 
    /* consider constant part of the sum expression */
-   lhs = consdata->lhs - SCIPgetConsExprExprSumConstant(expr);
-   rhs = consdata->rhs - SCIPgetConsExprExprSumConstant(expr);
+   lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : (consdata->lhs - SCIPgetConsExprExprSumConstant(expr));
+   rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : (consdata->rhs - SCIPgetConsExprExprSumConstant(expr));
 
    SCIP_CALL( SCIPcreateConsLinear(scip, lincons, SCIPconsGetName(cons),
-            SCIPgetConsExprExprNChildren(expr), vars, SCIPgetConsExprExprSumCoefs(expr),
+         SCIPgetConsExprExprNChildren(expr), vars, SCIPgetConsExprExprSumCoefs(expr),
          lhs, rhs,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
