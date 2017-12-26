@@ -12993,8 +12993,6 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
    SCIP_CONSDATA* consdata;
    int i;
 
-   assert(locktype == SCIP_LOCKTYPE_MODEL);
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 

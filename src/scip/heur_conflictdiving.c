@@ -181,6 +181,8 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    assert(diveset != NULL);
 
    *result = SCIP_DELAYED;
+   maxvarsfac = SCIP_INVALID;
+   minmaxvars = INT_MAX;
 
    /* don't run if no conflict constraints where found */
    if( SCIPgetNConflictConssFound(scip) == 0 )
@@ -206,17 +208,19 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 
    heurdata->nconflictsfound += (SCIPgetNConflictConssFound(scip) - nconflictsfound);
 
-#if SCIP_DEBUG
+#ifdef SCIP_DEBUG
    if( *result != SCIP_DELAYED )
       SCIPdebugMsg(scip, "found %lld (%lld) new conflicts\n", SCIPgetNConflictConssFound(scip) - nconflictsfound, heurdata->nconflictsfound);
 #endif
 
    if( heurdata->maxvarsfac >= 0.0 && !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
    {
+      assert(maxvarsfac != SCIP_INVALID);
       SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", maxvarsfac) );
    }
    if( heurdata->minmaxvars >= 0.0 && !SCIPisParamFixed(scip, "conflict/minmaxvars") )
    {
+      assert(minmaxvars != INT_MAX);
       SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", minmaxvars) );
    }
 
