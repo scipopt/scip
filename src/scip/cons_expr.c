@@ -2179,7 +2179,17 @@ SCIP_RETCODE reversePropConss(
          break;
    }
 
-   /* TODO reset expr->inqueue for all remaining expr's in queue (in case of early stop due to infeasibility) */
+   /* reset expr->inqueue for all remaining expr's in queue (can happen in case of early stop due to infeasibility) */
+   while( !SCIPqueueIsEmpty(queue) )
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+
+      expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(queue);
+
+      /* mark that the expression is not in the queue anymore */
+      expr->inqueue = FALSE;
+   }
+
    /* free the queue */
    SCIPqueueFree(&queue);
 
