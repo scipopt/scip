@@ -33,6 +33,7 @@
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 { /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRENFO_METHOD mymethods;
    int c;
 
    assert(scip != NULL);
@@ -45,11 +46,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    assert(nlhdlrexprdata != NULL);
 
    *success = FALSE;
+   mymethods = SCIP_CONSEXPR_EXPRENFO_NONE;
 
    /* return interval evaluation possibility if exprhdlr for expr has a inteval callback */
    if( SCIPgetConsExprExprHdlr(expr)->inteval != NULL )
    {
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
+      mymethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
       *success = TRUE;
    }
 
@@ -59,7 +61,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       /* one could claim that reverse propagation is sufficient for enforcement, but separation is probably stronger
        * so, not setting enforcedbelow/above to TRUE here for now
        */
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
+      mymethods |= SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
       *success = TRUE;
    }
 
@@ -78,7 +80,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
        * - it will enforce from both below and above
        * - it needs to be called for this expression
        */
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
       *enforcedbelow = TRUE;
       *enforcedabove = TRUE;
       *success = TRUE;
@@ -86,8 +88,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
    if( *success )
    {
-      /* remember in the nlhdlr exprdata (pointer) which enforcemethod we advertised */
-      *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)(*enforcemethods);
+      /* remember in the nlhdlr exprdata (pointer) which methods we advertised */
+      *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)mymethods;
+      /* augment mymethods in enforcemethods */
+      *enforcemethods |= mymethods;
    }
 
    return SCIP_OKAY;
