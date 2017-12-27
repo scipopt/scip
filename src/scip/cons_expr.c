@@ -1116,6 +1116,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
       }
    }
 
+   if( propdata->intersect )
+   {
+      /* make sure resulting interval is subset of expr->interval, if intersect is true
+       * even though we passed expr->interval as input to the inteval callbacks,
+       * these callbacks might not have taken it into account (most do not, actually)
+       */
+      SCIPintervalIntersect(&interval, interval, expr->interval);
+   }
+
    if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
    {
       /* update expression interval */
