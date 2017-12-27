@@ -2135,9 +2135,9 @@ SCIP_RETCODE reversePropConss(
       expr->inqueue = FALSE;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "call reverse propagation for ");
+      SCIPinfoMessage(scip, NULL, "call reverse propagation for ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
 #endif
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
@@ -2161,17 +2161,14 @@ SCIP_RETCODE reversePropConss(
             *ntightenings += nreds;
          }
       }
-      else
+      else if( expr->exprhdlr->reverseprop != NULL )
       {
-         /* if not in solving stage, call reverse propagation callback of exprhdlr directly */
+         /* if not in solving stage, call reverse propagation callback of exprhdlr directly (if any) */
          int nreds = 0;
 
-         if( expr->exprhdlr->reverseprop != NULL )
-         {
-            SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, queue, infeasible, &nreds, force) );
-            assert(nreds >= 0);
-            *ntightenings += nreds;
-         }
+         SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, queue, infeasible, &nreds, force) );
+         assert(nreds >= 0);
+         *ntightenings += nreds;
       }
 
       /* stop propagation if the problem is infeasible */
@@ -7080,14 +7077,12 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions */
       expr->hastightened = TRUE;
 
-      /* do not tighten variable in problem stage (important for unittests)
-       * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)? */
-      if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED )
-         return SCIP_OKAY;
-
-      /* tighten bounds of linearization variable */
+      /* tighten bounds of linearization variable
+       * but: do not tighten variable in problem stage (important for unittests)
+       * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
+       */
       var = SCIPgetConsExprExprLinearizationVar(expr);
-      if( var != NULL )
+      if( var != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       {
          SCIP_Bool tightened;
 
@@ -7105,7 +7100,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       }
 
       /* if a reversepropagation queue is given, then add expression to that queue if it has at least child and could have a reverseprop callback */
-      if( reversepropqueue != NULL )
+      if( reversepropqueue != NULL && !*cutoff )
       {
          if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && expr->nenfos > 0) ||
              (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && expr->exprhdlr->reverseprop != NULL) )
