@@ -1087,21 +1087,33 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
    }
 
-   for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
-      nlhdlr = expr->enfos[e]->nlhdlr;
-      assert(nlhdlr != NULL);
+      /* in solving stage, nlhdlrs take care of interval evaluation */
+      for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
+      {
+         nlhdlr = expr->enfos[e]->nlhdlr;
+         assert(nlhdlr != NULL);
 
-      /* skip nlhdlr if it does not provide interval evaluation */
-      if( nlhdlr->inteval == NULL )
-         continue;
+         /* skip nlhdlr if it does not provide interval evaluation */
+         if( nlhdlr->inteval == NULL )
+            continue;
 
-      /* let nlhdlr evaluate current expression */
-      nlhdlrinterval = interval;
-      SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, &nlhdlrinterval, expr, expr->enfos[e]->nlhdlrexprdata, propdata->varboundrelax) );
+         /* let nlhdlr evaluate current expression */
+         nlhdlrinterval = interval;
+         SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, &nlhdlrinterval, expr, expr->enfos[e]->nlhdlrexprdata, propdata->varboundrelax) );
 
-      /* intersect with interval */
-      SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+         /* intersect with interval */
+         SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+      }
+   }
+   else
+   {
+      /* outside solving stage, call the callback of the exprhdlr directly */
+      if( expr->exprhdlr->inteval != NULL )
+      {
+         SCIP_CALL( expr->exprhdlr->inteval(scip, expr, &interval, propdata->varboundrelax) );
+      }
    }
 
    if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
@@ -2119,23 +2131,38 @@ SCIP_RETCODE reversePropConss(
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-      /* call reverse propagation callbacks of nlhdlrs */
-      for( e = 0; e < expr->nenfos && !*infeasible; ++e )
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         SCIP_CONSEXPR_NLHDLR* nlhdlr;
-         int nreds;
+         /* during solving, call reverse propagation callbacks of nlhdlrs */
+         for( e = 0; e < expr->nenfos && !*infeasible; ++e )
+         {
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+            int nreds;
 
-         nlhdlr = expr->enfos[e]->nlhdlr;
-         assert(nlhdlr != NULL);
+            nlhdlr = expr->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
 
-         /* skip nlhdlr that does not implement reverseprop */
-         if( nlhdlr->reverseprop == NULL )
-            continue;
+            /* skip nlhdlr that does not implement reverseprop */
+            if( nlhdlr->reverseprop == NULL )
+               continue;
 
-         nreds = 0;
-         SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
-         assert(nreds >= 0);
-         *ntightenings += nreds;
+            nreds = 0;
+            SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
+            assert(nreds >= 0);
+            *ntightenings += nreds;
+         }
+      }
+      else
+      {
+         /* if not in solving stage, call reverse propagation callback of exprhdlr directly */
+         int nreds = 0;
+
+         if( expr->exprhdlr->reverseprop != NULL )
+         {
+            SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, queue, infeasible, &nreds, force) );
+            assert(nreds >= 0);
+            *ntightenings += nreds;
+         }
       }
 
       /* stop propagation if the problem is infeasible */
