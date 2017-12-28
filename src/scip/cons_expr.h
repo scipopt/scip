@@ -768,7 +768,7 @@ EXTERN
 SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   idx                 /**< index of child */
+   int                   childidx            /**< index of child */
    );
 
 /** returns the number of positive rounding locks of an expression */
