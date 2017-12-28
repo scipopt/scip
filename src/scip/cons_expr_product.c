@@ -1960,7 +1960,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
    allpos = TRUE;
    allneg = TRUE;
 
-   /* check whether all child intervals are positive or negative */
+   /* check whether all children (except for childidx) intervals are positive or negative */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && (allpos || allneg); ++i )
    {
       SCIP_INTERVAL interval;

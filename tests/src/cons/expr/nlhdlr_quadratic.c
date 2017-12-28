@@ -75,7 +75,7 @@ void setup(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
-   /* go to TRANSFORMED stage */
+   /* go to PRESOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, TRUE) );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
