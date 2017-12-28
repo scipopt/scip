@@ -41,6 +41,7 @@
 #include "scip/cons_expr_cos.h"
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
+#include "scip/cons_expr_iterator.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -143,6 +144,8 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
+
+   SCIP_CONSEXPR_ITERATOR*  iterator;        /**< expression iterator */
 
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
@@ -307,8 +310,8 @@ SCIP_RETCODE freeEnfoData(
    if( freeauxvar )
    {
       SCIP_CALL( freeAuxVar(scip, expr) );
+      assert(expr->auxvar == NULL);
    }
-   assert(expr->auxvar == NULL);
 
    /* free data stored by nonlinear handlers */
    for( e = 0; e < expr->nenfos; ++e )
@@ -4187,7 +4190,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
 {
    SCIP_CONSEXPR_NLHDLR* nlhdlr;
    INITSEPA_DATA* initsepadata;
-   SCIP_Bool infeasible;
    int e;
 
    assert(expr != NULL);
@@ -4211,6 +4213,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
    /* call initsepa of all nlhdlrs in expr */
    for( e = 0; e < expr->nenfos; ++e )
    {
+      SCIP_Bool infeasible;
       assert(expr->enfos[e] != NULL);
 
       nlhdlr = expr->enfos[e]->nlhdlr;
@@ -4223,6 +4226,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       assert(!expr->enfos[e]->issepainit);
 
       /* call the separation initialization callback of the nonlinear handler */
+      infeasible = FALSE;
       SCIP_CALL( nlhdlr->initsepa(scip, initsepadata->conshdlr, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr, &infeasible) );
       expr->enfos[e]->issepainit = TRUE;
 
@@ -4911,6 +4915,10 @@ SCIP_DECL_CONSFREE(consFreeExpr)
 
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
    conshdlrdata->nlhdlrssize = 0;
+
+   /* free expression iterator */
+   assert(conshdlrdata->iterator != NULL);
+   SCIPexpriteratorFree(&conshdlrdata->iterator);
 
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -7757,6 +7765,9 @@ SCIP_RETCODE includeConshdlrExprBasic(
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
    conshdlrdata->lastsoltag = 1;
+
+   /* create expression iterator */
+   SCIP_CALL( SCIPexpriteratorCreate(&conshdlrdata->iterator, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
 
    conshdlr = NULL;
 

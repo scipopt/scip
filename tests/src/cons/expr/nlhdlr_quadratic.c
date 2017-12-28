@@ -113,6 +113,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
    SCIP_Bool success;
+   SCIP_VAR* var;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <x>", NULL, &expr) );
@@ -132,15 +133,16 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    cr_assert(success);
    cr_assert_not_null(nlhdlrexprdata);
 
-   cr_expect_eq(nlhdlrexprdata->nlinvars, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->nlinvars);
-   cr_expect_eq(nlhdlrexprdata->nquadvars, 1, "Expecting 1 quadratic terms, got %d\n", nlhdlrexprdata->nquadvars);
-   cr_expect_eq(nlhdlrexprdata->nbilinterms, 0, "Expecting 0 bilinear terms, got %d\n", nlhdlrexprdata->nbilinterms);
+   cr_expect_eq(nlhdlrexprdata->nlinexprs, 0, "Expecting 0 linear expr, got %d\n", nlhdlrexprdata->nlinexprs);
+   cr_expect_eq(nlhdlrexprdata->nquadexprs, 1, "Expecting 1 quadratic terms, got %d\n", nlhdlrexprdata->nquadexprs);
+   cr_expect_eq(nlhdlrexprdata->nbilinexprterms, 0, "Expecting 0 bilinear terms, got %d\n", nlhdlrexprdata->nbilinexprterms);
 
-   SCIP_QUADVARTERM quad;
-   quad = nlhdlrexprdata->quadvarterms[0];
-   cr_assert_not_null(quad.var);
-   fprintf(stderr, "x = %s, quad.var %s\n", SCIPvarGetName(x), SCIPvarGetName(quad.var));
-   cr_expect_eq(quad.var, x, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(x), SCIPvarGetName(quad.var));
+   SCIP_QUADEXPRTERM quad;
+   quad = nlhdlrexprdata->quadexprterms[0];
+   cr_assert_not_null(quad.expr);
+   var = SCIPgetConsExprExprLinearizationVar(quad.expr);
+   fprintf(stderr, "x = %s, quad.expr's auxvar %s\n", SCIPvarGetName(x), SCIPvarGetName(var));
+   cr_expect_eq(var, x, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(x), SCIPvarGetName(var));
    cr_expect_eq(1.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 1.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
@@ -181,7 +183,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
 
-   /* get exp expression */
+   /* get exponential expression */
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 3);
    expexpr = SCIPgetConsExprExprChildren(expr)[1]; /*  x * exp(x^2 y) */
    expexpr = SCIPgetConsExprExprChildren(expexpr)[1]; /* exp(x^2 y) */
@@ -199,33 +201,35 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(success);
    cr_assert_not_null(nlhdlrexprdata);
 
-   cr_expect_eq(nlhdlrexprdata->nlinvars, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->nlinvars);
-   cr_expect_eq(nlhdlrexprdata->nquadvars, 2, "Expecting 2 quadratic terms, got %d\n", nlhdlrexprdata->nquadvars);
-   cr_expect_eq(nlhdlrexprdata->nbilinterms, 1, "Expecting 1 bilinear terms, got %d\n", nlhdlrexprdata->nbilinterms);
+   cr_expect_eq(nlhdlrexprdata->nlinexprs, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->nlinexprs);
+   cr_expect_eq(nlhdlrexprdata->nquadexprs, 2, "Expecting 2 quadratic terms, got %d\n", nlhdlrexprdata->nquadexprs);
+   cr_expect_eq(nlhdlrexprdata->nbilinexprterms, 1, "Expecting 1 bilinear terms, got %d\n", nlhdlrexprdata->nbilinexprterms);
 
    /* x var */
-   SCIP_QUADVARTERM quad;
-   quad = nlhdlrexprdata->quadvarterms[0];
-   cr_assert_not_null(quad.var);
-   cr_expect_eq(x, quad.var, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(x), SCIPvarGetName(quad.var));
+   SCIP_QUADEXPRTERM quad;
+   quad = nlhdlrexprdata->quadexprterms[0];
+   cr_assert_not_null(quad.expr);
+   cr_expect_eq(x, SCIPgetConsExprExprLinearizationVar(quad.expr), "Expecting var %s in quad term, got %s\n",
+         SCIPvarGetName(x), SCIPvarGetName(SCIPgetConsExprExprLinearizationVar(quad.expr)));
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
-   /* auxiliary var for exp(x^2 y) */
-   quad = nlhdlrexprdata->quadvarterms[1];
-   cr_assert_not_null(quad.var);
-   cr_expect_eq(SCIPgetConsExprExprLinearizationVar(expexpr), quad.var, "Expecting var %s in quad term, got %s\n",
-         SCIPvarGetName(SCIPgetConsExprExprLinearizationVar(expexpr)), SCIPvarGetName(quad.var));
+   /* expr exp(x^2 y) is quadratic */
+   quad = nlhdlrexprdata->quadexprterms[1];
+   cr_assert_not_null(quad.expr);
+   cr_expect_eq(expexpr, quad.expr);
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
+   cr_expect_not_null(SCIPgetConsExprExprLinearizationVar(quad.expr), "exp expr should have auxiliary variable!\n");
 
-   SCIP_BILINTERM bilin;
-   bilin = nlhdlrexprdata->bilinterms[0];
-   cr_assert_not_null(bilin.var1);
-   cr_assert_not_null(bilin.var2);
-   cr_expect_eq(bilin.var1, x, "Expecting var %s in bilin term, got %s\n", SCIPvarGetName(x), SCIPvarGetName(bilin.var1));
-   cr_expect_eq(bilin.var2, SCIPgetConsExprExprLinearizationVar(expexpr), "Expecting var %s in bilin term, got %s\n",
-         SCIPvarGetName(SCIPgetConsExprExprLinearizationVar(expexpr)), SCIPvarGetName(bilin.var2));
+
+   SCIP_BILINEXPRTERM bilin;
+   bilin = nlhdlrexprdata->bilinexprterms[0];
+   cr_assert_not_null(bilin.expr1);
+   cr_assert_not_null(bilin.expr2);
+   cr_expect_eq(SCIPgetConsExprExprLinearizationVar(bilin.expr1), x, "Expecting expr's auxvar %s in bilin term, got %s\n",
+         SCIPvarGetName(x), SCIPvarGetName(SCIPgetConsExprExprLinearizationVar(bilin.expr1)));
+   cr_expect_eq(bilin.expr2, expexpr);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
 
    /* register nlhdlr info in expr and free */
@@ -263,7 +267,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
 
-   /* expr is exp expr */
+   /* expr is exponential expr */
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 1);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp", "expecting exp got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
@@ -300,32 +304,34 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
 #endif
 
    /* quadratic terms */
-   SCIP_QUADVARTERM quad;
-   cr_expect_eq(2, expr->enfos[0]->nlhdlrexprdata->nquadvars);
+   SCIP_QUADEXPRTERM quad;
+   cr_expect_eq(2, expr->enfos[0]->nlhdlrexprdata->nquadexprs);
 
    /* x var */
-   quad = expr->enfos[0]->nlhdlrexprdata->quadvarterms[0];
-   cr_assert_not_null(quad.var);
-   cr_expect_eq(x, quad.var, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(x), SCIPvarGetName(quad.var));
+   quad = expr->enfos[0]->nlhdlrexprdata->quadexprterms[0];
+   cr_assert_not_null(quad.expr);
+   cr_expect_eq(x, SCIPgetConsExprExprLinearizationVar(quad.expr), "Expecting expr auxvar %s in quad term, got %s\n",
+         SCIPvarGetName(x), SCIPvarGetName(SCIPgetConsExprExprLinearizationVar(quad.expr)));
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
    /* y var */
-   quad = expr->enfos[0]->nlhdlrexprdata->quadvarterms[1];
-   cr_assert_not_null(quad.var);
-   cr_expect_eq(y, quad.var, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(y), SCIPvarGetName(quad.var));
+   quad = expr->enfos[0]->nlhdlrexprdata->quadexprterms[1];
+   cr_assert_not_null(quad.expr);
+   cr_expect_eq(y, SCIPgetConsExprExprLinearizationVar(quad.expr), "Expecting expr auxvar %s in quad term, got %s\n",
+         SCIPvarGetName(y), SCIPvarGetName(SCIPgetConsExprExprLinearizationVar(quad.expr)));
    cr_expect_eq(1.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(2.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
    /* bilinear term */
-   SCIP_BILINTERM bilin;
-   cr_expect_eq(1, expr->enfos[0]->nlhdlrexprdata->nbilinterms);
-   bilin = expr->enfos[0]->nlhdlrexprdata->bilinterms[0];
-   cr_assert_not_null(bilin.var1);
-   cr_assert_not_null(bilin.var2);
+   SCIP_BILINEXPRTERM bilin;
+   cr_expect_eq(1, expr->enfos[0]->nlhdlrexprdata->nbilinexprterms);
+   bilin = expr->enfos[0]->nlhdlrexprdata->bilinexprterms[0];
+   cr_assert_not_null(bilin.expr1);
+   cr_assert_not_null(bilin.expr2);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilincoef %g in quad term, got %g\n", 2.0, bilin.coef);
-   cr_expect_eq(bilin.var1, x);
-   cr_expect_eq(bilin.var2, y);
+   cr_expect_eq(SCIPgetConsExprExprLinearizationVar(bilin.expr1), x);
+   cr_expect_eq(SCIPgetConsExprExprLinearizationVar(bilin.expr2), y);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -361,6 +367,45 @@ Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
    cr_assert(!enforceabove);
    cr_assert(!success);
    cr_expect_null(nlhdlrexprdata);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* log^2 x + sin^2 y + cos^2 z should not be handled by this nlhandler */
+Test(nlhdlrquadratic, noproperquadratic2, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success;
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x>)^2 + sin(<y>)^2 + cos(<z>)^2", NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
+
+   /* detect */
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+
+   /* shouldn't have detected anything -> provides nothing */
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_assert(!enforcebelow);
+   cr_assert(!enforceabove);
+   cr_assert(!success);
+   cr_expect_null(nlhdlrexprdata);
+
+   /* no auxiliary variables */
+   cr_expect_eq(3, SCIPgetConsExprExprNChildren(expr));
+   for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); i++ )
+      cr_expect_null(SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[i]));
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
