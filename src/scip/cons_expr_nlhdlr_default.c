@@ -48,15 +48,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    *success = FALSE;
    mymethods = SCIP_CONSEXPR_EXPRENFO_NONE;
 
-   /* return interval evaluation possibility if exprhdlr for expr has a inteval callback */
-   if( SCIPgetConsExprExprHdlr(expr)->inteval != NULL )
+   /* return interval evaluation possibility if exprhdlr for expr has a inteval callback and noone already provides (a good) inteval */
+   if( SCIPgetConsExprExprHdlr(expr)->inteval != NULL && (*enforcemethods & SCIP_CONSEXPR_EXPRENFO_INTEVAL) == 0 )
    {
       mymethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
       *success = TRUE;
    }
 
-   /* return reverse propagation possibility if exprhdlr for expr has a reverseprop callback */
-   if( SCIPgetConsExprExprHdlr(expr)->reverseprop != NULL )
+   /* return reverse propagation possibility if exprhdlr for expr has a reverseprop callback and noone already provides (a good) reverseprop */
+   if( SCIPgetConsExprExprHdlr(expr)->reverseprop != NULL && (*enforcemethods & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) == 0 )
    {
       /* one could claim that reverse propagation is sufficient for enforcement, but separation is probably stronger
        * so, not setting enforcedbelow/above to TRUE here for now
@@ -193,8 +193,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalDefault)
    if( exprhdlr->inteval == NULL )
       return SCIP_OKAY;
 
-   assert((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_INTEVAL);
-
    /* call the interval evaluation callback of the expression handler */
    SCIP_CALL( exprhdlr->inteval(scip, expr, interval, varboundrelax) );
 
@@ -214,8 +212,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
 
    if( exprhdlr->reverseprop == NULL )
       return SCIP_OKAY;
-
-   assert((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP);
 
    /* call the reverse propagation callback of the expression handler */
    SCIP_CALL( exprhdlr->reverseprop(scip, expr, reversepropqueue, infeasible, nreductions, force) );
