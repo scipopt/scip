@@ -305,6 +305,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    *success = TRUE;
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 
+   /* communicate that we will also do inteval */
+   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
+
    return SCIP_OKAY;
 }
 
@@ -429,6 +432,22 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(intevalHdlr)
+{
+   SCIP_INTERVAL xbnds;
+   SCIP_INTERVAL ybnds;
+
+   /* todo regard varboundrelax? */
+   SCIPintervalSetBounds(&xbnds, SCIPvarGetLbLocal(nlhdlrexprdata->varx), SCIPvarGetUbLocal(nlhdlrexprdata->varx));
+   SCIPintervalSetBounds(&ybnds, SCIPvarGetLbLocal(nlhdlrexprdata->vary), SCIPvarGetUbLocal(nlhdlrexprdata->vary));
+
+   SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, xbnds, ybnds);
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, interval, *interval, nlhdlrexprdata->constant);
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
 {
    SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
@@ -449,6 +468,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHldr);
    SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlr, NULL);
+   SCIPsetConsExprNlhdlrProp(targetscip, targetnlhdlr, intevalHdlr, NULL);
 
    return SCIP_OKAY;
 }
@@ -532,6 +552,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHldr);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlr, NULL);
+   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, NULL);
 
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
    /* SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-6) ); */
