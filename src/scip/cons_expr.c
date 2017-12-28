@@ -27,6 +27,7 @@
 #include <ctype.h>
 
 #include "scip/cons_expr.h"
+#include "scip/cons_linear.h"
 #include "scip/struct_cons_expr.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
@@ -106,6 +107,15 @@ typedef struct
    int                   filterpos;          /**< position of eventdata in SCIP's event filter */
 } SCIP_VAREVENTDATA;
 
+/** expression constraint update method */
+struct SCIP_ExprConsUpgrade
+{
+   SCIP_DECL_EXPRCONSUPGD((*exprconsupgd));  /**< method to call for upgrading expression constraint */
+   int                   priority;           /**< priority of upgrading method */
+   SCIP_Bool             active;             /**< is upgrading enabled */
+};
+typedef struct SCIP_ExprConsUpgrade SCIP_EXPRCONSUPGRADE;
+
 /** constraint data for expr constraints */
 struct SCIP_ConsData
 {
@@ -166,6 +176,11 @@ struct SCIP_ConshdlrData
    /* separation parameters */
    SCIP_Real                mincutviolationsepa;    /**< minimal violation of a cut in order to add it to relaxation during separation */
    SCIP_Real                mincutviolationenfofac; /**< minimal target violation of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
+
+   /* upgrade */
+   SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
+   int                      exprconsupgradessize; /**< size of exprconsupgrades array */
+   int                      nexprconsupgrades;    /**< number of expression constraint upgrade methods */
 };
 
 /** data passed on during expression evaluation in a point */
@@ -463,6 +478,107 @@ SCIP_RETCODE findEqualExpr(
       }
    }
    while( TRUE ); /*lint !e506*/
+
+   return SCIP_OKAY;
+}
+
+/** tries to automatically convert an expression constraint into a more specific and more specialized constraint */
+static
+SCIP_RETCODE presolveUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
+   SCIP_CONS*            cons,               /**< source constraint to try to convert */
+   SCIP_Bool*            upgraded,           /**< buffer to store whether constraint was upgraded */
+   int*                  nupgdconss,         /**< buffer to increase if constraint was upgraded */
+   int*                  naddconss           /**< buffer to increase with number of additional constraints created during upgrade */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS** upgdconss;
+   int upgdconsssize;
+   int nupgdconss_;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(!SCIPconsIsModifiable(cons));
+   assert(upgraded   != NULL);
+   assert(nupgdconss != NULL);
+   assert(naddconss  != NULL);
+
+   *upgraded = FALSE;
+
+   nupgdconss_ = 0;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if there are no upgrade methods, we can stop */
+   if( conshdlrdata->nexprconsupgrades == 0 )
+      return SCIP_OKAY;
+
+   upgdconsssize = 2;
+   SCIP_CALL( SCIPallocBufferArray(scip, &upgdconss, upgdconsssize) );
+
+   /* call the upgrading methods */
+   SCIPdebugMsg(scip, "upgrading expression constraint <%s> (up to %d upgrade methods):\n",
+      SCIPconsGetName(cons), conshdlrdata->nexprconsupgrades);
+   SCIPdebugPrintCons(scip, cons, NULL);
+
+   /* try all upgrading methods in priority order in case the upgrading step is enable  */
+   for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
+   {
+      if( !conshdlrdata->exprconsupgrades[i]->active )
+         continue;
+
+      assert(conshdlrdata->exprconsupgrades[i]->exprconsupgd != NULL);
+
+      SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
+
+      while( nupgdconss_ < 0 )
+      {
+         /* upgrade function requires more memory: resize upgdconss and call again */
+         assert(-nupgdconss_ > upgdconsssize);
+         upgdconsssize = -nupgdconss_;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &upgdconss, -nupgdconss_) );
+
+         SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
+
+         assert(nupgdconss_ != 0);
+      }
+
+      if( nupgdconss_ > 0 )
+      {
+         /* got upgrade */
+         int j;
+
+         SCIPdebugMsg(scip, " -> upgraded to %d constraints:\n", nupgdconss_);
+
+         /* add the upgraded constraints to the problem and forget them */
+         for( j = 0; j < nupgdconss_; ++j )
+         {
+            SCIPdebugMsgPrint(scip, "\t");
+            SCIPdebugPrintCons(scip, upgdconss[j], NULL);
+
+            SCIP_CALL( SCIPaddCons(scip, upgdconss[j]) );      /*lint !e613*/
+            SCIP_CALL( SCIPreleaseCons(scip, &upgdconss[j]) ); /*lint !e613*/
+         }
+
+         /* count the first upgrade constraint as constraint upgrade and the remaining ones as added constraints */
+         *nupgdconss += 1;
+         *naddconss += nupgdconss_ - 1;
+         *upgraded = TRUE;
+
+         /* delete upgraded constraint */
+         SCIPdebugMsg(scip, "delete constraint <%s> after upgrade\n", SCIPconsGetName(cons));
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+
+         break;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &upgdconss);
 
    return SCIP_OKAY;
 }
@@ -4920,6 +5036,15 @@ SCIP_DECL_CONSFREE(consFreeExpr)
    assert(conshdlrdata->iterator != NULL);
    SCIPexpriteratorFree(&conshdlrdata->iterator);
 
+   /* free upgrade functions */
+   for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
+   {
+      assert(conshdlrdata->exprconsupgrades[i] != NULL);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->exprconsupgrades[i]);  /*lint !e866*/
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->exprconsupgrades, conshdlrdata->exprconsupgradessize);
+
+
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -5436,6 +5561,22 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    SCIP_CALL( removeFixedAndBoundConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
    assert(*ndelconss >= 0);
 
+   /* try to upgrade constraints */
+   if( !infeasible )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_Bool upgraded;
+
+         /* skip inactive and deleted constraints */
+         if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsActive(conss[c]) )
+            continue;
+
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
+      }
+   }
+
    if( infeasible )
    {
       *result = SCIP_CUTOFF;
@@ -5444,7 +5585,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    if( *result == SCIP_CUTOFF )
       return SCIP_OKAY;
 
-   if( *ndelconss > 0 || *nchgbds > 0 )
+   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
@@ -7938,6 +8079,85 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    return SCIP_OKAY;
 }
 
+/** includes an expression constraint upgrade method into the expression constraint handler */
+SCIP_RETCODE SCIPincludeExprconsUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_EXPRCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading expression constraint, or NULL */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
+   )
+{
+   SCIP_CONSHDLR*        conshdlr;
+   SCIP_CONSHDLRDATA*    conshdlrdata;
+   SCIP_EXPRCONSUPGRADE* exprconsupgrade;
+   char                  paramname[SCIP_MAXSTRLEN];
+   char                  paramdesc[SCIP_MAXSTRLEN];
+   int                   i;
+
+   assert(conshdlrname != NULL );
+
+   /* ignore empty upgrade functions */
+   if( exprconsupgd == NULL )
+      return SCIP_OKAY;
+
+   /* find the expression constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("nonlinear constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* check whether upgrade method exists already */
+   for( i = conshdlrdata->nexprconsupgrades - 1; i >= 0; --i )
+   {
+      if( conshdlrdata->exprconsupgrades[i]->exprconsupgd == exprconsupgd )
+      {
+#ifdef SCIP_DEBUG
+         SCIPwarningMessage(scip, "Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", nonlinconsupgd, nodereform, conshdlrname); /*lint !e611*/
+#endif
+         return SCIP_OKAY;
+      }
+   }
+
+   /* create an expression constraint upgrade data object */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &exprconsupgrade) );
+   exprconsupgrade->exprconsupgd = exprconsupgd;
+   exprconsupgrade->priority   = priority;
+   exprconsupgrade->active     = active;
+
+   /* insert expression constraint upgrade method into constraint handler data */
+   assert(conshdlrdata->nexprconsupgrades <= conshdlrdata->exprconsupgradessize);
+   if( conshdlrdata->nexprconsupgrades+1 > conshdlrdata->exprconsupgradessize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nexprconsupgrades+1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->exprconsupgrades, conshdlrdata->nexprconsupgrades, newsize) );
+      conshdlrdata->exprconsupgradessize = newsize;
+   }
+   assert(conshdlrdata->nexprconsupgrades+1 <= conshdlrdata->exprconsupgradessize);
+
+   for( i = conshdlrdata->nexprconsupgrades; i > 0 && conshdlrdata->exprconsupgrades[i-1]->priority < exprconsupgrade->priority; --i )
+      conshdlrdata->exprconsupgrades[i] = conshdlrdata->exprconsupgrades[i-1];
+   assert(0 <= i && i <= conshdlrdata->nexprconsupgrades);
+   conshdlrdata->exprconsupgrades[i] = exprconsupgrade;
+   conshdlrdata->nexprconsupgrades++;
+
+   /* adds parameter to turn on and off the upgrading step */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/" CONSHDLR_NAME "/upgrade/%s", conshdlrname);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable expression upgrading for constraint handler <%s>", conshdlrname);
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         paramname, paramdesc,
+         &exprconsupgrade->active, FALSE, active, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
 /** creates and captures a expr constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -8047,6 +8267,116 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    assert(consdata != NULL);
 
    return consdata->expr;
+}
+
+/** gets the left hand side of an expression constraint */
+SCIP_Real SCIPgetLhsConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->lhs;
+}
+
+/** gets the right hand side of an expression constraint */
+SCIP_Real SCIPgetRhsConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->rhs;
+}
+
+/** returns an equivalent linear constraint if possible */
+SCIP_RETCODE SCIPgetLinearConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_CONS**           lincons             /**< buffer to store linear constraint data */
+   )
+{
+   SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
+   SCIP_CONSEXPR_EXPRHDLR* varhdlr;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_VAR** vars;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(lincons != NULL);
+
+   *lincons = NULL;
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+   sumhdlr = SCIPgetConsExprExprHdlrSum(conshdlr);
+   assert(sumhdlr != NULL);
+   varhdlr = SCIPgetConsExprExprHdlrVar(conshdlr);
+   assert(varhdlr != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* not a linear constraint if the root expression is not a sum */
+   if( expr == NULL || expr->exprhdlr != sumhdlr )
+      return SCIP_OKAY;
+
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
+
+      /* at least one child is not a variable -> not a linear constraint */
+      if( child->exprhdlr != varhdlr )
+         return SCIP_OKAY;
+   }
+
+   /* collect all variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetConsExprExprNChildren(expr)) );
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
+
+      assert(child->exprhdlr == varhdlr);
+      vars[i] = SCIPgetConsExprExprVarVar(child);
+   }
+
+   /* consider constant part of the sum expression */
+   lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : (consdata->lhs - SCIPgetConsExprExprSumConstant(expr));
+   rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : (consdata->rhs - SCIPgetConsExprExprSumConstant(expr));
+
+   SCIP_CALL( SCIPcreateConsLinear(scip, lincons, SCIPconsGetName(cons),
+         SCIPgetConsExprExprNChildren(expr), vars, SCIPgetConsExprExprSumCoefs(expr),
+         lhs, rhs,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
 }
 
 /** Creates an expression from a string.
