@@ -204,10 +204,10 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffAbs)
 
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
-   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(childidx == 0);
    assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
-   child = SCIPgetConsExprExprChildren(expr)[idx];
+   child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
 
@@ -582,7 +582,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityAbs)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(result != NULL);
-   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(childidx == 0);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);

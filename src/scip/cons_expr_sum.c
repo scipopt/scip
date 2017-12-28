@@ -827,11 +827,11 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSum)
 {  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
-   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
-   assert(SCIPgetConsExprExprChildren(expr)[idx] != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[idx])), "val") != 0);
+   assert(childidx >= 0 && childidx < SCIPgetConsExprExprNChildren(expr));
+   assert(SCIPgetConsExprExprChildren(expr)[childidx] != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[childidx])), "val") != 0);
 
-   *val = SCIPgetConsExprExprSumCoefs(expr)[idx];
+   *val = SCIPgetConsExprExprSumCoefs(expr)[childidx];
 
    return SCIP_OKAY;
 }
@@ -1228,12 +1228,12 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySum)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(result != NULL);
-   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(childidx >= 0 && childidx < SCIPgetConsExprExprNChildren(expr));
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   *result = exprdata->coefficients[idx] >= 0.0 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
+   *result = exprdata->coefficients[childidx] >= 0.0 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
 
    return SCIP_OKAY;
 }
