@@ -8090,7 +8090,9 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    assert(scip != NULL);
    assert(expr != NULL);
    assert(child != NULL);
-   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here), that is, expression is locked */
+   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
+   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
 
    ENSUREBLOCKMEMORYARRAYSIZE(scip, expr->children, expr->childrensize, expr->nchildren + 1);
 
@@ -8175,7 +8177,9 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    assert(expr != NULL);
    assert(newchild != NULL);
    assert(childidx < SCIPgetConsExprExprNChildren(expr));
-   assert(expr->monotonicitysize == 0);  /* should not replace child while mononoticity is stored in expr (not updated here), that is, expression is locked */
+   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
+   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
 
    /* capture new child (do this before releasing the old child in case there are equal */
    SCIPcaptureConsExprExpr(newchild);
