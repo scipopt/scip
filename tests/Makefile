@@ -174,7 +174,7 @@ endif
 .PHONY: all
 all:            Criterion $(OBJDIR) $(OBJDIRS) $(BINDIRS) $(UNITTESTSBIN)
 		make ctestrunner
-		ctest --output-on-failure
+		setarch `uname -m` -R ctest --output-on-failure
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -196,10 +196,12 @@ $(BINDIRS):
 		@echo "-> Creating $@ directory"
 		@-mkdir -p $@
 
+# run the tests with address space layout randomization disabled, as this isn't
+# compatible with Criterions parametrized tests (https://github.com/Snaipe/Criterion/issues/208)
 .PHONY: test
 test:           $(UNITTESTSBIN)
 		make ctestrunner
-		ctest --output-on-failure
+		setarch `uname -m` -R ctest --output-on-failure
 
 .PHONY: ctestrunner
 ctestrunner: 	$(UNITTESTSBIN)
