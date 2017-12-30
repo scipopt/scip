@@ -123,8 +123,8 @@ Alternatively, one can disable ASLR system-wide (requires root access):
    sudo echo 0 > /proc/sys/kernel/randomize_va_space
 
 
-Debug
------
+Debug (up to Criterion 2.2.x)
+-----------------------------
 
 If a test fails, use ``gdb`` to debug. For example:
 
@@ -147,3 +147,8 @@ Criterion by default prints all of the critical debugging information
 (test\_suite::test\_name, file and line number were to break). When a
 test crashes, there is no need to ``break`` in ``gdb``. TODO: simplify
 debugging.
+
+## Debug (with Criterion 2.3 and later)
+---------------------------------------
+
+See README.md.
