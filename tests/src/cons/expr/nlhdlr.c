@@ -447,17 +447,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(intevalHdlr)
 {
-   SCIP_INTERVAL xbnds;
-   SCIP_INTERVAL ybnds;
-
    assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
    assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
-   /* todo regard varboundrelax? */
-   SCIPintervalSetBounds(&xbnds, SCIPvarGetLbLocal(nlhdlrexprdata->varx), SCIPvarGetUbLocal(nlhdlrexprdata->varx));
-   SCIPintervalSetBounds(&ybnds, SCIPvarGetLbLocal(nlhdlrexprdata->vary), SCIPvarGetUbLocal(nlhdlrexprdata->vary));
-
-   SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, xbnds, ybnds);
+   SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx), SCIPgetConsExprExprInterval(nlhdlrexprdata->expry));
    SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, interval, *interval, nlhdlrexprdata->constant);
 
    return SCIP_OKAY;
