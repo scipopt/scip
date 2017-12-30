@@ -22,7 +22,8 @@
  *
  * The test constructs a problem with two convex quadratic constraints.
  * Convexity is not exploited when using the separation methods of the expressions alone, as the quadratic terms
- * are considered separately. Thus, only with the nonlinear handler we can solve this problem by separation only (Kelley' cutting plane).
+ * are considered separately. Thus, if no other nonlinear handlers take care of this, then only with this nonlinear handler
+ * we can solve this problem by separation only (Kelley' cutting plane).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -58,6 +59,9 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Real             yycoef;             /**< coefficient of second variable square term */
    SCIP_Real             constant;           /**< constant term */
    SCIP_Bool             convex;             /**< whether convex or concave */
+
+   SCIP_CONSEXPR_EXPR*   exprx;               /**< expression corresponding to first variable */
+   SCIP_CONSEXPR_EXPR*   expry;               /**< expression corresponding to second variable */
 };
 
 
@@ -178,12 +182,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
          else if( exprdata.varx == NULL )
          {
             exprdata.varx = var;
+            exprdata.exprx = child;
             assert(exprdata.xcoef == 0.0);
             exprdata.xcoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else if( exprdata.vary == NULL )
          {
             exprdata.vary = var;
+            exprdata.expry = child;
             assert(exprdata.ycoef == 0.0);
             exprdata.ycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
@@ -219,12 +225,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
          {
             assert(exprdata.xxcoef == 0.0);
             exprdata.varx = var;
+            exprdata.exprx = child;
             exprdata.xxcoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else if( exprdata.vary == NULL )
          {
             assert(exprdata.yycoef == 0.0);
             exprdata.vary = var;
+            exprdata.expry = child;
             exprdata.yycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else
@@ -258,6 +266,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
          {
             assert(exprdata.xycoef == 0.0);
             exprdata.vary = (var1 == exprdata.varx) ? var2 : var1;
+            exprdata.expry = (var1 == exprdata.varx) ? SCIPgetConsExprExprChildren(child)[1] : SCIPgetConsExprExprChildren(child)[0];
             exprdata.xycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else if( exprdata.varx == NULL )
@@ -265,7 +274,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
             assert(exprdata.xycoef == 0.0);
             assert(exprdata.vary == NULL);
             exprdata.varx = var1;
+            exprdata.exprx = SCIPgetConsExprExprChildren(child)[0];
             exprdata.vary = var2;
+            exprdata.expry = SCIPgetConsExprExprChildren(child)[0];
             exprdata.xycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else
@@ -329,6 +340,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    *result = SCIP_DIDNOTFIND;
    *ncuts = 0;
@@ -436,6 +449,9 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(intevalHdlr)
 {
    SCIP_INTERVAL xbnds;
    SCIP_INTERVAL ybnds;
+
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    /* todo regard varboundrelax? */
    SCIPintervalSetBounds(&xbnds, SCIPvarGetLbLocal(nlhdlrexprdata->varx), SCIPvarGetUbLocal(nlhdlrexprdata->varx));
