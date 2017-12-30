@@ -754,6 +754,56 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+
+/** appends child to the children list of expr */
+EXTERN
+SCIP_RETCODE SCIPappendConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
+   );
+
+/** duplicates the given expression
+ *
+ * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
+ */
+EXTERN
+SCIP_RETCODE SCIPduplicateConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
+   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   );
+
+/** simplifies an expression
+ * The given expression will be released and overwritten with the simplified expression.
+ * To keep the expression, duplicate it via SCIPduplicateConsExprExpr before calling this method.
+ */
+EXTERN
+SCIP_RETCODE SCIPsimplifyConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
+   );
+
+/** prints structure of an expression a la Maple's dismantle */
+EXTERN
+SCIP_RETCODE SCIPdismantleConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
+   );
+
+/** overwrites/replaces a child of an expressions
+ *
+ * @note the old child is released and the newchild is captured
+ */
+EXTERN
+SCIP_RETCODE SCIPreplaceConsExprExprChild(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
+   int                     childidx,         /**< index of child being replaced */
+   SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
+   );
+
 /** @} */
 
 
@@ -761,10 +811,42 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
 /**@name Expression Constraint Handler Methods */
 /**@{ */
 
+/** upgrading method for expression constraints into more specific constraints
+ *
+ * the method might upgrade an expression constraint into a set of upgrade constraints
+ * the caller provided an array upgdconss to store upgrade constraints
+ * the length of upgdconss is given by upgdconsssize
+ * if an upgrade is not possible, set *nupgdconss to zero
+ * if more than upgdconsssize many constraints shall replace cons, the function
+ * should return the required number as negated value in *nupgdconss
+ * i.e., if cons should be replaced by 3 constraints, the function should set
+ * *nupgdconss to -3 and return with SCIP_OKAY
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - cons            : the nonlinear constraint to upgrade
+ *  - nupgdconss      : pointer to store number of constraints that replace this constraint
+ *  - upgdconss       : array to store constraints that replace this constraint
+ *  - upgdconsssize   : length of the provided upgdconss array
+ */
+#define SCIP_DECL_EXPRCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
+      int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
+
+
 /** creates the handler for expr constraints and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** includes an expression constraint upgrade method into the expression constraint handler */
+EXTERN
+SCIP_RETCODE SCIPincludeExprconsUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_EXPRCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading expression constraint, or NULL */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
    );
 
 /** creates and captures a expr constraint
@@ -831,54 +913,28 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** appends child to the children list of expr */
+/** gets the left hand side of an expression constraint */
 EXTERN
-SCIP_RETCODE SCIPappendConsExprExpr(
+SCIP_Real SCIPgetLhsConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** duplicates the given expression
- *
- * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
- */
+/** gets the right hand side of an expression constraint */
 EXTERN
-SCIP_RETCODE SCIPduplicateConsExprExpr(
+SCIP_Real SCIPgetRhsConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
-   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** simplifies an expression
- * The given expression will be released and overwritten with the simplified expression.
- * To keep the expression, duplicate it via SCIPduplicateConsExprExpr before calling this method.
- */
+/** returns an equivalent linear constraint if possible */
 EXTERN
-SCIP_RETCODE SCIPsimplifyConsExprExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
+SCIP_RETCODE SCIPgetLinearConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_CONS**           lincons             /**< buffer to store linear constraint data */
    );
 
-/** prints structure of an expression a la Maple's dismantle */
-EXTERN
-SCIP_RETCODE SCIPdismantleConsExprExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
-   );
-
-/** overwrites/replaces a child of an expressions
- *
- * @note the old child is released and the newchild is captured
- */
-EXTERN
-SCIP_RETCODE SCIPreplaceConsExprExprChild(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
-   int                     childidx,         /**< index of child being replaced */
-   SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
-   );
 /** @} */
 
 /** checks a cut for violation and numerical stability and possibly tries to improve it

@@ -1,0 +1,87 @@
+Notes for SCIP Release 5.0
+
+Features
+========
+
+- SCIP can now automatically detect and exploit symmetries in MIPs
+
+- add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
+
+- new primal heuristic ALNS that orchestrates eight different LNS heuristics adaptively
+  using algorithms for the multi-armed bandit problem
+
+- added analysis of the clique table which identifies possible aggregations via the search for
+  strongly connected components and may detect infeasible assignments on the way
+
+- new presolving plugin presol_sparsify that tries to cancel nonzero coefficients in linear constraints by adding
+  multiples of linear equalities
+
+- utilizing linear inequalities to compute stronger linearizations for bilinear terms; the inequalities are computed in
+  the OBBT propagator
+
+- extended conflict analysis by analyzing dual solutions of boundexceeding LPs
+
+- improved cut post-processing: apply coefficient tightening, enforce maximal dynamism
+
+- added interface to the NLP solver WORHP
+
+- added interface to the NLP solver FilterSQP
+
+- added new plugin type "table" for adding user-defined statistics tables
+
+- added macros to do computations with a higher precision by using double-double arithmetic
+
+- new methods and interactive shell functionality to display linear constraint classification types;
+  use SCIPclassifyConstraintTypesLinear() or 'display linclass' after reading a problem to classify linear constraint types
+
+- new numerical solution violations get printed when checksol is called
+
+
+Performance Improvements
+========================
+
+- new implementation of zerohalf separator
+
+- faster implementation of CMIR cut generation heuristic
+
+- improved cut selection and management
+
+- enabled cutting plane separation in the tree
+
+- disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
+
+- improved dual ray analysis
+
+- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
+
+- revised disaggregation of quadratic constraints: the number of created constraints can now be controlled and the
+  disaggregated constraints are scaled in order to increase numerical accuracy
+
+- removed bestrelaxsol and directly access relaxation solution instead to decrease overhead when using relaxation handlers
+
+- use LP solution polishing during probing and diving mode to activate it during many primal heuristics; remains disabled
+  during strong branching and OBBT
+
+- for fast presolving emphasis, disable use of implications in logicor presolving
+
+- use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
+
+- speed up creation of LP in the computation of relative interior points
+
+- drop events of disabled linear constraints to reduce event processing effort
+
+- improved versions of the clique and variable bound pre-root heuristics that are often able to fix many more variables
+
+
+Additional Notes
+================
+
+- default value for ZIMPL in the Makefile is now "false"
+
+- added compilation flag SYM to specify which graph automorphism package (bliss, none) should be used
+
+- improved Visual Studio compilation with CMake build system
+
+- several new unit tests
+
+- Many bug fixes, see CHANGELOG

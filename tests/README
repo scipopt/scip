@@ -103,8 +103,28 @@ compile and run them:
 TODO: Define a policy for moving/removing tests in ``src/bugs`` once the
 bugs are fixed.
 
-Debug
------
+
+To run a single test suite, execute the corresponding binary. Note, that
+parameterized tests will not work on systems that have address space layout
+randomization (ASLR) enabled. One can disable ASLR for a specific process
+(and its children) by calling it in a modified environment, e.g.,
+
+::
+
+   setarch `uname -m` -R ./bin/scip/intervalarith*
+
+This is the approach that is also followed by the Makefile when running
+the whole test suite.
+
+Alternatively, one can disable ASLR system-wide (requires root access):
+
+::
+
+   sudo echo 0 > /proc/sys/kernel/randomize_va_space
+
+
+Debug (up to Criterion 2.2.x)
+-----------------------------
 
 If a test fails, use ``gdb`` to debug. For example:
 
@@ -127,3 +147,8 @@ Criterion by default prints all of the critical debugging information
 (test\_suite::test\_name, file and line number were to break). When a
 test crashes, there is no need to ``break`` in ``gdb``. TODO: simplify
 debugging.
+
+## Debug (with Criterion 2.3 and later)
+---------------------------------------
+
+See README.md.

@@ -15,7 +15,6 @@ MINLP/instances/MINLPLib2/data/osil/genpooling_meyer04.osil
 MINLP/instances/MINLPLib2/data/osil/ghg_3veh.osil
 MINLP/instances/MINLPLib2/data/osil/glider100.osil
 MINLP/instances/MINLPLib2/data/osil/graphpart_3pm-0444-0444.osil
-MINLP/instances/MINLPLib2/data/osil/kall_circles_c8a.osil
 MINLP/instances/MINLPLib2/data/osil/kall_circlespolygons_c1p12.osil
 MINLP/instances/MINLPLib2/data/osil/korcns.osil
 MINLP/instances/MINLPLib2/data/osil/o8_ar4_1.osil
@@ -35,4 +34,3 @@ MINLP/instances/MINLPLib2/data/osil/tln7.osil
 MINLP/instances/MINLPLib2/data/osil/wastewater05m1.osil
 MINLP/instances/MINLPLib2/data/osil/water4.osil
 MINLP/instances/MINLPLib2/data/osil/watercontamination0303.osil
-MINLP/instances/MINLPLib2/data/osil/waterno2_03.osil
