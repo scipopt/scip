@@ -18,7 +18,8 @@
  *
  * This test implements a nonlinear handler for bivariate quadratic expressions that are either convex or concave.
  * We do some simplifying assumptions, e.g., assume that the arguments are actual variables and not non-variable expressions.
- * Also separation is only implemented for the convex side at the moment.
+ * Also separation is only implemented for the convex side.
+ * These assumptions are ok for the example that is executed by the test.
  *
  * The test constructs a problem with two convex quadratic constraints.
  * Convexity is not exploited when using the separation methods of the expressions alone, as the quadratic terms
@@ -309,10 +310,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    else
       return SCIP_OKAY; /* indefinite */
 
-   /* communicate that we will enforce by separation */
-   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
-   *enforcedbelow = TRUE;
-   *enforcedabove = TRUE;
+   /* communicate that we will enforce one side by separation */
+   *enforcemethods |= exprdata.convex ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   *enforcedbelow = exprdata.convex;
+   *enforcedabove = !exprdata.convex;
    *success = TRUE;
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 
@@ -402,7 +403,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
    }
    else
    {
-      /* todo? */
+      /* we do not implement separation for this side (and did not advertise to do so in detect) */
    }
 
    if( cut == NULL )
