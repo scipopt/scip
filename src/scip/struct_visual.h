@@ -47,6 +47,7 @@ struct SCIP_Visual
    SCIP_NODE*            lastnode;           /**< last node that was colored */
    SCIP_VBCCOLOR         lastcolor;          /**< last color that was used */
    SCIP_Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
+   SCIP_Real             lastlowerbound;     /**< last lower bound that was output */
 };
 
 #ifdef __cplusplus

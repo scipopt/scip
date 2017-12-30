@@ -1,6 +1,11 @@
 SCIP version NEXT
 =================
 
+features:
+- allow output of lower bounds for visualization
+
+new parameters:
+- new parameter "visual/displb" that enables output of lower bounds for visualization
 
 SCIP version 5.0.0
 ==================
