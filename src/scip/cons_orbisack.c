@@ -1932,7 +1932,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOrbisack) );
 
    /* separation methods */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/orbisack/coverseparation",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/coverseparation",
          "Separate cover inequalities for orbisacks?",
          &conshdlrdata->coverseparation, TRUE, DEFAULT_COVERSEPARATION, NULL, NULL) );
 
