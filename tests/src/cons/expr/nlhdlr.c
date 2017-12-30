@@ -109,7 +109,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlr)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldr)
+SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHdlr)
 {
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
@@ -475,7 +475,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIPsetConsExprNlhdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
-   SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHdlr);
    SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlr, NULL);
    SCIPsetConsExprNlhdlrProp(targetscip, targetnlhdlr, intevalHdlr, NULL);
 
@@ -559,7 +559,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHdlr);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlr, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, NULL);
 
