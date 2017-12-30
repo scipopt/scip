@@ -3732,11 +3732,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       child = expr->children[expr->walkcurrentchild];
       assert(child != NULL);
 
-      /* reset branching score if the tag has changed */
-      if( child->brscoretag != brscoredata->brscoretag )
-         child->violation = expr->violation;
-      else
-         child->violation += expr->violation;
+      SCIPaddConsExprExprBranchScore(scip, child, brscoredata->brscoretag, expr->violation);
    }
    assert(expr->brscoretag == brscoredata->brscoretag);
 
@@ -7257,6 +7253,32 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
    return SCIP_OKAY;
 }
+
+/** adds branching score to an expression
+ *
+ * Adds a score to the expression-specific branching score.
+ * The branchscoretag argument is used to identify whether the score in the expression needs to be reset before adding a new score.
+ * In an expression with children, the scores are distributed to its children.
+ * In an expression that is a variable, the score may be used to identify a variable for branching.
+ */
+void SCIPaddConsExprExprBranchScore(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
+   unsigned int            branchscoretag,   /**< tag to identify current branching scores */
+   SCIP_Real               branchscore       /**< branching score to add to expression */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(branchscore >= 0.0);
+
+   /* reset branching score if the tag has changed */
+   if( expr->brscoretag != branchscoretag )
+      expr->violation = 0.0;
+
+   expr->violation += branchscore;
+}
+
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
 SCIP_Real SCIPgetConsExprExprValue(
