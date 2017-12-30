@@ -316,8 +316,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    *success = TRUE;
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 
-   /* communicate that we will also do inteval */
+   /* communicate that we will also do inteval and reverseprop */
    *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
+   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
 
    return SCIP_OKAY;
 }
@@ -457,6 +458,32 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(intevalHdlr)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(reversepropHdlr)
+{
+   SCIP_INTERVAL childbounds;
+   SCIP_INTERVAL rhs;
+
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+
+   rhs = SCIPgetConsExprExprInterval(expr);
+   SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &rhs, rhs, nlhdlrexprdata->constant);
+
+   /* solve conv({x in xbnds : xxcoef*x^2 + yycoef*y^2 + xycoef*x*y + xcoef*x + ycoef*y \in rhs, y \in ybnds}) */
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, rhs, SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx), SCIPgetConsExprExprInterval(nlhdlrexprdata->expry));
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, nlhdlrexprdata->exprx, childbounds, force, reversepropqueue, infeasible, nreductions) );
+
+   if( !*infeasible )
+   {
+      /* solve conv({y in ybnds : yycoef*y^2 + xxcoef*x^2 + xycoef*y*x + ycoef*y + xcoef*x \in rhs, x \in xbnds}) */
+      SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->yycoef, nlhdlrexprdata->xxcoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->ycoef, nlhdlrexprdata->xcoef, rhs, SCIPgetConsExprExprInterval(nlhdlrexprdata->expry), SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx));
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, nlhdlrexprdata->expry, childbounds, force, reversepropqueue, infeasible, nreductions) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
 {
    SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
@@ -477,7 +504,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHdlr);
    SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlr, NULL);
-   SCIPsetConsExprNlhdlrProp(targetscip, targetnlhdlr, intevalHdlr, NULL);
+   SCIPsetConsExprNlhdlrProp(targetscip, targetnlhdlr, intevalHdlr, reversepropHdlr);
 
    return SCIP_OKAY;
 }
@@ -561,7 +588,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHdlr);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlr, NULL);
-   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, NULL);
+   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, reversepropHdlr);
 
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
    /* SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-6) ); */
