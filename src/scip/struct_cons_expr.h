@@ -84,7 +84,7 @@ struct SCIP_ConsExpr_Expr
    unsigned int            sepatag;       /**< tag of point for which an outer approximation cut has been computed last, or 0 */
 
    /* branching */
-   SCIP_Real               violation;     /**< violation of the linearization variables of the expression and its children, i.e. |w_i = g(w_j)| */
+   SCIP_Real               brscore;       /**< branching score for the expression (passed on to children) */
    unsigned int            brscoretag;    /**< tag to decide whether a branching score of an expression needs to be initialized */
    unsigned int            brscoreevaltag;/**< tag to decide whether the branching scoring callback of an expression needs to be called */
 
