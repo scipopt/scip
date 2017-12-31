@@ -220,6 +220,30 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
+{ /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   if( exprhdlr->brscore == NULL )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* call the branching callback of the expression handler */
+   SCIP_CALL( exprhdlr->brscore(scip, expr, sol, brscoretag, success) );
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrDefault)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
@@ -249,6 +273,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrExitSepaDefault);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
+   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreDefault);
 
    return SCIP_OKAY;
 }
