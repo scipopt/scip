@@ -3720,7 +3720,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       /* fallback */
       if( !success )
       {
-         SCIP_Real violation = 0.0;
+         SCIP_Real violation;
          int c;
 
          /* define |f(x*) - z*| as the violation if the branch score callback does not have been implemented where f is
