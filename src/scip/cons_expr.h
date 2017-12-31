@@ -1033,6 +1033,14 @@ void SCIPsetConsExprNlhdlrProp(
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
+/** set the branching score callback of a nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrBranchscore(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
+);
+
 /** gives name of nonlinear handler */
 EXTERN
 const char* SCIPgetConsExprNlhdlrName(

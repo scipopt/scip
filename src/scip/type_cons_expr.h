@@ -680,6 +680,29 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    int* nreductions, \
    SCIP_Bool force)
 
+/** nonlinear handler callback for branching scores
+ *
+ * The method adds branching scores to successors if it finds that the value of the
+ * linearization variables does not coincide with the value of the expression in the given solution.
+ * It shall use the function SCIPaddConsExprExprBranchScore() add a branching score to its successors.
+ * It shall return TRUE in success if no branching is necessary or branching scores have been added.
+ * If returning FALSE in success, then other scoring methods will be applied.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be hashed
+ *  - sol  : solution (NULL for the LP solution)
+ *  - violation : pointer to store the current violation
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_SOL* sol, \
+   unsigned int brscoretag, \
+   SCIP_Bool* success)
+
 typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
