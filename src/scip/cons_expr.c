@@ -3820,6 +3820,7 @@ SCIP_RETCODE registerBranchingCandidates(
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    int c;
@@ -3828,6 +3829,9 @@ SCIP_RETCODE registerBranchingCandidates(
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
    assert(nnotify != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    *nnotify = 0;
 
@@ -3849,6 +3853,10 @@ SCIP_RETCODE registerBranchingCandidates(
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
             SCIP_Real brscore;
+
+            /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint) */
+            if( conshdlrdata->lastbrscoretag != consdata->varexprs[i]->brscoretag )
+               continue;
 
             brscore = consdata->varexprs[i]->brscore;
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
