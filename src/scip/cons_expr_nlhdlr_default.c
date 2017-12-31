@@ -84,7 +84,29 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *enforcedbelow = TRUE;
       *enforcedabove = TRUE;
       *success = TRUE;
+
+      /* return also branching score possibility if we use separation from exprhdlr */
+      if( SCIPgetConsExprExprHdlr(expr)->brscore != NULL )
+      {
+         mymethods |= SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+         *success = TRUE;
+      }
    }
+   else if( SCIPgetConsExprExprHdlr(expr)->brscore != NULL &&
+      (!*enforcedbelow || !*enforcedabove) &&
+      (mymethods & SCIP_CONSEXPR_EXPRENFO_INTEVAL) != 0 &&
+      (mymethods & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) != 0 )
+   {
+      /* return branching score possibility if enforcement is not ensured yet, but we provide propagation,
+       * since propagation and branching should be sufficient for enforcement, too
+       */
+      mymethods |= SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+      *enforcedbelow = TRUE;
+      *enforcedabove = TRUE;
+      *success = TRUE;
+   }
+
+   /* I don't think it makes much sense to advertise a brscore callback if we do not also enforce via separation or propagation */
 
    if( *success )
    {
@@ -230,6 +252,10 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
 
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
    assert(exprhdlr != NULL);
+
+   /* if we did not say that we will provide branching scores, then stay to it */
+   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) == 0 )
+      return SCIP_OKAY;
 
    if( exprhdlr->brscore == NULL )
    {
