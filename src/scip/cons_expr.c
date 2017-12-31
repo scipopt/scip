@@ -3697,12 +3697,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
-   /* compute violation if we see an expression for the first time */
-   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && expr->brscoretag != brscoredata->brscoretag )
+   /* compute branching score for this expression, if not done so yet */
+   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && expr->brscoreevaltag != brscoredata->brscoretag )
    {
-      SCIP_Real violation = 0.0;
+      SCIP_Real violation = 0.0;  /* the branching score */
+      int c;
 
-      /* compute branching score for the current expression */
       if( expr->exprhdlr->brscore != NULL )
       {
          SCIP_CALL( (*expr->exprhdlr->brscore)(scip, expr, brscoredata->sol, &violation) );
@@ -3716,14 +3716,22 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
          violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol,SCIPgetConsExprExprLinearizationVar(expr))
             - expr->evalvalue);
       }
-
       assert(violation >= 0.0);
-      expr->violation += violation;
-      expr->brscoretag = brscoredata->brscoretag;
+
+      /* add computed branching score to all children */
+      for( c = 0; c < expr->nchildren; ++c )
+      {
+         SCIPaddConsExprExprBranchScore(scip, expr->children[c], brscoredata->brscoretag, violation);
+      }
+
+      expr->brscoreevaltag = brscoredata->brscoretag;
    }
 
-   /* add violation of the expression to its children */
-   if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD )
+   /* propagate branching score, if any, from this expression to current children
+    * NOTE: this only propagates down branching scores that were set by ancestors of expr
+    * the score that originated from a violation in this expression has been set in the children during enterexpr
+    */
+   if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD && expr->brscoretag == brscoredata->brscoretag )
    {
       SCIP_CONSEXPR_EXPR* child;
 
@@ -3734,7 +3742,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
 
       SCIPaddConsExprExprBranchScore(scip, child, brscoredata->brscoretag, expr->violation);
    }
-   assert(expr->brscoretag == brscoredata->brscoretag);
 
    return SCIP_OKAY;
 }
