@@ -3753,7 +3753,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       child = expr->children[expr->walkcurrentchild];
       assert(child != NULL);
 
-      SCIPaddConsExprExprBranchScore(scip, child, brscoredata->brscoretag, expr->violation);
+      SCIPaddConsExprExprBranchScore(scip, child, brscoredata->brscoretag, expr->brscore);
    }
 
    return SCIP_OKAY;
@@ -3800,7 +3800,7 @@ SCIP_RETCODE computeBranchingScores(
       /* call branching score callback for each expression in a violated constraint */
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
-         consdata->expr->violation = 0.0;
+         consdata->expr->brscore = 0.0;
          SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, computeBranchScore, computeBranchScore, NULL, NULL,
                (void*)&brscoredata) );
       }
@@ -3848,17 +3848,17 @@ SCIP_RETCODE registerBranchingCandidates(
 
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
-            SCIP_Real violation;
+            SCIP_Real brscore;
 
-            violation = consdata->varexprs[i]->violation;
+            brscore = consdata->varexprs[i]->brscore;
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
             assert(var != NULL);
 
-            /* introduce all variables which do not have been fixed yet and appear in some violated expressions */
-            if( SCIPisGT(scip, violation, SCIPfeastol(scip))
+            /* introduce all variables which do not have been fixed yet and appear in some violated expressions (=have a branching score > feastol) */
+            if( SCIPisGT(scip, brscore, SCIPfeastol(scip))
                && !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
             {
-               SCIP_CALL( SCIPaddExternBranchCand(scip, var, violation, SCIP_INVALID) );
+               SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
                ++(*nnotify);
             }
          }
@@ -7295,11 +7295,11 @@ void SCIPaddConsExprExprBranchScore(
    /* reset branching score if the tag has changed */
    if( expr->brscoretag != branchscoretag )
    {
-      expr->violation = 0.0;
+      expr->brscore = 0.0;
       expr->brscoretag = branchscoretag;
    }
 
-   expr->violation += branchscore;
+   expr->brscore += branchscore;
 }
 
 
