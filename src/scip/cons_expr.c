@@ -7274,7 +7274,10 @@ void SCIPaddConsExprExprBranchScore(
 
    /* reset branching score if the tag has changed */
    if( expr->brscoretag != branchscoretag )
+   {
       expr->violation = 0.0;
+      expr->brscoretag = branchscoretag;
+   }
 
    expr->violation += branchscore;
 }
