@@ -3701,12 +3701,23 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
    if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && SCIPgetConsExprExprLinearizationVar(expr) != NULL && expr->brscoreevaltag != brscoredata->brscoretag )
    {
       SCIP_Bool success = FALSE;
+      int e;
 
-      if( expr->exprhdlr->brscore != NULL )
+      /* call branching score callbacks of nlhdlrs until one succeeds */
+      for( e = 0; e < expr->nenfos && !success; ++e )
       {
-         SCIP_CALL( (*expr->exprhdlr->brscore)(scip, expr, brscoredata->sol, brscoredata->brscoretag, &success) );
+         SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+         nlhdlr = expr->enfos[e]->nlhdlr;
+         assert(nlhdlr != NULL);
+
+         if( nlhdlr->branchscore != NULL )
+         {
+            SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
+         }
       }
 
+      /* fallback */
       if( !success )
       {
          SCIP_Real violation = 0.0;
