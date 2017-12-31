@@ -335,19 +335,25 @@ extern "C" {
 
 /** expression branching score callback
  *
- * The method computes the violation at each expression by considering the values of the linearization variables.
+ * The method adds branching scores to its children if it finds that the value of the
+ * linearization variables does not coincide with the value of the expression in the given solution.
+ * It shall use the function SCIPaddConsExprExprBranchScore() add a branching score to its children.
+ * It shall return TRUE in success if no branching is necessary or branching scores have been added.
+ * If returning FALSE in success, then other scoring methods will be applied.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be hashed
  *  - sol  : solution (NULL for the LP solution)
- *  - violation : pointer to store the current violation
+ *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
+ *  - success: buffer to store whether the branching score callback was successful
  */
 #define SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
-   SCIP_Real* violation)
+   unsigned int brscoretag, \
+   SCIP_Bool* success)
 
 /** expression curvature detection callback
  *

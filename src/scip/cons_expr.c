@@ -3697,31 +3697,33 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
-   /* compute branching score for this expression, if not done so yet */
-   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && expr->brscoreevaltag != brscoredata->brscoretag )
+   /* add branching scores from this expression, if not done so yet and there is an auxvar */
+   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && SCIPgetConsExprExprLinearizationVar(expr) != NULL && expr->brscoreevaltag != brscoredata->brscoretag )
    {
-      SCIP_Real violation = 0.0;  /* the branching score */
-      int c;
+      SCIP_Bool success = FALSE;
 
       if( expr->exprhdlr->brscore != NULL )
       {
-         SCIP_CALL( (*expr->exprhdlr->brscore)(scip, expr, brscoredata->sol, &violation) );
+         SCIP_CALL( (*expr->exprhdlr->brscore)(scip, expr, brscoredata->sol, brscoredata->brscoretag, &success) );
       }
-      else if( SCIPgetConsExprExprLinearizationVar(expr) != NULL )
+
+      if( !success )
       {
+         SCIP_Real violation = 0.0;
+         int c;
+
          /* define |f(x*) - z*| as the violation if the branch score callback does not have been implemented where f is
           * the expression, x* solution values of original variables, and z* be the solution value of the linearization
           * variable attached to expression f
           */
          violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol,SCIPgetConsExprExprLinearizationVar(expr))
             - expr->evalvalue);
-      }
-      assert(violation >= 0.0);
 
-      /* add computed branching score to all children */
-      for( c = 0; c < expr->nchildren; ++c )
-      {
-         SCIPaddConsExprExprBranchScore(scip, expr->children[c], brscoredata->brscoretag, violation);
+         /* add violation as branching score to all children */
+         for( c = 0; c < expr->nchildren; ++c )
+         {
+            SCIPaddConsExprExprBranchScore(scip, expr->children[c], brscoredata->brscoretag, violation);
+         }
       }
 
       expr->brscoreevaltag = brscoredata->brscoretag;
