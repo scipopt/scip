@@ -294,6 +294,14 @@ Test(complex, test1)
    cr_expect_float_eq(binvrow[1], 1.0, EPS);
    cr_expect_float_eq(binvrow[2], 0.5, EPS);
 
+   /* check basis inverse matrix */
+   SCIP_CALL( SCIPlpiGetBInvCol(lpi, i, coef, NULL, NULL) );
+
+   /* col of basis inverse times nonbasic matrix should be (0, 0, -1) */
+   cr_expect_float_eq(coef[0], 0.0, EPS);
+   cr_expect_float_eq(coef[1], 0.0, EPS);
+   cr_expect_float_eq(coef[2], -1.0, EPS);
+
    /* check basis inverse times nonbasic matrix */
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, binvrow, coef, NULL, NULL) );
 
