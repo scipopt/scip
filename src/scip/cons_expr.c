@@ -2237,7 +2237,9 @@ SCIP_RETCODE reversePropConss(
       }
    }
 
-   /* main loop */
+   /* main loop that calls reverse propagation for expressions on the queue
+    * when reverseprop finds a tightening for an expression, then that expression is added to the queue (within the reverseprop call)
+    */
    while( !SCIPqueueIsEmpty(queue) && !(*infeasible) )
    {
       SCIP_CONSEXPR_EXPR* expr;
@@ -2271,6 +2273,7 @@ SCIP_RETCODE reversePropConss(
             if( nlhdlr->reverseprop == NULL )
                continue;
 
+            /* call the reverseprop of the nlhdlr */
             nreds = 0;
             SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
             assert(nreds >= 0);
@@ -2282,6 +2285,7 @@ SCIP_RETCODE reversePropConss(
          /* if not in solving stage, call reverse propagation callback of exprhdlr directly (if any) */
          int nreds = 0;
 
+         /* call the reverseprop of the exprhdlr */
          SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, queue, infeasible, &nreds, force) );
          assert(nreds >= 0);
          *ntightenings += nreds;
@@ -7239,7 +7243,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          }
       }
 
-      /* if a reversepropagation queue is given, then add expression to that queue if it has at least child and could have a reverseprop callback */
+      /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback */
       if( reversepropqueue != NULL && !*cutoff )
       {
          if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && expr->nenfos > 0) ||

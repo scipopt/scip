@@ -48,14 +48,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    *success = FALSE;
    mymethods = SCIP_CONSEXPR_EXPRENFO_NONE;
 
-   /* return interval evaluation possibility if exprhdlr for expr has a inteval callback and noone already provides (a good) inteval */
+   /* return interval evaluation possibility if exprhdlr for expr has a inteval callback and no one already provides (a good) inteval */
    if( SCIPgetConsExprExprHdlr(expr)->inteval != NULL && (*enforcemethods & SCIP_CONSEXPR_EXPRENFO_INTEVAL) == 0 )
    {
       mymethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
       *success = TRUE;
    }
 
-   /* return reverse propagation possibility if exprhdlr for expr has a reverseprop callback and noone already provides (a good) reverseprop */
+   /* return reverse propagation possibility if exprhdlr for expr has a reverseprop callback and no one already provides (a good) reverseprop */
    if( SCIPgetConsExprExprHdlr(expr)->reverseprop != NULL && (*enforcemethods & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) == 0 )
    {
       /* one could claim that reverse propagation is sufficient for enforcement, but separation is probably stronger
@@ -131,7 +131,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
    assert(result != NULL);
    assert(ncuts != NULL);
 
-   /* if we did not say that we will separate, then stay to it */
+   /* if we did not say that we will separate, then stand by it */
    if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
       return SCIP_OKAY;
 
