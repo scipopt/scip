@@ -25,6 +25,8 @@
  * SCIPlpiChgObjsen, SCIPlpiGetObjsen,
  * SCIPlpiGetNCols, SCIPlpiGetNRows, SCIPlpiGetNNonz,
  * SCIPlpiGetCols, SCIPlpiGetRows,
+ * SCIPlpiReadState, SCIPlpiWriteState, SCIPlpiClearState,
+ * SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -57,6 +59,8 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    SCIP_Real lhs[100] = {-SCIPlpiInfinity(lpi), -SCIPlpiInfinity(lpi) };
    SCIP_Real rhs[100] = { 1.0, 1.0 };
    SCIP_Real val[100] = { 1.0, 1.0 };
+   char* rownames[] = { "first_row", "second_row" };
+   char* colnames[] = { "first_col", "second_col" };
    int beg[100] = { 0, 1 };
    int ind[100] = { 0, 1 };
 
@@ -234,8 +238,8 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    }
 
    SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
-   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, NULL, *nnonz, beg, ind, val) );
+   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, colnames, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, rownames, *nnonz, beg, ind, val) );
 
    return TRUE;
 }
@@ -804,4 +808,50 @@ Test(change, testzerosinrows, .signal = SIGABRT)
    abort(); /* return SIGABORT */
 #endif
 
+}
+
+/** test SCIPlpiReadState, SCIPlpiWriteState, SCIPlpiClearState */
+Test(change, testlpiwritereadstatemethods)
+{
+   int nrows, ncols, nnonz;
+   SCIP_OBJSEN sense;
+   /* 2x2 problem */
+   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
+   char* fname = "testlpiwriteandreadstate.lp";
+
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+
+   SCIP_CALL( SCIPlpiWriteState(lpi, fname) );
+   SCIP_CALL( SCIPlpiClearState(lpi) );
+
+   char* fname2 = "testlpiwriteandreadstate2.lp";
+   SCIP_CALL( SCIPlpiReadState(lpi, fname) );
+   SCIP_CALL( SCIPlpiWriteState(lpi, fname2) );
+
+   FILE *file = fopen(fname, "r");
+   FILE *file2 = fopen(fname2, "r");
+   cr_assert_file_contents_eq(file, file2);
+}
+
+/** test SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear */
+Test(change, testlpiwritereadlpmethods)
+{
+   int nrows, ncols, nnonz;
+   SCIP_OBJSEN sense;
+   /* 2x2 problem */
+   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
+   char* fname = "testlpiwriteandreadlp.lp";
+
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+
+   SCIP_CALL( SCIPlpiWriteLP(lpi, fname) );
+   SCIP_CALL( SCIPlpiClear(lpi) );
+
+   char* fname2 = "testlpiwriteandreadlp2.lp";
+   SCIP_CALL( SCIPlpiReadLP(lpi, fname) );
+   SCIP_CALL( SCIPlpiWriteLP(lpi, fname2) );
+
+   FILE *file = fopen(fname, "r");
+   FILE *file2 = fopen(fname2, "r");
+   cr_assert_file_contents_eq(file, file2);
 }
