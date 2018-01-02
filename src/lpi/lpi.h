@@ -792,8 +792,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    );
 
@@ -878,7 +878,7 @@ EXTERN
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information), or NULL */
    );
 
 /** clears current LPi state (like basis information) of the solver */
@@ -941,7 +941,7 @@ extern
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    );
 
 /** frees LPi pricing norms information */
@@ -949,7 +949,7 @@ extern
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    );
 
 

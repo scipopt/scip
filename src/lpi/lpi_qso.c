@@ -3059,7 +3059,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information), or NULL */
    )
 {  /*lint --e{715} */
    char* icstat;
