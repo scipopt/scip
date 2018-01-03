@@ -908,7 +908,7 @@ SCIP_RETCODE SCIPlpiReadState(
    const char*           fname               /**< file name */
    );
 
-/** writes LPi state (like basis information) to a file */
+/** writes LPi state (i.e. basis information) to a file */
 EXTERN
 SCIP_RETCODE SCIPlpiWriteState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
