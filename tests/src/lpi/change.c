@@ -814,6 +814,10 @@ Test(change, testzerosinrows, .signal = SIGABRT)
 Test(change, testlpiwritereadstatemethods)
 {
    int nrows, ncols, nnonz;
+   int cstat[2];
+   int rstat[2];
+   int cstat2[2];
+   int rstat2[2];
    SCIP_OBJSEN sense;
    /* 2x2 problem */
    cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
@@ -822,10 +826,16 @@ Test(change, testlpiwritereadstatemethods)
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
    SCIP_CALL( SCIPlpiWriteState(lpi, fname) );
+   SCIP_CALL( SCIPlpiGetBase(lpi, cstat, rstat) );
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    char* fname2 = "testlpiwriteandreadstate2.lp";
    SCIP_CALL( SCIPlpiReadState(lpi, fname) );
+   SCIP_CALL( SCIPlpiGetBase(lpi, cstat2, rstat2) );
+
+   cr_assert_arr_eq( cstat, cstat2, 2 );
+   cr_assert_arr_eq( rstat, rstat2, 2 );
+
    SCIP_CALL( SCIPlpiWriteState(lpi, fname2) );
 
    FILE *file = fopen(fname, "r");
@@ -837,18 +847,39 @@ Test(change, testlpiwritereadstatemethods)
 Test(change, testlpiwritereadlpmethods)
 {
    int nrows, ncols, nnonz;
+   SCIP_Real objval;
+   SCIP_Real primsol[2];
+   SCIP_Real dualsol[2];
+   SCIP_Real activity[2];
+   SCIP_Real redcost[2];
+   SCIP_Real objval2;
+   SCIP_Real primsol2[2];
+   SCIP_Real dualsol2[2];
+   SCIP_Real activity2[2];
+   SCIP_Real redcost2[2];
+
    SCIP_OBJSEN sense;
    /* 2x2 problem */
    cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
    char* fname = "testlpiwriteandreadlp.lp";
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+   SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primsol, dualsol, activity, redcost) );
 
    SCIP_CALL( SCIPlpiWriteLP(lpi, fname) );
    SCIP_CALL( SCIPlpiClear(lpi) );
 
    char* fname2 = "testlpiwriteandreadlp2.lp";
    SCIP_CALL( SCIPlpiReadLP(lpi, fname) );
+
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+   SCIP_CALL( SCIPlpiGetSol(lpi, &objval2, primsol2, dualsol2, activity2, redcost2) );
+   cr_assert_eq( objval, objval2 );
+   cr_assert_arr_eq( primsol, primsol2, 2 );
+   cr_assert_arr_eq( dualsol, dualsol2, 2 );
+   cr_assert_arr_eq( activity, activity2, 2 );
+   cr_assert_arr_eq( redcost, redcost2, 2 );
+
    SCIP_CALL( SCIPlpiWriteLP(lpi, fname2) );
 
    FILE *file = fopen(fname, "r");
