@@ -1990,6 +1990,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("changing %d bounds in Gurobi\n", ncols);
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    for (i = 0; i < ncols; ++i)
    {
@@ -2035,6 +2037,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(ind != NULL);
 
    SCIPdebugMessage("changing %d sides in Gurobi\n", nrows);
+   if( nrows <= 0)
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -2434,7 +2438,7 @@ SCIP_RETCODE SCIPlpiGetCols(
 {
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
-   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 #ifndef NDEBUG
    {

@@ -336,7 +336,7 @@ SCIP_RETCODE SCIPlpiAddRows(
       {
          assert( val[j] != 0.0 );
          assert( 0 <= ind[j] && ind[j] < lpi->ncols );
-      {
+      }
    }
 #endif
 
@@ -419,6 +419,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
    int j;
 
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
+
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    for (j = 0; j < ncols; ++j)
    {

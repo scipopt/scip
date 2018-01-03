@@ -1067,6 +1067,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    lpi->solstat = 0;
 
@@ -1116,6 +1118,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(ind != NULL);
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    lpi->solstat = 0;
 

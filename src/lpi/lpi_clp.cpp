@@ -1005,6 +1005,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("calling SCIPlpiChgBounds()\n");
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1083,6 +1085,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(ind != NULL);
    assert(lhs != NULL);
    assert(rhs != NULL);
+   if( nrows <= 0)
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1390,7 +1394,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
-   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    ClpSimplex* clp = lpi->clp;

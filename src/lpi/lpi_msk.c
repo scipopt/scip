@@ -1237,6 +1237,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("Calling SCIPlpiChgBounds (%d)\n", lpi->lpid);
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgBounds") );
@@ -1290,6 +1292,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(ind != NULL);
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("Calling SCIPlpiChgSides (%d)\n", lpi->lpid);
 

@@ -1519,10 +1519,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(lpi->cpxenv != NULL);
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
-   if ( ncols <= 0 )
-      return SCIP_OKAY;
-
    SCIPdebugMessage("changing %d bounds in CPLEX\n", ncols);
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    for( i = 0; i < ncols; ++i )
    {
@@ -1583,7 +1582,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
 
-   if ( nrows <= 0 )
+   if( nrows <= 0 )
       return SCIP_OKAY;
 
    SCIPdebugMessage("changing %d sides in CPLEX\n", nrows);
@@ -1881,7 +1880,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
-   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    SCIPdebugMessage("getting columns %d to %d\n", firstcol, lastcol);

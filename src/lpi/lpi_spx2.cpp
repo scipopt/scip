@@ -1460,6 +1460,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1519,6 +1521,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(ind != NULL);
    assert(lhs != NULL);
    assert(rhs != NULL);
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1895,7 +1899,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->numColsReal());
-   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    if( lb != NULL )
