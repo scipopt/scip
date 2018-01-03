@@ -460,7 +460,9 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
 {  /*lint --e{715}*/
-   SCIP_INTERVAL childbound;
+   SCIP_INTERVAL childbounds;
+   SCIP_INTERVAL left;
+   SCIP_INTERVAL right;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -470,28 +472,20 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
 
    *nreductions = 0;
 
-   /* handle absolute expression as identity if child expression is already non-negative */
-   if( SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf >= 0.0 )
-   {
-      SCIPintervalSetBounds(&childbound, SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)),
-         SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
-   }
-   /* handle absolute expression as -identity if child expression is already non-positive */
-   else if( SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup <= 0.0 )
-   {
-      assert(-SCIPgetConsExprExprInterval(expr).sup <= -SCIPgetConsExprExprInterval(expr).inf);
-      SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
-         -SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)));
-   }
-   /* f = abs(c0) => c0 = -f union f */
-   else
-   {
-      SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
-         SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
-   }
+   /* abs(x) in I -> x \in (-I \cup I) \cap bounds(x) */
+   right = SCIPgetConsExprExprInterval(expr);  /* I */
+   SCIPintervalSetBounds(&left, -right.sup, -right.inf); /* -I */
+
+   childbounds = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   SCIPintervalIntersect(&left, left, childbounds);    /* -I \cap bounds(x), could become empty */
+   SCIPintervalIntersect(&right, right, childbounds);  /*  I \cap bounds(x), could become empty */
+   /* compute smallest interval containing (-I \cap bounds(x)) \cup (I \cap bounds(x)) = (-I \cup I) \cap bounds(x)
+    * this works also if left or right is empty
+    */
+   SCIPintervalUnify(&childbounds, left, right);
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, force, infeasible,
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbounds, force, reversepropqueue, infeasible,
          nreductions) );
 
    return SCIP_OKAY;

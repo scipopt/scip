@@ -540,7 +540,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropEntropy)
    SCIP_CALL( reverseProp(scip, exprinterval, childinterval, &newinterval) );
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, newinterval, force, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, newinterval, force, reversepropqueue, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }

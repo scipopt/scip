@@ -1172,8 +1172,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLR* nlhdlr;
    EXPRINTEVAL_DATA* propdata;
    SCIP_INTERVAL interval;
+   SCIP_INTERVAL nlhdlrinterval;
+   int e;
 
    assert(expr != NULL);
    assert(data != NULL);
@@ -1183,40 +1186,68 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    /* set tag in any case */
    expr->intevaltag = propdata->boxtag;
 
-   /* mark expression as not tightened if we do not intersect expression intervals; this happens onces before calling
+   /* mark expression as not tightened if we do not intersect expression intervals; this happens once before calling
     * the reverse propagation
     */
    if( !propdata->intersect )
       expr->hastightened = FALSE;
 
-   /* set interval to [-inf,+inf] if interval evaluation callback is not implemented */
-   if( expr->exprhdlr->inteval == NULL )
+   if( propdata->intersect )
    {
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-      return SCIP_OKAY;
+      /* start with interval that is stored in expression */
+      interval = expr->interval;
+   }
+   else
+   {
+      /* start with infinite interval [-inf,+inf] */
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
    }
 
-   /* evaluate current expression and move on */
-   SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &interval, propdata->varboundrelax) );
+   assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
+   if( expr->nenfos > 0 )
+   {
+      /* for nodes with enforcement (having auxvar, thus during solve), nlhdlrs take care of interval evaluation */
+      for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
+      {
+         nlhdlr = expr->enfos[e]->nlhdlr;
+         assert(nlhdlr != NULL);
 
-   /* update expression interval */
+         /* skip nlhdlr if it does not provide interval evaluation */
+         if( nlhdlr->inteval == NULL )
+            continue;
+
+         /* let nlhdlr evaluate current expression */
+         nlhdlrinterval = interval;
+         SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, &nlhdlrinterval, expr, expr->enfos[e]->nlhdlrexprdata, propdata->varboundrelax) );
+
+         /* intersect with interval */
+         SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+      }
+   }
+   else if( expr->exprhdlr->inteval != NULL )
+   {
+      /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
+      SCIP_CALL( expr->exprhdlr->inteval(scip, expr, &interval, propdata->varboundrelax) );
+   }
+
+   if( propdata->intersect )
+   {
+      /* make sure resulting interval is subset of expr->interval, if intersect is true
+       * even though we passed expr->interval as input to the inteval callbacks,
+       * these callbacks might not have taken it into account (most do not, actually)
+       */
+      SCIPintervalIntersect(&interval, interval, expr->interval);
+   }
+
    if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
    {
-      /* intersect new interval with the previous one */
-      if( propdata->intersect )
-         SCIPintervalIntersect(&expr->interval, expr->interval, interval);
-      else
-         SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
-
+      /* update expression interval */
+      SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
       *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    }
-
-   /* stop if the computed or resulting interval is empty */
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval)
-      || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval) )
+   else
    {
+      /* stop if interval is empty */
       SCIPintervalSetEmpty(&expr->interval);
       propdata->aborted = TRUE;
       *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -2131,7 +2162,7 @@ SCIP_RETCODE forwardPropCons(
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, force, infeasible, ntightenings) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, force, NULL, infeasible, ntightenings) );
    }
 
 #ifdef SCIP_DEBUG
@@ -2193,7 +2224,7 @@ SCIP_RETCODE reversePropConss(
          continue;
 
       /* skip expressions that could not have been tightened or do not implement the reverseprop callback; */
-      if( !consdata->expr->hastightened || consdata->expr->exprhdlr->reverseprop == NULL )
+      if( !consdata->expr->hastightened || (consdata->expr->exprhdlr->reverseprop == NULL && consdata->expr->nenfos == 0) )
          continue;
 
       /* add expressions which are not in the queue so far */
@@ -2204,52 +2235,75 @@ SCIP_RETCODE reversePropConss(
       }
    }
 
-   /* main loop */
+   /* main loop that calls reverse propagation for expressions on the queue
+    * when reverseprop finds a tightening for an expression, then that expression is added to the queue (within the reverseprop call)
+    */
    while( !SCIPqueueIsEmpty(queue) && !(*infeasible) )
    {
       SCIP_CONSEXPR_EXPR* expr;
-      int nreds;
+      int e;
 
       expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(queue);
       assert(expr != NULL);
-      assert(expr->exprhdlr->reverseprop != NULL);
-
-      nreds = 0;
+      assert(expr->exprhdlr->reverseprop != NULL || expr->nenfos > 0);
 
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "call reverse propagation for ");
+      SCIPinfoMessage(scip, NULL, "call reverse propagation for ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
 #endif
 
-      /* call reverse propagation callback */
-      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, infeasible, &nreds, force) );
-      assert(nreds >= 0);
-      *ntightenings += nreds;
+      assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
+      if( expr->nenfos > 0 )
+      {
+         /* for nodes with enforcement (having auxvar and during solving), call reverse propagation callbacks of nlhdlrs */
+         for( e = 0; e < expr->nenfos && !*infeasible; ++e )
+         {
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+            int nreds;
+
+            nlhdlr = expr->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+
+            /* skip nlhdlr that does not implement reverseprop */
+            if( nlhdlr->reverseprop == NULL )
+               continue;
+
+            /* call the reverseprop of the nlhdlr */
+            nreds = 0;
+            SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
+            assert(nreds >= 0);
+            *ntightenings += nreds;
+         }
+      }
+      else if( expr->exprhdlr->reverseprop != NULL )
+      {
+         /* if node without enforcement (no auxvar or in presolve), call reverse propagation callback of exprhdlr directly (if any) */
+         int nreds = 0;
+
+         /* call the reverseprop of the exprhdlr */
+         SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, queue, infeasible, &nreds, force) );
+         assert(nreds >= 0);
+         *ntightenings += nreds;
+      }
 
       /* stop propagation if the problem is infeasible */
       if( *infeasible )
          break;
+   }
 
-      /* add tightened children with at least one child to the queue */
-      for( i = 0; i < expr->nchildren; ++i )
-      {
-         SCIP_CONSEXPR_EXPR* child;
+   /* reset expr->inqueue for all remaining expr's in queue (can happen in case of early stop due to infeasibility) */
+   while( !SCIPqueueIsEmpty(queue) )
+   {
+      SCIP_CONSEXPR_EXPR* expr;
 
-         child = expr->children[i];
-         assert(child != NULL);
+      expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(queue);
 
-         /* add child to the queue */
-         /* @todo put children which are in the queue to the end of it! */
-         if( !child->inqueue && child->hastightened && child->nchildren > 0 && child->exprhdlr->reverseprop != NULL )
-         {
-            SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
-            child->inqueue = TRUE;
-         }
-      }
+      /* mark that the expression is not in the queue anymore */
+      expr->inqueue = FALSE;
    }
 
    /* free the queue */
@@ -7088,12 +7142,15 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
 
 /** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
  *  expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED
+ *
+ *  If a reversepropqueue is given, then the expression will be added to the queue if its bounds could be tightened without detecting infeasibility.
  */
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to add the total number of tightenings */
    )
@@ -7163,14 +7220,12 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions */
       expr->hastightened = TRUE;
 
-      /* do not tighten variable in problem stage (important for unittests)
-       * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)? */
-      if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED )
-         return SCIP_OKAY;
-
-      /* tighten bounds of linearization variable */
+      /* tighten bounds of linearization variable
+       * but: do not tighten variable in problem stage (important for unittests)
+       * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
+       */
       var = SCIPgetConsExprExprLinearizationVar(expr);
-      if( var != NULL )
+      if( var != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       {
          SCIP_Bool tightened;
 
@@ -7184,6 +7239,21 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          {
             SCIP_CALL( SCIPtightenVarUb(scip, var, newub, force, cutoff, &tightened) );
             (*ntightenings) += tightened ? 1 : 0;
+         }
+      }
+
+      /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback */
+      if( reversepropqueue != NULL && !*cutoff )
+      {
+         if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && expr->nenfos > 0) ||
+             (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && expr->exprhdlr->reverseprop != NULL) )
+         {
+            /* @todo put children which are in the queue to the end of it! */
+            if( !expr->inqueue && expr->nchildren > 0 )
+            {
+               SCIP_CALL( SCIPqueueInsert(reversepropqueue, (void*) expr) );
+               expr->inqueue = TRUE;
+            }
          }
       }
    }
@@ -8625,7 +8695,7 @@ void SCIPsetConsExprNlhdlrInitExit(
    nlhdlr->exit = exit_;
 }
 
-/** set the separation callback of a nonlinear handler */
+/** set the separation callbacks of a nonlinear handler */
 void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -8640,6 +8710,20 @@ void SCIPsetConsExprNlhdlrSepa(
    nlhdlr->initsepa = initsepa;
    nlhdlr->sepa = sepa;
    nlhdlr->exitsepa = exitsepa;
+}
+
+/** set the propagation callbacks of a nonlinear handler */
+void SCIPsetConsExprNlhdlrProp(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval)), /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
+)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->inteval = inteval;
+   nlhdlr->reverseprop = reverseprop;
 }
 
 /** gives name of nonlinear handler */

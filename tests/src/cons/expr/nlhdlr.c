@@ -18,11 +18,13 @@
  *
  * This test implements a nonlinear handler for bivariate quadratic expressions that are either convex or concave.
  * We do some simplifying assumptions, e.g., assume that the arguments are actual variables and not non-variable expressions.
- * Also separation is only implemented for the convex side at the moment.
+ * Also separation is only implemented for the convex side.
+ * These assumptions are ok for the example that is executed by the test.
  *
  * The test constructs a problem with two convex quadratic constraints.
  * Convexity is not exploited when using the separation methods of the expressions alone, as the quadratic terms
- * are considered separately. Thus, only with the nonlinear handler we can solve this problem by separation only (Kelley' cutting plane).
+ * are considered separately. Thus, if no other nonlinear handlers take care of this, then only with this nonlinear handler
+ * we can solve this problem by separation only (Kelley' cutting plane).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -58,6 +60,9 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Real             yycoef;             /**< coefficient of second variable square term */
    SCIP_Real             constant;           /**< constant term */
    SCIP_Bool             convex;             /**< whether convex or concave */
+
+   SCIP_CONSEXPR_EXPR*   exprx;               /**< expression corresponding to first variable */
+   SCIP_CONSEXPR_EXPR*   expry;               /**< expression corresponding to second variable */
 };
 
 
@@ -105,7 +110,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlr)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldr)
+SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHdlr)
 {
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
@@ -178,12 +183,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
          else if( exprdata.varx == NULL )
          {
             exprdata.varx = var;
+            exprdata.exprx = child;
             assert(exprdata.xcoef == 0.0);
             exprdata.xcoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else if( exprdata.vary == NULL )
          {
             exprdata.vary = var;
+            exprdata.expry = child;
             assert(exprdata.ycoef == 0.0);
             exprdata.ycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
@@ -219,12 +226,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
          {
             assert(exprdata.xxcoef == 0.0);
             exprdata.varx = var;
+            exprdata.exprx = child;
             exprdata.xxcoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else if( exprdata.vary == NULL )
          {
             assert(exprdata.yycoef == 0.0);
             exprdata.vary = var;
+            exprdata.expry = child;
             exprdata.yycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else
@@ -258,6 +267,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
          {
             assert(exprdata.xycoef == 0.0);
             exprdata.vary = (var1 == exprdata.varx) ? var2 : var1;
+            exprdata.expry = (var1 == exprdata.varx) ? SCIPgetConsExprExprChildren(child)[1] : SCIPgetConsExprExprChildren(child)[0];
             exprdata.xycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else if( exprdata.varx == NULL )
@@ -265,7 +275,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
             assert(exprdata.xycoef == 0.0);
             assert(exprdata.vary == NULL);
             exprdata.varx = var1;
+            exprdata.exprx = SCIPgetConsExprExprChildren(child)[0];
             exprdata.vary = var2;
+            exprdata.expry = SCIPgetConsExprExprChildren(child)[0];
             exprdata.xycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
          }
          else
@@ -298,12 +310,16 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    else
       return SCIP_OKAY; /* indefinite */
 
-   /* communicate that we will enforce by separation */
-   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
-   *enforcedbelow = TRUE;
-   *enforcedabove = TRUE;
+   /* communicate that we will enforce one side by separation */
+   *enforcemethods |= exprdata.convex ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   *enforcedbelow = exprdata.convex;
+   *enforcedabove = !exprdata.convex;
    *success = TRUE;
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
+
+   /* communicate that we will also do inteval and reverseprop */
+   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
+   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
 
    return SCIP_OKAY;
 }
@@ -326,6 +342,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    *result = SCIP_DIDNOTFIND;
    *ncuts = 0;
@@ -385,7 +403,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
    }
    else
    {
-      /* todo? */
+      /* we do not implement separation for this side (and did not advertise to do so in detect) */
    }
 
    if( cut == NULL )
@@ -429,6 +447,44 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(intevalHdlr)
+{
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+
+   SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx), SCIPgetConsExprExprInterval(nlhdlrexprdata->expry));
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, interval, *interval, nlhdlrexprdata->constant);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(reversepropHdlr)
+{
+   SCIP_INTERVAL childbounds;
+   SCIP_INTERVAL rhs;
+
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+
+   rhs = SCIPgetConsExprExprInterval(expr);
+   SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &rhs, rhs, nlhdlrexprdata->constant);
+
+   /* solve conv({x in xbnds : xxcoef*x^2 + yycoef*y^2 + xycoef*x*y + xcoef*x + ycoef*y \in rhs, y \in ybnds}) */
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, rhs, SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx), SCIPgetConsExprExprInterval(nlhdlrexprdata->expry));
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, nlhdlrexprdata->exprx, childbounds, force, reversepropqueue, infeasible, nreductions) );
+
+   if( !*infeasible )
+   {
+      /* solve conv({y in ybnds : yycoef*y^2 + xxcoef*x^2 + xycoef*y*x + ycoef*y + xcoef*x \in rhs, x \in xbnds}) */
+      SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->yycoef, nlhdlrexprdata->xxcoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->ycoef, nlhdlrexprdata->xcoef, rhs, SCIPgetConsExprExprInterval(nlhdlrexprdata->expry), SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx));
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, nlhdlrexprdata->expry, childbounds, force, reversepropqueue, infeasible, nreductions) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
 {
    SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
@@ -447,8 +503,9 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIPsetConsExprNlhdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
-   SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHdlr);
    SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlr, NULL);
+   SCIPsetConsExprNlhdlrProp(targetscip, targetnlhdlr, intevalHdlr, reversepropHdlr);
 
    return SCIP_OKAY;
 }
@@ -530,8 +587,9 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHdlr);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlr, NULL);
+   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, reversepropHdlr);
 
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
    /* SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-6) ); */

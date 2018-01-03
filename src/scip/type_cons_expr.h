@@ -236,10 +236,12 @@ extern "C" {
  *
  * The method propagates each child of an expression by taking the intervals of all other children into account. The
  * tighter interval is stored inside the interval variable of the corresponding child expression.
+ * SCIPtightenConsExprExprInterval() shall be used to tighten a childs interval.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be evaluated
+ *  - reversepropqueue : expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval
  *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
  *  - nreductions : buffer to store the number of interval reductions of all children
  *  - force : force tightening even if it is below the bound strengthening tolerance
@@ -247,6 +249,7 @@ extern "C" {
 #define SCIP_DECL_CONSEXPR_REVERSEPROP(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_QUEUE* reversepropqueue, \
    SCIP_Bool* infeasible, \
    int* nreductions, \
    SCIP_Bool force)
@@ -439,7 +442,9 @@ typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 #define SCIP_CONSEXPR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
 #define SCIP_CONSEXPR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
 #define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
-#define SCIP_CONSEXPR_EXPRENFO_ALL            SCIP_CONSEXPR_EXPRENFO_SEPABOTH  /**< all enforcement methods */
+#define SCIP_CONSEXPR_EXPRENFO_INTEVAL        0x4u /**< interval evaluation */
+#define SCIP_CONSEXPR_EXPRENFO_REVERSEPROP    0x8u /**< reverse propagation */
+#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) /**< all enforcement methods */
 
 /** type for exprenfo bitflags */
 typedef unsigned int SCIP_CONSEXPR_EXPRENFO_METHOD;
@@ -622,6 +627,52 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_Bool separated, \
    SCIP_RESULT* result, \
    int* ncuts)
+
+/** nonlinear handler interval evaluation callback
+ *
+ * The methods computes an interval that contains the image (range) of the expression.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - interval : buffer where to store interval (on input: current interval for expr, on output: computed interval for expr)
+ *  - varboundrelax : a suggested amount by which to relax variable bounds
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_INTERVAL* interval, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_Real varboundrelax)
+
+/** nonlinear handler callback for reverse propagation
+ *
+ * The method propagates bounds over the arguments of an expression.
+ * The arguments of an expression are other expressions and the tighter intervals should be stored inside the interval variable
+ * of the corresponding argument (expression) by using SCIPtightenConsExprExprInterval().
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - reversepropqueue : expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval
+ *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
+ *  - nreductions : buffer to store the number of interval reductions of all children
+ *  - force : force tightening even if it is below the bound strengthening tolerance
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_QUEUE* reversepropqueue, \
+   SCIP_Bool* infeasible, \
+   int* nreductions, \
+   SCIP_Bool force)
 
 typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */

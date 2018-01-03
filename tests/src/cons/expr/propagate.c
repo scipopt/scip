@@ -168,7 +168,7 @@ Test(propagate, product)
    cr_expect(SCIPisEQ(scip, expraux->interval.sup, 2.0));
 
    cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->interval.inf, 1.0), "Expecting %g and got %g\n", 1.0, expraux->children[0]->interval.inf);
-   cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->interval.sup, 8.0));
+   cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->interval.sup, 8.0), "Expecting %g and got %g\n", 8.0, expraux->children[0]->interval.sup);
    cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->children[0]->interval.inf, 1.0), "Expecting %g and got %g\n", 1.0, expraux->children[0]->interval.inf);
    cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->children[0]->interval.sup, SQRT(8)));
    cr_expect(SCIPisFeasEQ(scip, expraux->children[1]->interval.inf, 1/4.0));
