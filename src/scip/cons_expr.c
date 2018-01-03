@@ -1203,9 +1203,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
    }
 
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
+   if( expr->nenfos > 0 )
    {
-      /* in solving stage, nlhdlrs take care of interval evaluation */
+      /* for nodes with enforcement (having auxvar, thus during solve), nlhdlrs take care of interval evaluation */
       for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
       {
          nlhdlr = expr->enfos[e]->nlhdlr;
@@ -1223,13 +1224,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
          SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
       }
    }
-   else
+   else if( expr->exprhdlr->inteval != NULL )
    {
-      /* outside solving stage, call the callback of the exprhdlr directly */
-      if( expr->exprhdlr->inteval != NULL )
-      {
-         SCIP_CALL( expr->exprhdlr->inteval(scip, expr, &interval, propdata->varboundrelax) );
-      }
+      /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
+      SCIP_CALL( expr->exprhdlr->inteval(scip, expr, &interval, propdata->varboundrelax) );
    }
 
    if( propdata->intersect )
@@ -2258,9 +2256,10 @@ SCIP_RETCODE reversePropConss(
       SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
 #endif
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
+      if( expr->nenfos > 0 )
       {
-         /* during solving, call reverse propagation callbacks of nlhdlrs */
+         /* for nodes with enforcement (having auxvar and during solving), call reverse propagation callbacks of nlhdlrs */
          for( e = 0; e < expr->nenfos && !*infeasible; ++e )
          {
             SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -2282,7 +2281,7 @@ SCIP_RETCODE reversePropConss(
       }
       else if( expr->exprhdlr->reverseprop != NULL )
       {
-         /* if not in solving stage, call reverse propagation callback of exprhdlr directly (if any) */
+         /* if node without enforcement (no auxvar or in presolve), call reverse propagation callback of exprhdlr directly (if any) */
          int nreds = 0;
 
          /* call the reverseprop of the exprhdlr */
