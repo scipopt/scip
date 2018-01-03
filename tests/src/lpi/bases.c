@@ -297,7 +297,7 @@ Test(complex, test1)
    /* check basis inverse matrix */
    SCIP_CALL( SCIPlpiGetBInvCol(lpi, i, coef, NULL, NULL) );
 
-   /* col of basis inverse times nonbasic matrix should be (0, 0, -1) */
+   /* column of basis inverse should be (0, 0, -1) */
    cr_expect_float_eq(coef[0], 0.0, EPS);
    cr_expect_float_eq(coef[1], 0.0, EPS);
    cr_expect_float_eq(coef[2], -1.0, EPS);
