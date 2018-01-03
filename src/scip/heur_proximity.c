@@ -543,7 +543,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    nnodes -= heurdata->usednodes;
    nnodes = MIN(nnodes, heurdata->maxnodes);
 
-   nlpiters = (SCIP_Longint) heurdata->lpitersquot * SCIPgetNRootFirstLPIterations(scip);
+   nlpiters = (SCIP_Longint) (heurdata->lpitersquot * SCIPgetNRootFirstLPIterations(scip));
    nlpiters = MIN(nlpiters, heurdata->maxlpiters);
 
    /* check whether we have enough nodes left to call subproblem solving */
@@ -880,7 +880,9 @@ SCIP_RETCODE SCIPapplyProximity(
       assert(SCIPvarIsBinary(subvars[i]));
 
       solval = SCIPgetSolVal(scip, incumbent, vars[i]);
-      assert(SCIPisFeasEQ(scip, solval, 1.0) || SCIPisFeasEQ(scip, solval, 0.0));
+      assert(SCIPisFeasGE(scip, solval, 0.0));
+      assert(SCIPisFeasLE(scip, solval, 1.0));
+      assert(SCIPisFeasIntegral(scip, solval));
 
       if( solval < 0.5 )
       {
