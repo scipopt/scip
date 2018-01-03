@@ -69,7 +69,7 @@
 #define DEFAULT_MAXRANKINTEGRAL      -1 /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_AWAY               0.01 /**< minimal integrality violation of a basis variable in order to try Gomory cut */
-#define DEFAULT_MAKEINTEGRAL       TRUE /**< try to scale all cuts to integral coefficients */
+#define DEFAULT_MAKEINTEGRAL      FALSE /**< try to scale all cuts to integral coefficients */
 #define DEFAULT_FORCECUTS          TRUE /**< if conversion to integral coefficients failed still consider the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
 #define DEFAULT_DELAYEDCUTS       FALSE /**< should cuts be added to the delayed cut pool? */

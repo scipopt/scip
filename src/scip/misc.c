@@ -2601,7 +2601,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (uint64_t) key;
+   return (uint64_t) (uintptr_t) key;
 }
 
 
@@ -6244,16 +6244,15 @@ int SCIPactivityGetEnergy(
  * Resource Profile
  */
 
-/** creates resource profile */
-SCIP_RETCODE SCIPprofileCreate(
+/** helper method to create a profile */
+static
+SCIP_RETCODE doProfileCreate(
    SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
    int                   capacity            /**< resource capacity */
    )
 {
-   assert(profile != NULL);
-   assert(capacity > 0);
-
    SCIP_ALLOC( BMSallocMemory(profile) );
+   BMSclearMemory(*profile);
 
    (*profile)->arraysize = 10;
    SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->timepoints, (*profile)->arraysize) );
@@ -6268,18 +6267,34 @@ SCIP_RETCODE SCIPprofileCreate(
    return SCIP_OKAY;
 }
 
+/** creates resource profile */
+SCIP_RETCODE SCIPprofileCreate(
+   SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
+   int                   capacity            /**< resource capacity */
+   )
+{
+   assert(profile != NULL);
+   assert(capacity > 0);
+
+   SCIP_CALL_FINALLY( doProfileCreate(profile, capacity), SCIPprofileFree(profile) );
+
+   return SCIP_OKAY;
+}
+
 /** frees given resource profile */
 void SCIPprofileFree(
    SCIP_PROFILE**        profile             /**< pointer to the resource profile */
    )
 {
    assert(profile != NULL);
-   assert(*profile != NULL);
 
-   /* free main hash map data structure */
-   BMSfreeMemoryArray(&(*profile)->loads);
-   BMSfreeMemoryArray(&(*profile)->timepoints);
-   BMSfreeMemory(profile);
+   /* free resource profile */
+   if( *profile != NULL )
+   {
+      BMSfreeMemoryArrayNull(&(*profile)->loads);
+      BMSfreeMemoryArrayNull(&(*profile)->timepoints);
+      BMSfreeMemory(profile);
+   }
 }
 
 /** output of the given resource profile */
@@ -7532,18 +7547,19 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    )
 {
-   SCIP_Bool* visited;
+   SCIP_Bool* visited = NULL;
    int* comps;
    int* compstarts;
-   int* stackadjvisited;
-   int* dfsstack;
-   int* dfsnodes;
+   int* stackadjvisited = NULL;
+   int* dfsstack = NULL;
+   int* dfsnodes = NULL;
    int ndfsnodes;
    int ncomps;
    int i;
    int j;
    int k;
    int endidx;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    assert(digraph != NULL);
 
@@ -7551,10 +7567,10 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
    comps = digraph->components;
    compstarts = digraph->componentstarts;
 
-   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocClearMemoryArray(&visited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsnodes, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsstack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stackadjvisited, digraph->nnodes), TERMINATE );
 
    /* sort the components (almost) topologically */
    for( i = 0; i < ncomps; ++i )
@@ -7583,12 +7599,13 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
       }
    }
 
-   BMSfreeMemoryArray(&stackadjvisited);
-   BMSfreeMemoryArray(&dfsstack);
-   BMSfreeMemoryArray(&dfsnodes);
-   BMSfreeMemoryArray(&visited);
+TERMINATE:
+   BMSfreeMemoryArrayNull(&stackadjvisited);
+   BMSfreeMemoryArrayNull(&dfsstack);
+   BMSfreeMemoryArrayNull(&dfsnodes);
+   BMSfreeMemoryArrayNull(&visited);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** returns the number of previously computed undirected components for the given directed graph */

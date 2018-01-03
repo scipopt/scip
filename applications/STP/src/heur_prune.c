@@ -55,7 +55,7 @@
 #define DEFAULT_PRUNE_TMRUNS     100          /**< number of runs in TM heuristic when called by prune heuristic      */
 #define PRUNE_MINREDELIMS        2            /**< maximum number of eliminations for reduction package when called by prune heuristic */
 #define PRUNE_MAXREDROUNDS       6            /**< maximum number of reduction rounds in prune heuristic */
-#define BREAKONERROR TRUE
+#define BREAKONERROR  FALSE
 #define MAXNTERMINALS 500
 #define MAXNEDGES     10000
 
@@ -179,7 +179,7 @@ SCIP_RETCODE computeNewSols(
 
 /* get reduction bound */
 static
-inline int getRedBound(
+int getRedBound(
    int nround,
    int nedges
    )

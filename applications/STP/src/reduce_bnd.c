@@ -50,6 +50,47 @@
 #define STP_RED_MINBNDTERMS   500
 
 
+
+/** set prize of marked terminals to blocked */
+static
+void markPcMwRoots(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const int*            roots,              /**< root array */
+   int                   nroots,             /**< number of roots */
+   SCIP_Real             prizesum            /**< sum of positive prizes */
+)
+{
+   const int root = graph->source;
+
+   assert(graph != NULL);
+   assert(roots != NULL);
+   assert(!graph->extended);
+   assert(nroots >= 0);
+
+   for( int i = 0; i < nroots; i++ )
+   {
+      int e;
+      const int term = roots[i];
+      const int pterm = graph->head[graph->term2edge[term]];
+
+      assert(Is_term(graph->term[term]));
+      assert(SCIPisPositive(scip, graph->prize[term]));
+      assert(pterm >= 0);
+      assert(Is_pterm(graph->term[pterm]));
+
+      for( e = graph->inpbeg[pterm]; e != EAT_LAST; e = graph->ieat[e] )
+         if( root == graph->tail[e] )
+            break;
+
+      assert(e != EAT_LAST);
+      assert(SCIPisEQ(scip, graph->prize[term], graph->cost[e]));
+
+      graph->prize[term] = prizesum;
+      graph->cost[e] = prizesum;
+   }
+}
+
 /** are the dual costs still valid, i.e. are there zero cost paths from the root to all terminals? */
 static
 SCIP_Bool dualCostIsValid(
@@ -558,7 +599,6 @@ void computeTransVoronoi(
    for( int e = 0; e < transnedges; e++ )
       costrev[e] = cost[flipedge(e)];
 
-
    /* no paths should go back to the root */
    for( int e = transgraph->outbeg[root]; e != EAT_LAST; e = transgraph->oeat[e] )
       costrev[e] = FARAWAY;
@@ -598,6 +638,9 @@ int reducePcMw(
 
    assert(SCIPisGE(scip, minpathcost, 0.0));
    assert(!solgiven || graph_sol_valid(scip, graph, result));
+
+   if( minpathcost < 0.0 )
+      minpathcost = 0.0;
 
    nfixed = 0;
    nnodes = graph->knots;
@@ -2072,7 +2115,8 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Bool             shiftcosts,         /**< should costs be shifted to try to reduce number of terminals? */
    SCIP_Bool             markroots,          /**< should terminals proven to be part of an opt. sol. be marked as such? */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
-   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             prizesum            /**< sum of positive prizes */
 )
 {
    STPSOLPOOL* pool;
@@ -2245,6 +2289,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
+
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
       nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
@@ -2285,18 +2330,24 @@ SCIP_RETCODE reduce_daPcMw(
       }
    }
 
-   if( graph->stp_type == STP_MWCSP && graph->terms < STP_RED_MINBNDTERMS )
+#if 0
+   if( graph->stp_type == STP_MWCSP && graph->terms < STP_RED_MINBNDTERMS  )
       varyroot = FALSE;
+#endif
 
    /* change or mark roots? */
    if( varyroot || markroots )
    {
-      if( varyroot )
-         SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
-      else
-         roots = NULL;
+      SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
 
-      /* get possible roots */
+      /*
+       * get possible roots
+       */
+
+      BMSclearMemoryArray(nodearrchar, nnodes);
+
+      assert(nroots == 0);
+
       for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
       {
          int k = graph->head[e];
@@ -2308,7 +2359,7 @@ SCIP_RETCODE reduce_daPcMw(
 
             for( int e2 = transgraph->inpbeg[k]; e2 != EAT_LAST; e2 = transgraph->ieat[e2] )
             {
-               if( SCIPisZero(scip, transgraph->cost[e2]) )
+               if( transgraph->cost[e2] == 0.0 )
                   l = transgraph->tail[e2];
                else
                   e3 = e2;
@@ -2316,38 +2367,120 @@ SCIP_RETCODE reduce_daPcMw(
 
             assert(l >= 0);
             assert(e3 >= 0);
+            assert(l != root);
             assert(SCIPisEQ(scip, graph->cost[e], graph->cost[e3]));
             assert(graph->mark[l]);
 
-            if( SCIPisGT(scip, cost[e3], minpathcost) )
+            if( SCIPisGT(scip, cost[e3], upperbound - lpobjval) || SCIPisGT(scip, bestcost[e3], upperbound - bestlpobjval) )
             {
                assert(SCIPisPositive(scip, graph->prize[l]));
                assert(nroots < graph->terms);
 
-               if( roots != NULL )
-                  roots[nroots++] = l;
-
-               if( markroots )
-               {
-                  graph->prize[l] = FARAWAY;
-                  graph->cost[e] = FARAWAY;
-               }
+               roots[nroots++] = l;
+               nodearrchar[l] = TRUE;
             }
          }
       }
 
-      if( nroots > 0 )
+      if( nroots > 0 && graph->terms > 2 )
+      {
+         /*
+          * try to find additional roots by shortest path computations
+          */
+
+         SCIP_Real maxprize = 0.0;
+         int qstart = 0;
+
+         assert(!graph->extended);
+
+         for( int i = 0; i < nnodes; i++ )
+         {
+            state[i] = UNKNOWN;
+            vnoi[i].dist = FARAWAY;
+            vnoi[i].edge = UNKNOWN;
+
+            if( Is_term(graph->term[i]) && !nodearrchar[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
+               maxprize = graph->prize[i];
+         }
+
+         for( int rounds = 0; rounds < 10 && qstart != nroots; rounds++ )
+         {
+            const int oldnroots = nroots;
+
+            assert(!graph->extended);
+
+            SCIPdebugMessage("root-finding round %d \n", rounds);
+
+            for( int i = qstart; i < nroots; i++ )
+            {
+               int nlabeled;
+               const int term = roots[i];
+               assert(nodearrchar[term]);
+               assert(Is_term(graph->term[term]));
+               assert(SCIPisPositive(scip, graph->prize[term]));
+
+               /* look for terminals in neighborhood of term */
+               graph_sdPaths(scip, graph, vnoi, graph->cost, maxprize, pathedge, state, vbase, &nlabeled, term, term, 200);
+
+               /* check labelled nodes */
+               for( int k = 0; k < nlabeled; k++ )
+               {
+                  const int l = vbase[k];
+
+                  assert(graph->mark[l]);
+                  assert(state[l] != UNKNOWN);
+
+                  if( Is_term(graph->term[l]) && !nodearrchar[l] && vnoi[l].dist <= graph->prize[l] )
+                  {
+                     roots[nroots++] = l;
+                     nodearrchar[l] = TRUE;
+
+                     SCIPdebugMessage("added new root %d dist: %f, prize: %f  \n", l, vnoi[l].dist, graph->prize[l]);
+                  }
+
+                  /* restore data structures */
+                  state[l] = UNKNOWN;
+                  vnoi[l].dist = FARAWAY;
+                  vnoi[l].edge = UNKNOWN;
+               }
+            }
+#ifndef NDEBUG
+            for( int k = 0; k < nnodes; k++ )
+            {
+               assert(state[k] == UNKNOWN);
+               assert(vnoi[k].dist == FARAWAY);
+               assert(vnoi[k].edge == UNKNOWN);
+            }
+#endif
+
+            qstart = oldnroots;
+         }
+         SCIPdebugMessage("number of terminals found by DA: %d \n", nroots);
+      }
+
+      /* should prize of terminals be changed? */
+      if( nroots > 0 && markroots  )
+      {
+         if( userec )
+         {
+            userec = FALSE;
+            SCIPStpHeurRecFreePool(scip, &pool);
+            pool = NULL;
+         }
+
+         markPcMwRoots(scip, graph, roots, nroots, prizesum);
+      }
+
+      if( nroots > 0 && varyroot )
       {
          int* termdegs;
          int maxdeg = 0;
-
-         assert(roots != NULL);
 
          SCIP_CALL(SCIPallocBufferArray(scip, &termdegs, nroots));
 
          for( int i = 0; i < nroots; i++ )
          {
-            termdegs[i] = graph->grad[i];
+            termdegs[i] = graph->grad[roots[i]];
             if( maxdeg < termdegs[i] )
                maxdeg = termdegs[i];
          }
@@ -2482,7 +2615,7 @@ SCIP_RETCODE reduce_daPcMw(
    *nelims = nfixed;
 
    /* free memory */
-   if( userec )
+   if( pool != NULL )
       SCIPStpHeurRecFreePool(scip, &pool);
    SCIPfreeBufferArrayNull(scip, &roots);
    SCIPfreeBufferArray(scip, &bestcost);
@@ -2661,28 +2794,6 @@ SCIP_RETCODE reduce_daSlackPruneMw(
    assert(SCIPfindHeur(scip, "TM") != NULL);
    tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
-#if 0
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( Is_term(graph->term[k]) && k != root )
-      {
-         assert(graph->grad[k] > 0);
-
-         for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-            if( graph->head[e] == graph->source )
-            {
-               break;
-            }
-         }
-         if( e == EAT_LAST )
-         {
-            printf("err %d \n", 0);
-            return SCIP_ERROR;
-         }
-      }
-   }
-#endif
 
    /* compute Steiner tree to obtain upper bound */
    SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, transresult, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success, FALSE) );
@@ -2829,38 +2940,8 @@ SCIP_RETCODE reduce_daSlackPruneMw(
             break;
 
 
-#if 0 //todo
-         if( Is_term(graph->term[k]) )
-         {
-            e = graph->outbeg[k];
-            while( e != EAT_LAST )
-            {
-               etmp = graph->oeat[e];
-               tmpcost = pathdist[k] + cost[e] + vnoi[graph->head[e]].dist;
-
-               if( graph->mark[graph->head[e]] &&
-                  ((SCIPisGT(scip, tmpcost, minpathcost)) ||
-                     (SCIPisGE(scip, tmpcost, minpathcost) && result[e] != CONNECT && result[flipedge(e)] != CONNECT)) )
-               {
-                  if( marked[flipedge(e)] )
-                  {
-                     graph_edge_del(scip, graph, e, TRUE);
-                     graph_edge_del(scip, transgraph, e, FALSE);
-                     nfixed++;
-                  }
-                  else
-                  {
-                     marked[e] = TRUE;
-                  }
-               }
-               e = etmp;
-            }
-            continue;
-         }
-#else
          if( Is_term(graph->term[k]) )
             continue;
-#endif
 
          tmpcost = pathdist[k] + vnoi[k].dist;
 

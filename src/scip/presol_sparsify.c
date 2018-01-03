@@ -137,19 +137,19 @@ SCIP_DECL_HASHKEYVAL(varPairHashval)
 /** try non-zero cancellation for given row */
 static
 SCIP_RETCODE cancelRow(
-   SCIP*                 scip,                 /**< SCIP datastructure */
-   SCIP_MATRIX*          matrix,               /**< the constraint matrix */
-   SCIP_HASHTABLE*       pairtable,            /**< the hashtable containing ROWVARPAIR's of equations */
-   int                   rowidx,               /**< index of row to try non-zero cancellation for */
-   int                   maxcontfillin,        /**< maximal fill-in allowed for continuous variables */
-   int                   maxintfillin,         /**< maximal fill-in allowed for integral variables */
-   int                   maxbinfillin,         /**< maximal fill-in allowed for binary variables */
-   int                   maxconsiderednonzeros,/**< maximal number of non-zeros to consider for cancellation */
-   SCIP_Bool             preserveintcoefs,     /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
-   SCIP_Longint*         nuseless,             /**< pointer to update number of useless hashtable retrieves */
-   int*                  nchgcoefs,            /**< pointer to update number of changed coefficients */
-   int*                  ncanceled,            /**< pointer to update number of canceled nonzeros */
-   int*                  nfillin               /**< pointer to update the produced fill-in */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix,             /**< the constraint matrix */
+   SCIP_HASHTABLE*       pairtable,          /**< the hashtable containing ROWVARPAIR's of equations */
+   int                   rowidx,             /**< index of row to try non-zero cancellation for */
+   int                   maxcontfillin,      /**< maximal fill-in allowed for continuous variables */
+   int                   maxintfillin,       /**< maximal fill-in allowed for integral variables */
+   int                   maxbinfillin,       /**< maximal fill-in allowed for binary variables */
+   int                   maxconsiderednonzeros, /**< maximal number of non-zeros to consider for cancellation */
+   SCIP_Bool             preserveintcoefs,   /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
+   SCIP_Longint*         nuseless,           /**< pointer to update number of useless hashtable retrieves */
+   int*                  nchgcoefs,          /**< pointer to update number of changed coefficients */
+   int*                  ncanceled,          /**< pointer to update number of canceled nonzeros */
+   int*                  nfillin             /**< pointer to update the produced fill-in */
    )
 {
    int* cancelrowinds;
@@ -797,16 +797,36 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* insert varpairs into hash table */
       for( r = 0; r < nvarpairs; ++r )
       {
+         SCIP_Bool insert;
          ROWVARPAIR* othervarpair;
 
          assert(varpairs != NULL);
 
-         othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r]);
 
-         if( othervarpair != NULL && SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
-            continue;
+         insert = TRUE;
 
-         SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
+         /* check if this pair is already contained in the hash table;
+          * The loop is required due to the non-transitivity of the hash functions
+          */
+         while( (othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r])) != NULL )
+         {
+            /* if the previous variable pair has fewer or the same number of non-zeros in the attached row
+             * we keep that pair and skip this one
+             */
+            if( SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
+            {
+               insert = FALSE;
+               break;
+            }
+
+            /* this pairs row has fewer non-zeros, so remove the other pair from the hash table and loop */
+            SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) othervarpair) );
+         }
+
+         if( insert )
+         {
+            SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
+         }
       }
 
       /* sort rows according to parameter value */

@@ -479,6 +479,8 @@ SCIP_RETCODE SCIPdebugGetSol(
    assert(scip != NULL);
    assert(sol != NULL);
 
+   *sol = NULL;
+
    /* check whether a debug solution is available */
    if( !debugSolutionAvailable(scip->set) )
       return SCIP_OKAY;
@@ -486,10 +488,7 @@ SCIP_RETCODE SCIPdebugGetSol(
    SCIP_CALL( readSolution(scip->set) );
 
    if( debugsoldata->debugsol == NULL )
-   {
-      *sol = NULL;
       return SCIP_ERROR;
-   }
 
    *sol = debugsoldata->debugsol;
 
@@ -1077,7 +1076,8 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       return SCIP_OKAY;
 
    /* check if a solution will be cutoff in tree */
-   if( SCIPgetStage(set->scip) != SCIP_STAGE_EXITSOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_EXITPRESOLVE && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+   if( SCIPgetStage(set->scip) != SCIP_STAGE_EXITSOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_EXITPRESOLVE
+      && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE && !SCIPisInRestart(set->scip) )
    {
       SCIP_Bool solisinnode;
 

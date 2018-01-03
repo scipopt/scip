@@ -2218,6 +2218,10 @@ SCIP_RETCODE registerBranchingCandidates(
       {
          assert(conss[c] != NULL);  /*lint !e613*/
 
+         /* skip constraints that have been marked to be removed by propagateCons() */
+         if( !SCIPconsIsEnabled(conss[c]) ) /*lint !e613*/
+            continue;
+
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
 
@@ -2282,6 +2286,10 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
+      /* skip constraints that have been marked to be removed by propagateCons() */
+      if( !SCIPconsIsEnabled(conss[c]) )
+         continue;
+
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
@@ -2296,6 +2304,86 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
    if( *brvar != NULL )
    {
       SCIP_CALL( SCIPaddExternBranchCand(scip, *brvar, brvarval, SCIP_INVALID) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/* try to fix almost fixed x variable in violated constraint */
+static
+SCIP_RETCODE fixAlmostFixedX(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility was detected */
+   SCIP_Bool*            reduceddom          /**< buffer to store whether some variable bound was tightened */
+)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Bool tightened;
+   int c;
+
+   assert(scip != NULL);
+   assert(conss != NULL);
+   assert(infeasible != NULL);
+   assert(reduceddom != NULL);
+
+   *infeasible = FALSE;
+   *reduceddom = FALSE;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* if constraint not violated, then continue */
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      lb = SCIPvarGetLbLocal(consdata->x);
+      ub = SCIPvarGetUbLocal(consdata->x);
+
+      /* if x not almost fixed, then continue */
+      if( !SCIPisRelEQ(scip, lb, ub) )
+         continue;
+
+      /* if x fixed already, then continue */
+      if( SCIPisEQ(scip, lb, ub) )
+         continue;
+
+      assert(!SCIPisInfinity(scip, -lb));
+      assert(!SCIPisInfinity(scip,  ub));
+
+      /* try to fix variable */
+      SCIP_CALL( SCIPtightenVarLb(scip, consdata->x, (lb+ub)/2.0, TRUE, infeasible, &tightened) );
+      if( *infeasible )
+      {
+         SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(consdata->x));
+         return SCIP_OKAY;
+      }
+      if( tightened )
+      {
+         SCIPdebugMsg(scip, "Tightened lower bound of almost fixed variable <%s>.\n", SCIPvarGetName(consdata->x));
+         *reduceddom = TRUE;
+      }
+
+      SCIP_CALL( SCIPtightenVarUb(scip, consdata->x, (lb+ub)/2.0, TRUE, infeasible, &tightened) );
+      if( *infeasible )
+      {
+         SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(consdata->x));
+         return SCIP_OKAY;
+      }
+      if( tightened )
+      {
+         SCIPdebugMsg(scip, "Tightened upper bound of almost fixed variable <%s>.\n", SCIPvarGetName(consdata->x));
+         *reduceddom = TRUE;
+      }
+
+      /* stop as soon as one variable has been fixed to start another enfo round */
+      if( *reduceddom )
+         break;
    }
 
    return SCIP_OKAY;
@@ -2962,8 +3050,8 @@ SCIP_RETCODE propagateCons(
    else
       maxact = SCIPinfinity(scip);
 
-   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, minact, consdata->lhs)) &&
-       (SCIPisInfinity(scip,  consdata->rhs) || SCIPisFeasLE(scip, maxact, consdata->rhs)) )
+   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisGE(scip, minact, consdata->lhs)) &&
+       (SCIPisInfinity(scip,  consdata->rhs) || SCIPisLE(scip, maxact, consdata->rhs)) )
    {
       SCIPdebugMsg(scip, "absolute power constraint <%s> is redundant: <%s>[%.15g,%.15g], <%s>[%.15g,%.15g]\n",
          SCIPconsGetName(cons),
@@ -3522,7 +3610,10 @@ SCIP_RETCODE generateSecantCut(
 
    /* ignore constraints with fixed x (should be removed soon) */
    if( SCIPisRelEQ(scip, xlb, xub) )
+   {
+      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.20g,%.20g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
       return SCIP_OKAY;
+   }
 
    if( xlb > -xoffset )
       xlb = -xoffset;
@@ -3643,7 +3734,7 @@ SCIP_RETCODE generateCut(
 
    SCIPdebugMsg(scip, "generate cut for constraint <%s> with violated side %d\n", SCIPconsGetName(cons), violside);
    SCIPdebugPrintCons(scip, cons, NULL);
-   SCIPdebugMsg(scip, "xlb = %g  xub = %g  xval = %g\n", SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x), SCIPgetSolVal(scip, sol, consdata->x));
+   SCIPdebugMsg(scip, "xlb = %g  xub = %g  xval = %g  zval = %.15g\n", SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x), SCIPgetSolVal(scip, sol, consdata->x), SCIPgetSolVal(scip, sol, consdata->z));
 
    if( violside == SCIP_SIDETYPE_RIGHT )
    {
@@ -3667,6 +3758,11 @@ SCIP_RETCODE generateCut(
       zcoef = -consdata->zcoef;
       rhs   = -consdata->lhs;
    }
+   /* move reference point onto local domain, if clearly (>eps) outside */
+   if( SCIPisLT(scip, xval, xlb) )
+      xval = xlb;
+   else if( SCIPisGT(scip, xval, xub) )
+      xval = xub;
 
    if( SCIPisInfinity(scip, REALABS(xval)) )
    {
@@ -3721,7 +3817,7 @@ SCIP_RETCODE generateCut(
                consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
       else
          SCIP_CALL( generateLinearizationCut(scip, &rowprep, SCIPconsGetHdlr(cons), xub, consdata->exponent, xoffset, xmult, zcoef, rhs,
-               consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
+               consdata->x, consdata->z, xub+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
    }
    else
    {
@@ -3810,6 +3906,10 @@ SCIP_RETCODE separatePoint(
    for( c = 0, side = SCIP_SIDETYPE_LEFT; c < nconss && ! (*cutoff); c = (side == SCIP_SIDETYPE_RIGHT ? c+1 : c), side = (side == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT) )
    {
       assert(conss[c] != NULL);  /*lint !e613*/
+
+      /* skip constraints that are not enabled, e.g., because they were already marked for deletion at this node */
+      if( !SCIPconsIsEnabled(conss[c]) )  /*lint !e613*/
+         continue;
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
@@ -5199,9 +5299,25 @@ SCIP_RETCODE enforceConstraint(
 
    if( nnotify == 0 && !solinfeasible )
    {
-      /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
-         if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
+      SCIP_Bool reduceddom;
       SCIP_VAR* brvar = NULL;
+
+      /* fallback 2: fix almost-fixed nonlinear variables */
+      SCIP_CALL( fixAlmostFixedX(scip, conss, nconss, &cutoff, &reduceddom) );
+      if( cutoff )
+      {
+         SCIPdebugMsg(scip, "fixing almost fixed var lead to infeasibility.\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( reduceddom )
+      {
+         *result = SCIP_REDUCEDDOM;
+         return SCIP_OKAY;
+      }
+
+      /* fallback 3: separation probably failed because of numerical difficulties;
+         if no-one declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
       SCIP_CALL( registerLargeRelaxValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
       if( brvar == NULL )
       {

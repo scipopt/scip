@@ -858,6 +858,9 @@ SCIP_RETCODE collectMinactImplicVars(
    cliques = SCIPvarGetCliques(var, varfixing);
    ncliques = SCIPvarGetNCliques(var, varfixing);
 
+   if( uselesscliques == NULL )
+      return SCIP_INVALIDDATA;
+
 #ifndef NDEBUG
    /* check that the marker array is reset */
    for( c = 0; c < nbinobjvars; ++c )
@@ -868,8 +871,6 @@ SCIP_RETCODE collectMinactImplicVars(
    for( c = 0; c < ncliques; ++c )
    {
       SCIP_Bool useless;
-
-      assert(uselesscliques != NULL);
 
       clique = cliques[c];
       assert(clique != NULL);

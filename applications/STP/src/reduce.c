@@ -129,11 +129,11 @@ SCIP_RETCODE nvreduce_sl(
    return SCIP_OKAY;
 }
 
-
-
+/* remove unconnected vertices, overwrites g->mark */
 SCIP_RETCODE level0(
-   SCIP* scip,
-   GRAPH* g)
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
 {
    int k;
    int nnodes;
@@ -158,6 +158,44 @@ SCIP_RETCODE level0(
             graph_edge_del(scip, g, g->inpbeg[k], TRUE);
       }
    }
+   return SCIP_OKAY;
+}
+
+/* remove unconnected vertices, keep g->mark */
+SCIP_RETCODE level0save(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   int* savemark;
+   const int nnodes = g->knots;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &savemark, nnodes) );
+   BMScopyMemoryArray(savemark, g->mark, nnodes);
+
+   for( int k = nnodes - 1; k >= 0; k-- )
+      g->mark[k] = FALSE;
+
+   SCIP_CALL( graph_trail_arr(scip, g, g->source) );
+
+   for( int k = nnodes - 1; k >= 0 ; k-- )
+   {
+      if( !g->mark[k] && (g->grad[k] > 0) )
+      {
+         assert(!Is_term(g->term[k]));
+
+         while( g->inpbeg[k] != EAT_LAST )
+            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
+      }
+   }
+
+   BMScopyMemoryArray(g->mark, savemark, nnodes);
+
+   SCIPfreeBufferArray(scip, &savemark);
+
    return SCIP_OKAY;
 }
 
@@ -864,24 +902,24 @@ SCIP_RETCODE reduceNw(
 SCIP_RETCODE redLoopMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,
-   PATH*                 path,
-   GNODE**               gnodearr,
-   SCIP_Real*            nodearrreal,
-   SCIP_Real*            edgearrreal,
-   SCIP_Real*            edgearrreal2,
-   int*                  state,
-   int*                  vbase,
-   int*                  nodearrint,
-   int*                  edgearrint,
-   int*                  nodearrint2,
-   int*                  nodearrint3,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   PATH*                 path,               /**< path data structure */
+   GNODE**               gnodearr,           /**< nodes-sized array  */
+   SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
+   SCIP_Real*            edgearrreal,        /**< edges-sized array  */
+   SCIP_Real*            edgearrreal2,       /**< edges-sized array  */
+   int*                  state,              /**< shortest path array  */
+   int*                  vbase,              /**< voronoi base array  */
+   int*                  nodearrint,         /**< nodes-sized array  */
+   int*                  edgearrint,         /**< edges-sized array  */
+   int*                  nodearrint2,        /**< nodes-sized array  */
+   int*                  nodearrint3,        /**< nodes-sized array  */
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
-   STP_Bool*             nodearrchar,
+   STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   STP_Bool              advanced,
-   STP_Bool              bred,
-   STP_Bool              tryrmw,             /**< try to convert problem to RMWCSP? Only possible if advanced = TRUE */
+   STP_Bool              advanced,           /**< do advanced reduction? */
+   STP_Bool              bred,               /**< do bound-based reduction? */
+   STP_Bool              tryrmw,             /**< try to convert problem to RMWCSP? Only possible if advanced = TRUE and userec = TRUE */
    int                   redbound,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
@@ -907,12 +945,15 @@ SCIP_RETCODE redLoopMw(
    STP_Bool chain2 = TRUE;
    STP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_RANDNUMGEN* randnumgen;
+   SCIP_Real prizesum;
 
 
    assert(scip != NULL);
    assert(g != NULL);
    assert(fixed != NULL);
    assert(advanced || !tryrmw);
+
+   tryrmw = tryrmw && userec;
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
@@ -925,6 +966,8 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
    assert(graph_pc_term2edgeConsistent(g));
+
+   prizesum = graph_pc_getPosPrizeSum(scip, g);
 
    while( rerun && !SCIPisStopped(scip) )
    {
@@ -967,7 +1010,7 @@ SCIP_RETCODE redLoopMw(
       if( (da || (advanced && extensive)) )
       {
          SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-               state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE, userec, randnumgen) );
+               state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE, userec, randnumgen, prizesum) );
 
          if( daelims <= 2 * redbound )
             da = FALSE;
@@ -1058,7 +1101,9 @@ SCIP_RETCODE redLoopMw(
 #endif
 
          SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, FALSE, userec, randnumgen) );
+               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, tryrmw, userec, randnumgen, prizesum) );
+
+         userec = FALSE;
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {
@@ -1081,26 +1126,25 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
-   if( tryrmw && userec )
+#if 0
+   if( tryrmw )
    {
       SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-            state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE, userec, randnumgen) );
+            state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE, userec, randnumgen, prizesum) );
 
-      npvelims = 0;
-      anselims = 0;
-      ansadelims = 0;
       SCIP_CALL( reduce_npv(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
       reduce_ans(scip, g, nodearrint2, &anselims);
       reduce_ansAdv(scip, g, nodearrint2, &ansadelims, FALSE);
    }
+#endif
 
    /* go back to the extended graph */
    graph_pc_2trans(g);
 
    SCIP_CALL( level0(scip, g) );
 
-   if( tryrmw && userec )
-      SCIP_CALL( graph_pc_mw2rmw(scip, g) );
+   if( tryrmw )
+      SCIP_CALL( graph_pc_mw2rmw(scip, g, prizesum) );
 
    SCIPfreeRandom(scip, &randnumgen);
 
@@ -1111,23 +1155,23 @@ SCIP_RETCODE redLoopMw(
 SCIP_RETCODE redLoopPc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,
-   PATH*                 path,
-   GNODE**               gnodearr,
-   SCIP_Real*            nodearrreal,
-   SCIP_Real*            exedgearrreal,
-   SCIP_Real*            exedgearrreal2,
-   int*                  heap,
-   int*                  state,
-   int*                  vbase,
-   int*                  nodearrint,
-   int*                  edgearrint,
-   int*                  nodearrint2,
-   int*                  solnode,
-   STP_Bool*             nodearrchar,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   PATH*                 path,               /**< path data structure */
+   GNODE**               gnodearr,           /**< nodes-sized array  */
+   SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
+   SCIP_Real*            exedgearrreal,      /**< edges-sized array  */
+   SCIP_Real*            exedgearrreal2,     /**< edges-sized array  */
+   int*                  heap,               /**< shortest path array  */
+   int*                  state,              /**< voronoi base array  */
+   int*                  vbase,              /**< nodes-sized array  */
+   int*                  nodearrint,         /**< edges-sized array  */
+   int*                  edgearrint,         /**< nodes-sized array  */
+   int*                  nodearrint2,        /**< nodes-sized array  */
+   int*                  solnode,            /**< solution nodes array (or NULL) */
+   STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   SCIP_Bool             dualascent,
-   SCIP_Bool             bred,
+   SCIP_Bool             dualascent,         /**< do dual-ascent reduction? */
+   SCIP_Bool             bred,               /**< do bound-based reduction? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
@@ -1153,6 +1197,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool rerun = TRUE;
    SCIP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_Bool advancedrun = dualascent;
+   SCIP_Real prizesum;
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
@@ -1175,6 +1220,8 @@ SCIP_RETCODE redLoopPc(
 
    assert(graph_pc_term2edgeConsistent(g));
 
+   prizesum = graph_pc_getPosPrizeSum(scip, g);
+
    /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1195,6 +1242,7 @@ SCIP_RETCODE redLoopPc(
       if( sd || extensive )
       {
          SCIP_CALL( reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
+
          if( sdnelims <= reductbound )
             sd = FALSE;
 
@@ -1273,7 +1321,7 @@ SCIP_RETCODE redLoopPc(
                   nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL, FALSE) );
          else
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
-                  state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE, userec, randnumgen) );
+                  state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE, userec, randnumgen, prizesum) );
 
          if( danelims <= reductbound )
             da = FALSE;
@@ -1311,7 +1359,7 @@ SCIP_RETCODE redLoopPc(
          else
          {
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
-                  state, nodearrchar, &danelims, TRUE, TRUE, FALSE, FALSE, userec, randnumgen) );
+                  state, nodearrchar, &danelims, TRUE, TRUE, FALSE, FALSE, userec, randnumgen, prizesum) );
          }
          SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
          if( danelims + degnelims > reductbound || (extensive && (danelims + degnelims > 0)) )
@@ -1353,24 +1401,24 @@ SCIP_RETCODE redLoopPc(
 SCIP_RETCODE redLoopStp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH* RESTRICT        vnoi,
-   PATH* RESTRICT        path,
-   GNODE**               gnodearr,
-   SCIP_Real* RESTRICT   nodearrreal,
-   SCIP_Real* RESTRICT   edgearrreal,
-   SCIP_Real* RESTRICT   edgearrreal2,
-   int* RESTRICT         heap,
-   int* RESTRICT         state,
-   int* RESTRICT         vbase,
-   int* RESTRICT         nodearrint,
-   int* RESTRICT         edgearrint,
-   int* RESTRICT         nodearrint2,
-   int* RESTRICT         solnode,
-   STP_Bool* RESTRICT    nodearrchar,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   PATH*                 path,               /**< path data structure */
+   GNODE**               gnodearr,           /**< nodes-sized array  */
+   SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
+   SCIP_Real*            edgearrreal,        /**< edges-sized array  */
+   SCIP_Real*            edgearrreal2,       /**< edges-sized array  */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< shortest path array  */
+   int*                  vbase,              /**< Voronoi base array  */
+   int*                  nodearrint,         /**< edges-sized array  */
+   int*                  edgearrint,         /**< nodes-sized array  */
+   int*                  nodearrint2,        /**< nodes-sized array  */
+   int*                  solnode,            /**< solution nodes array (or NULL) */
+   STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   SCIP_Real             upperbound,
-   SCIP_Bool             da,
-   SCIP_Bool             bred,
+   SCIP_Real             upperbound,         /**< upper bound */
+   SCIP_Bool             da,                 /**< do dual-ascent reduction? */
+   SCIP_Bool             bred,               /**< do bound-based reduction? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */

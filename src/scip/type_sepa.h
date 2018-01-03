@@ -101,6 +101,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - scip            : SCIP main data structure
  *  - sepa            : the separator itself
  *  - result          : pointer to store the result of the separation call
+ *  - allowlocal      : should the separator allow local cuts?
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
@@ -124,7 +125,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - sepa            : the separator itself
  *  - sol             : primal solution that should be separated
  *  - result          : pointer to store the result of the separation call
- *  - allowlocal      : hint should the separator allow local cuts
+ *  - allowlocal      : should the separator allow local cuts?
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off

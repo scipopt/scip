@@ -12,7 +12,12 @@ endfunction(setLibProperties)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
 
+#configure the scipbuildflags.c source file for the build tree
+configure_file(${PROJECT_SOURCE_DIR}/src/scipbuildflags.c.in
+  "${CMAKE_BINARY_DIR}/scipbuildflag.c" @ONLY)
+
 set(scipsources
+    ${CMAKE_BINARY_DIR}/scipbuildflag.c
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
@@ -239,7 +244,6 @@ set(scipsources
     scip/retcode.c
     scip/scip.c
     scip/scip_bandit.c
-    scip/scipbuildflags.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c
@@ -414,11 +418,12 @@ set(scipheaders
     scip/cons_sos1.h
     scip/cons_sos2.h
     scip/cons_superindicator.h
-    scip/cons_symretope.h
+    scip/cons_symresack.h
     scip/cons_varbound.h
     scip/cons_xor.h
     scip/cutpool.h
     scip/cuts.h
+    scip/dbldblarith.h
     scip/debug.h
     scip/def.h
     scip/dialog_default.h
@@ -532,6 +537,7 @@ set(scipheaders
     scip/prop.h
     scip/prop_nlobbt.h
     scip/prop_obbt.h
+    scip/prop_orbitalfixing.h
     scip/prop_probing.h
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
@@ -612,7 +618,6 @@ set(scipheaders
     scip/sepa_convexproj.h
     scip/sepa_disjunctive.h
     scip/sepa_eccuts.h
-    scip/sepa_flowcover.h
     scip/sepa_gauge.h
     scip/sepa_gomory.h
     scip/sepa.h
@@ -638,6 +643,7 @@ set(scipheaders
     scip/struct_conflictstore.h
     scip/struct_cons.h
     scip/struct_cutpool.h
+    scip/struct_cuts.h
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
@@ -686,6 +692,7 @@ set(scipheaders
     scip/type_conflictstore.h
     scip/type_cons.h
     scip/type_cutpool.h
+    scip/type_cuts.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
@@ -762,7 +769,12 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+
+    # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+       add_compile_options(-x c++)
+    endif()
 endif()
 
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
@@ -805,20 +817,28 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+if(CMAKE_BUILD_TYPE EQUAL "Debug")
+    find_package(Sanitizers)
+    add_sanitizers(scip)
+endif()
+
 target_compile_definitions(scip PRIVATE EXTERN=extern)
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
-add_dependencies(libscip scip_update_githash scip_update_buildflags)
-add_dependencies(scip scip_update_githash scip_update_buildflags)
+add_dependencies(libscip scip_update_githash)
+add_dependencies(scip scip_update_githash)
 
 set_target_properties(libscip PROPERTIES
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
-    SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR})
+    SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
+    INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # set the install rpath to the installed destination
-set_target_properties(scip PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set_target_properties(scip PROPERTIES
+    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
+    INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)

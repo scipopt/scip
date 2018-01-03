@@ -126,7 +126,7 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
 
 /** edge cost multiplier */
 static
-inline int edgecostmultiplier(
+int edgecostmultiplier(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    SCIP_Real             avg                 /**< number of solutions containing this edge */
@@ -813,7 +813,7 @@ SCIP_RETCODE buildsolgraph(
 }
 
 static
-inline void marksolverts(
+void marksolverts(
    GRAPH* g,
    IDX* curr,
    int* unodemap,

@@ -20,7 +20,8 @@
  * @author Daniel Rehfeldt
  *
  * This file implements alternative-based reduction techniques for several Steiner problems.
- * All tests can be found in "A Generic Approach to Solving the Steiner Tree Problem and Variants" by Daniel Rehfeldt
+ * All tests can be found in "Combining NP-Hard Reduction Techniques and Strong Heuristics in an Exact Algorithm for the
+ * Maximum-Weight Connected Subgraph Problem" by Daniel Rehfeldt and Thorsten Koch,
  * or in "Reduction Techniques for the Prize-Collecting Steiner Tree Problem and the Maximum-Weight Connected Subgraph Problem"
  * by Daniel Rehfeldt et al.
  *
@@ -2986,6 +2987,8 @@ SCIP_RETCODE reduce_sdsp(
             }
          }
 
+         /* restore data */
+
          for( int k = 0; k < nlbltail; k++ )
          {
             const int l = memlbltail[k];
@@ -2996,7 +2999,6 @@ SCIP_RETCODE reduce_sdsp(
                pathmaxnodetail[l] = -1;
          }
 
-         /* restore data */
          for( int k = 0; k < nlblhead; k++ )
          {
             const int l = memlblhead[k];
@@ -3007,7 +3009,7 @@ SCIP_RETCODE reduce_sdsp(
                pathmaxnodehead[l] = -1;
          }
 
-#ifdef SCIP_DEBUG
+#ifndef NDEBUG
          for( int k = 0; k < nnodes; k++ )
          {
             assert(statetail[k]     == UNKNOWN);
@@ -3016,8 +3018,11 @@ SCIP_RETCODE reduce_sdsp(
             assert(statehead[k]     == UNKNOWN);
             assert(pathhead[k].dist == FARAWAY);
             assert(pathhead[k].edge == UNKNOWN);
-            assert(pathmaxnodetail[k] == -1);
-            assert(pathmaxnodehead[k] == -1);
+            if( pc )
+            {
+               assert(pathmaxnodetail[k] == -1);
+               assert(pathmaxnodehead[k] == -1);
+            }
          }
 #endif
          /* can edge be deleted? */
@@ -3622,16 +3627,16 @@ SCIP_RETCODE reduce_bd34(
 SCIP_RETCODE reduce_sl(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,
-   double*               fixed,
-   int*                  heap,
-   int*                  state,
-   int*                  vbase,
-   int*                  vrnodes,
-   STP_Bool*                 visited,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   double*               fixed,              /**< offset pointer */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< shortest path array */
+   int*                  vbase,              /**< Voronoi/shortest path bases array */
+   int*                  vrnodes,            /**< Voronoi/shortest path array  */
+   STP_Bool*             visited,            /**< Voronoi/shortest path array */
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
                                                   or NULL */
-   int*                  nelims
+   int*                  nelims              /**< pointer to store number of eliminations */
    )
 {
    SCIP_QUEUE* queue;
@@ -3643,9 +3648,6 @@ SCIP_RETCODE reduce_sl(
    int     e;
    int     j;
    int     t;
-#if 0
-   int     e2;
-#endif
    int     old;
    int     head;
    int     tail;
@@ -4026,18 +4028,18 @@ SCIP_RETCODE reduce_nv(
 SCIP_RETCODE reduce_nvAdv(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,
-   SCIP_Real*            distance,
-   double*               fixed,
-   int*                  edgearrint,
-   int*                  heap,
-   int*                  state,
-   int*                  vbase,
-   int*                  neighb,
-   int*                  distnode,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   SCIP_Real*            distance,           /**< nodes-sized distance array */
+   double*               fixed,              /**< offset pointer */
+   int*                  edgearrint,         /**< edges-sized array */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< shortest path array  */
+   int*                  vbase,              /**< Voronoi base array  */
+   int*                  neighb,             /**< nodes-sized neighborhood array  */
+   int*                  distnode,           /**< nodes-sized distance array  */
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
                                                   or NULL */
-   int*                  nelims
+   int*                  nelims              /**< pointer to store number of eliminations */
    )
 {
    SCIP_Real  min1;

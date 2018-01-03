@@ -734,7 +734,15 @@ SCIP_RETCODE SCIPapplyProximity(
 
    /* calculate the minimum improvement for a heuristic solution in terms of the distance between incumbent objective
     * and the lower bound */
-   objcutoff = lowerbound + (1 - minimprove) * (bestobj - lowerbound);
+   if( SCIPisInfinity(scip, REALABS(lowerbound)) )
+   {
+      if( SCIPisZero(scip, bestobj) )
+         objcutoff = bestobj - 1;
+      else
+         objcutoff = (1 - minimprove) * bestobj;
+   }
+   else
+      objcutoff = minimprove * lowerbound + (1 - minimprove) * (bestobj);
 
    /* use integrality of the objective function to round down (and thus strengthen) the objective cutoff */
    if( SCIPisObjIntegral(scip) )

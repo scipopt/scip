@@ -903,10 +903,12 @@ int sepastoreGetBestCut(
    int pos;
 
    assert(sepastore != NULL);
+   assert(sepastore->nforcedcuts < sepastore->ncuts);
 
-   bestscore = SCIP_REAL_MIN;
-   bestpos = -1;
-   for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
+   bestpos = sepastore->nforcedcuts;
+   bestscore = sepastore->scores[bestpos];
+   assert( bestscore != SCIP_INVALID ); /*lint !e777*/
+   for( pos = sepastore->nforcedcuts + 1; pos < sepastore->ncuts; pos++ )
    {
       /* check if cut is current best cut */
       assert( sepastore->scores[pos] != SCIP_INVALID ); /*lint !e777*/

@@ -111,10 +111,10 @@ SCIP_RETCODE readArguments(
 
    /* init usage text */
 #ifndef NDEBUG
-   status = snprintf(usage, SCIP_MAXSTRLEN, "usage: %s <file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
+   status = SCIPsnprintf(usage, SCIP_MAXSTRLEN, "usage: %s <file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
    assert( 0 <= status && status < SCIP_MAXSTRLEN );
 #else
-   (void) snprintf(usage, SCIP_MAXSTRLEN, "usage: %s <file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
+   (void) SCIPsnprintf(usage, SCIP_MAXSTRLEN, "usage: %s <file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
 #endif
 
    /* init arguments */

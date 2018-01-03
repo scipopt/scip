@@ -871,10 +871,8 @@ SCIP_RETCODE getLinVarsAndAndRess(
    }
 
    /* @todo try to avoid sorting here */
-   if( andress != NULL )
+   if( andress != NULL && nandress != NULL )
    {
-      assert(nandress != NULL);
-
       /* sort and resultants by their variable index */
       if( andcoefs != NULL )
       {

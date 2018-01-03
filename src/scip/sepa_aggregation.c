@@ -14,10 +14,25 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_aggregation.c
- * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
+ * @brief  flow cover and complemented mixed integer rounding cuts separator (Marchand's version)
  * @author Robert Lion Gottwald
  * @author Kati Wolter
  * @author Tobias Achterberg
+ *
+ * For an overview see:
+ *
+ * Marchand, H., & Wolsey, L. A. (2001).@n
+ * Aggregation and mixed integer rounding to solve MIPs.@n
+ * Operations research, 49(3), 363-371.
+ *
+ * Some remarks:
+ * - In general, continuous variables are less prefered than integer variables, since their cut
+ *   coefficient is worse.
+ * - We seek for aggregations that project out continuous variables that are far away from their bound,
+ *   since if it is at its bound then it doesn't contribute to the violation
+ * - These aggregations are also useful for the flowcover separation, so after building an aggregation
+ *   we try to generate a MIR cut and a flowcover cut.
+ * - We only keep the best cut.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -443,8 +458,8 @@ SCIP_RETCODE setupAggregationData(
 /** free resources held in aggregation data */
 static
 void destroyAggregationData(
-   SCIP*                 scip,
-   AGGREGATIONDATA*      aggrdata
+   SCIP*                 scip,               /**< SCIP datastructure */
+   AGGREGATIONDATA*      aggrdata            /**< pointer to ggregation data */
    )
 {
    SCIPaggrRowFree(scip, &aggrdata->aggrrow);
@@ -463,12 +478,12 @@ void destroyAggregationData(
  */
 static
 SCIP_Bool getRowAggregationCandidates(
-   AGGREGATIONDATA*      aggrdata,
-   int                   probvaridx,
-   SCIP_ROW***           rows,
-   SCIP_Real**           rowvarcoefs,
-   int*                  nrows,
-   int*                  ngoodrows
+   AGGREGATIONDATA*      aggrdata,           /**< pointer to ggregation data */
+   int                   probvaridx,         /**< problem index of variables to retrieve candidates for */
+   SCIP_ROW***           rows,               /**< pointer to store array to candidate rows */
+   SCIP_Real**           rowvarcoefs,        /**< pointer to store array of coefficients of given variable in the corresponding rows */
+   int*                  nrows,              /**< pointer to return number of rows in returned arrays */
+   int*                  ngoodrows           /**< pointer to return number of "good" rows in the returned arrays */
    )
 {
    int aggrdataidx;
@@ -487,8 +502,8 @@ SCIP_Bool getRowAggregationCandidates(
 /** find the bound distance value in the aggregation data struct for the given variable problem index */
 static
 SCIP_Real aggrdataGetBoundDist(
-   AGGREGATIONDATA*      aggrdata,
-   int                   probvaridx
+   AGGREGATIONDATA*      aggrdata,           /**< SCIP datastructure */
+   int                   probvaridx          /**< problem index of variables to retrieve candidates for */
    )
 {
    int aggrdataidx;
@@ -745,7 +760,7 @@ TERMINATE:
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP data structure */
-   AGGREGATIONDATA*      aggrdata,
+   AGGREGATIONDATA*      aggrdata,           /**< pointer to aggregation data */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
@@ -755,9 +770,9 @@ SCIP_RETCODE aggregation(
    int                   maxaggrs,           /**< maximal number of aggregations */
    SCIP_Bool*            wastried,           /**< pointer to store whether the given startrow was actually tried */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
-   int*                  cutinds,
-   SCIP_Real*            cutcoefs,
-   SCIP_Bool             negate,
+   int*                  cutinds,            /**< buffer array to store temporarily cut */
+   SCIP_Real*            cutcoefs,           /**< buffer array to store temporarily cut */
+   SCIP_Bool             negate,             /**< should the start row be multiplied by -1 */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
 {
@@ -842,7 +857,7 @@ SCIP_RETCODE aggregation(
 
       if( cmirsuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepadata->cmir, TRUE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
+         SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
                sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts, &cut) );
       }
       else if ( flowcoversuccess )
@@ -915,10 +930,13 @@ SCIP_RETCODE aggregation(
    return SCIP_OKAY;
 }
 
+/** gives an estimate of how much the activity of this row is
+ *  affected by fractionality in the current solution
+ */
 static
 SCIP_Real getRowFracActivity(
-   SCIP_ROW* row,
-   SCIP_Real* fractionalities
+   SCIP_ROW*             row,                /**< the LP row */
+   SCIP_Real*            fractionalities     /**< array of fractionalities for each variable */
    )
 {
    int nlpnonz;
@@ -1300,10 +1318,6 @@ SCIP_RETCODE separateCuts(
 
    return SCIP_OKAY;
 }
-
-/*
- * forward declarations for include function of dummy cmir and flowcover separators
- */
 
 /*
  * Callback methods of separator

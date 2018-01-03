@@ -719,11 +719,11 @@ void exchangeBounds(
 /** helper function to return a corner of the domain of two variables */
 static
 void getCorner(
-   SCIP_VAR*            x,                  /**< first variable */
-   SCIP_VAR*            y,                  /**< second variable */
-   CORNER               corner,             /**< corner */
-   SCIP_Real*           px,                 /**< buffer to store point for x */
-   SCIP_Real*           py                  /**< buffer to store point for y */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   CORNER                corner,             /**< corner */
+   SCIP_Real*            px,                 /**< buffer to store point for x */
+   SCIP_Real*            py                  /**< buffer to store point for y */
    )
 {
    assert(x != NULL);
@@ -757,13 +757,13 @@ void getCorner(
 /** helper function to return the two end points of a diagonal */
 static
 void getCorners(
-   SCIP_VAR*            x,                  /**< first variable */
-   SCIP_VAR*            y,                  /**< second variable */
-   CORNER               corner,             /**< corner */
-   SCIP_Real*           xs,                 /**< buffer to store start point for x */
-   SCIP_Real*           ys,                 /**< buffer to store start point for y */
-   SCIP_Real*           xt,                 /**< buffer to store end point for x */
-   SCIP_Real*           yt                  /**< buffer to store end point for y */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   CORNER                corner,             /**< corner */
+   SCIP_Real*            xs,                 /**< buffer to store start point for x */
+   SCIP_Real*            ys,                 /**< buffer to store start point for y */
+   SCIP_Real*            xt,                 /**< buffer to store end point for x */
+   SCIP_Real*            yt                  /**< buffer to store end point for y */
    )
 {
    assert(x != NULL);
