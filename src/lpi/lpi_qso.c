@@ -643,7 +643,7 @@ SCIP_RETCODE SCIPlpiAddCols(
       {
          lpi->iccnt[i] = 0;
          lbeg[i] = 0;
-         assert( val[j] != 0.0 );
+         assert( val[i] != 0.0 );
       }
    }
    else
@@ -795,7 +795,7 @@ SCIP_RETCODE SCIPlpiAddRows(
          ncols = QSget_colcount(lpi->prob);
          for (i = 0; i < nnonz; ++i)
          {
-            assert( val[j] != 0.0 );
+            assert( val[i] != 0.0 );
             assert( 0 <= ind[i] && ind[i] < ncols );
          }
       }
@@ -1118,7 +1118,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(ind != NULL);
-   if( ncols <= 0 )
+   if( nrows <= 0 )
       return SCIP_OKAY;
 
    lpi->solstat = 0;
@@ -1517,6 +1517,8 @@ SCIP_RETCODE SCIPlpiGetCols(
    /* store in the user-provided data */
    if( nnonz != NULL )
    {
+      assert(beg != NULL && ind != NULL && val != NULL); /* for lint */
+
       if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
       {
          SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
@@ -1534,6 +1536,8 @@ SCIP_RETCODE SCIPlpiGetCols(
    }
    if( lb != NULL )
    {
+      assert( ub != NULL ); /* for lint */
+
       if( llb == NULL || lub == NULL )
       {
          SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
@@ -1612,6 +1616,8 @@ SCIP_RETCODE SCIPlpiGetRows(
    /* store in the user-provided data */
    if( nnonz != NULL )
    {
+      assert( beg != NULL && ind != NULL && val != NULL ); /* for lint */
+
       if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
       {
          SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
@@ -1634,6 +1640,8 @@ SCIP_RETCODE SCIPlpiGetRows(
          SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
       }
+
+      assert( lhs != NULL ); /* for lint */
 
       for( i = 0; i < len; ++i )
       {

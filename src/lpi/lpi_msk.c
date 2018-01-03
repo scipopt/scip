@@ -679,7 +679,6 @@ SCIP_RETCODE SCIPlpiCreate(
 {
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
-   assert(lpi->task != NULL);
    assert(name != NULL);
    assert(numlp >= 0);
 
@@ -1244,9 +1243,6 @@ SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgBounds") );
 #endif
 
-   if (ncols == 0)
-      return SCIP_OKAY;
-
    /* @todo This test could be integrated into generateMskBoundkeys, but then this function needs to be able to return an
     * error, which requires some rewriting. */
    for (i = 0; i < ncols; ++i)
@@ -1292,7 +1288,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(ind != NULL);
-   if( ncols <= 0 )
+   if( nrows <= 0 )
       return SCIP_OKAY;
 
    SCIPdebugMessage("Calling SCIPlpiChgSides (%d)\n", lpi->lpid);
@@ -1300,9 +1296,6 @@ SCIP_RETCODE SCIPlpiChgSides(
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgSides") );
 #endif
-
-   if (nrows == 0)
-      return SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
 

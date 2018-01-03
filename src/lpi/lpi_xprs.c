@@ -1550,6 +1550,7 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert(*nnonz <= ntotalnonz);
       assert(lpi->indarray[lastcol-firstcol+1] == *nnonz);
 
+      assert(beg != NULL); /* for lint */
       for( c = 0; c < lastcol-firstcol+1; c++ )
          beg[c] = lpi->indarray[c];
    }
@@ -1575,7 +1576,7 @@ SCIP_RETCODE SCIPlpiGetRows(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((lhss != NULL && rhss != NULL) || (lhss == NULL && rhss == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    debugCheckRowrang(lpi, firstrow, lastrow);
@@ -1607,6 +1608,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert(*nnonz <= ntotalnonz);
       assert(lpi->indarray[lastrow-firstrow+1] == *nnonz);
 
+      assert(beg != NULL); /* for lint */
       for( r = 0; r < lastrow-firstrow+1; r++ )
          beg[r] = lpi->indarray[r];
    }

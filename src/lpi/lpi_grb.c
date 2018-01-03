@@ -2509,6 +2509,8 @@ SCIP_RETCODE SCIPlpiGetRows(
 
    if( nnonz != NULL )
    {
+      assert(beg != NULL && ind != NULL && val != NULL); /* for lint */
+
       /* get matrix entries */
       CHECK_ZERO( lpi->messagehdlr, GRBgetconstrs(lpi->grbmodel, nnonz, beg, ind, val, firstrow, lastrow-firstrow+1) );
 
