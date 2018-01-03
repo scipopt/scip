@@ -794,7 +794,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    );
 
 /** get column of inverse basis matrix B^-1
@@ -814,7 +814,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    );
 
 /** get row of inverse basis matrix times constraint matrix B^-1 * A
@@ -831,7 +831,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    );
 
 /** get column of inverse basis matrix times constraint matrix B^-1 * A
@@ -847,7 +847,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    );
 
 /**@} */

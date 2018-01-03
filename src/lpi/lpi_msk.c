@@ -244,6 +244,10 @@ SCIP_RETCODE scip_checkdata(
    double* tblx;
    double* tbux;
 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->task != NULL);
+
    MOSEK_CALL( MSK_solutiondef(lpi->task, MSK_SOL_BAS, &gotbasicsol) );
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &numvar) );
@@ -639,6 +643,9 @@ void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->task != NULL);
    return (void*) lpi->task;
 }
 
@@ -670,7 +677,9 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
+   assert(lpi->task != NULL);
    assert(name != NULL);
    assert(numlp >= 0);
 
@@ -875,14 +884,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    MSKboundkeye* bkx;
    int oldcols;
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
@@ -922,7 +923,10 @@ SCIP_RETCODE SCIPlpiAddCols(
 
       MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
       for (j = 0; j < nnonz; ++j)
+      {
          assert( 0 <= ind[j] && ind[j] < nrows );
+         assert( val[j] != 0.0 );
+      }
 #endif
 
       SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
@@ -1047,14 +1051,6 @@ SCIP_RETCODE SCIPlpiAddRows(
    MSKboundkeye* bkc;
    int oldrows;
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
@@ -1089,7 +1085,10 @@ SCIP_RETCODE SCIPlpiAddRows(
 
       MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
       for (j = 0; j < nnonz; ++j)
+      {
+         assert( val[j] != 0.0 );
          assert( 0 <= ind[j] && ind[j] < ncols );
+      }
 #endif
 
       SCIP_CALL( getEndptrs(nrows, beg, nnonz, &aptre) );
@@ -1625,6 +1624,16 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+
+#ifndef NDEBUG
+   {
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
+   }
+#endif
 
    SCIPdebugMessage("Calling SCIPlpiGetCols (%d)\n", lpi->lpid);
 
@@ -1653,13 +1662,22 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+
+#ifndef NDEBUG
+   {
+      int nrows;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+      assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
+   }
+#endif
 
    SCIPdebugMessage("Calling SCIPlpiGetRows (%d)\n", lpi->lpid);
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiGetRows") );
 #endif
-
 
    SCIP_CALL( SCIPlpiGetSides(lpi, firstrow, lastrow, lhs, rhs) );
    SCIP_CALL( getASlice(lpi, MSK_ACC_CON, firstrow, lastrow, nnonz, beg, ind, val) );
@@ -1682,6 +1700,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {  /*lint --e{715}*/
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(colnames != NULL || namestoragesize == 0);
@@ -1703,6 +1722,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {  /*lint --e{715}*/
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(rownames != NULL || namestoragesize == 0);
@@ -1850,6 +1870,7 @@ SCIP_RETCODE getSolutionStatus(
    MSKsolstae*           solsta              /**< pointer to store the solution status */
    )
 {
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
@@ -2931,7 +2952,9 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
+   assert(lpi->task != NULL);
    return FALSE;
 }
 
@@ -2940,7 +2963,9 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
+   assert(lpi->task != NULL);
    return SCIPlpiExistsDualRay(lpi);
 }
 
@@ -3010,7 +3035,9 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
+   assert(lpi->task != NULL);
    return FALSE;
 }
 
@@ -3019,7 +3046,9 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
+   assert(lpi->task != NULL);
    return SCIPlpiExistsPrimalRay(lpi);
 }
 
@@ -3283,7 +3312,9 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
 {  /*lint --e{715}*/
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
+   assert(lpi->task != NULL);
    assert(quality != NULL);
 
    *quality = SCIP_INVALID;
@@ -3610,7 +3641,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    int nrows;
@@ -3684,7 +3715,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    int nrows;
@@ -3759,7 +3790,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    int nrows;
@@ -3833,7 +3864,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    SCIP_Real* val;
@@ -4171,7 +4202,9 @@ SCIP_RETCODE SCIPlpiClearState(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
+   assert(lpi->task != NULL);
 
    lpi->clearstate = TRUE;
 
@@ -4282,7 +4315,9 @@ SCIP_RETCODE SCIPlpiGetNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
 {  /*lint --e{715}*/
+   assert(MosekEnv != NULL);
    assert(lpi != NULL);
+   assert(lpi->task != NULL);
    assert(lpinorms != NULL);
    assert(blkmem != NULL);
 

@@ -1278,15 +1278,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -1312,7 +1303,10 @@ SCIP_RETCODE SCIPlpiAddCols(
 
       nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
       for (j = 0; j < nnonz; ++j)
+      {
          assert( 0 <= ind[j] && ind[j] < nrows );
+         assert( val[j] != 0.0 );
+      }
 #endif
 
       CHECK_ZERO( lpi->messagehdlr, CPXaddcols(lpi->cpxenv, lpi->cpxlp, ncols, nnonz, obj, beg, ind, val, lb, ub, colnames) );
@@ -1383,14 +1377,6 @@ SCIP_RETCODE SCIPlpiAddRows(
 {
    int rngcount;
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -1418,8 +1404,10 @@ SCIP_RETCODE SCIPlpiAddRows(
       int j;
 
       ncols = CPXgetnumcols(lpi->cpxenv, lpi->cpxlp);
-      for (j = 0; j < nnonz; ++j)
+      for (j = 0; j < nnonz; ++j) {
+         assert( val[j] != 0.0 );
          assert( 0 <= ind[j] && ind[j] < ncols );
+      }
 #endif
       CHECK_ZERO( lpi->messagehdlr, CPXaddrows(lpi->cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
             rownames) );
@@ -1893,37 +1881,25 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    SCIPdebugMessage("getting columns %d to %d\n", firstcol, lastcol);
 
    if( lb != NULL )
    {
-      assert(ub != NULL);
-
       CHECK_ZERO( lpi->messagehdlr, CPXgetlb(lpi->cpxenv, lpi->cpxlp, lb, firstcol, lastcol) );
       CHECK_ZERO( lpi->messagehdlr, CPXgetub(lpi->cpxenv, lpi->cpxlp, ub, firstcol, lastcol) );
    }
-   else
-      assert(ub == NULL);
 
    if( nnonz != NULL )
    {
       int surplus;
 
-      assert(beg != NULL);
-      assert(ind != NULL);
-      assert(val != NULL);
-
       /* get matrix entries */
       CHECK_ZERO( lpi->messagehdlr, CPXgetcols(lpi->cpxenv, lpi->cpxlp, nnonz, beg, ind, val,
             CPXgetnumnz(lpi->cpxenv, lpi->cpxlp), &surplus, firstcol, lastcol) );
       assert(surplus >= 0);
-   }
-   else
-   {
-      assert(beg == NULL);
-      assert(ind == NULL);
-      assert(val == NULL);
    }
 
    return SCIP_OKAY;
@@ -1953,10 +1929,12 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
+   assert((lhs == NULL && rhs == NULL) || (rhs != NULL && lhs != NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    SCIPdebugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
-   if( lhs != NULL || rhs != NULL )
+   if( lhs != NULL )
    {
       /* get row sense, rhs, and ranges */
       SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
@@ -1982,20 +1960,10 @@ SCIP_RETCODE SCIPlpiGetRows(
    {
       int surplus;
 
-      assert(beg != NULL);
-      assert(ind != NULL);
-      assert(val != NULL);
-
       /* get matrix entries */
       CHECK_ZERO( lpi->messagehdlr, CPXgetrows(lpi->cpxenv, lpi->cpxlp, nnonz, beg, ind, val,
             CPXgetnumnz(lpi->cpxenv, lpi->cpxlp), &surplus, firstrow, lastrow) );
       assert(surplus >= 0);
-   }
-   else
-   {
-      assert(beg == NULL);
-      assert(ind == NULL);
-      assert(val == NULL);
    }
 
    return SCIP_OKAY;
@@ -3636,7 +3604,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    int retval;
@@ -3712,7 +3680,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    int retval;
@@ -3783,7 +3751,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    int retval;
@@ -3855,7 +3823,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    int retval;

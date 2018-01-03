@@ -613,14 +613,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    register int i;
    int* lbeg;
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
    assert(obj != NULL);
@@ -651,6 +643,7 @@ SCIP_RETCODE SCIPlpiAddCols(
       {
          lpi->iccnt[i] = 0;
          lbeg[i] = 0;
+         assert( val[j] != 0.0 );
       }
    }
    else
@@ -768,14 +761,6 @@ SCIP_RETCODE SCIPlpiAddRows(
 {
    register int i;
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
    assert( nrows >= 0 );
@@ -809,7 +794,10 @@ SCIP_RETCODE SCIPlpiAddRows(
 
          ncols = QSget_colcount(lpi->prob);
          for (i = 0; i < nnonz; ++i)
+         {
+            assert( val[j] != 0.0 );
             assert( 0 <= ind[i] && ind[i] < ncols );
+         }
       }
 #endif
 
@@ -1523,11 +1511,8 @@ SCIP_RETCODE SCIPlpiGetCols(
    QS_TESTG(rval, CLEANUP, " ");
 
    /* store in the user-provided data */
-   if( nnonz )
+   if( nnonz != NULL )
    {
-      assert( beg != NULL );
-      assert( ind != NULL );
-      assert( val != NULL );
       if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
       {
          SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
@@ -1543,9 +1528,8 @@ SCIP_RETCODE SCIPlpiGetCols(
          val[i] = lval[i];
       }
    }
-   if( lb )
+   if( lb != NULL )
    {
-      assert( ub != NULL );
       if( llb == NULL || lub == NULL )
       {
          SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
@@ -1622,11 +1606,8 @@ SCIP_RETCODE SCIPlpiGetRows(
    QS_TESTG(rval, CLEANUP, " ");
 
    /* store in the user-provided data */
-   if( nnonz )
+   if( nnonz != NULL )
    {
-      assert( beg != NULL );
-      assert( ind != NULL );
-      assert( val != NULL );
       if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
       {
          SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
@@ -1642,9 +1623,8 @@ SCIP_RETCODE SCIPlpiGetRows(
          val[i] = lval[i];
       }
    }
-   if( rhs )
+   if( rhs != NULL )
    {
-      assert( lhs != NULL );
       if( lrhs == NULL || lrng == NULL || lsense == NULL )
       {
          SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
@@ -2870,7 +2850,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715} */
    int nrows;
@@ -2916,7 +2896,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715} */
    assert(lpi!=NULL);
@@ -2944,7 +2924,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715} */
    int ncols;
@@ -2991,7 +2971,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715} */
    assert(lpi!=NULL);

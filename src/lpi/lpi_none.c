@@ -231,20 +231,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
-
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-      {
-         assert( val[j] != 0 );
-         /* perform check that no new rows are added - this is forbidden */
-         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
-      }
-   }
-#endif
-
-
    assert( lpi != NULL );
    assert( lpi->ncols >= 0 );
    assert(obj != NULL);
@@ -255,6 +241,18 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || val != NULL);
    assert(nnonz >= 0);
    assert(ncols >= 0);
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+      {
+         assert( val[j] != 0.0 );
+         /* perform check that no new rows are added - this is forbidden */
+         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
+      }
+   }
+#endif
 
    lpi->ncols += ncols;
 
@@ -322,14 +320,6 @@ SCIP_RETCODE SCIPlpiAddRows(
    )
 {  /*lint --e{715}*/
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
    assert(lhs != NULL);
@@ -343,7 +333,10 @@ SCIP_RETCODE SCIPlpiAddRows(
    {
       int j;
       for (j = 0; j < nnonz; ++j)
+      {
+         assert( val[j] != 0.0 );
          assert( 0 <= ind[j] && ind[j] < lpi->ncols );
+      {
    }
 #endif
 
@@ -1245,7 +1238,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
@@ -1270,7 +1263,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
@@ -1292,7 +1285,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
@@ -1313,7 +1306,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);

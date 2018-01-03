@@ -893,14 +893,6 @@ SCIP_RETCODE SCIPlpiAddCols(
 { /*lint --e{715}*/
    int c;
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(ncols > 0);
@@ -927,7 +919,10 @@ SCIP_RETCODE SCIPlpiAddCols(
 
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
       for (j = 0; j < nnonz; ++j)
+      {
+         assert( val[j] != 0.0 );
          assert( 0 <= ind[j] && ind[j] < nrows );
+      }
    }
 #endif
 
@@ -1041,14 +1036,6 @@ SCIP_RETCODE SCIPlpiAddRows(
 { /*lint --e{715}*/
    int r;
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(nrows >= 0);
@@ -1071,7 +1058,10 @@ SCIP_RETCODE SCIPlpiAddRows(
 
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
       for (j = 0; j < nnonz; ++j)
+      {
+         assert( val[j] != 0.0 );
          assert( 0 <= ind[j] && ind[j] < ncols );
+      }
    }
 #endif
 
@@ -1524,7 +1514,8 @@ SCIP_RETCODE SCIPlpiGetCols(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert( (lb == NULL && ub == NULL) || (lb != NULL && ub != NULL) );
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    debugCheckColrang(lpi, firstcol, lastcol);
 
@@ -1532,22 +1523,14 @@ SCIP_RETCODE SCIPlpiGetCols(
 
    if( lb != NULL )
    {
-      assert(ub != NULL);
-
       CHECK_ZERO( lpi->messagehdlr, XPRSgetlb(lpi->xprslp, lb, firstcol, lastcol) );
       CHECK_ZERO( lpi->messagehdlr, XPRSgetub(lpi->xprslp, ub, firstcol, lastcol) );
    }
-   else
-      assert(ub == NULL);
 
    if( nnonz != NULL )
    {
       int ntotalnonz;
       int c;
-
-      assert(beg != NULL);
-      assert(ind != NULL);
-      assert(val != NULL);
 
       /* ensure that the temporary buffer array is large enough */
       SCIP_CALL( ensureValMem(lpi, lastcol-firstcol+2) );
@@ -1565,12 +1548,6 @@ SCIP_RETCODE SCIPlpiGetCols(
 
       for( c = 0; c < lastcol-firstcol+1; c++ )
          beg[c] = lpi->indarray[c];
-   }
-   else
-   {
-      assert(beg == NULL);
-      assert(ind == NULL);
-      assert(val == NULL);
    }
 
    return SCIP_OKAY;
@@ -1594,6 +1571,8 @@ SCIP_RETCODE SCIPlpiGetRows(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    debugCheckRowrang(lpi, firstrow, lastrow);
 
@@ -1601,22 +1580,14 @@ SCIP_RETCODE SCIPlpiGetRows(
 
    if( lhss != NULL )
    {
-      assert(rhss != NULL);
-
       /* get left and right sides */
       SCIP_CALL( SCIPlpiGetSides(lpi, firstrow, lastrow, lhss, rhss) );
    }
-   else
-      assert(rhss == NULL);
 
    if( nnonz != NULL )
    {
       int ntotalnonz;
       int r;
-
-      assert(beg != NULL);
-      assert(ind != NULL);
-      assert(val != NULL);
 
       /* ensure that the temporary buffer array is large enough */
       SCIP_CALL( ensureValMem(lpi, lastrow-firstrow+2) );
@@ -1634,12 +1605,6 @@ SCIP_RETCODE SCIPlpiGetRows(
 
       for( r = 0; r < lastrow-firstrow+1; r++ )
          beg[r] = lpi->indarray[r];
-   }
-   else
-   {
-      assert(beg == NULL);
-      assert(ind == NULL);
-      assert(val == NULL);
    }
 
    return SCIP_OKAY;
@@ -2902,7 +2867,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    int nrows;
@@ -2943,7 +2908,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    int nrows;
@@ -2981,7 +2946,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    SCIP_Real* binv;
@@ -3056,7 +3021,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    int nrows;

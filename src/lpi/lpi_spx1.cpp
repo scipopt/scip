@@ -1851,14 +1851,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
    assert(lpi != NULL);
@@ -1882,7 +1874,10 @@ SCIP_RETCODE SCIPlpiAddCols(
       /* perform check that no new rows are added - this is likely to be a mistake */
       int nrows = lpi->spx->nRows();
       for (int j = 0; j < nnonz; ++j)
+      {
          assert( 0 <= ind[j] && ind[j] < nrows );
+         assert( val[j] != 0.0 );
+      }
    }
 #endif
 
@@ -1991,14 +1986,6 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
    assert(lpi != NULL);
@@ -2019,7 +2006,10 @@ SCIP_RETCODE SCIPlpiAddRows(
       /* perform check that no new columns are added - this is likely to be a mistake */
       int ncols = lpi->spx->nCols();
       for (int j = 0; j < nnonz; ++j)
+      {
          assert( 0 <= ind[j] && ind[j] < ncols );
+         assert( val[j] != 0.0 );
+      }
    }
 #endif
 
@@ -2567,11 +2557,11 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    if( lb != NULL )
    {
-      assert(ub != NULL);
-
       const Vector& lbvec = lpi->spx->lower();
       const Vector& ubvec = lpi->spx->upper();
       for( i = firstcol; i <= lastcol; ++i )
@@ -2580,8 +2570,6 @@ SCIP_RETCODE SCIPlpiGetCols(
          ub[i-firstcol] = ubvec[i];
       }
    }
-   else
-      assert(ub == NULL);
 
    if( nnonz != NULL )
    {
@@ -2597,12 +2585,6 @@ SCIP_RETCODE SCIPlpiGetCols(
             (*nnonz)++;
          }
       }
-   }
-   else
-   {
-      assert(beg == NULL);
-      assert(ind == NULL);
-      assert(val == NULL);
    }
 
    return SCIP_OKAY;
@@ -2632,11 +2614,11 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    if( lhs != NULL )
    {
-      assert(rhs != NULL);
-
       const Vector& lhsvec = lpi->spx->lhs();
       const Vector& rhsvec = lpi->spx->rhs();
       for( i = firstrow; i <= lastrow; ++i )
@@ -2645,8 +2627,6 @@ SCIP_RETCODE SCIPlpiGetRows(
          rhs[i-firstrow] = rhsvec[i];
       }
    }
-   else
-      assert(rhs == NULL);
 
    if( nnonz != NULL )
    {
@@ -2662,12 +2642,6 @@ SCIP_RETCODE SCIPlpiGetRows(
             (*nnonz)++;
          }
       }
-   }
-   else
-   {
-      assert(beg == NULL);
-      assert(ind == NULL);
-      assert(val == NULL);
    }
 
    return SCIP_OKAY;
@@ -4323,7 +4297,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
@@ -4627,7 +4601,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
@@ -4669,7 +4643,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    SCIP_Real* buf;
@@ -4728,7 +4702,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    DVector col(lpi->spx->nRows());
