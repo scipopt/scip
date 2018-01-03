@@ -64,6 +64,7 @@
 #define MINIMPROVEFAC            1.5
 #define DEFAULT_STARTMINIMPROVE  0.05
 #define DEFAULT_ADJUSTMINIMPROVE TRUE
+#define DEFAULT_ADJUSTTARGETNODES FALSE /**< should the target nodes be dynamically adjusted? */
 
 /*
  * bandit algorithm parameters
@@ -383,6 +384,7 @@ struct SCIP_HeurData
    SCIP_Bool             adjustfixingrate;   /**< should the heuristic adjust the target fixing rate based on the success? */
    SCIP_Bool             usesubscipheurs;    /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
    SCIP_Bool             adjustminimprove;   /**< should the factor by which the minimum improvement is bound be dynamically updated? */
+   SCIP_Bool             adjusttargetnodes;  /**< should the target nodes be dynamically adjusted? */
    SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
    SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
    SCIP_Bool             scalebyeffort;      /**< should the reward be scaled by the effort? */
@@ -2607,7 +2609,10 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       }
 
       /* update the target node limit based on the status of the selected algorithm */
-      updateTargetNodeLimit(heurdata, &runstats[banditidx], subscipstatus[banditidx]);
+      if( heurdata->adjusttargetnodes )
+      {
+         updateTargetNodeLimit(heurdata, &runstats[banditidx], subscipstatus[banditidx]);
+      }
 
       SCIPdebugMsg(scip, "LRates %8.5f,%8.5f Exponents %8.5f %8.5f\n",
             heurdata->minimprovlearnrate, heurdata->nodefaclearningrate,
@@ -3916,6 +3921,10 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjustminimprove",
          "should the factor by which the minimum improvement is bound be dynamically updated?",
          &heurdata->adjustminimprove, TRUE, DEFAULT_ADJUSTMINIMPROVE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjusttargetnodes",
+            "should the target nodes be dynamically adjusted?",
+            &heurdata->adjusttargetnodes, TRUE, DEFAULT_ADJUSTTARGETNODES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/eps",
          "increase exploration in epsilon-greedy bandit algorithm",
