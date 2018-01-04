@@ -691,9 +691,12 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *
  * input:
  *  - scip : SCIP main data structure
+ *  - nlhdlr : nonlinear handler
  *  - expr : expression to be hashed
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
  *  - sol  : solution (NULL for the LP solution)
- *  - violation : pointer to store the current violation
+ *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
+ *  - success: buffer to store whether the branching score callback was successful
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(x) SCIP_RETCODE x (\
    SCIP* scip, \
