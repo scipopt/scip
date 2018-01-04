@@ -234,6 +234,9 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(bilin.expr2, expexpr);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
 
+   /* free auxvar(s) created by detect from above */
+   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
+
    /* register nlhdlr info in expr and free */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &(expr->enfos[0])) );
@@ -241,6 +244,9 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
    expr->nenfos = 1;
    expr->enfos[0]->issepainit = FALSE;
+
+   /* if there is an nlhdlr, then there must also be an auxvar */
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
