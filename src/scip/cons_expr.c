@@ -4930,7 +4930,7 @@ SCIP_DECL_CONSINITPRE(consInitpreExpr)
     * removed all of his captures on variables; variables that are not release by any plug-in (nuses = 2) will then
     * unlocked and freed
     */
-   if( SCIPisInRestart(scip) )
+   if( SCIPgetNRuns(scip) > 1 )
    {
       SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
    }
