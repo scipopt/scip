@@ -85,8 +85,9 @@ struct SCIP_ConsExpr_Expr
    unsigned int            sepatag;       /**< tag of point for which an outer approximation cut has been computed last, or 0 */
 
    /* branching */
-   SCIP_Real               violation;     /**< violation of the linearization variables of the expression and its children, i.e. |w_i = g(w_j)| */
+   SCIP_Real               brscore;       /**< branching score for the expression (passed on to children) */
    unsigned int            brscoretag;    /**< tag to decide whether a branching score of an expression needs to be initialized */
+   unsigned int            brscoreevaltag;/**< tag to decide whether the branching scoring callback of an expression needs to be called */
 
    /* point-evaluation */
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */
@@ -140,6 +141,7 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa));          /**< separation deinitialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval));            /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop));    /**< reverse propagation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore));    /**< branching scoring callback (can be NULL) */
 };
 
 /** enforcement data of an expression */

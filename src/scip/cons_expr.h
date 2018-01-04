@@ -509,6 +509,21 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    int*                    ntightenings      /**< buffer to add the total number of tightenings */
    );
 
+/** adds branching score to an expression
+ *
+ * Adds a score to the expression-specific branching score.
+ * The branchscoretag argument is used to identify whether the score in the expression needs to be reset before adding a new score.
+ * In an expression with children, the scores are distributed to its children.
+ * In an expression that is a variable, the score may be used to identify a variable for branching.
+ */
+EXTERN
+void SCIPaddConsExprExprBranchScore(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
+   unsigned int            branchscoretag,   /**< tag to identify current branching scores */
+   SCIP_Real               branchscore       /**< branching score to add to expression */
+   );
+
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
 EXTERN
 SCIP_Real SCIPgetConsExprExprValue(
@@ -1047,6 +1062,14 @@ void SCIPsetConsExprNlhdlrProp(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval)), /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
+);
+
+/** set the branching score callback of a nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrBranchscore(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
 );
 
 /** gives name of nonlinear handler */

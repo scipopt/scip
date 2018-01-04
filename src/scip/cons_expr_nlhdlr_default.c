@@ -84,7 +84,29 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *enforcedbelow = TRUE;
       *enforcedabove = TRUE;
       *success = TRUE;
+
+      /* return also branching score possibility if we use separation from exprhdlr */
+      if( SCIPgetConsExprExprHdlr(expr)->brscore != NULL )
+      {
+         mymethods |= SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+         *success = TRUE;
+      }
    }
+   else if( SCIPgetConsExprExprHdlr(expr)->brscore != NULL &&
+      (!*enforcedbelow || !*enforcedabove) &&
+      (mymethods & SCIP_CONSEXPR_EXPRENFO_INTEVAL) != 0 &&
+      (mymethods & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) != 0 )
+   {
+      /* return branching score possibility if enforcement is not ensured yet, but we provide propagation,
+       * since propagation and branching should be sufficient for enforcement, too
+       */
+      mymethods |= SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+      *enforcedbelow = TRUE;
+      *enforcedabove = TRUE;
+      *success = TRUE;
+   }
+
+   /* it does not makes much sense to advertise a brscore callback if we do not also enforce via separation or propagation */
 
    if( *success )
    {
@@ -220,6 +242,34 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
+{ /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   /* if we did not say that we will provide branching scores, then stand by it */
+   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) == 0 )
+      return SCIP_OKAY;
+
+   if( exprhdlr->brscore == NULL )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* call the branching callback of the expression handler */
+   SCIP_CALL( exprhdlr->brscore(scip, expr, sol, brscoretag, success) );
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrDefault)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
@@ -249,6 +299,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrExitSepaDefault);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
+   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreDefault);
 
    return SCIP_OKAY;
 }
