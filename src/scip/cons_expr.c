@@ -3067,7 +3067,7 @@ SCIP_RETCODE canonicalizeConstraints(
    SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlocksneg, nconss) );
 
-   /* simplify each constraint's expression */
+   /* unlock all constraints */
    for( i = 0; i < nconss; ++i )
    {
       assert(conss[i] != NULL);
@@ -3083,7 +3083,36 @@ SCIP_RETCODE canonicalizeConstraints(
       SCIP_CALL( addLocks(scip, conss[i], -consdata->nlockspos, -consdata->nlocksneg) );
       assert(consdata->nlockspos == 0);
       assert(consdata->nlocksneg == 0);
+   }
 
+#ifndef NDEBUG
+   /* check whether all locks of each expression have been removed */
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CONSEXPR_EXPR* expr;
+
+         consdata = SCIPconsGetData(conss[i]);
+         assert(consdata != NULL);
+
+         for( expr = SCIPexpriteratorInit(conshdlrdata->iterator, consdata->expr);
+            !SCIPexpriteratorIsEnd(conshdlrdata->iterator);
+            expr = SCIPexpriteratorGetNext(conshdlrdata->iterator) )
+         {
+            assert(expr != NULL);
+            assert(expr->nlocksneg == 0);
+            assert(expr->nlockspos == 0);
+         }
+      }
+   }
+#endif
+
+   /* simplify each constraint's expression */
+   for( i = 0; i < nconss; ++i )
+   {
       if( !consdata->issimplified && consdata->expr != NULL )
       {
          SCIP_CONSEXPR_EXPR* simplified;
