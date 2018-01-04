@@ -253,7 +253,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
    assert(exprhdlr != NULL);
 
-   /* if we did not say that we will provide branching scores, then stay to it */
+   /* if we did not say that we will provide branching scores, then stand by it */
    if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) == 0 )
       return SCIP_OKAY;
 

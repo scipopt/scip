@@ -337,9 +337,10 @@ extern "C" {
  *
  * The method adds branching scores to its children if it finds that the value of the
  * linearization variables does not coincide with the value of the expression in the given solution.
- * It shall use the function SCIPaddConsExprExprBranchScore() add a branching score to its children.
+ * It shall use the function SCIPaddConsExprExprBranchScore() to add a branching score to its children.
  * It shall return TRUE in success if no branching is necessary or branching scores have been added.
- * If returning FALSE in success, then other scoring methods will be applied.
+ * If returning FALSE in success, then other scoring methods will be applied, e.g., a fallback that
+ * adds a score to every child.
  *
  * input:
  *  - scip : SCIP main data structure
@@ -685,7 +686,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *
  * The method adds branching scores to successors if it finds that the value of the
  * linearization variables does not coincide with the value of the expression in the given solution.
- * It shall use the function SCIPaddConsExprExprBranchScore() add a branching score to its successors.
+ * It shall use the function SCIPaddConsExprExprBranchScore() to add a branching score to its successors.
  * It shall return TRUE in success if no branching is necessary or branching scores have been added.
  * If returning FALSE in success, then other scoring methods will be applied.
  *
