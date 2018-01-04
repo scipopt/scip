@@ -187,6 +187,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
    SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)) /**< curvature detection callback (can be NULL) */
 );
 
+/** set the monotonicity detection callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRMONOTONICITY((*monotonicity)) /**< monotonicity detection callback (can be NULL) */
+);
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -754,6 +763,28 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** returns the monotonicity of an expression w.r.t. to a given child
+ *
+ *  @note Call SCIPevalConsExprExprInterval before using this function.
+ */
+EXTERN
+SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   childidx            /**< index of child */
+   );
+
+/** returns the number of positive rounding locks of an expression */
+EXTERN
+int SCIPgetNLocksPosExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** returns the number of negative rounding locks of an expression */
+EXTERN
+int SCIPgetNLocksNegExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
 
 /** appends child to the children list of expr */
 EXTERN

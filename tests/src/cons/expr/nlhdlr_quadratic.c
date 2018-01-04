@@ -75,7 +75,7 @@ void setup(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
-   /* go to TRANSFORMED stage */
+   /* go to PRESOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, TRUE) );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -178,9 +178,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( simplifyConstraints(scip, &cons, 1, &success) );
-   cr_assert(success);
-   SCIP_CALL( replaceCommonSubexpressions(scip, &cons, 1) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1) );
 
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
@@ -266,9 +264,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
-   success = FALSE;
-   SCIP_CALL( simplifyConstraints(scip, &cons, 1, &success) );
-   cr_assert(success);
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1) );
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );

@@ -195,10 +195,10 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffCos)
    SCIP_CONSEXPR_EXPR* child;
 
    assert(expr != NULL);
-   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(childidx == 0);
    assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
-   child = SCIPgetConsExprExprChildren(expr)[idx];
+   child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
 
@@ -459,6 +459,43 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
    return SCIP_OKAY;
 }
 
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityCos)
+{  /*lint --e{715}*/
+   SCIP_INTERVAL interval;
+   SCIP_Real inf;
+   SCIP_Real sup;
+   int k;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(childidx == 0);
+
+   assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
+   interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+
+   *result = SCIP_MONOTONE_UNKNOWN;
+   inf = SCIPintervalGetInf(interval);
+   sup = SCIPintervalGetSup(interval);
+
+   /* expression is not monotone because the interval is too large */
+   if( sup - inf > M_PI )
+      return SCIP_OKAY;
+
+   /* compute k s.t. PI * k <= interval.inf <= PI * (k+1) */
+   k = (int)floor(inf/M_PI);
+   assert(M_PI * k <= inf);
+   assert(M_PI * (k+1) >= inf);
+
+   /* check whether [inf,sup] are contained in an interval for which the cosine function is monotone */
+   if( sup <= M_PI * (k+1) )
+      *result = ((k % 2 + 2) % 2) == 0 ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for cos expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -484,6 +521,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureCos) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityCos) );
 
    return SCIP_OKAY;
 }

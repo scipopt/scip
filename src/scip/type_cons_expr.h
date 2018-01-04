@@ -223,13 +223,13 @@ extern "C" {
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be evaluated
- *  - idx : index of the children
+ *  - childidx : index of the child
  *  - val : buffer to store the partial derivative w.r.t. the i-th children
  */
 #define SCIP_DECL_CONSEXPR_EXPRBWDIFF(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
-   int idx, \
+   int childidx, \
    SCIP_Real* val)
 
 /** expression callback for reverse propagation
@@ -366,6 +366,22 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_EXPRCURV* curvature)
 
+/** expression monotonicity detection callback
+ *
+ * The method computes the monotonicity of an expression with respect to a given child.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to the curvature for
+ *  - childidx : index of the considered child expression
+ *  - result : buffer to store the monotonicity
+ */
+#define SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   int childidx, \
+   SCIP_MONOTONE* result)
+
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {
@@ -391,6 +407,7 @@ typedef union
 {
    SCIP_Real             realval;            /**< a floating-point value */
    int                   intval;             /**< an integer value */
+   int                   intvals[2];         /**< two integer values */
    void*                 ptrval;             /**< a pointer */
 } SCIP_CONSEXPREXPRWALK_IO;
 
@@ -400,6 +417,16 @@ typedef enum
    SCIP_CONSEXPRITERATOR_RTOPOLOGIC,         /**< reverse topological order */
    SCIP_CONSEXPRITERATOR_BFS                 /**< breadth-first search */
 } SCIP_CONSEXPRITERATOR_TYPE;
+
+/** monotonicity of an expression */
+typedef enum
+{
+   SCIP_MONOTONE_UNKNOWN      = 0,          /**< unknown */
+   SCIP_MONOTONE_INC          = 1,          /**< increasing */
+   SCIP_MONOTONE_DEC          = 2,          /**< decreasing */
+   SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
+
+} SCIP_MONOTONE;
 
 /** expression graph walk callback
  *

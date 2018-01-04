@@ -486,10 +486,10 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffPow)
 
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
-   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(childidx == 0);
    assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
-   child = SCIPgetConsExprExprChildren(expr)[idx];
+   child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
 
@@ -859,6 +859,68 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
    return SCIP_OKAY;
 }
 
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
+{  /*lint --e{715}*/
+   SCIP_INTERVAL interval;
+   SCIP_Real exponent;
+   SCIP_Real inf;
+   SCIP_Real sup;
+   SCIP_Bool expisint;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(childidx == 0);
+
+   assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
+   interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+
+   *result = SCIP_MONOTONE_UNKNOWN;
+   inf = SCIPintervalGetInf(interval);
+   sup = SCIPintervalGetSup(interval);
+   exponent = SCIPgetConsExprExprPowExponent(expr);
+   expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
+
+   if( expisint )
+   {
+      SCIP_Bool expisodd = ceil(exponent/2) != exponent/2; /*lint !e777*/
+
+      if( expisodd )
+      {
+         /* x^1, x^3, ... */
+         if( exponent >= 0.0 )
+            *result = SCIP_MONOTONE_INC;
+
+         /* ..., x^-3, x^-1 are decreasing if 0 is not in ]inf,sup[ */
+         else if( inf >= 0.0 || sup <= 0.0 )
+            *result = SCIP_MONOTONE_DEC;
+      }
+      /* ..., x^-4, x^-2, x^2, x^4, ... */
+      else
+      {
+         /* function is not monotone if 0 is in ]inf,sup[ */
+         if( inf >= 0.0 )
+            *result = exponent >= 0.0 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
+         else if( sup <= 0.0 )
+            *result = exponent >= 0.0 ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
+      }
+   }
+   else
+   {
+      /* note that the expression is not defined for negative input values
+       *
+       * - increasing iff exponent >= 0
+       * - decreasing iff exponent <= 0
+       */
+      *result = exponent >= 0.0 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for power expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -882,6 +944,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvaturePow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityPow) );
 
    return SCIP_OKAY;
 }
