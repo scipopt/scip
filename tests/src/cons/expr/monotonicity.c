@@ -253,7 +253,7 @@ Test(monotonicity, pow)
    SCIP_CALL( chgBounds(x, -SCIPinfinity(scip), 0.0) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
    SCIP_CALL( chgBounds(x, -1.0, 1.0) );
-   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_UNKNOWN) );
 
    SCIP_CALL( createExpr("<x>[C]^(-2)", "pow") );
 

@@ -894,8 +894,8 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
          if( exponent >= 0.0 )
             *result = SCIP_MONOTONE_INC;
 
-         /* ..., x^-3, x^-1 are decreasing if 0 is not in [inf,sup] */
-         else if( inf > 0.0 || sup < 0.0 )
+         /* ..., x^-3, x^-1 are decreasing if 0 is not in ]inf,sup[ */
+         else if( inf >= 0.0 || sup <= 0.0 )
             *result = SCIP_MONOTONE_DEC;
       }
       /* ..., x^-4, x^-2, x^2, x^4, ... */
