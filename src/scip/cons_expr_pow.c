@@ -888,10 +888,16 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
    {
       SCIP_Bool expisodd = ceil(exponent/2) != exponent/2; /*lint !e777*/
 
-      /* ..., x^-3, x^-1, x^1, x^3, ... */
       if( expisodd )
-         *result = exponent >= 0.0 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
+      {
+         /* x^1, x^3, ... */
+         if( exponent >= 0.0 )
+            *result = SCIP_MONOTONE_INC;
 
+         /* ..., x^-3, x^-1 are decreasing if 0 is not in [inf,sup] */
+         else if( inf > 0.0 || sup < 0.0 )
+            *result = SCIP_MONOTONE_DEC;
+      }
       /* ..., x^-4, x^-2, x^2, x^4, ... */
       else
       {
