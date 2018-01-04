@@ -3100,7 +3100,7 @@ SCIP_RETCODE canonicalizeConstraints(
 
          for( expr = SCIPexpriteratorInit(conshdlrdata->iterator, consdata->expr);
             !SCIPexpriteratorIsEnd(conshdlrdata->iterator);
-            expr = SCIPexpriteratorGetNext(conshdlrdata->iterator) )
+            expr = SCIPexpriteratorGetNext(conshdlrdata->iterator) ) /*lint !e441*/
          {
             assert(expr != NULL);
             assert(expr->nlocksneg == 0);
@@ -3113,6 +3113,9 @@ SCIP_RETCODE canonicalizeConstraints(
    /* simplify each constraint's expression */
    for( i = 0; i < nconss; ++i )
    {
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
       if( !consdata->issimplified && consdata->expr != NULL )
       {
          SCIP_CONSEXPR_EXPR* simplified;
