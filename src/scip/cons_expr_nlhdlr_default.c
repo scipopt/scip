@@ -106,7 +106,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *success = TRUE;
    }
 
-   /* I don't think it makes much sense to advertise a brscore callback if we do not also enforce via separation or propagation */
+   /* it does not makes much sense to advertise a brscore callback if we do not also enforce via separation or propagation */
 
    if( *success )
    {
