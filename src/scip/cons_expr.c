@@ -2186,7 +2186,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
     * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
     * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
     */
-   if( SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
+   if( !SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
       expr->children[expr->walkcurrentchild]->derivative = expr->derivative * derivative;
    else
       expr->children[expr->walkcurrentchild]->derivative += expr->derivative * derivative;
