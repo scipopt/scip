@@ -1585,7 +1585,7 @@ SCIP_RETCODE separatePointProduct(
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
    *cut = NULL;
@@ -1599,7 +1599,7 @@ SCIP_RETCODE separatePointProduct(
       /* value expressions should have been removed during simplification */
       assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
 
-      var = SCIPgetConsExprExprLinearizationVar(child);
+      var = SCIPgetConsExprExprAuxVar(child);
       assert(var != NULL);
 
       violation *= SCIPgetSolVal(scip, sol, var);
@@ -1620,7 +1620,7 @@ SCIP_RETCODE separatePointProduct(
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       child = SCIPgetConsExprExprChildren(expr)[c];
-      var = SCIPgetConsExprExprLinearizationVar(child);
+      var = SCIPgetConsExprExprAuxVar(child);
       assert(var != NULL);
       SCIPdebugMsg(scip, "var: %s = %g in [%g, %g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
@@ -1648,12 +1648,12 @@ SCIP_RETCODE separatePointProduct(
 
       /* collect first variable */
       child = SCIPgetConsExprExprChildren(expr)[0];
-      x = SCIPgetConsExprExprLinearizationVar(child);
+      x = SCIPgetConsExprExprAuxVar(child);
       assert(x != NULL);
 
       /* collect second variable */
       child = SCIPgetConsExprExprChildren(expr)[1];
-      y = SCIPgetConsExprExprLinearizationVar(child);
+      y = SCIPgetConsExprExprAuxVar(child);
       assert(y != NULL);
 
       lincoefx = 0.0;
@@ -1725,7 +1725,7 @@ SCIP_RETCODE separatePointProduct(
       SCIPintervalSet(&fixedinterval, 1.0);
       for( i = 0; i < nvars; ++i )
       {
-         var = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[i]);
+         var = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
 
          if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
          {

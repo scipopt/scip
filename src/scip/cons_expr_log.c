@@ -267,11 +267,11 @@ SCIP_RETCODE separatePointLog(
    assert(cut != NULL);
 
    /* get expression data */
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   childvar = SCIPgetConsExprExprLinearizationVar(child);
+   childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
 
    *cut = NULL;

@@ -3964,7 +3964,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    /* if no auxvar, then no need to compute branching score here (nothing can be violated) */
-   if( SCIPgetConsExprExprLinearizationVar(expr) == NULL )
+   if( SCIPgetConsExprExprAuxVar(expr) == NULL )
       return SCIP_OKAY;
 
    /* if having evaluated branching score already, then don't do again and don't enter subexpressions */
@@ -3998,7 +3998,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       SCIP_Real violation;
       int c;
 
-      violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol,SCIPgetConsExprExprLinearizationVar(expr))
+      violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol,SCIPgetConsExprExprAuxVar(expr))
          - expr->evalvalue);
 
       /* add violation as branching score to all children */
@@ -7085,7 +7085,7 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
  *
  * @note for variable expression it returns the corresponding variable
  */
-SCIP_VAR* SCIPgetConsExprExprLinearizationVar(
+SCIP_VAR* SCIPgetConsExprExprAuxVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
@@ -7511,7 +7511,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
        * but: do not tighten variable in problem stage (important for unittests)
        * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
        */
-      var = SCIPgetConsExprExprLinearizationVar(expr);
+      var = SCIPgetConsExprExprAuxVar(expr);
       if( var != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       {
          SCIP_Bool tightened;

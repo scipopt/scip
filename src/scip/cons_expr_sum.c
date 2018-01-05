@@ -899,7 +899,7 @@ SCIP_RETCODE separatePointSum(
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
    *cut = NULL;
@@ -915,7 +915,7 @@ SCIP_RETCODE separatePointSum(
       /* value expressions should have been removed during simplification */
       assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
 
-      vars[c] = SCIPgetConsExprExprLinearizationVar(child);
+      vars[c] = SCIPgetConsExprExprAuxVar(child);
       assert(vars[c] != NULL);
       coefs[c] = exprdata->coefficients[c];
    }

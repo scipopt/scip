@@ -693,7 +693,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       activity = SCIPgetConsExprExprSumConstant(expr); /* TODO: is this okay or should the constant be stored at the moment of creation? */
       for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
          activity += nlhdlrexprdata->lincoefs[i] *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->linexprs[i]));
+            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[i]));
 
       for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i ) /* quadratic terms */
       {
@@ -701,7 +701,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
          SCIP_Real solval;
 
          quadexprterm = nlhdlrexprdata->quadexprterms[i];
-         solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprLinearizationVar(quadexprterm.expr));
+         solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm.expr));
          activity += (quadexprterm.lincoef + quadexprterm.sqrcoef * solval) * solval;
       }
       for( i = 0; i < nlhdlrexprdata->nbilinexprterms; ++i ) /* bilinear terms */
@@ -710,11 +710,11 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
 
          bilinexprterm = nlhdlrexprdata->bilinexprterms[i];
          activity += bilinexprterm.coef *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprLinearizationVar(bilinexprterm.expr1)) *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprLinearizationVar(bilinexprterm.expr2));
+            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr1)) *
+            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr2));
       }
 
-      side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprLinearizationVar(expr));
+      side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
 
       SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", activity,
             SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
@@ -738,7 +738,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    /* handle purely linear variables */
    for( j = 0; j < nlhdlrexprdata->nlinexprs; ++j )
    {
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->linexprs[j]),
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[j]),
                nlhdlrexprdata->lincoefs[j]) );
    }
 
@@ -748,7 +748,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    {
       int k;
       SCIP_VAR* var;
-      var = SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->quadexprterms[j].expr);
+      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->quadexprterms[j].expr);
 
       /* initialize coefficients to linear coefficients of quadratic variables */
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, nlhdlrexprdata->quadexprterms[j].lincoef) );
@@ -769,10 +769,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
          SCIP_VAR* var2;
 
          bilinexprterm = &nlhdlrexprdata->bilinexprterms[nlhdlrexprdata->quadexprterms[j].adjbilin[k]];
-         if( SCIPgetConsExprExprLinearizationVar(bilinexprterm->expr1) != var )
+         if( SCIPgetConsExprExprAuxVar(bilinexprterm->expr1) != var )
             continue;
 
-         var2 = SCIPgetConsExprExprLinearizationVar(bilinexprterm->expr2);
+         var2 = SCIPgetConsExprExprAuxVar(bilinexprterm->expr2);
          assert(var2 != NULL);
          assert(var2 != var);
 
@@ -795,7 +795,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       goto CLEANUP;
 
    /* add auxiliary variable */
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprLinearizationVar(expr), -1.0) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
 
    /* check build cut and check violation */
    {

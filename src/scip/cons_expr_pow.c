@@ -561,11 +561,11 @@ SCIP_RETCODE separatePointPow(
    assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
 
    /* get expression data */
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   childvar = SCIPgetConsExprExprLinearizationVar(child);
+   childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
 
    *cut = NULL;

@@ -256,8 +256,8 @@ SCIP_RETCODE computeCutsAbs(
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
 
-   x = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[0]);
-   z = SCIPgetConsExprExprLinearizationVar(expr);
+   x = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
+   z = SCIPgetConsExprExprAuxVar(expr);
    assert(x != NULL);
    assert(z != NULL);
 

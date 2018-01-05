@@ -251,11 +251,11 @@ SCIP_RETCODE separatePointExp(
    *cut = NULL;
 
    /* get expression data */
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   childvar = SCIPgetConsExprExprLinearizationVar(child);
+   childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
 
    /* compute the violation; this determines whether we need to over- or underestimate */

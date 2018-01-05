@@ -71,13 +71,13 @@ SCIP_RETCODE separatePointEntropy(
    *cut = NULL;
 
    /* get linearization variable */
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
    /* get expression data */
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   childvar = SCIPgetConsExprExprLinearizationVar(child);
+   childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
 
    refpoint = SCIPgetSolVal(scip, sol, childvar);

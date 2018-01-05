@@ -358,7 +358,7 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
  * @note for variable expression it returns the corresponding variable
  */
 EXTERN
-SCIP_VAR* SCIPgetConsExprExprLinearizationVar(
+SCIP_VAR* SCIPgetConsExprExprAuxVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 

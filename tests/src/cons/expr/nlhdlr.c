@@ -342,14 +342,14 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
-   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    *result = SCIP_DIDNOTFIND;
    *ncuts = 0;
 
    /* get auxiliary variable */
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
    xval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->varx);
@@ -449,8 +449,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(intevalHdlr)
 {
-   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
-   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx), SCIPgetConsExprExprInterval(nlhdlrexprdata->expry));
    SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, interval, *interval, nlhdlrexprdata->constant);
@@ -464,8 +464,8 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(reversepropHdlr)
    SCIP_INTERVAL childbounds;
    SCIP_INTERVAL rhs;
 
-   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
-   assert(SCIPgetConsExprExprLinearizationVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    rhs = SCIPgetConsExprExprInterval(expr);
    SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &rhs, rhs, nlhdlrexprdata->constant);
