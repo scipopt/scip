@@ -15,6 +15,9 @@ new parameters:
 deleted and modified parameters:
 - rename parameter: "constraints/orbisack/orbisack/coverseparation" to "constraints/orbisack/coverseparation"
 
+fixed bugs:
+- fixed wrong cast in LP iteration limit computation in proximity search heuristic
+
 
 SCIP version 5.0.0
 ==================

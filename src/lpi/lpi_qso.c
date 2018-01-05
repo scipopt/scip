@@ -2436,6 +2436,10 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    SCIPdebugMessage("getting solution\n");
 
+   /* cannot return solution if we reached the objective limit */
+   if ( lpi->solstat == QS_LP_OBJ_LIMIT )
+      return SCIP_LPERROR;
+
    nrows = QSget_rowcount(lpi->prob);
    SCIP_CALL( ensureRowMem(lpi, nrows) );
 
