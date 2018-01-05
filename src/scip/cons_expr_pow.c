@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "scip/cons_expr_value.h"
+#include "scip/cons_expr_var.h"
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_sum.h"
@@ -155,6 +156,27 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
 
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, pow(baseval, exponent)) );
       return SCIP_OKAY;
+   }
+
+   /* enforces POW10 */
+   if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+   {
+      SCIP_VAR* basevar;
+
+      SCIPdebugPrintf("[simplifyPow] POW10\n");
+      basevar = SCIPgetConsExprExprVarVar(base);
+
+      assert(basevar != NULL);
+
+      /* FIXME: if exponent is negative, we could fix the binary variable to 1. However, this is a bit tricky because
+       * variables can not be tighten in EXITPRE, where the simplify is also called
+       */
+      if( SCIPvarIsBinary(basevar) && exponent > 0 )
+      {
+         *simplifiedexpr = base;
+         SCIPcaptureConsExprExpr(*simplifiedexpr);
+         return SCIP_OKAY;
+      }
    }
 
    if( SCIPisIntegral(scip, exponent) )

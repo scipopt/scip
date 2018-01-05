@@ -1616,6 +1616,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *    POW7: if exponent is 2, its child is not a sum (expand sums)
  *    POW8: if exponent is integer, its child is not a power
  *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
+ *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
  * - is a sum expression such that
  *    SS1: every child is simplified
  *    SS2: no child is a sum
