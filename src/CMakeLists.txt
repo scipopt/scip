@@ -424,6 +424,8 @@ set(scipheaders
     scip/cons_expr_sum.h
     scip/cons_expr_value.h
     scip/cons_expr_var.h
+    scip/cons_expr_nlhdlr_convex.h
+    scip/cons_expr_nlhdlr_default.h
     scip/cons_expr_nlhdlr_quadratic.h
     scip/cons.h
     scip/cons_indicator.h

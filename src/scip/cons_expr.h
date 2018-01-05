@@ -353,6 +353,12 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** returns whether an expression is a variable expression */
+EXTERN
+SCIP_Bool SCIPisConsExprExprVar(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 /** returns the variable used for linearizing a given expression (return value might be NULL)
  *
  * @note for variable expression it returns the corresponding variable
@@ -537,6 +543,12 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   );
+
+/** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
+EXTERN
+SCIP_Real SCIPgetConsExprExprDerivative(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
 /** returns the interval from the last interval evaluation of an expression (interval can be empty) */
@@ -848,6 +860,19 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
    int                     childidx,         /**< index of child being replaced */
    SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
+   );
+
+/** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
+ * to be at least of size the number of variables in the expression which is bounded by SCIPgetNVars() since there are
+ * no two different variable expression sharing the same variable
+ *
+ * @note function captures variable expressions
+ */
+SCIP_RETCODE SCIPgetConsExprExprVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
+   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
    );
 
 /** @} */

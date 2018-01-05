@@ -40,6 +40,7 @@
 #include "scip/cons_expr_entropy.h"
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_cos.h"
+#include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/cons_expr_iterator.h"
@@ -640,7 +641,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
          assert(targetexprhdlr != NULL);
 
          /* if the source is a variable expression create a variable expression directly; otherwise copy the expression data */
-         if( strcmp(expr->exprhdlr->name, "var") == 0 )
+         if( SCIPisConsExprExprVar(expr) )
          {
             SCIP_VAR* sourcevar;
             SCIP_VAR* targetvar;
@@ -1563,7 +1564,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    /* add variable expression if not seen so far; there is only one variable expression representing a variable */
-   if( strcmp(expr->exprhdlr->name, "var") == 0 && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
+   if( SCIPisConsExprExprVar(expr) && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
    {
       assert(SCIPgetNTotalVars(scip) >= getvarsdata->nvarexprs + 1);
 
@@ -2149,7 +2150,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
 
    /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
    if( expr->children[expr->walkcurrentchild]->difftag != bwdiffdata->difftag
-      && strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "var") == 0 )
+      && SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
    {
       expr->children[expr->walkcurrentchild]->derivative = 0.0;
    }
@@ -2185,7 +2186,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
     * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
     * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
     */
-   if( strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "var") != 0 )
+   if( SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
       expr->children[expr->walkcurrentchild]->derivative = expr->derivative * derivative;
    else
       expr->children[expr->walkcurrentchild]->derivative += expr->derivative * derivative;
@@ -2569,8 +2570,7 @@ SCIP_RETCODE propConss(
  *
  * @note function captures variable expressions
  */
-static
-SCIP_RETCODE getVarExprs(
+SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
@@ -2619,7 +2619,7 @@ SCIP_RETCODE storeVarExprs(
    /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNVars() */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
 
-   SCIP_CALL( getVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
    assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
 
    /* realloc array if there are less variable expression than variables */
@@ -2738,7 +2738,7 @@ SCIP_RETCODE catchVarEvents(
    for( i = 0; i < consdata->nvarexprs; ++i )
    {
       assert(consdata->varexprs[i] != NULL);
-      assert(strcmp(consdata->varexprs[i]->exprhdlr->name, "var") == 0);
+      assert(SCIPisConsExprExprVar(consdata->varexprs[i]));
 
       var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
       assert(var != NULL);
@@ -2826,7 +2826,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    varexpr = ((SCIP_VAREVENTDATA*) eventdata)->varexpr;
    assert(varexpr != NULL);
-   assert(strcmp(varexpr->exprhdlr->name, "var") == 0);
+   assert(SCIPisConsExprExprVar(varexpr));
 
    var = SCIPgetConsExprExprVarVar(varexpr);
    assert(var != NULL);
@@ -7081,6 +7081,17 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    return expr->exprdata;
 }
 
+/** returns whether an expression is a variable expression */
+EXTERN
+SCIP_Bool SCIPisConsExprExprVar(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return strcmp(expr->exprhdlr->name, "var") == 0;
+}
+
 /** returns the variable used for linearizing a given expression (return value might be NULL)
  *
  * @note for variable expression it returns the corresponding variable
@@ -7091,7 +7102,7 @@ SCIP_VAR* SCIPgetConsExprExprAuxVar(
 {
    assert(expr != NULL);
 
-   return strcmp(expr->exprhdlr->name, "var") == 0 ? SCIPgetConsExprExprVarVar(expr) : expr->auxvar;
+   return SCIPisConsExprExprVar(expr) ? SCIPgetConsExprExprVarVar(expr) : expr->auxvar;
 }
 
 /** sets the expression data of an expression
@@ -7620,10 +7631,20 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
 
    varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
    assert(varexpr != NULL);
-   assert(strcmp(varexpr->exprhdlr->name, "var") == 0);
+   assert(SCIPisConsExprExprVar(varexpr));
 
    /* use difftag to decide whether the variable belongs to the expression */
    return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->derivative;
+}
+
+/** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
+SCIP_Real SCIPgetConsExprExprDerivative(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->derivative;
 }
 
 /** returns the interval from the last interval evaluation of an expression (interval can be empty) */
@@ -8278,6 +8299,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* include nonlinear handler for quadratics */
    SCIP_CALL( SCIPincludeConsExprNlhdlrQuadratic(scip, conshdlr) );
+
+   /* include nonlinear handler for convex expressions */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrConvex(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
