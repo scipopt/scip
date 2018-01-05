@@ -7082,7 +7082,6 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
 }
 
 /** returns whether an expression is a variable expression */
-EXTERN
 SCIP_Bool SCIPisConsExprExprVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
