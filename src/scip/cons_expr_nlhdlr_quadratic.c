@@ -720,9 +720,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
             SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
             "concave");
 
-      if( activity > side && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
+      if( activity - side > minviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
          rowprep->sidetype = SCIP_SIDETYPE_RIGHT;
-      else if( activity < side && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
+      else if( minviolation < side - activity && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
          rowprep->sidetype = SCIP_SIDETYPE_LEFT;
       else
          goto CLEANUP;
