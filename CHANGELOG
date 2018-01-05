@@ -12,6 +12,7 @@ deleted and modified parameters:
 fixed bugs:
 - fixed wrong cast in LP iteration limit computation in proximity search heuristic
 - fixed check for time limit in heur_nlpdiving
+- fixed LP status to unsolved when marking LP to be resolved if objective limit has changed
 
 
 SCIP version 5.0.0
