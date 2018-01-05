@@ -1,4 +1,4 @@
-SCIP version 5.0.1
+SCIP version NEXT
 ==================
 
 performance improvements:
@@ -14,6 +14,7 @@ new parameters:
 
 deleted and modified parameters:
 - rename parameter: "constraints/orbisack/orbisack/coverseparation" to "constraints/orbisack/coverseparation"
+
 
 SCIP version 5.0.0
 ==================
