@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_convex.c
+/**@file   cons_expr_nlhdlr_convex.h
  * @brief  nonlinear handler for convex expressions
  * @author Benjamin Mueller
  */
