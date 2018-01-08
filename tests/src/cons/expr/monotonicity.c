@@ -142,10 +142,10 @@ SCIP_RETCODE testMonotonicity(
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
 
    /* check curvature */
-   cr_expect(SCIPgetMonotonicityExprExpr(scip, expr, i) == expectedres, "expect %d, got %d",
-      SCIPgetMonotonicityExprExpr(scip, expr, i), expectedres);
+   cr_expect(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres, "expect %d, got %d",
+      SCIPgetConsExprExprMonotonicity(scip, expr, i), expectedres);
 
-   assert(SCIPgetMonotonicityExprExpr(scip, expr, i) == expectedres);
+   assert(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres);
 
    return SCIP_OKAY;
 }

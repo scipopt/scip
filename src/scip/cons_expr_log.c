@@ -415,7 +415,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureLog)
    assert(child != NULL);
 
    /* expression is convex if child is concave */
-   if( (int)(SCIPgetCurvatureExprExpr(child) & SCIP_EXPRCURV_CONCAVE) != 0 )
+   if( (int)(SCIPgetConsExprExprCurvature(child) & SCIP_EXPRCURV_CONCAVE) != 0 )
       *curvature = SCIP_EXPRCURV_CONCAVE;
    else
       *curvature = SCIP_EXPRCURV_UNKNOWN;

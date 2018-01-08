@@ -575,7 +575,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureEntropy)
    assert(child != NULL);
 
    /* expression is concave if child is concave */
-   if( (int)(SCIPgetCurvatureExprExpr(child) & SCIP_EXPRCURV_CONCAVE) != 0 )
+   if( (int)(SCIPgetConsExprExprCurvature(child) & SCIP_EXPRCURV_CONCAVE) != 0 )
       *curvature = SCIP_EXPRCURV_CONCAVE;
    else
       *curvature = SCIP_EXPRCURV_UNKNOWN;

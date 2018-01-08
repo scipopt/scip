@@ -551,7 +551,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   childcurv = SCIPgetCurvatureExprExpr(child);
+   childcurv = SCIPgetConsExprExprCurvature(child);
    childinf = SCIPintervalGetInf(SCIPgetConsExprExprInterval(child));
    childsup = SCIPintervalGetSup(SCIPgetConsExprExprInterval(child));
 
