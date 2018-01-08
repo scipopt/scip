@@ -42,6 +42,83 @@
  * Local methods
  */
 
+
+/** helper function to separate a given point; needed for proper unittest */
+static
+SCIP_RETCODE separatePointExp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< exponential expression */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
+   SCIP_ROW**            cut                 /**< pointer to store the row */
+   )
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* auxvar;
+   SCIP_VAR* childvar;
+   SCIP_Real refpoint;
+   SCIP_Real lincoef;
+   SCIP_Real linconstant;
+   SCIP_Bool islocal;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(cut != NULL);
+
+   *cut = NULL;
+
+   /* get expression data */
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   assert(auxvar != NULL);
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   refpoint = SCIPgetSolVal(scip, sol, childvar);
+   lincoef = 0.0;
+   linconstant = 0.0;
+   success = TRUE;
+
+   /* adjust the reference points */
+   refpoint = SCIPisLT(scip, refpoint, SCIPvarGetLbLocal(childvar)) ? SCIPvarGetLbLocal(childvar) : refpoint;
+   refpoint = SCIPisGT(scip, refpoint, SCIPvarGetUbLocal(childvar)) ? SCIPvarGetUbLocal(childvar) : refpoint;
+   assert(SCIPisLE(scip, refpoint, SCIPvarGetUbLocal(childvar)) && SCIPisGE(scip, refpoint, SCIPvarGetLbLocal(childvar)));
+
+   if( overestimate )
+   {
+      SCIPaddExpSecant(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), &lincoef, &linconstant,
+         &success);
+      islocal = TRUE; /* secants are only valid locally */
+   }
+   else
+   {
+      SCIPaddExpLinearization(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), refpoint, &lincoef, &linconstant,
+         &success);
+      islocal = FALSE; /* linearization are globally valid */
+   }
+
+   /* create cut if it was successful */
+   if( success )
+   {
+      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "exp_cut", 0, NULL, NULL,
+            overestimate ? -linconstant : -SCIPinfinity(scip),
+            overestimate ? SCIPinfinity(scip) : -linconstant,
+            islocal, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, lincoef) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of expression handler
  */
@@ -219,92 +296,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
    return SCIP_OKAY;
 }
 
-/** helper function to separate a given point; needed for proper unittest */
-static
-SCIP_RETCODE separatePointExp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< exponential expression */
-   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_ROW**            cut                 /**< pointer to store the row */
-   )
-{
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* childvar;
-   SCIP_Bool overestimate;
-   SCIP_Real violation;
-   SCIP_Real refpoint;
-   SCIP_Real lincoef;
-   SCIP_Real linconstant;
-   SCIP_Bool islocal;
-   SCIP_Bool success;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
-   assert(cut != NULL);
-
-   *cut = NULL;
-
-   /* get expression data */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
-   assert(auxvar != NULL);
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-   childvar = SCIPgetConsExprExprAuxVar(child);
-   assert(childvar != NULL);
-
-   /* compute the violation; this determines whether we need to over- or underestimate */
-   violation = exp(SCIPgetSolVal(scip, sol, childvar)) - SCIPgetSolVal(scip, sol, auxvar);
-
-   /* check if there is a violation */
-   if( SCIPisEQ(scip, violation, 0.0) )
-      return SCIP_OKAY;
-
-   /* determine if we need to under- or overestimate */
-   overestimate = SCIPisLT(scip, violation, 0.0);
-   refpoint = SCIPgetSolVal(scip, sol, childvar);
-   lincoef = 0.0;
-   linconstant = 0.0;
-   success = TRUE;
-
-   /* adjust the reference points */
-   refpoint = SCIPisLT(scip, refpoint, SCIPvarGetLbLocal(childvar)) ? SCIPvarGetLbLocal(childvar) : refpoint;
-   refpoint = SCIPisGT(scip, refpoint, SCIPvarGetUbLocal(childvar)) ? SCIPvarGetUbLocal(childvar) : refpoint;
-   assert(SCIPisLE(scip, refpoint, SCIPvarGetUbLocal(childvar)) && SCIPisGE(scip, refpoint, SCIPvarGetLbLocal(childvar)));
-
-   if( overestimate )
-   {
-      SCIPaddExpSecant(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), &lincoef, &linconstant,
-         &success);
-      islocal = TRUE; /* secants are only valid locally */
-   }
-   else
-   {
-      SCIPaddExpLinearization(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), refpoint, &lincoef, &linconstant,
-         &success);
-      islocal = FALSE; /* linearization are globally valid */
-   }
-
-   /* create cut if it was successful */
-   if( success )
-   {
-      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "exp_cut", 0, NULL, NULL,
-            overestimate ? -linconstant : -SCIPinfinity(scip),
-            overestimate ? SCIPinfinity(scip) : -linconstant,
-            islocal, FALSE, FALSE) );
-
-      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
-      SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, lincoef) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
@@ -316,7 +307,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointExp(scip, conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointExp(scip, conshdlr, expr, sol, overestimate, &cut) );
 
    /* failed to compute a cut */
    if( cut == NULL )

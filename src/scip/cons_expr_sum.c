@@ -879,6 +879,8 @@ SCIP_RETCODE separatePointSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
+   SCIP_Bool             underestimate,      /**< should the expression be underestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
@@ -887,6 +889,8 @@ SCIP_RETCODE separatePointSum(
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    SCIP_VAR* auxvar;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
    int c;
 
    assert(scip != NULL);
@@ -923,9 +927,12 @@ SCIP_RETCODE separatePointSum(
    vars[SCIPgetConsExprExprNChildren(expr)] = auxvar;
    coefs[SCIPgetConsExprExprNChildren(expr)] = -1.0;
 
+   /* compute sides */
+   lhs = underestimate ? -exprdata->constant : -SCIPinfinity(scip);
+   rhs = overestimate ? -exprdata->constant : SCIPinfinity(scip);
+
    /* create cut; it is globally valid because it is linear */
-   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sum_cut", 0, NULL, NULL, -exprdata->constant, -exprdata->constant,
-         FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sum_cut", 0, NULL, NULL, lhs, rhs, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *cut, SCIPgetConsExprExprNChildren(expr) + 1, vars, coefs) );
 
    /* release memory */
@@ -941,6 +948,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
+   assert(overestimate || underestimate);
+
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
    assert(exprdata->row == NULL);
@@ -948,7 +957,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
    *infeasible = FALSE;
 
    /* compute initial cut */
-   SCIP_CALL( separatePointSum(scip, conshdlr, expr, &exprdata->row) );
+   SCIP_CALL( separatePointSum(scip, conshdlr, expr, overestimate, underestimate, &exprdata->row) );
    assert(exprdata->row != NULL);
 
    SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->row, FALSE, infeasible) );
@@ -1001,7 +1010,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    /* compute and store cut (might happen if the constraint is not 'initial') */
    if( exprdata->row == NULL )
    {
-      SCIP_CALL( separatePointSum(scip, conshdlr, expr, &exprdata->row) );
+      SCIP_CALL( separatePointSum(scip, conshdlr, expr, overestimate, !overestimate, &exprdata->row) );
    }
    assert(exprdata->row != NULL);
 

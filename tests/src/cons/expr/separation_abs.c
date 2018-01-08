@@ -47,7 +47,7 @@ Test(separation, absolute, .init = setup, .fini = teardown,
    expr->auxvar = auxvar;
 
    /* compute all possible cuts */
-   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, &rowneg, &rowpos, &secant) );
+   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, TRUE, TRUE, &rowneg, &rowpos, &secant) );
 
    /* check left tangent */
    cr_assert(rowneg != NULL);
