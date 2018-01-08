@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1730,6 +1730,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    if( npseudocands == 0 )
       return SCIP_OKAY;
 
+   /* set time limit for NLP solver */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
+   if( !SCIPisInfinity(scip, timelim) )
+      timelim -= SCIPgetSolvingTime(scip);
+   /* possibly exit if time is up (need to check here, since the paramter has to be >= 0) */
+   if ( timelim <= 0.0 )
+      return SCIP_OKAY;
+   SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
+
    *result = SCIP_DIDNOTFIND;
 
 #ifdef SCIP_DEBUG
@@ -1739,12 +1748,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    /* set iteration limit */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, &origiterlim) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, maxnnlpiterations - heurdata->nnlpiterations) );
-
-   /* set time limit for NLP solver */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
-   if( !SCIPisInfinity(scip, timelim) )
-      timelim -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
 
    /* set whether NLP solver should fail fast */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, &origfastfail) );
