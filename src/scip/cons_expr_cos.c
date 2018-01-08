@@ -301,7 +301,6 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
    SCIP_ROW* cuts[4] = {NULL, NULL, NULL, NULL};
    SCIP_Real refpoint;
