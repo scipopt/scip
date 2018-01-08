@@ -1051,7 +1051,6 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
    SCIP_ROW* cuts[4] = {NULL, NULL, NULL, NULL};
    SCIP_Real refpoint;
@@ -1061,8 +1060,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    int i;
 
    /* get expression data */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
-   assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childvar = SCIPgetConsExprExprAuxVar(child);
