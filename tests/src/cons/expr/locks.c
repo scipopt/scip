@@ -79,10 +79,10 @@ SCIP_Bool checkVarLocks(
    int                  nylocksneg          /**< target number of negative locks */
    )
 {
-   return SCIPgetNLocksPosExprExpr(xexpr) == nxlockspos
-            && SCIPgetNLocksNegExprExpr(xexpr) == nxlocksneg
-            && SCIPgetNLocksPosExprExpr(yexpr) == nylockspos
-            && SCIPgetNLocksNegExprExpr(yexpr) == nylocksneg
+   return SCIPgetConsExprExprNLocksPos(xexpr) == nxlockspos
+            && SCIPgetConsExprExprNLocksNeg(xexpr) == nxlocksneg
+            && SCIPgetConsExprExprNLocksPos(yexpr) == nylockspos
+            && SCIPgetConsExprExprNLocksNeg(yexpr) == nylocksneg
             && SCIPvarGetNLocksDown(x) == nxlocksneg
             && SCIPvarGetNLocksUp(x) == nxlockspos
             && SCIPvarGetNLocksDown(y) == nylocksneg

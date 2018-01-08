@@ -1201,7 +1201,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSum)
 
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && *curvature != SCIP_EXPRCURV_UNKNOWN; ++i )
    {
-      SCIP_EXPRCURV childcurv = SCIPgetCurvatureExprExpr(SCIPgetConsExprExprChildren(expr)[i]);
+      SCIP_EXPRCURV childcurv = SCIPgetConsExprExprCurvature(SCIPgetConsExprExprChildren(expr)[i]);
 
       /* consider negative coefficients for the curvature of a child */
       if( exprdata->coefficients[i] < 0.0 )
