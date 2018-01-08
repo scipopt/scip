@@ -4569,6 +4569,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
    if( expr->auxvar != NULL )
    {
       SCIP_RESULT separesult;
+      SCIP_Real violation;
+      SCIP_Bool underestimate;
+      SCIP_Bool overestimate;
       SCIP_Bool separated;
       int ncuts;
       int e;
@@ -4576,6 +4579,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       separesult = SCIP_DIDNOTFIND;
       ncuts = 0;
       separated = FALSE;
+
+      /* decide whether to under- or overestimate */
+      violation = expr->evalvalue - SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
+      underestimate = SCIPisLT(scip, violation, 0.0) && SCIPgetNLocksNegExprExpr(expr) > 0;
+      overestimate = SCIPisGT(scip, violation, 0.0) && SCIPgetNLocksPosExprExpr(expr) > 0;
+
+      /* no violation w.r.t. the original variables -> skip expression */
+      if( !overestimate && !underestimate )
+         return SCIP_OKAY;
 
       /* call the separation callbacks of the nonlinear handlers */
       for( e = 0; e < expr->nenfos; ++e )
