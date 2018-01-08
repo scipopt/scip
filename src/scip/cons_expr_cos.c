@@ -310,8 +310,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
    int i;
 
    /* get expression data */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
-   assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childvar = SCIPgetConsExprExprAuxVar(child);
