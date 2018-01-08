@@ -13,7 +13,7 @@ endif()
 
 set(SCIP_VERSION_MAJOR 5)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 0)
+set(SCIP_VERSION_PATCH 1)
 set(SCIP_VERSION_SUB 0)
 set(SCIP_VERSION_API 17)
 
@@ -56,6 +56,10 @@ option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
 option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
+option(SANITIZE_ADDRESS "should the address sanitizer be enabled in debug mode if available" OFF)
+option(SANITIZE_MEMORY "should the memory sanitizer be enabled in debug mode if available" OFF)
+option(SANITIZE_UNDEFINED "should the undefined behavior sanitizer be enabled in debug mode if available" ON)
+option(SANITIZE_THREAD "should the thread sanitizer be enabled in debug mode if available" OFF)
 option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
@@ -100,8 +104,9 @@ if(WIN32)
     add_definitions(-DNO_STRTOK_R)
 endif()
 if(MSVC)
-    add_definitions(/W4)
+#    add_definitions(/W4)
     add_definitions(/wd4100)
+    add_definitions(/wd4244)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
@@ -188,23 +193,7 @@ add_custom_target(scip_update_githash
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/githash.c
                                            -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
 
-# create a target for updating the current build configuration
-file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
-set(SCIP_BUILDFLAGS_DEFINE  \"#define SCIP_BUILDFLAGS \\\" ARCH=${CMAKE_SYSTEM}${NEWLINE} COMP=${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=${CMAKE_BUILD_TYPE}${NEWLINE}\\\"\")
-if(EXISTS \${DST})
-   file(STRINGS \${DST} SCIP_BUILDFLAGS_DEFINE_OLD)
-endif()
-if(NOT \${SCIP_BUILDFLAGS_DEFINE} STREQUAL \"\${SCIP_BUILDFLAGS_DEFINE_OLD}\")
-   file(WRITE \${DST} \"\${SCIP_BUILDFLAGS_DEFINE}\n\")
-endif()
-")
-add_custom_target(scip_update_buildflags
-                  COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c
-                                           -P ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake)
-
 add_definitions(-DWITH_SCIPDEF)
-
-
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)

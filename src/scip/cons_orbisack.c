@@ -1689,13 +1689,13 @@ SCIP_DECL_CONSPRINT(consPrintOrbisack)
 
 /** checks given solution for feasibility */
 SCIP_RETCODE SCIPcheckSolutionOrbisack(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_SOL*          sol,                /**< solution to check for feasibility */
-   SCIP_VAR**         vars1,              /**< variables of first column */
-   SCIP_VAR**         vars2,              /**< variables of second column */
-   int                nrows,              /**< number of rows */
-   SCIP_Bool          printreason,        /**< whether reason for infeasibility should be printed */
-   SCIP_Bool*         feasible            /**< memory address to store whether sol is feasible */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to check for feasibility */
+   SCIP_VAR**            vars1,              /**< variables of first column */
+   SCIP_VAR**            vars2,              /**< variables of second column */
+   int                   nrows,              /**< number of rows */
+   SCIP_Bool             printreason,        /**< whether reason for infeasibility should be printed */
+   SCIP_Bool*            feasible            /**< memory address to store whether sol is feasible */
    )
 {
    int i;
@@ -1932,7 +1932,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOrbisack) );
 
    /* separation methods */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/orbisack/coverseparation",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/coverseparation",
          "Separate cover inequalities for orbisacks?",
          &conshdlrdata->coverseparation, TRUE, DEFAULT_COVERSEPARATION, NULL, NULL) );
 

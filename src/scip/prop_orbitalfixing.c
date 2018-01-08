@@ -102,8 +102,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
    if ( tabledata->propdata->enabled )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Orbital fixing     :\n");
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :\t%7d\n", tabledata->propdata->nfixedzero);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :\t%7d\n", tabledata->propdata->nfixedone);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :%11d\n", tabledata->propdata->nfixedzero);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :%11d\n", tabledata->propdata->nfixedone);
    }
 
    return SCIP_OKAY;
@@ -641,6 +641,11 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
 
    /* do nothing if we are in a probing node */
    if ( SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   /* do not run after a restart */
+   /* @todo recompute symmetries after a restart */
+   if ( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
    /* get data */

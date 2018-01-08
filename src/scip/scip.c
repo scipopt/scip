@@ -686,6 +686,52 @@ void SCIPprintError(
  * general SCIP methods
  */
 
+/** internal method to create SCIP */
+static
+SCIP_RETCODE doScipCreate(
+   SCIP**                scip                /**< pointer to SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(scip) );
+
+   /* all members are initialized to NULL */
+   BMSclearMemory(*scip);
+
+   /* create a default message handler */
+   SCIP_CALL( SCIPcreateMessagehdlrDefault(&(*scip)->messagehdlr, TRUE, NULL, FALSE) );
+
+   SCIP_CALL( SCIPmemCreate(&(*scip)->mem) );
+   SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->messagehdlr, (*scip)->mem->setmem, *scip) );
+   SCIP_CALL( SCIPinterruptCreate(&(*scip)->interrupt) );
+   SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
+   SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
+
+   /* include additional core functionality */
+   SCIP_CALL( SCIPincludeCorePlugins(*scip) );
+
+   SCIPclockStart((*scip)->totaltime, (*scip)->set);
+
+   SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
+
+   if( strcmp(SCIPlpiGetSolverName(), "NONE") != 0 )
+   {
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc()) );
+   }
+   if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
+   {
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
+   }
+
+#ifdef WITH_ZLIB
+   SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
+#endif
+
+   return SCIP_OKAY;
+}
+
 /** creates and initializes SCIP data structures
  *
  *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() to install your own
@@ -705,56 +751,7 @@ SCIP_RETCODE SCIPcreate(
 {
    assert(scip != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(scip) );
-
-   /* create a default message handler */
-   SCIP_CALL( SCIPcreateMessagehdlrDefault(&(*scip)->messagehdlr, TRUE, NULL, FALSE) );
-
-   SCIP_CALL( SCIPmemCreate(&(*scip)->mem) );
-   SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->messagehdlr, (*scip)->mem->setmem, *scip) );
-   SCIP_CALL( SCIPinterruptCreate(&(*scip)->interrupt) );
-   SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
-   SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
-
-   /* include additional core functionality */
-   SCIP_CALL( SCIPincludeCorePlugins(*scip) );
-
-   SCIPclockStart((*scip)->totaltime, (*scip)->set);
-   (*scip)->stat = NULL;
-   (*scip)->origprob = NULL;
-   (*scip)->origprimal = NULL;
-   (*scip)->eventfilter = NULL;
-   (*scip)->eventqueue = NULL;
-   (*scip)->branchcand = NULL;
-   (*scip)->lp = NULL;
-   (*scip)->nlp = NULL;
-   (*scip)->primal = NULL;
-   (*scip)->tree = NULL;
-   (*scip)->conflict = NULL;
-   (*scip)->transprob = NULL;
-   (*scip)->pricestore = NULL;
-   (*scip)->sepastore = NULL;
-   (*scip)->conflictstore = NULL;
-   (*scip)->cutpool = NULL;
-   (*scip)->delayedcutpool = NULL;
-   (*scip)->reopt = NULL;
-   (*scip)->concurrent = NULL;
-
-   SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
-
-   if( strcmp(SCIPlpiGetSolverName(), "NONE") != 0 )
-   {
-      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc()) );
-   }
-   if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
-   {
-      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
-   }
-
-#ifdef WITH_ZLIB
-   SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
-#endif
+   SCIP_CALL_FINALLY( doScipCreate(scip), (void)SCIPfree(scip) );
 
    return SCIP_OKAY;
 }
@@ -785,7 +782,8 @@ SCIP_RETCODE SCIPfree(
    )
 {
    assert(scip != NULL);
-   assert(*scip != NULL);
+   if( *scip == NULL )
+      return SCIP_OKAY;
 
    SCIP_CALL( checkStage(*scip, "SCIPfree", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 
@@ -13751,7 +13749,7 @@ SCIP_RETCODE checkSolOrig(
 void SCIPupdateSolIntegralityViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real             absviol            /**< absolute violation */
+   SCIP_Real             absviol             /**< absolute violation */
    )
 {
    if( SCIPprimalUpdateViolations(scip->origprimal) )
@@ -13808,7 +13806,7 @@ void SCIPupdateSolLPConsViolation(
 
 /** allow violation updates */
 void SCIPactivateSolViolationUpdates(
-   SCIP*                 scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIPprimalSetUpdateViolations(scip->origprimal, TRUE);
@@ -13816,7 +13814,7 @@ void SCIPactivateSolViolationUpdates(
 
 /** disallow violation updates */
 void SCIPdeactivateSolViolationUpdates(
-   SCIP*                 scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIPprimalSetUpdateViolations(scip->origprimal, FALSE);
@@ -25873,7 +25871,11 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    return scip->set->presol_donotmultaggr || SCIPvarDoNotMultaggr(var);
 }
 
-/** returns whether dual reductions propagation methods and presolvers is allowed */
+/** returns whether dual reduction are allowed during propagation and presolving
+ *
+ *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs and/or dual LPs.
+ */
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -33820,20 +33822,20 @@ void SCIPcomputeBilinEnvelope1(
  */
 static
 void computeBilinEnvelope2(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_Real            x,                  /**< reference point for x */
-   SCIP_Real            y,                  /**< reference point for y */
-   SCIP_Real            mi,                 /**< coefficient of x in the first linear inequality */
-   SCIP_Real            qi,                 /**< constant in the first linear inequality */
-   SCIP_Real            mj,                 /**< coefficient of x in the second linear inequality */
-   SCIP_Real            qj,                 /**< constant in the second linear inequality */
-   SCIP_Real* RESTRICT  xi,                 /**< buffer to store x coordinate of the first point */
-   SCIP_Real* RESTRICT  yi,                 /**< buffer to store y coordinate of the first point */
-   SCIP_Real* RESTRICT  xj,                 /**< buffer to store x coordinate of the second point */
-   SCIP_Real* RESTRICT  yj,                 /**< buffer to store y coordinate of the second point */
-   SCIP_Real* RESTRICT  xcoef,              /**< buffer to store the x coefficient of the envelope */
-   SCIP_Real* RESTRICT  ycoef,              /**< buffer to store the y coefficient of the envelope */
-   SCIP_Real* RESTRICT  constant            /**< buffer to store the constant of the envelope */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             x,                  /**< reference point for x */
+   SCIP_Real             y,                  /**< reference point for y */
+   SCIP_Real             mi,                 /**< coefficient of x in the first linear inequality */
+   SCIP_Real             qi,                 /**< constant in the first linear inequality */
+   SCIP_Real             mj,                 /**< coefficient of x in the second linear inequality */
+   SCIP_Real             qj,                 /**< constant in the second linear inequality */
+   SCIP_Real* RESTRICT   xi,                 /**< buffer to store x coordinate of the first point */
+   SCIP_Real* RESTRICT   yi,                 /**< buffer to store y coordinate of the first point */
+   SCIP_Real* RESTRICT   xj,                 /**< buffer to store x coordinate of the second point */
+   SCIP_Real* RESTRICT   yj,                 /**< buffer to store y coordinate of the second point */
+   SCIP_Real* RESTRICT   xcoef,              /**< buffer to store the x coefficient of the envelope */
+   SCIP_Real* RESTRICT   ycoef,              /**< buffer to store the y coefficient of the envelope */
+   SCIP_Real* RESTRICT   constant            /**< buffer to store the constant of the envelope */
    )
 {
    assert(xi != NULL);
@@ -33889,25 +33891,25 @@ void computeBilinEnvelope2(
  *
  */
 void SCIPcomputeBilinEnvelope2(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_Real            bilincoef,          /**< coefficient of bilinear term */
-   SCIP_Real            lbx,                /**< lower bound on first variable */
-   SCIP_Real            ubx,                /**< upper bound on first variable */
-   SCIP_Real            refpointx,          /**< reference point for first variable */
-   SCIP_Real            lby,                /**< lower bound on second variable */
-   SCIP_Real            uby,                /**< upper bound on second variable */
-   SCIP_Real            refpointy,          /**< reference point for second variable */
-   SCIP_Bool            overestimate,       /**< whether to compute an overestimator instead of an underestimator */
-   SCIP_Real            xcoef1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
-   SCIP_Real            ycoef1,             /**< y coefficient of linear inequality */
-   SCIP_Real            constant1,          /**< constant of linear inequality */
-   SCIP_Real            xcoef2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
-   SCIP_Real            ycoef2,             /**< y coefficient of linear inequality */
-   SCIP_Real            constant2,          /**< constant of linear inequality */
-   SCIP_Real* RESTRICT  lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
-   SCIP_Real* RESTRICT  lincoefy,           /**< buffer to store coefficient of second variable in linearization */
-   SCIP_Real* RESTRICT  linconstant,        /**< buffer to store constant of linearization */
-   SCIP_Bool* RESTRICT  success             /**< buffer to store whether linearization was successful */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             xcoef1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef1,             /**< y coefficient of linear inequality */
+   SCIP_Real             constant1,          /**< constant of linear inequality */
+   SCIP_Real             xcoef2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef2,             /**< y coefficient of linear inequality */
+   SCIP_Real             constant2,          /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
    )
 {
    SCIP_Real mi, mj, qi, qj, xi, xj, yi, yj;
@@ -38235,6 +38237,139 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
    return SCIP_OKAY;
 }
 
+/** helper method that sets up and solves the sub-SCIP for removing infinite values from solutions */
+static
+SCIP_RETCODE setupAndSolveFiniteSolSubscip(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of sub-SCIP*/
+   SCIP_VAR**            origvars,           /**< original problem variables of main SCIP */
+   int                   norigvars,          /**< number of original problem variables of main SCIP */
+   SCIP_Real*            solvals,            /**< array with solution values of variables; infinite ones are replaced */
+   SCIP_Bool*            success             /**< pointer to store if removing infinite values was successful */
+   )
+{
+   SCIP_HASHMAP* varmap;
+   SCIP_VAR* varcopy;
+   SCIP_Real fixval;
+   SCIP_Bool valid;
+   SCIP_SOL* bestsol;
+   int v;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(origvars != NULL);
+   assert(solvals != NULL);
+   assert(success != NULL);
+
+   /* copy the original problem to the sub-SCIP */
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
+   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
+
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+
+   /* in the sub-SCIP, we try to minimize the absolute values of all variables with infinite values in the solution
+    * and fix all other variables to the value they have in the solution
+    */
+   for( v = 0; v < norigvars; ++v )
+   {
+      varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
+      assert(varcopy != NULL);
+
+      fixval = solvals[v];
+
+      if( SCIPisInfinity(scip, fixval) || SCIPisInfinity(scip, -fixval) )
+      {
+         /* If a variable with a finite finite lower bound was set to +infinity, we just change its objective to 1.0
+          * to minimize its value; if a variable with a finite finite upper bound was set to -infinity, we just
+          * change its objective to -1.0 to maximize its value; if a variable is free, we split the variable into
+          * positive and negative part by creating two new non-negative variables and one constraint linking those
+          * variables.
+          */
+         if( SCIPisInfinity(scip, fixval) && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(varcopy)) )
+         {
+            SCIP_CALL( SCIPchgVarObj(subscip, varcopy, 1.0) );
+         }
+         else if( SCIPisInfinity(scip, -fixval) && !SCIPisInfinity(scip, SCIPvarGetUbLocal(varcopy)) )
+         {
+            SCIP_CALL( SCIPchgVarObj(subscip, varcopy, -1.0) );
+         }
+         else
+         {
+            char name[SCIP_MAXSTRLEN];
+            SCIP_VAR* posvar;
+            SCIP_VAR* negvar;
+            SCIP_CONS* linkcons;
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "run");
+            SCIP_CALL( SCIPcreateVar(subscip, &posvar, name, 0.0, SCIPinfinity(scip), 1.0,
+                  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(subscip, posvar) );
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "neg");
+            SCIP_CALL( SCIPcreateVar(subscip, &negvar, name, 0.0, SCIPinfinity(scip), 1.0,
+                  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(subscip, negvar) );
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "linkcons");
+            SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &linkcons, name, 0, NULL, NULL, 0.0, 0.0 ) );
+            SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, varcopy, 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, posvar, -1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, negvar, 1.0) );
+            SCIP_CALL( SCIPaddCons(subscip, linkcons) );
+
+            SCIP_CALL( SCIPreleaseCons(subscip, &linkcons) );
+            SCIP_CALL( SCIPreleaseVar(subscip, &posvar) );
+            SCIP_CALL( SCIPreleaseVar(subscip, &negvar) );
+
+            SCIP_CALL( SCIPchgVarObj(subscip, varcopy, 0.0) );
+         }
+      }
+      else
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool fixed;
+
+         if( SCIPisFeasLT(scip, solvals[v], SCIPvarGetLbLocal(varcopy)) || SCIPisFeasGT(scip, solvals[v], SCIPvarGetUbLocal(varcopy)) )
+         {
+            SCIP_CALL( SCIPchgVarType(subscip, varcopy, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+            assert(!infeasible);
+         }
+
+         /* fix variable to its value in the solution */
+         SCIP_CALL( SCIPfixVar(subscip, varcopy, fixval, &infeasible, &fixed) );
+         assert(!infeasible);
+      }
+   }
+
+   SCIP_CALL( SCIPsolve(subscip) );
+
+   bestsol = SCIPgetBestSol(subscip);
+
+   if( bestsol != NULL )
+   {
+      /* change the stored solution values for variables fixed to infinite values */
+      for( v = 0; v < norigvars; ++v )
+      {
+         varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
+         assert(varcopy != NULL);
+
+         if( (SCIPisInfinity(scip, solvals[v]) || SCIPisInfinity(scip, -solvals[v])) )
+         {
+            solvals[v] = SCIPgetSolVal(subscip, bestsol, varcopy);
+         }
+      }
+   }
+   else
+   {
+      *success = FALSE;
+   }
+
+   SCIPhashmapFree(&varmap);
+
+   return SCIP_OKAY;
+}
+
+
 /** creates a copy of a primal solution, thereby replacing infinite fixings of variables by finite values;
  *  the copy is always defined in the original variable space;
  *  success indicates whether the objective value of the solution was changed by removing infinite values
@@ -38310,12 +38445,8 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
    /* there were variables fixed to infinite values */
    if( v < nfixedvars )
    {
-      SCIP_HASHMAP* varmap;
       SCIP* subscip;
-      SCIP_VAR* varcopy;
-      SCIP_Real fixval;
-      SCIP_Bool valid;
-      SCIP_SOL* bestsol;
+      SCIP_RETCODE retcode;
 
       /* if one of the variables was fixed to infinity in the original problem, we stop here */
       for( v = 0; v < norigvars; ++v )
@@ -38338,112 +38469,12 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       /* create sub-SCIP */
       SCIP_CALL( SCIPcreate(&subscip) );
 
-      /* copy the original problem to the sub-SCIP */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
-      SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
-
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
-
-      /* in the sub-SCIP, we try to minimize the absolute values of all variables with infinite values in the solution
-       * and fix all other variables to the value they have in the solution
-       */
-      for( v = 0; v < norigvars; ++v )
-      {
-         varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
-         assert(varcopy != NULL);
-
-         fixval = solvals[v];
-
-         if( SCIPisInfinity(scip, fixval) || SCIPisInfinity(scip, -fixval) )
-         {
-            /* If a variable with a finite finite lower bound was set to +infinity, we just change its objective to 1.0
-             * to minimize its value; if a variable with a finite finite upper bound was set to -infinity, we just
-             * change its objective to -1.0 to maximize its value; if a variable is free, we split the variable into
-             * positive and negative part by creating two new non-negative variables and one constraint linking those
-             * variables.
-             */
-            if( SCIPisInfinity(scip, fixval) && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(varcopy)) )
-            {
-               SCIP_CALL( SCIPchgVarObj(subscip, varcopy, 1.0) );
-            }
-            else if( SCIPisInfinity(scip, -fixval) && !SCIPisInfinity(scip, SCIPvarGetUbLocal(varcopy)) )
-            {
-               SCIP_CALL( SCIPchgVarObj(subscip, varcopy, -1.0) );
-            }
-            else
-            {
-               char name[SCIP_MAXSTRLEN];
-               SCIP_VAR* posvar;
-               SCIP_VAR* negvar;
-               SCIP_CONS* linkcons;
-
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "run");
-               SCIP_CALL( SCIPcreateVar(subscip, &posvar, name, 0.0, SCIPinfinity(scip), 1.0,
-                     SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-               SCIP_CALL( SCIPaddVar(subscip, posvar) );
-
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "neg");
-               SCIP_CALL( SCIPcreateVar(subscip, &negvar, name, 0.0, SCIPinfinity(scip), 1.0,
-                     SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-               SCIP_CALL( SCIPaddVar(subscip, negvar) );
-
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "linkcons");
-               SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &linkcons, name, 0, NULL, NULL, 0.0, 0.0 ) );
-               SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, varcopy, 1.0) );
-               SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, posvar, -1.0) );
-               SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, negvar, 1.0) );
-               SCIP_CALL( SCIPaddCons(subscip, linkcons) );
-
-               SCIP_CALL( SCIPreleaseCons(subscip, &linkcons) );
-               SCIP_CALL( SCIPreleaseVar(subscip, &posvar) );
-               SCIP_CALL( SCIPreleaseVar(subscip, &negvar) );
-
-               SCIP_CALL( SCIPchgVarObj(subscip, varcopy, 0.0) );
-            }
-         }
-         else
-         {
-            SCIP_Bool infeasible;
-            SCIP_Bool fixed;
-
-            if( SCIPisFeasLT(scip, solvals[v], SCIPvarGetLbLocal(varcopy)) || SCIPisFeasGT(scip, solvals[v], SCIPvarGetUbLocal(varcopy)) )
-            {
-               SCIP_CALL( SCIPchgVarType(subscip, varcopy, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-               assert(!infeasible);
-            }
-
-            /* fix variable to its value in the solution */
-            SCIP_CALL( SCIPfixVar(subscip, varcopy, fixval, &infeasible, &fixed) );
-            assert(!infeasible);
-         }
-      }
-
-      SCIP_CALL( SCIPsolve(subscip) );
-
-      bestsol = SCIPgetBestSol(subscip);
-
-      if( bestsol != NULL )
-      {
-         /* change the stored solution values for variables fixed to infinite values */
-         for( v = 0; v < norigvars; ++v )
-         {
-            varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
-            assert(varcopy != NULL);
-
-            if( (SCIPisInfinity(scip, solvals[v]) || SCIPisInfinity(scip, -solvals[v])) )
-            {
-               solvals[v] = SCIPgetSolVal(subscip, bestsol, varcopy);
-            }
-         }
-      }
-      else
-      {
-         *success = FALSE;
-      }
+      retcode = setupAndSolveFiniteSolSubscip(scip, subscip, origvars, norigvars, solvals, success);
 
       /* free sub-SCIP */
       SCIP_CALL( SCIPfree(&subscip) );
-      SCIPhashmapFree(&varmap);
+
+      SCIP_CALL( retcode );
    }
 
    /* create original solution and set the solution values */
@@ -45434,7 +45465,7 @@ void SCIPprintConcsolverStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConcsolverStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPsyncstoreIsInitialized(scip->syncstore) )
       return;
@@ -46586,7 +46617,7 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
  *
  * @pre The value of relaxfeastol is reset to SCIP_INVALID when initializing the solve (INITSOL).
  * Therefore, this method can only be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOL
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
  * @return previous value of relaxfeastol

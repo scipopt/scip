@@ -2791,7 +2791,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIPdebugMessage("Gurobi primal simplex needed %d iterations to gain LP status %d\n", (int) cnt, lpi->solstat);
 
    /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
-   if( SCIPlpiIsPrimalInfeasible(lpi) && ! SCIPlpiHasPrimalRay(lpi) )
+   assert( lpi->solstat != GRB_INF_OR_UNBD );
+   if( lpi->solstat == GRB_INFEASIBLE )
    {
       int presolve;
 
@@ -2828,6 +2829,87 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("Gurobi primal simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         return SCIP_LPERROR;
+      }
+   }
+   else if ( lpi->solstat == GRB_UNBOUNDED )
+   {
+      /* Unbounded means that there exists an unbounded primal ray. However, this does not state whether the problem is
+       * feasible. Thus, we temporarily set the objective to 0 and solve again. */
+      SCIP_Real* zeroobjcoefs;
+      SCIP_Real* objcoefs;
+      SCIP_Real oldobjcutoff;
+      int grbobjsen;
+      int status;
+      int ncols;
+
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      SCIP_ALLOC( BMSallocMemoryArray(&objcoefs, ncols) );
+      SCIP_ALLOC( BMSallocClearMemoryArray(&zeroobjcoefs, ncols) );
+
+      /* preserve objective coefficients */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, objcoefs) );
+
+      /* set objective to 0 */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, zeroobjcoefs) );
+
+      /* disable cutoff */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, &oldobjcutoff) );
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &grbobjsen) );
+      if ( grbobjsen == GRB_MINIMIZE )
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, GRB_INFINITY) );
+      }
+      else
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, -GRB_INFINITY) );
+         assert( grbobjsen == GRB_MAXIMIZE );
+      }
+
+      /* solve problem again */
+      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+      CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+      lpi->iterations += (int) cnt;
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
+
+      /* restore objective */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, objcoefs) );
+      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+
+      /* restore objective limit */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, oldobjcutoff) );
+
+      BMSfreeMemoryArray(&zeroobjcoefs);
+      BMSfreeMemoryArray(&objcoefs);
+
+      /* possibly correct status */
+      switch ( status )
+      {
+      case GRB_INF_OR_UNBD:
+      case GRB_INFEASIBLE:
+         lpi->solstat = GRB_INFEASIBLE;
+         break;
+
+      case GRB_OPTIMAL:
+         /* We again have to solve the problem to restore possible unbounded rays. */
+         CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+         lpi->iterations += (int) cnt;
+         break;
+
+      case GRB_ITERATION_LIMIT:
+      case GRB_TIME_LIMIT:
+         /* do nothing */
+         break;
+
+         /* GRB_LOADED, GRB_NODE_LIMIT, GRB_CUTOFF, GRB_SOLUTION_LIMIT, GRB_INTERRUPTED, GRB_NUMERIC, GRB_SUBOPTIMAL, GRB_INPROGRESS, GRB_USER_OBJ_LIMIT */
+      default:
+         SCIPerrorMessage("Gurobi returned wrong status %d.\n", status);
+         return SCIP_LPERROR;
       }
    }
 
@@ -2959,6 +3041,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off.\n");
+         return SCIP_LPERROR;
       }
    }
 
@@ -3086,7 +3169,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       if( lpi->solstat == GRB_INF_OR_UNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         SCIPerrorMessage("Gurobi barrier returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         return SCIP_LPERROR;
       }
    }
 
@@ -3546,7 +3630,6 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIP_Bool violated;
    int algo;
    int res;
 
@@ -3557,14 +3640,19 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIPdebugMessage("checking for primal feasibility\n");
 
+   if ( lpi->solstat == GRB_OPTIMAL )
+      return TRUE;
+
    res = GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
    if ( res != 0 )
    {
       SCIPABORT();
       return FALSE; /*lint !e527*/
    }
+   if ( algo != GRB_METHOD_PRIMAL )
+      return FALSE;
 
-   if( lpi->solstat == GRB_ITERATION_LIMIT || lpi->solstat == GRB_UNBOUNDED )
+   if( lpi->solstat == GRB_ITERATION_LIMIT )
    {
       double consviol;
       double boundviol;
@@ -3589,13 +3677,11 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
          return FALSE; /*lint !e527*/
       }
 
-      violated = (consviol > eps || boundviol > eps);
+      if ( consviol <= eps && boundviol <= eps )
+         return TRUE;
    }
-   else
-      violated = FALSE;
 
-   return (lpi->solstat == GRB_OPTIMAL || (!violated && lpi->solstat == GRB_ITERATION_LIMIT && algo == GRB_METHOD_PRIMAL)
-     || (! violated && lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+   return FALSE;
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3800,6 +3886,8 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    )
 {
+   int ret;
+
 #ifndef NDEBUG
    double oval = GRB_INFINITY;
    double obnd = -GRB_INFINITY;
@@ -3817,7 +3905,31 @@ SCIP_RETCODE SCIPlpiGetObjval(
    assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
 
-   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval) );
+   ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
+
+   /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
+    * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queries (e.g., objval,
+    * primal and dual solution), in this case we just return the installed cutoff value minus some epsilon. This is some
+    * kind of hack for the code in conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that is similar to
+    * this case.
+    */
+   if( ret == GRB_ERROR_DATA_NOT_AVAILABLE && lpi->solstat == GRB_CUTOFF )
+   {
+      SCIP_Real dval;
+      SCIP_OBJSEN objsense;
+
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
+
+      if( objsense == SCIP_OBJSEN_MINIMIZE )
+         *objval = dval - 1e-06;
+      else
+         *objval = dval + 1e-06;
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, ret );
+   }
 
    return SCIP_OKAY;
 }

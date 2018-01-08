@@ -39,7 +39,10 @@ SCIP_RETCODE SCIPincludeBanditvtable(
    SCIP_DECL_BANDITRESET ((*banditreset))    /**< update callback for bandit algorithms */
    )
 {
+   SCIP_BANDITVTABLE* vtableptr;
+
    assert(scip != NULL);
+   assert(banditvtable != NULL);
 
    if( SCIPfindBanditvtable(scip, name) != NULL )
    {
@@ -47,10 +50,12 @@ SCIP_RETCODE SCIPincludeBanditvtable(
        return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPbanditvtableCreate(banditvtable, name,
+   SCIP_CALL( SCIPbanditvtableCreate(&vtableptr, name,
          banditfree, banditselect, banditupdate, banditreset) );
 
-   SCIP_CALL( SCIPsetIncludeBanditvtable(scip->set, *banditvtable) );
+   SCIP_CALL( SCIPsetIncludeBanditvtable(scip->set, vtableptr) );
+
+   *banditvtable = vtableptr;
 
    return SCIP_OKAY;
 }

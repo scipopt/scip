@@ -89,7 +89,7 @@
 /* scaling factor for gauge function */
 #define GAUGESCALE 0.99999
 
-#define ROWPREP_SCALEUP_VIOLNONZERO    (10.0*SCIPepsilon(scip))    /**< minimal violation for considering up-scaling of rowprep (we want to avoid upscaling very small violations) */
+#define ROWPREP_SCALEUP_VIOLNONZERO    (minviol / 10.0)            /**< minimal violation for considering up-scaling of rowprep (we want to avoid upscaling very small violations) */
 #define ROWPREP_SCALEUP_MINVIOLFACTOR  2.0                         /**< scale up will target a violation of ~MINVIOLFACTOR*minviol, where minviol is given by caller */
 #define ROWPREP_SCALEUP_MAXMINCOEF     (1.0 / SCIPfeastol(scip))   /**< scale up only if min. coef is below this number (before scaling) */
 #define ROWPREP_SCALEUP_MAXMAXCOEF     SCIPgetHugeValue(scip)      /**< scale up only if max. coef will not exceed this number by scaling */
@@ -13989,7 +13989,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxdisaggrsize",
          "maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)",
-         &conshdlrdata->maxdisaggrsize, TRUE, 127, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxdisaggrsize, FALSE, 1, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/disaggrmergemethod",
          "strategy how to merge independent blocks to reach maxdisaggrsize limit (keep 'b'iggest blocks and merge others; keep 's'mallest blocks and merge other; merge small blocks into bigger blocks to reach 'm'ean sizes)",

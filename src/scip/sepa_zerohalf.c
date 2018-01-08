@@ -62,6 +62,7 @@
 #define DEFAULT_MAXROUNDSROOT        20 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          20 /**< maximal number of zerohalf cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of zerohalf cuts separated per separation round in root node */
+#define DEFAULT_MAXCUTCANDS        2000 /**< maximal number of zerohalf cuts considered per separation round */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.0 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_GOODSCORE           0.9 /**< threshold for score of cut relative to best score to be considered good,
@@ -176,6 +177,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
+   int                   maxcutcands;        /**< maximal number of zerohalf cuts considered per separation round */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
    int                   cutssize;           /**< size of cuts and cutscores arrays */
    int                   ncuts;              /**< number of cuts generated in the current call */
@@ -2147,7 +2149,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    for( k = 0; k < MAXREDUCTIONROUNDS; ++k )
    {
-      int nzeroslackrows;
+      int ncancel;
+
       sepadata->nreductions = 0;
 
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
@@ -2160,20 +2163,32 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       if( mod2matrix.nrows == 0 )
          break;
 
+      if( sepadata->ncuts >= sepadata->maxcutcands )
+      {
+         SCIPdebugMsg(scip, "enough cuts, stopping (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
+         break;
+      }
+
       SCIP_CALL( mod2matrixPreprocessColumns(scip, &mod2matrix, sepadata) );
 
       SCIPdebugMsg(scip, "preprocessed columns (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-      SCIPsortPtr((void**) mod2matrix.rows, compareRowSlack, mod2matrix.nrows);
+      ncancel = mod2matrix.nrows;
+      if( ncancel > 100 )
+      {
+         ncancel = 100;
+         SCIPselectPtr((void**) mod2matrix.rows, compareRowSlack, ncancel, mod2matrix.nrows);
+      }
+
+      SCIPsortPtr((void**) mod2matrix.rows, compareRowSlack, ncancel);
 
       if( mod2matrix.ncols == 0 )
          break;
 
-      nzeroslackrows = mod2matrix.nzeroslackrows;
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
 
       /* apply Prop5 */
-      for( i = 0; i < nzeroslackrows; ++i )
+      for( i = 0; i < ncancel; ++i )
       {
          int j;
          MOD2_COL* col = NULL;
@@ -2181,6 +2196,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
          if( SCIPisPositive(scip, row->slack) || row->nnonzcols == 0 )
             continue;
+
+         SCIPdebugMsg(scip, "processing row %i/%i (%i/%i cuts)\n", i, mod2matrix.nrows, sepadata->ncuts, sepadata->maxcutcands);
 
          for( j = 0; j < row->nnonzcols; ++j )
          {
@@ -2234,7 +2251,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       }
    }
 
-   for( i = 0; i < mod2matrix.nrows; ++i )
+   for( i = 0; i < mod2matrix.nrows && sepadata->ncuts < sepadata->maxcutcands; ++i )
    {
       MOD2_ROW* row = mod2matrix.rows[i];
 
@@ -2385,6 +2402,10 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/" SEPA_NAME "/maxsepacutsroot",
          "maximal number of cmir cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/" SEPA_NAME "/maxcutcands",
+         "maximal number of zerohalf cuts considered per separation round",
+         &sepadata->maxcutcands, FALSE, DEFAULT_MAXCUTCANDS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/maxslack",
          "maximal slack of rows to be used in aggregation",
@@ -2395,11 +2416,11 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/goodscore",
-         "maximal slack of rows to be used in aggregation in the root node",
+         "threshold for score of cut relative to best score to be considered good, so that less strict filtering is applied",
          &sepadata->goodscore, TRUE, DEFAULT_GOODSCORE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/badscore",
-         "maximal slack of rows to be used in aggregation in the root node",
+         "threshold for score of cut relative to best score to be discarded",
          &sepadata->badscore, TRUE, DEFAULT_BADSCORE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/minviol",

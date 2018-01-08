@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -84,13 +84,13 @@ struct SCIP_NlpiProblem
    int                         varssize;     /**< length of variables-related arrays, if allocated */
    int                         conssize;     /**< length of constraints-related arrays, if allocated */
 
-   SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
+   SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known, size varssize */
    SCIP_Bool                   warmstart;    /**< whether we could warmstart the next solve */
 
-   SCIP_Real*                  primalvalues; /**< primal values of variables in solution */
-   SCIP_Real*                  consdualvalues;  /**< dual values of constraints in solution */
-   SCIP_Real*                  varlbdualvalues; /**< dual values of variable lower bounds in solution */
-   SCIP_Real*                  varubdualvalues; /**< dual values of variable upper bounds in solution */
+   SCIP_Real*                  primalvalues; /**< primal values of variables in solution, size varssize */
+   SCIP_Real*                  consdualvalues;  /**< dual values of constraints in solution, size conssize */
+   SCIP_Real*                  varlbdualvalues; /**< dual values of variable lower bounds in solution, size varssize */
+   SCIP_Real*                  varubdualvalues; /**< dual values of variable upper bounds in solution, size varssize */
 
    SCIP_NLPSOLSTAT             solstat;      /**< solution status from last NLP solve */
    SCIP_NLPTERMSTAT            termstat;     /**< termination status from last NLP solve */
@@ -108,21 +108,23 @@ struct SCIP_NlpiProblem
    fint                        iprint;       /**< print verbosity level */
 
    /* cached FilterSQP data */
-   real*                       x;            /**< variable values, size nvars */
-   real*                       c;            /**< constraint value, size nconss */
-   real*                       lam;          /**< duals, size nvars + nconss */
-   real*                       bl;           /**< variable lower bounds and constraint lhs, size nvars + nconss */
-   real*                       bu;           /**< variable upper bounds and constraint rhs, size nvars + nconss */
-   real*                       s;            /**< scaling factors, size nvars + nconss */
-   char*                       cstype;       /**< constraint linearity, size nconss */
-   real*                       a;            /**< gradients values */
-   fint*                       la;           /**< gradients indices */
-   fint*                       hessiannz;    /**< nonzero information about Hessian */
-   real*                       ws;           /**< real workspace */
-   fint*                       lws;          /**< integer workspace */
+   real*                       x;            /**< variable values, size varssize */
+   real*                       c;            /**< constraint value, size conssize */
+   real*                       lam;          /**< duals, size varssize + conssize */
+   real*                       bl;           /**< variable lower bounds and constraint lhs, size varssize + conssize */
+   real*                       bu;           /**< variable upper bounds and constraint rhs, size varssize + conssize */
+   real*                       s;            /**< scaling factors, size varssize + conssize */
+   char*                       cstype;       /**< constraint linearity, size conssize */
+   real*                       a;            /**< gradients values, size la[0]-1 */
+   fint*                       la;           /**< gradients indices, size lasize */
+   int                         lasize;       /**< length of la array */
+   fint*                       hessiannz;    /**< nonzero information about Hessian, size hessiannzsize */
+   int                         hessiannzsize;/**< length of hessiannz array */
+   real*                       ws;           /**< real workspace, size mxwk */
+   fint*                       lws;          /**< integer workspace, size mxiwk */
    fint                        mxwk;         /**< size of real workspace */
    fint                        mxiwk;        /**< size of integer workspace */
-   real*                       evalbuffer;   /**< buffer to cache evaluation results before passing it to FilterSQP */
+   real*                       evalbuffer;   /**< buffer to cache evaluation results before passing it to FilterSQP, size evalbufsize */
    int                         evalbufsize;  /**< size of evaluation buffer */
 };
 
@@ -506,9 +508,11 @@ F77_FUNC(hessian,HESSIAN)(
 
 static
 SCIP_RETCODE setupGradients(
-   SCIP_NLPIORACLE*      oracle,
-   fint**                la,
-   real**                a
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLPIORACLE*      oracle,             /**< NLPI oracle */
+   fint**                la,                 /**< buffer to store pointer to sparsity structure */
+   int*                  lasize,             /**< buffer to store length of *la array */
+   real**                a                   /**< buffer to store pointer to value buffer */
    )
 {
    const int* offset;
@@ -520,6 +524,7 @@ SCIP_RETCODE setupGradients(
    int c;
 
    assert(la != NULL);
+   assert(lasize != NULL);
    assert(a != NULL);
    assert(*la == NULL);
    assert(*a == NULL);
@@ -542,7 +547,8 @@ SCIP_RETCODE setupGradients(
     */
 
    /* need space for la(0) and column indices and rowstarts (1+ncons+1 for objective, constraints, and end (offsets[ncons])) */
-   SCIP_ALLOC( BMSallocMemoryArray(la, 1 + (nvars+nnz) + 1+ncons + 1) );
+   *lasize = 1 + (nvars+nnz) + 1+ncons + 1;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, la, *lasize) );
 
    (*la)[0] = nvars+nnz+1;
 
@@ -559,7 +565,7 @@ SCIP_RETCODE setupGradients(
    for( c = 0; c <= ncons; ++c )
       (*la)[(*la)[0]+1+c] = offset[c] + nvars + 1;  /* shift by nvars for objective, shift by 1 for Fortran */
 
-   SCIP_ALLOC( BMSallocMemoryArray(a, nvars + nnz) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, a, nvars + nnz) );
 
 #if 0  /* enable for debugging Jacobian */
    for( i = 0; i < 1 + (nvars+nnz) + 1+ncons + 1; ++i )
@@ -571,8 +577,10 @@ SCIP_RETCODE setupGradients(
 
 static
 SCIP_RETCODE setupHessian(
-   SCIP_NLPIORACLE*      oracle,
-   fint**                la
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLPIORACLE*      oracle,             /**< NLPI oracle */
+   fint**                la,                 /**< buffer to store pointer to Hessian sparsity structure */
+   int*                  lasize              /**< buffer to store length of *la array */
    )
 {
    const int* offset;
@@ -581,6 +589,10 @@ SCIP_RETCODE setupHessian(
    int nvars;
    int i;
    int v;
+
+   assert(la != NULL);
+   assert(lasize != NULL);
+   assert(*la == NULL);
 
    nvars = SCIPnlpiOracleGetNVars(oracle);
 
@@ -602,7 +614,8 @@ SCIP_RETCODE setupHessian(
     * nvars for rowstarts
     * 1 for first unused position
     */
-   SCIP_ALLOC( BMSallocMemoryArray(la, 1 + nnz + nvars + 1) );
+   *lasize = 1 + nnz + nvars + 1;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, la, *lasize) );
 
    (*la)[0] = nnz+1;
 
@@ -692,7 +705,7 @@ SCIP_RETCODE setupStart(
       if( problem->initguess != NULL )
       {
          /* forget given starting point and try to make up our own */
-         BMSfreeMemoryArray(&problem->initguess);
+         BMSfreeBlockMemoryArray(data->blkmem, &problem->initguess, problem->varssize);
          SCIP_CALL( setupStart(data, problem, x, success) );
       }
    }
@@ -751,10 +764,10 @@ SCIP_RETCODE processSolveOutcome(
          assert(problem->varlbdualvalues == NULL); /* if primalvalues == NULL, then also varlbdualvalues should be NULL */
          assert(problem->varubdualvalues == NULL); /* if primalvalues == NULL, then also varubdualvalues should be NULL */
 
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->primalvalues, problem->varssize) );
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->consdualvalues, problem->conssize) );
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->varlbdualvalues, problem->varssize) );
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->varubdualvalues, problem->varssize) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(nlpidata->blkmem, &problem->primalvalues, problem->varssize) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(nlpidata->blkmem, &problem->consdualvalues, problem->conssize) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(nlpidata->blkmem, &problem->varlbdualvalues, problem->varssize) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(nlpidata->blkmem, &problem->varubdualvalues, problem->varssize) );
       }
       else
       {
@@ -1011,24 +1024,24 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
       SCIP_CALL( SCIPnlpiOracleFree(&(*problem)->oracle) );
    }
 
-   BMSfreeMemoryArrayNull(&(*problem)->initguess);
-   BMSfreeMemoryArrayNull(&(*problem)->primalvalues);
-   BMSfreeMemoryArrayNull(&(*problem)->consdualvalues);
-   BMSfreeMemoryArrayNull(&(*problem)->varlbdualvalues);
-   BMSfreeMemoryArrayNull(&(*problem)->varubdualvalues);
-   BMSfreeMemoryArrayNull(&(*problem)->cstype);
-   BMSfreeMemoryArrayNull(&(*problem)->s);
-   BMSfreeMemoryArrayNull(&(*problem)->bu);
-   BMSfreeMemoryArrayNull(&(*problem)->bl);
-   BMSfreeMemoryArrayNull(&(*problem)->x);
-   BMSfreeMemoryArrayNull(&(*problem)->c);
-   BMSfreeMemoryArrayNull(&(*problem)->lam);
-   BMSfreeMemoryArrayNull(&(*problem)->la);
-   BMSfreeMemoryArrayNull(&(*problem)->a);
-   BMSfreeMemoryArrayNull(&(*problem)->hessiannz);
-   BMSfreeMemoryArrayNull(&(*problem)->lws);
-   BMSfreeMemoryArrayNull(&(*problem)->ws);
-   BMSfreeMemoryArrayNull(&(*problem)->evalbuffer);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->initguess, (*problem)->varssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->primalvalues, (*problem)->varssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->consdualvalues, (*problem)->conssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->varlbdualvalues, (*problem)->varssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->varubdualvalues, (*problem)->varssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->cstype, (*problem)->conssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->s, (*problem)->varssize + (*problem)->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->bu, (*problem)->varssize + (*problem)->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->bl, (*problem)->varssize + (*problem)->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->x, (*problem)->varssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->c, (*problem)->conssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->lam, (*problem)->varssize + (*problem)->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->a, (*problem)->la != NULL ? (*problem)->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->la, (*problem)->lasize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->hessiannz, (*problem)->hessiannzsize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->lws, (*problem)->mxiwk);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->ws, (*problem)->mxwk);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->evalbuffer, (*problem)->evalbufsize);
 
    BMSfreeBlockMemory(data->blkmem, problem);
    assert(*problem == NULL);
@@ -1065,61 +1078,67 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerFilterSQP)
 static
 SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
    int oldnvars;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
+
    oldnvars = SCIPnlpiOracleGetNVars(problem->oracle);
 
    SCIP_CALL( SCIPnlpiOracleAddVars(problem->oracle, nvars, lbs, ubs, varnames) );
 
-   BMSfreeMemoryArrayNull(&problem->initguess);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->initguess, problem->varssize);
    invalidateSolution(problem);
    problem->warmstart = FALSE;
 
    /* increase variables-related arrays in problem, if necessary */
    if( problem->varssize < SCIPnlpiOracleGetNVars(problem->oracle) )
    {
-      problem->varssize = calcGrowSize(SCIPnlpiOracleGetNVars(problem->oracle));
+      int newsize = calcGrowSize(SCIPnlpiOracleGetNVars(problem->oracle));
 
       if( problem->primalvalues != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->primalvalues, problem->varssize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->primalvalues, problem->varssize, newsize) );
       }
 
       if( problem->varlbdualvalues != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->varlbdualvalues, problem->varssize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->varlbdualvalues, problem->varssize, newsize) );
       }
 
       if( problem->varubdualvalues != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->varubdualvalues, problem->varssize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->varubdualvalues, problem->varssize, newsize) );
       }
 
       if( problem->x != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->x, problem->varssize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->x, problem->varssize, newsize) );
       }
 
       if( problem->lam != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->lam, problem->varssize + problem->conssize, newsize + problem->conssize) );  /*lint !e776*/
       }
 
       if( problem->bl != NULL )
       {
          assert(problem->bu != NULL);
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );  /*lint !e776*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->bl, problem->varssize + problem->conssize, newsize + problem->conssize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->bu, problem->varssize + problem->conssize, newsize + problem->conssize) );  /*lint !e776*/
       }
 
       if( problem->s != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->s, problem->varssize + problem->conssize, newsize + problem->conssize) );  /*lint !e776*/
       }
+
+      problem->varssize = newsize;
    }
 
    /* update variable bounds in FilterSQP data */
@@ -1148,11 +1167,11 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
    }
 
    /* gradients information is out of date now (objective gradient is stored in dense form) */
-   BMSfreeMemoryArrayNull(&problem->la);
-   BMSfreeMemoryArrayNull(&problem->a);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->la, problem->lasize);
 
    /* Hessian information is out of date now (no new entries in Hessian, but also empty cols shows up in sparsity info) */
-   BMSfreeMemoryArrayNull(&problem->hessiannz);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->hessiannz, problem->hessiannzsize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1199,11 +1218,15 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 static
 SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
    int oldnconss;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    oldnconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
@@ -1219,36 +1242,38 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
    /* increase constraints-related arrays in problem, if necessary */
    if( SCIPnlpiOracleGetNConstraints(problem->oracle) > problem->conssize )
    {
-      problem->conssize = calcGrowSize(SCIPnlpiOracleGetNConstraints(problem->oracle));
+      int newsize = calcGrowSize(SCIPnlpiOracleGetNConstraints(problem->oracle));
 
       if( problem->consdualvalues != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->consdualvalues, problem->conssize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->consdualvalues, problem->conssize, newsize) );
       }
 
       if( problem->c != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->c, problem->conssize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->c, problem->conssize, newsize) );
       }
 
       if( problem->lam != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->lam, problem->varssize + problem->conssize, problem->varssize + newsize) );  /*lint !e776*/
       }
 
       if( problem->bl != NULL )
       {
          assert(problem->bu != NULL);
          assert(problem->cstype != NULL);
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );  /*lint !e776*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );  /*lint !e776*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->cstype, problem->conssize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->bl, problem->varssize + problem->conssize, problem->varssize + newsize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->bu, problem->varssize + problem->conssize, problem->varssize + newsize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->cstype, problem->conssize, newsize) );
       }
 
       if( problem->s != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(nlpidata->blkmem, &problem->s, problem->varssize + problem->conssize, problem->varssize + newsize) );  /*lint !e776*/
       }
+
+      problem->conssize = newsize;
    }
 
    /* update constraint sides and type in FilterSQP data */
@@ -1268,11 +1293,11 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
    }
 
    /* gradients information is out of date now */
-   BMSfreeMemoryArrayNull(&problem->la);
-   BMSfreeMemoryArrayNull(&problem->a);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->la, problem->lasize);
 
    /* Hessian information is out of date now */
-   BMSfreeMemoryArrayNull(&problem->hessiannz);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->hessiannz, problem->hessiannzsize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1307,9 +1332,14 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
 static
 SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
          constant, nlins, lininds, linvals,
@@ -1321,7 +1351,7 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
    /* gradients info (la,a) should still be ok, as objective gradient is stored in dense form */
 
    /* Hessian information is out of date now */
-   BMSfreeMemoryArrayNull(&problem->hessiannz);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->hessiannz, problem->hessiannzsize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1414,28 +1444,33 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesFilterSQP )
 static
 SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(problem->oracle, dstats) );
 
    /* @TODO keep initguess and bl, bu for remaining variables? */
 
-   BMSfreeMemoryArrayNull(&problem->initguess);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->initguess, problem->varssize);
    invalidateSolution(problem);
    problem->warmstart = FALSE;
 
-   BMSfreeMemoryArrayNull(&problem->bl);
-   BMSfreeMemoryArrayNull(&problem->bu);
-   BMSfreeMemoryArrayNull(&problem->cstype);  /* because we assume that cstype is allocated iff bl is allocated */
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bl, problem->varssize + problem->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bu, problem->varssize + problem->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->cstype, problem->conssize);  /* because we assume that cstype is allocated iff bl is allocated */
 
    /* gradients information is out of date now (objective gradient is stored in dense form) */
-   BMSfreeMemoryArrayNull(&problem->la);
-   BMSfreeMemoryArrayNull(&problem->a);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->la, problem->lasize);
 
    /* Hessian information is out of date now */
-   BMSfreeMemoryArrayNull(&problem->hessiannz);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->hessiannz, problem->hessiannzsize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1453,23 +1488,30 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
 static
 SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleDelConsSet(problem->oracle, dstats) );
 
    invalidateSolution(problem);
    problem->warmstart = FALSE;
 
-   BMSfreeMemoryArrayNull(&problem->bl);
-   BMSfreeMemoryArrayNull(&problem->bu);
-   BMSfreeMemoryArrayNull(&problem->cstype);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bl, problem->varssize + problem->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bu, problem->varssize + problem->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->cstype, problem->conssize);  /* because we assume that cstype is allocated iff bl is allocated */
+
    /* gradients information is out of date now */
-   BMSfreeMemoryArrayNull(&problem->la);
-   BMSfreeMemoryArrayNull(&problem->a);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->la, problem->lasize);
+
    /* Hessian information is out of date now */
-   BMSfreeMemoryArrayNull(&problem->hessiannz);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->hessiannz, problem->hessiannzsize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1487,9 +1529,14 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
 static
 SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(problem->oracle, idx, nvals, varidxs, vals) );
 
@@ -1499,8 +1546,8 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
     * (we only care that sparsity doesn't change, not about actual values in a)
     * TODO free only if coefficients were added or removed (SCIPnlpiOracleChgLinearCoefs() could give feedback)
     */
-   BMSfreeMemoryArrayNull(&problem->la);
-   BMSfreeMemoryArrayNull(&problem->a);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->la, problem->lasize);
 
    /* Hessian information should still be ok */
 
@@ -1521,9 +1568,14 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
 static
 SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nquadelems, quadelems) );
 
@@ -1537,13 +1589,13 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
     * (we only care that sparsity doesn't change, not about actual values in a)
     * TODO free only if coefficients were added or removed (SCIPnlpiOracleChgLinearCoefs() could give feedback)
     */
-   BMSfreeMemoryArrayNull(&problem->la);
-   BMSfreeMemoryArrayNull(&problem->a);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->la, problem->lasize);
 
    /* Hessian sparsity may have changed if elements were added or removed
     * TODO free only if coefficients were added or removed (SCIPnlpiOracleChgLinearCoefs() could give feedback)
     */
-   BMSfreeMemoryArrayNull(&problem->hessiannz);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->hessiannz, problem->hessiannzsize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1560,9 +1612,14 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
 static
 SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExprtree(problem->oracle, idxcons, exprvaridxs, exprtree) );
 
@@ -1573,10 +1630,11 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
       problem->cstype[idxcons] = (SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons) <= 1 ? 'L' : 'N');
 
    /* gradients information (la,a) may have changed */
-   BMSfreeMemoryArrayNull(&problem->la);
-   BMSfreeMemoryArrayNull(&problem->a);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->la, problem->lasize);
+
    /* Hessian information may have changed */
-   BMSfreeMemoryArrayNull(&problem->hessiannz);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->hessiannz, problem->hessiannzsize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1595,19 +1653,25 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
 static
 SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
 
    invalidateSolution(problem);
 
    /* gradients information (la,a) may have changed (?) */
-   BMSfreeMemoryArrayNull(&problem->la);
-   BMSfreeMemoryArrayNull(&problem->a);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->la, problem->lasize);
+
    /* Hessian information may have changed (?) */
-   BMSfreeMemoryArrayNull(&problem->hessiannz);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->hessiannz, problem->hessiannzsize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1646,24 +1710,27 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantFilterSQP )
 static
 SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessFilterSQP )
 {
+   SCIP_NLPIDATA* nlpidata;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
 
    if( primalvalues != NULL )
    {
       if( problem->initguess == NULL )
       {
-         SCIP_ALLOC( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(nlpidata->blkmem, &problem->initguess, problem->varssize) );
       }
-      else
-      {
-         BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
-      }
+      assert(SCIPnlpiOracleGetNVars(problem->oracle) <= problem->varssize);
+      BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
    }
    else
    {
-      BMSfreeMemoryArrayNull(&problem->initguess);
+      BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->initguess, problem->varssize);
    }
 
    return SCIP_OKAY;
@@ -1734,15 +1801,15 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    if( problem->x == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->x, problem->varssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &problem->x, problem->varssize) );
    }
    if( problem->c == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->c, problem->conssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &problem->c, problem->conssize) );
    }
    if( problem->lam == NULL )
    {
-      SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, problem->varssize + problem->conssize) );  /*lint !e776 */
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(data->blkmem, &problem->lam, problem->varssize + problem->conssize) );  /*lint !e776 */
    }
    else
    {
@@ -1750,13 +1817,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    }
    if( problem->s == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &problem->s, problem->varssize + problem->conssize) );
    }
 
    if( problem->la == NULL )
    {
       /* allocate la, a and initialize la for Objective Gradient and Jacobian */
-      SCIP_CALL( setupGradients(problem->oracle, &problem->la, &problem->a) );
+      SCIP_CALL( setupGradients(data->blkmem, problem->oracle, &problem->la, &problem->lasize, &problem->a) );
    }
    /* maximal number entries in a = nvars+nnz */
    maxa = problem->la[0]-1;
@@ -1764,7 +1831,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    if( problem->hessiannz == NULL )
    {
       /* allocate and initialize problem->hessiannz for Hessian */
-      SCIP_CALL( setupHessian(problem->oracle, &problem->hessiannz) );
+      SCIP_CALL( setupHessian(data->blkmem, problem->oracle, &problem->hessiannz, &problem->hessiannzsize) );
    }
 
    /* setup variable bounds, constraint sides, and constraint types */
@@ -1773,9 +1840,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       assert(problem->bu == NULL);
       assert(problem->cstype == NULL);
 
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->cstype, problem->conssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &problem->bl, problem->varssize + problem->conssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &problem->bu, problem->varssize + problem->conssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &problem->cstype, problem->conssize) );
 
       BMScopyMemoryArray(problem->bl, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
       BMScopyMemoryArray(problem->bu, SCIPnlpiOracleGetVarUbs(problem->oracle), n);
@@ -1790,8 +1857,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* buffer for evaluation results (used in setupStart already) */
    if( problem->evalbufsize < MAX3(n, problem->hessiannz[0], maxa) )
    {
-      problem->evalbufsize = calcGrowSize(MAX3(n, problem->hessiannz[0], maxa));
-      SCIP_ALLOC( BMSreallocMemoryArray(&problem->evalbuffer, problem->evalbufsize) );
+      int newsize = calcGrowSize(MAX3(n, problem->hessiannz[0], maxa));
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(data->blkmem, &problem->evalbuffer, problem->evalbufsize, newsize) );
+      problem->evalbufsize = newsize;
    }
 
    /* setup starting point */
@@ -1813,12 +1881,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    if( problem->ws == NULL )
    {
       problem->mxwk = minmxwk;
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->ws, problem->mxwk) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &problem->ws, problem->mxwk) );
    }
    else if( problem->mxwk < minmxwk )
    {
-      problem->mxwk = calcGrowSize(minmxwk);
-      SCIP_ALLOC( BMSreallocMemoryArray(&problem->ws, problem->mxwk) );
+      int newsize = calcGrowSize(minmxwk);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(data->blkmem, &problem->ws, problem->mxwk, newsize) );
+      problem->mxwk = newsize;
    }
 
    /* initial guess of integer workspace size */
@@ -1830,12 +1899,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       assert(!problem->warmstart);
 
       problem->mxiwk = minmxiwk;
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->lws, problem->mxiwk) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &problem->lws, problem->mxiwk) );
    }
    else if( problem->mxiwk < minmxiwk && !problem->warmstart ) /* if warmstart, then lws should remain untouched (n and m didn't change anyway) */
    {
-      problem->mxiwk = calcGrowSize(minmxiwk);
-      SCIP_ALLOC( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) );
+      int newsize = calcGrowSize(minmxiwk);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(data->blkmem, &problem->lws, problem->mxiwk, newsize) );
+      problem->mxiwk = newsize;
    }
    /* in case of some evalerrors, not clearing ws could lead to valgrind warnings about use of uninitialized memory */
    memset(problem->ws, 0, problem->mxwk * sizeof(real));
@@ -1933,25 +2003,27 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       /* increase real workspace, if ifail = 9 (real workspace too small) or ifail = 8 (unexpected ifail from QP solver, often also when workspace too small) */
       if( ifail == 8 || ifail == 9 )
       {
-         problem->mxwk = calcGrowSize(WORKSPACEGROWTHFACTOR*problem->mxwk);
-         if( BMSreallocMemoryArray(&problem->ws, problem->mxwk) == NULL )
+         int newsize = calcGrowSize(WORKSPACEGROWTHFACTOR*problem->mxwk);
+         if( BMSreallocBlockMemoryArray(data->blkmem, &problem->ws, problem->mxwk, newsize) == NULL )
          {
             /* realloc failed: give up NLP solve */
             problem->mxwk = 0;
             break;
          }
+         problem->mxwk = newsize;
       }
 
       /* increase integer workspace, if ifail = 10 (integer workspace too small) or ifail = 8 (unexpected ifail from QP solver, often also when workspace too small) */
       if( ifail == 8 || ifail == 10 )
       {
-         problem->mxiwk = calcGrowSize(WORKSPACEGROWTHFACTOR*problem->mxiwk);
-         if( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) == NULL )
+         int newsize = calcGrowSize(WORKSPACEGROWTHFACTOR*problem->mxiwk);
+         if( BMSreallocBlockMemoryArray(data->blkmem, &problem->lws, problem->mxiwk, newsize) == NULL )
          {
             /* realloc failed: give up NLP solve */
             problem->mxiwk = 0;
             break;
          }
+         problem->mxiwk = newsize;
 
          /* better don't try warmstart for the next trial; warmstart requires that lws is untouched, does extending count as touching? */
          ifail = 0;

@@ -821,7 +821,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
 
    /*************************** Create Conflict ***************************/
-   if( lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT )
+   if( SCIPallColsInLP(scip) && (lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT) )
    {
 #ifndef NOCONFLICT
       /* create own conflict */

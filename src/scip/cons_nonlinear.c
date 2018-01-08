@@ -1781,6 +1781,21 @@ SCIP_RETCODE splitOffLinearPart(
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->exprgraph != NULL);
 
+   if( SCIPexprgraphGetNodeOperator(consdata->exprgraphnode) == SCIP_EXPR_SUM && SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode) == 1 )
+   {
+      /* it can happen that simplifies leaves a node that is an identity w.r.t only child, if that node is the root of an expression, used by a constraint
+       * replace exprgraphnode by its child then
+       */
+      SCIP_EXPRGRAPHNODE* child;
+
+      child = SCIPexprgraphGetNodeChildren(consdata->exprgraphnode)[0];
+      assert(child != NULL);
+
+      SCIPexprgraphCaptureNode(child);
+      SCIP_CALL( SCIPexprgraphReleaseNode(conshdlrdata->exprgraph, &consdata->exprgraphnode) );
+      consdata->exprgraphnode = child;
+   }
+
    /* number of children of expression graph node is a good upper estimate on number of linear variables */
    linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);  /*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &linvars,  linvarssize) );
@@ -3792,7 +3807,7 @@ SCIP_RETCODE computeViolation(
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
          }
 
-         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) );
+         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
       }
       else
       {
@@ -4215,7 +4230,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    assert(SCIPisLE(scip, xlb, xub));
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
    if( !SCIPisFinite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
@@ -4223,7 +4238,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    vallb *= treecoef;
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
    if( !SCIPisFinite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in upper bound\n", exprtreeidx, SCIPconsGetName(cons));

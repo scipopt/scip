@@ -662,13 +662,17 @@ void SCIPvisualFoundSolution(
    SCIP_SOL*             sol                 /**< solution that has been found */
    )
 {
-   if( node == NULL || !set->visual_dispsols || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+   if( node == NULL || ! set->visual_dispsols )
       return;
 
    if( visual->vbcfile != NULL )
    {
       SCIP_Real obj;
       size_t nodenum;
+
+      /* if we are in probing, determine original parent node */
+      while ( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+         node = SCIPnodeGetParent(node);
 
       /* get node num from hash map */
       assert(node != NULL);

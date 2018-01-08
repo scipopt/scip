@@ -318,7 +318,7 @@ SCIP_RETCODE heurExec(
    assert(result != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, SCIPgetNBinVars(scip)) );
-   SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
 
    /* collect all non-fixed binary variables */
    for( i = 0; i < SCIPgetNBinVars(scip); ++i )
@@ -591,7 +591,7 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &ubs);
    SCIPfreeBufferArrayNull(scip, &lbs);
    SCIPfreeBufferArrayNull(scip, &initguess);
-   SCIPnlpStatisticsFree(&nlpstatistics);
+   SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
    SCIPfreeBufferArray(scip, &binvars);
 
    return SCIP_OKAY;

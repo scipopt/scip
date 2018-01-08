@@ -7393,6 +7393,11 @@ SCIP_RETCODE addRelaxation(
    }
    assert(consdata->row != NULL);
 
+   if( consdata->nvars == 0 )
+   {
+      SCIPdebugMsg(scip, "Empty linear constraint enters LP: <%s>\n", SCIPconsGetName(cons));
+   }
+
    /* insert LP row as cut */
    if( !SCIProwIsInLP(consdata->row) )
    {
@@ -7637,7 +7642,12 @@ SCIP_RETCODE propagateCons(
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+
+            /* remove the constraint locally unless it has become empty, in which case it is removed globally */
+            if( consdata->nvars > 0 )
+               SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+            else
+               SCIP_CALL( SCIPdelCons(scip, cons) );
          }
       }
    }

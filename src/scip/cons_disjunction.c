@@ -968,7 +968,7 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
                global, valid) );
       }
 
-      if( *valid && targetrelaxcons != NULL )
+      if( *valid )
       {
          if( name == NULL )
          {
@@ -981,7 +981,10 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
                   initial, enforce, check, local, modifiable, dynamic) );
          }
 
-         SCIP_CALL( SCIPreleaseCons(scip, &targetrelaxcons) );
+         if( targetrelaxcons != NULL )
+         {
+            SCIP_CALL( SCIPreleaseCons(scip, &targetrelaxcons) );
+         }
       }
    }
 

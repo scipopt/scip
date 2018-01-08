@@ -32,6 +32,16 @@ extern "C" {
 #endif
 
 
+
+/** creates the handler for symresack constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrSymresack(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@addtogroup CONSHDLRS
  *
  * @{
@@ -96,13 +106,6 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   );
-
-
-/** creates the handler for symresack constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrSymresack(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 

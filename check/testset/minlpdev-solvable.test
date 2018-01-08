@@ -47,6 +47,7 @@ MINLP/instances/MINLPLib2/data/osil/graphpart_clique-40.osil
 MINLP/instances/MINLPLib2/data/osil/harker.osil
 MINLP/instances/MINLPLib2/data/osil/hvb11.osil
 MINLP/instances/MINLPLib2/data/osil/kall_circles_c6a.osil
+MINLP/instances/MINLPLib2/data/osil/kall_circles_c8a.osil
 MINLP/instances/MINLPLib2/data/osil/kall_circlespolygons_c1p13.osil
 MINLP/instances/MINLPLib2/data/osil/kall_circlesrectangles_c1r12.osil
 MINLP/instances/MINLPLib2/data/osil/kall_circlesrectangles_c1r13.osil
@@ -103,3 +104,4 @@ MINLP/instances/MINLPLib2/data/osil/turkey.osil
 MINLP/instances/MINLPLib2/data/osil/watercontamination0202.osil
 MINLP/instances/MINLPLib2/data/osil/watercontamination0202r.osil
 MINLP/instances/MINLPLib2/data/osil/watercontamination0303r.osil
+MINLP/instances/MINLPLib2/data/osil/waterno2_03.osil
