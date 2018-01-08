@@ -1332,6 +1332,39 @@ SCIP_RETCODE checkMemGlbCons(
    return SCIP_OKAY;
 }
 
+static
+/** reactivate globally valid constraints that were deactivated and necessary to ensure correctness */
+SCIP_RETCODE cleanActiveConss(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int nentries;
+   int i;
+
+   assert(reopt != NULL);
+   assert(reopt->activeconss != NULL);
+
+   nentries = SCIPhashmapGetNEntries(reopt->activeconss);
+
+   /* loop over all entries of the hashmap and reactivate deactivated constraints */
+   for( i = 0; i < nentries; i++ )
+   {
+      SCIP_CONS* cons;
+      SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry(reopt->activeconss, i);
+
+      if( entry == NULL )
+         continue;
+
+      cons = (SCIP_CONS*)SCIPhashmapEntryGetImage(entry);
+      assert(cons != NULL);
+
+       SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** update the bound changes made by constraint propagations during current iteration; stop saving the bound changes if
  *  we reach a branching decision based on a dual information.
  */
@@ -5183,20 +5216,19 @@ SCIP_RETCODE SCIPreoptFree(
       BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
    }
 
+   SCIP_CALL( cleanActiveConss((*reopt), set) );
+   SCIPhashmapFree(&(*reopt)->activeconss);
+   (*reopt)->activeconss = NULL;
+
    if( (*reopt)->glblb != NULL )
    {
       SCIPhashmapFree(&(*reopt)->glblb);
       SCIPhashmapFree(&(*reopt)->glbub);
-      SCIPhashmapFree(&(*reopt)->activeconss);
       (*reopt)->glblb = NULL;
       (*reopt)->glbub = NULL;
-      (*reopt)->activeconss = NULL;
    }
    else
-   {
       assert((*reopt)->glbub == NULL);
-      assert((*reopt)->activeconss == NULL);
-   }
 
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory, (*reopt)->runsize);
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
@@ -7668,7 +7700,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       assert(!SCIPhashmapExists(reopt->activeconss, (void*)cons));
       SCIP_CALL( SCIPhashmapInsert(reopt->activeconss, (void*)cons, (void*)cons) );
 
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      /* don't release the constraint because we would need to capture the constraint anyway */
 
       /* mark the constraint as empty */
       reopt->glbconss[c]->nvars = 0;
@@ -8157,6 +8189,7 @@ SCIP_RETCODE SCIPreoptSaveActiveConss(
       assert(SCIPconsIsActive(conss[i]));
       assert(!SCIPhashmapExists(reopt->activeconss, (void*)conss[i]));
 
+      SCIPconsCapture(conss[i]);
       SCIP_CALL( SCIPhashmapInsert(reopt->activeconss, (void*)conss[i], (void*)conss[i]) );
    }
 
@@ -8239,7 +8272,9 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
 
       cons = (SCIP_CONS*)SCIPhashmapEntryGetImage(entry);
       assert(cons != NULL);
-      assert(!SCIPconsIsDeleted(cons));
+
+       if( SCIPconsIsDeleted(cons) )
+          cons->deleted = FALSE;
 
       /* to ensure that the constraint will be added to all the data structures we need to deactivate the
        * constraint first.
