@@ -1332,8 +1332,8 @@ SCIP_RETCODE checkMemGlbCons(
    return SCIP_OKAY;
 }
 
-static
 /** reactivate globally valid constraints that were deactivated and necessary to ensure correctness */
+static
 SCIP_RETCODE cleanActiveConss(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1359,7 +1359,7 @@ SCIP_RETCODE cleanActiveConss(
       cons = (SCIP_CONS*)SCIPhashmapEntryGetImage(entry);
       assert(cons != NULL);
 
-       SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+      SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
    }
 
    return SCIP_OKAY;
@@ -8273,8 +8273,9 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
       cons = (SCIP_CONS*)SCIPhashmapEntryGetImage(entry);
       assert(cons != NULL);
 
-       if( SCIPconsIsDeleted(cons) )
-          cons->deleted = FALSE;
+      /* it can happen that the constraint got globally deleted */
+      if( SCIPconsIsDeleted(cons) )
+         cons->deleted = FALSE;
 
       /* to ensure that the constraint will be added to all the data structures we need to deactivate the
        * constraint first.
