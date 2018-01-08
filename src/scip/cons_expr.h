@@ -766,17 +766,17 @@ int SCIPcompareConsExprExprs(
 
 /** sets the curvature of an expression */
 EXTERN
-void SCIPsetCurvatureExprExpr(
+void SCIPsetConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_EXPRCURV         curvature           /**< curvature of the expression */
    );
 
 /** returns the curvature of an expression
  *
- *  @note Call SCIPcomputeCurvatureExprExpr before calling this function.
+ *  @note Call SCIPcomputeConsExprExprCurvature before calling this function.
  */
 EXTERN
-SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
+SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
@@ -785,7 +785,7 @@ SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
  */
 EXTERN
-SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
+SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
@@ -795,7 +795,7 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
  *  @note Call SCIPevalConsExprExprInterval before using this function.
  */
 EXTERN
-SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
+SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    int                   childidx            /**< index of child */
@@ -803,13 +803,13 @@ SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
 
 /** returns the number of positive rounding locks of an expression */
 EXTERN
-int SCIPgetNLocksPosExprExpr(
+int SCIPgetConsExprExprNLocksPos(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
 /** returns the number of negative rounding locks of an expression */
 EXTERN
-int SCIPgetNLocksNegExprExpr(
+int SCIPgetConsExprExprNLocksNeg(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 

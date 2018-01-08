@@ -103,10 +103,10 @@ SCIP_RETCODE checkCurvature(
       exprhdlrname, SCIPgetConsExprExprHdlrName(exprhdlr));
 
    /* compute curvature */
-   SCIP_CALL( SCIPcomputeCurvatureExprExpr(scip, expr) );
+   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
 
    /* check curvature */
-   cr_expect(SCIPgetCurvatureExprExpr(expr) == expectedcur, "expect %d, got %d", SCIPgetCurvatureExprExpr(expr), expectedcur);
+   cr_expect(SCIPgetConsExprExprCurvature(expr) == expectedcur, "expect %d, got %d", SCIPgetConsExprExprCurvature(expr), expectedcur);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

@@ -367,6 +367,15 @@ SCIP_RETCODE addExprToQuadexprterms(
          quadexprterm->adjbilinsize = 0;
          quadexprterm->adjbilin = NULL;
 
+         /* when seen in a bilinear term -> store it */
+         if( bilinexprtermidx >= 0 )
+         {
+            SCIP_CALL( nlhdlrexprdataEnsureAdjBilinSize(scip, quadexprterm, quadexprterm->nadjbilin + 1) );
+
+            quadexprterm->adjbilin[quadexprterm->nadjbilin] = bilinexprtermidx;
+            quadexprterm->nadjbilin++;
+         }
+
          /* expr now appears quadratically --> remove it from nlhdlrexprdata->linexprs */
          nlhdlrexprdata->nlinexprs--;
          if( idx < nlhdlrexprdata->nlinexprs )

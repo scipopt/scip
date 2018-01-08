@@ -1327,7 +1327,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
       child = SCIPgetConsExprExprChildren(expr)[idx];
 
       /* NOTE: the monotonicity stored in an expression might be different from the result obtained by
-       * SCIPgetMonotonicityExprExpr
+       * SCIPgetConsExprExprMonotonicity
        */
       monotonicity = expr->monotonicity != NULL ? expr->monotonicity[idx] : SCIP_MONOTONE_UNKNOWN;
 
@@ -1617,6 +1617,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *    POW7: if exponent is 2, its child is not a sum (expand sums)
  *    POW8: if exponent is integer, its child is not a power
  *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
+ *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
  * - is a sum expression such that
  *    SS1: every child is simplified
  *    SS2: no child is a sum
@@ -1939,7 +1940,7 @@ int SCIPcompareConsExprExprs(
 }
 
 /** sets the curvature of an expression */
-void SCIPsetCurvatureExprExpr(
+void SCIPsetConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_EXPRCURV         curvature           /**< curvature of the expression */
    )
@@ -1949,7 +1950,7 @@ void SCIPsetCurvatureExprExpr(
 }
 
 /** returns the curvature of an expression */
-SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
+SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
@@ -1984,7 +1985,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
    }
 
    /* set curvature in expression */
-   SCIPsetCurvatureExprExpr(expr, curv);
+   SCIPsetConsExprExprCurvature(expr, curv);
 
    return SCIP_OKAY;
 }
@@ -1993,7 +1994,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
  */
-SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
+SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
@@ -2019,7 +2020,7 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
  *
  *  @note Call SCIPevalConsExprExprInterval before using this function.
  */
-SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
+SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    int                   childidx            /**< index of child */
@@ -2041,7 +2042,7 @@ SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
 }
 
 /** returns the number of positive rounding locks of an expression */
-int SCIPgetNLocksPosExprExpr(
+int SCIPgetConsExprExprNLocksPos(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
@@ -2050,7 +2051,7 @@ int SCIPgetNLocksPosExprExpr(
 }
 
 /** returns the number of negative rounding locks of an expression */
-int SCIPgetNLocksNegExprExpr(
+int SCIPgetConsExprExprNLocksNeg(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
@@ -5292,7 +5293,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
          assert(consdata->expr != NULL);
 
          /* evaluate all expressions for curvature check */
-         SCIP_CALL( SCIPcomputeCurvatureExprExpr(scip, consdata->expr) );
+         SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
       }
 
       /* tell SCIP that we have something nonlinear */

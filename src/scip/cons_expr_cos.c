@@ -453,7 +453,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
    assert(child != NULL);
    childinterval = SCIPgetConsExprExprInterval(child);
 
-   *curvature = SCIPcomputeCurvatureSin(SCIPgetCurvatureExprExpr(child), childinterval.inf + M_PI_2,
+   *curvature = SCIPcomputeCurvatureSin(SCIPgetConsExprExprCurvature(child), childinterval.inf + M_PI_2,
       childinterval.sup + M_PI_2);
 
    return SCIP_OKAY;

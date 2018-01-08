@@ -1197,7 +1197,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
    assert(child != NULL);
    childinterval = SCIPgetConsExprExprInterval(child);
 
-   *curvature = SCIPcomputeCurvatureSin(SCIPgetCurvatureExprExpr(child), childinterval.inf, childinterval.sup);
+   *curvature = SCIPcomputeCurvatureSin(SCIPgetConsExprExprCurvature(child), childinterval.inf, childinterval.sup);
 
    return SCIP_OKAY;
 }
