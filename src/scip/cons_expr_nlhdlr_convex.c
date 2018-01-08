@@ -128,7 +128,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    assert(nlhdlrexprdata != NULL);
 
    *success = FALSE;
-   curvature = SCIPgetCurvatureExprExpr(expr);
+   curvature = SCIPgetConsExprExprCurvature(expr);
 
    /* check whether expression is nonlinear, convex or concave, and is not handled by another nonlinear handler */
    if( curvature == SCIP_EXPRCURV_CONVEX && !*enforcedabove )
@@ -173,12 +173,12 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
    assert(nlhdlrexprdata->nvarexprs > 0);
    assert(result != NULL);
    assert(ncuts != NULL);
-   assert(SCIPgetCurvatureExprExpr(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetCurvatureExprExpr(expr) == SCIP_EXPRCURV_CONCAVE);
+   assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
    assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
 
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
-   type = SCIPgetCurvatureExprExpr(expr) == SCIP_EXPRCURV_CONVEX ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
+   type = SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
 
    /* compute gradient */
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
