@@ -285,8 +285,7 @@ SCIP_RETCODE separatePointExp(
    }
    else
    {
-      SCIPaddExpLinearization(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), refpoint, &lincoef, &linconstant,
-         &success);
+      SCIPaddExpLinearization(scip, refpoint, SCIPvarIsIntegral(childvar), &lincoef, &linconstant, &success);
       islocal = FALSE; /* linearization are globally valid */
    }
 

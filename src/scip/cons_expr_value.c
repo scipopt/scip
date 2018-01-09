@@ -189,7 +189,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityValue)
    assert(expr != NULL);
    assert(isintegral != NULL);
 
-   /* TODO maybe use SCIPisIntegral() ?*/
    *isintegral = EPSISINT(SCIPgetConsExprExprValueValue(expr), 0.0); /*lint !e835 !e666*/
 
    return SCIP_OKAY;
