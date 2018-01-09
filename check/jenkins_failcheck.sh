@@ -269,6 +269,7 @@ while [ $PERM -le $PERMUTE ]; do
   # check for fixed instances
   echo "Checking for fixed instances."
   RESOLVEDINSTANCES=`awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
+  echo "Temporary database: $TMPDATABASE\n"
   mv $TMPDATABASE $DATABASE
 
 
@@ -379,7 +380,22 @@ if [ "${PERFORMANCE}" == "performance" ]; then
 
   URLSTR=`echo ${IDSTR} | sed 's/,/?compare=/'`
 
-  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}"`
+  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}
+
+"`
+
+  PERM=0
+  while [ $PERM -le $PERMUTE ]; do
+    LASTWEEK=`grep -e ${OLDTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2`
+    THISWEEK=`grep -e ${NEWTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2`
+    if [ "${LASTWEEK}" != "" ]; then
+      if [ "${THISWEEK}" != "" ]; then
+        PERF_MAIL="${PERF_MAIL}Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISWEEK}
+"
+      fi
+    fi
+    PERM=$((PERM + 1))
+  done
 
   SUBJECT="WEEKLYPERF ${SUBJECTINFO}"
   echo -e "$PERF_MAIL" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
