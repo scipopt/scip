@@ -14,6 +14,8 @@ fixed bugs:
 - fixed check for time limit in heur_nlpdiving
 - improved numerics and fixed stop criterion in zirounding heuristic
 - fixed treatment of variable aggregations in knapsack constraint handler that led to wrong propagations
+- fixed LPI status after changing objective in lpi_cpx, lpi_grb, lpi_xprs
+
 
 
 SCIP version 5.0.0

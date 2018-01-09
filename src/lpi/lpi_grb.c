@@ -2209,6 +2209,8 @@ SCIP_RETCODE SCIPlpiChgObj(
 
    SCIPdebugMessage("changing %d objective values in Gurobi\n", ncols);
 
+   invalidateSolution(lpi);
+
    CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_OBJ, ncols, (int*)ind, (SCIP_Real*)obj) );
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 

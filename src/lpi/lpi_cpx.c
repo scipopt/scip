@@ -1672,6 +1672,8 @@ SCIP_RETCODE SCIPlpiChgObj(
 
    SCIPdebugMessage("changing %d objective values in CPLEX\n", ncols);
 
+   invalidateSolution(lpi);
+
    CHECK_ZERO( lpi->messagehdlr, CPXchgobj(lpi->cpxenv, lpi->cpxlp, ncols, ind, obj) );
 
    return SCIP_OKAY;
