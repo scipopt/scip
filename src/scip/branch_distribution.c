@@ -784,7 +784,7 @@ SCIP_RETCODE calcBranchScore(
 
 /** free branchrule data */
 static
-SCIP_RETCODE branchruledataFreeArrays(
+void branchruledataFreeArrays(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
@@ -801,8 +801,6 @@ SCIP_RETCODE branchruledataFreeArrays(
 
       branchruledata->memsize = 0;
    }
-
-   return SCIP_OKAY;
 }
 
 /** add variable to the bound change event queue; skipped if variable is already in there, or if variable has
@@ -1049,7 +1047,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolDistribution)
    assert(branchruledata != NULL);
 
    /* free row arrays when branch-and-bound data is freed */
-   SCIP_CALL( branchruledataFreeArrays(scip, branchruledata) );
+   branchruledataFreeArrays(scip, branchruledata);
 
    /* drop variable events at the end of branch and bound process (cannot be used after restarts, anyway) */
    if( branchruledata->varfilterposs != NULL)
@@ -1084,7 +1082,7 @@ SCIP_DECL_BRANCHFREE(branchFreeDistribution)
    assert(branchruledata != NULL);
 
    /* free internal arrays first */
-   SCIP_CALL( branchruledataFreeArrays(scip, branchruledata) );
+   branchruledataFreeArrays(scip, branchruledata);
    SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
