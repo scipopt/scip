@@ -1304,6 +1304,8 @@ SCIP_RETCODE SCIPlpiChgObj(
 
    SCIPdebugMessage("changing %d objective values in Xpress\n", ncols);
 
+   invalidateSolution(lpi);
+
    CHECK_ZERO( lpi->messagehdlr, XPRSchgobj(lpi->xprslp, ncols, ind, obj) );
 
    return SCIP_OKAY;
