@@ -810,6 +810,15 @@ int SCIPgetConsExprExprNLocksNeg(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** computes integrality information of a given expression and all its subexpressions; the integrality information can
+ * be accessed via SCIPisConsExprExprIntegral()
+ */
+EXTERN
+SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 /** returns whether an expression is integral */
 EXTERN
 SCIP_Bool SCIPisConsExprExprIntegral(

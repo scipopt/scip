@@ -603,7 +603,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityAbs)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(isintegral != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 0);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
