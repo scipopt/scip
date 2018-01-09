@@ -2059,7 +2059,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
          if( SCIPisLT(scip, obj, min) )
          {
-            *bestnewstart = k;
+            if( bestnewstart != NULL )
+               *bestnewstart = k;
             min = obj;
 
             SCIPdebugMessage("\n Obj(run: %d, ncall: %d)=%.12e\n\n", r, (int) nexecs, obj);
@@ -2121,7 +2122,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
             if( SCIPisLT(scip, obj, min) && edgecount <= graph->hoplimit )
             {
                min = obj;
-               *bestnewstart = root;
+               if( bestnewstart != NULL )
+                  *bestnewstart = root;
 
                for( e = 0; e < nedges; e++ )
                   best_result[e] = result[e];
@@ -2255,7 +2257,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
             if( graph->stp_type != STP_DHCSTP || edgecount <= graph->hoplimit )
             {
                min = obj;
-               *bestnewstart = start[r];
+               if( bestnewstart != NULL )
+                  *bestnewstart = start[r];
 
                for( e = 0; e < nedges; e++ )
                   best_result[e] = result[e];

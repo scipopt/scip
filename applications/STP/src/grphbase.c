@@ -1330,23 +1330,24 @@ SCIP_RETCODE graph_pc_getRsap(
          {
             head = p->head[e];
 
-            if( Is_term(p->term[head]) && head != root )
+            if( Is_term(p->term[head]) && p->term2edge[head] >= 0 )
             {
-               for( e2 = p->inpbeg[head]; e2 != EAT_LAST; e2 = p->ieat[e] )
-               {
-                  if( p->tail[e2] == root )
-                  {
-                     p->cost[e2] = FARAWAY;
-                     break;
-                  }
-               }
-               assert(e2 != EAT_LAST);
+               assert(p->grad[head] == 2);
+               assert(head != root);
 
+               while( p->outbeg[head] != EAT_LAST )
+                  graph_edge_del(scip, p, p->outbeg[head], FALSE);
+
+               graph_knot_chg(p, head, -1);
                break;
             }
          }
+
+         p->term2edge[head] = -1;
+         p->term2edge[aterm] = -1;
+
          assert(e != EAT_LAST);
-         p->prize[aterm] = FARAWAY;
+         graph_knot_chg(p, aterm, 0);
       }
    }
 
@@ -2501,7 +2502,17 @@ void graph_edge_hide(
 }
 
 
-
+/** print edge info */
+void graph_edge_printInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   e                   /**< the edge */
+   )
+{
+   const int t = g->tail[e];
+   const int h = g->head[e];
+   printf("e: %d   %d->%d (%d->%d) \n", e, t, h, g->term[t], g->term[h]);
+}
 
 /** changes solution according to given root */
 SCIP_RETCODE graph_sol_reroot(

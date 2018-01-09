@@ -189,6 +189,7 @@ extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RES
 extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
 extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_edge_hide(GRAPH*, int);
+extern void   graph_edge_printInfo(SCIP*, const GRAPH*, int);
 extern void   graph_uncover(GRAPH*);
 extern void   graph_trail(const GRAPH*, int);
 extern void   graph_free(SCIP*, GRAPH*, SCIP_Bool);

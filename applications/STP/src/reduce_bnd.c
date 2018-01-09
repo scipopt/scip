@@ -50,6 +50,153 @@
 #define STP_RED_MINBNDTERMS   500
 
 
+/** find roots for PC and MW during DA reduction */
+static
+void findDaRoots(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const GRAPH*          transgraph,         /**< graph data structure */
+   const SCIP_Real*      cost,               /**< da reduced cost */
+   const SCIP_Real*      bestcost,           /**< best incumbent da reduced cost */
+   SCIP_Real             lpobjval,           /**< da lower bound */
+   SCIP_Real             bestlpobjval,       /**< best da lower bound */
+   SCIP_Real             upperbound,         /**< da upper bound */
+   SCIP_Real             prizesum,           /**< sum of positive prizes */
+   PATH*                 vnoi,               /**< sp array */
+   int*                  state,              /**< array */
+   int*                  pathedge,           /**< array */
+   int*                  vbase,              /**< array */
+   STP_Bool*             nodearrchar,        /**< bool array */
+   int*                  roots,              /**< root array */
+   int*                  rootscount          /**< number of roots */
+)
+{
+   const int root = graph->source;
+   const int nnodes = graph->knots;
+   int nroots = *rootscount;
+
+   /*
+    * get possible roots
+    */
+
+   BMSclearMemoryArray(nodearrchar, nnodes);
+
+   assert(nroots == 0);
+
+   for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+   {
+      const int k = graph->head[e];
+
+      if( Is_pterm(graph->term[k]) )
+      {
+         int l = -1;
+         int e3 = -1;
+
+         for( int e2 = transgraph->inpbeg[k]; e2 != EAT_LAST; e2 = transgraph->ieat[e2] )
+         {
+            if( transgraph->cost[e2] == 0.0 )
+               l = transgraph->tail[e2];
+            else
+               e3 = e2;
+         }
+
+         assert(l >= 0);
+         assert(e3 >= 0);
+         assert(l != root);
+         assert(SCIPisEQ(scip, graph->cost[e], graph->cost[e3]));
+         assert(graph->mark[l]);
+
+         if( SCIPisGT(scip, cost[e3], upperbound - lpobjval) || SCIPisGT(scip, bestcost[e3], upperbound - bestlpobjval) )
+         {
+            assert(SCIPisPositive(scip, graph->prize[l]));
+            assert(nroots < graph->terms);
+
+            roots[nroots++] = l;
+            nodearrchar[l] = TRUE;
+         }
+      }
+   }
+
+   /* could more roots be found? */
+   if( nroots > 0 && graph->terms > 2 )
+   {
+      /*
+       * try to find additional roots by shortest path computations
+       */
+
+      SCIP_Real maxprize = 0.0;
+      int qstart = 0;
+
+      assert(!graph->extended);
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         state[i] = UNKNOWN;
+         vnoi[i].dist = FARAWAY;
+         vnoi[i].edge = UNKNOWN;
+
+         if( Is_term(graph->term[i]) && !nodearrchar[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
+            maxprize = graph->prize[i];
+      }
+
+      for( int rounds = 0; rounds < 10 && qstart != nroots; rounds++ )
+      {
+         const int oldnroots = nroots;
+
+         assert(!graph->extended);
+
+         SCIPdebugMessage("root-finding round %d \n", rounds);
+
+         for( int i = qstart; i < nroots; i++ )
+         {
+            int nlabeled;
+            const int term = roots[i];
+            assert(nodearrchar[term]);
+            assert(Is_term(graph->term[term]));
+            assert(SCIPisPositive(scip, graph->prize[term]));
+
+            /* look for terminals in neighborhood of term */
+            graph_sdPaths(scip, graph, vnoi, graph->cost, maxprize, pathedge, state, vbase, &nlabeled, term, term, 200);
+
+            /* check labelled nodes */
+            for( int k = 0; k < nlabeled; k++ )
+            {
+               const int l = vbase[k];
+
+               assert(graph->mark[l]);
+               assert(state[l] != UNKNOWN);
+
+               if( Is_term(graph->term[l]) && !nodearrchar[l] && vnoi[l].dist <= graph->prize[l] )
+               {
+                  roots[nroots++] = l;
+                  nodearrchar[l] = TRUE;
+
+                  SCIPdebugMessage("added new root %d dist: %f, prize: %f  \n", l, vnoi[l].dist, graph->prize[l]);
+               }
+
+               /* restore data structures */
+               state[l] = UNKNOWN;
+               vnoi[l].dist = FARAWAY;
+               vnoi[l].edge = UNKNOWN;
+            }
+         }
+#ifndef NDEBUG
+         for( int k = 0; k < nnodes; k++ )
+         {
+            assert(state[k] == UNKNOWN);
+            assert(vnoi[k].dist == FARAWAY);
+            assert(vnoi[k].edge == UNKNOWN);
+         }
+#endif
+
+         qstart = oldnroots;
+      }
+      SCIPdebugMessage("number of terminals found by DA: %d \n", nroots);
+   }
+
+   *rootscount = nroots;
+}
+
 
 /** set prize of marked terminals to blocked */
 static
@@ -690,6 +837,8 @@ int reducePcMw(
             {
                if( marked[flipedge(e)] )
                {
+                  assert(!Is_pterm(graph->term[graph->head[e]]));
+
                   graph_edge_del(scip, graph, e, TRUE);
                   graph_edge_del(scip, transgraph, e, FALSE);
                   nfixed++;
@@ -2265,10 +2414,8 @@ SCIP_RETCODE reduce_daPcMw(
       /* with recombination? */
       if( userec && graph->stp_type != STP_MWCSP )
       {
-         int dummy;
-
          /* compute second solution and add to pool */
-         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, &dummy, result2, DEFAULT_HEURRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, 0.0, &success, FALSE) );
+         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, NULL, result2, DEFAULT_HEURRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, 0.0, &success, FALSE) );
          assert(success);
 
          SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
@@ -2340,123 +2487,8 @@ SCIP_RETCODE reduce_daPcMw(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
 
-      /*
-       * get possible roots
-       */
-
-      BMSclearMemoryArray(nodearrchar, nnodes);
-
-      assert(nroots == 0);
-
-      for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-      {
-         int k = graph->head[e];
-
-         if( Is_pterm(graph->term[k]) )
-         {
-            int l = -1;
-            int e3 = -1;
-
-            for( int e2 = transgraph->inpbeg[k]; e2 != EAT_LAST; e2 = transgraph->ieat[e2] )
-            {
-               if( transgraph->cost[e2] == 0.0 )
-                  l = transgraph->tail[e2];
-               else
-                  e3 = e2;
-            }
-
-            assert(l >= 0);
-            assert(e3 >= 0);
-            assert(l != root);
-            assert(SCIPisEQ(scip, graph->cost[e], graph->cost[e3]));
-            assert(graph->mark[l]);
-
-            if( SCIPisGT(scip, cost[e3], upperbound - lpobjval) || SCIPisGT(scip, bestcost[e3], upperbound - bestlpobjval) )
-            {
-               assert(SCIPisPositive(scip, graph->prize[l]));
-               assert(nroots < graph->terms);
-
-               roots[nroots++] = l;
-               nodearrchar[l] = TRUE;
-            }
-         }
-      }
-
-      if( nroots > 0 && graph->terms > 2 )
-      {
-         /*
-          * try to find additional roots by shortest path computations
-          */
-
-         SCIP_Real maxprize = 0.0;
-         int qstart = 0;
-
-         assert(!graph->extended);
-
-         for( int i = 0; i < nnodes; i++ )
-         {
-            state[i] = UNKNOWN;
-            vnoi[i].dist = FARAWAY;
-            vnoi[i].edge = UNKNOWN;
-
-            if( Is_term(graph->term[i]) && !nodearrchar[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
-               maxprize = graph->prize[i];
-         }
-
-         for( int rounds = 0; rounds < 10 && qstart != nroots; rounds++ )
-         {
-            const int oldnroots = nroots;
-
-            assert(!graph->extended);
-
-            SCIPdebugMessage("root-finding round %d \n", rounds);
-
-            for( int i = qstart; i < nroots; i++ )
-            {
-               int nlabeled;
-               const int term = roots[i];
-               assert(nodearrchar[term]);
-               assert(Is_term(graph->term[term]));
-               assert(SCIPisPositive(scip, graph->prize[term]));
-
-               /* look for terminals in neighborhood of term */
-               graph_sdPaths(scip, graph, vnoi, graph->cost, maxprize, pathedge, state, vbase, &nlabeled, term, term, 200);
-
-               /* check labelled nodes */
-               for( int k = 0; k < nlabeled; k++ )
-               {
-                  const int l = vbase[k];
-
-                  assert(graph->mark[l]);
-                  assert(state[l] != UNKNOWN);
-
-                  if( Is_term(graph->term[l]) && !nodearrchar[l] && vnoi[l].dist <= graph->prize[l] )
-                  {
-                     roots[nroots++] = l;
-                     nodearrchar[l] = TRUE;
-
-                     SCIPdebugMessage("added new root %d dist: %f, prize: %f  \n", l, vnoi[l].dist, graph->prize[l]);
-                  }
-
-                  /* restore data structures */
-                  state[l] = UNKNOWN;
-                  vnoi[l].dist = FARAWAY;
-                  vnoi[l].edge = UNKNOWN;
-               }
-            }
-#ifndef NDEBUG
-            for( int k = 0; k < nnodes; k++ )
-            {
-               assert(state[k] == UNKNOWN);
-               assert(vnoi[k].dist == FARAWAY);
-               assert(vnoi[k].edge == UNKNOWN);
-            }
-#endif
-
-            qstart = oldnroots;
-         }
-         SCIPdebugMessage("number of terminals found by DA: %d \n", nroots);
-      }
+      findDaRoots(scip, graph, transgraph, cost, bestcost, lpobjval, bestlpobjval, upperbound, prizesum,
+            vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots);
 
       /* should prize of terminals be changed? */
       if( nroots > 0 && markroots  )
@@ -2557,6 +2589,19 @@ SCIP_RETCODE reduce_daPcMw(
                cost[flipedge(e)] = 0.0;
             else
                cost[e] = 0.0;
+         }
+      }
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( Is_pterm(graph->term[k]) && graph->prize[k] >= prizesum )
+         {
+            for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               const int head = graph->head[e];
+               if( Is_term(graph->term[head]) && head != root )
+                  cost[e] = 0.0;
+            }
          }
       }
 
