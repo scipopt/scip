@@ -258,7 +258,7 @@ while [ $PERM -le $PERMUTE ]; do
   if [ "${PERFORMANCE}" == "performance" ]; then
     ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
     NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
-    echo "${RUNTIMESTAMP} ${NEWRBID} p=${PERM}" >> $RBDB
+    echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM}" >> $RBDB
   else
     ./evalcheck_cluster.sh -r "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
   fi
@@ -358,11 +358,6 @@ Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFRO
   ${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
   fi
   rm ${STILLFAILING}
-
-  if [ "${PERFORMANCE}" == "performance" ]; then
-     SUBJECT="WEEKLYPERF ${SUBJECTINFO}"
-     echo -e "${PERF_MAIL}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-  fi
 
   PERM=$((PERM + 1))
 done
