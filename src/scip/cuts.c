@@ -719,15 +719,17 @@ SCIP_RETCODE cutTightenCoefsQuad(
                return SCIP_OKAY;
             }
 
-            QUAD_ASSIGN(val, intval);
-            QUAD_ARRAY_STORE(cutcoefs, cutinds[i], val);
-
             if( intval != 0.0 )
             {
+               QUAD_ASSIGN(val, intval);
+               QUAD_ARRAY_STORE(cutcoefs, cutinds[i], val);
                ++i;
             }
             else
             {
+               /* this must not be -0.0, otherwise the clean buffer memory is not cleared properly */
+               QUAD_ASSIGN(val, 0.0);
+               QUAD_ARRAY_STORE(cutcoefs, cutinds[i], val);
                --(*cutnnz);
                cutinds[i] = cutinds[*cutnnz];
             }
@@ -1101,14 +1103,15 @@ SCIP_RETCODE cutTightenCoefs(
                return SCIP_OKAY;
             }
 
-            cutcoefs[cutinds[i]] = intval;
-
             if( intval != 0.0 )
             {
+               cutcoefs[cutinds[i]] = intval;
                ++i;
             }
             else
             {
+               /* this must not be -0.0, otherwise the clean buffer memory is not cleared properly */
+               cutcoefs[cutinds[i]] = 0.0;
                --(*cutnnz);
                cutinds[i] = cutinds[*cutnnz];
             }
