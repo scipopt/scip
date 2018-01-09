@@ -1239,6 +1239,19 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySin)
    return SCIP_OKAY;
 }
 
+/** expression integrality detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralitySin)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(isintegral != NULL);
+
+   *isintegral = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sin expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1265,6 +1278,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicitySin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralitySin) );
 
    return SCIP_OKAY;
 }

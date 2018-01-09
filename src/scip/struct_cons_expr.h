@@ -60,6 +60,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)); /**< branching score callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)); /**< curvature detection callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRMONOTONICITY((*monotonicity)); /**< monotonicity detection callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)); /**< integrality detection callback (can be NULL) */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */
@@ -120,6 +121,9 @@ struct SCIP_ConsExpr_Expr
    /* monotonicity information of each child */
    SCIP_MONOTONE*          monotonicity;  /**< array containing monotonicity of expression w.r.t. each children */
    int                     monotonicitysize; /**< length of monotonicity array */
+
+   /* integrality information */
+   SCIP_Bool               isintegral;     /**< flag to store whether an expression is integral */
 };
 
 /** generic data and callback methods of an nonlinear handler */

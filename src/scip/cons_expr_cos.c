@@ -496,6 +496,20 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityCos)
    return SCIP_OKAY;
 }
 
+/** expression integrality detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityCos)
+{  /*lint --e{715}*/
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(isintegral != NULL);
+
+   *isintegral = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for cos expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -522,6 +536,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityCos) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityCos) );
 
    return SCIP_OKAY;
 }

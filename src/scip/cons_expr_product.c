@@ -1991,6 +1991,33 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
    return SCIP_OKAY;
 }
 
+/** expression integrality detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityProduct)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(isintegral != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   *isintegral = EPSISINT(exprdata->coefficient, 0.0); /*lint !e835*/
+
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && *isintegral; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
+      assert(child != NULL);
+
+      *isintegral = SCIPisConsExprExprIntegral(child);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2028,6 +2055,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityProduct) );
 
    return SCIP_OKAY;
 }

@@ -2058,6 +2058,16 @@ int SCIPgetConsExprExprNLocksNeg(
    return expr->nlocksneg;
 }
 
+/** returns whether an expression is integral */
+SCIP_Bool SCIPisConsExprExprIntegral(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->isintegral;
+}
+
+
 /**@} */  /* end of simplifying methods */
 
 /** compares nonlinear handler by priority
@@ -6432,6 +6442,20 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
    return SCIP_OKAY;
 }
 
+/** set the integrality detection callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
+   )
+{ /*lint --e{715}*/
+   assert(exprhdlr != NULL);
+
+   exprhdlr->integrality= integrality;
+
+   return SCIP_OKAY;
+}
 
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(

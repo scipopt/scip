@@ -619,6 +619,23 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityEntropy)
    return SCIP_OKAY;
 }
 
+/** expression integrality detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityEntropy)
+{  /*lint --e{715}*/
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(isintegral != NULL);
+
+   /* TODO it is possible to check for the special case that the child is integral and its bounds are [0,1]; in
+    * this case the entropy expression can only achieve 0 and is thus integral
+    */
+   *isintegral = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for x*log(x) expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -648,6 +665,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityEntropy) );
 
    return SCIP_OKAY;
 }
