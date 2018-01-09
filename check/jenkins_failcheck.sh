@@ -381,7 +381,6 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   URLSTR=`echo ${IDSTR} | sed 's/,/?compare=/'`
 
   PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}
-
 "`
 
   PERM=0
@@ -390,8 +389,8 @@ if [ "${PERFORMANCE}" == "performance" ]; then
     THISWEEK=`grep -e ${NEWTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2`
     if [ "${LASTWEEK}" != "" ]; then
       if [ "${THISWEEK}" != "" ]; then
-        PERF_MAIL="${PERF_MAIL}Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISWEEK}
-"
+        PERF_MAIL="${PERF_MAIL}
+Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISWEEK}"
       fi
     fi
     PERM=$((PERM + 1))
