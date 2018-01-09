@@ -4431,6 +4431,9 @@ SCIP_RETCODE detectNlhdlrs(
       }
 #endif
 
+      /* compute integrality information for all subexpressions */
+      SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, consdata->expr) );
+
       /* create auxiliary variable for root expression */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
       assert(consdata->expr->auxvar != NULL);  /* couldn't this fail if the expression is only a variable? */
@@ -7785,6 +7788,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VARTYPE vartype;
    char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
@@ -7824,8 +7828,11 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%d", conshdlrdata->auxvarid);
    ++conshdlrdata->auxvarid;
 
+   /* type of auxiliary variable depends on integrality information of the expression */
+   vartype = SCIPisConsExprExprIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
+
    SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->interval.inf ),
-      MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, SCIP_VARTYPE_CONTINUOUS) ); /*lint !e666*/
+      MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, vartype) ); /*lint !e666*/
    SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear

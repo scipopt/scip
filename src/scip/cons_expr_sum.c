@@ -1259,7 +1259,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralitySum)
       SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
       assert(child != NULL);
 
-      *isintegral = EPSISINT(exprdata->coefficients[i], 0.0) && SCIPisConsExprExprIntegral(child);
+      *isintegral = EPSISINT(exprdata->coefficients[i], 0.0) && SCIPisConsExprExprIntegral(child); /*lint !e835*/
    }
 
    return SCIP_OKAY;
