@@ -405,7 +405,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_ROW* rows[3];
+   SCIP_ROW* rows[3] = {NULL, NULL, NULL};
    SCIP_Real violation;
    SCIP_Bool infeasible;
    int i;
