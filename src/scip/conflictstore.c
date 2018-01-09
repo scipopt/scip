@@ -17,7 +17,8 @@
  * @brief  methods for storing conflicts
  * @author Jakob Witzig
  */
-
+#define SCIP_DEBUG
+#define SCIP_PRINT_DETAILS
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -323,7 +324,7 @@ SCIP_RETCODE delPosConflict(
    conflictstore->ncbconflicts -= (SCIPsetIsInfinity(set, REALABS(conflictstore->confprimalbnds[pos])) ? 0 : 1);
 
 #ifdef SCIP_PRINT_DETAILS
-   SCIPsetDebugMsg(set, "-> remove conflict at pos=%d with age=%g\n", pos, SCIPconsGetAge(conflict));
+   SCIPsetDebugMsg(set, "-> remove conflict <%s> at pos=%d with age=%g\n", SCIPconsGetName(conflict), pos, SCIPconsGetAge(conflict));
 #endif
 
    /* remove conflict locks */

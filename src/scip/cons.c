@@ -8374,8 +8374,14 @@ SCIP_Bool SCIPconsIsLocked(
    )
 {
    assert(cons != NULL);
+   assert(!cons->check || !cons->conflict);
 
-   return (cons->nlockspos > 0 || cons->nlocksneg > 0);
+   if( cons->check )
+      return (cons->nlockspos > 0 || cons->nlocksneg > 0);
+   else if( cons->conflict )
+      return (cons->nconflictlockspos > 0 || cons->nconflictlocksneg > 0);
+   else
+      return FALSE;
 }
 
 /** get number of times the roundings for variables in constraint are locked */
@@ -8384,8 +8390,14 @@ int SCIPconsGetNLocksPos(
    )
 {
    assert(cons != NULL);
+   assert(!cons->check || !cons->conflict);
 
-   return cons->nlockspos;
+   if( cons->check )
+      return cons->nlockspos;
+   else if( cons->conflict )
+      return cons->nconflictlockspos;
+   else
+      return 0;
 }
 
 /** get number of times the roundings for variables in constraint's negation are locked */
@@ -8394,13 +8406,15 @@ int SCIPconsGetNLocksNeg(
    )
 {
    assert(cons != NULL);
+   assert(!cons->check || !cons->conflict);
 
-   return cons->nlocksneg;
+   if( cons->check )
+      return cons->nlocksneg;
+   else if( cons->conflict )
+      return cons->nconflictlocksneg;
+   else
+      return 0;
 }
-
-
-// TODO: add softlocks getter
-
 
 /** returns if the constraint was already added to a SCIP instance */
 SCIP_Bool SCIPconsIsAdded(

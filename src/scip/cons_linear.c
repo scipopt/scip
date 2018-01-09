@@ -3397,6 +3397,7 @@ SCIP_RETCODE chgLhs(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_LOCKTYPE locktype;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3422,6 +3423,8 @@ SCIP_RETCODE chgLhs(
       assert(consdata->row == NULL);
    }
 
+   locktype = SCIPconsIsConflict(cons) ? SCIP_LOCKTYPE_CONFLICT : SCIP_LOCKTYPE_MODEL;
+
    /* if necessary, update the rounding locks of variables */
    if( SCIPconsIsLocked(cons) )
    {
@@ -3442,11 +3445,11 @@ SCIP_RETCODE chgLhs(
 
             if( SCIPisPositive(scip, vals[v]) )
             {
-               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, locktype, TRUE, FALSE) );
             }
             else
             {
-               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, locktype, FALSE, TRUE) );
             }
          }
       }
@@ -3467,11 +3470,11 @@ SCIP_RETCODE chgLhs(
 
             if( SCIPisPositive(scip, vals[v]) )
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, locktype, TRUE, FALSE) );
             }
             else
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, locktype, FALSE, TRUE) );
             }
          }
       }
@@ -3518,6 +3521,7 @@ SCIP_RETCODE chgRhs(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_LOCKTYPE locktype;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3543,6 +3547,8 @@ SCIP_RETCODE chgRhs(
       assert(consdata->row == NULL);
    }
 
+   locktype = SCIPconsIsConflict(cons) ? SCIP_LOCKTYPE_CONFLICT : SCIP_LOCKTYPE_MODEL;
+
    /* if necessary, update the rounding locks of variables */
    if( SCIPconsIsLocked(cons) )
    {
@@ -3565,11 +3571,11 @@ SCIP_RETCODE chgRhs(
 
             if( SCIPisPositive(scip, vals[v]) )
             {
-               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, locktype, FALSE, TRUE) );
             }
             else
             {
-               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, locktype, TRUE, FALSE) );
             }
          }
       }
@@ -3590,11 +3596,11 @@ SCIP_RETCODE chgRhs(
 
             if( SCIPisPositive(scip, vals[v]) )
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, locktype, FALSE, TRUE) );
             }
             else
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, locktype, TRUE, FALSE) );
             }
          }
       }
