@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2624,7 +2624,7 @@ SCIP_Bool SCIPlpiIsObjlimExc(
 	 return FALSE;
    }
 
-   return ( lpi->clp->isObjectiveLimitTestValid() && (lpi->clp->isPrimalObjectiveLimitReached() || lpi->clp->isDualObjectiveLimitReached()) );
+   return ( lpi->clp->isObjectiveLimitTestValid() && lpi->clp->isDualObjectiveLimitReached() );
 
    /* The above code is equivalent to the following:
    if ( lpi->clp->status() == 0 || (lpi->clp->status() == 1 && lpi->clp->algorithm() < 0) || (lpi->clp->status() == 2 && lpi->clp->algorithm() > 0) )
@@ -3665,10 +3665,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       /* @todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_OBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )
-	 *dval = lpi->clp->primalObjectiveLimit();   // minimization
-      else
-	 *dval = lpi->clp->dualObjectiveLimit();     // maximization
+      *dval = lpi->clp->dualObjectiveLimit();
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->clp->maximumSeconds();
@@ -3704,10 +3701,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       /* @todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_OBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )
-	 lpi->clp->setPrimalObjectiveLimit(dval);   // minimization
-      else
-	 lpi->clp->setDualObjectiveLimit(dval);     // maximization
+      lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       lpi->clp->setMaximumSeconds(dval);

@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="5.0.0"
+VERSION="5.0.0.2"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -71,13 +71,11 @@ $NAME/applications/Coloring/check/CMakeLists.txt \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
 $NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
-$NAME/applications/CMakeLists.txt \
 $NAME/applications/CycleClustering/* $NAME/applications/CycleClustering/doc/* $NAME/applications/CycleClustering/instances/Pot/3Cycle/* \
 $NAME/applications/CycleClustering/instances/Pot/4Cycle/*                 $NAME/applications/CycleClustering/instances/Pot/6Cycle/* \
 $NAME/applications/CycleClustering/check/CMakeLists.txt $NAME/applications/CycleClustering/settings/* \
 $NAME/applications/CycleClustering/check/testset/short.test \
 $NAME/applications/CycleClustering/src/*.c $NAME/applications/CycleClustering/src/*.h \
-$NAME/applications/Coloring/src/*.h \
 $NAME/applications/Scheduler/doc/* \
 $NAME/applications/Scheduler/INSTALL.md \
 $NAME/applications/Scheduler/check/CMakeLists.txt \
@@ -111,7 +109,6 @@ $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
 $NAME/applications/PolySCIP/src/CMakeLists.txt \
 $NAME/applications/PolySCIP/CMakeLists.txt     \
 $NAME/applications/PolySCIP/cmake/PolySCIPConfig.h.in \
-$NAME/applications/STP/INSTALL.md \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \

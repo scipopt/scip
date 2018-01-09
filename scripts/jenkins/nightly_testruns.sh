@@ -72,22 +72,22 @@ ln -s /optimi/kombadon/MINLP check/
 # No setting name should be a prefix of another!
 
 # MIP
-./bin/scip -c "set rand rand 20171124 set diffsave settings/Default_20171124.set q"
-./bin/scip -c "set heur emph aggr set rand rand 20171124 set diffsave settings/heuraggr_20171124.set q"
-./bin/scip -c "set sepa emph aggr set presol emph aggr set heur emph off set rand rand 20171124 set diffsave settings/presolaggr_sepaaggr_heuroff_20171124.set q"
+./bin/scip -c "set rand rand 20180105 set diffsave settings/Default_20180105.set q"
+./bin/scip -c "set heur emph aggr set rand rand 20180105 set diffsave settings/heuraggr_20180105.set q"
+./bin/scip -c "set sepa emph aggr set presol emph aggr set heur emph off set rand rand 20180105 set diffsave settings/presolaggr_sepaaggr_heuroff_20180105.set q"
 for testset in mipdebug; do
-  for setting in Default_20171124 heuraggr_20171124 presolaggr_sepaaggr_heuroff_20171124 default; do
+  for setting in Default_20180105 heuraggr_20180105 presolaggr_sepaaggr_heuroff_20180105 default; do
     make testcluster $SCIP_FLAGS TEST=$testset MEM=6000 TIME=300 SETTINGS=$setting QUEUE=opt-low | check/jenkins_check_results.sh $testset $setting
   done
 done
 
 # MINLP
 ./bin/scip -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
-./bin/scip -c "set numerics checkfeastolfac 1000.0 set rand rand 20171124 set diffsave settings/minlp_Default_20171124.set q"
-./bin/scip -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set rand rand 20171124 set diffsave settings/minlp_heuraggr_20171124.set q"
-./bin/scip -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand 20171124 set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_20171124.set q"
+./bin/scip -c "set numerics checkfeastolfac 1000.0 set rand rand 20180105 set diffsave settings/minlp_Default_20180105.set q"
+./bin/scip -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set rand rand 20180105 set diffsave settings/minlp_heuraggr_20180105.set q"
+./bin/scip -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand 20180105 set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_20180105.set q"
 for testset in MINLP; do
-  for setting in minlp_Default_20171124 minlp_heuraggr_20171124 minlp_presolaggr_sepaaggr_heuroff_20171124 minlp_default; do
+  for setting in minlp_Default_20180105 minlp_heuraggr_20180105 minlp_presolaggr_sepaaggr_heuroff_20180105 minlp_default; do
     make testcluster $SCIP_FLAGS TEST=$testset MEM=6000 TIME=300 SETTINGS=$setting QUEUE=opt-low | check/jenkins_check_results.sh $testset $setting
   done
 done

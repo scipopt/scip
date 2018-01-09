@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2435,6 +2435,10 @@ SCIP_RETCODE SCIPlpiGetSol(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("getting solution\n");
+
+   /* cannot return solution if we reached the objective limit */
+   if ( lpi->solstat == QS_LP_OBJ_LIMIT )
+      return SCIP_LPERROR;
 
    nrows = QSget_rowcount(lpi->prob);
    SCIP_CALL( ensureRowMem(lpi, nrows) );

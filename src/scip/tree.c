@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2312,10 +2312,16 @@ void SCIPnodeUpdateLowerbound(
    if( newbound > node->lowerbound )
    {
       SCIP_Real oldbound;
+      SCIP_Real lowerbound;
 
       oldbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
+
+      lowerbound = SCIPtreeGetLowerbound(tree, set);
+      assert(newbound >= lowerbound);
+      SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
+
       if( node->depth == 0 )
       {
          stat->rootlowerbound = newbound;
@@ -2324,10 +2330,6 @@ void SCIPnodeUpdateLowerbound(
       }
       else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
       {
-         SCIP_Real lowerbound;
-         lowerbound = SCIPtreeGetLowerbound(tree, set);
-         assert(newbound >= lowerbound);
-
          /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
          if( lowerbound > stat->lastlowerbound )
             SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
