@@ -444,8 +444,8 @@ SCIP_RETCODE resetFixingRate(
    assert(fixingrate != NULL);
    fixingrate->increment = FIXINGRATE_STARTINC;
 
-   /* use the middle between the minimum and the maximum fixing rate */
-   fixingrate->targetfixingrate = 0.5 * (fixingrate->minfixingrate + fixingrate->maxfixingrate);
+   /* always start with the most conservative value */
+   fixingrate->targetfixingrate = fixingrate->maxfixingrate;
 
    return SCIP_OKAY;
 }
