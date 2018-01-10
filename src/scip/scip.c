@@ -35,6 +35,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_E on Windows */  /*lint !750 */
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -33746,7 +33748,7 @@ void SCIPaddExpLinearization(
 
       f = SCIPfloor(scip, refpoint);
 
-      coef = (exp(1.0) - 1.0) * exp(f);
+      coef = (M_E - 1.0) * exp(f);
       constant = exp(f) - f * coef;
    }
 
