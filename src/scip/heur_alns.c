@@ -274,6 +274,7 @@ struct NH_Stats
    SCIP_CLOCK*           submipclock;        /**< clock for the sub-SCIP solve */
    SCIP_Longint          usednodes;          /**< total number of used nodes */
    SCIP_Real             oldupperbound;      /**< upper bound before the sub-SCIP started */
+   SCIP_Real             newupperbound;      /**< new upper bound for allrewards mode to work correctly */
    int                   nruns;              /**< number of runs of a neighborhood */
    int                   nrunsbestsol;       /**< number of runs that produced a new incumbent */
    SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
@@ -959,6 +960,9 @@ SCIP_RETCODE transferSolution(
       }
    }
 
+   /* update new upper bound for reward later */
+   runstats->newupperbound = SCIPgetUpperbound(sourcescip);
+
    SCIPfreeBufferArray(sourcescip, &subsolvals);
 
    return SCIP_OKAY;
@@ -1016,6 +1020,7 @@ void initRunStats(
    stats->usednodes = 0L;
    stats->nfixings = 0;
    stats->oldupperbound = SCIPgetUpperbound(scip);
+   stats->newupperbound = SCIPgetUpperbound(scip);
 }
 
 /** update run stats after the sub SCIP was solved */
@@ -2027,7 +2032,7 @@ SCIP_RETCODE getReward(
    assert(runstats->nfixings >= 0);
 
    /* just add one node to avoid division by zero */
-   effort = runstats->usednodes / (SCIP_Real)(heurdata->maxnodes + 1.0);
+   effort = runstats->usednodes / 100.0;
 
    /* assume that every fixed variable linearly reduces the subproblem complexity */
    effort = (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)))) * effort;
@@ -2045,7 +2050,7 @@ SCIP_RETCODE getReward(
       /* the indicator function is simply 1.0 */
       bestsolreward = 1.0;
 
-      ub = SCIPgetUpperbound(scip);
+      ub = runstats->newupperbound;
       lb = SCIPgetLowerbound(scip);
 
       /* compute the closed gap reward */
