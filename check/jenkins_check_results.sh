@@ -2,7 +2,7 @@
 
 #
 # Usage:
-# make testcluster | VERSION=scipbinversion PERF=performance check/jenkins_check_results.sh TESTSET SETTING
+# make testcluster | PERMUTE=permutations VERSION=scipbinversion PERF=performance check/jenkins_check_results.sh TESTSET SETTING
 
 # This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
@@ -28,6 +28,13 @@ else
   export SCIPVERSION="scip-${VERSION}"
   SCIPVERSIONOUTPUT=`bin/${SCIPVERSION}* -v | sed -e 's/$/@/'`
 fi
+
+# if PERMUTE is not a number, set it to 0
+re='^[0-9]+$'
+if ! [[ $PERMUTE =~ $re ]] ; then
+  PERMUTE="0"
+fi
+export PERMUTE
 
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 
