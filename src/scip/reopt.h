@@ -58,6 +58,14 @@ SCIP_RETCODE SCIPreoptFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/* release all variables and constraints captured during reoptimization */
+extern
+SCIP_RETCODE SCIPreoptReleaseData(
+   SCIP_REOPT*           reopt,              /**< pointer to reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+    );
+
 /** returns the number of constraints added by the reoptimization plug-in */
 extern
 int SCIPreoptGetNAddedConss(
