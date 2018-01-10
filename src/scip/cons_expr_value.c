@@ -180,6 +180,20 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityValue)
    return SCIP_OKAY;
 }
 
+/** expression integrality detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityValue)
+{  /*lint --e{715}*/
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(isintegral != NULL);
+
+   *isintegral = EPSISINT(SCIPgetConsExprExprValueValue(expr), 0.0); /*lint !e835 !e666*/
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for constant value expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -201,6 +215,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityValue) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityValue) );
 
    return SCIP_OKAY;
 }

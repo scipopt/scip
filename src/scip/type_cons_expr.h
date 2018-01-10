@@ -364,7 +364,7 @@ extern "C" {
  * input:
  *  - scip : SCIP main data structure
  *  - conshdlr : expression constraint handler
- *  - expr : expression to the curvature for
+ *  - expr : expression to check the curvature for
  *  - curvature : buffer to store the curvature of the expression
  */
 #define SCIP_DECL_CONSEXPR_EXPRCURVATURE(x) SCIP_RETCODE x (\
@@ -379,7 +379,7 @@ extern "C" {
  *
  * input:
  *  - scip : SCIP main data structure
- *  - expr : expression to the curvature for
+ *  - expr : expression to check the monotonicity for
  *  - childidx : index of the considered child expression
  *  - result : buffer to store the monotonicity
  */
@@ -388,6 +388,20 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    int childidx, \
    SCIP_MONOTONE* result)
+
+/** expression integrality detection callback
+ *
+ * The method computes whether an expression evaluates always to an integral value.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to check the integrality for
+ *  - isintegral : buffer to store whether expr is integral
+ */
+#define SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool* isintegral)
 
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum

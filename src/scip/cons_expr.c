@@ -2058,6 +2058,57 @@ int SCIPgetConsExprExprNLocksNeg(
    return expr->nlocksneg;
 }
 
+/** expression walk callback for computing expression integrality */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeIntegrality)
+{
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(data == NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   /* TODO add a tag to store whether an expression has been visited already */
+   expr->isintegral = FALSE;
+
+   if( expr->exprhdlr->integrality != NULL )
+   {
+      /* get curvature from expression handler */
+      SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** computes integrality information of a given expression and all its subexpressions; the integrality information can
+ * be accessed via SCIPisConsExprExprIntegral()
+ */
+SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   /* compute integrality information */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeIntegrality, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** returns whether an expression is integral */
+SCIP_Bool SCIPisConsExprExprIntegral(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->isintegral;
+}
+
+
 /**@} */  /* end of simplifying methods */
 
 /** compares nonlinear handler by priority
@@ -4380,6 +4431,9 @@ SCIP_RETCODE detectNlhdlrs(
       }
 #endif
 
+      /* compute integrality information for all subexpressions */
+      SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, consdata->expr) );
+
       /* create auxiliary variable for root expression */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
       assert(consdata->expr->auxvar != NULL);  /* couldn't this fail if the expression is only a variable? */
@@ -6432,6 +6486,20 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
    return SCIP_OKAY;
 }
 
+/** set the integrality detection callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
+   )
+{ /*lint --e{715}*/
+   assert(exprhdlr != NULL);
+
+   exprhdlr->integrality = integrality;
+
+   return SCIP_OKAY;
+}
 
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -7720,6 +7788,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VARTYPE vartype;
    char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
@@ -7759,8 +7828,11 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%d", conshdlrdata->auxvarid);
    ++conshdlrdata->auxvarid;
 
+   /* type of auxiliary variable depends on integrality information of the expression */
+   vartype = SCIPisConsExprExprIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
+
    SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->interval.inf ),
-      MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, SCIP_VARTYPE_CONTINUOUS) ); /*lint !e666*/
+      MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, vartype) ); /*lint !e666*/
    SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear
