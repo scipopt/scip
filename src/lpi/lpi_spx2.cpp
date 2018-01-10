@@ -1521,7 +1521,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(ind != NULL);
    assert(lhs != NULL);
    assert(rhs != NULL);
-   if( ncols <= 0 )
+   if( nrows <= 0 )
       return SCIP_OKAY;
 
    invalidateSolution(lpi);
