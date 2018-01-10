@@ -315,7 +315,7 @@ void checkChgObj(int dim, int* ind, SCIP_Real* setobj)
    SCIP_CALL( SCIPlpiChgObj(lpi, dim, ind, setobj) );
    SCIP_CALL( SCIPlpiGetObj(lpi, 0, dim-1, obj) );
 
-   cr_assert_arr_eq(obj, setobj, dim);
+   cr_assert_arr_eq(obj, setobj, dim*sizeof(SCIP_Real));
 }
 
 TheoryDataPoints(change, testchgobjectives) =
@@ -349,8 +349,8 @@ void checkChgBounds(int dim, int* ind, SCIP_Real* setlb, SCIP_Real* setub)
    SCIP_CALL( SCIPlpiChgBounds(lpi, dim, ind, setlb, setub) );
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, dim - 1, lb, ub) );
 
-   cr_assert_arr_eq(ub, setub, dim);
-   cr_assert_arr_eq(lb, setlb, dim);
+   cr_assert_arr_eq(ub, setub, dim*sizeof(SCIP_Real));
+   cr_assert_arr_eq(lb, setlb, dim*sizeof(SCIP_Real));
 }
 
 TheoryDataPoints(change, testchgbounds) =
@@ -394,8 +394,8 @@ void checkChgSides(int dim, int* ind, SCIP_Real* setls, SCIP_Real* setrs)
    SCIP_CALL( SCIPlpiChgSides(lpi, dim, ind, setls, setrs) );
    SCIP_CALL( SCIPlpiGetSides(lpi, 0, dim - 1, ls, rs) );
 
-   cr_assert_arr_eq(ls, setls, dim);
-   cr_assert_arr_eq(rs, setrs, dim);
+   cr_assert_arr_eq(ls, setls, dim*sizeof(SCIP_Real));
+   cr_assert_arr_eq(rs, setrs, dim*sizeof(SCIP_Real));
 }
 
 TheoryDataPoints(change, testchgsides) =
@@ -603,11 +603,11 @@ Test(change, testrowmethods)
          SCIP_CALL( SCIPlpiGetRows(lpi, nrowsbefore, nrowsbefore - 1 + nrows, newlhs, newrhs, &newnnonz, newbeg, newind, newval) );
          cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
 
-         cr_assert_arr_eq(lhs, newlhs, nrows);
-         cr_assert_arr_eq(rhs, newrhs, nrows);
-         cr_assert_arr_eq(beg, newbeg, nrows);
-         cr_assert_arr_eq(ind, newind, nnonz);
-         cr_assert_arr_eq(val, newval, nnonz);
+         cr_assert_arr_eq(lhs, newlhs, nrows*sizeof(SCIP_Real));
+         cr_assert_arr_eq(rhs, newrhs, nrows*sizeof(SCIP_Real));
+         cr_assert_arr_eq(beg, newbeg, nrows*sizeof(int));
+         cr_assert_arr_eq(ind, newind, nnonz*sizeof(int));
+         cr_assert_arr_eq(val, newval, nnonz*sizeof(SCIP_Real));
       }
 
       /* checks */
@@ -717,11 +717,11 @@ Test(change, testcolmethods)
          SCIP_CALL( SCIPlpiGetCols(lpi, ncolsbefore, ncolsbefore-1+ncols, newlb, newub, &newnnonz, newbeg, newind, newval) );
          cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
 
-         cr_assert_arr_eq(lb, newlb, ncols);
-         cr_assert_arr_eq(ub, newub, ncols);
-         cr_assert_arr_eq(beg, newbeg, ncols);
-         cr_assert_arr_eq(ind, newind, nnonz);
-         cr_assert_arr_eq(val, newval, nnonz);
+         cr_assert_arr_eq(lb, newlb, ncols*sizeof(SCIP_Real));
+         cr_assert_arr_eq(ub, newub, ncols*sizeof(SCIP_Real));
+         cr_assert_arr_eq(beg, newbeg, ncols*sizeof(int));
+         cr_assert_arr_eq(ind, newind, nnonz*sizeof(int));
+         cr_assert_arr_eq(val, newval, nnonz*sizeof(SCIP_Real));
       }
 
       /* checks */
@@ -833,8 +833,8 @@ Test(change, testlpiwritereadstatemethods)
    SCIP_CALL( SCIPlpiReadState(lpi, fname) );
    SCIP_CALL( SCIPlpiGetBase(lpi, cstat2, rstat2) );
 
-   cr_assert_arr_eq( cstat, cstat2, 2 );
-   cr_assert_arr_eq( rstat, rstat2, 2 );
+   cr_assert_arr_eq( cstat, cstat2, 2*sizeof(int) );
+   cr_assert_arr_eq( rstat, rstat2, 2*sizeof(int) );
 
    SCIP_CALL( SCIPlpiWriteState(lpi, fname2) );
 
@@ -875,10 +875,10 @@ Test(change, testlpiwritereadlpmethods)
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    SCIP_CALL( SCIPlpiGetSol(lpi, &objval2, primsol2, dualsol2, activity2, redcost2) );
    cr_assert_eq( objval, objval2 );
-   cr_assert_arr_eq( primsol, primsol2, 2 );
-   cr_assert_arr_eq( dualsol, dualsol2, 2 );
-   cr_assert_arr_eq( activity, activity2, 2 );
-   cr_assert_arr_eq( redcost, redcost2, 2 );
+   cr_assert_arr_eq( primsol, primsol2, 2*sizeof(SCIP_Real) );
+   cr_assert_arr_eq( dualsol, dualsol2, 2*sizeof(SCIP_Real) );
+   cr_assert_arr_eq( activity, activity2, 2*sizeof(SCIP_Real) );
+   cr_assert_arr_eq( redcost, redcost2, 2*sizeof(SCIP_Real) );
 
    SCIP_CALL( SCIPlpiWriteLP(lpi, fname2) );
 
