@@ -677,14 +677,13 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(name != NULL);
    assert(numlp >= 0);
 
    SCIPdebugMessage("Calling SCIPlpiCreate\n");
 
-   if (!MosekEnv)
+   if (MosekEnv == NULL)
    {
       MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL) );
       MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, (MSKuserhandle_t) messagehdlr, printstr) );
