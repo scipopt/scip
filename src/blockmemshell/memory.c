@@ -3015,7 +3015,7 @@ void BMSfreeBufferMemory_work(
    }
 #endif
 
-#ifdef CHECKMEM
+#ifndef NDEBUG
    /* check that the memory is cleared */
    if( buffer->clean )
    {
