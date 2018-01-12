@@ -65,6 +65,17 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_BILINEXPRTERM*   bilinexprterms;     /**< bilinear expression terms array */
 
    SCIP_EXPRCURV         curvature;          /**< curvature of the quadratic representation of the expression */
+
+   SCIP_INTERVAL         linactivity;        /**< activity of linear part */
+
+   /* activities of quadratic parts as defined in nlhdlrIntervarQuadratic */
+   SCIP_Real             minquadfiniteact;   /**< minimum activity of quadratic part where only terms with finite min
+                                               activity contribute */
+   SCIP_Real             maxquadfiniteact;   /**< maximum activity of quadratic part, where only terms with finite max
+                                               activity contribute */
+   int                   nneginfinityquadact;/**< number of quadratic terms contributing -infinity to activity */
+   int                   nposinfinityquadact;/**< number of quadratic terms contributing +infinity to activity */
+   SCIP_INTERVAL*        quadactivities;     /**< activity of each quadratic function as defined in nlhdlrIntevalQuadratic */
 };
 
 /*
@@ -84,6 +95,8 @@ void freeNlhdlrExprData(
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->linexprs), nlhdlrexprdata->linexprssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->lincoefs), nlhdlrexprdata->linexprssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->bilinexprterms), nlhdlrexprdata->bilinexprtermssize);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->quadactivities), nlhdlrexprdata->nquadexprs);
 
    for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
    {
@@ -464,6 +477,69 @@ SCIP_RETCODE createAuxVar(
    return SCIP_OKAY;
 }
 
+/** solves a quadratic equation \f$ a expr^2 + b expr \in rhs \f$ (with b an interval) and reduces bounds on expr or
+ * deduces infeasibility if possible; expr is quadexpr.expr
+ */
+static
+SCIP_RETCODE propagateBoundsQuadExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_QUADEXPRTERM     quadexpr,           /**< quadratic expression to propagate */
+   SCIP_INTERVAL         b,                  /**< interval acting as linear coefficient */
+   SCIP_INTERVAL         rhs,                /**< interval acting as rhs */
+   SCIP_QUEUE*           reversepropqueue,   /**< queue used in reverse prop, pass to SCIPtightenConsExprExprInterval */
+   SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
+   int*                  nreductions,        /**< buffer to store the number of interval reductions */
+   SCIP_Bool             force               /**< to force tightening */
+   )
+{
+   SCIP_INTERVAL newrange;
+
+   assert(scip != NULL);
+   assert(infeasible != NULL);
+   assert(nreductions != NULL);
+
+   /* compute solution of a*x^2 + b*x \in rhs */
+   if( quadexpr.sqrcoef == 0.0 && SCIPintervalGetInf(b) == 0.0 && SCIPintervalGetSup(b) == 0.0 )
+   {
+      /* relatively easy case: 0.0 \in rhs, thus check if infeasible or just redundant */
+      if( SCIPintervalGetInf(rhs) > 0.0 || SCIPintervalGetSup(rhs) < 0.0 )
+         SCIPintervalSetEmpty(&newrange);
+      else
+         return SCIP_OKAY;
+   }
+   else if( SCIPintervalGetInf(SCIPgetConsExprExprInterval(quadexpr.expr)) >= 0.0 )
+   {
+      SCIP_INTERVAL a;
+
+      /* need only positive solutions */
+      SCIPintervalSet(&a, quadexpr.sqrcoef);
+      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs);
+   }
+   else if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(quadexpr.expr)) <= 0.0 )
+   {
+      /* need only negative solutions */
+      SCIP_INTERVAL a;
+      SCIP_INTERVAL tmp;
+      SCIPintervalSet(&a, quadexpr.sqrcoef);
+      SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
+      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIP_INTERVAL_INFINITY, &tmp, a, tmp, rhs);
+
+      SCIPintervalSetBounds(&newrange, -SCIPintervalGetSup(tmp), -SCIPintervalGetInf(tmp));
+   }
+   else
+   {
+      /* need both positive and negative solution */
+      SCIP_INTERVAL a;
+      SCIPintervalSet(&a, quadexpr.sqrcoef);
+      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs);
+   }
+
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, quadexpr.expr, newrange, force, reversepropqueue, infeasible,
+            nreductions) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -647,7 +723,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    SCIPhashmapFree(&expridx);
 
-   /* check curvature of quadratic function stored in nlexprdata */
+   /* every detected quadratic expression will be handled since we can propagate */
+   *enforcedbelow = FALSE;
+   *enforcedabove = FALSE;
+   *success = TRUE;
+   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadactivities, nlexprdata->nquadexprs) );
+
+   /* check if we can do something more: check curvature of quadratic function stored in nlexprdata */
    SCIP_CALL( checkCurvature(scip, nlexprdata) );
 
    if( nlexprdata->curvature == SCIP_EXPRCURV_CONVEX )
@@ -672,18 +755,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    else
    {
-      SCIPdebugMsg(scip, "expr %p is not convex\n", (void*)expr);
-
-      /* we can't handle this expression, free data */
-      SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
+      /* we cannot do more with this quadratic function */
       return SCIP_OKAY;
    }
 
+   /* quadratic expression is concave/convex -> create aux vars for all expressions stored in nlhdlrexprdata */
    {
       int i;
       SCIP_Bool originalvars = TRUE;
 
-      /* create auxiliary variables for all expressions stored in nlhdlrexprdata */
       for( i = 0; i < nlexprdata->nlinexprs; ++i ) /* expressions appearing linearly */
       {
          SCIP_CALL( createAuxVar(scip, conshdlr, nlexprdata->linexprs[i], &originalvars) );
@@ -879,6 +959,318 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
+/** nonlinear handler forward propagation callback
+ * This method should solve the problem
+ * max/min quad expression over box constraints
+ * However, this problem is difficult so we are satisfied with a proxy.
+ * Interval arithmetic suffices when no variable appears twice, however this is seldom the case, so we try
+ * to take care of the dependency problem to some extent:
+ * 1. partition the quadratic expression as sum of quadratic functions
+ * \sum_l q_l
+ * where q_l = a_l expr_l^2 + \sum_{i \in P_l} b_il expr_i expr_l + c_l expr_l
+ * 2. build interval quadratic functions, i.e, a x^2 + b x where b is an interval as
+ * a_l expr_l^2 + [\sum_{i \in P_l} b_il expr_i + c_l] expr_l
+ * 3. compute \min and \max { a x^2 + b x : x \in [x] } for each interval quadratic, i.e.
+ * \min and \max a_l expr_l^2 + [\sum_{i \in P_l} b_il expr_i + c_l] expr_l : expr_l \in [expr_l]
+ *
+ * In particular, P_l = \{i : expr_l expr_i is a bilinear expr\}. Note that the
+ * order matters, that is in P_l, expr_l is the the first expression.
+ */
+static
+SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
+{ /*lint --e{715}*/
+
+   SCIP_INTERVAL quadactivity;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nquadexprs != 0);
+
+   SCIPdebugMsg(scip, "Interval evaluation of quadratic expr\n");
+#ifdef DEBUG_PROP
+   SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+#endif
+
+   /*
+    * compute activity of linear part
+    */
+   {
+      int i;
+
+      SCIPdebugMsg(scip, "Computing activity of linear part\n");
+
+      SCIPintervalSet(&nlhdlrexprdata->linactivity, SCIPgetConsExprExprSumConstant(expr));
+      for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i )
+      {
+         SCIP_INTERVAL linterminterval;
+
+         SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &linterminterval,
+               SCIPgetConsExprExprInterval(nlhdlrexprdata->linexprs[i]), nlhdlrexprdata->lincoefs[i]);
+         SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &nlhdlrexprdata->linactivity, nlhdlrexprdata->linactivity, linterminterval);
+      }
+
+      SCIPdebugMsg(scip, "Activity of linear part is [%g, %g]\n", nlhdlrexprdata->linactivity.inf,
+            nlhdlrexprdata->linactivity.sup);
+   }
+
+   /*
+    * compute activity of quadratic part
+    */
+   nlhdlrexprdata->nneginfinityquadact = 0;
+   nlhdlrexprdata->nposinfinityquadact = 0;
+   nlhdlrexprdata->minquadfiniteact = 0.0;
+   nlhdlrexprdata->maxquadfiniteact = 0.0;
+   SCIPintervalSet(&quadactivity, 0.0);
+   {
+      SCIP_BILINEXPRTERM* bilinterms;
+      int i;
+
+      bilinterms = nlhdlrexprdata->bilinexprterms;
+      for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
+      {
+         int j;
+         SCIP_INTERVAL b;
+         SCIP_QUADEXPRTERM quadexpr;
+         SCIP_Real quadub;
+         SCIP_Real quadlb;
+
+         /* b = [c_l] */
+         quadexpr = nlhdlrexprdata->quadexprterms[i];
+         SCIPintervalSet(&b, quadexpr.lincoef);
+         for( j = 0; j < quadexpr.nadjbilin; ++j )
+         {
+            SCIP_BILINEXPRTERM bilinterm;
+            SCIP_INTERVAL bterm;
+
+            bilinterm = bilinterms[quadexpr.adjbilin[j]];
+            if( bilinterm.expr1 != quadexpr.expr )
+               continue;
+
+            /* b += [b_jl * expr_j] for j \in P_l */
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, SCIPgetConsExprExprInterval(bilinterm.expr2),
+                  bilinterm.coef);
+            SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
+         }
+
+         /* TODO: under which assumptions do we know that we just need to compute min or max? */
+         quadub = SCIPintervalQuadUpperBound(SCIP_INTERVAL_INFINITY, quadexpr.sqrcoef, b,
+               SCIPgetConsExprExprInterval(quadexpr.expr));
+
+         /* TODO: implement SCIPintervalQuadLowerBound */
+         {
+            SCIP_INTERVAL minusb;
+            SCIPintervalSetBounds(&minusb, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
+
+            quadlb = -SCIPintervalQuadUpperBound(SCIP_INTERVAL_INFINITY, -quadexpr.sqrcoef, minusb,
+                  SCIPgetConsExprExprInterval(quadexpr.expr));
+         }
+
+         SCIPintervalSetBounds(&nlhdlrexprdata->quadactivities[i], quadlb, quadub);
+         SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &quadactivity, quadactivity, nlhdlrexprdata->quadactivities[i]);
+
+         /* get number of +/-infinity contributions and compute finite activity */
+         if( quadlb <= -SCIP_INTERVAL_INFINITY )
+            nlhdlrexprdata->nneginfinityquadact++;
+         else
+         {
+            SCIP_ROUNDMODE roundmode;
+
+            roundmode = SCIPintervalGetRoundingMode();
+            SCIPintervalSetRoundingModeDownwards();
+
+            nlhdlrexprdata->minquadfiniteact += quadlb;
+
+            SCIPintervalSetRoundingMode(roundmode);
+         }
+         if( quadub >= SCIP_INTERVAL_INFINITY )
+            nlhdlrexprdata->nneginfinityquadact++;
+         else
+         {
+            SCIP_ROUNDMODE roundmode;
+
+            roundmode = SCIPintervalGetRoundingMode();
+            SCIPintervalSetRoundingModeDownwards();
+
+            nlhdlrexprdata->maxquadfiniteact += quadub;
+
+            SCIPintervalSetRoundingMode(roundmode);
+         }
+      }
+
+      SCIPdebugMsg(scip, "Activity of quadratic part is [%g, %g]\n", quadactivity.inf, quadactivity.sup);
+   }
+
+   /* interval evaluation is linear activity + quadactivity */
+   SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->linactivity,  quadactivity);
+
+   return SCIP_OKAY;
+}
+
+
+/** nonlinear handler reverse propagation callback
+ * @note: the implemented technique is a proxy for solving the OBBT problem min/max{ x_i : quad expr \in [quad expr] }
+ * and as such can be improved.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - reversepropqueue : expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval
+ *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
+ *  - nreductions : buffer to store the number of interval reductions of all children
+ *  - force : force tightening even if it is below the bound strengthening tolerance
+ */
+static
+SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
+{ /*lint --e{715}*/
+   SCIP_INTERVAL rhs;
+   SCIP_INTERVAL quadactivity;
+
+   SCIPdebugMsg(scip, "Reverse propagation of quadratic expr\n");
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(reversepropqueue != NULL);
+   assert(infeasible != NULL);
+
+   /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)) )
+      return SCIP_OKAY;
+
+   /* propagate linear part in rhs = expr's interval - quadratic activity; first, reconstruct the quadratic activity */
+   SCIPintervalSetBounds(&quadactivity,
+         nlhdlrexprdata->nneginfinityquadact > 0 ? -SCIP_INTERVAL_INFINITY : nlhdlrexprdata->minquadfiniteact,
+         nlhdlrexprdata->nposinfinityquadact > 0 ?  SCIP_INTERVAL_INFINITY : nlhdlrexprdata->maxquadfiniteact);
+
+   SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, SCIPgetConsExprExprInterval(expr), quadactivity);
+   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, nlhdlrexprdata->nlinexprs,
+            nlhdlrexprdata->linexprs, nlhdlrexprdata->lincoefs, SCIPgetConsExprExprSumConstant(expr),
+            rhs, reversepropqueue, infeasible, nreductions, force) );
+
+   /* stop if we find infeasibility */
+   if( *infeasible )
+      return SCIP_OKAY;
+
+   /* propagate quadratic part in expr's interval - linear activity:
+    * linear activity was computed in INTEVAL
+    * One way of achieving this is by, for each expression expr_i, write the quadratic expression as
+    * a_i expr^2_i + expr_i ( \sum_{j \in J_i} b_ij expr_j + c_i ) + quadratic expression in expr_k for k \neq i
+    * then compute the interval b = [\sum_{j \in J_i} b_ij expr_j + c_i], where J_i are all the indices j such that the
+    * bilinear expression expr_i expr_j appears, and use some technique (like the one in nlhdlrIntevalQuadratic), to
+    * evaluate the activity rest_i = [quadratic expression in expr_k for k \neq i].
+    * Then, solve a_i expr_i^2 + b expr_i = [expr] - rest_i =: rhs_i.
+    * However, this might be expensive, specially computing rest_i. Hence, we implement a simpler version, namely,
+    * we use the same partition as in nlhdlrIntevalQuadratic for the bilinear terms. This way,
+    * b = [\sum_{j \in P_i} b_ij expr_j + c_i], where P_i is defined as in nlhdlrIntevalQuadratic, all the indices j
+    * such that expr_i expr_j appears in that order, and rest_i = sum_{k \neq i} [\min q_k, \max q_k] where
+    * q_k = a_k expr_k^2 + [\sum_{j \in P_k} b_jk expr_j + c_k] expr_k. The intervals [\min q_k, \max q_k] were
+    * already computed in nlhdlrIntevalQuadratic, so we just reuse them.
+    *
+    * TODO: in cons_quadratic there seems to be a further technique that tries, when propagating expr_i, to borrow a
+    * bilinear term expr_k expr_i when the quadratic function for expr_k is simple enough.
+    *
+    * TODO: handle simple cases
+    * TODO: identify early when there is nothing to be gain
+    */
+   SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, SCIPgetConsExprExprInterval(expr), nlhdlrexprdata->linactivity);
+   {
+      SCIP_BILINEXPRTERM* bilinterms;
+      int i;
+
+      bilinterms = nlhdlrexprdata->bilinexprterms;
+      for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
+      {
+         int j;
+         SCIP_INTERVAL b;
+         SCIP_INTERVAL rhs_i;
+         SCIP_INTERVAL rest_i;
+         SCIP_QUADEXPRTERM quadexpr;
+
+         /* b = [c_l] */
+         quadexpr = nlhdlrexprdata->quadexprterms[i];
+         SCIPintervalSet(&b, quadexpr.lincoef);
+         for( j = 0; j < quadexpr.nadjbilin; ++j )
+         {
+            SCIP_BILINEXPRTERM bilinterm;
+            SCIP_INTERVAL bterm;
+
+            bilinterm = bilinterms[quadexpr.adjbilin[j]];
+            if( bilinterm.expr1 != quadexpr.expr )
+               continue;
+
+            /* b += [b_jl * expr_j] for j \in P_l */
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, SCIPgetConsExprExprInterval(bilinterm.expr2),
+                  bilinterm.coef);
+            SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
+         }
+
+         /* rhs_i = rhs - rest_i.
+          * to compute rest_i = [\sum_{k \neq i} q_k] we just have to substract
+          * the activity of q_i from quadactivity; however, care must be taken about infinities;
+          * if [q_i].sup = +infinity and there is = 1 contributing +infinity -> rest_i.sup = maxquadfiniteact
+          * if [q_i].sup = +infinity and there is > 1 contributing +infinity -> rest_i.sup = +infinity
+          * if [q_i].sup = finite and there is > 0 contributing +infinity -> rest_i.sup = +infinity
+          * if [q_i].sup = finite and there is = 0 contributing +infinity -> rest_i.sup = maxquadfiniteact - [q_i].sup
+          *
+          * the same holds when replacing sup with inf, + with - and max(quadfiniteact) with min(...)
+          */
+         /* compute rest_i.sup */
+         if( SCIPintervalGetSup(nlhdlrexprdata->quadactivities[i]) < SCIP_INTERVAL_INFINITY &&
+               nlhdlrexprdata->nposinfinityquadact == 0 )
+         {
+            SCIP_ROUNDMODE roundmode;
+
+            roundmode = SCIPintervalGetRoundingMode();
+            SCIPintervalSetRoundingModeUpwards();
+            rest_i.sup = nlhdlrexprdata->maxquadfiniteact - SCIPintervalGetSup(nlhdlrexprdata->quadactivities[i]);
+
+            SCIPintervalSetRoundingMode(roundmode);
+         }
+         else if( SCIPintervalGetSup(nlhdlrexprdata->quadactivities[i]) >= SCIP_INTERVAL_INFINITY &&
+               nlhdlrexprdata->nposinfinityquadact == 1 )
+            rest_i.sup = nlhdlrexprdata->maxquadfiniteact;
+         else
+            rest_i.sup = SCIP_INTERVAL_INFINITY;
+
+         /* compute rest_i.inf */
+         if( SCIPintervalGetInf(nlhdlrexprdata->quadactivities[i]) > -SCIP_INTERVAL_INFINITY &&
+               nlhdlrexprdata->nneginfinityquadact == 0 )
+         {
+            SCIP_ROUNDMODE roundmode;
+
+            roundmode = SCIPintervalGetRoundingMode();
+            SCIPintervalSetRoundingModeDownwards();
+            rest_i.inf = nlhdlrexprdata->minquadfiniteact - SCIPintervalGetInf(nlhdlrexprdata->quadactivities[i]);
+
+            SCIPintervalSetRoundingMode(roundmode);
+         }
+         else if( SCIPintervalGetInf(nlhdlrexprdata->quadactivities[i]) <= -SCIP_INTERVAL_INFINITY &&
+               nlhdlrexprdata->nneginfinityquadact == 1 )
+            rest_i.inf = nlhdlrexprdata->minquadfiniteact;
+         else
+            rest_i.inf = -SCIP_INTERVAL_INFINITY;
+
+         /* compute rhs_i */
+         SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs_i, rhs, rest_i);
+
+         /* solve a_i expr_i^2 + b expr_i = rhs_i */
+         if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, rhs_i) )
+            continue;
+
+         SCIP_CALL( propagateBoundsQuadExpr(scip, quadexpr, b, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+
+         /* stop if we find infeasibility */
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** nonlinear handler copy callback
  *
  * the method includes the nonlinear handler into a expression constraint handler
@@ -915,6 +1307,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrsepaHdlrQuadratic, NULL);
+   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuadratic, nlhdlrReversepropQuadratic);
 
    return SCIP_OKAY;
 }
