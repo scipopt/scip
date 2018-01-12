@@ -5327,7 +5327,6 @@ SCIP_Real SCIPlpiInfinity(
    SCIP_LPI*             /*lpi*/             /**< LP interface structure */
    )
 {
-   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiInfinity()\n");
 
    return soplex::infinity;
@@ -5339,7 +5338,6 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val
    )
 {
-   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
 
    return (val >= soplex::infinity);

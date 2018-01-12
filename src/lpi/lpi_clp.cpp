@@ -712,7 +712,7 @@ SCIP_RETCODE SCIPlpiAddCols(
          {
             assert( val[j] != 0.0 );
             /* perform check that no new rows are added - this is forbidden */
-            assert( 0 <= ind[j] && ind[j] < lpi->nrows );
+            assert( 0 <= ind[j] /*&& ind[j] < lpi->nrows*/ );
          }
       }
 #endif
