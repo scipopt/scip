@@ -4403,8 +4403,6 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
-   assert(locktype == SCIP_LOCKTYPE_MODEL);
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 

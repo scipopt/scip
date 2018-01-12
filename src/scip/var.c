@@ -3067,7 +3067,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    if( addnlocksdown == 0 && addnlocksup == 0 )
       return SCIP_OKAY;
 
-//#ifdef SCIP_DEBUG
+#ifdef SCIP_DEBUG
    if( locktype == SCIP_LOCKTYPE_MODEL )
    {
       SCIPsetDebugMsg(set, "add rounding locks %d/%d to variable <%s> (locks=%d/%d, type=%u)\n",
@@ -3076,10 +3076,9 @@ SCIP_RETCODE SCIPvarAddLocks(
    else
    {
       assert(locktype == SCIP_LOCKTYPE_CONFLICT);
-      printf("add rounding locks %d/%d to variable <%s> (locks=%d/%d, type=%u)\n",
          addnlocksdown, addnlocksup, var->name, var->nconflictlocksdown, var->nconflictlocksup, locktype);
    }
-//#endif
+#endif
 
    lockvar = var;
 

@@ -745,6 +745,18 @@ int SCIPconsGetNLocksNeg(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** get number of times the conflict roundings for variables in constraint are locked */
+EXTERN
+int SCIPconsGetNConflictLocksPos(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** get number of times the conflict roundings for variables in constraint's negation are locked */
+EXTERN
+int SCIPconsGetNConflictLocksNeg(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns if the constraint was already added to a SCIP instance */
 EXTERN
 SCIP_Bool SCIPconsIsAdded(
@@ -810,6 +822,8 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsIsLocked(cons)          ((cons)->nlockspos > 0 || (cons)->nlocksneg > 0)
 #define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos)
 #define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg)
+#define SCIPconsGetNConflictLocksPos(cons) ((cons)->nconflictlockspos)
+#define SCIPconsGetNConflictLocksNeg(cons) ((cons)->nconflictlocksneg)
 #define SCIPconsIsAdded(cons)           ((cons)->addarraypos >= 0)
 #define SCIPconsGetNUpgradeLocks(cons)  ((cons)->nupgradelocks)
 

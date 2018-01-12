@@ -8374,14 +8374,8 @@ SCIP_Bool SCIPconsIsLocked(
    )
 {
    assert(cons != NULL);
-   assert(!cons->check || !cons->conflict);
 
-   if( cons->check )
-      return (cons->nlockspos > 0 || cons->nlocksneg > 0);
-   else if( cons->conflict )
-      return (cons->nconflictlockspos > 0 || cons->nconflictlocksneg > 0);
-   else
-      return FALSE;
+   return (cons->nlockspos > 0 || cons->nlocksneg > 0);
 }
 
 /** get number of times the roundings for variables in constraint are locked */
@@ -8390,14 +8384,8 @@ int SCIPconsGetNLocksPos(
    )
 {
    assert(cons != NULL);
-   assert(!cons->check || !cons->conflict);
 
-   if( cons->check )
-      return cons->nlockspos;
-   else if( cons->conflict )
-      return cons->nconflictlockspos;
-   else
-      return 0;
+   return cons->nlockspos;
 }
 
 /** get number of times the roundings for variables in constraint's negation are locked */
@@ -8406,14 +8394,28 @@ int SCIPconsGetNLocksNeg(
    )
 {
    assert(cons != NULL);
-   assert(!cons->check || !cons->conflict);
 
-   if( cons->check )
-      return cons->nlocksneg;
-   else if( cons->conflict )
-      return cons->nconflictlocksneg;
-   else
-      return 0;
+   return cons->nlocksneg;
+}
+
+/** get number of times the conflict roundings for variables in constraint are locked */
+int SCIPconsGetNConflictLocksPos(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->nconflictlockspos;
+}
+
+/** get number of times the conflict roundings for variables in constraint's negation are locked */
+int SCIPconsGetNConflictLocksNeg(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->nconflictlocksneg;
 }
 
 /** returns if the constraint was already added to a SCIP instance */
