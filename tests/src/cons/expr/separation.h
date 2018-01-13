@@ -84,10 +84,8 @@ void setup(void)
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
 
-   /* transform the problem and set it so INITSOLVE stage */
-   SCIP_CALL( SCIPincludeNodeselBfs(scip) );
-   SCIP_CALL( SCIPtransformProb(scip) );
-   scip->set->stage = SCIP_STAGE_INITSOLVE;
+   /* get SCIP into SOLVING stage */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -99,9 +97,6 @@ void teardown(void)
 {
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
-
-   /* reset stage to PRESOLVED */
-   scip->set->stage = SCIP_STAGE_PRESOLVED;
 
    /* release solution */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
