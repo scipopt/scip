@@ -4656,9 +4656,19 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       separated = FALSE;
 
       /* decide whether to under- or overestimate */
-      violation = expr->evalvalue - SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
-      underestimate = SCIPisLT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksNeg(expr) > 0;
-      overestimate = SCIPisGT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksPos(expr) > 0;
+      if( expr->evalvalue != SCIP_INVALID )
+      {
+         /* the expression could be evaluated, then look at sign of violation */
+         violation = expr->evalvalue - SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
+         underestimate = SCIPisLT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksNeg(expr) > 0;
+         overestimate = SCIPisGT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksPos(expr) > 0;
+      }
+      else
+      {
+         /* if expression could not be evaluated, then both under- and overestimate should be considered */
+         underestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+         overestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+      }
 
       /* no violation w.r.t. the original variables -> skip expression */
       if( !overestimate && !underestimate )
@@ -4682,6 +4692,18 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
 
          assert(ncuts >= 0);
          sepadata->ncuts += ncuts;
+
+         if( underestimate && overestimate && separesult != SCIP_CUTOFF && separesult != SCIP_SEPARATED )
+         {
+            /* call the separation callback of the nonlinear handler again for underestimation, if nothing found yet
+             * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error), see above
+             */
+            SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+               FALSE, sepadata->minviolation, separated, &separesult, &ncuts) );
+
+            assert(ncuts >= 0);
+            sepadata->ncuts += ncuts;
+         }
 
          if( separesult == SCIP_CUTOFF )
          {
