@@ -154,6 +154,7 @@ SCIP_Real reversePropBinarySearch(
    SCIP_Real xmaxval = (xmax == 0.0) ? 0.0 : -xmax * log(xmax);
    int i;
 
+   assert(xmin <= xmax);
    assert(increasing ? xminval <= xmaxval : xminval >= xmaxval);
 
    /* function can not achieve -x*log(x) -> return xmin or xmax */
