@@ -196,6 +196,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
    SCIP_DECL_CONSEXPR_EXPRMONOTONICITY((*monotonicity)) /**< monotonicity detection callback (can be NULL) */
 );
 
+/** set the integrality detection callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
+);
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -798,6 +807,21 @@ int SCIPgetConsExprExprNLocksPos(
 /** returns the number of negative rounding locks of an expression */
 EXTERN
 int SCIPgetConsExprExprNLocksNeg(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** computes integrality information of a given expression and all its subexpressions; the integrality information can
+ * be accessed via SCIPisConsExprExprIntegral()
+ */
+EXTERN
+SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** returns whether an expression is integral */
+EXTERN
+SCIP_Bool SCIPisConsExprExprIntegral(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 

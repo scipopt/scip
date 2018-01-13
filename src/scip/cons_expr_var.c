@@ -348,6 +348,24 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityVar)
    return SCIP_OKAY;
 }
 
+/** expression integrality detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityVar)
+{  /*lint --e{715}*/
+   SCIP_VAR* var;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(isintegral != NULL);
+
+   var = (SCIP_VAR*)SCIPgetConsExprExprData(expr);
+   assert(var != NULL);
+
+   *isintegral = SCIPvarIsIntegral(var);
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for variable expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -374,6 +392,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityVar) );
 
    return SCIP_OKAY;
 }

@@ -934,6 +934,38 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
    return SCIP_OKAY;
 }
 
+/** expression integrality detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityPow)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real exponent;
+   SCIP_Bool expisint;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(isintegral != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   *isintegral = FALSE;
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* expression can not be integral if child is not */
+   if( !SCIPisConsExprExprIntegral(child) )
+      return SCIP_OKAY;
+
+   exponent = SCIPgetConsExprExprPowExponent(expr);
+   assert(exponent != 0.0);
+   expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
+
+   /* expression is integral if and only if exponent non-negative and integral */
+   *isintegral = expisint && exponent >= 0.0;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for power expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -958,6 +990,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvaturePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityPow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityPow) );
 
    return SCIP_OKAY;
 }

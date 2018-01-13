@@ -35,6 +35,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_E on Windows */  /*lint !750 */
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -33696,7 +33698,6 @@ void SCIPaddExpSecant(
    }
    else
    {
-      assert(lb != ub);
       coef = (exp(ub) - exp(lb)) / (ub - lb);
       constant = exp(ub) - coef * ub;
    }
@@ -33714,9 +33715,8 @@ void SCIPaddExpSecant(
 /** computes coefficients of linearization of an exponential term in a reference point */
 void SCIPaddExpLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lb,                 /**< lower bound on variable */
-   SCIP_Real             ub,                 /**< upper bound on variable */
    SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
    SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
    SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
    SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
@@ -33736,8 +33736,21 @@ void SCIPaddExpLinearization(
       return;
    }
 
-   coef = exp(refpoint);
-   constant = exp(refpoint) * (1.0 - refpoint);
+   if( !isint || SCIPisIntegral(scip, refpoint) )
+   {
+      coef = exp(refpoint);
+      constant = exp(refpoint) * (1.0 - refpoint);
+   }
+   else
+   {
+      /* exp(x) -> secant between f=floor(refpoint) and f+1 = ((e-1)*e^f) * x + e^f - f * ((e-1)*e^f) */
+      SCIP_Real f;
+
+      f = SCIPfloor(scip, refpoint);
+
+      coef = (M_E - 1.0) * exp(f);
+      constant = exp(f) - f * coef;
+   }
 
    if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
    {
@@ -33745,7 +33758,7 @@ void SCIPaddExpLinearization(
       return;
    }
 
-   *lincoef += coef;
+   *lincoef     += coef;
    *linconstant += constant;
 }
 
@@ -33785,7 +33798,6 @@ void SCIPaddLogSecant(
    }
    else
    {
-      assert(lb != ub);
       coef = (log(ub) - log(lb)) / (ub - lb);
       constant = log(ub) - coef * ub;
    }
@@ -33803,9 +33815,8 @@ void SCIPaddLogSecant(
 /** computes coefficients of linearization of a logarithmic term in a reference point */
 void SCIPaddLogLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lb,                 /**< lower bound on variable */
-   SCIP_Real             ub,                 /**< upper bound on variable */
    SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
    SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
    SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
    SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
@@ -33826,9 +33837,23 @@ void SCIPaddLogLinearization(
       return;
    }
 
-   assert(refpoint != 0.0);
-   coef = 1.0 / refpoint;
-   constant = log(refpoint) - 1.0;
+   if( !isint || SCIPisIntegral(scip, refpoint) )
+   {
+      assert(refpoint != 0.0);
+      coef = 1.0 / refpoint;
+      constant = log(refpoint) - 1.0;
+   }
+   else
+   {
+      /* log(x) -> secant between f=floor(refpoint) and f+1 = log((f+1.0)/f) * x + log(f) - log((f+1.0)/f) * f */
+      SCIP_Real f;
+
+      f = SCIPfloor(scip, refpoint);
+      assert(f > 0.0);
+
+      coef     = log((f+1.0) / f);
+      constant = log(f) - coef * f;
+   }
 
    if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
    {

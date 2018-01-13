@@ -1247,6 +1247,33 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySum)
    return SCIP_OKAY;
 }
 
+/** expression integrality detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralitySum)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(isintegral != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   *isintegral = EPSISINT(exprdata->constant, 0.0); /*lint !e835*/
+
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && *isintegral; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
+      assert(child != NULL);
+
+      *isintegral = EPSISINT(exprdata->coefficients[i], 0.0) && SCIPisConsExprExprIntegral(child); /*lint !e835*/
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1273,6 +1300,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicitySum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralitySum) );
 
    return SCIP_OKAY;
 }

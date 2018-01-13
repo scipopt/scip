@@ -290,8 +290,7 @@ SCIP_RETCODE separatePointLog(
 
    if( overestimate )
    {
-      SCIPaddLogLinearization(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), refpoint, &lincoef, &linconstant,
-         &success);
+      SCIPaddLogLinearization(scip, refpoint, SCIPvarIsIntegral(childvar), &lincoef, &linconstant, &success);
       islocal = FALSE; /* linearization are globally valid */
    }
    else
