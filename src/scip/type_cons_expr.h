@@ -409,6 +409,11 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_Bool* isintegral)
 
+/* maybe should make this a parameter (was cutmaxrange in other conshdlr)
+ * maybe should derive this from the current feastol (e.g., 10/feastol)
+ */
+#define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
+
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {

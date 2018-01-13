@@ -8863,11 +8863,6 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    return SCIP_OKAY;
 }
 
-/* maybe should make this a parameter (was cutmaxrange in other conshdlr)
- * maybe should derive this from the current feastol (e.g., 10/feastol)
- */
-#define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
-
 /** checks a cut for violation and numerical stability and possibly tries to improve it
  *
  * If the numerical properties of the cut are too bad, the routines tries to improve this.
