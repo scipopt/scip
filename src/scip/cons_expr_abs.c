@@ -27,6 +27,9 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_abs.h"
 
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
+
 #define EXPRHDLR_NAME         "abs"
 #define EXPRHDLR_DESC         "absolute expression"
 #define EXPRHDLR_PRECEDENCE  70000
@@ -319,18 +322,32 @@ SCIP_RETCODE computeCutsAbs(
          {
             /* z = abs(x), x still has mixed sign */
             SCIP_Real alpha;
+            SCIP_ROWPREP* rowprep;
+            SCIP_Real coefrange;
 
             /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
              *
              * z - |ub| <= alpha * (x - ub)  <=> alpha * ub - |ub| <= -z + alpha * x
              */
             alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
-            coefs[1] = alpha;
 
-            /* secants are only valid locally */
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, (alpha * ub - REALABS(ub)), SCIPinfinity(scip),
-               TRUE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
+            /* create row preparation */
+            SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
+            SCIPaddRowprepSide(rowprep, alpha * ub - REALABS(ub));
+            coefs[1] = alpha;
+            SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 2, vars, coefs) );
+
+            /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
+            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
+
+            /* if coefrange is good and no variable has been removed, then create SCIP_ROW */
+            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
+            {
+               memcpy(rowprep->name, name, SCIP_MAXSTRLEN);
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, secant, rowprep, conshdlr) );
+            }
+
+            SCIPfreeRowprep(scip, &rowprep);
          }
       }
    }
@@ -451,10 +468,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
    {
       SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, TRUE, FALSE, NULL, NULL, &rows[2]) );
 
-      /* massage secant */
-      if( rows[2] != NULL )
+      /* check whether violation >= minviolation */
+      if( rows[2] != NULL && -SCIPgetRowSolFeasibility(scip, rows[2], sol) < minviolation )
       {
-         SCIP_CALL( SCIPmassageConsExprExprCut(scip, &rows[2], sol, minviolation) );
+         SCIP_CALL( SCIPreleaseRow(scip, &rows[2]) );
       }
    }
 
