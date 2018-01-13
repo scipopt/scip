@@ -4656,7 +4656,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       separated = FALSE;
 
       /* decide whether to under- or overestimate */
-      if( expr->evalvalue != SCIP_INVALID )
+      if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
       {
          /* the expression could be evaluated, then look at sign of violation */
          violation = expr->evalvalue - SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
