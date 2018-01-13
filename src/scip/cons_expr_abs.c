@@ -262,6 +262,7 @@ SCIP_RETCODE computeCutsAbs(
    z = SCIPgetConsExprExprAuxVar(expr);
    assert(x != NULL);
    assert(z != NULL);
+   /* z = abs(x) */
 
    vars[0] = z;
    vars[1] = x;
@@ -295,26 +296,42 @@ SCIP_RETCODE computeCutsAbs(
       lb = SCIPvarGetLbLocal(x);
       ub = SCIPvarGetUbLocal(x);
 
-      /* it does not make sense to add a cut if child variable is unbounded, fixed, non-positive, or non-negative */
-      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub)
-         && SCIPisLT(scip, lb, 0.0) && SCIPisGT(scip, ub, 0.0)
-         && !SCIPisEQ(scip, lb, ub) )
+      /* it does not make sense to add a cut if child variable is unbounded or fixed */
+      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) && !SCIPisEQ(scip, lb, ub) )
       {
-         SCIP_Real alpha;
-
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_secant_%s", SCIPvarGetName(x));
 
-         /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
-          *
-          * z - |ub| <= alpha * (x - ub)  <=> alpha * ub - |ub| <= -z + alpha * x
-          */
-         alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
-         coefs[1] = alpha;
+         if( !SCIPisPositive(scip, ub) )
+         {
+            /* z = -x, so add -z-x >= 0 here (-z-x <= 0 is the underestimator that is added above) */
+            coefs[1] = -1.0;
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
+         }
+         else if( !SCIPisNegative(scip, lb) )
+         {
+            /* z =  x, so add -z+x >= 0 here (-z+x <= 0 is the underestimator that is added above) */
+            coefs[1] =  1.0;
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
+         }
+         else
+         {
+            /* z = abs(x), x still has mixed sign */
+            SCIP_Real alpha;
 
-         /* secants are only valid locally */
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, (alpha * ub - REALABS(ub)), SCIPinfinity(scip),
+            /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
+             *
+             * z - |ub| <= alpha * (x - ub)  <=> alpha * ub - |ub| <= -z + alpha * x
+             */
+            alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
+            coefs[1] = alpha;
+
+            /* secants are only valid locally */
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, (alpha * ub - REALABS(ub)), SCIPinfinity(scip),
                TRUE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
+         }
       }
    }
 
