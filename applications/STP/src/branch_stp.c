@@ -28,6 +28,7 @@
 #include <string.h>
 #include "scip/branch_fullstrong.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
 #include "scip/var.h"
 #include "scip/set.h"
 #include "scip/pub_tree.h"
@@ -189,11 +190,11 @@ SCIP_DECL_BRANCHEXIT(branchExitStp)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 {  /*lint --e{715}*/
-   SCIP_PROBDATA* probdata;
-   SCIP_CONS* consin;
-   SCIP_CONS* consout;
-   SCIP_NODE* vertexin;
-   SCIP_NODE* vertexout;
+   SCIP_PROBDATA* probdata = NULL;
+   SCIP_CONS* consin = NULL;
+   SCIP_CONS* consout = NULL;
+   SCIP_NODE* vertexin = NULL;
+   SCIP_NODE* vertexout = NULL;
    SCIP_VAR** edgevars;
    SCIP_Real estimatein;
    SCIP_Real estimateout;
@@ -201,6 +202,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    int e;
    int probtype;
    int branchvertex;
+   char consnamein[SCIP_MAXSTRLEN];
+   char consnameout[SCIP_MAXSTRLEN];
+
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -236,25 +240,34 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    edgevars = SCIPprobdataGetEdgeVars(scip);
 
-   /* create constraints */
-   SCIP_CALL( SCIPcreateConsLinear(scip, &consin, "consin", 0,
-         NULL, NULL, 1.0, 1.0,
-         TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+   (void)SCIPsnprintf(consnamein, SCIP_MAXSTRLEN, "consin%d", branchvertex);
+   (void)SCIPsnprintf(consnameout, SCIP_MAXSTRLEN, "consout%d", branchvertex);
 
-   SCIP_CALL( SCIPcreateConsLinear(scip, &consout, "consout", 0,
+   printf("addchildin %s \n", consnamein);
+   printf("addchildout %s \n", consnameout);
+
+   SCIP_NODE* const currnode = SCIPgetCurrentNode(scip);
+         const SCIP_Longint nodenumber = SCIPnodeGetNumber(currnode);
+
+         printf("add node %lld  create kids \n", nodenumber);
+
+   /* create constraints */
+   SCIP_CALL( SCIPcreateConsSetpart(scip, &consin, consnamein, 0, NULL,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+
+   SCIP_CALL( SCIPcreateConsLinear(scip, &consout, consnameout, 0,
          NULL, NULL, 0.0, 0.0,
-         TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
    for( e = g->inpbeg[branchvertex]; e != EAT_LAST; e = g->ieat[e] )
    {
-      SCIP_CALL( SCIPaddCoefLinear(scip, consin,  edgevars[e], 1.0) );
+      SCIP_CALL( SCIPaddCoefSetppc(scip, consin,  edgevars[e]) );
       SCIP_CALL( SCIPaddCoefLinear(scip, consout, edgevars[e], 1.0) );
       SCIP_CALL( SCIPaddCoefLinear(scip, consout, edgevars[flipedge(e)], 1.0) );
    }
 
    /* create the child nodes */
    SCIP_CALL( SCIPcreateChild(scip, &vertexin, 1.0, estimatein) );
-
    SCIP_CALL( SCIPcreateChild(scip, &vertexout, 1.0, estimateout) );
 
    assert(vertexin != NULL);
@@ -270,7 +283,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    SCIPdebugMessage("Branched on stp vertex %d \n", branchvertex);
 
    *result = SCIP_BRANCHED;
-
 
    return SCIP_OKAY;
 }

@@ -184,6 +184,7 @@ extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_show(const GRAPH*);
 extern void   graph_knot_add(GRAPH*, int);
 extern void   graph_knot_chg(GRAPH*, int, int);
+extern void   graph_knot_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_knot_contract_dir(GRAPH*, int, int);
 extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
 extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);

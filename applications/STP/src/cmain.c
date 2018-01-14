@@ -107,6 +107,8 @@ SCIP_RETCODE runShell(
    /* include propagator */
    SCIP_CALL( SCIPincludePropStp(scip) );
 
+   SCIP_CALL( SCIPsetSubscipsOff(scip, FALSE) );
+
    /* set STP-specific default parameters */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "display/freq", 1) );

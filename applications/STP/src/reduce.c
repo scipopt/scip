@@ -205,7 +205,7 @@ SCIP_RETCODE reduceStp(
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   SCIP_Bool             dualascent,         /**< perform dualascent reductions? */
+   SCIP_Bool             dualascent,         /**< perform dual-ascent reductions? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    SCIP_Bool             userec              /**< use recombination heuristic? */

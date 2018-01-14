@@ -2014,6 +2014,21 @@ void graph_knot_chg(
    }
 }
 
+void graph_knot_del(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int                   k,                  /**< the node */
+   SCIP_Bool             freeancestors       /**< free edge ancestors? */
+   )
+{
+   assert(g          != NULL);
+   assert(k          >= 0);
+   assert(k          <  g->knots);
+
+   while( g->outbeg[k] != EAT_LAST )
+      graph_edge_del(scip, g, g->outbeg[k], freeancestors);
+}
+
 /** contract an edge, given by its endpoints */
 SCIP_RETCODE graph_knot_contract(
    SCIP*                 scip,               /**< SCIP data structure */

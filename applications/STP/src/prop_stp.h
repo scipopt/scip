@@ -27,6 +27,8 @@
 #ifndef __SCIP_PROP_STP_H__
 #define __SCIP_PROP_STP_H__
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "scip/scip.h"
 #include "grph.h"
 #include "probdata_stp.h"

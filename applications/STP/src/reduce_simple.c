@@ -519,6 +519,7 @@ SCIP_RETCODE reduce_simple(
 
             if( checkstate )
             {
+               int todo;
                if( edgestate[e1] == EDGE_BLOCKED || Is_term(g->term[i]) )
                   continue;
                else

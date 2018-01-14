@@ -507,26 +507,43 @@ void pertubateEdgeCosts(
 
 /** order roots */
 static
-void orderDaRoots(
+SCIP_RETCODE orderDaRoots(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
    int*                  terms,              /**< sol int array corresponding to upper bound */
-   int*                  termdegs,           /**< sol int array */
    int                   nterms,             /**< number of terminals */
-   int                   maxdeg,             /**< max degree */
    SCIP_Bool             randomize,          /**< randomize */
-   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator (or NULL) */
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
 )
 {
+   int* termdegs;
+   int maxdeg = 0;
+
    assert(terms != NULL);
-   assert(termdegs != NULL);
+   assert(nterms > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &termdegs, nterms) );
 
    for( int i = 0; i < nterms; i++ )
    {
-      termdegs[i] *= -1;
-      if( randomize )
-         termdegs[i] -= SCIPrandomGetInt(randnumgen, 0, maxdeg);
+      const int grad = graph->grad[terms[i]];
+      assert(terms[i] >= 0);
+
+      termdegs[i] = -grad;
+
+      if( grad > maxdeg )
+         maxdeg = termdegs[i];
    }
 
+   if( randomize )
+      for( int i = 0; i < nterms; i++ )
+         termdegs[i] -= SCIPrandomGetInt(randnumgen, 0, maxdeg);
+
    SCIPsortIntInt(termdegs, terms, nterms);
+
+   SCIPfreeBufferArray(scip, &termdegs);
+
+   return SCIP_OKAY;
 }
 
 
@@ -1215,6 +1232,9 @@ SCIP_RETCODE reduce_da(
             assert(graph_sol_valid(scip, graph, result));
             upperbound = graph_sol_getObj(graph->cost, result, 0.0, nedges);
          }
+
+         // todo might not be valid
+         assert(graph_sol_valid(scip, graph, result));
       }
    }
    else
@@ -1245,9 +1265,7 @@ SCIP_RETCODE reduce_da(
 
       /* no feasible solution found? */
       if( !success )
-      {
          goto TERMINATE;
-      }
    }
 
    /*
@@ -1257,31 +1275,17 @@ SCIP_RETCODE reduce_da(
    /* if not RPC, select roots for dual ascent */
    if( !rpc && !directed )
    {
-      int* termdegs;
-      int maxdeg = 0;
+      int nrealterms = 0;
 
       assert(terms != NULL);
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &termdegs, graph->terms) );
-
-      k = 0;
       for( i = 0; i < nnodes; i++ )
-      {
          if( Is_term(graph->term[i]) && (grad[i] > 1) )
-         {
-            termdegs[k] = grad[i];
-            terms[k++] = i;
+            terms[nrealterms++] = i;
 
-            if( grad[i] > maxdeg )
-               maxdeg = grad[i];
-         }
-      }
+      nruns = MIN(nrealterms, DEFAULT_DARUNS);
+      SCIP_CALL( orderDaRoots(scip, graph, terms, nrealterms, (prevrounds > 0), randnumgen) );
 
-      nruns = MIN(k, DEFAULT_DARUNS);
-
-      orderDaRoots(terms, termdegs, k, maxdeg, (prevrounds > 0), randnumgen);
-
-      SCIPfreeBufferArray(scip, &termdegs);
    }
    else
    {
@@ -2567,23 +2571,7 @@ SCIP_RETCODE reduce_daPcMw(
          markPcMwRoots(scip, roots, 0, nroots, prizesum, graph, &userec, &pool);
 
       if( nroots > 0 && varyroot )
-      {
-         int* termdegs;
-         int maxdeg = 0;
-
-         SCIP_CALL(SCIPallocBufferArray(scip, &termdegs, nroots));
-
-         for( int i = 0; i < nroots; i++ )
-         {
-            termdegs[i] = graph->grad[roots[i]];
-            if( maxdeg < termdegs[i] )
-               maxdeg = termdegs[i];
-         }
-
-         orderDaRoots(roots, termdegs, nroots, maxdeg, TRUE, randnumgen);
-
-         SCIPfreeBufferArray(scip, &termdegs);
-      }
+         SCIP_CALL( orderDaRoots(scip, graph, roots, nroots, TRUE, randnumgen) );
    }
    else
    {

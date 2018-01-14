@@ -3813,6 +3813,11 @@ SCIP_RETCODE reduce_sl(
             {
                SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e], NULL) );
                SCIP_CALL( graph_knot_contract(scip, g, solnode, j, k) );
+
+               assert(g->grad[k] == 0 && g->grad[j] >= 0);
+
+               if( !Is_term(g->term[j]) )
+                  graph_knot_chg(g, j, 0);
             }
 
             assert(old - g->grad[j] - g->grad[k] > 0);
@@ -4274,8 +4279,7 @@ SCIP_RETCODE reduce_ledge(
    int* vbase,
    int* nelims,
    int* edgestate
-
-   )
+)
 {
    GRAPH* netgraph;
    PATH* mst;
