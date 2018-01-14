@@ -40,7 +40,7 @@
 
 #define BRANCHRULE_NAME            "stp"
 #define BRANCHRULE_DESC            "stp branching on vertices"
-#define BRANCHRULE_PRIORITY        1000000
+#define BRANCHRULE_PRIORITY        10000000
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 

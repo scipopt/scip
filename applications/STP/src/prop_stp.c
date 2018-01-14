@@ -37,7 +37,7 @@
 #define PROP_NAME              "stp"
 #define PROP_DESC              "stp propagator"
 #define PROP_TIMING            SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
-#define PROP_PRIORITY          +1000000 /**< propagator priority */
+#define PROP_PRIORITY          1000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
@@ -62,6 +62,7 @@
 /** propagator data */
 struct SCIP_PropData
 {
+   SCIP_Real*            fixingbounds;       /**< saves largest upper bound to each variable that would allow to fix it */
    SCIP_Longint          nfails;             /**< number of failures since last successful call */
    SCIP_Longint          ncalls;             /**< number of calls */
    SCIP_Longint          nlastcall;          /**< number of last call */
@@ -98,7 +99,6 @@ SCIP_RETCODE fixedgevarTo1(
       propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
       assert(propdata != NULL);
 
-
 printf("FIXED VAR VAR TO ONE %d \n", 0);
 
       SCIP_CALL( SCIPchgVarLb(scip, edgevar, 1.0) );
@@ -108,6 +108,65 @@ printf("FIXED VAR VAR TO ONE %d \n", 0);
    }
    return SCIP_OKAY;
 }
+
+/** try to make global fixings */
+static
+SCIP_RETCODE globalfixing(
+   SCIP*                 scip,               /**< SCIP */
+   SCIP_VAR**            vars,               /**< variables */
+   int*                  nfixededges,        /**< points to number of fixed edges */
+   const SCIP_Real*      fixingbounds,       /**< fixing bounds */
+   SCIP_Real             cutoffbound,        /**> cutoff bound  */
+   int                   nedges              /**< number of edges */
+)
+{
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( SCIPisLT(scip, cutoffbound, fixingbounds[e]) )
+      {
+         SCIP_VAR* const edgevar = vars[e];
+
+         if( SCIPvarGetLbGlobal(edgevar) < 0.5 && SCIPvarGetUbGlobal(edgevar) > 0.5 )
+         {
+            assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(edgevar), 1.0));
+            printf("FIXED %d \n", e);
+            SCIPchgVarUbGlobal(scip, edgevar, 0.0);
+            (*nfixededges)++;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/* updates fixing bounds for reduced cost fixings */
+static
+void updateFixingBounds(
+   SCIP_Real*            fixingbounds,       /**< fixing bounds */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      cost,               /**< reduced costs */
+   const SCIP_Real*      pathdist,           /**> shortest path distances  */
+   const PATH*           vnoi,               /**> Voronoi paths  */
+   SCIP_Real             lpobjal             /**> LP objective  */
+)
+{
+   const int nnodes = graph->knots;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(graph->term[k]) && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) )
+         continue;
+
+      for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         const SCIP_Real fixbnd = pathdist[k] + cost[e] + vnoi[graph->head[e]].dist + lpobjal;
+         if( fixbnd > fixingbounds[e] )
+            fixingbounds[e] = fixbnd;
+      }
+   }
+}
+
+
 
 
 #define STPPROP_EDGE_KILLED -1
@@ -254,7 +313,9 @@ SCIP_RETCODE redbasedvarfixing(
    /* reduce graph */
 
    SCIP_CALL( level0(scip, copyg) );
-   SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, edgestate, FALSE) );
+ //  SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, edgestate, FALSE) );
+   SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, NULL, FALSE) );
+
 
    assert(graph_valid(copyg));
 
@@ -327,10 +388,11 @@ SCIP_RETCODE redbasedvarfixing(
       }
       else if( remain[e] == STPPROP_EDGE_FIXED )
       {
+         int todo;
          assert(remain[erev] == STPPROP_EDGE_FIXED);
 
-         SCIP_CALL( fixedgevarTo1(scip, vars[e], nfixed) );
-         SCIP_CALL( fixedgevarTo1(scip, vars[erev], nfixed) );
+//         SCIP_CALL( fixedgevarTo1(scip, vars[e], nfixed) );
+  //       SCIP_CALL( fixedgevarTo1(scip, vars[erev], nfixed) );
       }
    }
 
@@ -380,6 +442,7 @@ SCIP_DECL_PROPFREE(propFreeStp)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
+   SCIPfreeMemoryArrayNull(scip, &(propdata->fixingbounds));
    SCIPfreeMemory(scip, &propdata);
 
    SCIPpropSetData(prop, NULL);
@@ -481,6 +544,13 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    SCIPdebugMessage("cutoffbound %f, lpobjval %f\n", cutoffbound, lpobjval);
 
+   if( propdata->fixingbounds == NULL )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->fixingbounds), nedges) );
+      for( int i = 0; i < nedges; i++ )
+         propdata->fixingbounds[i] = -FARAWAY;
+   }
+
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
@@ -544,7 +614,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    for( int k = 0; k < nnodes; k++ )
    {
-      // todo is that necessary?
       if( Is_term(graph->term[k]) && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) )
             continue;
 
@@ -552,10 +621,8 @@ SCIP_DECL_PROPEXEC(propExecStp)
       {
          for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
-            /* try to fix edge */
+            /* try to fix edge and reversed one */
             SCIP_CALL( fixedgevar(scip, vars[e], &nfixed) );
-
-            /* try to fix reversed edge */
             SCIP_CALL( fixedgevar(scip, vars[flipedge(e)], &nfixed) );
          }
       }
@@ -572,6 +639,12 @@ SCIP_DECL_PROPEXEC(propExecStp)
          }
       }
    }
+
+   /* at root? */
+   if( SCIPgetDepth(scip) == 0 )
+      updateFixingBounds(propdata->fixingbounds, graph, cost, pathdist, vnoi, lpobjval);
+
+   SCIP_CALL( globalfixing(scip, vars, &nfixed, propdata->fixingbounds, cutoffbound, nedges) );
 
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathedge);
@@ -729,6 +802,7 @@ SCIP_RETCODE SCIPincludePropStp(
    propdata->lastnodenumber = -1;
    propdata->nfixededges = 0;
    propdata->postrednfixededges = 0;
+   propdata->fixingbounds = NULL;
 
    /* add parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/nwaitingrounds",

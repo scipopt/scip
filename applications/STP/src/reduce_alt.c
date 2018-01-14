@@ -3657,7 +3657,9 @@ SCIP_RETCODE reduce_sl(
    int     minedge;
    int*    qnode;
    STP_Bool    contract;
+   STP_Bool    foundterms;
    STP_Bool*   forbidden;
+   STP_Bool*   newterm;
    SCIP_Bool pc;
 
    assert(g != NULL);
@@ -3669,6 +3671,7 @@ SCIP_RETCODE reduce_sl(
    assert(visited != NULL);
 
    *nelims = 0;
+   foundterms = FALSE;
    nnodes = g->knots;
    root = g->source;
    pc = (g->stp_type == STP_PCSPG) || (g->stp_type == STP_RPCSPG);
@@ -3677,6 +3680,7 @@ SCIP_RETCODE reduce_sl(
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &forbidden, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newterm, nnodes) );
 
    if( !pc )
       for( i = 0; i < nnodes; i++ )
@@ -3687,6 +3691,7 @@ SCIP_RETCODE reduce_sl(
    SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
    for( j = 0; j < nnodes; j++ )
    {
+      newterm[j] = FALSE;
       forbidden[j] = FALSE;
       visited[j] = FALSE;
    }
@@ -3817,7 +3822,10 @@ SCIP_RETCODE reduce_sl(
                assert(g->grad[k] == 0 && g->grad[j] >= 0);
 
                if( !Is_term(g->term[j]) )
-                  graph_knot_chg(g, j, 0);
+               {
+                  newterm[j] = TRUE;
+                  foundterms = TRUE;
+               }
             }
 
             assert(old - g->grad[j] - g->grad[k] > 0);
@@ -3828,8 +3836,14 @@ SCIP_RETCODE reduce_sl(
       }
    }
 
+   for( i = 0; i < nnodes && foundterms; i++ )
+      if( newterm[i] && !Is_term(g->term[i]) && g->grad[i] > 0 )
+         graph_knot_chg(g, i, 0);
+
+
    /* free memory */
    SCIPqueueFree(&queue);
+   SCIPfreeBufferArray(scip, &newterm);
    SCIPfreeBufferArray(scip, &forbidden);
 
    return SCIP_OKAY;
