@@ -283,23 +283,49 @@ SCIP_RETCODE lockRounding(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_LOCKTYPE mlocked;
+   SCIP_LOCKTYPE clocked;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   mlocked = SCIPconsIsLocked(cons);
+   clocked = SCIPconsIsConflictLocked(cons);
 
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
       /* rounding in both directions may violate the constraint */
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      if( mlocked )
+      {
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      }
+      if( clocked )
+      {
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, TRUE, TRUE) );
+      }
       break;
    case SCIP_SETPPCTYPE_PACKING:
       /* rounding up may violate the constraint */
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+      if( mlocked )
+      {
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+      }
+      if( clocked )
+      {
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
+      }
       break;
    case SCIP_SETPPCTYPE_COVERING:
       /* rounding down may violate the constraint */
-      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+      if( mlocked )
+      {
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+      }
+      if( clocked )
+      {
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, TRUE, FALSE) );
+      }
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -318,23 +344,49 @@ SCIP_RETCODE unlockRounding(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_LOCKTYPE mlocked;
+   SCIP_LOCKTYPE clocked;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   mlocked = SCIPconsIsLocked(cons);
+   clocked = SCIPconsIsConflictLocked(cons);
 
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
       /* rounding in both directions may violate the constraint */
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      if( mlocked )
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      }
+      if( clocked )
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, TRUE, TRUE) );
+      }
       break;
    case SCIP_SETPPCTYPE_PACKING:
       /* rounding up may violate the constraint */
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+      if( mlocked )
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+      }
+      if( clocked )
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
+      }
       break;
    case SCIP_SETPPCTYPE_COVERING:
       /* rounding down may violate the constraint */
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+      if( mlocked )
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+      }
+      if( clocked )
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, TRUE, FALSE) );
+      }
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -819,7 +871,7 @@ SCIP_RETCODE setSetppcType(
    SCIPdebugMsg(scip, " -> converting <%s> into setppc type %d\n", SCIPconsGetName(cons), setppctype);
 
    /* remove rounding locks */
-   if( SCIPconsIsLocked(cons) )
+   if( SCIPconsIsLocked(cons) || SCIPconsIsConflictLocked(cons) )
    {
       int v;
 
@@ -852,7 +904,7 @@ SCIP_RETCODE setSetppcType(
    consdata->setppctype = setppctype; /*lint !e641*/
 
    /* reinstall rounding locks again */
-   if( SCIPconsIsLocked(cons) )
+   if( SCIPconsIsLocked(cons) || SCIPconsIsConflictLocked(cons) )
    {
       int v;
 

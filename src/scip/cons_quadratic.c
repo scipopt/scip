@@ -2024,6 +2024,7 @@ SCIP_RETCODE chgLinearCoefPos(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsConflictLocked(cons));
    assert(!SCIPisZero(scip, newcoef));
 
    conshdlrdata = NULL;

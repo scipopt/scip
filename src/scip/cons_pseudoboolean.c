@@ -1653,6 +1653,7 @@ SCIP_RETCODE lockRoundingAndCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsConflictLocked(cons));
    assert(consanddata != NULL);
    assert(!SCIPisInfinity(scip, coef) && !SCIPisInfinity(scip, -coef));
    assert(!SCIPisInfinity(scip, lhs));
@@ -1721,6 +1722,7 @@ SCIP_RETCODE unlockRoundingAndCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsConflictLocked(cons));
    assert(consanddata != NULL);
    assert(!SCIPisInfinity(scip, coef) && !SCIPisInfinity(scip, -coef));
    assert(!SCIPisInfinity(scip, lhs));
@@ -2384,6 +2386,7 @@ SCIP_RETCODE chgLhs(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsConflictLocked(cons));
    assert(!SCIPisInfinity(scip, lhs));
 
    /* adjust value to not be smaller than -inf */
@@ -2557,6 +2560,7 @@ SCIP_RETCODE chgRhs(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsConflictLocked(cons));
    assert(!SCIPisInfinity(scip, -rhs));
 
    /* adjust value to not be larger than inf */

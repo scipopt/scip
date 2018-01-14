@@ -21725,14 +21725,16 @@ SCIP_RETCODE SCIPlockVarCons(
 
    nlocksdown = 0;
    nlocksup = 0;
-   if( SCIPconsIsLockedPos(cons) )
+   if( (locktype == SCIP_LOCKTYPE_MODEL && SCIPconsIsLockedPos(cons))
+    || (locktype == SCIP_LOCKTYPE_CONFLICT && SCIPconsIsConflictLockedPos(cons)) )
    {
       if( lockdown )
          nlocksdown++;
       if( lockup )
          nlocksup++;
    }
-   if( SCIPconsIsLockedNeg(cons) )
+   if( (locktype == SCIP_LOCKTYPE_MODEL && SCIPconsIsLockedNeg(cons))
+    || (locktype == SCIP_LOCKTYPE_CONFLICT && SCIPconsIsConflictLockedNeg(cons)) )
    {
       if( lockdown )
          nlocksup++;
@@ -21800,14 +21802,16 @@ SCIP_RETCODE SCIPunlockVarCons(
 
    nlocksdown = 0;
    nlocksup = 0;
-   if( SCIPconsIsLockedPos(cons) )
+   if( (locktype == SCIP_LOCKTYPE_MODEL && SCIPconsIsLockedPos(cons))
+    || (locktype == SCIP_LOCKTYPE_CONFLICT && SCIPconsIsConflictLockedPos(cons)) )
    {
       if( lockdown )
          nlocksdown++;
       if( lockup )
          nlocksup++;
    }
-   if( SCIPconsIsLockedNeg(cons) )
+   if( (locktype == SCIP_LOCKTYPE_MODEL && SCIPconsIsLockedNeg(cons))
+    || (locktype == SCIP_LOCKTYPE_CONFLICT && SCIPconsIsConflictLockedNeg(cons)) )
    {
       if( lockdown )
          nlocksup++;

@@ -482,8 +482,14 @@ SCIP_RETCODE lockRounding(
    )
 {
    /* rounding up may violate the constraint */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
-
+   if( SCIPconsIsLocked(cons) )
+   {
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+   }
+   if( SCIPconsIsConflictLocked(cons) )
+   {
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
+   }
    return SCIP_OKAY;
 }
 
@@ -496,7 +502,14 @@ SCIP_RETCODE unlockRounding(
    )
 {
    /* rounding up may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+   if( SCIPconsIsLocked(cons) )
+   {
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+   }
+   if( SCIPconsIsConflictLocked(cons) )
+   {
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
+   }
 
    return SCIP_OKAY;
 }

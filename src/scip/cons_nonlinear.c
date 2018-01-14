@@ -346,6 +346,7 @@ SCIP_RETCODE unlockLinearVariable(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsConflictLocked(cons));
    assert(var != NULL);
    assert(coef != 0.0);
 

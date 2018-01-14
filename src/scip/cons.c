@@ -8398,6 +8398,36 @@ int SCIPconsGetNLocksNeg(
    return cons->nlocksneg;
 }
 
+/** returns TRUE iff conflict roundings for variables in constraint are locked */
+SCIP_Bool SCIPconsIsConflictLockedPos(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (cons->nconflictlockspos > 0);
+}
+
+/** returns TRUE iff conflict roundings for variables in constraint's negation are locked */
+SCIP_Bool SCIPconsIsConflictLockedNeg(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (cons->nconflictlocksneg > 0);
+}
+
+/** returns TRUE iff conflict roundings for variables in constraint or in constraint's negation are locked */
+SCIP_Bool SCIPconsIsConflictLocked(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (cons->nconflictlockspos > 0 || cons->nconflictlocksneg > 0);
+}
+
 /** get number of times the conflict roundings for variables in constraint are locked */
 int SCIPconsGetNConflictLocksPos(
    SCIP_CONS*            cons                /**< constraint */
