@@ -283,8 +283,8 @@ SCIP_RETCODE lockRounding(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_LOCKTYPE mlocked;
-   SCIP_LOCKTYPE clocked;
+   SCIP_Bool mlocked;
+   SCIP_Bool clocked;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -344,8 +344,8 @@ SCIP_RETCODE unlockRounding(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_LOCKTYPE mlocked;
-   SCIP_LOCKTYPE clocked;
+   SCIP_Bool mlocked;
+   SCIP_Bool clocked;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
