@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -460,6 +460,7 @@
 #define SCIP_DEFAULT_VISUAL_BAKFILENAME     "-" /**< name of the BAK tool output file, or "-" if no BAK tool output should be created */
 #define SCIP_DEFAULT_VISUAL_REALTIME       TRUE /**< should the real solving time be used instead of a time step counter in visualization? */
 #define SCIP_DEFAULT_VISUAL_DISPSOLS      FALSE /**< should the node where solutions are found be visualized? */
+#define SCIP_DEFAULT_VISUAL_DISPLB        FALSE /**< should lower bound information be visualized? */
 #define SCIP_DEFAULT_VISUAL_OBJEXTERN      TRUE /**< should be output the external value of the objective? */
 
 
@@ -2485,6 +2486,11 @@ SCIP_RETCODE SCIPsetCreate(
          "visual/dispsols",
          "should the node where solutions are found be visualized?",
          &(*set)->visual_dispsols, FALSE, SCIP_DEFAULT_VISUAL_DISPSOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "visual/displb",
+         "should lower bound information be visualized?",
+         &(*set)->visual_displb, FALSE, SCIP_DEFAULT_VISUAL_DISPLB,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "visual/objextern",
