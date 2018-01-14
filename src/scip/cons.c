@@ -8023,6 +8023,11 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsLocked
 #undef SCIPconsGetNLocksPos
 #undef SCIPconsGetNLocksNeg
+#undef SCIPconsIsConflictLockedPos
+#undef SCIPconsIsConflictLockedNeg
+#undef SCIPconsIsConflictLocked
+#undef SCIPconsGetNConflictLocksPos
+#undef SCIPconsGetNConflictLocksNeg
 #undef SCIPconsIsAdded
 #undef SCIPconsGetNUpgradeLocks
 
