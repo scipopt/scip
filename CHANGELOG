@@ -6,8 +6,17 @@ performance improvements:
 - disable disaggregation of quadratic constraints by changing the default for constraints/quadratic/maxdisaggrsize to 1
   (disaggregation can still be very helpful on some instances, but also seems hurtful on others)
 
+deleted and modified API functions:
+- added parameter locktype to SCIPaddVarLocks(), SCIPlockVarCons(), SCIPunlockVarCons(), and SCIPaddConsLocks()
+- added parameter locktype to SCIP_DECL_CONSLOCK callback
+
+new API functions:
+- new functions SCIPconsIsConflictLocked(), SCIPconsIsConflictLocked{Pos,Neg}(), SCIPconsGetNConflictLocks{Pos,Neg}()
+- new functions SCIPvarGetNConflictLocksDown() and SCIPvarGetNConflictLocksUp()
+
 features:
 - allow output of lower bounds for visualization
+- new diving heuristic "conflictdiving"
 
 new parameters:
 - new parameter "visual/displb" that enables output of lower bounds for visualization
