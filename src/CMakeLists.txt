@@ -63,6 +63,7 @@ set(scipsources
     scip/cons_expr_sum.c
     scip/cons_expr_value.c
     scip/cons_expr_var.c
+    scip/cons_expr_nlhdlr_convex.c
     scip/cons_expr_nlhdlr_default.c
     scip/cons_expr_nlhdlr_quadratic.c
     scip/cons_indicator.c
@@ -424,6 +425,8 @@ set(scipheaders
     scip/cons_expr_sum.h
     scip/cons_expr_value.h
     scip/cons_expr_var.h
+    scip/cons_expr_nlhdlr_convex.h
+    scip/cons_expr_nlhdlr_default.h
     scip/cons_expr_nlhdlr_quadratic.h
     scip/cons.h
     scip/cons_indicator.h
