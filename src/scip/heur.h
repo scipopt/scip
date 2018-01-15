@@ -80,12 +80,12 @@ extern
 void SCIPdivesetUpdateStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
-   int                   depth,              /**< the depth reached by this diveset */
-   int                   nprobingnodes,      /**< total number of probing nodes explored by this diveset */
-   int                   nbacktracks,        /**< total number of backtracks during the execution of this diveset */
-   SCIP_Longint          nsolsfound,         /**< total number of new solutions found by this diveset */
-   SCIP_Longint          nbestsolsfound,     /**< total number of new best solutions found this diveset */
-   SCIP_Longint          nconflictsfound,    /**< total number of new conflicts found this diveset */
+   int                   depth,              /**< the depth reached this time */
+   int                   nprobingnodes,      /**< the number of probing nodes explored this time */
+   int                   nbacktracks,        /**< the number of backtracks during probing this time */
+   SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
+   SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
    SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    );
 
