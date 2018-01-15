@@ -253,11 +253,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    /* create constraints */
    SCIP_CALL( SCIPcreateConsSetpart(scip, &consin, consnamein, 0, NULL,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcreateConsLinear(scip, &consout, consnameout, 0,
          NULL, NULL, 0.0, 0.0,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
    for( e = g->inpbeg[branchvertex]; e != EAT_LAST; e = g->ieat[e] )
    {

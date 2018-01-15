@@ -78,7 +78,7 @@ struct SCIP_PropData
  * @{
  */
 
-
+#if 0
 static
 SCIP_RETCODE fixedgevarTo1(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -99,8 +99,6 @@ SCIP_RETCODE fixedgevarTo1(
       propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
       assert(propdata != NULL);
 
-printf("FIXED VAR VAR TO ONE %d \n", 0);
-
       SCIP_CALL( SCIPchgVarLb(scip, edgevar, 1.0) );
       (*nfixed)++;
       propdata->nfixededges++;
@@ -108,14 +106,16 @@ printf("FIXED VAR VAR TO ONE %d \n", 0);
    }
    return SCIP_OKAY;
 }
+#endif
 
 /** try to make global fixings */
 static
 SCIP_RETCODE globalfixing(
-   SCIP*                 scip,               /**< SCIP */
+   SCIP*                 scip,               /**< SCIP structure */
    SCIP_VAR**            vars,               /**< variables */
    int*                  nfixededges,        /**< points to number of fixed edges */
    const SCIP_Real*      fixingbounds,       /**< fixing bounds */
+   const GRAPH*          graph,              /**< graph structure */
    SCIP_Real             cutoffbound,        /**> cutoff bound  */
    int                   nedges              /**< number of edges */
 )
@@ -129,7 +129,12 @@ SCIP_RETCODE globalfixing(
          if( SCIPvarGetLbGlobal(edgevar) < 0.5 && SCIPvarGetUbGlobal(edgevar) > 0.5 )
          {
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(edgevar), 1.0));
-            printf("FIXED %d \n", e);
+
+//#ifdef SCIP_DEBUG
+#if 1
+            printf("lurking fix: ");
+            graph_edge_printInfo(scip, graph, e);
+#endif
             SCIPchgVarUbGlobal(scip, edgevar, 0.0);
             (*nfixededges)++;
          }
@@ -165,8 +170,6 @@ void updateFixingBounds(
       }
    }
 }
-
-
 
 
 #define STPPROP_EDGE_KILLED -1
@@ -644,7 +647,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( SCIPgetDepth(scip) == 0 )
       updateFixingBounds(propdata->fixingbounds, graph, cost, pathdist, vnoi, lpobjval);
 
-   SCIP_CALL( globalfixing(scip, vars, &nfixed, propdata->fixingbounds, cutoffbound, nedges) );
+   SCIP_CALL( globalfixing(scip, vars, &nfixed, propdata->fixingbounds, graph, cutoffbound, nedges) );
 
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathedge);

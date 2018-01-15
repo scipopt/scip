@@ -50,6 +50,139 @@
 #define STP_RED_MINBNDTERMS   500
 
 
+/** updates fixing bounds for reduced cost fixings */
+static
+void updateFixingBoundsPcMw(
+   SCIP_Real*            fixingbounds,       /**< fixing bounds */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      cost,               /**< reduced costs */
+   const SCIP_Real*      pathdist,           /**< shortest path distances  */
+   const PATH*           vnoi,               /**< Voronoi paths  */
+   SCIP_Real             lpobjal,            /**< LP objective  */
+   int                   extnedges,          /**< number of edges for extended problem */
+   SCIP_Bool             initialize,         /**< initialize fixing bounds? */
+   SCIP_Bool             undirected          /**< only consider undirected edges */
+)
+{
+   const int nnodes = graph->knots;
+
+   if( graph->extended )
+      exit(1);
+
+   assert(!graph->extended);
+   assert(extnedges > 0);
+
+   if( initialize )
+      for( int e = 0; e < extnedges; e++ )
+         fixingbounds[e] = -FARAWAY;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !graph->mark[k] )
+         continue;
+
+      assert(!Is_pterm(graph->term[k]));
+
+      if( undirected )
+      {
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            const int head = graph->head[e];
+
+            if( graph->mark[head] )
+            {
+               const int erev = flipedge(e);
+               const SCIP_Real fixbnd = pathdist[k] + cost[e] + vnoi[head].dist + lpobjal;
+               const SCIP_Real fixbndrev = pathdist[head] + cost[erev] + vnoi[k].dist + lpobjal;
+               const SCIP_Real minbnd = MIN(fixbnd, fixbndrev);
+
+               assert(fixingbounds[e] == fixingbounds[erev]);
+
+               if( fixingbounds[e] != fixingbounds[erev] )
+               {
+                  int todo;
+                  printf("wtf %d \n", 0);
+                  exit(1);
+               }
+
+               if( minbnd > fixingbounds[e] )
+               {
+                  fixingbounds[e] = minbnd;
+                  fixingbounds[erev] = minbnd;
+               }
+            }
+         }
+      }
+      else
+      {
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            const int head = graph->head[e];
+
+            if( graph->mark[head] )
+            {
+               const SCIP_Real fixbnd = pathdist[k] + cost[e] + vnoi[head].dist + lpobjal;
+
+               if( fixbnd > fixingbounds[e] )
+                  fixingbounds[e] = fixbnd;
+            }
+         }
+      }
+   }
+}
+
+/** eliminate edges by using fixing-bounds and reduced costs */
+static
+int reduceWithFixingBoundPcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   GRAPH*                transgraph,         /**< graph data structure */
+   const SCIP_Real*      fixingbounds,       /**< fixing bounds */
+   const int*            result,             /**< sol int array */
+   SCIP_Real             upperbound          /**< best upperbound */
+)
+{
+   int nfixed = 0;
+   int nnodes = graph->knots;
+
+   assert(!graph->extended);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int e;
+      if( !graph->mark[k] )
+         continue;
+
+      assert(!Is_pterm(graph->term[k]));
+
+      e = graph->outbeg[k];
+      while( e != EAT_LAST )
+      {
+         const int enext = graph->oeat[e];
+
+         if( graph->mark[graph->head[e]] )
+         {
+            const int erev = flipedge(e);
+
+            if( SCIPisLT(scip, upperbound, fixingbounds[e]) && SCIPisLT(scip, upperbound, fixingbounds[erev]) )
+            {
+               int todo;
+               printf("DELLLL %d \n", e);
+
+               graph_edge_del(scip, graph, e, TRUE);
+               graph_edge_del(scip, transgraph, e, FALSE);
+               nfixed++;
+            }
+         }
+
+         e = enext;
+      }
+   }
+
+   return nfixed;
+}
+
+
 /** find roots for PC and MW during DA reduction */
 static
 void findDaRoots(
@@ -2347,6 +2480,7 @@ SCIP_RETCODE reduce_daPcMw(
    STPSOLPOOL* pool;
    GRAPH* transgraph;
    SCIP_Real* bestcost;
+   SCIP_Real* fixingbounds;
    SCIP_Real ub;
    SCIP_Real offset;
    SCIP_Real lpobjval;
@@ -2391,6 +2525,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result2, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcost, extnedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixingbounds, extnedges) );
 
    if( userec )
       SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
@@ -2473,6 +2608,9 @@ SCIP_RETCODE reduce_daPcMw(
 
    /* try to reduce the graph */
    assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
+
+   updateFixingBoundsPcMw(fixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, TRUE, FALSE);
+
    nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
 
    /* edges from result might have been deleted! */
@@ -2512,11 +2650,14 @@ SCIP_RETCODE reduce_daPcMw(
 
       assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
+      updateFixingBoundsPcMw(fixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
 
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
       nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
             &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
+
+      nfixed += reduceWithFixingBoundPcMw(scip, graph, transgraph, fixingbounds, result, upperbound);
 
       if( userec )
          SCIPdebugMessage("eliminations after sol based run2 with best dual sol %d bestlb %f newlb %f\n", nfixed, bestlpobjval, lpobjval);
@@ -2544,10 +2685,14 @@ SCIP_RETCODE reduce_daPcMw(
          SCIPdebugMessage("DA: pertubated run %d minpathcost: %f \n", run, upperbound - lpobjval);
 
          computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
+         updateFixingBoundsPcMw(fixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
+
          nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
          nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
                &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
+
+         nfixed += reduceWithFixingBoundPcMw(scip, graph, transgraph, fixingbounds, result, upperbound);
 
          SCIPdebugMessage("DA: pertubated run %d NFIXED %d \n", run, nfixed);
       }
@@ -2702,11 +2847,20 @@ SCIP_RETCODE reduce_daPcMw(
       assert(graph->mark[tmproot]);
       graph->mark[tmproot] = FALSE;
 
+      /* at first run switch to undirected case */
+      if( run == 0 )
+         for( int e = 0; e < extnedges; e++ )
+            fixingbounds[e] = MIN(fixingbounds[e], fixingbounds[flipedge(e)]);
+
+      updateFixingBoundsPcMw(fixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, TRUE);
+
       for( int e = 0; e < transnedges; e++ )
          marked[e] = FALSE;
 
       /* try to eliminate vertices and edges */
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
+
+      nfixed += reduceWithFixingBoundPcMw(scip, graph, transgraph, fixingbounds, result, upperbound);
 
       apsol = apsol && graph_sol_unreduced(scip, graph, result);
       assert(!apsol || graph_sol_valid(scip, graph, result));
@@ -2725,6 +2879,7 @@ SCIP_RETCODE reduce_daPcMw(
    if( pool != NULL )
       SCIPStpHeurRecFreePool(scip, &pool);
    SCIPfreeBufferArrayNull(scip, &roots);
+   SCIPfreeBufferArray(scip, &fixingbounds);
    SCIPfreeBufferArray(scip, &bestcost);
    SCIPfreeBufferArray(scip, &result2);
    SCIPfreeBufferArray(scip, &marked);

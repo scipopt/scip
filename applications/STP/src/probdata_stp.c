@@ -2162,7 +2162,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->usesymcons = probdata->usesymcons && (mw || pc);
 
    if( probdata->usesymcons  )
-      SCIPdebugMessage("USE SYM CONS: %d \n", (int) (0.5 * (graph->terms - 1) * graph->terms));
+      SCIPdebugMessage("USE SYM CONS: %d \n", graph->terms);
    else
       SCIPdebugMessage("NO SYM CONS: \n");
 
