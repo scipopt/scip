@@ -58,14 +58,20 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to store nlhdlr expression data */
    )
 {
+   int nvars;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata == NULL);
 
+   /* compute a decent upper bound on the number of unique variable expressions */
+   SCIP_CALL( SCIPgetConsExprExprNVars(scip, expr, &nvars) );
+   assert(nvars > 0);
+
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, SCIPgetNVars(scip)) );
-   (*nlhdlrexprdata)->varexprssize = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, nvars) );
+   (*nlhdlrexprdata)->varexprssize = nvars;
 
    /* collect all variable expressions that are contained in expr (the function also captures all variable expressions) */
    SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
