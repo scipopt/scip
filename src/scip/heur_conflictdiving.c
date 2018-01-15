@@ -215,7 +215,7 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 
    if( heurdata->maxvarsfac >= 0.0 && !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
    {
-      assert(maxvarsfac != SCIP_INVALID);
+      assert(maxvarsfac != SCIP_INVALID); /*lint !e777*/
       SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", maxvarsfac) );
    }
    if( heurdata->minmaxvars >= 0.0 && !SCIPisParamFixed(scip, "conflict/minmaxvars") )
