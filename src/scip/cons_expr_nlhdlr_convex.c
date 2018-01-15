@@ -28,6 +28,7 @@
 #include "scip/cons_quadratic.h" /* for SCIP_ROWPREP */
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_var.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "convex"
@@ -223,8 +224,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       assert(nlhdlrexprdata->varexprs[i] != NULL);
       assert(SCIPisConsExprExprVar(nlhdlrexprdata->varexprs[i]));
 
-      /* get the original variable */
-      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->varexprs[i]);
+      /* get the variable of the variable expression */
+      var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[i]);
       assert(var != NULL);
 
       /* get solution value */
