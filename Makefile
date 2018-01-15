@@ -535,6 +535,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_expr_value.o \
 			scip/cons_expr_var.o \
 			scip/cons_expr_entropy.o \
+			scip/cons_expr_nlhdlr_convex.o \
 			scip/cons_expr_nlhdlr_default.o \
 			scip/cons_expr_nlhdlr_quadratic.o \
 			scip/cons_indicator.o \

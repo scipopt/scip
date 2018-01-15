@@ -19,7 +19,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr.c"
+#include "scip/cons_expr.h"
+#include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_var.h"
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -79,7 +81,7 @@ Test(getvars, expression_not_containing_all_vars)
    int i;
    
    /* note that this captures the variable expressions */
-   SCIP_CALL( getVarExprs(scip, expr, varexprs, &nvarexprs) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, expr, varexprs, &nvarexprs) );
    cr_assert_eq(nvarexprs, 3);
 
    for( i = 0; i < nvarexprs; ++i )
@@ -106,7 +108,7 @@ Test(getvars, expression_containing_all_vars)
    SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, expr, 1.0) );
 
    /* note that this captures the variable expressions */
-   SCIP_CALL( getVarExprs(scip, sumexpr, varexprs, &nvarexprs) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, sumexpr, varexprs, &nvarexprs) );
    cr_assert_eq(nvarexprs, 4, "Expecting 4, got %d\n", nvarexprs);
 
    for( i = 0; i < nvarexprs; ++i )
