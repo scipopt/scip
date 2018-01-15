@@ -84,6 +84,7 @@ set(scipsources
     scip/heur_dins.c
     scip/heur_distributiondiving.c
     scip/heur_dualval.c
+    scip/heur_farkasdiving.c
     scip/heur_feaspump.c
     scip/heur_fixandinfer.c
     scip/heur_fracdiving.c
