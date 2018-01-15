@@ -2628,7 +2628,7 @@ SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    getvarsdata.nvarexprs = 0;
    getvarsdata.varexprs = varexprs;
 
-   /* use a hash map to dicide whether we have stored a variable expression already */
+   /* use a hash map to decide whether we have stored a variable expression already */
    SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPgetNTotalVars(scip)) );
 
    /* collect all variable expressions */
