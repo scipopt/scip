@@ -3935,85 +3935,6 @@ SCIP_Real computeMIREfficacy(
    return - rhs / MAX(norm, 1e-6);
 }
 
-static
-void calcAdditionalDelta(
-   SCIP*                 scip,
-   SCIP_Real*            deltacands,
-   int*                  ndeltacands,
-   SCIP_Real             rhs,
-   SCIP_Real*            scale,
-   SCIP_Bool*            success
-
-   )
-{
-   int i;
-   SCIP_Real currscale;
-   int minpos;
-
-   assert(*ndeltacands > 0);
-
-   *success = FALSE;
-
-   currscale = REALABS(deltacands[0]);
-   minpos = 0;
-
-   for( i = 1; i < *ndeltacands; ++i )
-   {
-      SCIP_Real absval = REALABS(deltacands[i]);
-
-      if( absval < currscale )
-      {
-         currscale = absval;
-         minpos = i;
-      }
-   }
-
-   currscale = 1.0 / currscale;
-
-   if( SCIPisFeasIntegral(scip, currscale * rhs) )
-      return;
-
-   for( i = 0; i < *ndeltacands; ++i )
-   {
-      SCIP_Real val;
-      SCIP_Real frac;
-      SCIP_Longint nominator;
-      SCIP_Longint denominator;
-
-      if( i == minpos )
-         continue;
-
-      val = currscale * deltacands[i];
-      frac = val - floor(val + QUAD_EPSILON);
-
-      if( frac < 1e-6 )
-         continue;
-
-      if( SCIPrealToRational(frac, -QUAD_EPSILON, 1e-6, 100000LL, &nominator, &denominator) )
-      {
-         SCIP_Longint gcd;
-         SCIP_Real newscale;
-
-         while( (gcd = SCIPcalcGreComDiv(nominator, denominator)) != 1 )
-         {
-            nominator /= gcd;
-            denominator /= gcd;
-         }
-
-         newscale = currscale * denominator;
-
-         if( newscale < 1e6 && ! SCIPisFeasIntegral(scip, newscale * rhs) )
-            currscale = newscale;
-      }
-   }
-
-   if( SCIPisEQ(scip, currscale, REALABS(1.0 / deltacands[minpos])) )
-      return;
-
-   *scale = currscale;
-   *success = TRUE;
-}
-
 /** calculates an MIR cut out of an aggregation of LP rows
  *
  *  Given the aggregation, it is transformed to a mixed knapsack set via complementation (using bounds or variable bounds)
@@ -4188,11 +4109,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       SCIP_Real intscale;
       SCIP_Bool intscalesuccess;
 
-#if 1
-      calcAdditionalDelta(scip, deltacands, &ndeltacands, QUAD_TO_DBL(mksetrhs), &intscale, &intscalesuccess);
-#else
       SCIP_CALL( SCIPcalcIntegralScalar(deltacands, nbounddist, -QUAD_EPSILON, SCIPsumepsilon(scip), (SCIP_Longint)10000, 10000.0, &intscale, &intscalesuccess) );
-#endif
 
       if( intscalesuccess )
       {
