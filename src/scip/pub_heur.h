@@ -293,6 +293,12 @@ SCIP_Longint SCIPdivesetGetNBacktracks(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
+/** get the total number of conflicts found by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNConflicts(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
 /** get the total number of solutions (leaf and rounded solutions) found by the dive set */
 EXTERN
 SCIP_Longint SCIPdivesetGetNSols(
