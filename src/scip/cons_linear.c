@@ -3420,15 +3420,15 @@ SCIP_RETCODE consdataSort(
  * local linear constraint handler methods
  */
 
-/** updates rounding locks if w.r.t rhs */
+/** updates rounding locks */
 static
 SCIP_RETCODE updateLocks(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,
-   SCIP_CONSDATA*        consdata,
-   SCIP_Real             side,
-   SCIP_Bool             isrhs,
-   SCIP_LOCKTYPE         locktype
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_Real             side,               /**< side that should be considered */
+   SCIP_Bool             isrhs,              /**< is the side the right-hand side? */
+   SCIP_LOCKTYPE         locktype            /**< type of locks that should be updated */
    )
 {
    assert(scip != NULL);
