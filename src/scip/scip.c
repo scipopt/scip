@@ -36811,6 +36811,7 @@ void SCIPupdateDivesetStats(
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
    SCIP_Longint          nsolsfound,         /**< the number of solutions found */
    SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
+   SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
    SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
    )
 {
@@ -36818,7 +36819,8 @@ void SCIPupdateDivesetStats(
    assert(diveset != NULL);
    assert(SCIPinProbing(scip));
 
-   SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks, nsolsfound, nbestsolsfound, leavewassol);
+   SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks, nsolsfound,
+         nbestsolsfound, nconflictsfound, leavewassol);
 }
 
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings
@@ -42968,7 +42970,9 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNStrongbranchConflictConss(scip->conflict)
       + SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict)
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
-      + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict);
+      + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
+      + SCIPconflictGetNDualrayInfSuccess(scip->conflict)
+      + SCIPconflictGetNDualrayBndSuccess(scip->conflict);
 }
 
 /** get number of conflict constraints found so far at the current node
@@ -44982,7 +44986,7 @@ void SCIPprintHeuristicStatistics(
 
    if ( ndivesets > 0 )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks     NConfs   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
       for( i = 0; i < scip->set->nheurs; ++i )
       {
          int s;
@@ -44992,10 +44996,11 @@ void SCIPprintHeuristicStatistics(
             SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
             if( SCIPdivesetGetNCalls(diveset) > 0 )
             {
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
                   SCIPdivesetGetNProbingNodes(diveset),
                   SCIPdivesetGetNLPIterations(diveset),
                   SCIPdivesetGetNBacktracks(diveset),
+                  SCIPdivesetGetNConflicts(diveset),
                   SCIPdivesetGetMinDepth(diveset),
                   SCIPdivesetGetMaxDepth(diveset),
                   SCIPdivesetGetAvgDepth(diveset),
@@ -45013,7 +45018,7 @@ void SCIPprintHeuristicStatistics(
                   SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
             }
             else
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -\n");
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -          -\n");
          }
       }
    }
