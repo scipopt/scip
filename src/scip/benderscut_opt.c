@@ -513,6 +513,7 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
    SCIP_BENDERSCUT* benderscut;
+   char paramname[SCIP_MAXSTRLEN];
 
    assert(benders != NULL);
 
@@ -549,13 +550,13 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
 #endif
 
    /* add opt Benders' decomposition cuts parameters */
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "benderscut/" BENDERSCUT_NAME "/solutiontol",
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/solutiontol", SCIPbendersGetName(benders), BENDERSCUT_NAME);
+   SCIP_CALL( SCIPaddRealParam(scip, paramname,
          "the tolerance used for the comparison between the auxiliary variable and the subproblem objective.",
          &benderscutdata->soltol, FALSE, SCIP_DEFAULT_SOLTOL, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "benderscut/" BENDERSCUT_NAME "/addcuts",
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/addcuts", SCIPbendersGetName(benders), BENDERSCUT_NAME);
+   SCIP_CALL( SCIPaddBoolParam(scip, paramname,
          "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
          &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );
 

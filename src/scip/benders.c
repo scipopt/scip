@@ -73,6 +73,7 @@ struct SCIP_EventhdlrData
 {
    int                   numruns;            /**< the number of times that the problem has been solved */
    SCIP_Real             upperbound;         /**< an upper bound for the problem */
+   SCIP_Bool             solvemip;           /**< is the event called from a MIP subproblem solve*/
 };
 
 /* ---------------- Callback methods of node focus event handler ---------------- */
@@ -140,7 +141,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersMipnodefocus)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
    /* interrupting the solve so that the control is returned back to the Benders' core. */
-   if( eventhdlrdata->numruns == 0 )
+   if( eventhdlrdata->numruns == 0 && !eventhdlrdata->solvemip )
       SCIP_CALL( SCIPinterruptSolve(scip) );
 
    SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
@@ -964,8 +965,7 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_CALL( SCIPclockCreate(&(*benders)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*benders)->bendersclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*benders)->ncalls = 0;
-   (*benders)->noptcutsfound = 0;
-   (*benders)->nfeascutsfound = 0;
+   (*benders)->ncutsfound = 0;
    (*benders)->ntransferred = 0;
    (*benders)->active = FALSE;
    (*benders)->initialized = FALSE;
@@ -1199,6 +1199,7 @@ SCIP_RETCODE createSubproblems(
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
             eventhdlrdata_mipnodefocus->numruns = 0;
+            eventhdlrdata_mipnodefocus->solvemip = FALSE;
             eventhdlrdata_upperbound->upperbound = -SCIPinfinity(subproblem);
 
             /* include the first LP solved event handler into the subproblem */
@@ -1309,8 +1310,8 @@ SCIP_RETCODE SCIPbendersInit(
       SCIPclockReset(benders->bendersclock);
 
       benders->ncalls = 0;
-      benders->noptcutsfound = 0;
-      benders->nfeascutsfound = 0;
+      benders->ncutsfound = 0;
+      benders->ntransferred = 0;
    }
 
    /* start timing */
@@ -1558,16 +1559,11 @@ SCIP_RETCODE SCIPbendersExit(
       return SCIP_INVALIDCALL;
    }
 
+   /* start timing */
+   SCIPclockStart(benders->setuptime, set);
+
    if( benders->bendersexit != NULL )
-   {
-      /* start timing */
-      SCIPclockStart(benders->setuptime, set);
-
       SCIP_CALL( benders->bendersexit(set->scip, benders) );
-
-      /* stop timing */
-      SCIPclockStop(benders->setuptime, set);
-   }
 
    /* if the Benders' decomposition is a copy, then
     * - the generated cuts will be transferred to the source scip, and
@@ -1586,6 +1582,9 @@ SCIP_RETCODE SCIPbendersExit(
    }
 
    benders->initialized = FALSE;
+
+   /* stop timing */
+   SCIPclockStop(benders->setuptime, set);
 
    return SCIP_OKAY;
 }
@@ -1668,16 +1667,13 @@ SCIP_RETCODE SCIPbendersInitsol(
    assert(benders != NULL);
    assert(set != NULL);
 
+   /* start timing */
+   SCIPclockStart(benders->setuptime, set);
+
    /* call solving process initialization method of Benders' decomposition */
    if( benders->bendersinitsol != NULL )
    {
-      /* start timing */
-      SCIPclockStart(benders->setuptime, set);
-
       SCIP_CALL( benders->bendersinitsol(set->scip, benders) );
-
-      /* stop timing */
-      SCIPclockStop(benders->setuptime, set);
    }
 
    /* calling the initsol method for the Benders' cuts */
@@ -1686,6 +1682,9 @@ SCIP_RETCODE SCIPbendersInitsol(
    {
       SCIP_CALL( SCIPbenderscutInitsol(benders->benderscuts[i], set) );
    }
+
+   /* stop timing */
+   SCIPclockStop(benders->setuptime, set);
 
    return SCIP_OKAY;
 }
@@ -1701,16 +1700,13 @@ SCIP_RETCODE SCIPbendersExitsol(
    assert(benders != NULL);
    assert(set != NULL);
 
+   /* start timing */
+   SCIPclockStart(benders->setuptime, set);
+
    /* call solving process deinitialization method of Benders' decomposition */
    if( benders->bendersexitsol != NULL )
    {
-      /* start timing */
-      SCIPclockStart(benders->setuptime, set);
-
       SCIP_CALL( benders->bendersexitsol(set->scip, benders) );
-
-      /* stop timing */
-      SCIPclockStop(benders->setuptime, set);
    }
 
    /* calling the exitsol method for the Benders' cuts */
@@ -1719,6 +1715,9 @@ SCIP_RETCODE SCIPbendersExitsol(
    {
       SCIP_CALL( SCIPbenderscutExitsol(benders->benderscuts[i], set) );
    }
+
+   /* stop timing */
+   SCIPclockStop(benders->setuptime, set);
 
    return SCIP_OKAY;
 }
@@ -1839,6 +1838,9 @@ SCIP_RETCODE SCIPbendersExec(
    int nchecked;              /* the number of subproblems that have been checked */
    SCIP_Bool* subisinfeas;
    SCIP_Bool onlylpcheck;     /* should only the LP be checked in the presence of integer subproblems */
+
+   /* start timing */
+   SCIPclockStart(benders->bendersclock, set);
 
    (*infeasible) = FALSE;
 
@@ -2085,12 +2087,14 @@ SCIP_RETCODE SCIPbendersExec(
                      || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k])) )
                      //|| (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k]) && i == 0) )
                   {
-                     cutresult = (*result);
-
                      SCIP_CALL( SCIPbenderscutExec(benderscuts[k], set, benders, sol, i, type, &cutresult) );
 
                      if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
+                     {
                         *result = cutresult;
+
+                        benders->ncutsfound++;
+                     }
                   }
 
                   addedcuts += (SCIPbenderscutGetNAddedCons(benderscuts[k]) + SCIPbenderscutGetNAddedCuts(benderscuts[k]) - prevaddedcuts);
@@ -2169,6 +2173,8 @@ SCIP_RETCODE SCIPbendersExec(
    /* increment the number of calls to the Benders' decomposition subproblem solve */
    benders->ncalls++;
 
+   /* end timing */
+   SCIPclockStop(benders->bendersclock, set);
 
    /* freeing memory */
    SCIPsetFreeBufferArray(set, &subisinfeas);
@@ -2492,11 +2498,12 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
       /* if the MIP will be solved directly, then the probing mode needs to be skipped. This is done by dropping the
        * node focus event */
       SCIP_EVENTHDLR* eventhdlr;
+      SCIP_EVENTHDLRDATA* eventhdlrdata;
 
       eventhdlr = SCIPfindEventhdlr(subproblem, MIPNODEFOCUS_EVENTHDLR_NAME);
+      eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
-      /* this may throw an error because the event is not being tracked. I am not sure about this yet. */
-      SCIP_CALL(SCIPdropEvent(subproblem, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
+      eventhdlrdata->solvemip = TRUE;
    }
    else
    {
@@ -2941,23 +2948,13 @@ int SCIPbendersGetNCalls(
 }
 
 /** gets the number of optimality cuts found by the collection of Benders' decomposition subproblems */
-int SCIPbendersGetNOptCutsFound(
+int SCIPbendersGetNCutsFound(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
 
-   return benders->noptcutsfound;
-}
-
-/** gets the number of feasibility cuts found by the collection of Benders' decomposition subproblems */
-int SCIPbendersGetNFeasCutsFound(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   )
-{
-   assert(benders != NULL);
-
-   return benders->nfeascutsfound;
+   return benders->ncutsfound;
 }
 
 /** gets time in seconds used in this benders for setting up for next stages */

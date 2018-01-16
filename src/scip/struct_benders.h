@@ -58,8 +58,7 @@ struct SCIP_Benders
    SCIP_CLOCK*           bendersclock;       /**< benders execution time */
    int                   priority;           /**< priority of the Benders' decomposition */
    int                   ncalls;             /**< number of times, this benders was called */
-   int                   noptcutsfound;      /**< number of optimality cuts found by the Benders' decomposition */
-   int                   nfeascutsfound;     /**< number of feasibility cuts found by the Benders' decomposition */
+   int                   ncutsfound;         /**< number of cuts found by the Benders' decomposition */
    int                   ntransferred;       /**< number of cuts transferred from sub SCIP to the master SCIP */
    SCIP_Bool             active;             /**< is the Benders' decomposition active? */
    SCIP_Bool             initialized;        /**< is Benders' decomposition initialized? */
