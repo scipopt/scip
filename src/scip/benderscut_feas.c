@@ -141,6 +141,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       SCIP_CALL( BDconsGetVars(subproblem, conss[i], consvars, nconsvars) );
       SCIP_CALL( BDconsGetVals(subproblem, conss[i], consvals, nconsvars) );
 
+#ifndef NDEBUG
       /* loop over all variables with non-zero coefficient */
       for( j = 0; j < nconsvars; j++ )
       {
@@ -159,7 +160,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
          //assert(!BDoriginalVarIsLinking(consvar));
 
-#ifndef NDEBUG
          /* update the coefficient in the farkas activity */
          farkascoefs[SCIPvarGetProbindex(consvar)] += dualsol * consval;
 
@@ -168,8 +168,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
           * given by the upper bound of the variable. */
          if( mastervar != NULL )
             farkaslhs -= dualsol * consval * SCIPvarGetUbLocal(consvar);
-#endif
       }
+#endif
 
       SCIPfreeBufferArray(subproblem, &consvars);
       SCIPfreeBufferArray(subproblem, &consvals);

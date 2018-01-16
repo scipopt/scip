@@ -79,45 +79,6 @@ struct SCIP_ConshdlrData
  * Local methods
  */
 
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            vars,               /**< the variables of the original SCIP                  */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
-   SCIP_SOL**            newsol,             /**< the new solution constructed from the subscip */
-   int                   nvars               /**< the number of variables of the original SCIP        */
-   )
-{
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( subvars != NULL );
-   assert( subsol != NULL );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, newsol, NULL) );
-   SCIP_CALL( SCIPsetSolVals(scip, *newsol, nvars, vars, subsolvals) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
-
-
 /** constructs a new solution based upon the solutions to the Benders' decomposition subproblems */
 static
 SCIP_RETCODE constructValidSolution(
