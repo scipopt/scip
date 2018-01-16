@@ -2657,7 +2657,6 @@ SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
 {
    SCIP_Real auxiliaryvarval;
    SCIP_Real soltol;
-   SCIP_Real reldiff;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -2683,7 +2682,6 @@ SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
       reldiff = SCIPsetInfinity(set);
 
    if( SCIPsetIsFeasGE(set, auxiliaryvarval + soltol, SCIPbendersGetSubprobObjval(benders, probnumber)) )
-   //if( SCIPsetIsFeasGE(set, auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber)) || reldiff <= soltol )
       (*optimal) = TRUE;
 
    return SCIP_OKAY;
