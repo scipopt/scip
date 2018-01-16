@@ -79,9 +79,9 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
    int nconsvars;
-   int j;
 
 #ifndef NDEBUG
+   int j;
    SCIP_Real activity;
    SCIP_Real* farkascoefs;    // the coefficients of the farkas proof
    SCIP_Real farkasact = 0;   // the activities of the farkas proof
