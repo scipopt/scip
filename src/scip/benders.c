@@ -2671,16 +2671,6 @@ SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
    SCIPsetDebugMsg(set, "Subproblem %d - Auxiliary Variable: %g Subproblem Objective: %g\n", probnumber, auxiliaryvarval,
       SCIPbendersGetSubprobObjval(benders, probnumber));
 
-   /* if the value of the auxiliary variable in the master problem is greater or equal to the subproblem objective,
-    * then a cut is not added by the subproblem.
-    */
-   if( SCIPsetIsGT(set, auxiliaryvarval, -SCIPsetInfinity(set))
-      && SCIPsetIsLT(set, SCIPbendersGetSubprobObjval(benders, probnumber), SCIPsetInfinity(set)) )
-      reldiff = ABS(auxiliaryvarval - SCIPbendersGetSubprobObjval(benders, probnumber))/
-         MAX(ABS(auxiliaryvarval), ABS(SCIPbendersGetSubprobObjval(benders, probnumber)));
-   else
-      reldiff = SCIPsetInfinity(set);
-
    if( SCIPsetIsFeasGE(set, auxiliaryvarval + soltol, SCIPbendersGetSubprobObjval(benders, probnumber)) )
       (*optimal) = TRUE;
 
