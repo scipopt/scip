@@ -2575,9 +2575,10 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       }
       else
       {
+         SCIP_Bool pfeas;
          SCIP_Bool dfeas;
 
-         SCIP_CALL( SCIPlpiGetSolFeasibility(lpi, NULL, &dfeas) );
+         SCIP_CALL( SCIPlpiGetSolFeasibility(lpi, &pfeas, &dfeas) );
 
          if (!dfeas)
          {
@@ -2646,9 +2647,10 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       }
       else
       {
+         SCIP_Bool pfeas;
          SCIP_Bool dfeas;
 
-         SCIP_CALL( SCIPlpiGetSolFeasibility(lpi, NULL, &dfeas) );
+         SCIP_CALL( SCIPlpiGetSolFeasibility(lpi, &pfeas, &dfeas) );
 
          if (!dfeas)
          {
