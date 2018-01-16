@@ -1118,24 +1118,28 @@ SCIP_RETCODE separatePointProduct(
 
    /* debug output: prints expression we are trying to separate, bounds of variables and point */
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "separating product with %d variables: will try to separate violated point (%g) by an %s\n",
-         SCIPgetConsExprExprNChildren(expr), violation, overestimate ? "overestimator": "underestimator");
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
-      child = SCIPgetConsExprExprChildren(expr)[c];
-      var = SCIPgetConsExprExprAuxVar(child);
-      assert(var != NULL);
-      SCIPdebugMsg(scip, "var: %s = %g in [%g, %g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
-            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+      int c;
 
-      if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+      SCIPdebugMsg(scip, "separating product with %d variables: will try to separate violated point by an %s\n",
+            SCIPgetConsExprExprNChildren(expr), overestimate ? "overestimator": "underestimator");
+      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
       {
-         SCIPdebugMsg(scip, "unbounded factor related to\n");
-         SCIP_CALL( SCIPdismantleConsExprExpr(scip, child) );
+         child = SCIPgetConsExprExprChildren(expr)[c];
+         var = SCIPgetConsExprExprAuxVar(child);
+         assert(var != NULL);
+         SCIPdebugMsg(scip, "var: %s = %g in [%g, %g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
+               SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+
+         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+         {
+            SCIPdebugMsg(scip, "unbounded factor related to\n");
+            SCIP_CALL( SCIPdismantleConsExprExpr(scip, child) );
+         }
       }
+      SCIPdebugMsg(scip, "The product should be equal to auxvar: %s = %g in [%g, %g]\n", SCIPvarGetName(auxvar),
+            SCIPgetSolVal(scip, sol, auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
    }
-   SCIPdebugMsg(scip, "The product should be equal to auxvar: %s = %g in [%g, %g]\n", SCIPvarGetName(auxvar),
-         SCIPgetSolVal(scip, sol, auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
 #endif
 
    /* bilinear term */
