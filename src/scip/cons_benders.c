@@ -118,127 +118,6 @@ SCIP_RETCODE createNewSol(
 }
 
 
-/* solves the probing LP with the integer variables fixed to the given solution.
- * The solution to this LP will optimise the auxiliary variables. */
-static
-SCIP_RETCODE optimiseAuxiliaryVariables(
-   SCIP*                 scip,               /**< the SCIP instance */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SOL**            newsol,             /**< the new solution constructed from the subscip */
-   SCIP_Bool*            newsolfound         /**< was a new solution found and created? */
-   )
-{
-   SCIP* subscip;
-   SCIP_HASHMAP* varmap;
-   SCIP_VAR** vars;
-   SCIP_VAR** subvars;
-   SCIP_VAR** fixedvars;
-   SCIP_Real* fixedvals;
-   int nvars;
-   int nbinvars;
-   int nintvars;
-   int nfixedvars;
-   int i;
-   SCIP_Bool success;
-
-   assert(scip != NULL);
-   assert(newsol != NULL);
-
-   (*newsolfound) = FALSE;
-
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-
-   /* check whether discrete variables are available */
-   if( nbinvars == 0 && nintvars == 0 )
-      return SCIP_OKAY;
-
-   /* allocate buffer storage to hold the RINS fixings */
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
-
-   for( i = 0; i < nintvars + nbinvars; i++ )
-   {
-      fixedvars[i] = vars[i];
-      fixedvals[i] = SCIPgetSolVal(scip, sol, vars[i]);
-   }
-   nfixedvars = nintvars + nbinvars;
-
-   SCIP_CALL( SCIPcreate(&subscip) );
-
-   /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
-
-   SCIP_CALL( SCIPsetBoolParam(subscip, "benders/copybenders", FALSE) );
-
-   /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmap, "consbenders",
-         fixedvars, fixedvals, nfixedvars, FALSE, FALSE, &success, NULL) );
-
-   /* copy subproblem variables from map to obtain the same order */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-   for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
-
-   /* free hash map */
-   SCIPhashmapFree(&varmap);
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-#ifdef SCIP_DEBUG
-   /* for debugging, enable full output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_FULL) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#else
-   /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int) SCIP_VERBLEVEL_NONE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-#endif
-
-   /* forbid recursive call of heuristics and separators solving subMIPs */
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-   /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-   /* disable heuristics */
-   SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   /* solve the subproblem */
-   SCIP_CALL_ABORT( SCIPsolve(subscip) );
-
-   /* print solving statistics of subproblem if we are in SCIP's debug mode */
-   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
-
-   /* check, whether a solution was found */
-   if( SCIPgetNSols(subscip) > 0 )
-   {
-      SCIP_SOL* subsol;
-
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      subsol = SCIPgetBestSol(subscip);
-      SCIP_CALL( createNewSol(scip, subscip, vars, subvars, subsol, newsol, nvars) );
-      (*newsolfound) = TRUE;
-   }
-   /* free subproblem */
-   SCIPfreeBufferArray(scip, &subvars);
-   SCIP_CALL( SCIPfree(&subscip) );
-
-   SCIPfreeBufferArray(scip, &fixedvals);
-   SCIPfreeBufferArray(scip, &fixedvars);
-
-   return SCIP_OKAY;
-}
-
-
 /** constructs a new solution based upon the solutions to the Benders' decomposition subproblems */
 static
 SCIP_RETCODE constructValidSolution(
@@ -707,9 +586,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
       /* if the master problem is currently in probing mode, then it is assumed that the auxiliary variables are
        * optimised. If not, the master problem is put into probing mode and then reoptimised. */
       newsolfound = FALSE;
-      //if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisLPConstructed(scip) )
-      //if( !SCIPheurUsesSubscip(SCIPsolGetHeur(sol)) )
-         //SCIP_CALL( optimiseAuxiliaryVariables(scip, sol, &newsol, &newsolfound) );
 
       for( i = 0; i < nactivebenders; i++ )
       {

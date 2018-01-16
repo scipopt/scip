@@ -78,12 +78,15 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
+   int nconsvars;
+   int j;
+
+#ifndef NDEBUG
    SCIP_Real activity;
    SCIP_Real* farkascoefs;    // the coefficients of the farkas proof
    SCIP_Real farkasact = 0;   // the activities of the farkas proof
    SCIP_Real farkaslhs = 0;   // the lhs of the farkas proof
-   int nconsvars;
-   int j;
+#endif
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -98,9 +101,11 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    nconss = SCIPgetNConss(subproblem);
    conss = SCIPgetConss(subproblem);
 
+#ifndef NDEBUG
    SCIP_CALL( SCIPallocBufferArray(subproblem, &farkascoefs, nvars + nfixedvars) );
    for( i = 0; i < nvars + nfixedvars; i++ )
       farkascoefs[i] = 0;
+#endif
 
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
@@ -126,7 +131,9 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       /* Update the lhs of the cut */
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
 
+#ifndef NDEBUG
       farkaslhs += addval;
+#endif
 
       nconsvars = BDconsGetNVars(subproblem, conss[i]);
       SCIP_CALL( SCIPallocBufferArray(subproblem, &consvars, nconsvars) );
@@ -152,6 +159,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
          //assert(!BDoriginalVarIsLinking(consvar));
 
+#ifndef NDEBUG
          /* update the coefficient in the farkas activity */
          farkascoefs[SCIPvarGetProbindex(consvar)] += dualsol * consval;
 
@@ -160,6 +168,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
           * given by the upper bound of the variable. */
          if( mastervar != NULL )
             farkaslhs -= dualsol * consval * SCIPvarGetUbLocal(consvar);
+#endif
       }
 
       SCIPfreeBufferArray(subproblem, &consvars);
