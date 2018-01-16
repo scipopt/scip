@@ -214,6 +214,9 @@ SCIP_RETCODE redbasedvarfixing(
    /* set ancestor data structures of the new graph */
    SCIP_CALL( graph_init_history(scip, copyg) );
 
+   for( int e = 0; e < nedges; e++ )
+      remain[e] = STPPROP_EDGE_UNSET;
+
    for( int e = 0; e < nedges; e += 2 )
    {
       const int erev = e + 1;
@@ -230,12 +233,13 @@ SCIP_RETCODE redbasedvarfixing(
          edgestate[e] = EDGE_BLOCKED;
          edgestate[erev] = EDGE_BLOCKED;
 
-       //  offset += copyg->cost[e];
+         copyg->cost[e] = 0.0;
+         copyg->cost[erev] = 0.0;
 
-       //  copyg->cost[e] = 0.0;
-       //  copyg->cost[erev] = 0.0;
+         printf("block %d \n", e);
 
-      //   printf("SET TO ONE %d %d\n", tail, head);
+         remain[e] = STPPROP_EDGE_FIXED;
+         remain[erev] = STPPROP_EDGE_FIXED;
       }
       else
       {
@@ -251,11 +255,6 @@ SCIP_RETCODE redbasedvarfixing(
          graph_edge_del(scip, copyg, e, TRUE);
          remain[e] = STPPROP_EDGE_KILLED;
          remain[erev] = STPPROP_EDGE_KILLED;
-      }
-      else
-      {
-         remain[e] = STPPROP_EDGE_UNSET;
-         remain[erev] = STPPROP_EDGE_UNSET;
       }
    }
 
@@ -317,7 +316,7 @@ SCIP_RETCODE redbasedvarfixing(
 
    SCIP_CALL( level0(scip, copyg) );
  //  SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, edgestate, FALSE) );
-   SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, NULL, FALSE) );
+   SCIP_CALL( reduceStp(scip, &copyg, &offset, 2, FALSE, FALSE, NULL, FALSE) );
 
 
    assert(graph_valid(copyg));

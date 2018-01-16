@@ -2089,13 +2089,13 @@ SCIP_RETCODE graph_knot_contract(
    sgrad = p->grad[s];
    if( sgrad >= 2 )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &incost, sgrad - 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &outcost, sgrad - 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &mark, sgrad - 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &edge, sgrad - 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &knot, sgrad - 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, sgrad - 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, sgrad - 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &incost, sgrad - 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &outcost, sgrad - 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mark, sgrad - 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &edge, sgrad - 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &knot, sgrad - 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ancestors, sgrad - 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &revancestors, sgrad - 1) );
    }
 
    /* store edges to be moved/removed */
@@ -2263,13 +2263,13 @@ SCIP_RETCODE graph_knot_contract(
          SCIPintListNodeFree(scip, &(ancestors[i]));
          SCIPintListNodeFree(scip, &(revancestors[i]));
       }
-      SCIPfreeBufferArray(scip, &revancestors);
-      SCIPfreeBufferArray(scip, &ancestors);
-      SCIPfreeBufferArray(scip, &knot);
-      SCIPfreeBufferArray(scip, &edge);
-      SCIPfreeBufferArray(scip, &mark);
-      SCIPfreeBufferArray(scip, &outcost);
-      SCIPfreeBufferArray(scip, &incost);
+      SCIPfreeBlockMemoryArray(scip, &revancestors, sgrad - 1);
+      SCIPfreeBlockMemoryArray(scip, &ancestors, sgrad - 1);
+      SCIPfreeBlockMemoryArray(scip, &knot, sgrad - 1);
+      SCIPfreeBlockMemoryArray(scip, &edge, sgrad - 1);
+      SCIPfreeBlockMemoryArray(scip, &mark, sgrad - 1);
+      SCIPfreeBlockMemoryArray(scip, &outcost, sgrad - 1);
+      SCIPfreeBlockMemoryArray(scip, &incost, sgrad - 1);
    }
    assert(p->grad[s]   == 0);
    assert(p->outbeg[s] == EAT_LAST);
