@@ -47,6 +47,7 @@ SCIP_RETCODE SCIPbenderscutCopyInclude(
 /** creates a Benders' decomposition cuts */
 extern
 SCIP_RETCODE SCIPbenderscutCreate(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_BENDERSCUT**     benderscut,         /**< pointer to Benders' decomposition cuts data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */

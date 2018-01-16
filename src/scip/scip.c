@@ -6379,6 +6379,25 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    return SCIP_OKAY;
 }
 
+/** frees the subproblem after calling the solve subproblem method. This will either call the user defined free
+ *  subproblem callback for Benders' decomposition or the default freeing methods. In the default case, if the
+ *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is a MIP, then SCIPfreeTransform is called. */
+SCIP_RETCODE SCIPfreeBendersSubproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
+
+   SCIP_CALL( SCIPbendersFreeSubproblem(benders, scip->set, probnumber) );
+
+   return SCIP_OKAY;
+}
+
 /** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
  * value of the corresponding auxiliary variable */
 SCIP_RETCODE SCIPcheckBendersAuxiliaryVar(
@@ -6457,7 +6476,7 @@ SCIP_RETCODE SCIPincludeBenderscut(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPbenderscutCreate(&benderscut, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
+   SCIP_CALL( SCIPbenderscutCreate(benders, &benderscut, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
          islpcut, benderscutcopy, benderscutfree, benderscutinit, benderscutexit,
          benderscutinitsol, benderscutexitsol, benderscutexec, benderscutdata) );
    SCIP_CALL( SCIPbendersIncludeBenderscut(benders, scip->set, benderscut) );
@@ -6503,8 +6522,8 @@ SCIP_RETCODE SCIPincludeBenderscutBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPbenderscutCreate(&benderscut, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
-         islpcut, NULL, NULL, NULL, NULL, NULL, NULL, benderscutexec, benderscutdata) );
+   SCIP_CALL( SCIPbenderscutCreate(benders, &benderscut, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc,
+         priority, islpcut, NULL, NULL, NULL, NULL, NULL, NULL, benderscutexec, benderscutdata) );
    SCIP_CALL( SCIPbendersIncludeBenderscut(benders, scip->set, benderscut) );
 
    if( benderscutptr != NULL )
@@ -45486,6 +45505,57 @@ void printConcsolverStatistics(
    }
 }
 
+/** display Benders' decomposition statistics */
+static
+void printBendersStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   SCIP_BENDERS** benders;
+   int nbenders;
+   int i;
+
+   if( !SCIPgetNActiveBenders(scip) )
+      return;
+
+   nbenders = SCIPgetNBenders(scip);
+   benders = SCIPgetBenders(scip);
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Benders Decomp     :   ExecTime  SetupTime      Calls      Found Transferred\n");
+   for( i = 0; i < nbenders; ++i )
+   {
+      if( SCIPbendersIsActive(benders[i]) )
+      {
+         SCIP_BENDERSCUT** benderscuts;
+         int nbenderscuts;
+         int j;
+
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT "\n",
+            SCIPbendersGetName(scip->set->benders[i]),
+            SCIPbendersGetTime(scip->set->benders[i]),
+            SCIPbendersGetSetupTime(scip->set->benders[i]),
+            SCIPbendersGetNCalls(scip->set->benders[i]),
+            SCIPbendersGetNCutsFound(scip->set->benders[i]),
+            SCIPbendersGetNTransferredCuts(scip->set->benders[i]));
+
+
+         nbenderscuts = SCIPbendersGetNBenderscuts(scip->set->benders[i]);
+         benderscuts = SCIPbendersGetBenderscuts(scip->set->benders[i]);
+
+         for( j = 0; j < nbenderscuts; j++ )
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "    %-15.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "           -\n",
+               SCIPbenderscutGetTime(benderscuts[j]),
+               SCIPbenderscutGetSetupTime(benderscuts[j]),
+               SCIPbenderscutGetName(benderscuts[j]),
+               SCIPbenderscutGetNCalls(benderscuts[j]),
+               SCIPbenderscutGetNFound(benderscuts[j]));
+         }
+      }
+   }
+}
+
 /** display first LP statistics */
 static
 void printRootStatistics(
@@ -45663,6 +45733,7 @@ SCIP_RETCODE SCIPprintStatistics(
       printConflictStatistics(scip, file);
       printHeuristicStatistics(scip, file);
       printCompressionStatistics(scip, file);
+      printBendersStatistics(scip, file);
       printSolutionStatistics(scip, file);
       printConcsolverStatistics(scip, file);
       return SCIP_OKAY;
@@ -45685,6 +45756,7 @@ SCIP_RETCODE SCIPprintStatistics(
       printBranchruleStatistics(scip, file);
       printHeuristicStatistics(scip, file);
       printCompressionStatistics(scip, file);
+      printBendersStatistics(scip, file);
       printLPStatistics(scip, file);
       printNLPStatistics(scip, file);
       printRelaxatorStatistics(scip, file);

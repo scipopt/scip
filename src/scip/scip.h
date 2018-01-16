@@ -70,6 +70,7 @@
 #include "scip/type_benderscut.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
+#include "scip/pub_benders.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
@@ -3041,6 +3042,16 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   );
+
+/** frees the subproblem after calling the solve subproblem method. This will either call the user defined free
+ *  subproblem callback for Benders' decomposition or the default freeing methods. In the default case, if the
+ *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is a MIP, then SCIPfreeTransform is called. */
+EXTERN
+SCIP_RETCODE SCIPfreeBendersSubproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   int                   probnumber          /**< the subproblem number */
    );
 
 /** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the

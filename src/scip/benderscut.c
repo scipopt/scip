@@ -32,6 +32,7 @@
 #include "scip/reopt.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_benders.h"
 
 #include "scip/struct_benderscut.h"
 
@@ -90,6 +91,7 @@ SCIP_RETCODE SCIPbenderscutCopyInclude(
 
 /** creates a Benders' decomposition cuts */
 SCIP_RETCODE SCIPbenderscutCreate(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_BENDERSCUT**     benderscut,         /**< pointer to Benders' decomposition cuts data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -142,7 +144,7 @@ SCIP_RETCODE SCIPbenderscutCreate(
    (*benderscut)->naddedcuts = 0;
 
    /* add parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/benderscut/%s/priority", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/priority", SCIPbendersGetName(benders), name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of Benders' cut <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*benderscut)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4,
@@ -314,11 +316,15 @@ SCIP_RETCODE SCIPbenderscutExec(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
+   SCIP_RESULT cutresult;
+
    assert(benderscut != NULL);
    assert(benderscut->benderscutexec != NULL);
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(result != NULL);
+
+   cutresult = SCIP_DIDNOTRUN;
 
    SCIPsetDebugMsg(set, "executing Benders' decomposition cuts <%s>\n", benderscut->name);
 
@@ -326,25 +332,28 @@ SCIP_RETCODE SCIPbenderscutExec(
    SCIPclockStart(benderscut->benderscutclock, set);
 
    /* call external method */
-   SCIP_CALL( benderscut->benderscutexec(set->scip, benders, benderscut, sol, probnumber, type, result) );
+   SCIP_CALL( benderscut->benderscutexec(set->scip, benders, benderscut, sol, probnumber, type, &cutresult) );
 
    /* stop timing */
    SCIPclockStop(benderscut->benderscutclock, set);
 
    /* evaluate result */
-   if( *result != SCIP_CONSADDED
-      && *result != SCIP_FEASIBLE
-      && *result != SCIP_SEPARATED )
+   if( cutresult != SCIP_DIDNOTRUN
+      && cutresult != SCIP_CONSADDED
+      && cutresult != SCIP_FEASIBLE
+      && cutresult != SCIP_SEPARATED )
    {
       SCIPerrorMessage("execution method of Benders' decomposition cuts <%s> returned invalid result <%d>\n",
-         benderscut->name, *result);
+         benderscut->name, cutresult);
       return SCIP_INVALIDRESULT;
    }
 
    benderscut->ncalls++;
 
-   if( *result == SCIP_CONSADDED )
+   if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
       benderscut->nfound++;
+
+   (*result) = cutresult;
 
    return SCIP_OKAY;
 }

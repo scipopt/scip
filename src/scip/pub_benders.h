@@ -99,13 +99,7 @@ int SCIPbendersGetNCalls(
 
 /** gets the number of optimality cuts found by the collection of Benders' decomposition subproblems */
 EXTERN
-int SCIPbendersGetNOptCutsFound(
-   SCIP_BENDERS*         benders             /**< variable benders */
-   );
-
-/** gets the number of feasibility cuts found by the collection of Benders' decomposition subproblems */
-EXTERN
-int SCIPbendersGetNFeasCutsFound(
+int SCIPbendersGetNCutsFound(
    SCIP_BENDERS*         benders             /**< variable benders */
    );
 
@@ -179,14 +173,6 @@ SCIP_Real SCIPbendersGetSubprobObjval(
    );
 
 /** Public functions associated with Benders' cuts */
-
-/** inserts a Benders' cut into the Benders' cuts list */
-EXTERN
-SCIP_RETCODE SCIPbendersIncludeBenderscut(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' cut */
-   );
 
 /** returns the Benders' cut of the given name, or NULL if not existing */
 EXTERN
