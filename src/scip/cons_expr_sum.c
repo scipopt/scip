@@ -928,8 +928,8 @@ SCIP_RETCODE separatePointSum(
    coefs[SCIPgetConsExprExprNChildren(expr)] = -1.0;
 
    /* compute sides */
-   lhs = underestimate ? -exprdata->constant : -SCIPinfinity(scip);
-   rhs = overestimate ? -exprdata->constant : SCIPinfinity(scip);
+   lhs = overestimate ? -exprdata->constant : -SCIPinfinity(scip);
+   rhs = underestimate ? -exprdata->constant : SCIPinfinity(scip);
 
    /* create cut; it is globally valid because it is linear */
    SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sum_cut", 0, NULL, NULL, lhs, rhs, FALSE, FALSE, FALSE) );
