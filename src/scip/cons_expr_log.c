@@ -244,14 +244,13 @@ SCIP_RETCODE separatePointLog(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
-   SCIP_Bool overestimate;
-   SCIP_Real violation;
    SCIP_Real refpoint;
    SCIP_Real lincoef;
    SCIP_Real linconstant;
@@ -280,15 +279,6 @@ SCIP_RETCODE separatePointLog(
    if( SCIPisLE(scip, refpoint, 0.0) )
       return SCIP_OKAY;
 
-   /* compute the violation; this determines whether we need to over- or underestimate */
-   violation = log(refpoint) - SCIPgetSolVal(scip, sol, auxvar);
-
-   /* check if there is a violation */
-   if( SCIPisEQ(scip, violation, 0.0) )
-      return SCIP_OKAY;
-
-   /* determine if we need to under- or overestimate */
-   overestimate = SCIPisLT(scip, violation, 0.0);
    lincoef = 0.0;
    linconstant = 0.0;
    success = TRUE;
@@ -336,7 +326,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointLog(scip, conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointLog(scip, conshdlr, expr, sol, overestimate, &cut) );
 
    /* failed to compute a cut */
    if( cut == NULL )

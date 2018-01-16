@@ -45,7 +45,7 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -5.0) );
 
    cut = NULL;
-   SCIP_CALL( separatePointPow(scip,  conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointPow(scip,  conshdlr, expr, sol, FALSE, &cut) );
    cr_assert(cut != NULL);
 
    cr_assert_eq(SCIProwGetNNonz(cut), 2);
@@ -77,7 +77,7 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 5.0) );
 
    cut = NULL;
-   SCIP_CALL( separatePointPow(scip,  conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointPow(scip,  conshdlr, expr, sol, TRUE, &cut) );
    cr_assert(cut != NULL);
    cr_assert_eq(SCIProwGetNNonz(cut), 2);
    cr_assert_eq(SCIProwGetLhs(cut), -5.0);

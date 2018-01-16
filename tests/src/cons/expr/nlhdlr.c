@@ -329,9 +329,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 {
    SCIP_VAR* auxvar;
    SCIP_ROW* cut = NULL;
-   SCIP_Bool overestimate;
    SCIP_Bool infeasible;
-   SCIP_Real violation;
    SCIP_Real xval;
    SCIP_Real yval;
    SCIP_Real xcoef;
@@ -354,20 +352,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 
    xval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->varx);
    yval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vary);
-
-   /* compute the violation; this determines whether we need to over- or underestimate */
-   violation = nlhdlrexprdata->constant;
-   violation += nlhdlrexprdata->xcoef * xval + nlhdlrexprdata->ycoef * yval;
-   violation += nlhdlrexprdata->xxcoef * xval*xval + nlhdlrexprdata->yycoef * yval*yval;
-   violation += nlhdlrexprdata->xycoef * xval*yval;
-   violation -= SCIPgetSolVal(scip, sol, auxvar);
-
-   /* check if there is a violation */
-   if( SCIPisEQ(scip, violation, 0.0) )
-      return SCIP_OKAY;
-
-   /* determine if we need to under- or overestimate */
-   overestimate = SCIPisLT(scip, violation, 0.0);
 
    /* adjust the reference point */
    xval = MIN(MAX(xval, SCIPvarGetLbLocal(nlhdlrexprdata->varx)), SCIPvarGetUbLocal(nlhdlrexprdata->varx));
@@ -408,12 +392,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 
    if( cut == NULL )
       return SCIP_OKAY;
-
-   if( nlhdlrexprdata->convex == !overestimate )
-   {
-      /* if separated on convex side, then violation of cut in sol should be same as violation of cons in sol */
-      assert(SCIPisRelEQ(scip, -SCIPgetRowSolFeasibility(scip, cut, sol), violation));
-   }
 
    /* check whether its violation and numerical properties are ok (and maybe improve) */
    SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );

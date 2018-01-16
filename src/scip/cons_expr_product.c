@@ -976,6 +976,354 @@ SCIP_RETCODE createData(
    return SCIP_OKAY;
 }
 
+
+/** separates a multilinear constraint of the form \f$ f(x) := a \Pi_{i = 1}^n x_i = w \f$ where \f$ x_i \f$ are the
+ * auxiliary variables of the children and \f$ w \f$ is the auxiliary variable of expr. If \f$ f(x^*) > w^* \f$, then we
+ * look for an affine underestimator of \f$ f(x) \f$ which separates \f$ (x^*, w^*) \f$ from the feasible region, i.e.
+ * \f$ g(x) := \alpha^T x + \beta \le f(x) = w \f$ for all \f$ x \f$ in the domain, such that \f$ \alpha x^* > w^* \f$.
+ *
+ * Since \f$ f(x) \f$ is componentwise linear, its convex envelope is piecewise linear and its value can be computed by
+ * finding the largest affine underestimator. Furthermore, it implies that \f$ g \f$ is an underestimator if and only if
+ * \f$ g(v^i) \leq f(v^i), \forall i \f$, where \f$ \{ v^i \}_{i = 1}^{2^n} \subseteq \mathbb R^n \f$ are the vertices
+ * of the domain of \f$ x \f$, \f$ [\ell,u] \f$. Hence, we can compute a linear underestimator by solving the following
+ * LP (we don't necessarily get a facet of the convex envelope, see Technical detail below):
+ *
+ * \f[
+ *              \max \, \alpha^T x^* + \beta
+ * \f]
+ * \f[
+ *     s.t. \; \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
+ * \f]
+ *
+ * In principle, one would need to update the LP whenever the domain changes. However, \f$ [\ell,u] = T([0, 1]^n) \f$,
+ * where \f$ T \f$ is an affine linear invertible transformation given by \f$ T(y)_i = (u_i - \ell_i) y_i + \ell_i \f$.
+ * Working with the change of variables \f$ x = T(y) \f$ allows us to keep the constraints of the LP, even it the domain
+ * changes. Indeed, after the change of variables, the problem is: find an affine underestimator \f$ g \f$ such that \f$
+ * g(T(y)) \le f(T(y)) \f$, for all \f$ y \in [0, 1]^n \f$. Now \f$ f(T(y)) \f$ is componentwise affine, but still
+ * satisfies that \f$ g \f$ is a valid underestimator if and only if \f$ g(T(u)) \leq f(T(u)), \forall u \in \{0, 1\}^n
+ * \f$. So we now look for \f$ \bar g(y) := g(T(y)) = g(((u_i - \ell_i) y_i + \ell_i)_i) = \bar \alpha^T y + \bar \beta
+ * \f$, where \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i \f$ and \f$ \bar \beta = \sum_i \alpha_i \ell_i + \beta \f$. So
+ * we find \f$ \bar g \f$ by solving the LP:
+ *
+ * \f[
+ *              \max \, \bar \alpha^T T^{-1}(x^*) + \bar \beta
+ * \f]
+ * \f[
+ *     s.t. \; \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
+ * \f]
+ *
+ * and recover \f$ g \f$ by solving \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
+ * \beta \f$. Notice that \f$ f(T(u^i)) = f(v^i) \f$ so the right hand side doesn't change after the change of variables
+ *
+ * Furthermore, the LP has more constraints than variables, so we solve its dual:
+ *
+ * \f[
+ *              \min \, \sum_i \lambda_i f(v^i)
+ * \f]
+ * \f[
+ *     s.t. \; \sum_i \lambda_i u^i = T^{-1}(x^*)
+ * \f]
+ * \f[
+ *             \sum_i \lambda_i = 1
+ * \f]
+ * \f[
+ *             \forall i, \, \lambda_i \geq 0
+ * \f]
+ *
+ * In case we violate the constraint in the other direction, i.e., \f$ f(x^*) < w^* \f$, we do exactly the same, but
+ * looking for an overestimator instead of an underestimator. This means, for the dual, that we have to maximize instead
+ * of minimize.
+ *
+ * #### Technical and implementation details
+ * -# The special case \f$ n = 2 \f$ is handled separately
+ * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 10 \f$
+ * -# We store a unique LP containing \f$ U = [u^1 | u^2 | \cdots | u^{2^n}] \f$, and \f$ U \f$ is build in such a way
+ * that its submatrices consisting of the first \f$ k \f$ rows and first \f$ 2^k \f$ columns contains all the vectors in
+ * \f$ \{0, 1\}^k \f$. This way, the same matrix can be used to separate a multilinear constraint with only \f$ k \f$
+ * variables just by fixing \f$ \lambda_i = 0, i > 2^k \f$ to 0. The \f$ n + 1 \f$-th row is the row representing the
+ * constraint \f$ \sum_i \lambda_i = 1 \f$, where \f$ n \f$ is the minimum between 10 and the maximum number of products
+ * among all product expressions.
+ * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
+ * otherwise the dual is infeasible
+ * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
+ *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol, then we weaken \f$
+ *  \beta \f$ by this
+ * amount, otherwise, we discard the cut.
+ * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
+ * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
+ * -# In every iteration we set _all_ \f$ 2^n \f$ bounds and objective values. The reason is that different products
+ * have different number of children, so we might need to fix/unfix more variables
+ * -# If \f$ x^* \f$ is in the boundary of the domain, then the LP has infinitely many solutions, some of which might
+ * have very bad numerical properties. For this reason, we perturb \f$ x^* \f$ to be in the interior of the region.
+ * Furthermore, for some interior points, there might also be infinitely many solutions (e.g. for \f$ x y \f$ in \f$
+ * [0,1]^2 \f$ any point \f$ (x^*, y^*) \f$ such that \f$ y^* = 1 - x^* \f$ has infinitely many solutions). For this
+ * reason, we perturb any given \f$ x^* \f$. The idea is to try to get a facet of the convex/concave envelope. This only
+ * happens when the solution has \f$ n + 1 \f$ non zero \f$ \lambda \f$'s (i.e. the primal has a unique solution)
+ * -# We need to compute \f$ f(v^i) \f$ for every vertex of \f$ [\ell,u] \f$. A vertex is encoded by a number between 0
+ * and \f$ 2^n - 1 \f$, via its binary representation (0 bit is lower bound, 1 bit is upper bound), so we can compute
+ * all these values by iterating between 0 and \f$ 2^n - 1 \f$.
+ * @note This could be accelerated: Since \f$ f(v^i) = 0 \f$, whenever a component of the vertex is 0, we can sort the
+ * variables so that the first \f$ p \f$ have a 0.0 bound. This way, if \f$ i_0 \f$ is the first vertex such that \f$
+ * f(v^{i_0}) = 0 \f$, then we can loop increasing by \f$ 2^p \f$ in every iteration.
+ * -# to check that the computed cut is valid we do the following: when there are no fixed variables, we use a gray code
+ * to loop over the vertices of the box domain in order to evaluate the underestimator. When there are fixed variables,
+ * we compute the underestimator for a different function: suppose \f$ f(x,y) = c \Pi_i x_i \Pi_j y_j \f$ is the
+ * function we are underestimating and we fix the \f$ y \f$ variables at their mid point. Let \f$ y_m = \Pi_j mid(y_j)
+ * \f$, then we are actually computing an underestimator for \f$ h(x) = f(x, mid(y)) = c y_m \Pi_i x_i \f$. Let \f$
+ * \alpha x + \beta \f$ be the underestimator and \f$ [y_l, y_u] \f$ be the interval of \f$ \Pi_j y_j \f$. To ensure the
+ * validity of the underestimator, we check whether \f$ \alpha x + \beta \le f(x,y) \f$ for every vertex of the domains
+ * \f$ [x] \f$ and \f$ [y] \f$.  Given a vertex of \f$ x^i \in [x] \f$ we just need to pick the vertex of \f$ [y] \f$
+ * that produces the worst value for \f$ f(x^i, y) \f$. However, since \f$ y \f$ does not appear in the underestimator,
+ * we don't care about the vertex itself, but of the value. This value has to be \f$ y_l \f$ or \f$ y_u \f$. So we
+ * actually just check whether \f$ \alpha x^i + \beta \le \min{ \frac{h(x^i) y_l}{y_m}, \frac{h(x^i) y_u}{y_m} } \f$
+ *
+ * @todo the solution is a facet if all variables of the primal have positive reduced costs (i.e. the solution is
+ * unique). In the dual, this means that there are \f$ n + 1 \f$ variables with positive value. Can we use this or some
+ * other information to handle any of both cases (point in the boundary or point in the intersection of polytopes
+ * defining different pieces of the convex envelope)? In the case where the point is in the boundary, can we use that
+ * information to maybe solve another to find a facet? How do the polytopes defining the pieces where the convex
+ * envelope is linear looks like, i.e, given a point in the interior of a facet of the domain, does the midpoint of the
+ * segment joining \f$ x^* \f$ with the center of the domain, always belongs to the interior of one of those polytopes?
+ */
+static
+SCIP_RETCODE separatePointProduct(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
+   SCIP_ROW**            cut                 /**< pointer to store the row */
+   )
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* auxvar;
+   SCIP_VAR* var;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(cut != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   assert(auxvar != NULL);
+
+   *cut = NULL;
+   success = FALSE;
+
+   /* debug output: prints expression we are trying to separate, bounds of variables and point */
+#ifdef SCIP_DEBUG
+   {
+      int c;
+
+      SCIPdebugMsg(scip, "separating product with %d variables: will try to separate violated point by an %s\n",
+            SCIPgetConsExprExprNChildren(expr), overestimate ? "overestimator": "underestimator");
+      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      {
+         child = SCIPgetConsExprExprChildren(expr)[c];
+         var = SCIPgetConsExprExprAuxVar(child);
+         assert(var != NULL);
+         SCIPdebugMsg(scip, "var: %s = %g in [%g, %g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
+               SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+
+         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+         {
+            SCIPdebugMsg(scip, "unbounded factor related to\n");
+            SCIP_CALL( SCIPdismantleConsExprExpr(scip, child) );
+         }
+      }
+      SCIPdebugMsg(scip, "The product should be equal to auxvar: %s = %g in [%g, %g]\n", SCIPvarGetName(auxvar),
+            SCIPgetSolVal(scip, sol, auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
+   }
+#endif
+
+   /* bilinear term */
+   if( SCIPgetConsExprExprNChildren(expr) == 2 )
+   {
+      SCIP_VAR* x;
+      SCIP_VAR* y;
+      SCIP_Real lincoefx;
+      SCIP_Real lincoefy;
+      SCIP_Real linconstant;
+      SCIP_Real refpointx;
+      SCIP_Real refpointy;
+
+      /* collect first variable */
+      child = SCIPgetConsExprExprChildren(expr)[0];
+      x = SCIPgetConsExprExprAuxVar(child);
+      assert(x != NULL);
+
+      /* collect second variable */
+      child = SCIPgetConsExprExprChildren(expr)[1];
+      y = SCIPgetConsExprExprAuxVar(child);
+      assert(y != NULL);
+
+      lincoefx = 0.0;
+      lincoefy = 0.0;
+      linconstant = 0.0;
+      refpointx = SCIPgetSolVal(scip, sol, x);
+      refpointy = SCIPgetSolVal(scip, sol, y);
+      success = TRUE;
+
+      /* adjust the reference points */
+      refpointx = SCIPisLT(scip, refpointx, SCIPvarGetLbLocal(x)) ? SCIPvarGetLbLocal(x) : refpointx;
+      refpointx = SCIPisGT(scip, refpointx, SCIPvarGetUbLocal(x)) ? SCIPvarGetUbLocal(x) : refpointx;
+      refpointy = SCIPisLT(scip, refpointy, SCIPvarGetLbLocal(y)) ? SCIPvarGetLbLocal(y) : refpointy;
+      refpointy = SCIPisGT(scip, refpointy, SCIPvarGetUbLocal(y)) ? SCIPvarGetUbLocal(y) : refpointy;
+      assert(SCIPisLE(scip, refpointx, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpointx, SCIPvarGetLbLocal(x)));
+      assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
+
+      SCIPaddBilinMcCormick(scip, exprdata->coefficient, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpointx,
+            SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &lincoefx, &lincoefy, &linconstant,
+            &success);
+
+      /* @todo allow lhs/rhs of +/- infinity? */
+      if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
+      {
+         /* McCormicks are only valid locally */
+         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "mccormick", 0, NULL, NULL, -SCIPinfinity(scip),
+                  SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoefx) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, y, lincoefy) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+
+         if( overestimate )
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
+         }
+      }
+
+      return SCIP_OKAY;
+   }
+   else
+   {
+      /* general case */
+      SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
+      SCIP_INTERVAL fixedinterval;
+      SCIP_Real* facet;
+      SCIP_VAR** vars;
+      SCIP_Real violation;
+      SCIP_Real midval;
+      int nvars;
+      int pos;
+      int i;
+
+      /* prepare data to compute a facet of the envelope */
+      nvars = SCIPgetConsExprExprNChildren(expr);
+
+      /* allocate necessary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &facet, nvars + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+
+      /* store variables: we only store variables that are not fixed; compute the product of the fixed mid point of the
+       * fix variables along with their interval product
+       */
+      pos = 0;
+      midval = 1.0;
+      SCIPintervalSet(&fixedinterval, 1.0);
+      for( i = 0; i < nvars; ++i )
+      {
+         var = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
+
+         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+         {
+            SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
+            goto CLEANUP;
+         }
+
+         if( !SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) )
+         {
+            vars[pos] = var;
+            ++pos;
+         }
+         else
+         {
+            SCIP_INTERVAL bounds;
+
+            midval *= (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
+            SCIPintervalSetBounds(&bounds, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            SCIPintervalMul(SCIP_INTERVAL_INFINITY, &fixedinterval, fixedinterval, bounds);
+         }
+      }
+      nvars = pos; /* update number of vars */
+      assert(nvars >= 0);
+
+      /* nothing to do if all variables are fixed */
+      /* TODO if a single variable is unfix, should we add the linear equality w = constant * the_unfix_var ?? */
+      if( nvars == 0 )
+         goto CLEANUP;
+
+      /* currently, we can't separate if there are too many variables (we could if we split the product in smaller
+       * products, but this is not so simple with the current design) */
+      if( nvars >= MAXMULTILINSEPALPSIZE )
+         goto CLEANUP;
+
+      exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrProduct(conshdlr));
+
+      /* if LP is not constructed, build it now */
+      if( exprhdlrdata->lpsize == 0 )
+      {
+         assert(exprhdlrdata->multilinearseparationlp == NULL);
+
+         SCIP_CALL( buildMultilinearSeparationLP(scip, nvars, &(exprhdlrdata->multilinearseparationlp)) );
+         exprhdlrdata->lpsize = nvars;
+      }
+      /* if LP is not large enough, rebuild it */
+      else if( exprhdlrdata->lpsize < nvars )
+      {
+         assert(exprhdlrdata->multilinearseparationlp != NULL);
+         SCIP_CALL( SCIPlpiFree(&(exprhdlrdata->multilinearseparationlp)) );
+
+         SCIP_CALL( buildMultilinearSeparationLP(scip, nvars, &(exprhdlrdata->multilinearseparationlp)) );
+         exprhdlrdata->lpsize = nvars;
+      }
+      assert(exprhdlrdata->multilinearseparationlp != NULL);
+      assert(exprhdlrdata->lpsize >= nvars);
+
+      SCIPdebugMsg(scip, "computing multilinear cut with %d variables, coef %g, midval %g\n", nvars, midval * exprdata->coefficient, midval );
+
+      /* compute facet of fixmid * coefficient * \Pi_i vars[i] */
+      SCIP_CALL( computeFacet(scip, exprhdlrdata->randnumgen, exprhdlrdata->multilinearseparationlp, sol, vars, nvars,
+               auxvar, midval * exprdata->coefficient, overestimate, midval, fixedinterval, &violation, facet) );
+
+      /* if we can't separate the point, return */
+      if( SCIPisLE(scip, violation, 0.0) )
+         goto CLEANUP;
+
+      /* build cut; multilinear cuts are only valid locally */
+      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "multilinear", 0, NULL, NULL, -SCIPinfinity(scip),
+               SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddVarsToRow(scip, *cut, nvars, vars, facet) );
+      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+
+      if( overestimate )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, *cut, -facet[nvars]) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, *cut, -facet[nvars]) );
+      }
+
+CLEANUP:
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &facet);
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of expression handler
  */
@@ -1450,372 +1798,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
-/** separates a multilinear constraint of the form \f$ f(x) := a \Pi_{i = 1}^n x_i = w \f$ where \f$ x_i \f$ are the
- * auxiliary variables of the children and \f$ w \f$ is the auxiliary variable of expr. If \f$ f(x^*) > w^* \f$, then we
- * look for an affine underestimator of \f$ f(x) \f$ which separates \f$ (x^*, w^*) \f$ from the feasible region, i.e.
- * \f$ g(x) := \alpha^T x + \beta \le f(x) = w \f$ for all \f$ x \f$ in the domain, such that \f$ \alpha x^* > w^* \f$.
- *
- * Since \f$ f(x) \f$ is componentwise linear, its convex envelope is piecewise linear and its value can be computed by
- * finding the largest affine underestimator. Furthermore, it implies that \f$ g \f$ is an underestimator if and only if
- * \f$ g(v^i) \leq f(v^i), \forall i \f$, where \f$ \{ v^i \}_{i = 1}^{2^n} \subseteq \mathbb R^n \f$ are the vertices
- * of the domain of \f$ x \f$, \f$ [\ell,u] \f$. Hence, we can compute a linear underestimator by solving the following
- * LP (we don't necessarily get a facet of the convex envelope, see Technical detail below):
- *
- * \f[
- *              \max \, \alpha^T x^* + \beta
- * \f]
- * \f[
- *     s.t. \; \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
- * \f]
- *
- * In principle, one would need to update the LP whenever the domain changes. However, \f$ [\ell,u] = T([0, 1]^n) \f$,
- * where \f$ T \f$ is an affine linear invertible transformation given by \f$ T(y)_i = (u_i - \ell_i) y_i + \ell_i \f$.
- * Working with the change of variables \f$ x = T(y) \f$ allows us to keep the constraints of the LP, even it the domain
- * changes. Indeed, after the change of variables, the problem is: find an affine underestimator \f$ g \f$ such that \f$
- * g(T(y)) \le f(T(y)) \f$, for all \f$ y \in [0, 1]^n \f$. Now \f$ f(T(y)) \f$ is componentwise affine, but still
- * satisfies that \f$ g \f$ is a valid underestimator if and only if \f$ g(T(u)) \leq f(T(u)), \forall u \in \{0, 1\}^n
- * \f$. So we now look for \f$ \bar g(y) := g(T(y)) = g(((u_i - \ell_i) y_i + \ell_i)_i) = \bar \alpha^T y + \bar \beta
- * \f$, where \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i \f$ and \f$ \bar \beta = \sum_i \alpha_i \ell_i + \beta \f$. So
- * we find \f$ \bar g \f$ by solving the LP:
- *
- * \f[
- *              \max \, \bar \alpha^T T^{-1}(x^*) + \bar \beta
- * \f]
- * \f[
- *     s.t. \; \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
- * \f]
- *
- * and recover \f$ g \f$ by solving \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
- * \beta \f$. Notice that \f$ f(T(u^i)) = f(v^i) \f$ so the right hand side doesn't change after the change of variables
- *
- * Furthermore, the LP has more constraints than variables, so we solve its dual:
- *
- * \f[
- *              \min \, \sum_i \lambda_i f(v^i)
- * \f]
- * \f[
- *     s.t. \; \sum_i \lambda_i u^i = T^{-1}(x^*)
- * \f]
- * \f[
- *             \sum_i \lambda_i = 1
- * \f]
- * \f[
- *             \forall i, \, \lambda_i \geq 0
- * \f]
- *
- * In case we violate the constraint in the other direction, i.e., \f$ f(x^*) < w^* \f$, we do exactly the same, but
- * looking for an overestimator instead of an underestimator. This means, for the dual, that we have to maximize instead
- * of minimize.
- *
- * #### Technical and implementation details
- * -# The special case \f$ n = 2 \f$ is handled separately
- * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 10 \f$
- * -# We store a unique LP containing \f$ U = [u^1 | u^2 | \cdots | u^{2^n}] \f$, and \f$ U \f$ is build in such a way
- * that its submatrices consisting of the first \f$ k \f$ rows and first \f$ 2^k \f$ columns contains all the vectors in
- * \f$ \{0, 1\}^k \f$. This way, the same matrix can be used to separate a multilinear constraint with only \f$ k \f$
- * variables just by fixing \f$ \lambda_i = 0, i > 2^k \f$ to 0. The \f$ n + 1 \f$-th row is the row representing the
- * constraint \f$ \sum_i \lambda_i = 1 \f$, where \f$ n \f$ is the minimum between 10 and the maximum number of products
- * among all product expressions.
- * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
- * otherwise the dual is infeasible
- * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
- *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol, then we weaken \f$
- *  \beta \f$ by this
- * amount, otherwise, we discard the cut.
- * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
- * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
- * -# In every iteration we set _all_ \f$ 2^n \f$ bounds and objective values. The reason is that different products
- * have different number of children, so we might need to fix/unfix more variables
- * -# If \f$ x^* \f$ is in the boundary of the domain, then the LP has infinitely many solutions, some of which might
- * have very bad numerical properties. For this reason, we perturb \f$ x^* \f$ to be in the interior of the region.
- * Furthermore, for some interior points, there might also be infinitely many solutions (e.g. for \f$ x y \f$ in \f$
- * [0,1]^2 \f$ any point \f$ (x^*, y^*) \f$ such that \f$ y^* = 1 - x^* \f$ has infinitely many solutions). For this
- * reason, we perturb any given \f$ x^* \f$. The idea is to try to get a facet of the convex/concave envelope. This only
- * happens when the solution has \f$ n + 1 \f$ non zero \f$ \lambda \f$'s (i.e. the primal has a unique solution)
- * -# We need to compute \f$ f(v^i) \f$ for every vertex of \f$ [\ell,u] \f$. A vertex is encoded by a number between 0
- * and \f$ 2^n - 1 \f$, via its binary representation (0 bit is lower bound, 1 bit is upper bound), so we can compute
- * all these values by iterating between 0 and \f$ 2^n - 1 \f$.
- * @note This could be accelerated: Since \f$ f(v^i) = 0 \f$, whenever a component of the vertex is 0, we can sort the
- * variables so that the first \f$ p \f$ have a 0.0 bound. This way, if \f$ i_0 \f$ is the first vertex such that \f$
- * f(v^{i_0}) = 0 \f$, then we can loop increasing by \f$ 2^p \f$ in every iteration.
- * -# to check that the computed cut is valid we do the following: when there are no fixed variables, we use a gray code
- * to loop over the vertices of the box domain in order to evaluate the underestimator. When there are fixed variables,
- * we compute the underestimator for a different function: suppose \f$ f(x,y) = c \Pi_i x_i \Pi_j y_j \f$ is the
- * function we are underestimating and we fix the \f$ y \f$ variables at their mid point. Let \f$ y_m = \Pi_j mid(y_j)
- * \f$, then we are actually computing an underestimator for \f$ h(x) = f(x, mid(y)) = c y_m \Pi_i x_i \f$. Let \f$
- * \alpha x + \beta \f$ be the underestimator and \f$ [y_l, y_u] \f$ be the interval of \f$ \Pi_j y_j \f$. To ensure the
- * validity of the underestimator, we check whether \f$ \alpha x + \beta \le f(x,y) \f$ for every vertex of the domains
- * \f$ [x] \f$ and \f$ [y] \f$.  Given a vertex of \f$ x^i \in [x] \f$ we just need to pick the vertex of \f$ [y] \f$
- * that produces the worst value for \f$ f(x^i, y) \f$. However, since \f$ y \f$ does not appear in the underestimator,
- * we don't care about the vertex itself, but of the value. This value has to be \f$ y_l \f$ or \f$ y_u \f$. So we
- * actually just check whether \f$ \alpha x^i + \beta \le \min{ \frac{h(x^i) y_l}{y_m}, \frac{h(x^i) y_u}{y_m} } \f$
- *
- * @todo the solution is a facet if all variables of the primal have positive reduced costs (i.e. the solution is
- * unique). In the dual, this means that there are \f$ n + 1 \f$ variables with positive value. Can we use this or some
- * other information to handle any of both cases (point in the boundary or point in the intersection of polytopes
- * defining different pieces of the convex envelope)? In the case where the point is in the boundary, can we use that
- * information to maybe solve another to find a facet? How do the polytopes defining the pieces where the convex
- * envelope is linear looks like, i.e, given a point in the interior of a facet of the domain, does the midpoint of the
- * segment joining \f$ x^* \f$ with the center of the domain, always belongs to the interior of one of those polytopes?
- */
-static
-SCIP_RETCODE separatePointProduct(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
-   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_ROW**            cut                 /**< pointer to store the row */
-   )
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* var;
-   SCIP_Real violation;
-   SCIP_Bool overestimate;
-   SCIP_Bool success;
-   int c;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
-   assert(expr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
-   assert(cut != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
-   assert(auxvar != NULL);
-
-   *cut = NULL;
-
-   /* compute violation of the expression by evaluating auxiliary variables */
-   violation = exprdata->coefficient;
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      child = SCIPgetConsExprExprChildren(expr)[c];
-
-      /* value expressions should have been removed during simplification */
-      assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
-
-      var = SCIPgetConsExprExprAuxVar(child);
-      assert(var != NULL);
-
-      violation *= SCIPgetSolVal(scip, sol, var);
-   }
-   violation -= SCIPgetSolVal(scip, sol, auxvar);
-
-   /* no violation in this sub-expression */
-   if( SCIPisEQ(scip, violation, 0.0) )
-      return SCIP_OKAY;
-
-   overestimate = SCIPisLT(scip, violation, 0.0);
-   success = FALSE;
-
-   /* debug output: prints expression we are trying to separate, bounds of variables and point */
-#ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "separating product with %d variables: will try to separate violated point (%g) by an %s\n",
-         SCIPgetConsExprExprNChildren(expr), violation, overestimate ? "overestimator": "underestimator");
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      child = SCIPgetConsExprExprChildren(expr)[c];
-      var = SCIPgetConsExprExprAuxVar(child);
-      assert(var != NULL);
-      SCIPdebugMsg(scip, "var: %s = %g in [%g, %g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
-            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-
-      if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
-      {
-         SCIPdebugMsg(scip, "unbounded factor related to\n");
-         SCIP_CALL( SCIPdismantleConsExprExpr(scip, child) );
-      }
-   }
-   SCIPdebugMsg(scip, "The product should be equal to auxvar: %s = %g in [%g, %g]\n", SCIPvarGetName(auxvar),
-         SCIPgetSolVal(scip, sol, auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
-#endif
-
-   /* bilinear term */
-   if( SCIPgetConsExprExprNChildren(expr) == 2 )
-   {
-      SCIP_VAR* x;
-      SCIP_VAR* y;
-      SCIP_Real lincoefx;
-      SCIP_Real lincoefy;
-      SCIP_Real linconstant;
-      SCIP_Real refpointx;
-      SCIP_Real refpointy;
-
-      /* collect first variable */
-      child = SCIPgetConsExprExprChildren(expr)[0];
-      x = SCIPgetConsExprExprAuxVar(child);
-      assert(x != NULL);
-
-      /* collect second variable */
-      child = SCIPgetConsExprExprChildren(expr)[1];
-      y = SCIPgetConsExprExprAuxVar(child);
-      assert(y != NULL);
-
-      lincoefx = 0.0;
-      lincoefy = 0.0;
-      linconstant = 0.0;
-      refpointx = SCIPgetSolVal(scip, sol, x);
-      refpointy = SCIPgetSolVal(scip, sol, y);
-      success = TRUE;
-
-      /* adjust the reference points */
-      refpointx = SCIPisLT(scip, refpointx, SCIPvarGetLbLocal(x)) ? SCIPvarGetLbLocal(x) : refpointx;
-      refpointx = SCIPisGT(scip, refpointx, SCIPvarGetUbLocal(x)) ? SCIPvarGetUbLocal(x) : refpointx;
-      refpointy = SCIPisLT(scip, refpointy, SCIPvarGetLbLocal(y)) ? SCIPvarGetLbLocal(y) : refpointy;
-      refpointy = SCIPisGT(scip, refpointy, SCIPvarGetUbLocal(y)) ? SCIPvarGetUbLocal(y) : refpointy;
-      assert(SCIPisLE(scip, refpointx, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpointx, SCIPvarGetLbLocal(x)));
-      assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
-
-      SCIPaddBilinMcCormick(scip, exprdata->coefficient, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpointx,
-            SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &lincoefx, &lincoefy, &linconstant,
-            &success);
-
-      /* @todo allow lhs/rhs of +/- infinity? */
-      if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
-      {
-         /* McCormicks are only valid locally */
-         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "mccormick", 0, NULL, NULL, -SCIPinfinity(scip),
-                  SCIPinfinity(scip), TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoefx) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, y, lincoefy) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
-
-         if( overestimate )
-         {
-            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
-         }
-      }
-
-      return SCIP_OKAY;
-   }
-   else
-   {
-      /* general case */
-      SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
-      SCIP_INTERVAL fixedinterval;
-      SCIP_Real* facet;
-      SCIP_VAR** vars;
-      SCIP_Real midval;
-      int nvars;
-      int pos;
-      int i;
-
-      /* prepare data to compute a facet of the envelope */
-      nvars = SCIPgetConsExprExprNChildren(expr);
-
-      /* allocate necessary memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &facet, nvars + 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-
-      /* store variables: we only store variables that are not fixed; compute the product of the fixed mid point of the
-       * fix variables along with their interval product
-       */
-      pos = 0;
-      midval = 1.0;
-      SCIPintervalSet(&fixedinterval, 1.0);
-      for( i = 0; i < nvars; ++i )
-      {
-         var = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
-
-         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
-         {
-            SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
-            goto CLEANUP;
-         }
-
-         if( !SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) )
-         {
-            vars[pos] = var;
-            ++pos;
-         }
-         else
-         {
-            SCIP_INTERVAL bounds;
-
-            midval *= (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
-            SCIPintervalSetBounds(&bounds, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-            SCIPintervalMul(SCIP_INTERVAL_INFINITY, &fixedinterval, fixedinterval, bounds);
-         }
-      }
-      nvars = pos; /* update number of vars */
-      assert(nvars >= 0);
-
-      /* nothing to do if all variables are fixed */
-      /* TODO if a single variable is unfix, should we add the linear equality w = constant * the_unfix_var ?? */
-      if( nvars == 0 )
-         goto CLEANUP;
-
-      /* currently, we can't separate if there are too many variables (we could if we split the product in smaller
-       * products, but this is not so simple with the current design) */
-      if( nvars >= MAXMULTILINSEPALPSIZE )
-         goto CLEANUP;
-
-      exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrProduct(conshdlr));
-
-      /* if LP is not constructed, build it now */
-      if( exprhdlrdata->lpsize == 0 )
-      {
-         assert(exprhdlrdata->multilinearseparationlp == NULL);
-
-         SCIP_CALL( buildMultilinearSeparationLP(scip, nvars, &(exprhdlrdata->multilinearseparationlp)) );
-         exprhdlrdata->lpsize = nvars;
-      }
-      /* if LP is not large enough, rebuild it */
-      else if( exprhdlrdata->lpsize < nvars )
-      {
-         assert(exprhdlrdata->multilinearseparationlp != NULL);
-         SCIP_CALL( SCIPlpiFree(&(exprhdlrdata->multilinearseparationlp)) );
-
-         SCIP_CALL( buildMultilinearSeparationLP(scip, nvars, &(exprhdlrdata->multilinearseparationlp)) );
-         exprhdlrdata->lpsize = nvars;
-      }
-      assert(exprhdlrdata->multilinearseparationlp != NULL);
-      assert(exprhdlrdata->lpsize >= nvars);
-
-      SCIPdebugMsg(scip, "computing multilinear cut with %d variables, coef %g, midval %g\n", nvars, midval * exprdata->coefficient, midval );
-
-      /* compute facet of fixmid * coefficient * \Pi_i vars[i] */
-      SCIP_CALL( computeFacet(scip, exprhdlrdata->randnumgen, exprhdlrdata->multilinearseparationlp, sol, vars, nvars,
-               auxvar, midval * exprdata->coefficient, overestimate, midval, fixedinterval, &violation, facet) );
-
-      /* if we can't separate the point, return */
-      if( SCIPisLE(scip, violation, 0.0) )
-         goto CLEANUP;
-
-      /* build cut; multilinear cuts are only valid locally */
-      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "multilinear", 0, NULL, NULL, -SCIPinfinity(scip),
-               SCIPinfinity(scip), TRUE, FALSE, FALSE) );
-
-      SCIP_CALL( SCIPaddVarsToRow(scip, *cut, nvars, vars, facet) );
-      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
-
-      if( overestimate )
-      {
-         SCIP_CALL( SCIPchgRowLhs(scip, *cut, -facet[nvars]) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPchgRowRhs(scip, *cut, -facet[nvars]) );
-      }
-
-CLEANUP:
-      SCIPfreeBufferArray(scip, &vars);
-      SCIPfreeBufferArray(scip, &facet);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
@@ -1827,7 +1809,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    *ncuts = 0;
 
    /* try to find a cut */
-   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, overestimate, &cut) );
 
    if( cut == NULL )
       return SCIP_OKAY;

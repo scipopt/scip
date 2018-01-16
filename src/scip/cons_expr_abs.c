@@ -239,6 +239,8 @@ SCIP_RETCODE computeCutsAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< absolute expression */
+   SCIP_Bool             overestimate,       /**< overestimate the absolute expression? */
+   SCIP_Bool             underestimate,      /**< underestimate the absolute expression? */
    SCIP_ROW**            rowneg,             /**< buffer to store first tangent (might be NULL) */
    SCIP_ROW**            rowpos,             /**< buffer to store second tangent (might be NULL) */
    SCIP_ROW**            secant              /**< buffer to store secant (might be NULL) */
@@ -266,7 +268,7 @@ SCIP_RETCODE computeCutsAbs(
    coefs[0] = -1.0;
 
    /* compute left tangent -z -x <= 0 */
-   if( rowneg != NULL )
+   if( rowneg != NULL && underestimate )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_neg_%s", SCIPvarGetName(x));
       coefs[1] = -1.0;
@@ -275,7 +277,7 @@ SCIP_RETCODE computeCutsAbs(
    }
 
    /* compute right tangent -z +x <= 0 */
-   if( rowpos != NULL )
+   if( rowpos != NULL && underestimate )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_pos_%s", SCIPvarGetName(x));
       coefs[1] = 1.0;
@@ -284,7 +286,7 @@ SCIP_RETCODE computeCutsAbs(
    }
 
    /* compute secant */
-   if( secant != NULL )
+   if( secant != NULL && overestimate )
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -335,12 +337,18 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
    secant = NULL;
 
    /* compute initial cuts; do no store the secant in the expression data */
-   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, &exprdata->rowneg, &exprdata->rowpos, &secant) );
-   assert(exprdata->rowneg != NULL);
-   assert(exprdata->rowpos != NULL);
+   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, overestimate, underestimate, &exprdata->rowneg, &exprdata->rowpos,
+      &secant) );
+   assert(exprdata->rowneg != NULL || !underestimate);
+   assert(exprdata->rowpos != NULL || !underestimate);
 
-   SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowneg, FALSE, infeasible) );
-   if( !*infeasible )
+   /* add cuts */
+   if( exprdata->rowneg != NULL )
+   {
+      SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowneg, FALSE, infeasible) );
+   }
+
+   if( !*infeasible && exprdata->rowpos != NULL )
    {
       SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowpos, FALSE, infeasible) );
    }
@@ -397,7 +405,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_ROW* rows[3];
+   SCIP_ROW* rows[3] = {NULL, NULL, NULL};
    SCIP_Real violation;
    SCIP_Bool infeasible;
    int i;
@@ -409,22 +417,35 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   /* create tangents if it not happened so far (might be possible if the constraint is not 'initial') */
-   if( exprdata->rowneg == NULL || exprdata->rowpos == NULL )
+   /* create all cuts that might be relevant */
+   if( !overestimate )
    {
-      assert(exprdata->rowneg == NULL && exprdata->rowpos == NULL);
-
-      SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, &exprdata->rowneg, &exprdata->rowpos, NULL) );
+      /* create tangents if it not happened so far (might be possible if the constraint is not 'initial') */
+      if( exprdata->rowneg == NULL )
+      {
+         SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, FALSE, TRUE, &exprdata->rowneg, NULL, NULL) );
+      }
+      if( exprdata->rowpos == NULL )
+      {
+         SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, FALSE, TRUE, NULL, &exprdata->rowpos, NULL) );
+      }
    }
-   assert(exprdata->rowneg != NULL && exprdata->rowpos != NULL);
+   else
+   {
+      SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, TRUE, FALSE, NULL, NULL, &rows[2]) );
+
+      /* massage secant */
+      if( rows[2] != NULL )
+      {
+         SCIP_CALL( SCIPmassageConsExprExprCut(scip, &rows[2], sol, minviolation) );
+      }
+   }
+
+   assert(exprdata->rowneg != NULL || overestimate);
+   assert(exprdata->rowpos != NULL || overestimate);
 
    rows[0] = exprdata->rowneg;
    rows[1] = exprdata->rowpos;
-   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, NULL, NULL, &rows[2]) );
-   if( rows[2] != NULL )
-   {
-      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &rows[2], sol, minviolation) );
-   }
 
    for( i = 0; i < 3; ++i )
    {

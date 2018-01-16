@@ -48,6 +48,7 @@ SCIP_RETCODE separatePointEntropy(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< entropy expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
@@ -55,11 +56,8 @@ SCIP_RETCODE separatePointEntropy(
    SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
    SCIP_Real refpoint;
-   SCIP_Real activity;
-   SCIP_Real violation;
    SCIP_Real coef;
    SCIP_Real constant;
-   SCIP_Bool overestimate;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -85,10 +83,6 @@ SCIP_RETCODE separatePointEntropy(
    /* reference point is outside the domain of f(x) = x*log(x) */
    if( refpoint < 0.0 )
       return SCIP_OKAY;
-
-   activity = (refpoint == 0.0) ? 0.0 : -refpoint * log(refpoint);
-   violation = activity - SCIPgetSolVal(scip, sol, auxvar);
-   overestimate = SCIPisLT(scip, violation, 0.0);
 
    /* use secant for underestimate (locally valid) */
    if( !overestimate )
@@ -489,7 +483,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaEntropy)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointEntropy(scip, conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointEntropy(scip, conshdlr, expr, sol, overestimate, &cut) );
 
    /* failed to compute a cut */
    if( cut == NULL )

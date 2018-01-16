@@ -276,6 +276,8 @@ extern "C" {
  *  - scip            : SCIP main data structure
  *  - conshdlr        : expression constraint handler
  *  - expr            : expression
+ *  - overestimate    : whether the expression needs to be overestimated
+ *  - underestimate   : whether the expression needs to be underestimated
  *
  *  output:
  *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
@@ -284,6 +286,8 @@ extern "C" {
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
       SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_Bool overestimate, \
+      SCIP_Bool underestimate, \
       SCIP_Bool* infeasible)
 
 /** separation deinitialization method of an expression handler (called during CONSEXITSOL)
@@ -304,6 +308,7 @@ extern "C" {
  *  - scip : SCIP main data structure
  *  - expr : expression
  *  - sol  : solution to be separated (NULL for the LP solution)
+ *  - overestimate : whether the expression needs to be over- or underestimated
  *  - minviolation : minimal violation of a cut if it should be added to the LP
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
@@ -313,6 +318,7 @@ extern "C" {
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
+   SCIP_Bool overestimate, \
    SCIP_Real minviolation, \
    SCIP_RESULT* result, \
    int* ncuts)
@@ -623,6 +629,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - nlhdlr          : nonlinear handler
  *  - nlhdlrexprdata  : exprdata of nonlinear handler
  *  - expr            : expression
+ *  - overestimate    : whether the expression needs to be overestimated
+ *  - underestimate   : whether the expression needs to be underestimated
  *
  *  output:
  *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
@@ -633,6 +641,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
       SCIP_CONSEXPR_NLHDLR* nlhdlr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
       SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_Bool overestimate, \
+      SCIP_Bool underestimate, \
       SCIP_Bool* infeasible)
 
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL)
@@ -660,6 +670,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
  *  - sol  : solution to be separated (NULL for the LP solution)
+ *  - overestimate : whether the expression needs to be over- or underestimated
  *  - minviolation : minimal violation of a cut if it should be added to the LP
  *  - separated: whether another nonlinear handler already added a cut for this expression
  *  - result : pointer to store the result
@@ -672,6 +683,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
+   SCIP_Bool overestimate, \
    SCIP_Real minviolation, \
    SCIP_Bool separated, \
    SCIP_RESULT* result, \

@@ -49,7 +49,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 1.0) );
 
    cut = NULL;
-   SCIP_CALL( separatePointProduct(scip,  conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointProduct(scip,  conshdlr, expr, sol, TRUE, &cut) );
 
    cr_assert(cut != NULL);
    cr_assert_eq(SCIProwGetNNonz(cut), 3);
@@ -85,7 +85,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -1.0) );
 
    cut = NULL;
-   SCIP_CALL( separatePointProduct(scip,  conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointProduct(scip,  conshdlr, expr, sol, FALSE, &cut) );
 
    cr_assert(cut != NULL);
    cr_assert_eq(SCIProwGetNNonz(cut), 3);

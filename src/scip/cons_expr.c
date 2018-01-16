@@ -4596,6 +4596,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
    /* call initsepa of all nlhdlrs in expr */
    for( e = 0; e < expr->nenfos; ++e )
    {
+      SCIP_Bool underestimate;
+      SCIP_Bool overestimate;
       SCIP_Bool infeasible;
       assert(expr->enfos[e] != NULL);
 
@@ -4608,9 +4610,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
 
       assert(!expr->enfos[e]->issepainit);
 
+      /* check whether expression needs to be under- or overestimated */
+      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+      assert(underestimate || overestimate);
+
       /* call the separation initialization callback of the nonlinear handler */
       infeasible = FALSE;
-      SCIP_CALL( nlhdlr->initsepa(scip, initsepadata->conshdlr, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr, &infeasible) );
+      SCIP_CALL( nlhdlr->initsepa(scip, initsepadata->conshdlr, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr,
+         overestimate, underestimate, &infeasible) );
       expr->enfos[e]->issepainit = TRUE;
 
       if( infeasible )
@@ -4677,6 +4685,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
    if( expr->auxvar != NULL )
    {
       SCIP_RESULT separesult;
+      SCIP_Real violation;
+      SCIP_Bool underestimate;
+      SCIP_Bool overestimate;
       SCIP_Bool separated;
       int ncuts;
       int e;
@@ -4684,6 +4695,26 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       separesult = SCIP_DIDNOTFIND;
       ncuts = 0;
       separated = FALSE;
+
+
+      /* decide whether to under- or overestimate */
+      if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
+      {
+         /* the expression could be evaluated, then look at sign of violation */
+         violation = expr->evalvalue - SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
+         overestimate = SCIPisLT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksNeg(expr) > 0;
+         underestimate = SCIPisGT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksPos(expr) > 0;
+      }
+      else
+      {
+         /* if expression could not be evaluated, then both under- and overestimate should be considered */
+         overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+         underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+      }
+
+      /* no violation w.r.t. the original variables -> skip expression */
+      if( !overestimate && !underestimate )
+         return SCIP_OKAY;
 
       /* call the separation callbacks of the nonlinear handlers */
       for( e = 0; e < expr->nenfos; ++e )
@@ -4698,10 +4729,23 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             continue;
 
          /* call the separation callback of the nonlinear handler */
-         SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol, sepadata->minviolation, separated, &separesult, &ncuts) );
+         SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+            overestimate, sepadata->minviolation, separated, &separesult, &ncuts) );
 
          assert(ncuts >= 0);
          sepadata->ncuts += ncuts;
+
+         if( underestimate && overestimate && separesult != SCIP_CUTOFF && separesult != SCIP_SEPARATED )
+         {
+            /* call the separation callback of the nonlinear handler again for underestimation, if nothing found yet
+             * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error), see above
+             */
+            SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+               FALSE, sepadata->minviolation, separated, &separesult, &ncuts) );
+
+            assert(ncuts >= 0);
+            sepadata->ncuts += ncuts;
+         }
 
          if( separesult == SCIP_CUTOFF )
          {

@@ -991,50 +991,55 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    childlb = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf;
    childub = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup;
 
-
    /* compute underestimating cuts */
-   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-         SCIP_INVALID, childlb, childub, TRUE) );
-
-   for( i = 0; i < 5; ++i)
+   if( underestimate )
    {
-      /* only the cuts which could be created are added */
-      if( !*infeasible && cuts[i] != NULL )
-      {
-         SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
+      SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+            SCIP_INVALID, childlb, childub, TRUE) );
 
-         if( cuts[i] != NULL ) {
-            SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
+      for( i = 0; i < 5; ++i)
+      {
+         /* only the cuts which could be created are added */
+         if( !*infeasible && cuts[i] != NULL )
+         {
+            SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
+
+            if( cuts[i] != NULL ) {
+               SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
+            }
          }
-      }
 
-      /* release the row */
-      if( cuts[i] != NULL )
-      {
-         SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
+         /* release the row */
+         if( cuts[i] != NULL )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
+         }
       }
    }
 
    /* compute overestimating cuts */
-   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-         SCIP_INVALID, childlb, childub, FALSE) );
-
-   for( i = 0; i < 5; ++i )
+   if( overestimate )
    {
-      /* only the cuts which could be created are added */
-      if (!*infeasible && cuts[i] != NULL) {
-         SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
+      SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+            SCIP_INVALID, childlb, childub, FALSE) );
 
+      for( i = 0; i < 5; ++i )
+      {
+         /* only the cuts which could be created are added */
+         if (!*infeasible && cuts[i] != NULL) {
+            SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
+
+            if (cuts[i] != NULL)
+            {
+               SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
+            }
+         }
+
+         /* release the row */
          if (cuts[i] != NULL)
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
+            SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
          }
-      }
-
-      /* release the row */
-      if (cuts[i] != NULL)
-      {
-         SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
       }
    }
 
@@ -1046,20 +1051,15 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
    SCIP_ROW* cuts[4] = {NULL, NULL, NULL, NULL};
-   SCIP_Real violation;
    SCIP_Real refpoint;
    SCIP_Real childlb;
    SCIP_Real childub;
-   SCIP_Bool underestimate;
    SCIP_Bool infeasible;
    int i;
 
    /* get expression data */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
-   assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childvar = SCIPgetConsExprExprAuxVar(child);
@@ -1073,17 +1073,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    childlb = SCIPgetConsExprExprInterval(child).inf;
    childub = SCIPgetConsExprExprInterval(child).sup;
 
-
-   /* compute the violation; this determines whether we need to over- or underestimate */
-   violation = exp(refpoint) - SCIPgetSolVal(scip, sol, auxvar);
-
-   /* check if there is a violation */
-   if( SCIPisEQ(scip, violation, 0.0) )
-      return SCIP_OKAY;
-
-   /* determine if we need to under- or overestimate */
-   underestimate = SCIPisGT(scip, violation, 0.0);
-
    /* compute all possible inequalities; the resulting cuts are stored in the cuts array
     *
     *  - cuts[0] = secant
@@ -1092,7 +1081,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
     *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
     */
    SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
-         refpoint, childlb, childub, underestimate) );
+         refpoint, childlb, childub, !overestimate) );
 
    for( i = 0; i < 4; ++i )
    {
@@ -1104,8 +1093,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
       if( cuts[i] == NULL )
          continue;
 
-      violation = -SCIPgetRowSolFeasibility(scip, cuts[i], sol);
-      if( SCIPisGE(scip, violation, minviolation) )
+      if( SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, cuts[i], sol), minviolation) )
       {
          SCIP_CALL( SCIPaddCut(scip, sol, cuts[i], FALSE, &infeasible) );
          *ncuts += 1;
