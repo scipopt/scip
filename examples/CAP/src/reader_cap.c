@@ -232,6 +232,9 @@ SCIP_DECL_READERREAD(readerReadCap)
    int i;
    int j;
 
+   /* setting the random seed */
+   srand(1);
+
    readerdata = SCIPreaderGetData(reader);
 
    nscenarios = readerdata->nscenarios;
