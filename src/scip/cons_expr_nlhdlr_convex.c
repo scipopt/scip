@@ -190,13 +190,20 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
    /* compute gradient */
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
 
-   /* g(x*) */
+   /* check whether there has been an error during the gradient computation */
+   if( SCIPgetConsExprExprDerivative(expr) == SCIP_INVALID ) /*lint !e777*/
+   {
+      SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)expr);
+      return SCIP_OKAY;
+   }
+
+   /* compute g(x*) */
    constant = SCIPgetConsExprExprValue(expr);
 
    /* evaluation error -> skip */
    if( constant == SCIP_INVALID ) /*lint !e777*/
    {
-      SCIPdebugMsg(scip, "evaluation error for %p during NLHDLRSEPA\n", (void*)expr);
+      SCIPdebugMsg(scip, "evaluation error for %p\n", (void*)expr);
       return SCIP_OKAY;
    }
 
