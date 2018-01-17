@@ -190,7 +190,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
    /* compute gradient */
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
 
-   /* check whether there has been an error during the gradient computation */
+   /* gradient evaluation error -> skip */
    if( SCIPgetConsExprExprDerivative(expr) == SCIP_INVALID ) /*lint !e777*/
    {
       SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)expr);
