@@ -14,20 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sto.c
- * @brief  (extended) STO file reader
- * @author Thorsten Koch
- * @author Tobias Achterberg
- * @author Marc Pfetsch
- * @author Stefan Heinz
- * @author Stefan Vigerske
- * @author Michael Winkler
- *
- * This reader/writer handles STO files in extended STO format, as it
- * is used by CPLEX. In the extended format the limits on variable
- * name lengths and coefficients are considerably relaxed. The columns
- * in the format are then separated by whitespaces.
- *
- * @todo Check whether constructing the names for aggregated constraint yields name clashes (aggrXXX).
+ * @brief  STO file reader
+ * @author Stephen J. Maher
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,11 +30,8 @@
 #include "scip/cons_linear.h"
 
 #define READER_NAME             "storeader"
-#define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
+#define READER_DESC             "file reader for stochastic information of stochastic programs in the SMPS file format"
 #define READER_EXTENSION        "sto"
-
-#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the sto file? */
-#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
 #define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
 /*
@@ -55,15 +40,12 @@
 
 #define STO_MAX_LINELEN  1024
 #define STO_MAX_NAMELEN   256
-#define STO_MAX_VALUELEN   26
-#define STO_MAX_FIELDLEN   20
 
 #define STO_DEFAULT_ARRAYSIZE          100
 #define STO_DEFAULT_ENTRIESSIZE         20
 #define STO_DEFAULT_BLOCKARRAYSIZE       5
-#define STO_DEFAULT_CHILDRENSIZE       5
+#define STO_DEFAULT_CHILDRENSIZE         5
 
-#define PATCH_CHAR    '_'
 #define BLANK         ' '
 
 typedef struct StoScenario STOSCENARIO;
@@ -162,6 +144,7 @@ SCIP_RETCODE createScenarioData(
    return SCIP_OKAY;
 }
 
+/** frees the memory used for the scenario tree */
 static
 SCIP_RETCODE freeScenarioTree(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -461,8 +444,9 @@ SCIP_Real getScenarioEntryValue(
    return scenario->values[entry];
 }
 
-/** copy scenario
-    in the case of blocks, the scenarios must be combined */
+/** copies a scenario.
+ * In the case of blocks, the scenarios must be combined
+ */
 static
 SCIP_RETCODE copyScenario(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -500,8 +484,9 @@ SCIP_RETCODE copyScenario(
    return SCIP_OKAY;
 }
 
-/** merge scenarios
-    in the case of blocks, the scenarios must be combined */
+/** merge scenarios.
+ *  In the case of blocks, the scenarios must be combined
+ */
 static
 SCIP_RETCODE mergeScenarios(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -557,7 +542,7 @@ SCIP_RETCODE scenarioAddChild(
    return SCIP_OKAY;
 }
 
-/* recursively adds the scenarios to the reader data */
+/** recursively adds the scenarios to the reader data */
 static
 SCIP_RETCODE buildScenarioTree(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -880,6 +865,7 @@ SCIP_RETCODE createReaderdata(
    return SCIP_OKAY;
 }
 
+/** frees the reader data */
 static
 SCIP_RETCODE freeReaderdata(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -924,8 +910,6 @@ SCIP_RETCODE stoinputCreate(
    (*stoi)->f3          = NULL;
    (*stoi)->f4          = NULL;
    (*stoi)->f5          = NULL;
-
-   //SCIP_CALL( SCIPgetBoolParam(scip, "reading/usebenders", &((*stoi)->usebenders)) );
 
    return SCIP_OKAY;
 }
@@ -1195,7 +1179,7 @@ SCIP_Bool stoinputReadLine(
    return TRUE;
 }
 
-/** Process NAME section. */
+/** Process STOCH section. */
 static
 SCIP_RETCODE readStoch(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1289,7 +1273,15 @@ SCIP_RETCODE readBlocks(
       if( stoinputField0(stoi) != NULL )
       {
          if( !strcmp(stoinputField0(stoi), "BLOCKS") )
+         {
             stoinputSetSection(stoi, STO_BLOCKS);
+            if( strcmp(stoinputField1(stoi), "DISCRETE") )
+            {
+               SCIPerrorMessage("Sorry, %s blocks stucture is not currently supported.\n", stoinputField1(stoi));
+               SCIPerrorMessage("Only DISCRETE blocks are supported.\n");
+               goto TERMINATE;
+            }
+         }
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
          {
             SCIP_CALL( createScenariosFromBlocks(scip, readerdata, blocks, numblocks, numblocksperblock, numstages) );
@@ -1449,7 +1441,15 @@ SCIP_RETCODE readScenarios(
          }
 
          if( !strcmp(stoinputField0(stoi), "SCENARIOS") )
+         {
             stoinputSetSection(stoi, STO_SCENARIOS);
+            if( strcmp(stoinputField1(stoi), "DISCRETE") )
+            {
+               SCIPerrorMessage("Sorry, %s scenarios is not currently supported.\n", stoinputField1(stoi));
+               SCIPerrorMessage("Only DISCRETE scenarios are supported.\n");
+               goto TERMINATE;
+            }
+         }
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
             stoinputSetSection(stoi, STO_ENDATA);
          else
@@ -1570,7 +1570,16 @@ SCIP_RETCODE readIndep(
       if( stoinputField0(stoi) != NULL )
       {
          if( !strcmp(stoinputField0(stoi), "INDEP") )
+         {
             stoinputSetSection(stoi, STO_INDEP);
+
+            if( strcmp(stoinputField1(stoi), "DISCRETE") )
+            {
+               SCIPerrorMessage("Sorry, %s independent scenarios is not currently supported.\n", stoinputField1(stoi));
+               SCIPerrorMessage("Only DISCRETE independent scenarios are supported.\n");
+               goto TERMINATE;
+            }
+         }
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
          {
             SCIP_CALL( createScenariosFromBlocks(scip, readerdata, blocks, numblocks, numblocksperblock, numstages) );
@@ -1671,6 +1680,7 @@ TERMINATE:
 }
 
 
+/** Adds the scenario variables and constraints to the problem */
 static
 SCIP_RETCODE addScenarioVarsAndConsToProb(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -1919,40 +1929,6 @@ SCIP_RETCODE buildFullProblem(
 
    return SCIP_OKAY;
 }
-
-
-/* build the stochastic program completely as a MIP, i.e. no decomposition */
-//static
-//SCIP_RETCODE buildDecompProblem(
-   //SCIP*                 scip,               /**< the SCIP data structure */
-   //SCIP_READERDATA*      readerdata          /**< the reader data */
-   //)
-//{
-   //SCIP** subproblems;
-   //int i;
-
-   //assert(scip != NULL);
-   //assert(readerdata != NULL);
-
-   //SCIP_CALL( SCIPallocBufferArray(scip, &subproblems, getScenarioNChildren(readerdata->scenariotree)) );
-
-   ///* adding all variables and constraints for stages below the first stage.
-    //* The first stage is covered by the original problem. */
-   //for( i = 0; i < getScenarioNChildren(readerdata->scenariotree); i++ )
-   //{
-      //SCIP_CALL( addScenarioVarsAndConsToProb(scip, getScenarioChild(readerdata->scenariotree, i)) );
-      //subproblems[i] = getScenarioScip(scenario);
-   //}
-
-   //SCIP_CALL( SCIPcreate )
-
-   ///* removing the variable and constraints that were included as part of the core file */
-   //SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
-
-
-
-   //return SCIP_OKAY;
-//}
 
 
 /** Read LP in "STO File Format".

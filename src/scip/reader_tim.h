@@ -15,16 +15,23 @@
 
 /**@file   reader_tim.h
  * @ingroup FILEREADERS
- * @brief  (extended) TIM file reader
- * @author Thorsten Koch
- * @author Tobias Achterberg
+ * @brief  TIM file reader
+ * @author Stephen J. Maher
  *
- * This reader allows to parse and write TIM files with linear and quadratic constraints and objective,
- * special ordered sets of type 1 and 2, indicators on linear constraints, and semicontinuous variables.
- * For writing, linear (general and specialized), indicator, quadratic, second order cone, and
- * special ordered set constraints are supported.
+ * This is a reader for the time file of a stochastic programming instance in SMPS format.
+ * The three files that must be read are:
+ * - .cor
+ * - .tim
+ * - .sto
  *
- * See http://en.wikipedia.org/wiki/TIM_%28format%29 for a description.
+ * Alternatively, it is possible to create a .smps file with the relative path to the .cor, .tim and .sto files.
+ * A file reader is available for the .smps file.
+ *
+ * Details regarding the SMPS file format can be found at:
+ * Birge, J. R.; Dempster, M. A.; Gassmann, H. I.; Gunn, E.; King, A. J. & Wallace, S. W.
+ * A standard input format for multiperiod stochastic linear programs
+ * IIASA, Laxenburg, Austria, WP-87-118, 1987
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -26,7 +26,7 @@
 #include "scip/reader_cor.h"
 
 #define READER_NAME             "correader"
-#define READER_DESC             "file reader for core problem of stochastic programs in the COR file format"
+#define READER_DESC             "file reader for CORE problem of stochastic programs in the SMPS file format"
 #define READER_EXTENSION        "cor"
 
 #define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the mps file? */

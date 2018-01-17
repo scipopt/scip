@@ -17,6 +17,23 @@
  * @ingroup FILEREADERS
  * @brief  COR file reader (MPS format of the core problem for stochastic programs)
  * @author Stephen J. Maher
+ *
+ * This is a reader for the core file of a stochastic programming instance in SMPS format.
+ * The three files that must be read are:
+ * - .cor
+ * - .tim
+ * - .sto
+ *
+ * Alternatively, it is possible to create a .smps file with the relative path to the .cor, .tim and .sto files.
+ * A file reader is available for the .smps file.
+ *
+ * The core file is in the form of an MPS.
+ *
+ * Details regarding the SMPS file format can be found at:
+ * Birge, J. R.; Dempster, M. A.; Gassmann, H. I.; Gunn, E.; King, A. J. & Wallace, S. W.
+ * A standard input format for multiperiod stochastic linear programs
+ * IIASA, Laxenburg, Austria, WP-87-118, 1987
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

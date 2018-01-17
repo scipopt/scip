@@ -14,13 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_tim.c
- * @brief  (extended) TIM file reader
+ * @brief  TIM file reader
  * @author Stephen J. Maher
- *
- * This reader parses the time file for stochastic programs. This must be read with the corresponding core and
- * stochastic files.
- *
- * @todo Check whether constructing the names for aggregated constraint yields name clashes (aggrXXX).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,7 +28,7 @@
 #include "scip/reader_cor.h"
 
 #define READER_NAME             "timreader"
-#define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
+#define READER_DESC             "file reader for the TIME file of a stochastic program in SMPS format"
 #define READER_EXTENSION        "tim"
 
 /*
@@ -45,7 +40,6 @@
 #define TIM_DEFAULT_STAGESIZE   10
 #define TIM_DEFAULT_ARRAYSIZE  100
 
-#define PATCH_CHAR    '_'
 #define BLANK         ' '
 
 struct TimStage
@@ -747,21 +741,7 @@ SCIP_RETCODE readPeriods(
 }
 
 
-/** Read LP in "TIM File Format".
- *
- *  A specification of the TIM format can be found at
- *
- *  http://plato.asu.edu/ftp/tim_format.txt,
- *  ftp://ftp.caam.rice.edu/pub/people/bixby/miplib/tim_format,
- *
- *  and in the
- *
- *  CPLEX Reference Manual
- *
- *  This routine should read all valid TIM format files.
- *  What it will not do, is to find all cases where a file is ill formed.
- *  If this happens it may complain and read nothing or read "something".
- */
+/** Read time data for the SMPS file format. */
 static
 SCIP_RETCODE readTim(
    SCIP*                 scip,               /**< SCIP data structure */
