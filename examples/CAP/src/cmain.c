@@ -30,7 +30,6 @@
 #include "scip/cons_benderslp.h"
 #include "scip/benders_default.h"
 
-#include "benders_cap.h"
 #include "reader_cap.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
