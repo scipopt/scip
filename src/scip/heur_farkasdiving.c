@@ -58,10 +58,17 @@
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_RANDSEED            151 /**< initial seed for random number generation */
 
+#define DEFAULT_CHECKOBJ          FALSE
+#define DEFAULT_CHECKOBJGLB        TRUE
+
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_Bool             disabled;           /**< remember if the heuristic should not run at all */
+   SCIP_Bool             checkobj;
+   SCIP_Bool             checkobjglb;
+   SCIP_Bool             objchecked;
 };
 
 
@@ -124,6 +131,9 @@ SCIP_DECL_HEURINIT(heurInitFarkasdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
+   heurdata->disabled = FALSE;
+   heurdata->objchecked = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -154,6 +164,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
+   int nnzobjvars;
 
    heurdata = SCIPheurGetData(heur);
    assert(SCIPheurGetNDivesets(heur) > 0);
@@ -164,10 +175,120 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
+   /* terminate if the heuristic has been disabled */
+   if( heurdata->disabled )
+      return SCIP_OKAY;
+
    /* terminate if there are no integer variables (note that, e.g., SOS1 variables may be present) */
    if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
       return SCIP_OKAY;
 
+   nnzobjvars = SCIPgetNObjVars(scip);
+
+   /* terminate if at most one variable has a non-zero objective coefficient */
+   if( nnzobjvars <= 1 )
+   {
+      heurdata->disabled = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* initialize the hashing of all objective coefficients */
+   if( heurdata->checkobj )
+   {
+      SCIP_VAR** divecandvars;
+      SCIP_Real* objcoefs;
+      SCIP_Real lastobjcoef;
+      int nnzobjcoefs;
+      int ndiffobjs;
+      int ndivecands;
+      int i;
+
+      divecandvars = NULL;
+      ndivecands = -1;
+
+      /* check w.r.t. all variables and decide whether we want to run or not */
+      if( heurdata->checkobjglb )
+      {
+         if( !heurdata->objchecked )
+         {
+            divecandvars = SCIPgetVars(scip);
+            ndivecands = SCIPgetNVars(scip);
+         }
+         else
+         {
+            goto PERFORMDIVING;
+         }
+      }
+      else if( !heurdata->checkobjglb )
+      {
+         /* we can only access the branching candidates if the LP is solved to optimality */
+         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         {
+            SCIP_CALL( SCIPgetLPBranchCands(scip, &divecandvars, NULL, NULL, &ndivecands, NULL, NULL) );
+         }
+         else
+         {
+            goto PERFORMDIVING;
+         }
+      }
+
+      assert(divecandvars != NULL);
+      assert(ndivecands >= 0);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &objcoefs, ndivecands) );
+
+      /* collect all absolute values of objective coefficients */
+      nnzobjcoefs = 0;
+      for( i = 0; i < ndivecands; i++ )
+      {
+         SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
+
+         if( SCIPisZero(scip, obj) )
+            continue;
+
+         objcoefs[nnzobjcoefs] = REALABS(obj);
+         ++nnzobjcoefs;
+      }
+      assert(nnzobjcoefs >= 2);
+
+      /* sort in increasing order */
+      SCIPsortReal(objcoefs, nnzobjcoefs);
+      assert(!SCIPisZero(scip, objcoefs[0]));
+
+      lastobjcoef = objcoefs[0];
+      ndiffobjs = 1;
+
+      for( i = 1; i < nnzobjcoefs; i++ )
+      {
+         if( SCIPisGT(scip, objcoefs[i], lastobjcoef) )
+         {
+            lastobjcoef = objcoefs[i];
+            ++ndiffobjs;
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &objcoefs);
+
+      SCIPdebugMsg(scip, "%d divecands; %d nzobjs; %d diffobjs", ndivecands, nnzobjvars, ndiffobjs);
+
+      if( ndiffobjs <= 2 || ndiffobjs / (SCIP_Real)nnzobjvars < 0.15 )
+      {
+         printf(" ---> disable farkasdiving%s\n", heurdata->checkobjglb ? "" : " locally");
+
+         /* disable the heuristic if we want to check the objective only once */
+         if( heurdata->checkobjglb )
+            heurdata->disabled = TRUE;
+
+         return SCIP_OKAY;
+      }
+      else
+      {
+         printf("\n");
+         heurdata->objchecked = TRUE;
+      }
+   }
+
+  PERFORMDIVING:
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
    return SCIP_OKAY;
@@ -230,6 +351,14 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreFarkasdiving) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkobj",
+         "should objective function be check before running?",
+         &heurdata->checkobj, TRUE, DEFAULT_CHECKOBJ, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkobjglb",
+         "should objective function be check globally or locally?",
+         &heurdata->checkobjglb, TRUE, DEFAULT_CHECKOBJGLB, NULL, NULL) );
 
    return SCIP_OKAY;
 }
