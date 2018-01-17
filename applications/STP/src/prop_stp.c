@@ -271,9 +271,12 @@ SCIP_RETCODE redbasedvarfixing(
       assert(SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) == 1);
 
       /* move up branch-and-bound path and check constraints */
-      for( SCIP_NODE* node = SCIPgetCurrentNode(scip); SCIPnodeGetNAddedConss(node) == 1 && SCIPnodeGetDepth(node) > 0;
+      for( SCIP_NODE* node = SCIPgetCurrentNode(scip); SCIPnodeGetDepth(node) > 0;
             node = SCIPnodeGetParent(node) )
       {
+         if( SCIPnodeGetNAddedConss(node) != 1 )
+            continue;
+
          char* consname;
 
          /* get constraints */

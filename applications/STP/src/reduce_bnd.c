@@ -2373,7 +2373,8 @@ SCIP_RETCODE reduce_daPcMw(
    STPSOLPOOL* pool;
    GRAPH* transgraph;
    SCIP_Real* bestcost;
-   SCIP_Real* fixingbounds;
+   SCIP_Real* edgefixingbounds;
+   SCIP_Real* nodefixingbounds;
    SCIP_Real ub;
    SCIP_Real offset;
    SCIP_Real lpobjval;
@@ -2418,7 +2419,8 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result2, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcost, extnedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixingbounds, extnedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgefixingbounds, extnedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodefixingbounds, nnodes + 1) );
 
    if( userec )
       SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
@@ -2502,7 +2504,8 @@ SCIP_RETCODE reduce_daPcMw(
    /* try to reduce the graph */
    assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
 
-   updateEdgeFixingBounds(fixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, TRUE, FALSE);
+   updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, TRUE, FALSE);
+   updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, TRUE);
 
    nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
 
@@ -2543,14 +2546,16 @@ SCIP_RETCODE reduce_daPcMw(
 
       assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
-      updateEdgeFixingBounds(fixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
+      updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
+      updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, FALSE);
 
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
       nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
             &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
 
-      nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, fixingbounds, upperbound);
+      nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, upperbound);
+      nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
       if( userec )
          SCIPdebugMessage("eliminations after sol based run2 with best dual sol %d bestlb %f newlb %f\n", nfixed, bestlpobjval, lpobjval);
@@ -2578,14 +2583,16 @@ SCIP_RETCODE reduce_daPcMw(
          SCIPdebugMessage("DA: pertubated run %d minpathcost: %f \n", run, upperbound - lpobjval);
 
          computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
-         updateEdgeFixingBounds(fixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
+         updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
+         updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, FALSE);
 
          nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
          nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
                &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
 
-         nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, fixingbounds, upperbound);
+         nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, upperbound);
+         nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
          SCIPdebugMessage("DA: pertubated run %d NFIXED %d \n", run, nfixed);
       }
@@ -2743,17 +2750,18 @@ SCIP_RETCODE reduce_daPcMw(
       /* at first run switch to undirected case */
       if( run == 0 )
          for( int e = 0; e < extnedges; e++ )
-            fixingbounds[e] = MIN(fixingbounds[e], fixingbounds[flipedge(e)]);
+            edgefixingbounds[e] = MIN(edgefixingbounds[e], edgefixingbounds[flipedge(e)]);
 
-      updateEdgeFixingBounds(fixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, TRUE);
+      updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, TRUE);
+      updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, FALSE);
 
       for( int e = 0; e < transnedges; e++ )
          marked[e] = FALSE;
 
       /* try to eliminate vertices and edges */
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
-
-      nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, fixingbounds, upperbound);
+      nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, upperbound);
+      nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
       apsol = apsol && graph_sol_unreduced(scip, graph, result);
       assert(!apsol || graph_sol_valid(scip, graph, result));
@@ -2772,7 +2780,8 @@ SCIP_RETCODE reduce_daPcMw(
    if( pool != NULL )
       SCIPStpHeurRecFreePool(scip, &pool);
    SCIPfreeBufferArrayNull(scip, &roots);
-   SCIPfreeBufferArray(scip, &fixingbounds);
+   SCIPfreeBufferArray(scip, &nodefixingbounds);
+   SCIPfreeBufferArray(scip, &edgefixingbounds);
    SCIPfreeBufferArray(scip, &bestcost);
    SCIPfreeBufferArray(scip, &result2);
    SCIPfreeBufferArray(scip, &marked);
