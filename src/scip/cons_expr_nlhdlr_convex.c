@@ -19,6 +19,8 @@
  *
  * TODO curvature information that have been computed during the detection
  *      of other nonlinear handler can not be used right now
+ *
+ * TODO perturb reference point if separation fails due to too large numbers
  */
 
 #include <string.h>
@@ -200,10 +202,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
    /* compute g(x*) */
    constant = SCIPgetConsExprExprValue(expr);
 
-   /* evaluation error -> skip */
-   if( constant == SCIP_INVALID ) /*lint !e777*/
+   /* evaluation error or a too large constant -> skip */
+   if( SCIPisInfinity(scip, REALABS(constant)) )
    {
-      SCIPdebugMsg(scip, "evaluation error for %p\n", (void*)expr);
+      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", constant, (void*)expr);
       return SCIP_OKAY;
    }
 
@@ -242,10 +244,11 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       derivative = SCIPgetConsExprExprDerivative(nlhdlrexprdata->varexprs[i]);
       assert(SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, var) == derivative); /*lint !e777*/
 
-      /* evaluation error -> skip */
-      if( derivative == SCIP_INVALID ) /*lint !e777*/
+      /* evaluation error or too large values -> skip */
+      if( SCIPisInfinity(scip, REALABS(derivative * val)) )
       {
-         SCIPdebugMsg(scip, "evaluation error for %s in %p during NLHDLRSEPA\n", SCIPvarGetName(var), (void*)expr);
+         SCIPdebugMsg(scip, "evaluation error / too large values (%g %g) for %s in %p\n", derivative, val,
+            SCIPvarGetName(var), (void*)expr);
          goto CLEANUP;
       }
 
