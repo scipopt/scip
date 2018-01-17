@@ -1171,10 +1171,8 @@ SCIP_RETCODE separatePointProduct(
       success = TRUE;
 
       /* adjust the reference points */
-      refpointx = SCIPisLT(scip, refpointx, SCIPvarGetLbLocal(x)) ? SCIPvarGetLbLocal(x) : refpointx;
-      refpointx = SCIPisGT(scip, refpointx, SCIPvarGetUbLocal(x)) ? SCIPvarGetUbLocal(x) : refpointx;
-      refpointy = SCIPisLT(scip, refpointy, SCIPvarGetLbLocal(y)) ? SCIPvarGetLbLocal(y) : refpointy;
-      refpointy = SCIPisGT(scip, refpointy, SCIPvarGetUbLocal(y)) ? SCIPvarGetUbLocal(y) : refpointy;
+      refpointx = MIN(MAX(refpointx, SCIPvarGetLbLocal(x)),SCIPvarGetUbLocal(x)); /*lint !e666*/
+      refpointy = MIN(MAX(refpointy, SCIPvarGetLbLocal(y)),SCIPvarGetUbLocal(y)); /*lint !e666*/
       assert(SCIPisLE(scip, refpointx, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpointx, SCIPvarGetLbLocal(x)));
       assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
 
