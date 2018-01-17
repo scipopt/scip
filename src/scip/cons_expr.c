@@ -2585,7 +2585,7 @@ SCIP_RETCODE propConss(
           */
          if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
          {
-            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
+            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d)\n", SCIPconsGetName(conss[i]), roundnr);
             SCIPdebugPrintCons(scip, conss[i], NULL);
 
             cutoff = FALSE;
@@ -4967,9 +4967,17 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
 
       if( !(*infeasible) && consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
       {
-         /* backward propagation should have tighthened the bounds of the variable */
-         assert(SCIPvarGetLbLocal(SCIPgetConsExprExprVarVar(consdata->expr)) - consdata->lhs >= -SCIPfeastol(scip));
-         assert(SCIPvarGetUbLocal(SCIPgetConsExprExprVarVar(consdata->expr)) - consdata->rhs <=  SCIPfeastol(scip));
+         /* propagation may not have tightened the bounds of the variable if small boundchanges were not forced
+          * thus, ensure here that variable bounds are within constraint sides
+          */
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, SCIPgetConsExprExprVarVar(consdata->expr), consdata->lhs, TRUE, infeasible, NULL) );
+         }
+         if( !*infeasible && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, SCIPgetConsExprExprVarVar(consdata->expr), consdata->rhs, TRUE, infeasible, NULL) );
+         }
 
          /* delete the redundant constraint locally */
          SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
@@ -7658,7 +7666,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    }
 
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "tighten bounds of ");
+      SCIPinfoMessage(scip, NULL, "tighten bounds of expr ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "");
       SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, newlb, newub);
