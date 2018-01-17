@@ -8508,7 +8508,10 @@ SCIP_RETCODE SCIPlpFlush(
 
    /* if the cutoff bound was changed in between, we want to re-optimize the LP even if nothing else has changed */
    if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) /*lint !e777*/
+   {
       lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
 
    assert(lp->nlpicols == lp->ncols);
    assert(lp->lpifirstchgcol == lp->nlpicols);
