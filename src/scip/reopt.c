@@ -5108,6 +5108,32 @@ SCIP_RETCODE SCIPreoptCreate(
    return SCIP_OKAY;
 }
 
+/* release all variables and constraints captured during reoptimization */
+SCIP_RETCODE SCIPreoptReleaseData(
+   SCIP_REOPT*           reopt,              /**< pointer to reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   /* release all added constraints and free the data */
+   if( reopt->addedconss != NULL )
+   {
+      int c;
+      for( c = 0; c < reopt->naddedconss; c++)
+      {
+         assert(reopt->addedconss[c] != NULL);
+
+         SCIP_CALL( SCIPconsRelease(&reopt->addedconss[c], blkmem, set) );
+      }
+
+      BMSfreeBlockMemoryArray(blkmem, &reopt->addedconss, reopt->addedconsssize);
+   }
+
+   SCIP_CALL( cleanActiveConss(reopt, set) );
+
+   return SCIP_OKAY;
+}
+
 /** frees reoptimization data */
 SCIP_RETCODE SCIPreoptFree(
    SCIP_REOPT**          reopt,              /**< reoptimization data structure */
@@ -5202,21 +5228,6 @@ SCIP_RETCODE SCIPreoptFree(
    /* clocks */
    SCIPclockFree(&(*reopt)->savingtime);
 
-   /* clean addedconss array */
-   if( (*reopt)->addedconss != NULL )
-   {
-      int c;
-      for( c = 0; c < (*reopt)->naddedconss; c++)
-      {
-         assert((*reopt)->addedconss[c] != NULL);
-
-         SCIP_CALL( SCIPconsRelease(&(*reopt)->addedconss[c], blkmem, set) );
-      }
-
-      BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
-   }
-
-   SCIP_CALL( cleanActiveConss((*reopt), set) );
    SCIPhashmapFree(&(*reopt)->activeconss);
    (*reopt)->activeconss = NULL;
 

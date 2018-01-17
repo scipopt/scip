@@ -42,7 +42,7 @@ export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 export GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
 if [ "${GITBRANCH}" = "" ];
 then
-    export GITBRANCH=`git show -s --pretty=%D | cut -d / -f 2`
+    export GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2 | `
 fi
 
 export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`

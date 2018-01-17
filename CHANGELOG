@@ -17,6 +17,7 @@ new API functions:
 features:
 - allow output of lower bounds for visualization
 - new diving heuristic "conflictdiving"
+- add number of conflict constraints found by diving heuristics to statistics
 
 new parameters:
 - new parameter "visual/displb" that enables output of lower bounds for visualization
@@ -27,7 +28,10 @@ deleted and modified parameters:
 fixed bugs:
 - fixed wrong cast in LP iteration limit computation in proximity search heuristic
 - fixed check for time limit in heur_nlpdiving
+- fixed LP status to unsolved when marking LP to be resolved if objective limit has changed
 - improved numerics and fixed stop criterion in zirounding heuristic
+- fixed treatment of variable aggregations in knapsack constraint handler that led to wrong propagations
+- fixed LPI status after changing objective in lpi_cpx, lpi_grb, lpi_xprs
 
 
 SCIP version 5.0.0

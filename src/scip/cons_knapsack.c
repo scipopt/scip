@@ -7616,12 +7616,16 @@ SCIP_RETCODE propagateCons(
                 */
                if( consdata->onesweightsum + minweightsum  + (maxcliqueweight - secondmaxweights[c]) > consdata->capacity )
                {
+#ifndef NDEBUG
+                  SCIP_Longint oldonesweightsum = consdata->onesweightsum;
+#endif
                   assert(maxcliqueweight >= secondmaxweights[c]);
                   assert(SCIPvarGetLbLocal(maxvar) < 0.5 && SCIPvarGetUbLocal(maxvar) > 0.5);
 
                   SCIPdebugMsg(scip, " -> fixing variable <%s> to 0\n", SCIPvarGetName(maxvar));
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   SCIP_CALL( SCIPinferBinvarCons(scip, maxvar, FALSE, cons, cliquestartposs[c], &infeasible, &tightened) );
+                  assert(consdata->onesweightsum == oldonesweightsum);
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
@@ -7646,7 +7650,7 @@ SCIP_RETCODE propagateCons(
                /* loop over items with non-maximal weight (omitting the first position) */
                for( i = endvarposclique; i > startvarposclique; --i )
                {
-                  /* there should be no variable fixed to 0 between and startvarposclique + 1 and endvarposclique unless we
+                  /* there should be no variable fixed to 0 between startvarposclique + 1 and endvarposclique unless we
                    * messed up the clique preprocessing in the previous loop to filter those variables out */
                   assert(SCIPvarGetUbLocal(myvars[i]) > 0.5);
 
@@ -7664,8 +7668,12 @@ SCIP_RETCODE propagateCons(
                       * since replacing i with the element of maximal weight leads to infeasibility */
                      if( maxvarfixed || consdata->onesweightsum + minweightsum - myweights[i] + maxcliqueweight > consdata->capacity  )
                      {
-                     SCIPdebugMsg(scip, " -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[i]));
+#ifndef NDEBUG
+                        SCIP_Longint oldonesweightsum = consdata->onesweightsum;
+#endif
+                        SCIPdebugMsg(scip, " -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[i]));
                         SCIP_CALL( SCIPinferBinvarCons(scip, myvars[i], TRUE, cons, -i, &infeasible, &tightened) );
+                        assert(consdata->onesweightsum == oldonesweightsum + myweights[i]);
                         assert(!infeasible);
                         assert(tightened);
                         ++(*nfixedvars);
@@ -13277,7 +13285,8 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
             consdata->existmultaggr = TRUE;
             consdata->merged = FALSE;
          }
-         else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+         else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED ||
+            (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && SCIPvarGetStatus(SCIPvarGetNegatedVar(var)) == SCIP_VARSTATUS_AGGREGATED) )
             consdata->merged = FALSE;
 
       }
