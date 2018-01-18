@@ -224,15 +224,30 @@ SCIP_RETCODE reverseProp(
     * consider bounds implied by lower bound on the expression
     */
 
-   bound = reversePropBinarySearch(scip, exp(-1.0), childsup, FALSE, exprinf);
-   assert(bound <= childsup);
-   childsup = MIN(bound, childsup);
+   if( childsup > exp(-1.0) )
+   {
+      bound = reversePropBinarySearch(scip, exp(-1.0), childsup, FALSE, exprinf);
+      assert(bound <= childsup);
+      childsup = MIN(bound, childsup);
 
-   if( SCIPisGT(scip, exprinf, 0.0) )
+      if( childsup < childinf )
+      {
+         SCIPintervalSetEmpty(interval);
+         return SCIP_OKAY;
+      }
+   }
+
+   if( SCIPisGT(scip, exprinf, 0.0) && childinf < exp(-1.0) )
    {
       bound = reversePropBinarySearch(scip, childinf, exp(-1.0), TRUE, exprinf);
       assert(bound >= childinf);
       childinf = MAX(childinf, bound);
+
+      if( childsup < childinf )
+      {
+         SCIPintervalSetEmpty(interval);
+         return SCIP_OKAY;
+      }
    }
 
    /*
@@ -245,6 +260,12 @@ SCIP_RETCODE reverseProp(
       bound = reversePropBinarySearch(scip, childinf, childsup, FALSE, exprsup);
       assert(bound >= childinf);
       childinf = MAX(childinf, bound);
+
+      if( childsup < childinf )
+      {
+         SCIPintervalSetEmpty(interval);
+         return SCIP_OKAY;
+      }
    }
 
    /* set the resulting bounds */
