@@ -9,6 +9,9 @@ performance improvements:
 deleted and modified parameters:
 - rename parameter: "constraints/orbisack/orbisack/coverseparation" to "constraints/orbisack/coverseparation"
 
+new parameters:
+- new parameter: "presolving/symmetry/displaynorbitvars" (whether we display the number of affected variables in the statistics)
+
 fixed bugs:
 - fixed wrong cast in LP iteration limit computation in proximity search heuristic
 - fixed check for time limit in heur_nlpdiving
