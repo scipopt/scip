@@ -1161,7 +1161,7 @@ SCIP_RETCODE computeNOrbitVars(
    int** perms;
    int nperms;
    int nvars;
-   SCIP_Bool* affected;
+   SCIP_Shortbool* affected;
    int i;
    int p;
    int naffected = 0;
