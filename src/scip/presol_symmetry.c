@@ -1176,10 +1176,7 @@ SCIP_RETCODE computeNOrbitVars(
    nperms = presoldata->nperms;
    nvars = presoldata->npermvars;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &affected, nvars) );
-
-   for (i = 0; i < nvars; ++i)
-      affected[i] = FALSE;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &affected, nvars) );
 
    /* iterate over permutations and check which variables are affected by some symmetry */
    for (p = 0; p < nperms; ++p)
