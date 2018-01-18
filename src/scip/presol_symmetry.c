@@ -1168,9 +1168,9 @@ SCIP_RETCODE computeNOrbitVars(
 
    assert( scip != NULL );
    assert( presoldata != NULL );
-   assert( perms != NULL );
-   assert( nperms > 0 );
-   assert( nvars > 0 );
+   assert( presoldata->perms != NULL );
+   assert( presoldata->nperms > 0 );
+   assert( presoldata->nvars > 0 );
 
    perms = presoldata->perms;
    nperms = presoldata->nperms;
