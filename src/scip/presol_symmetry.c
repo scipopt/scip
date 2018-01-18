@@ -1170,7 +1170,7 @@ SCIP_RETCODE computeNOrbitVars(
    assert( presoldata != NULL );
    assert( presoldata->perms != NULL );
    assert( presoldata->nperms > 0 );
-   assert( presoldata->nvars > 0 );
+   assert( presoldata->npermvars > 0 );
 
    perms = presoldata->perms;
    nperms = presoldata->nperms;
