@@ -205,13 +205,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    char consnamein[SCIP_MAXSTRLEN];
    char consnameout[SCIP_MAXSTRLEN];
 
-
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of Stp branching\n ");
+   SCIPdebugMessage("Execlp method of STP branching\n ");
    estimatein = SCIPgetUpperbound(scip);
    estimateout = SCIPgetUpperbound(scip);
    *result = SCIP_DIDNOTRUN;
@@ -287,6 +286,31 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    return SCIP_OKAY;
 }
 
+
+/** branching execution method for not completely fixed pseudo solutions */
+static
+SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMsg(scip, "Execps method of STP branching\n");
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   *result = SCIP_BRANCHED;
+
+   printf("branchExecpsStp %d \n", 0);
+
+   return SCIP_ERROR;
+}
+
+
 /*
  * branching rule specific interface methods
  */
@@ -315,6 +339,8 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitStp) );
    SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitStp) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpStp) );
+   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsStp) );
+
 
    return SCIP_OKAY;
 }
