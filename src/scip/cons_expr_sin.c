@@ -450,8 +450,8 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
       }
 
       assert(newinf >= childbounds.inf);
-      assert(SCIPisGE(scip, SIN(newinf), parentbounds.inf));
-      assert(SCIPisLE(scip, SIN(newinf), parentbounds.sup));
+      assert(SCIPisFeasGE(scip, SIN(newinf), parentbounds.inf));
+      assert(SCIPisFeasLE(scip, SIN(newinf), parentbounds.sup));
    }
 
    if( !SCIPisInfinity(scip, newsup) )
@@ -477,8 +477,8 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
       }
 
       assert(newsup <= childbounds.sup);
-      assert(SCIPisGE(scip, SIN(newsup), parentbounds.inf));
-      assert(SCIPisLE(scip, SIN(newsup), parentbounds.sup));
+      assert(SCIPisFeasGE(scip, SIN(newsup), parentbounds.inf));
+      assert(SCIPisFeasLE(scip, SIN(newsup), parentbounds.sup));
    }
 
    /* if the new interval is invalid, the old one was already invalid */
