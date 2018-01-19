@@ -232,7 +232,7 @@ SCIP_Bool computeSolTangentSin(
    }
 
    /* use newton procedure to test if cut is valid */
-   for( i = 0; i < 3; ++i)
+   for( i = 0; i < 3; ++i )
    {
       intersection = SCIPcomputeRootNewton(function1, derivative1, params, 2, startingpoints[i], NEWTON_PRECISION,
          NEWTON_NITERATIONS);
@@ -321,6 +321,8 @@ SCIP_Bool computeLeftMidTangentSin(
       *issecant = TRUE;
    }
 
+   if( tangentpoint == lb )
+      return FALSE;
 
    /* compute secant between lower bound and connection point */
    *lincoef = (SIN(tangentpoint) - SIN(lb)) / (tangentpoint - lb);
@@ -402,6 +404,9 @@ SCIP_Bool computeRightMidTangentSin(
 
       *issecant = TRUE;
    }
+
+   if( tangentpoint == ub )
+      return FALSE;
 
    /* compute secant between lower bound and connection point */
    *lincoef = (SIN(tangentpoint) - SIN(ub)) / (tangentpoint - ub);
