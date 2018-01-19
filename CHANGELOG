@@ -16,7 +16,7 @@ fixed bugs:
 - improved numerics and fixed stop criterion in zirounding heuristic
 - fixed treatment of variable aggregations in knapsack constraint handler that led to wrong propagations
 - fixed LPI status after changing objective in lpi_cpx, lpi_grb, lpi_xprs
-
+- copy parameter settings to sub-SCIPs in SCIPcopyLargeNeighborhoodSearch() also when copying only LP rows
 
 SCIP version 5.0.0
 ==================

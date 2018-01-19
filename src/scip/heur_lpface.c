@@ -794,6 +794,7 @@ SCIP_RETCODE setupSubscipLpface(
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
 
+      /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
    }
    else
