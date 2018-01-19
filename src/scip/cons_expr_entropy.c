@@ -224,7 +224,7 @@ SCIP_RETCODE reverseProp(
 
    /* set values on the child bounds */
    infvalue = (childinf == 0.0 ? 0.0 : -childinf * log(childinf));
-   supvalue = (childsup == 0.0 ? 0.0 : -childsup * log(childsup));
+   supvalue = (childsup == SCIPinfinity(scip) ? -SCIPinfinity(scip) : -childsup * log(childsup));
 
    /*
     * consider bounds implied on the upper bound of the child
