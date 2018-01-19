@@ -198,6 +198,8 @@ SCIP_RETCODE reverseProp(
    SCIP_Real childinf;
    SCIP_Real exprsup;
    SCIP_Real exprinf;
+   SCIP_Real infvalue;
+   SCIP_Real supvalue;
    SCIP_Real bound;
 
    assert(scip != NULL);
@@ -220,11 +222,15 @@ SCIP_RETCODE reverseProp(
    if( childinf < 0.0 )
       childinf = 0.0;
 
+   /* set values on the child bounds */
+   infvalue = (childinf == 0.0 ? 0.0 : -childinf * log(childinf));
+   supvalue = (childsup == 0.0 ? 0.0 : -childsup * log(childsup));
+
    /*
-    * consider bounds implied by lower bound on the expression
+    * consider bounds implied on the upper bound of the child
     */
 
-   if( childsup > exp(-1.0) )
+   if( childsup > exp(-1.0) && SCIPisLT(scip, supvalue, exprinf) )
    {
       bound = reversePropBinarySearch(scip, exp(-1.0), childsup, FALSE, exprinf);
       assert(bound <= childsup);
@@ -236,8 +242,18 @@ SCIP_RETCODE reverseProp(
          return SCIP_OKAY;
       }
    }
+   else if( SCIPisGT(scip, supvalue, exprsup) )
+   {
+      bound = reversePropBinarySearch(scip, childinf, MIN(childsup, exp(-1.0)), FALSE, exprsup);
+      assert(bound <= childsup);
+      childsup = MAX(childsup, bound);
+   }
 
-   if( SCIPisGT(scip, exprinf, 0.0) && childinf < exp(-1.0) )
+   /*
+    * consider bounds implied on the lower bound of the child
+    */
+
+   if( childinf < exp(-1.0) && SCIPisLT(scip, infvalue, exprinf) )
    {
       bound = reversePropBinarySearch(scip, childinf, exp(-1.0), TRUE, exprinf);
       assert(bound >= childinf);
@@ -249,19 +265,18 @@ SCIP_RETCODE reverseProp(
          return SCIP_OKAY;
       }
    }
-
-   /*
-    * consider bounds implied by upper bound on the expression
-    */
-
-   /* upper bound on expression can only imply a better lower bound on the child's interval */
-   if( SCIPisGT(scip, -childinf * log(childinf), exprsup) )
+   else if( SCIPisGT(scip, infvalue, exprsup) )
    {
-      bound = reversePropBinarySearch(scip, childinf, childsup, FALSE, exprsup);
+      bound = reversePropBinarySearch(scip, MAX(childinf, exp(-1.0)), childsup, FALSE, exprsup);
       assert(bound >= childinf);
       childinf = MAX(childinf, bound);
+   }
 
-      if( childsup < childinf )
+   /* if child is fixed after propagation, check whether domain is empty */
+   if( SCIPisEQ(scip, childinf, childsup) )
+   {
+      infvalue = (childinf == 0.0 ? 0.0 : -childinf * log(childinf));
+      if( SCIPisGT(scip, infvalue, exprsup) || SCIPisLT(scip, infvalue, exprinf) )
       {
          SCIPintervalSetEmpty(interval);
          return SCIP_OKAY;
