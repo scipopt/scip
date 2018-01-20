@@ -524,6 +524,12 @@ SCIP_RETCODE computeFacet(
       ub[i] = i < ncorners ? 1.0 : 0.0;
 
       SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lb[i], ub[i], funvals[i]);
+
+      if( SCIPisInfinity(scip, REALABS(funvals[i])) )
+      {
+         SCIPdebugMsg(scip, "cannot compute underestimator for %d-var product because product at a corner is very large %g\n", nvars, funvals[i]);
+         goto CLEANUP;
+      }
    }
 
    /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
@@ -575,11 +581,6 @@ SCIP_RETCODE computeFacet(
    SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
    /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
-
-   /* free memory used to update the LP */
-   SCIPfreeBufferArray(scip, &ub);
-   SCIPfreeBufferArray(scip, &lb);
-   SCIPfreeBufferArray(scip, &inds);
 
    /*
     * 3. solve the LP and store the resulting facet for the transformed space
@@ -660,13 +661,7 @@ SCIP_RETCODE computeFacet(
 
    /* if cut doesn't separate x^* (i.e. violation <= 0) there is no point in going on, since we only weaking the cut */
    if( SCIPisLE(scip, *violation, 0.0) )
-   {
-      /* free memory and return */
-      SCIPfreeBufferArray(scip, &aux);
-      SCIPfreeBufferArray(scip, &funvals);
-
-      return SCIP_OKAY;
-   }
+      goto CLEANUP;
 
    /*
     *  5. check and adjust facet with the algorithm of Rikun et al.
@@ -695,7 +690,13 @@ SCIP_RETCODE computeFacet(
       *violation -= maxfaceterror;
    }
 
+CLEANUP:
+
    /* free allocated memory */
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &inds);
+
    SCIPfreeBufferArray(scip, &aux);
    SCIPfreeBufferArray(scip, &funvals);
 
