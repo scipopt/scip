@@ -495,6 +495,8 @@ SCIP_RETCODE computeFacet(
    assert(violation != NULL);
    assert(facet != NULL);
 
+   *violation = 0.0;
+
    /* get number of cols and rows of separation lp */
    SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
    SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
@@ -625,7 +627,6 @@ SCIP_RETCODE computeFacet(
 
    SCIPdebugMsg(scip, "facet in orig. space: ");
 
-   *violation = 0.0;
    for( i = 0; i < nvars; ++i )
    {
       SCIP_Real varlb;
