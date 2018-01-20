@@ -2355,7 +2355,7 @@ void SCIPintervalExp(
          resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
          resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
 
-         return;
+         goto CLEAN;
       }
    }
 
@@ -2391,6 +2391,15 @@ void SCIPintervalExp(
       if( resultant->sup < -infinity )
          resultant->sup = -infinity;
    }
+
+   /* due to numerical errors it happens that interval.inf < 0 (however, when this happens, it has to be very small);
+    * correct it
+    */
+CLEAN:
+   assert(resultant->inf > -1e-20);
+   if( resultant->inf < 0.0 )
+      resultant->inf = 0.0;
+
 }
 
 /** stores natural logarithm of operand in resultant
