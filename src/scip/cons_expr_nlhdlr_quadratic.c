@@ -516,6 +516,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
       return SCIP_OKAY;
 
+   SCIPdebugMsg(scip, "checking if expr %p is a proper quadratic\n", (void*)expr);
    /* check if expression is a proper quadratic expression */
    properquadratic = FALSE;
    SCIP_CALL( SCIPhashmapCreate(&seenexpr, SCIPblkmem(scip), 2*SCIPgetConsExprExprNChildren(expr)) );
@@ -550,6 +551,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 
    if( ! properquadratic )
       return SCIP_OKAY;
+
+   SCIPdebugMsg(scip, "expr %p is proper quadratic: checking convexity\n", (void*)expr);
 
    /* expridx maps expressions to indices; if index > 0, it is its index in the linexprs array, otherwise -index-1 is
     * its index in the quadexprterms array
@@ -626,6 +629,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 
    if( nlexprdata->curvature == SCIP_EXPRCURV_CONVEX )
    {
+      SCIPdebugMsg(scip, "expr %p is convex when replacing factors of bilinear terms, bases of squares and every other term by their aux vars\n",
+            (void*)expr);
+
       /* we will estimate the expression from below, that is handle expr <= auxvar */
       *enforcedbelow = TRUE;
       *success = TRUE;
@@ -633,6 +639,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    else if( nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
    {
+      SCIPdebugMsg(scip, "expr %p is concave when replacing factors of bilinear terms, bases of squares and every other term by their aux vars\n",
+            (void*)expr);
+
       /* we will estimate the expression from above, that is handle expr >= auxvar */
       *enforcedabove = TRUE;
       *success = TRUE;
@@ -640,6 +649,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    else
    {
+      SCIPdebugMsg(scip, "expr %p is not convex\n", (void*)expr);
+
       /* we can't handle this expression, free data */
       SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
       return SCIP_OKAY;
