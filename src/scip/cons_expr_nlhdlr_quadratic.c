@@ -829,13 +829,18 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
-      SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-      (*ncuts)++;
+      /* check that sides of row are finite */
+      if( (SCIP_SIDETYPE_RIGHT == rowprep->sidetype && !SCIPisInfinity(scip, SCIProwGetRhs(row)))
+         || (SCIP_SIDETYPE_LEFT == rowprep->sidetype && !SCIPisInfinity(scip, -SCIProwGetLhs(row))) )
+      {
+         SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
+         (*ncuts)++;
 
-      if( infeasible )
-         *result = SCIP_CUTOFF;
-      else
-         *result = SCIP_SEPARATED;
+         if( infeasible )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+      }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
