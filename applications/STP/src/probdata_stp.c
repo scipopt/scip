@@ -3590,3 +3590,17 @@ void SCIPprobdataSetNSolvers(
    probdata = SCIPgetProbData(scip);
    probdata->nSolvers = nSolvers;
 }
+
+/** branching information from UG */
+void initReceivedSubproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int             lLinearConsNames,   /**< number of linear constraints */
+   const char*           linearConsNames,    /**< linear constraints string */
+   const int             lSetppcConsNames,   /**< number of setppc constraints */
+   const char*           setppcConsNames     /**< number of setppc constraints */
+   )
+{
+   printf("received lin %s \n", linearConsNames);
+   printf("received ppc %s \n", setppcConsNames);
+   printf("number %d \n", lLinearConsNames);
+}
