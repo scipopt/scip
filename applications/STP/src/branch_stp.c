@@ -157,6 +157,9 @@ SCIP_RETCODE selectBranchingVertexBySol(
    if( propgraph == NULL || graphnodenumber != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
       return SCIP_OKAY;
 
+   if( !graph_valid(propgraph) )
+      return SCIP_OKAY;
+
    nedges = propgraph->edges;
    nnodes = propgraph->knots;
 
@@ -168,10 +171,16 @@ SCIP_RETCODE selectBranchingVertexBySol(
    SCIP_CALL(SCIPallocBufferArray(scip, &costrev, nedges));
    SCIP_CALL(SCIPallocBufferArray(scip, &soledges, nedges));
 
+   SCIP_CALL( graph_path_init(scip, propgraph) );
+
    SCIP_CALL( SCIPStpHeurTMRunLP(scip, propgraph, NULL, soledges, BRANCHRULE_TMRUNS, cost, costrev, &success) );
    assert(success);
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, propgraph, propgraph->cost, soledges) );
+
+   assert(graph_sol_valid(scip, propgraph, soledges));
+
+   graph_path_exit(scip, propgraph);
 
    if( addsol )
    {
