@@ -1798,7 +1798,7 @@ SCIP_RETCODE reduce_sd(
    /* free memory*/
    SCIPfreeBufferArray(scip, &mst);
    graph_path_exit(scip, netgraph);
-   graph_free(scip, netgraph, TRUE);
+   graph_free(scip, &netgraph, TRUE);
 
    return SCIP_OKAY;
 }
@@ -2074,7 +2074,7 @@ SCIP_RETCODE reduce_sdPc(
    }
 
    SCIPdebugMessage("SDPC eliminations: %d \n", *nelims);
-   graph_free(scip, netgraph, TRUE);
+   graph_free(scip, &netgraph, TRUE);
 
    assert(graph_valid(g));
 
@@ -3312,7 +3312,7 @@ SCIP_RETCODE reduce_bdr(
    SCIPfreeBufferArray(scip, &sd);
 
    graph_path_exit(scip, auxg);
-   graph_free(scip, auxg, TRUE);
+   graph_free(scip, &auxg, TRUE);
    SCIPfreeBufferArray(scip, &mst);
 
    return SCIP_OKAY;
@@ -3613,7 +3613,7 @@ SCIP_RETCODE reduce_bd34(
    SCIPfreeBufferArrayNull(scip, &pathmaxnodetail);
 
    graph_path_exit(scip, auxg);
-   graph_free(scip, auxg, TRUE);
+   graph_free(scip, &auxg, TRUE);
 
    SCIPdebugMessage("bd34: %d nodes deleted\n", *nelims);
 
@@ -4489,7 +4489,7 @@ SCIP_RETCODE reduce_ledge(
 
    /* free netgraph and  MST data structure */
    graph_path_exit(scip, netgraph);
-   graph_free(scip, netgraph, TRUE);
+   graph_free(scip, &netgraph, TRUE);
    SCIPfreeBufferArray(scip, &mst);
    SCIPfreeBufferArray(scip, &nodesid);
    SCIPfreeBufferArray(scip, &edgeorg);
@@ -5504,7 +5504,7 @@ SCIP_RETCODE reduce_npv(
 
    /* free memory*/
    graph_path_exit(scip, auxg);
-   graph_free(scip, auxg, TRUE);
+   graph_free(scip, &auxg, TRUE);
 
    return SCIP_OKAY;
 }

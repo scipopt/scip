@@ -193,7 +193,9 @@ extern void   graph_edge_hide(GRAPH*, int);
 extern void   graph_edge_printInfo(SCIP*, const GRAPH*, int);
 extern void   graph_uncover(GRAPH*);
 extern void   graph_trail(const GRAPH*, int);
-extern void   graph_free(SCIP*, GRAPH*, SCIP_Bool);
+extern void   graph_free(SCIP*, GRAPH**, SCIP_Bool);
+extern void   graph_free_history(SCIP*, GRAPH*);
+extern void   graph_free_historyDeep(SCIP*, GRAPH*);
 extern void   graph_get_NVET(const GRAPH*, int*, int*, int*);
 extern void   graph_sol_setNodeList(const GRAPH*, STP_Bool*, IDX*);
 extern void   graph_pc_2org(GRAPH*);
@@ -217,6 +219,7 @@ extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Rea
 extern SCIP_RETCODE   graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
 extern SCIP_RETCODE   graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, int, int, int);
 extern SCIP_RETCODE   graph_grid_coordinates(SCIP*, int**, int**, int*, int, int);
+extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Bool);
 extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int);

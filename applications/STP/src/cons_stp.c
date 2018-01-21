@@ -2474,7 +2474,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
 
-   graph_free(scip, transgraph, TRUE);
+   graph_free(scip, &transgraph, TRUE);
 
    return SCIP_OKAY;
 

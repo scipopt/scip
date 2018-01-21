@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <string.h>
 #include "prop_stp.h"
+#include "branch_stp.h"
 #include "scip/tree.h"
 
 
@@ -41,6 +42,11 @@
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
+#define PROP_STP_EDGE_KILLED -1
+#define PROP_STP_EDGE_UNSET   0
+#define PROP_STP_EDGE_SET     1
+#define PROP_STP_EDGE_FIXED   2
+
 /**@} */
 
 /**@name Default parameter values
@@ -49,7 +55,7 @@
  */
 
 #define DEFAULT_MAXNWAITINGROUNDS        3    /**< maximum number of rounds to wait until propagating again */
-#define REDUCTION_WAIT_RATIO             0.10 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
+#define REDUCTION_WAIT_RATIO             0.08 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
 
 /**@} */
 
@@ -62,11 +68,13 @@
 /** propagator data */
 struct SCIP_PropData
 {
+   GRAPH*                propgraph;          /**< graph data */
    SCIP_Real*            fixingbounds;       /**< saves largest upper bound to each variable that would allow to fix it */
    SCIP_Longint          nfails;             /**< number of failures since last successful call */
    SCIP_Longint          ncalls;             /**< number of calls */
    SCIP_Longint          nlastcall;          /**< number of last call */
    SCIP_Longint          lastnodenumber;     /**< number of last call */
+   SCIP_Longint          propgraphnodenumber;/**< b&b node number at which propgraph was updated */
    int                   nfixededges;        /**< total number of arcs fixed by 'fixedgevar' method of this propagator */
    int                   postrednfixededges; /**< total number of arcs fixed by 'fixedgevar' method of this propagator after the last reductions */
    int                   maxnwaitrounds;     /**< maximum number of rounds to wait until propagating again */
@@ -171,51 +179,194 @@ void updateFixingBounds(
    }
 }
 
+/** dual cost based fixing of variables */
+static
+SCIP_RETCODE dualcostVarfixing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   int*                  nfixed,             /**< pointer to number of fixed edges */
+   const GRAPH*          graph               /**< graph data structure */
+      )
+{
+   PATH* vnoi;
+   SCIP_Real* cost;
+   SCIP_Real* costrev;
+   SCIP_Real* pathdist;
+   const SCIP_Real lpobjval = SCIPgetLPObjval(scip);
+   const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
+   SCIP_Real minpathcost;
+   int* vbase;
+   int* pathedge;
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
 
-#define STPPROP_EDGE_KILLED -1
-#define STPPROP_EDGE_UNSET   0
-#define STPPROP_EDGE_SET     1
-#define STPPROP_EDGE_FIXED   2
+   /* only execute dualcostVarfixing if current node has an LP */
+   if( !SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
+   /* only execute dualcostVarfixing if optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only execute dualcostVarfixing if current LP is valid relaxation */
+   if( !SCIPisLPRelax(scip) )
+      return SCIP_OKAY;
+
+   /* we cannot apply reduced cost strengthening if no simplex basis is available */
+   if( !SCIPisLPSolBasic(scip) )
+      return SCIP_OKAY;
+
+   /* reduced cost strengthening can only be applied if cutoff is finite */
+   if( SCIPisInfinity(scip, cutoffbound) )
+      return SCIP_OKAY;
+
+   minpathcost = cutoffbound - lpobjval;
+
+   if( propdata->fixingbounds == NULL )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->fixingbounds), nedges) );
+      for( int i = 0; i < nedges; i++ )
+         propdata->fixingbounds[i] = -FARAWAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
+
+   for( unsigned int e = 0; e < (unsigned) nedges; e++ )
+   {
+      assert(SCIPvarIsBinary(vars[e]));
+
+      /* variable is already fixed, we must not trust the reduced cost */
+      if( SCIPvarGetLbLocal(vars[e]) + 0.5 > SCIPvarGetUbLocal(vars[e]) )
+      {
+         if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
+            cost[e] = 0.0;
+         else
+         {
+            assert(SCIPvarGetUbLocal(vars[e]) < 0.5);
+            cost[e] = FARAWAY;
+         }
+      }
+      else
+      {
+         if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[e])) )
+         {
+            assert(!SCIPisDualfeasNegative(scip, SCIPgetVarRedcost(scip, vars[e])));
+            cost[e] = SCIPgetVarRedcost(scip, vars[e]);
+         }
+         else
+         {
+            assert(!SCIPisDualfeasPositive(scip, SCIPgetVarRedcost(scip, vars[e])));
+            assert(SCIPisFeasEQ(scip, SCIPgetSolVal(scip, NULL, vars[e]), 1.0) || SCIPisDualfeasZero(scip, SCIPgetVarRedcost(scip, vars[e])));
+            cost[e] = 0.0;
+         }
+      }
+
+      if( cost[e] < 0.0 )
+         cost[e] = 0.0;
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+      graph->mark[k] = (graph->grad[k] > 0);
+
+   /* distance from root to all nodes */
+   graph_path_execX(scip, graph, graph->source, cost, pathdist, pathedge);
+
+   for( unsigned int e = 0; e < (unsigned) nedges; e++ )
+      costrev[e] = cost[flipedge(e)];
+
+   /* no paths should go back to the root */
+   for( int e = graph->outbeg[graph->source]; e != EAT_LAST; e = graph->oeat[e] )
+      costrev[e] = FARAWAY;
+
+   /* build voronoi diagram */
+   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+#if 0
+      if( Is_term(graph->term[k]) && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) )
+            continue;
+#endif
+      if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
+      {
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            /* try to fix edge and reversed one */
+            SCIP_CALL( fixedgevar(scip, vars[e], nfixed) );
+            SCIP_CALL( fixedgevar(scip, vars[flipedge(e)], nfixed) );
+         }
+      }
+      else
+      {
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            if( SCIPisGT(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
+               SCIP_CALL( fixedgevar(scip, vars[e], nfixed) );
+      }
+   }
+
+   /* at root? */
+   if( SCIPgetDepth(scip) == 0 )
+      updateFixingBounds(propdata->fixingbounds, graph, cost, pathdist, vnoi, lpobjval);
+
+   SCIP_CALL( globalfixing(scip, vars, nfixed, propdata->fixingbounds, graph, cutoffbound, nedges) );
+
+   SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &pathedge);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &pathdist);
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
+
+   return SCIP_OKAY;
+}
 
 
 /** This methods tries to fix edges by performing reductions on the current graph.
  *  To this end, the already 0-fixed edges are (temporarily) removed from the underlying graph to strengthen the reduction methods. */
 static
-SCIP_RETCODE redbasedvarfixing(
+SCIP_RETCODE redbasedVarfixing(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
-   int*                  nfixed              /**< pointer to number of fixed edges */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   int*                  nfixed,             /**< pointer to number of fixed edges */
+   const GRAPH*          g                   /**< graph data structure */
 )
 {
-   SCIP_VAR** vars;
-   GRAPH* copyg;
+   GRAPH* propgraph;
    IDX* curr;
    SCIP_Real offset;
    int* remain;
    int* edgestate;
    const int nedges = g->edges;
 
+   assert(propdata != NULL);
    assert(scip != NULL);
    assert(g != NULL);
-
-   vars = SCIPprobdataGetVars(scip);
-
-   if( vars == NULL )
-      return SCIP_OKAY;
+   assert(vars != NULL);
 
    offset = 0.0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &remain, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgestate, nedges) );
 
+   propgraph = propdata->propgraph;
+   assert(propgraph != NULL);
+
    /* copy the graph */
-   SCIP_CALL( graph_copy(scip, g, &copyg) ); // todo only copy and keep memory
+   SCIP_CALL( graph_copy_data(scip, g, propgraph) );
+   propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* set ancestor data structures of the new graph */
-   SCIP_CALL( graph_init_history(scip, copyg) );
+   SCIP_CALL( graph_init_history(scip, propgraph) );
 
    for( int e = 0; e < nedges; e++ )
-      remain[e] = STPPROP_EDGE_UNSET;
+      remain[e] = PROP_STP_EDGE_UNSET;
 
    for( int e = 0; e < nedges; e += 2 )
    {
@@ -224,22 +375,20 @@ SCIP_RETCODE redbasedvarfixing(
       /* e or its anti-parallel edge fixed to one? */
       if( SCIPvarGetLbLocal(vars[e]) > 0.5 || SCIPvarGetLbLocal(vars[erev]) > 0.5 )
       {
-         const int tail = copyg->tail[e];
-         const int head = copyg->head[e];
+         const int tail = propgraph->tail[e];
+         const int head = propgraph->head[e];
 
-         graph_knot_chg(copyg, tail, 0);
-         graph_knot_chg(copyg, head, 0);
+         graph_knot_chg(propgraph, tail, 0);
+         graph_knot_chg(propgraph, head, 0);
 
          edgestate[e] = EDGE_BLOCKED;
          edgestate[erev] = EDGE_BLOCKED;
 
-         copyg->cost[e] = 0.0;
-         copyg->cost[erev] = 0.0;
+         propgraph->cost[e] = 0.0;
+         propgraph->cost[erev] = 0.0;
 
-         printf("block %d \n", e);
-
-         remain[e] = STPPROP_EDGE_FIXED;
-         remain[erev] = STPPROP_EDGE_FIXED;
+         remain[e] = PROP_STP_EDGE_FIXED;
+         remain[erev] = PROP_STP_EDGE_FIXED;
       }
       else
       {
@@ -252,100 +401,52 @@ SCIP_RETCODE redbasedvarfixing(
       {
          assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
 
-         graph_edge_del(scip, copyg, e, TRUE);
-         remain[e] = STPPROP_EDGE_KILLED;
-         remain[erev] = STPPROP_EDGE_KILLED;
+         graph_edge_del(scip, propgraph, e, TRUE);
+         remain[e] = PROP_STP_EDGE_KILLED;
+         remain[erev] = PROP_STP_EDGE_KILLED;
       }
    }
 
    /* not at root? */
    if( SCIPgetDepth(scip) > 0 )
    {
-      SCIP_CONS* parentcons;
-      int naddedconss;
-
-      printf("added %d \n", SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)));
-      if( SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) != 1 )
-         exit(1);
-
-      assert(SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) == 1);
-
-      /* move up branch-and-bound path and check constraints */
-      for( SCIP_NODE* node = SCIPgetCurrentNode(scip); SCIPnodeGetDepth(node) > 0;
-            node = SCIPnodeGetParent(node) )
-      {
-         if( SCIPnodeGetNAddedConss(node) != 1 )
-            continue;
-
-         char* consname;
-
-         /* get constraints */
-         SCIPnodeGetAddedConss(node, &parentcons, &naddedconss, 1);
-         consname = (char*) SCIPconsGetName(parentcons);
-
-         printf("CONSNAME %s \n", consname);
-
-         /* terminal inclusion constraint? */
-         if( strncmp(consname, "consin", 6) == 0 )
-         {
-            char* tailptr;
-            const int term = (int) strtol(consname + 6, &tailptr, 10);
-
-            SCIPdebugMessage("make terminal %d   \n", term);
-
-            graph_knot_chg(copyg, term, 0);
-         }
-         /* node removal constraint? */
-         else if( strncmp(consname, "consout", 7) == 0 )
-         {
-            char* tailptr;
-            const int vert = (int) strtol(consname + 7, &tailptr, 10);
-
-            SCIPdebugMessage("delete vertex %d \n", vert);
-
-            graph_knot_del(scip, copyg, vert, TRUE);
-         }
-         else
-         {
-            printf("found unknown constraint at b&b node \n");
-            return SCIP_ERROR;
-         }
-      }
+      /* then modify the graph according to vertex kills/fixes during branch-and-bound */
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, NULL, propgraph) );
    }
 
-   SCIP_CALL( graph_path_init(scip, copyg) );
+   SCIP_CALL( graph_path_init(scip, propgraph) );
 
    /* reduce graph */
 
-   SCIP_CALL( level0(scip, copyg) );
- //  SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, edgestate, FALSE) );
-   SCIP_CALL( reduceStp(scip, &copyg, &offset, 2, FALSE, FALSE, NULL, FALSE) );
+   SCIP_CALL( level0(scip, propgraph) );
+ //  SCIP_CALL( reduceStp(scip, &propgraph, &offset, 5, FALSE, FALSE, edgestate, FALSE) );
+   SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, NULL, FALSE) );
 
 
-   assert(graph_valid(copyg));
+   assert(graph_valid(propgraph));
 
-   graph_path_exit(scip, copyg);
+   graph_path_exit(scip, propgraph);
 
    /* try to fix edges ... */
 
    for( int e = 0; e < nedges; e++ )
    {
-      if( copyg->ieat[e] != EAT_FREE )
+      if( propgraph->ieat[e] != EAT_FREE )
       {
-         assert(copyg->ieat[flipedge(e)] != EAT_FREE);
+         assert(propgraph->ieat[flipedge(e)] != EAT_FREE);
 
-         curr = copyg->ancestors[e];
+         curr = propgraph->ancestors[e];
 
          while( curr != NULL )
          {
             const int i = curr->index;
             assert(i < nedges);
-            assert(remain[i] != STPPROP_EDGE_KILLED);
+            assert(remain[i] != PROP_STP_EDGE_KILLED);
 
-            if( remain[i] == STPPROP_EDGE_UNSET )
+            if( remain[i] == PROP_STP_EDGE_UNSET )
             {
-               remain[i] = STPPROP_EDGE_SET;
-               remain[flipedge(i)] = STPPROP_EDGE_SET;
+               remain[i] = PROP_STP_EDGE_SET;
+               remain[flipedge(i)] = PROP_STP_EDGE_SET;
             }
 
             curr = curr->parent;
@@ -353,22 +454,22 @@ SCIP_RETCODE redbasedvarfixing(
       }
    }
 
-   curr = copyg->fixedges;
+   curr = propgraph->fixedges;
 
    while( curr != NULL )
    {
       const int e = curr->index;
       assert(e < nedges);
 
-      remain[e] = STPPROP_EDGE_FIXED;
-      remain[flipedge(e)] = STPPROP_EDGE_FIXED;
+      remain[e] = PROP_STP_EDGE_FIXED;
+      remain[flipedge(e)] = PROP_STP_EDGE_FIXED;
 
       curr = curr->parent;
    }
 
    /* 1-fixed edge to be deleted? */
    for( int e = 0; e < nedges; e++ )
-      if( (remain[e] == STPPROP_EDGE_UNSET || remain[e] == STPPROP_EDGE_KILLED) && (SCIPvarGetLbLocal(vars[e]) > 0.5) )
+      if( (remain[e] == PROP_STP_EDGE_UNSET || remain[e] == PROP_STP_EDGE_KILLED) && (SCIPvarGetLbLocal(vars[e]) > 0.5) )
       {
          int todo;
          printf("1 fix failed %d \n", 0);
@@ -384,30 +485,29 @@ SCIP_RETCODE redbasedvarfixing(
    {
       const int erev = e + 1;
       /* edge not set yet? */
-      if( remain[e] == STPPROP_EDGE_UNSET )
+      if( remain[e] == PROP_STP_EDGE_UNSET )
       {
-         assert(remain[erev] == STPPROP_EDGE_UNSET);
+         assert(remain[erev] == PROP_STP_EDGE_UNSET);
 
          SCIP_CALL( fixedgevar(scip, vars[e], nfixed) );
          SCIP_CALL( fixedgevar(scip, vars[erev], nfixed) );
       }
-      else if( remain[e] == STPPROP_EDGE_FIXED )
+      else if( remain[e] == PROP_STP_EDGE_FIXED )
       {
          int todo;
-         assert(remain[erev] == STPPROP_EDGE_FIXED);
+         assert(remain[erev] == PROP_STP_EDGE_FIXED);
 
 //         SCIP_CALL( fixedgevarTo1(scip, vars[e], nfixed) );
   //       SCIP_CALL( fixedgevarTo1(scip, vars[erev], nfixed) );
       }
    }
 
-   printf("nfixed %d \n\n", *nfixed);
+   printf("reduction based fixings: %d \n\n", *nfixed);
 
+TERMINATE:
 
-   TERMINATE:
-
-   /* free memory */
-   graph_free(scip, copyg, TRUE);
+   graph_free_history(scip, propgraph);
+   graph_free_historyDeep(scip, propgraph);
    SCIPfreeBufferArray(scip, &edgestate);
    SCIPfreeBufferArray(scip, &remain);
 
@@ -448,6 +548,9 @@ SCIP_DECL_PROPFREE(propFreeStp)
    assert(propdata != NULL);
 
    SCIPfreeMemoryArrayNull(scip, &(propdata->fixingbounds));
+   if( propdata->propgraph != NULL )
+      graph_free(scip, &(propdata->propgraph), TRUE);
+
    SCIPfreeMemory(scip, &propdata);
 
    SCIPpropSetData(prop, NULL);
@@ -463,20 +566,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_PROPDATA* propdata;
    SCIP_PROBDATA* probdata;
    SCIP_VAR** vars;
-   SCIP_VAR* edgevar;
    GRAPH* graph;
-   PATH* vnoi;
-   SCIP_Real* cost;
-   SCIP_Real* costrev;
-   SCIP_Real* pathdist;
-   SCIP_Real redratio;
-   SCIP_Real lpobjval;
-   SCIP_Real cutoffbound;
-   SCIP_Real minpathcost;
-   int* vbase;
-   int* pathedge;
-   int nedges;
-   int nnodes;
    int nfixed;
    SCIP_Bool callreduce;
 
@@ -486,37 +576,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
-   /* only call propagator if current node has an LP */
-   if( !SCIPhasCurrentNodeLP(scip) )
-      return SCIP_OKAY;
-
-   /* only call propagator if optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
-
-   /* only call propagator if current LP is valid relaxation */
-   if( !SCIPisLPRelax(scip) )
-      return SCIP_OKAY;
-
-   /* we cannot apply reduced cost strengthening, if no simplex basis is available */
-   if( !SCIPisLPSolBasic(scip) )
-      return SCIP_OKAY;
-
-   cutoffbound = SCIPgetCutoffbound(scip);
-
-      /* reduced cost strengthening can only be applied, if cutoff is finite */
-   if( SCIPisInfinity(scip, cutoffbound) )
-      return SCIP_OKAY;
-
    /* get problem data */
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
-
-   graph = SCIPprobdataGetGraph(probdata);
-   assert(graph != NULL);
-
-   nedges = graph->edges;
-   nnodes = graph->knots;
 
    /* get all variables (corresponding to the edges) */
    vars = SCIPprobdataGetVars(scip);
@@ -540,131 +602,27 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    propdata->nlastcall = propdata->ncalls;
 
-   /* get LP objective value */
-   lpobjval = SCIPgetLPObjval(scip);
-   *result = SCIP_DIDNOTFIND;
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
 
-   /* the required reduced path cost to be surpassed */
-   minpathcost = cutoffbound - lpobjval;
-
-   SCIPdebugMessage("cutoffbound %f, lpobjval %f\n", cutoffbound, lpobjval);
-
-   if( propdata->fixingbounds == NULL )
+   if( propdata->propgraph == NULL )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->fixingbounds), nedges) );
-      for( int i = 0; i < nedges; i++ )
-         propdata->fixingbounds[i] = -FARAWAY;
+      propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+      SCIP_CALL( graph_copy(scip, graph, &(propdata->propgraph)) );
    }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
-
-   for( unsigned int e = 0; e < (unsigned) nedges; ++e )
-   {
-      assert(SCIPvarIsBinary(vars[e]));
-
-      /* variable is already fixed, we must not trust the reduced cost */
-      if( SCIPvarGetLbLocal(vars[e]) + 0.5 > SCIPvarGetUbLocal(vars[e]) )
-      {
-         if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
-            cost[e] = 0.0;
-         else
-         {
-            assert(SCIPvarGetUbLocal(vars[e]) < 0.5);
-            cost[e] = FARAWAY;
-         }
-      }
-      else
-      {
-         if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[e])) )
-         {
-            assert(!SCIPisDualfeasNegative(scip, SCIPgetVarRedcost(scip, vars[e])));
-            cost[e] = SCIPgetVarRedcost(scip, vars[e]);
-         }
-         else
-         {
-            assert(!SCIPisDualfeasPositive(scip, SCIPgetVarRedcost(scip, vars[e])));
-            assert(SCIPisFeasEQ(scip, SCIPgetSolVal(scip, NULL, vars[e]), 1.0) || SCIPisDualfeasZero(scip, SCIPgetVarRedcost(scip, vars[e])));
-            cost[e] = 0.0;
-         }
-      }
-
-      if( SCIPisLT(scip, cost[e], 0.0) )
-         cost[e] = 0.0;
-
-      if( e % 2 == 0 )
-         costrev[e + 1] = cost[e];
-      else
-         costrev[e - 1] = cost[e];
-   }
-
-   for( int k = 0; k < nnodes; k++ )
-      graph->mark[k] = (graph->grad[k] > 0);
-
-   /* distance from root to all nodes */
-   graph_path_execX(scip, graph, graph->source, cost, pathdist, pathedge);
-
-   /* no paths should go back to the root */
-   for( int e = graph->outbeg[graph->source]; e != EAT_LAST; e = graph->oeat[e] )
-      costrev[e] = FARAWAY;
-
-   /* build voronoi diagram */
-   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
 
    nfixed = 0;
+   *result = SCIP_DIDNOTFIND;
 
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( Is_term(graph->term[k]) && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) )
-            continue;
-
-      if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
-      {
-         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-            /* try to fix edge and reversed one */
-            SCIP_CALL( fixedgevar(scip, vars[e], &nfixed) );
-            SCIP_CALL( fixedgevar(scip, vars[flipedge(e)], &nfixed) );
-         }
-      }
-      else
-      {
-         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-            if( SCIPisGT(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
-            {
-               edgevar = vars[e];
-               /* try to fix edge */
-               SCIP_CALL( fixedgevar(scip, edgevar, &nfixed) );
-            }
-         }
-      }
-   }
-
-   /* at root? */
-   if( SCIPgetDepth(scip) == 0 )
-      updateFixingBounds(propdata->fixingbounds, graph, cost, pathdist, vnoi, lpobjval);
-
-   SCIP_CALL( globalfixing(scip, vars, &nfixed, propdata->fixingbounds, graph, cutoffbound, nedges) );
-
-   SCIPfreeBufferArray(scip, &vnoi);
-   SCIPfreeBufferArray(scip, &pathedge);
-   SCIPfreeBufferArray(scip, &vbase);
-   SCIPfreeBufferArray(scip, &pathdist);
-   SCIPfreeBufferArray(scip, &costrev);
-   SCIPfreeBufferArray(scip, &cost);
-
-   /* is ratio of newly fixed edges higher than bound? */
-   redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
+   /* call dual cost based variable fixing */
+   SCIP_CALL( dualcostVarfixing(scip, vars, propdata, &nfixed, graph ) );
 
    callreduce = FALSE;
 
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT )
    {
+      const SCIP_Real redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
+
       /* not at root? */
       if( SCIPgetDepth(scip) > 0 )
       {
@@ -673,11 +631,11 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
          if( nodenumber != propdata->lastnodenumber || propdata->aggressive )
          {
-            printf("new node %lld \n", nodenumber);
             propdata->lastnodenumber = nodenumber;
             callreduce = TRUE;
          }
       }
+      /* is ratio of newly fixed edges higher than bound? */
       else if( SCIPisGT(scip, redratio, REDUCTION_WAIT_RATIO) )
       {
          callreduce = TRUE;
@@ -688,7 +646,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( callreduce )
    {
       SCIPdebugMessage("use reduction techniques \n");
-      SCIP_CALL( redbasedvarfixing(scip, graph, &nfixed) );
+
+      /* call reduced cost based based variable fixing */
+      SCIP_CALL( redbasedVarfixing(scip, vars, propdata, &nfixed, graph) );
       propdata->postrednfixededges = 0;
    }
 
@@ -702,7 +662,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
       if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || graph->stp_type == STP_RPCSPG ||
           graph->stp_type == STP_PCSPG || graph->stp_type == STP_DCSTP )
       {
-         for( int e = 0; e < nedges; e += 2 )
+         for( int e = 0; e < graph->edges; e += 2 )
          {
             const int erev = e + 1;
 
@@ -763,9 +723,9 @@ SCIP_RETCODE fixedgevar(
 }
 
 /** return total number of arcs fixed by 'fixedgevar' method of this propagator */
-int SCIPstpNfixedEdges(
+int SCIPStpNfixedEdges(
    SCIP*                 scip                /**< SCIP data structure */
-      )
+   )
 {
    SCIP_PROPDATA* propdata;
 
@@ -778,6 +738,26 @@ int SCIPstpNfixedEdges(
    assert(propdata != NULL);
 
    return (propdata->nfixededges);
+}
+
+/** gets propagator graph  */
+void SCIPStpPropGetGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH**               graph,              /**< graph data */
+   SCIP_Longint*         graphnodenumber     /**< point to b&b node for which graph is valid */
+   )
+{
+   SCIP_PROPDATA* propdata;
+
+   assert(scip != NULL);
+
+   /* get propagator data */
+   assert(SCIPfindProp(scip, "stp") != NULL);
+   propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
+   assert(propdata != NULL);
+
+   *graph = (propdata->propgraph);
+   *graphnodenumber = propdata->propgraphnodenumber;
 }
 
 
@@ -808,6 +788,8 @@ SCIP_RETCODE SCIPincludePropStp(
    propdata->nfixededges = 0;
    propdata->postrednfixededges = 0;
    propdata->fixingbounds = NULL;
+   propdata->propgraph = NULL;
+   propdata->propgraphnodenumber = -1;
 
    /* add parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/nwaitingrounds",

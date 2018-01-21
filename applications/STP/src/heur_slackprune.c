@@ -387,7 +387,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
          if( SCIPisGT(scip, stallproportion, SLACKPRUNE_MAXSTALLPROPORTION) )
             stallproportion = SLACKPRUNE_MAXSTALLPROPORTION;
 
-         if( (SCIPstpNfixedEdges(scip) - heurdata->lastnfixededges) < (int) (stallproportion * nedges) )
+         if( (SCIPStpNfixedEdges(scip) - heurdata->lastnfixededges) < (int) (stallproportion * nedges) )
             return SCIP_OKAY;
       }
    }
@@ -400,7 +400,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    if( xval == NULL )
       return SCIP_OKAY;
 
-   heurdata->lastnfixededges = SCIPstpNfixedEdges(scip);
+   heurdata->lastnfixededges = SCIPStpNfixedEdges(scip);
 
    vars = SCIPprobdataGetVars(scip);
    nvars = SCIPprobdataGetNVars(scip);
@@ -756,7 +756,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 #endif
 
    /* free memory */
-   graph_free(scip, prunegraph, TRUE);
+   graph_free(scip, &prunegraph, TRUE);
 
    SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);
@@ -1108,7 +1108,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
 
    /* free memory */
    graph_path_exit(scip, prunegraph);
-   graph_free(scip, prunegraph, TRUE);
+   graph_free(scip, &prunegraph, TRUE);
 
    SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);

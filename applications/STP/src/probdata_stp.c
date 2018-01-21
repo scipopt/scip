@@ -1627,7 +1627,7 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
 
       graph_path_exit(scip, (*probdata)->graph);
 
-      graph_free(scip, (*probdata)->graph, TRUE);
+      graph_free(scip, &((*probdata)->graph), TRUE);
    }
 
    /* free the (original) probdata */
@@ -2885,7 +2885,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
       SCIPqueueFree(&queue);
 
-      graph_free(scip, solgraph, TRUE);
+      graph_free(scip, &solgraph, TRUE);
 
       for( e = 0; e < norgedges; e++ )
       {

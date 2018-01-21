@@ -902,7 +902,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 #endif
 
    /* free memory */
-   graph_free(scip, prunegraph, TRUE);
+   graph_free(scip, &prunegraph, TRUE);
 
    SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);

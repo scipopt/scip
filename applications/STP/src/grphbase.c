@@ -2985,14 +2985,13 @@ SCIP_RETCODE graph_init_history(
 
    if( pcmw )
    {
-      int k;
-      int nnodes = graph->knots;
+      const int nnodes = graph->knots;
 
       SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->pcancestors), nnodes) );
 
       pcancestors = graph->pcancestors;
 
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
          pcancestors[k] = NULL;
    }
 
@@ -3056,71 +3055,22 @@ SCIP_RETCODE graph_resize(
 /** free the graph */
 void graph_free(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                p,                  /**< graph to be freed */
+   GRAPH**               graph,              /**< graph to be freed */
    SCIP_Bool             final               /**< delete ancestor data structures? */
    )
 {
-   IDX* curr;
-   int e;
-   int i;
-   int nedges;
+   GRAPH* p;
 
    assert(scip != NULL);
+   assert(graph != NULL);
+
+   p = *graph;
    assert(p != NULL);
 
-   nedges = p->edges;
-
-   if( p->ancestors != NULL )
-   {
-        for( e = nedges - 1; e >= 0; e-- )
-        {
-           curr = p->ancestors[e];
-           while( curr != NULL )
-           {
-              p->ancestors[e] = curr->parent;
-              SCIPfreeBlockMemory(scip, &(curr));
-              curr = p->ancestors[e];
-           }
-        }
-        SCIPfreeMemoryArray(scip, &(p->ancestors));
-   }
+   graph_free_history(scip, p);
 
    if( final )
-   {
-      assert(p->path_heap == NULL);
-      assert(p->path_state == NULL);
-
-      if( p->pcancestors != NULL )
-      {
-         for( e = p->norgmodelknots - 1; e >= 0; e-- )
-         {
-            curr = p->pcancestors[e];
-            while( curr != NULL )
-            {
-               p->pcancestors[e] = curr->parent;
-               SCIPfreeBlockMemory(scip, &(curr));
-               curr = p->pcancestors[e];
-            }
-         }
-         SCIPfreeMemoryArray(scip, &(p->pcancestors));
-      }
-
-      if( p->orgtail != NULL )
-      {
-         assert(p->orghead != NULL);
-
-         SCIPfreeMemoryArray(scip, &(p->orghead));
-         SCIPfreeMemoryArray(scip, &(p->orgtail));
-      }
-      curr = p->fixedges;
-      while( curr != NULL )
-      {
-         p->fixedges = curr->parent;
-         SCIPfreeBlockMemory(scip, &(curr));
-
-         curr = p->fixedges;
-      }
-   }
+      graph_free_historyDeep(scip, p);
 
    if( p->prize != NULL )
    {
@@ -3138,7 +3088,7 @@ void graph_free(
       if( p->grid_coordinates != NULL )
       {
          assert(p->grid_coordinates != NULL);
-         for( i = p->grid_dim - 1; i >= 0;  i-- )
+         for( int i = p->grid_dim - 1; i >= 0;  i-- )
             SCIPfreeMemoryArray(scip, &(p->grid_coordinates[i]));
 
          SCIPfreeMemoryArray(scip, &(p->grid_coordinates));
@@ -3159,27 +3109,96 @@ void graph_free(
    SCIPfreeMemoryArray(scip, &(p->mark));
    SCIPfreeMemoryArray(scip, &(p->term));
 
-   SCIPfreeMemory(scip, &(p));
+   SCIPfreeMemory(scip, graph);
 }
 
-/** copy the graph */
-SCIP_RETCODE graph_copy(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          orgraph,            /**< original graph */
-   GRAPH**               copygraph           /**< graph to be copied */
+
+/** free the history */
+void graph_free_history(
+   SCIP*                 scip,               /**< SCIP data */
+   GRAPH*                p                   /**< graph data */
    )
 {
-   GRAPH* g;
-   const GRAPH* p;
-   int ksize;
+   if( p->ancestors != NULL )
+   {
+      const int nedges = p->edges;
 
-   p = orgraph;
+      for( int e = nedges - 1; e >= 0; e-- )
+      {
+         IDX* curr = p->ancestors[e];
+         while( curr != NULL )
+         {
+            p->ancestors[e] = curr->parent;
+            SCIPfreeBlockMemory(scip, &(curr));
+            curr = p->ancestors[e];
+         }
+      }
+      SCIPfreeMemoryArray(scip, &(p->ancestors));
+   }
+}
+
+/** free the deep history */
+void graph_free_historyDeep(
+   SCIP*                 scip,               /**< SCIP data */
+   GRAPH*                p                   /**< graph data */
+   )
+{
+   IDX* curr;
+
+   assert(scip != NULL);
    assert(p != NULL);
+   assert(p->path_heap == NULL);
+   assert(p->path_state == NULL);
 
-   ksize = p->ksize;
+   if( p->pcancestors != NULL )
+   {
+      for( int e = p->norgmodelknots - 1; e >= 0; e-- )
+      {
+         curr = p->pcancestors[e];
+         while( curr != NULL )
+         {
+            p->pcancestors[e] = curr->parent;
+            SCIPfreeBlockMemory(scip, &(curr));
+            curr = p->pcancestors[e];
+         }
+      }
+      SCIPfreeMemoryArray(scip, &(p->pcancestors));
+   }
 
-   SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers) );
-   g = *copygraph;
+   if( p->orgtail != NULL )
+   {
+      assert(p->orghead != NULL);
+
+      SCIPfreeMemoryArray(scip, &(p->orghead));
+      SCIPfreeMemoryArray(scip, &(p->orgtail));
+   }
+   curr = p->fixedges;
+   while( curr != NULL )
+   {
+      p->fixedges = curr->parent;
+      SCIPfreeBlockMemory(scip, &(curr));
+
+      curr = p->fixedges;
+   }
+}
+
+/** copy the data of the graph */
+SCIP_RETCODE graph_copy_data(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orgraph,            /**< original graph */
+   GRAPH*                copygraph           /**< graph to be copied to */
+   )
+{
+   GRAPH* g = copygraph;
+   const GRAPH* p = orgraph;
+   const int ksize = p->ksize;
+   const int esize = p->esize;
+
+   assert(scip != NULL);
+   assert(orgraph != NULL);
+   assert(copygraph != NULL);
+   assert(ksize == g->ksize && ksize > 0);
+   assert(esize == g->esize && esize >= 0);
 
    g->norgmodeledges = p->norgmodeledges;
    g->norgmodelknots = p->norgmodelknots;
@@ -3202,18 +3221,18 @@ SCIP_RETCODE graph_copy(
    BMScopyMemoryArray(g->grad, p->grad, ksize);
    BMScopyMemoryArray(g->inpbeg, p->inpbeg, ksize);
    BMScopyMemoryArray(g->outbeg, p->outbeg, ksize);
-   BMScopyMemoryArray(g->cost, p->cost, p->esize);
-   BMScopyMemoryArray(g->tail, p->tail, p->esize);
-   BMScopyMemoryArray(g->head, p->head, p->esize);
-   BMScopyMemoryArray(g->ieat, p->ieat, p->esize);
-   BMScopyMemoryArray(g->oeat, p->oeat, p->esize);
+   BMScopyMemoryArray(g->cost, p->cost, esize);
+   BMScopyMemoryArray(g->tail, p->tail, esize);
+   BMScopyMemoryArray(g->head, p->head, esize);
+   BMScopyMemoryArray(g->ieat, p->ieat, esize);
+   BMScopyMemoryArray(g->oeat, p->oeat, esize);
 
    if( g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG || g->stp_type == STP_MWCSP || g->stp_type == STP_RMWCSP )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), g->knots) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->term2edge), g->knots) );
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->prize), g->knots));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->term2edge), g->knots));
 
-      for( int k = 0; k < g->knots; k++)
+      for( int k = 0; k < g->knots; k++ )
          if( Is_term(p->term[k]) )
             g->prize[k] = 0.0;
          else
@@ -3227,9 +3246,9 @@ SCIP_RETCODE graph_copy(
    {
       assert(p->maxdeg != NULL);
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->maxdeg), g->knots) );
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->maxdeg), g->knots));
 
-      for( int k = 0; k < g->knots; k++)
+      for( int k = 0; k < g->knots; k++ )
          g->maxdeg[k] = p->maxdeg[k];
    }
    else if( p->stp_type == STP_RSMT )
@@ -3237,19 +3256,36 @@ SCIP_RETCODE graph_copy(
       assert(p->grid_ncoords != NULL);
       assert(p->grid_coordinates != NULL);
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_coordinates), p->grid_dim) );
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->grid_coordinates), p->grid_dim));
 
       BMScopyMemoryArray(g->grid_coordinates, p->grid_coordinates, p->grid_dim);
       for( int k = 0; k < p->grid_dim; k++ )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_coordinates[k]), p->terms) ); /*lint !e866*/
+         SCIP_CALL(SCIPallocMemoryArray(scip, &(g->grid_coordinates[k]), p->terms)); /*lint !e866*/
          BMScopyMemoryArray(g->grid_coordinates[k], p->grid_coordinates[k], p->terms); /*lint !e866*/
       }
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_ncoords), p->grid_dim) );
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->grid_ncoords), p->grid_dim));
 
       BMScopyMemoryArray(g->grid_ncoords, p->grid_ncoords, p->grid_dim);
    }
    assert(graph_valid(g));
+
+   return SCIP_OKAY;
+}
+
+/** copy the graph */
+SCIP_RETCODE graph_copy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orgraph,            /**< original graph */
+   GRAPH**               copygraph           /**< graph to be created */
+   )
+{
+   const GRAPH* p = orgraph;
+   assert(p != NULL);
+
+   SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers) );
+
+   SCIP_CALL( graph_copy_data(scip, orgraph, *copygraph) );
 
    return SCIP_OKAY;
 }
@@ -3412,7 +3448,7 @@ SCIP_RETCODE graph_pack(
    if( new == NULL )
    {
       q->ancestors = NULL;
-      graph_free(scip, g, FALSE);
+      graph_free(scip, &g, FALSE);
 
       if( q->stp_type == STP_RSMT )
       {
@@ -3511,7 +3547,7 @@ SCIP_RETCODE graph_pack(
    SCIPfreeBufferArray(scip, &new);
 
    g->stp_type = UNKNOWN;
-   graph_free(scip, g, FALSE);
+   graph_free(scip, &g, FALSE);
 
    assert(graph_valid(q));
 

@@ -1236,7 +1236,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
                /* free the supergraph and the MST data structure */
                graph_path_exit(scip, supergraph);
-               graph_free(scip, supergraph, TRUE);
+               graph_free(scip, &supergraph, TRUE);
                SCIPfreeBufferArray(scip, &mst);
 
                /* unmark the descendant supervertices */

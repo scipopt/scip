@@ -33,7 +33,15 @@
 extern "C" {
 #endif
 
-/** creates the multi-aggregated branching rule and includes it in SCIP */
+/** applies vertex changes caused by this branching rule, either on a graph or on an array */
+EXTERN
+SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  vertexchgs,         /**< array to store changes or NULL */
+   GRAPH*                graph               /**< graph to apply changes on or NULL */
+   );
+
+/** creates the stp branching rule and includes it to SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP*                 scip                /**< SCIP data structure */

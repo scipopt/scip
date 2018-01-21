@@ -608,7 +608,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       mark[k] = (g->grad[k] > 0);
 
    /* free memory */
-   graph_free(scip, newgraph, TRUE);
+   graph_free(scip, &newgraph, TRUE);
    SCIPfreeBufferArray(scip, &edgeancestor);
    SCIPfreeBufferArrayNull(scip, &nval);
 
@@ -638,7 +638,6 @@ SCIP_RETCODE SCIPStpIncludeHeurAscendPrune(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyAscendPrune) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeAscendPrune) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitAscendPrune) );
-
 
    /* add ascend and prune primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/maxfreq",

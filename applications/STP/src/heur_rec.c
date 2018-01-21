@@ -1466,7 +1466,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          SCIPfreeMemoryArray(scip, &edgeancestor);
 
-         graph_free(scip, solgraph, TRUE);
+         graph_free(scip, &solgraph, TRUE);
 
          /* prune solution (in the original graph) */
          if( pcmw )
@@ -1826,7 +1826,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
       *success = FALSE;
 
    SCIPfreeBufferArray(scip, &unodemap);
-   graph_free(scip, newgraph, TRUE);
+   graph_free(scip, &newgraph, TRUE);
 
    return SCIP_OKAY;
 }

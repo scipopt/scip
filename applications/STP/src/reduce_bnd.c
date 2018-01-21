@@ -2629,7 +2629,7 @@ SCIP_RETCODE reduce_daPcMw(
       nusedroots = -1;
 
    graph_path_exit(scip, transgraph);
-   graph_free(scip, transgraph, TRUE);
+   graph_free(scip, &transgraph, TRUE);
 
    /* loop and change root for dual ascent run */
    for( int run = 0; run < nusedroots; run++  )
@@ -2771,7 +2771,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       transgraph->stp_type = STP_RPCSPG;
       graph_path_exit(scip, transgraph);
-      graph_free(scip, transgraph, TRUE);
+      graph_free(scip, &transgraph, TRUE);
    }
 
    *nelims = nfixed;
@@ -3180,7 +3180,7 @@ SCIP_RETCODE reduce_daSlackPruneMw(
    SCIPdebugMessage("fixed by da: %d \n", nfixed );
 
    graph_path_exit(scip, transgraph);
-   graph_free(scip, transgraph, TRUE);
+   graph_free(scip, &transgraph, TRUE);
 
    /* restore transformed graph */
    graph_pc_2trans(graph);
@@ -3548,7 +3548,7 @@ SCIP_RETCODE reduce_bound(
          if( !mw )
          {
             graph_path_exit(scip, adjgraph);
-            graph_free(scip, adjgraph, TRUE);
+            graph_free(scip, &adjgraph, TRUE);
          }
          SCIPfreeBufferArrayNull(scip, &mst);
          SCIPfreeBufferArrayNull(scip, &starts);
@@ -3857,7 +3857,7 @@ SCIP_RETCODE reduce_bound(
    if( !mw )
    {
       graph_path_exit(scip, adjgraph);
-      graph_free(scip, adjgraph, TRUE);
+      graph_free(scip, &adjgraph, TRUE);
    }
 
    /* free memory*/
@@ -4181,7 +4181,7 @@ SCIP_RETCODE reduce_boundPrune(
       /* free memory*/
       SCIPfreeBufferArray(scip, &mst);
       graph_path_exit(scip, adjgraph);
-      graph_free(scip, adjgraph, TRUE);
+      graph_free(scip, &adjgraph, TRUE);
 
    }
    else
@@ -4798,7 +4798,7 @@ SCIP_RETCODE reduce_boundHop(
 
    /* free adjgraph */
    graph_path_exit(scip, adjgraph);
-   graph_free(scip, adjgraph, TRUE);
+   graph_free(scip, &adjgraph, TRUE);
 
    /* free memory*/
    SCIPfreeBufferArray(scip, &mst);
