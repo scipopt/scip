@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <string.h>
 #include "prop_stp.h"
+#include "grph.h"
 #include "branch_stp.h"
 #include "scip/tree.h"
 
@@ -344,6 +345,7 @@ SCIP_RETCODE redbasedVarfixing(
    int* remain;
    int* edgestate;
    const int nedges = g->edges;
+   const SCIP_Bool pc = (g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
 
    assert(propdata != NULL);
    assert(scip != NULL);
@@ -406,6 +408,9 @@ SCIP_RETCODE redbasedVarfixing(
          remain[erev] = PROP_STP_EDGE_KILLED;
       }
    }
+
+   if( pc )
+      SCIP_CALL( reduce_contractZeroEdges(scip, propgraph, TRUE) );
 
    /* not at root? */
    if( SCIPgetDepth(scip) > 0 )

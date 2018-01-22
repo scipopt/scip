@@ -181,6 +181,7 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 extern void   graph_pc_knot2nonTerm(GRAPH*, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
+extern void   graph_pc_chgPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_show(const GRAPH*);
 extern void   graph_knot_add(GRAPH*, int);
 extern void   graph_knot_chg(GRAPH*, int, int);
@@ -338,7 +339,7 @@ extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_
 
 /* reduce_simple.c
  */
-extern SCIP_RETCODE    reduce_contractZeroEdges(SCIP*, GRAPH*);
+extern SCIP_RETCODE    reduce_contractZeroEdges(SCIP*, GRAPH*, SCIP_Bool);
 extern SCIP_RETCODE    reduce_simple(SCIP*, GRAPH*, SCIP_Real*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_simple_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_mw(SCIP*, GRAPH*, int*, SCIP_Real*, int*);

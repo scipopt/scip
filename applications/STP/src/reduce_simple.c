@@ -439,7 +439,8 @@ void adjust0term(
 /** contract edges of weight zero */
 SCIP_RETCODE reduce_contractZeroEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g                   /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Bool             savehistory         /**< save the history? */
    )
 {
    int count;
@@ -455,9 +456,12 @@ SCIP_RETCODE reduce_contractZeroEdges(
       count = 0;
       for( int e = 0; e < nedges; e += 2 )
       {
-         if( g->oeat[e] != EAT_FREE && SCIPisZero(scip, g->cost[e]) )
+         if( g->oeat[e] != EAT_FREE && SCIPisZero(scip, g->cost[e]) && SCIPisZero(scip, g->cost[flipedge(e)]) )
          {
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e], NULL) );
+            if( savehistory )
+            {
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e], NULL) );
+            }
             SCIP_CALL( graph_knot_contract(scip, g, NULL, g->tail[e], g->head[e]) );
             count++;
          }

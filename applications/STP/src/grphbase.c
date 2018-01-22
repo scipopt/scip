@@ -1876,6 +1876,50 @@ void graph_pc_subtractPrize(
    assert(SCIPisGE(scip, g->prize[i], 0.0) || g->stp_type == STP_MWCSP);
 }
 
+/** change prize of a terminal */
+void graph_pc_chgPrize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   SCIP_Real             newprize,           /**< prize to be subtracted */
+   int                   i                   /**< the terminal */
+   )
+{
+   int e;
+   int j;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(newprize > 0.0);
+
+   if( g->stp_type == STP_RPCSPG && i == g->source )
+      return;
+
+   g->prize[i] = newprize;
+   for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      if( Is_pterm(g->term[g->head[e]]) )
+         break;
+
+   assert(e != EAT_LAST);
+
+   j = g->head[e];
+
+   assert(j != g->source);
+   assert(!g->mark[j]);
+
+   for( e = g->inpbeg[j]; e != EAT_LAST; e = g->ieat[e] )
+      if( g->source == g->tail[e] )
+         break;
+
+   assert(e != EAT_LAST);
+   assert(!g->mark[g->tail[e]] || g->stp_type == STP_RPCSPG);
+
+   g->cost[e] = newprize;
+
+   assert(g->stp_type == STP_MWCSP  || g->stp_type == STP_RMWCSP || SCIPisGE(scip, g->prize[i], 0.0));
+   assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
+   assert(SCIPisGE(scip, g->prize[i], 0.0) || g->stp_type == STP_MWCSP);
+}
+
 
 
 /** contract an edge of (rooted) prize-collecting Steiner tree problem or maximum-weight connected subgraph problem */

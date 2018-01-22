@@ -1447,7 +1447,7 @@ SCIP_RETCODE redLoopStp(
    ub = upperbound;
    fix = 0.0;
 
-   SCIP_CALL( reduce_contractZeroEdges(scip, g) );
+   SCIP_CALL( reduce_contractZeroEdges(scip, g, TRUE) );
 
    SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &i, edgestate) );
 

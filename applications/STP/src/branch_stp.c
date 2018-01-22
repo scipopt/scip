@@ -78,10 +78,11 @@ SCIP_Bool isProbCompatible(
    int                   probtype            /**< the problem type */
 )
 {
-   return (probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT);
+   return (probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT
+        || probtype == STP_PCSPG || probtype == STP_RPCSPG);
 }
 
-/** select vertex to branch on by chosing vertex of highest degree */
+/** select vertex to branch on by choosing vertex of highest degree */
 static
 SCIP_RETCODE selectBranchingVertexByDegree(
    SCIP*                 scip,               /**< original SCIP data structure */
@@ -540,7 +541,23 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
          SCIPdebugMessage("make terminal %d \n", term);
 
          if( graph != NULL)
-            graph_knot_chg(graph, term, 0);
+         {
+            assert(!Is_term(graph->term[term]));
+
+            if( graph->stp_type == STP_PCSPG )
+            {
+               if( Is_pterm(graph->term[term]) )
+                  graph_pc_chgPrize(scip, graph, FARAWAY, term);
+            }
+            else if( graph->stp_type == STP_RPCSPG )
+            {
+               assert(0 && "not implemented");
+            }
+            else
+            {
+               graph_knot_chg(graph, term, 0);
+            }
+         }
 
          if( vertexchgs != NULL )
             vertexchgs[term] = BRANCH_STP_VERTEX_TERM;
@@ -554,7 +571,27 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
          SCIPdebugMessage("delete vertex %d \n", vert);
 
          if( graph != NULL)
-            graph_knot_del(scip, graph, vert, TRUE);
+         {
+            assert(!Is_term(graph->term[vert]));
+
+            if( graph->stp_type == STP_PCSPG )
+            {
+               if( Is_pterm(graph->term[vert]) )
+               {
+                  int todo; // fix arc vars
+                  graph_pc_deleteTerm(scip, graph, vert);
+               }
+               graph_knot_del(scip, graph, vert, TRUE);
+            }
+            else if( graph->stp_type == STP_RPCSPG )
+            {
+               assert(0 && "not implemented");
+            }
+            else
+            {
+               graph_knot_del(scip, graph, vert, TRUE);
+            }
+         }
 
          if( vertexchgs != NULL )
             vertexchgs[vert] = BRANCH_STP_VERTEX_KILLED;
