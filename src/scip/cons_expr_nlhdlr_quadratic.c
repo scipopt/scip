@@ -799,6 +799,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    SCIP_Bool success;
    int j;
 
+   /* FIXME: apparently, cons_expr is not handling correctly the enfomethods provided; once that is fixed, remove me */
+   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
+      return SCIP_OKAY;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(conshdlr != NULL);
