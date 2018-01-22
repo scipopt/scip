@@ -236,6 +236,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
    SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, NULL, *nnonz, beg, ind, val) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+   cr_assert( SCIPlpiWasSolved(lpi) );
 
    return TRUE;
 }
@@ -246,11 +249,13 @@ void setup(void)
 {
    /* create LPI */
    SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
 }
 
 static
 void teardown(void)
 {
+   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiFree(&lpi) );
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
@@ -276,6 +281,7 @@ static
 void checkChgCoef(int row, int col, SCIP_Real newval)
 {
    SCIP_CALL( SCIPlpiChgCoef(lpi, row, col, newval) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
 
    SCIP_Real val;
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
@@ -309,6 +315,7 @@ void checkChgObj(int dim, int* ind, SCIP_Real* setobj)
    SCIP_Real obj[dim];
 
    SCIP_CALL( SCIPlpiChgObj(lpi, dim, ind, setobj) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetObj(lpi, 0, dim-1, obj) );
 
    cr_assert_arr_eq(obj, setobj, dim);
@@ -343,6 +350,7 @@ void checkChgBounds(int dim, int* ind, SCIP_Real* setlb, SCIP_Real* setub)
    SCIP_Real lb[100];
 
    SCIP_CALL( SCIPlpiChgBounds(lpi, dim, ind, setlb, setub) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, dim - 1, lb, ub) );
 
    cr_assert_arr_eq(ub, setub, dim);
@@ -388,6 +396,7 @@ void checkChgSides(int dim, int* ind, SCIP_Real* setls, SCIP_Real* setrs)
    SCIP_Real rs[100];
 
    SCIP_CALL( SCIPlpiChgSides(lpi, dim, ind, setls, setrs) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetSides(lpi, 0, dim - 1, ls, rs) );
 
    cr_assert_arr_eq(ls, setls, dim);
@@ -437,6 +446,7 @@ Theory((SCIP_OBJSEN newsense, int prob), change, testchgobjsen)
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiChgObjsen(lpi, newsense) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
 
    SCIP_OBJSEN probsense;
    SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
