@@ -1326,42 +1326,25 @@ SCIP_RETCODE determineSymmetry(
          SCIP_CALL( computeNOrbitVars(scip, presoldata) );
       }
 
+      /* display statistics: number of generators */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "   (%.1fs) symmetry computation finished: %d generators found (max: ",
+         SCIPgetSolvingTime(scip), presoldata->nperms);
+
+      /* display statistics: maximum number of generators*/
       if ( maxgenerators == 0 )
-      {
-         if ( presoldata->displaynorbitvars )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) symmetry computation finished: %d generators found (max: -, log10 of symmetry group size: %.1f, ",
-               SCIPgetSolvingTime(scip), presoldata->nperms, presoldata->log10groupsize);
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "number of affected variables: %d)\n",
-               presoldata->norbitvars);
-         }
-         else
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) symmetry computation finished: %d generators found (max: -, log10 of symmetry group size: %.1f)\n",
-               SCIPgetSolvingTime(scip), presoldata->nperms, presoldata->log10groupsize);
-         }
-      }
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "-");
       else
-      {
-         if ( presoldata->displaynorbitvars )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) symmetry computation finished: %d generators found (max: %u, log10 of symmetry group size: %.1f, ",
-               SCIPgetSolvingTime(scip), presoldata->nperms, maxgenerators, presoldata->log10groupsize);
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "number of affected variables: %d)\n",
-               presoldata->norbitvars);
-         }
-         else
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) symmetry computation finished: %d generators found (max: %u, log10 of symmetry group size: %.1f)\n",
-               SCIPgetSolvingTime(scip), presoldata->nperms, maxgenerators, presoldata->log10groupsize);
-         }
-      }
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%u", maxgenerators);
+
+      /* display statistics: log10 group size, number of affected vars*/
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", presoldata->log10groupsize);
+
+      /* display statistics: number of affected vars*/
+      if ( presoldata->displaynorbitvars )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", presoldata->norbitvars);
+      else
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
       /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
