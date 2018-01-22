@@ -7951,7 +7951,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    }
 
    /* create and capture auxiliary variable */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%d", conshdlrdata->auxvarid);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%s_%d", expr->exprhdlr->name, conshdlrdata->auxvarid);
    ++conshdlrdata->auxvarid;
 
    /* type of auxiliary variable depends on integrality information of the expression */
