@@ -1027,6 +1027,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
       SCIP_BILINEXPRTERM* bilinterms;
       int i;
 
+      SCIPdebugMsg(scip, "Computing activity of quadratic part\n");
+
       bilinterms = nlhdlrexprdata->bilinexprterms;
       for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
       {
@@ -1066,6 +1068,13 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
             quadlb = -SCIPintervalQuadUpperBound(SCIP_INTERVAL_INFINITY, -quadexpr.sqrcoef, minusb,
                   SCIPgetConsExprExprInterval(quadexpr.expr));
          }
+
+#ifdef DEBUG_PROP
+         SCIPinfoMessage(scip, NULL, "Computing activity for quadratic term a <expr>^2 + b <expr>, where <expr> is:");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, quadexpr.expr, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+         SCIPinfoMessage(scip, NULL, "a = %g, b = [%g, %g] and activity [%g, %g]\n", quadexpr.sqrcoef, b.inf, b.sup, quadlb, quadub);
+#endif
 
          SCIPintervalSetBounds(&nlhdlrexprdata->quadactivities[i], quadlb, quadub);
          SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &quadactivity, quadactivity, nlhdlrexprdata->quadactivities[i]);
@@ -1257,6 +1266,13 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs_i, rhs, rest_i);
 
          /* solve a_i expr_i^2 + b expr_i = rhs_i */
+#ifdef DEBUG_PROP
+         SCIPinfoMessage(scip, NULL, "Propagate <expr> by solving a <expr>^2 + b <expr> in rhs, where <expr> is: ");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, quadexpr.expr, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+         SCIPinfoMessage(scip, NULL, "a = %g, b = [%g, %g] and rhs = [%g, %g]\n", quadexpr.sqrcoef, b.inf, b.sup,
+               rhs_i.inf, rhs_i.sup);
+#endif
          if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, rhs_i) )
             continue;
 
