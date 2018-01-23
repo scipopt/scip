@@ -217,8 +217,8 @@ int reduceWithNodeFixingBounds(
 
       if( SCIPisLT(scip, upperbound, fixingbounds[k]) )
       {
+         SCIPdebugMessage("delete knot %d %f < %f %d\n", k, upperbound, fixingbounds[k], graph->grad[k]);
 
-         printf("delete knot %d %f < %f %d\n", k, upperbound, fixingbounds[k], graph->grad[k]);
          graph_knot_del(scip, graph, k, TRUE);
          if( transgraph != NULL )
             graph_knot_del(scip, graph, k, FALSE);
@@ -260,7 +260,7 @@ int reduceWithNodeReplaceBounds(
 
       if( SCIPisLT(scip, upperbound, replacebounds[k]) )
       {
-         printf("pseudo delete %d grad %d\n", k, graph->grad[k]);
+      //   printf("pseudo delete %d grad %d\n", k, graph->grad[k]);
       }
 
       if( 0 )
@@ -338,7 +338,7 @@ int reduceWithEdgeFixingBounds(
 
             if( SCIPisLT(scip, upperbound, fixingbounds[e]) && SCIPisLT(scip, upperbound, fixingbounds[erev]) )
             {
-               printf("delete edge %d \n", e);
+               SCIPdebugMessage("delete edge %d \n", e);
 
                graph_edge_del(scip, graph, e, TRUE);
                if( transgraph != NULL )

@@ -514,9 +514,12 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    assert(scip != NULL);
    assert(graph != NULL || vertexchgs != NULL);
 
-   printf("added %d \n", SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)));
    if( SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) != 1 )
+   {
+      printf("added %d \n", SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)));
+
       exit(1);
+   }
 
    assert(SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) == 1);
 
@@ -540,10 +543,8 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
 
          SCIPdebugMessage("make terminal %d \n", term);
 
-         if( graph != NULL)
+         if( graph != NULL && !Is_term(graph->term[term]) )
          {
-            assert(!Is_term(graph->term[term]));
-
             if( graph->stp_type == STP_PCSPG )
             {
                if( Is_pterm(graph->term[term]) )

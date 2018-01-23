@@ -140,7 +140,7 @@ SCIP_RETCODE globalfixing(
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(edgevar), 1.0));
 
 //#ifdef SCIP_DEBUG
-#if 1
+#if 0
             printf("lurking fix: ");
             graph_edge_printInfo(scip, graph, e);
 #endif
@@ -336,6 +336,7 @@ SCIP_RETCODE redbasedVarfixing(
    SCIP_VAR**            vars,               /**< variables */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  nfixed,             /**< pointer to number of fixed edges */
+   SCIP_Bool*            probisinfeas,       /**< is problem infeasible? */
    const GRAPH*          g                   /**< graph data structure */
 )
 {
@@ -352,6 +353,7 @@ SCIP_RETCODE redbasedVarfixing(
    assert(g != NULL);
    assert(vars != NULL);
 
+   *probisinfeas = FALSE;
    offset = 0.0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &remain, nedges) );
@@ -417,6 +419,12 @@ SCIP_RETCODE redbasedVarfixing(
    {
       /* then modify the graph according to vertex kills/fixes during branch-and-bound */
       SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, NULL, propgraph) );
+   }
+
+   if( !graph_valid(propgraph) )
+   {
+      *probisinfeas = TRUE;
+      goto TERMINATE;
    }
 
    SCIP_CALL( graph_path_init(scip, propgraph) );
@@ -507,7 +515,7 @@ SCIP_RETCODE redbasedVarfixing(
       }
    }
 
-   printf("reduction based fixings: %d \n\n", *nfixed);
+   printf("reduction based fixings: %d \n", *nfixed);
 
 TERMINATE:
 
@@ -614,21 +622,27 @@ SCIP_DECL_PROPEXEC(propExecStp)
    {
       propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
       SCIP_CALL( graph_copy(scip, graph, &(propdata->propgraph)) );
+      assert(propdata->nfixededges == 0);
+      printf("init propgraph at node %lld \n", propdata->propgraphnodenumber);
    }
 
    nfixed = 0;
    *result = SCIP_DIDNOTFIND;
 
    /* call dual cost based variable fixing */
-   SCIP_CALL( dualcostVarfixing(scip, vars, propdata, &nfixed, graph ) );
+   SCIP_CALL( dualcostVarfixing(scip, vars, propdata, &nfixed, graph) );
 
    callreduce = FALSE;
+
+
+                const SCIP_Longint nodenumber2 = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+                printf("i am at node %lld \n", nodenumber2);
 
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT )
    {
       const SCIP_Real redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
 
-      /* not at root? */
+      /* in the tree? */
       if( SCIPgetDepth(scip) > 0 )
       {
          SCIP_NODE* const currnode = SCIPgetCurrentNode(scip);
@@ -640,21 +654,34 @@ SCIP_DECL_PROPEXEC(propExecStp)
             callreduce = TRUE;
          }
       }
-      /* is ratio of newly fixed edges higher than bound? */
-      else if( SCIPisGT(scip, redratio, REDUCTION_WAIT_RATIO) )
+      /* and root and is ratio of newly fixed edges higher than bound? */
+      else if( SCIPisGT(scip, redratio, REDUCTION_WAIT_RATIO) && SCIPgetDepth(scip) == 0 )
       {
+         SCIP_NODE* const currnode = SCIPgetCurrentNode(scip);
+                 const SCIP_Longint nodenumber = SCIPnodeGetNumber(currnode);
+                 printf("currentnode %lld \n", nodenumber);
+
          callreduce = TRUE;
-         assert(SCIPisLE(scip, ((SCIP_Real) propdata->nfixededges) / (graph->edges), 1.0));
+         printf("%d <= %d \n", propdata->nfixededges, graph->edges);
+         //assert(propdata->nfixededges <= graph->edges);
       }
    }
 
    if( callreduce )
    {
+      SCIP_Bool probisinfeas;
+
       SCIPdebugMessage("use reduction techniques \n");
 
       /* call reduced cost based based variable fixing */
-      SCIP_CALL( redbasedVarfixing(scip, vars, propdata, &nfixed, graph) );
+      SCIP_CALL( redbasedVarfixing(scip, vars, propdata, &nfixed, &probisinfeas, graph) );
       propdata->postrednfixededges = 0;
+
+      if( probisinfeas )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
    }
 
    if( nfixed > 0 )
@@ -662,6 +689,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
       SCIPdebugMessage("newly fixed by STP propagator: %d \n", nfixed );
 
       propdata->nfails = 0;
+      propdata->nfixededges += nfixed;
+      propdata->postrednfixededges += nfixed;
+
       *result = SCIP_REDUCEDDOM;
 
       if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || graph->stp_type == STP_RPCSPG ||
@@ -711,18 +741,8 @@ SCIP_RETCODE fixedgevar(
 
    if( SCIPvarGetLbLocal(edgevar) < 0.5 && SCIPvarGetUbLocal(edgevar) > 0.5 )
    {
-      SCIP_PROPDATA* propdata;
-
-      /* get propagator data */
-      assert(SCIPfindProp(scip, "stp") != NULL);
-      propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
-
-      assert(propdata != NULL);
-
       SCIP_CALL( SCIPchgVarUb(scip, edgevar, 0.0) );
       (*nfixed)++;
-      propdata->nfixededges++;
-      propdata->postrednfixededges++;
    }
    return SCIP_OKAY;
 }

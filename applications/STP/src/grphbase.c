@@ -3720,14 +3720,14 @@ SCIP_Bool graph_valid(
    const GRAPH*          g                   /**< the new graph */
    )
 {
-   const char* fehler1  = "*** Graph Validation Error: Head invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n";
-   const char* fehler2  = "*** Graph Validation Error: Tail invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n";
-   const char* fehler3  = "*** Graph Validation Error: Source invalid, Layer %d, Source %d, Terminal %d\n";
-   const char* fehler4  = "*** Graph Validation Error: FREE invalid, Edge %d/%d\n";
-   const char* fehler5  = "*** Graph Validation Error: Anti invalid, Edge %d/%d, Tail=%d/%d, Head=%d/%d\n";
-   const char* fehler6  = "*** Graph Validation Error: Knot %d with Grad 0 has Edges\n";
-   const char* fehler7  = "*** Graph Validation Error: Knot %d not connected\n";
-   const char* fehler9  = "*** Graph Validation Error: Wrong Terminal count, count is %d, should be %d\n";
+   const char* fehler1  = "*** Graph invalid: Head invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n";
+   const char* fehler2  = "*** Graph invalid: Tail invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n";
+   const char* fehler3  = "*** Graph invalid: Source invalid, Layer %d, Source %d, Terminal %d\n";
+   const char* fehler4  = "*** Graph invalid: FREE invalid, Edge %d/%d\n";
+   const char* fehler5  = "*** Graph invalid: Anti invalid, Edge %d/%d, Tail=%d/%d, Head=%d/%d\n";
+   const char* fehler6  = "*** Graph invalid: Knot %d with Grad 0 has Edges\n";
+   const char* fehler7  = "*** Graph invalid: Knot %d not connected\n";
+   const char* fehler9  = "*** Graph invalid: Wrong Terminal count, count is %d, should be %d\n";
 
    int    k;
    int    e;
