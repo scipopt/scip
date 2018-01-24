@@ -516,7 +516,7 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
 
    if( SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) != 1 )
    {
-      printf("added %d \n", SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)));
+      printf("FAIL: added %d \n", SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)));
 
       exit(1);
    }

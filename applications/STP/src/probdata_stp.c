@@ -1739,40 +1739,40 @@ SCIP_DECL_PROBTRANS(probtransStp)
       else
       {
          /* transform edge constraints */
-	 if( sourcedata->bigt )
-	 {
-	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->nedges) );
-            SCIP_CALL( SCIPtransformConss(scip, sourcedata->nedges, sourcedata->edgecons, (*targetdata)->edgecons) );
-	 }
-	 else
-	 {
-            SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->realnterms * sourcedata->nedges) );
-            SCIP_CALL( SCIPtransformConss(scip, sourcedata->realnterms * sourcedata->nedges, sourcedata->edgecons, (*targetdata)->edgecons) );
-	 }
+         if( sourcedata->bigt )
+         {
+            SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->nedges));
+            SCIP_CALL(SCIPtransformConss(scip, sourcedata->nedges, sourcedata->edgecons, (*targetdata)->edgecons));
+         }
+         else
+         {
+            SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->realnterms * sourcedata->nedges));
+            SCIP_CALL(SCIPtransformConss(scip, sourcedata->realnterms * sourcedata->nedges, sourcedata->edgecons, (*targetdata)->edgecons));
+         }
 
-	 /* transform constraints */
+         /* transform constraints */
          if( sourcedata->mode == MODE_PRICE )
          {
-	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms) );
-            SCIP_CALL( SCIPtransformConss(scip, sourcedata->realnterms, sourcedata->pathcons, (*targetdata)->pathcons) );
+            SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms));
+            SCIP_CALL(SCIPtransformConss(scip, sourcedata->realnterms, sourcedata->pathcons, (*targetdata)->pathcons));
          }
          /* transform constraints and variables*/
          else if( sourcedata->mode == MODE_FLOW )
          {
-	    if( sourcedata->bigt )
-	    {
-	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->nedges) );
-	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, (sourcedata->nnodes - 1)) );
-               SCIP_CALL( SCIPtransformConss(scip, (sourcedata->nnodes - 1), sourcedata->pathcons, (*targetdata)->pathcons) );
-	       SCIP_CALL( SCIPtransformVars(scip, sourcedata->nedges, sourcedata->flowvars, (*targetdata)->flowvars) );
-	    }
-	    else
-	    {
-	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->realnterms * sourcedata->nedges) );
-               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons,  sourcedata->realnterms * (sourcedata->nnodes - 1)) );
-               SCIP_CALL( SCIPtransformConss(scip, sourcedata->realnterms * (sourcedata->nnodes - 1), sourcedata->pathcons, (*targetdata)->pathcons) );
-	       SCIP_CALL( SCIPtransformVars(scip, sourcedata->nedges * sourcedata->realnterms, sourcedata->flowvars, (*targetdata)->flowvars) );
-	    }
+            if( sourcedata->bigt )
+            {
+               SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->nedges));
+               SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, (sourcedata->nnodes - 1)));
+               SCIP_CALL(SCIPtransformConss(scip, (sourcedata->nnodes - 1), sourcedata->pathcons, (*targetdata)->pathcons));
+               SCIP_CALL(SCIPtransformVars(scip, sourcedata->nedges, sourcedata->flowvars, (*targetdata)->flowvars));
+            }
+            else
+            {
+               SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->realnterms * sourcedata->nedges));
+               SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms * (sourcedata->nnodes - 1)));
+               SCIP_CALL(SCIPtransformConss(scip, sourcedata->realnterms * (sourcedata->nnodes - 1), sourcedata->pathcons, (*targetdata)->pathcons));
+               SCIP_CALL(SCIPtransformVars(scip, sourcedata->nedges * sourcedata->realnterms, sourcedata->flowvars, (*targetdata)->flowvars));
+            }
          }
       }
 
@@ -2005,7 +2005,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/bound/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zeroobj/freq", -1) );
 
-   /* TODO for SCIP stuff should be disabled for other variants */
    if( graph->stp_type == STP_DHCSTP )
    {
       SCIP_CALL(SCIPsetIntParam(scip, "constraints/knapsack/propfreq", -1));
@@ -2127,12 +2126,14 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->graph = graph;
    probdata->stp_type = graph->stp_type;
 
+#ifndef WITH_UG
    if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS) )
    {
       SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
    }
+#endif
 
    if( mw )
    {
