@@ -166,6 +166,7 @@ struct SCIP_LPi
    MSKstakeye*           skc;                /**< basis status for rows */
    int                   skxsize;            /**< size of skx array */
    int                   skcsize;            /**< size of skc array */
+   SCIP_Bool             solved;             /**< was the current LP solved? */
    SCIP_Bool             fromscratch;        /**< Shall solves be performed with MSK_IPAR_SIM_HOTSTART turned off? */
    SCIP_Bool             clearstate;         /**< Shall next solve be performed with MSK_IPAR_SIM_HOTSTART turned off? */
    SCIP_Bool             lpinfo;             /**< Should LP solver output information to the screen? */
@@ -347,6 +348,17 @@ SCIP_RETCODE scip_checkdata(
 /*
  * Local functions
  */
+
+/** marks the current LP to be unsolved */
+static
+void invalidateSolution(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   lpi->solved = FALSE;
+}
 
 /** compute boundkeys to inform MOSEK about fixed/free/ranged/lower bounded/upper bounded variables or constraints */
 static
@@ -731,6 +743,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->clearstate = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
 
+   invalidateSolution(*lpi);
+
    return SCIP_OKAY;
 }
 
@@ -810,6 +824,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(val != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiLoadColLP (%d)\n", lpi->lpid);
+
+   invalidateSolution(lpi);
 
    /* initialize all array with NULL */
    aptre = NULL;
@@ -896,6 +912,8 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    SCIPdebugMessage("Calling SCIPlpiAddCols (%d)\n", lpi->lpid);
 
+   invalidateSolution(lpi);
+
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiAddCols") );
 #endif
@@ -956,6 +974,8 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    SCIPdebugMessage("Calling SCIPlpiDelCols (%d)\n", lpi->lpid);
 
+   invalidateSolution(lpi);
+
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiDelCols") );
 #endif
@@ -994,6 +1014,8 @@ SCIP_RETCODE SCIPlpiDelColset(
    assert(dstat != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiDelColset (%d)\n", lpi->lpid);
+
+   invalidateSolution(lpi);
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiDelColset") );
@@ -1058,6 +1080,8 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    SCIPdebugMessage("Calling SCIPlpiAddRows (%d)\n", lpi->lpid);
 
+   invalidateSolution(lpi);
+
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiAddRows") );
 #endif
@@ -1118,6 +1142,8 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    SCIPdebugMessage("Calling SCIPlpiDelRows (%d)\n", lpi->lpid);
 
+   invalidateSolution(lpi);
+
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiDelRows") );
 #endif
@@ -1156,6 +1182,8 @@ SCIP_RETCODE SCIPlpiDelRowset(
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiDelRowset (%d)\n", lpi->lpid);
+
+   invalidateSolution(lpi);
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiDelRowset") );
@@ -1208,6 +1236,8 @@ SCIP_RETCODE SCIPlpiClear(
 
    SCIPdebugMessage("Calling SCIPlpiClear (%d)\n", lpi->lpid);
 
+   invalidateSolution(lpi);
+
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
 
@@ -1237,6 +1267,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    SCIPdebugMessage("Calling SCIPlpiChgBounds (%d)\n", lpi->lpid);
    if( ncols <= 0 )
       return SCIP_OKAY;
+
+   invalidateSolution(lpi);
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgBounds") );
@@ -1290,6 +1322,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    if( nrows <= 0 )
       return SCIP_OKAY;
 
+   invalidateSolution(lpi);
+
    SCIPdebugMessage("Calling SCIPlpiChgSides (%d)\n", lpi->lpid);
 
 #if DEBUG_CHECK_DATA > 0
@@ -1324,6 +1358,8 @@ SCIP_RETCODE SCIPlpiChgCoef(
 
    SCIPdebugMessage("Calling SCIPlpiChgCoef (%d)\n", lpi->lpid);
 
+   invalidateSolution(lpi);
+
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgCoef") );
 #endif
@@ -1349,6 +1385,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    SCIPdebugMessage("Calling SCIPlpiChgObjsen (%d)\n", lpi->lpid);
 
+   invalidateSolution(lpi);
+
    MOSEK_CALL( MSK_putobjsense(lpi->task, SENSE2MOSEK(objsen)) );
 
    return SCIP_OKAY;
@@ -1369,6 +1407,8 @@ SCIP_RETCODE SCIPlpiChgObj(
    assert(obj != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiChgObj (%d)\n", lpi->lpid);
+
+   invalidateSolution(lpi);
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgObj") );
@@ -1402,6 +1442,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiScaleRow (%d)\n", lpi->lpid);
+
+   invalidateSolution(lpi);
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiScaleRow") );
@@ -1455,6 +1497,8 @@ SCIP_RETCODE SCIPlpiScaleCol(
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiScaleCol (%d)\n", lpi->lpid);
+
+   invalidateSolution(lpi);
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiScaleCol") );
@@ -1924,6 +1968,8 @@ SCIP_RETCODE SolveWSimplex(
    MSKsolstae solsta;
    double pobj, dobj;
 
+   invalidateSolution(lpi);
+
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, &presolve) );
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, &maxiter) );
 
@@ -2054,8 +2100,10 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_SOL_STA_DUAL_FEAS:
    case MSK_SOL_STA_PRIM_INFEAS_CER:
    case MSK_SOL_STA_DUAL_INFEAS_CER:
-   case MSK_SOL_STA_UNKNOWN:
+      if (lpi->termcode == MSK_RES_OK)
+         lpi->solved = TRUE;
       break;
+   case MSK_SOL_STA_UNKNOWN:
    case MSK_SOL_STA_NEAR_OPTIMAL:
    case MSK_SOL_STA_NEAR_PRIM_FEAS:
    case MSK_SOL_STA_NEAR_DUAL_FEAS:
@@ -2093,8 +2141,8 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
    case MSK_PRO_STA_PRIM_INFEAS:
    case MSK_PRO_STA_DUAL_INFEAS:
-   case MSK_PRO_STA_UNKNOWN:
       break;
+   case MSK_PRO_STA_UNKNOWN:
    case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_PRO_STA_NEAR_PRIM_FEAS:
    case MSK_PRO_STA_NEAR_DUAL_FEAS:
@@ -2104,6 +2152,8 @@ SCIP_RETCODE SolveWSimplex(
 
       if (lpi->termcode == MSK_RES_OK)
          lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
+
+      invalidateSolution(lpi);
 
 #if ASSERT_ON_WARNING
       assert(0);
@@ -2355,7 +2405,12 @@ SCIP_RETCODE SCIPlpiSolveDual(
    return SCIP_OKAY;
 }
 
-/** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
+/** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis
+ *
+ * @note Currently all solution processing methods always ask Mosek for the basic solution, so if
+ *       the interior point solver is called without crossover, it may not be possible to retrieve
+ *       the solution.
+ */
 SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Bool             crossover           /**< perform crossover */
@@ -2366,6 +2421,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    assert(lpi->task != NULL);
 
    optimizecount++;
+
+   invalidateSolution(lpi);
 
 #if FORCE_MOSEK_LOG
    if( optimizecount > WRITE_ABOVE )
@@ -2424,6 +2481,85 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       MOSEK_CALL( MSK_getsolutionstatus ( lpi->task, MSK_SOL_BAS, &prosta, &solsta) );
       SCIPdebugMessage("termcode = %d, prosta = %d, solsta = %d, iter = %d\n",
          lpi->termcode, prosta, solsta, lpi->itercount);
+
+      switch (solsta)
+      {
+      case MSK_SOL_STA_OPTIMAL:
+      case MSK_SOL_STA_PRIM_AND_DUAL_FEAS:
+      case MSK_SOL_STA_PRIM_FEAS:
+      case MSK_SOL_STA_DUAL_FEAS:
+      case MSK_SOL_STA_PRIM_INFEAS_CER:
+      case MSK_SOL_STA_DUAL_INFEAS_CER:
+         if (lpi->termcode == MSK_RES_OK)
+            lpi->solved = TRUE;
+         break;
+      case MSK_SOL_STA_UNKNOWN:
+      case MSK_SOL_STA_NEAR_OPTIMAL:
+      case MSK_SOL_STA_NEAR_PRIM_FEAS:
+      case MSK_SOL_STA_NEAR_DUAL_FEAS:
+      case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
+      case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
+      case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
+         SCIPmessagePrintWarning(lpi->messagehdlr, "Barrier[%d] returned solsta = %d\n", optimizecount, solsta);
+
+         if (lpi->termcode == MSK_RES_OK)
+            lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
+
+   #if ASSERT_ON_WARNING
+         assert(0);
+   #endif
+         break;
+      case MSK_SOL_STA_INTEGER_OPTIMAL:
+      case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
+      default:
+   #if SHOW_ERRORS && !FORCE_SILENCE
+         SCIPerrorMessage("Barrier[%d] returned solsta = %d\n", optimizecount, solsta);
+   #endif
+
+   #if ASSERT_ON_WARNING
+         assert(0);
+   #endif
+
+         return SCIP_LPERROR;
+      }  /*lint !e788*/
+
+      switch (prosta)
+      {
+      case MSK_PRO_STA_PRIM_AND_DUAL_FEAS:
+      case MSK_PRO_STA_PRIM_FEAS:
+      case MSK_PRO_STA_DUAL_FEAS:
+      case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
+      case MSK_PRO_STA_PRIM_INFEAS:
+      case MSK_PRO_STA_DUAL_INFEAS:
+         break;
+      case MSK_PRO_STA_UNKNOWN:
+      case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
+      case MSK_PRO_STA_NEAR_PRIM_FEAS:
+      case MSK_PRO_STA_NEAR_DUAL_FEAS:
+      case MSK_PRO_STA_ILL_POSED:
+      case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
+         SCIPmessagePrintWarning(lpi->messagehdlr, "Barrier[%d] returned prosta = %d\n", optimizecount, prosta);
+
+         if (lpi->termcode == MSK_RES_OK)
+            lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
+
+         invalidateSolution(lpi);
+
+   #if ASSERT_ON_WARNING
+         assert(0);
+   #endif
+         break;
+      default:
+   #if SHOW_ERRORS && !FORCE_SILENCE
+         SCIPerrorMessage("Barrier[%d] returned prosta = %d\n", optimizecount, prosta);
+   #endif
+
+   #if ASSERT_ON_WARNING
+         assert(0);
+   #endif
+
+         return SCIP_LPERROR;
+      }  /*lint !e788*/
    }
 #endif
 
@@ -2681,6 +2817,8 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    SCIP_CALL( setbase(lpi) );
 
+   invalidateSolution(lpi);
+
    lpi->termcode = MSK_RES_OK;
    lpi->itercount = 0;
 
@@ -2820,27 +2958,9 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   MSKbooleant exists;
-   MSKsolstae solsta;
-   MSKrescodee res;
-
-   assert(MosekEnv != NULL);
    assert(lpi != NULL);
-   assert(lpi->task != NULL);
 
-   SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n", lpi->lpid);
-
-   res = MSK_solutiondef(lpi->task, MSK_SOL_BAS, &exists);
-
-   if ( res != MSK_RES_OK || ! exists )
-      return FALSE;
-
-   res = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
-
-   if ( res != MSK_RES_OK )
-      return FALSE;
-
-   return (solsta != MSK_SOL_STA_UNKNOWN);
+   return lpi->solved;
 }
 
 /** gets information about primal and dual feasibility of the current LP solution */
@@ -3579,6 +3699,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    SCIP_CALL( setbase(lpi) );
 
+   invalidateSolution(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -3628,6 +3750,8 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
  *        see also the explanation in lpi.h.
  *
  *  @todo check that the result is in terms of the LP interface definition
+ *
+ *  @todo check if this should invalidate the solution
  */
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3706,6 +3830,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
  *        see also the explanation in lpi.h.
  *
  *  @todo check that the result is in terms of the LP interface definition
+ *
+ *  @todo check if this should invalidate the solution
  */
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3780,6 +3906,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
  *        see also the explanation in lpi.h.
  *
  *  @todo check that the result is in terms of the LP interface definition
+ *
+ *  @todo check if this should invalidate the solution
  */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3855,7 +3983,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 }
 
 
-/** get column of inverse basis matrix times constraint matrix B^-1 * A */
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @todo check if this should invalidate the solution
+ */
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
@@ -4189,6 +4320,8 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* load basis information into MOSEK */
    SCIP_CALL( setbase(lpi) );
+
+   invalidateSolution(lpi);
 
    SCIPdebugMessage("Store from state into task iter : %d with solsta : %d\n", lpistate->num, lpistate->solsta);
 
