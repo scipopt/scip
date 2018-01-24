@@ -634,9 +634,8 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    callreduce = FALSE;
 
-
-                const SCIP_Longint nodenumber2 = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-                printf("i am at node %lld \n", nodenumber2);
+   const SCIP_Longint nodenumber2 = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   printf("(dual cost)i am at node %lld fix: %d  allfix: %d  \n", nodenumber2, nfixed, propdata->nfixededges);
 
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT )
    {
@@ -663,7 +662,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
          callreduce = TRUE;
          printf("%d <= %d \n", propdata->nfixededges, graph->edges);
-         //assert(propdata->nfixededges <= graph->edges);
+     //    assert(propdata->nfixededges <= graph->edges);
       }
    }
 
@@ -675,6 +674,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
       /* call reduced cost based based variable fixing */
       SCIP_CALL( redbasedVarfixing(scip, vars, propdata, &nfixed, &probisinfeas, graph) );
+      printf("(red based) i am at node %lld fix: %d  allfix: %d  \n", nodenumber2, nfixed, propdata->nfixededges);
+
+
       propdata->postrednfixededges = 0;
 
       if( probisinfeas )

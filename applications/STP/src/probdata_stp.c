@@ -73,6 +73,17 @@
 #define CUT_MAXNEDGES     10000
 
 
+#ifdef WITH_UG
+extern
+const char*
+getBranchLinearConsName(const char* names, int i);
+
+extern
+const char*
+getBranchSetppcConsName(const char* names, int i);
+#endif
+
+
 /** @brief Problem data which is accessible in all places
  *
  * This problem data is used to store the graph of the Steiner tree problem
@@ -3601,7 +3612,21 @@ void initReceivedSubproblem(
    const char*           setppcConsNames     /**< number of setppc constraints */
    )
 {
-   printf("received lin %s \n", linearConsNames);
-   printf("received ppc %s \n", setppcConsNames);
-   printf("number %d \n", lLinearConsNames);
+   printf("received lin %s n: %d\n", linearConsNames, lLinearConsNames);
+   printf("received ppc %s n: %d \n", setppcConsNames, lSetppcConsNames);
+
+
+#ifdef WITH_UG
+   for( int i = 0; i < lLinearConsNames; i++ )
+   {
+      printf("first lin %s \n", getBranchLinearConsName(linearConsNames, i));
+   }
+
+   for( int i = 0; i < lSetppcConsNames; i++ )
+   {
+      printf("first ppc %s \n", getBranchSetppcConsName(setppcConsNames, i));
+   }
+
+   printf("ok %d \n", 0);
+#endif
 }
