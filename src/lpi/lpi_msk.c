@@ -744,7 +744,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->skcsize = 0;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
-   (*lpi)->lastsolvetype = -1;
+   (*lpi)->lastsolvetype = (MSKsoltypee) -1;
    (*lpi)->lpinfo = FALSE;
    (*lpi)->fromscratch = FALSE;
    (*lpi)->clearstate = FALSE;
