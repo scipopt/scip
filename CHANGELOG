@@ -20,6 +20,7 @@ fixed bugs:
 - fixed treatment of variable aggregations in knapsack constraint handler that led to wrong propagations
 - fixed LPI status after changing objective in lpi_cpx, lpi_grb, lpi_xprs
 - copy parameter settings to sub-SCIPs in SCIPcopyLargeNeighborhoodSearch() also when copying only LP rows
+- fixed a check for fixed variable in Binpacking example
 
 SCIP version 5.0.0
 ==================
