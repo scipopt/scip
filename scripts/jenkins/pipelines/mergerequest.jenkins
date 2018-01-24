@@ -13,7 +13,7 @@ gitlabCommitStatus(name: 'cmake compilation') {
                 scm: [
                     $class: 'GitSCM',
                     branches: [[
-                        name: 'origin/${env.gitlabSourceBranch}'
+                        name: 'origin/${gitlabSourceBranch}'
                     ]],
                     doGenerateSubmoduleConfigurations: false,
                     extensions: [[
@@ -22,7 +22,7 @@ gitlabCommitStatus(name: 'cmake compilation') {
                             fastForwardMode: 'FF',
                             mergeRemote: 'origin',
                             mergeStrategy: 'default',
-                            mergeTarget: '${env.gitlabTargetBranch}'
+                            mergeTarget: '${gitlabTargetBranch}'
                         ]
                     ]],
                     submoduleCfg: [],
