@@ -258,7 +258,7 @@ SCIP_Bool consdataCheck(
       var = vars[v];
 
       /* if variables is locally fixed to zero continue */
-      if( SCIPvarGetLbLocal(var) < 0.5 )
+      if( SCIPvarGetUbLocal(var) < 0.5 )
          continue;
 
       /* check if the packing which corresponds to the variable is feasible for this constraint */
