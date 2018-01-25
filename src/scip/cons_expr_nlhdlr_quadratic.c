@@ -573,7 +573,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
       coef = SCIPgetConsExprExprSumCoefs(expr)[c];
 
       assert(child != NULL);
-      assert(! SCIPisZero(scip, coef)); /* TODO maybe this should be only coef != 0.0, since the original problem might have bad numerics */
+      assert(coef != 0.0);
 
       if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
             SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
