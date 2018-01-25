@@ -1995,6 +1995,56 @@ SCIP_DECL_HEURFREE(heurFreeLocal)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolLocal)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+
+   printf("INIT HEUR LOCAL  %d \n\n", 0);
+
+   heurdata->nfails = 1;
+   heurdata->nbestsols = DEFAULT_NBESTSOLS;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->maxnsols) );
+
+   for( int i = 0; i < heurdata->maxnsols; i++ )
+      heurdata->lastsolindices[i] = -1;
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolLocal)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   printf("EXIT HEUR LOCAL  %d \n\n", 0);
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   assert(heurdata->lastsolindices != NULL);
+   SCIPfreeMemoryArray(scip, &(heurdata->lastsolindices));
+
+   return SCIP_OKAY;
+}
+
+
+
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecLocal)
@@ -2276,13 +2326,9 @@ SCIP_RETCODE SCIPStpIncludeHeurLocal(
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
-   int i;
 
    /* create Local primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-
-   heurdata->nfails = 1;
-   heurdata->nbestsols = DEFAULT_NBESTSOLS;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -2294,6 +2340,8 @@ SCIP_RETCODE SCIPStpIncludeHeurLocal(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLocal) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLocal) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolLocal) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolLocal) );
 
    /* add local primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "stp/duringroot",
@@ -2307,11 +2355,6 @@ SCIP_RETCODE SCIPStpIncludeHeurLocal(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxnsols",
          "maximum number of best solutions to improve",
          &heurdata->maxnsols, FALSE, DEFAULT_MAXNBESTSOLS, 1, 50, NULL, NULL) );
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->maxnsols) );
-
-   for( i = 0; i < heurdata->maxnsols; i++ )
-      heurdata->lastsolindices[i] = -1;
 
    return SCIP_OKAY;
 }

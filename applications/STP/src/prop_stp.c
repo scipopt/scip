@@ -559,10 +559,8 @@ SCIP_DECL_PROPFREE(propFreeStp)
    /* free propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
-
-   SCIPfreeMemoryArrayNull(scip, &(propdata->fixingbounds));
-   if( propdata->propgraph != NULL )
-      graph_free(scip, &(propdata->propgraph), TRUE);
+   assert(propdata->fixingbounds == NULL);
+   assert(propdata->propgraph == NULL);
 
    SCIPfreeMemory(scip, &propdata);
 
@@ -637,6 +635,8 @@ SCIP_DECL_PROPEXEC(propExecStp)
    const SCIP_Longint nodenumber2 = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
    printf("(dual cost)i am at node %lld fix: %d  allfix: %d  \n", nodenumber2, nfixed, propdata->nfixededges);
 
+   assert(SCIPgetDepth(scip) != 0 || propdata->nfixededges <= graph->edges);
+
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT )
    {
       const SCIP_Real redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
@@ -656,13 +656,8 @@ SCIP_DECL_PROPEXEC(propExecStp)
       /* and root and is ratio of newly fixed edges higher than bound? */
       else if( SCIPisGT(scip, redratio, REDUCTION_WAIT_RATIO) && SCIPgetDepth(scip) == 0 )
       {
-         SCIP_NODE* const currnode = SCIPgetCurrentNode(scip);
-                 const SCIP_Longint nodenumber = SCIPnodeGetNumber(currnode);
-                 printf("currentnode %lld \n", nodenumber);
-
          callreduce = TRUE;
-         printf("%d <= %d \n", propdata->nfixededges, graph->edges);
-     //    assert(propdata->nfixededges <= graph->edges);
+         assert(propdata->nfixededges <= graph->edges);
       }
    }
 
@@ -675,7 +670,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
       /* call reduced cost based based variable fixing */
       SCIP_CALL( redbasedVarfixing(scip, vars, propdata, &nfixed, &probisinfeas, graph) );
       printf("(red based) i am at node %lld fix: %d  allfix: %d  \n", nodenumber2, nfixed, propdata->nfixededges);
-
 
       propdata->postrednfixededges = 0;
 
@@ -723,6 +717,47 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    return SCIP_OKAY;
 }
+
+/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_PROPINITSOL(propInitsolStp)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   printf("INIT SOL %d \n\n\n", 0);
+
+   propdata->nfails = 0;
+   propdata->ncalls = 0;
+   propdata->nlastcall = 0;
+   propdata->lastnodenumber = -1;
+   propdata->nfixededges = 0;
+   propdata->postrednfixededges = 0;
+   propdata->fixingbounds = NULL;
+   propdata->propgraph = NULL;
+   propdata->propgraphnodenumber = -1;
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
+static
+SCIP_DECL_PROPEXITSOL(propExitsolStp)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   /* free propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   SCIPfreeMemoryArrayNull(scip, &(propdata->fixingbounds));
+   if( propdata->propgraph != NULL )
+      graph_free(scip, &(propdata->propgraph), TRUE);
+
+   return SCIP_OKAY;
+}
+
 
 /**@} */
 
@@ -808,15 +843,8 @@ SCIP_RETCODE SCIPincludePropStp(
    /* set optional callbacks via setter functions */
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyStp) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeStp) );
-   propdata->nfails = 0;
-   propdata->ncalls = 0;
-   propdata->nlastcall = 0;
-   propdata->lastnodenumber = -1;
-   propdata->nfixededges = 0;
-   propdata->postrednfixededges = 0;
-   propdata->fixingbounds = NULL;
-   propdata->propgraph = NULL;
-   propdata->propgraphnodenumber = -1;
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolStp) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolStp) );
 
    /* add parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/nwaitingrounds",
