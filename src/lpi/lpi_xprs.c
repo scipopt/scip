@@ -2800,12 +2800,12 @@ SCIP_RETCODE SCIPlpiSetBase(
     */
    for( r = 0; r < nrows; ++r )
    {
-      if (rstat[r] == (int) SCIP_BASESTAT_LOWER)
+      if (rstat[r] == (int) SCIP_BASESTAT_LOWER) /*lint --e{613}*/
          slackstats[r] = (int) SCIP_BASESTAT_UPPER;
-      else if (rstat[r] == (int) SCIP_BASESTAT_UPPER)
+      else if (rstat[r] == (int) SCIP_BASESTAT_UPPER) /*lint --e{613}*/
          slackstats[r] = (int) SCIP_BASESTAT_LOWER;
       else
-         slackstats[r] = rstat[r];
+         slackstats[r] = rstat[r]; /*lint --e{613}*/
    }
 
    /* load basis information into Xpress
