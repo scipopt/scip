@@ -2771,13 +2771,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    )
 {
    int* slackstats;
+   int ncols;
    int nrows;
    int r;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   /*  get the number of rows/columns */
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
@@ -2786,9 +2792,6 @@ SCIP_RETCODE SCIPlpiSetBase(
    SCIPdebugMessage("loading basis %p/%p into Xpress\n", (void*)rstat, (void*)cstat);
 
    invalidateSolution(lpi);
-
-   /* get the number of rows */
-   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
 
    SCIP_ALLOC( BMSallocMemoryArray(&slackstats, nrows) );
 

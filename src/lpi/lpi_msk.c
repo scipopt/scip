@@ -3564,13 +3564,14 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    SCIPdebugMessage("Calling SCIPlpiSetBase (%d)\n", lpi->lpid);
-
-   MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
-   MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
 
    SCIP_CALL( ensureStateMem(lpi, ncols, nrows) );
 

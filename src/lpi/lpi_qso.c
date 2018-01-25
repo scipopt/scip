@@ -2745,13 +2745,14 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    SCIPdebugMessage("loading basis %p/%p into QSopt\n", (void*)cstat, (void*)rstat);
-
-   ncols = QSget_colcount(lpi->prob);
-   nrows = QSget_rowcount(lpi->prob);
 
    SCIP_CALL( ensureTabMem(lpi, ncols) );
    SCIP_CALL( ensureRowMem(lpi, nrows) );

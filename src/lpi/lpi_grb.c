@@ -4300,15 +4300,16 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    SCIPdebugMessage("loading basis %p/%p into Gurobi\n", (void*) cstat, (void*) rstat);
 
    invalidateSolution(lpi);
-
-   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
 
    SCIP_CALL( ensureCstatMem(lpi, ncols+lpi->nrngrows) );
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
