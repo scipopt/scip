@@ -365,16 +365,16 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
    else
    {
       int masterindex;
-      origvar = var;
+      //origvar = var;
       /* The variable needs to be transformed back into an original variable. If the variable is already original, then
        * this function just returns the same variable */
-      retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
-      assert(retcode == SCIP_OKAY);
+      //retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+      //assert(retcode == SCIP_OKAY);
 
       /* we are requesting the subproblem variable for a master problem variable */
       /* The master problem variable is a transformed variable. The original variable is not required. */
       /* NOTE: Currently the original variable is being used. This may not be correct and should be the transformed variable. */
-      masterindex = (int)(size_t) SCIPhashmapGetImage(bendersdata->mastervartosubindex, origvar);
+      masterindex = (int)(size_t) SCIPhashmapGetImage(bendersdata->mastervartosubindex, var);
       mappedvar = bendersdata->subproblemvars[probnumber][masterindex];
    }
 
