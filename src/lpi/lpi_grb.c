@@ -4331,7 +4331,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
       else
       {
-         switch( rstat[i] ) /*lint --e{613}*/
+         switch( rstat[i] ) /*lint !e613*/
          {
          case SCIP_BASESTAT_BASIC:
             lpi->rstat[i] = GRB_BASIC;
@@ -4362,7 +4362,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 
          case SCIP_BASESTAT_ZERO:
          default:
-            SCIPerrorMessage("invalid basis status %d for row.\n", rstat[i]); /*lint --e{613}*/
+            SCIPerrorMessage("invalid basis status %d for row.\n", rstat[i]); /*lint !e613*/
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
          }
@@ -4371,7 +4371,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    for( j = 0; j < ncols; ++j )
    {
-      switch( cstat[j] ) /*lint --e{613}*/
+      switch( cstat[j] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_BASIC:
          lpi->cstat[j] = GRB_BASIC;
@@ -4390,7 +4390,7 @@ SCIP_RETCODE SCIPlpiSetBase(
          break;
 
       default:
-         SCIPerrorMessage("invalid basis status %d\n", cstat[j]); /*lint --e{613}*/
+         SCIPerrorMessage("invalid basis status %d\n", cstat[j]); /*lint !e613*/
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }

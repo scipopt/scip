@@ -3552,14 +3552,14 @@ SCIP_RETCODE SCIPlpiSetBase(
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
    for (i = 0; i < nrows; ++i)
    {
-      if ( rstat[i] == (int) SCIP_BASESTAT_UPPER ) /*lint --e{613}*/
+      if ( rstat[i] == (int) SCIP_BASESTAT_UPPER ) /*lint !e613*/
       {
          CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
          if ( sense == 'L' )
             lpi->rstat[i] = CPX_AT_LOWER;
       }
       else
-         lpi->rstat[i] = rstat[i]; /*lint --e{613}*/
+         lpi->rstat[i] = rstat[i]; /*lint !e613*/
    }
 
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, lpi->rstat) );
