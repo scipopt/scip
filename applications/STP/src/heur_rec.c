@@ -1590,33 +1590,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    return SCIP_OKAY;
 }
 
-/** initialize heurdata */
-SCIP_RETCODE SCIPStpHeurRecInit(
-    SCIP_HEUR*            heur                /**< rec heuristic */
-)
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-
-   /* get data of heuristic */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* initialize data */
-   heurdata->nselectedsols = 0;
-   heurdata->ncalls = 0;
-   heurdata->nlastsols = 0;
-   heurdata->lastsolindex = -1;
-   heurdata->bestsolindex = -1;
-   heurdata->nfailures = 0;
-   heurdata->nusedsols = DEFAULT_NUSEDSOLS;
-   heurdata->randseed = DEFAULT_RANDSEED;
-
-   return SCIP_OKAY;
-}
-
-
 /** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
 SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1897,7 +1870,40 @@ SCIP_DECL_HEURINIT(heurInitRec)
    assert(heur != NULL);
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPStpHeurRecInit(heur) );
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolRec)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+   heurdata->nselectedsols = 0;
+   heurdata->nusedsols = DEFAULT_NUSEDSOLS;
+   heurdata->randseed = DEFAULT_RANDSEED;
+   heurdata->nselectedsols = 0;
+   heurdata->ncalls = 0;
+   heurdata->nlastsols = 0;
+   heurdata->lastsolindex = -1;
+   heurdata->bestsolindex = -1;
+   heurdata->nfailures = 0;
+
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolRec)
+{  /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
@@ -2094,6 +2100,8 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRec) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRec) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitRec) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolRec) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolRec) );
 
    /* add rec primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nwaitingsols",
@@ -2116,8 +2124,6 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
          "should the heuristic be executed at maximum frequeny?",
          &heurdata->maxfreq, FALSE, DEFAULT_MAXFREQREC, NULL, NULL) );
 
-   /* initialize data */
-   heurdata->nselectedsols = 0;
    heurdata->nusedsols = DEFAULT_NUSEDSOLS;
    heurdata->randseed = DEFAULT_RANDSEED;
 

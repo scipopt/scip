@@ -1954,9 +1954,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
 
 
-
-
-
 /*
  * Callback methods of primal heuristic
  */

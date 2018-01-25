@@ -108,10 +108,6 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** initialize heurdata */
-SCIP_RETCODE SCIPStpHeurRecInit(
-   SCIP_HEUR*            heur                /**< rec heuristic */
-   );
 
 /** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
 extern

@@ -280,9 +280,18 @@ SCIP_DECL_HEURFREE(heurFreePrune)
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
-
 static
 SCIP_DECL_HEURINIT(heurInitPrune)
+{  /*lint --e{715}*/
+
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolPrune)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -301,6 +310,16 @@ SCIP_DECL_HEURINIT(heurInitPrune)
 
    return SCIP_OKAY;
 }
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolPrune)
+{  /*lint --e{715}*/
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of primal heuristic */
 static
@@ -945,7 +964,8 @@ SCIP_RETCODE SCIPStpIncludeHeurPrune(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyPrune) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreePrune) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitPrune) );
-
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolPrune) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolPrune) );
 
    /* add prune primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/maxfreq",

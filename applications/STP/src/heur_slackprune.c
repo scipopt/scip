@@ -302,6 +302,16 @@ SCIP_DECL_HEURFREE(heurFreeSlackPrune)
 static
 SCIP_DECL_HEURINIT(heurInitSlackPrune)
 {  /*lint --e{715}*/
+
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolSlackPrune)
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -319,6 +329,17 @@ SCIP_DECL_HEURINIT(heurInitSlackPrune)
 
    return SCIP_OKAY;
 }
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolSlackPrune)
+{  /*lint --e{715}*/
+
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of primal heuristic */
 static
@@ -1154,7 +1175,8 @@ SCIP_RETCODE SCIPStpIncludeHeurSlackPrune(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySlackPrune) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSlackPrune) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSlackPrune) );
-
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolSlackPrune) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSlackPrune) );
 
    /* add slackprune primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/maxfreq",
