@@ -2352,10 +2352,11 @@ void SCIPintervalExp(
 
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
          tmp = exp(operand.inf);
-         resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
+         resultant->inf = tmp > 0.0 ? SCIPnextafter(tmp, SCIP_REAL_MIN) : 0.0;
+         assert(resultant->inf >= 0.0);
          resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
 
-         goto CLEAN;
+         return;
       }
    }
 
@@ -2369,8 +2370,11 @@ void SCIPintervalExp(
    }
    else
    {
+      SCIP_Real tmp;
+
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      resultant->inf = SCIPnextafter(exp(operand.inf), SCIP_REAL_MIN);
+      tmp = exp(operand.inf);
+      resultant->inf = tmp > 0.0 ? SCIPnextafter(tmp, SCIP_REAL_MIN) : 0.0;
       /* make sure we do not exceed value for infinity, so interval is not declared as empty if inf and sup are both > infinity */
       if( resultant->inf >= infinity )
          resultant->inf = infinity;
@@ -2391,15 +2395,6 @@ void SCIPintervalExp(
       if( resultant->sup < -infinity )
          resultant->sup = -infinity;
    }
-
-   /* due to numerical errors it happens that interval.inf < 0 (however, when this happens, it has to be very small);
-    * correct it
-    */
-CLEAN:
-   assert(resultant->inf > -1e-20);
-   if( resultant->inf < 0.0 )
-      resultant->inf = 0.0;
-
 }
 
 /** stores natural logarithm of operand in resultant
