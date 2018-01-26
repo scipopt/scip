@@ -22,7 +22,7 @@ fixed bugs:
 - retrieve interior solution instead of (possibly non-existing) basic solution from mosek after using
   barrier without crossover in lpi_msk
 - copy parameter settings to sub-SCIPs in SCIPcopyLargeNeighborhoodSearch() also when copying only LP rows
-- fixed a check for fixed variable in Binpacking example
+- fixed a check for fixed variables in Binpacking example
 
 SCIP version 5.0.0
 ==================
