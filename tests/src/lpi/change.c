@@ -51,7 +51,7 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    {
       SCIP_CALL( SCIPlpiFree(&lpi) );
    }
-   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "lpi_change_test_problem.lp", SCIP_OBJSEN_MAXIMIZE) );
 
    SCIP_Real obj[100] = { 1.0, 1.0 };
    SCIP_Real  lb[100] = { 0.0, 0.0 };
@@ -613,11 +613,28 @@ Test(change, testrowmethods)
          SCIP_CALL( SCIPlpiGetRows(lpi, nrowsbefore, nrowsbefore - 1 + nrows, newlhs, newrhs, &newnnonz, newbeg, newind, newval) );
          cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
 
-         cr_assert_arr_eq(lhs, newlhs, nrows*sizeof(SCIP_Real));
-         cr_assert_arr_eq(rhs, newrhs, nrows*sizeof(SCIP_Real));
          cr_assert_arr_eq(beg, newbeg, nrows*sizeof(int));
-         cr_assert_arr_eq(ind, newind, nnonz*sizeof(int));
-         cr_assert_arr_eq(val, newval, nnonz*sizeof(SCIP_Real));
+
+         beg[nrows] = nnonz;
+         newbeg[nrows] = newnnonz;
+         for( j = 0; j < nrows; j++ )
+         {
+            cr_assert_float_eq(lhs[j], newlhs[j], 1e-16);
+            cr_assert_float_eq(rhs[j], newrhs[j], 1e-16);
+            for( int s = beg[j]; s < beg[j+1]; s++ )
+            {
+               int indcount = 0;
+               for( int x = beg[j]; x < beg[j+1]; x++ )
+               {
+                  if( ind[s] == newind[x] )
+                  {
+                     indcount = indcount + 1;
+                     cr_assert_float_eq( val[s], newval[x], 1e-16, "expected %g got %g\n", val[s], newval[x] );
+                  }
+               }
+               cr_assert_eq(indcount, 1);
+            }
+         }
       }
 
       /* checks */
@@ -873,7 +890,7 @@ Test(change, testlpiwritereadlpmethods)
    SCIP_OBJSEN sense;
    /* 2x2 problem */
    cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
-   char* fname = "testlpiwriteandreadlp.lp";
+   char* fname = "lpi_change_test_problem.lp";
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primsol, dualsol, activity, redcost) );
@@ -881,7 +898,7 @@ Test(change, testlpiwritereadlpmethods)
    SCIP_CALL( SCIPlpiWriteLP(lpi, fname) );
    SCIP_CALL( SCIPlpiClear(lpi) );
 
-   char* fname2 = "testlpiwriteandreadlp2.lp";
+   char* fname2 = "lpi_change_test_problem2.lp";
    SCIP_CALL( SCIPlpiReadLP(lpi, fname) );
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
