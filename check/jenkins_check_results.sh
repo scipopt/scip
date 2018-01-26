@@ -2,7 +2,7 @@
 
 #
 # Usage:
-# make testcluster | VERSION=scipbinversion PERF=performance check/jenkins_check_results.sh TESTSET SETTING
+# make testcluster | PERMUTE=permutations VERSION=scipbinversion PERF=performance check/jenkins_check_results.sh TESTSET SETTING
 
 # This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
@@ -29,13 +29,20 @@ else
   SCIPVERSIONOUTPUT=`bin/${SCIPVERSION}* -v | sed -e 's/$/@/'`
 fi
 
+# if PERMUTE is not a number, set it to 0
+re='^[0-9]+$'
+if ! [[ $PERMUTE =~ $re ]] ; then
+  PERMUTE="0"
+fi
+export PERMUTE
+
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 
 # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
 export GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
 if [ "${GITBRANCH}" = "" ];
 then
-    export GITBRANCH=`git show -s --pretty=%D | cut -d / -f 2`
+    export GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2 | `
 fi
 
 export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`

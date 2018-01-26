@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -8508,7 +8508,10 @@ SCIP_RETCODE SCIPlpFlush(
 
    /* if the cutoff bound was changed in between, we want to re-optimize the LP even if nothing else has changed */
    if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) /*lint !e777*/
+   {
       lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
 
    assert(lp->nlpicols == lp->ncols);
    assert(lp->lpifirstchgcol == lp->nlpicols);

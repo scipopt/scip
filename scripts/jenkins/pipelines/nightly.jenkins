@@ -18,7 +18,7 @@ node ('nightly'){
             String[] buildtypes = ["Release", "Debug"]
             String[] branches = ["master", "bugfix"]
             String[] compilers = ["gnu", "clang", "intel"]
-            String[] lpsolvers = ["cpx", "spx", "xprs", "msk", "grb"] //missing clp!
+            String[] lpsolvers = ["cpx", "spx", "xprs", "msk"] //, "grb"] //missing clp!
 
             for(i = 0; i < buildtypes.size(); i += 1) {
                 def bt = buildtypes[i]

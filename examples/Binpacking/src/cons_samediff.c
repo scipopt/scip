@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -258,7 +258,7 @@ SCIP_Bool consdataCheck(
       var = vars[v];
 
       /* if variables is locally fixed to zero continue */
-      if( SCIPvarGetLbLocal(var) < 0.5 )
+      if( SCIPvarGetUbLocal(var) < 0.5 )
          continue;
 
       /* check if the packing which corresponds to the variable is feasible for this constraint */

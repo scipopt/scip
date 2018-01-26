@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -139,7 +139,7 @@ SCIP_RETCODE ensureCstatMem(
    int                   num                 /**< minimal number of entries in array */
    )
 {
-   assert(lpi != 0);
+   assert(lpi != NULL);
 
    if( num > lpi->cstatsize )
    {
@@ -161,7 +161,7 @@ SCIP_RETCODE ensureRstatMem(
    int                   num                 /**< minimal number of entries in array */
    )
 {
-   assert(lpi != 0);
+   assert(lpi != NULL);
 
    if( num > lpi->rstatsize )
    {
@@ -294,6 +294,7 @@ void setFactorizationFrequency(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
    /* set the factorization frequency only once */
    if ( lpi->setFactorizationFrequency )
       return;
@@ -308,6 +309,7 @@ void setFastmipClpParameters(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
    lpi->fastmip = TRUE;
 
    /* Perturbation:
@@ -403,6 +405,7 @@ void unsetFastmipClpParameters(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
    lpi->fastmip = FALSE;
 
    // reset to default value:
@@ -450,6 +453,7 @@ void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {
+   assert(lpi != NULL);
    return (void*) lpi->clp;
 }
 
@@ -457,10 +461,11 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
-   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   assert(lpi != NULL);
    return SCIP_LPERROR;
 }
 
@@ -484,7 +489,8 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   assert(lpi != 0);
+   assert(lpi != NULL);
+   assert(name != NULL);
 
    SCIPdebugMessage("calling SCIPlpiCreate()\n");
 
@@ -550,7 +556,7 @@ SCIP_RETCODE SCIPlpiFree(
    SCIP_LPI**            lpi                 /**< pointer to an LP interface structure */
    )
 {
-   assert(lpi != 0);
+   assert(lpi != NULL);
    assert(*lpi != 0);
    assert((*lpi)->clp != 0);
 
@@ -587,11 +593,11 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      obj,                /**< objective function values of columns */
    const SCIP_Real*      lb,                 /**< lower bounds of columns */
    const SCIP_Real*      ub,                 /**< upper bounds of columns */
-   char**                colnames,           /**< column names, or 0 */
+   char**                colnames,           /**< column names, or NULL */
    int                   nrows,              /**< number of rows */
    const SCIP_Real*      lhs,                /**< left hand sides of rows */
    const SCIP_Real*      rhs,                /**< right hand sides of rows */
-   char**                rownames,           /**< row names, or 0 */
+   char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
    const int*            beg,                /**< start index of each column in ind- and val-array */
    const int*            ind,                /**< row indices of constraint matrix entries */
@@ -608,10 +614,17 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(lhs != 0);
-   assert(rhs != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(beg != NULL);
+   assert(ind != NULL);
+   assert(val != NULL);
+
    assert( nnonz > beg[ncols-1] );
 
    invalidateSolution(lpi);
@@ -667,24 +680,16 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or 0 if nnonz == 0 */
    )
 {
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(obj != 0);
-   assert(lb != 0);
-   assert(ub != 0);
-   assert(nnonz == 0 || beg != 0);
-   assert(nnonz == 0 || ind != 0);
-   assert(nnonz == 0 || val != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
    assert(nnonz >= 0);
    assert(ncols >= 0);
 
@@ -700,6 +705,17 @@ SCIP_RETCODE SCIPlpiAddCols(
    // if columns are not empty
    if ( nnonz != 0 )
    {
+#ifndef NDEBUG
+      {
+         int j;
+         for( j = 0; j < nnonz; j++ )
+         {
+            assert( val[j] != 0.0 );
+            /* perform check that no new rows are added - this is forbidden */
+            assert( 0 <= ind[j] /*&& ind[j] < lpi->nrows*/ );
+         }
+      }
+#endif
       BMScopyMemoryArray(mybeg, beg, ncols);
       mybeg[ncols] = nnonz;   // add additional entry at end
 
@@ -737,8 +753,8 @@ SCIP_RETCODE SCIPlpiDelCols(
 {
    SCIPdebugMessage("calling SCIPlpiDelCols()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
 
    invalidateSolution(lpi);
@@ -769,9 +785,9 @@ SCIP_RETCODE SCIPlpiDelColset(
 {
    SCIPdebugMessage("calling SCIPlpiDelColset()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(dstat != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(dstat != NULL);
 
    invalidateSolution(lpi);
 
@@ -811,30 +827,22 @@ SCIP_RETCODE SCIPlpiAddRows(
    int                   nrows,              /**< number of rows to be added */
    const SCIP_Real*      lhs,                /**< left hand sides of new rows */
    const SCIP_Real*      rhs,                /**< right hand sides of new rows */
-   char**                rownames,           /**< row names, or 0 */
+   char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*            beg,                /**< start index of each row in ind- and val-array, or 0 if nnonz == 0 */
-   const int*            ind,                /**< column indices of constraint matrix entries, or 0 if nnonz == 0 */
-   const SCIP_Real*      val                 /**< values of constraint matrix entries, or 0 if nnonz == 0 */
+   const int*            beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
+   const int*            ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(lhs != 0);
-   assert(rhs != 0);
-   assert(nnonz == 0 || beg != 0);
-   assert(nnonz == 0 || ind != 0);
-   assert(nnonz == 0 || val != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    invalidateSolution(lpi);
 
@@ -850,7 +858,10 @@ SCIP_RETCODE SCIPlpiAddRows(
       /* perform check that no new columns are added - this is likely to be a mistake */
       int ncols = lpi->clp->getNumCols();
       for (int j = 0; j < nnonz; ++j)
+      {
+         assert( val[j] != 0.0 );
          assert( 0 <= ind[j] && ind[j] < ncols );
+      }
 #endif
 
 
@@ -892,8 +903,8 @@ SCIP_RETCODE SCIPlpiDelRows(
 {
    SCIPdebugMessage("calling SCIPlpiDelRows() (number: %d)\n", lastrow-firstrow+1);
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
 
    invalidateSolution(lpi);
@@ -925,8 +936,8 @@ SCIP_RETCODE SCIPlpiDelRowset(
 {
    SCIPdebugMessage("calling SCIPlpiDelRowset()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(dstat != 0);
 
    invalidateSolution(lpi);
@@ -968,8 +979,8 @@ SCIP_RETCODE SCIPlpiClear(
 {
    SCIPdebugMessage("calling SCIPlpiClear()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    invalidateSolution(lpi);
 
@@ -984,16 +995,18 @@ SCIP_RETCODE SCIPlpiClear(
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
-   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(ncols == 0 || (ind != 0 && lb != 0 && ub != 0));
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("calling SCIPlpiChgBounds()\n");
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1067,11 +1080,13 @@ SCIP_RETCODE SCIPlpiChgSides(
 {
    SCIPdebugMessage("calling SCIPlpiChgSides()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(ind != 0);
-   assert(lhs != 0);
-   assert(rhs != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(ind != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   if( nrows <= 0)
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1094,8 +1109,8 @@ SCIP_RETCODE SCIPlpiChgCoef(
 {
    SCIPdebugMessage("calling SCIPlpiChgCoef()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= row && row < lpi->clp->numberRows());
    assert(0 <= col && col < lpi->clp->numberColumns());
 
@@ -1115,8 +1130,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 {
    SCIPdebugMessage("calling SCIPlpiChgObjsen()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    invalidateSolution(lpi);
 
@@ -1137,10 +1152,10 @@ SCIP_RETCODE SCIPlpiChgObj(
 {
    SCIPdebugMessage("calling SCIPlpiChgObj()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(ind != 0);
-   assert(obj != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(ind != NULL);
+   assert(obj != NULL);
 
    invalidateSolution(lpi);
 
@@ -1163,8 +1178,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
 {
    SCIPdebugMessage("calling SCIPlpiScaleRow()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(scaleval != 0.0);
    assert(0 <= row && row <= lpi->clp->numberRows() );
 
@@ -1236,8 +1251,8 @@ SCIP_RETCODE SCIPlpiScaleCol(
 {
    SCIPdebugMessage("calling SCIPlpiScaleCol()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(scaleval != 0.0);
    assert(0 <= col && col <= lpi->clp->numberColumns() );
 
@@ -1312,9 +1327,9 @@ SCIP_RETCODE SCIPlpiGetNRows(
 {
    SCIPdebugMessage("calling SCIPlpiGetNRows()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(nrows != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(nrows != NULL);
 
    *nrows = lpi->clp->numberRows();
 
@@ -1330,9 +1345,9 @@ SCIP_RETCODE SCIPlpiGetNCols(
 {
    SCIPdebugMessage("calling SCIPlpiGetNCols()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(ncols != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(ncols != NULL);
 
    *ncols = lpi->clp->numberColumns();
 
@@ -1348,9 +1363,9 @@ SCIP_RETCODE SCIPlpiGetNNonz(
 {
    SCIPdebugMessage("calling SCIPlpiGetNNonz()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(nnonz != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(nnonz != NULL);
 
    *nnonz = lpi->clp->getNumElements();
 
@@ -1359,32 +1374,33 @@ SCIP_RETCODE SCIPlpiGetNNonz(
 
 
 /** gets columns from LP problem object; the arrays have to be large enough to store all values
- *  Either both, lb and ub, have to be 0, or both have to be non-0,
- *  either nnonz, beg, ind, and val have to be 0, or all of them have to be non-0.
+ *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
  */
 SCIP_RETCODE SCIPlpiGetCols(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get from LP */
    int                   lastcol,            /**< last column to get from LP */
-   SCIP_Real*            lb,                 /**< buffer to store the lower bound vector, or 0 */
-   SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or 0 */
-   int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or 0 */
-   int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or 0 */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or 0 */
-   SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or 0 */
+   SCIP_Real*            lb,                 /**< buffer to store the lower bound vector, or NULL */
+   SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
+   int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetCols()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    ClpSimplex* clp = lpi->clp;
 
    // get lower and upper bounds for the variables
-   assert( (lb != 0 && ub != 0) || (lb == 0 && ub == 0) );
-   if ( lb != 0 )
+   if ( lb != NULL )
    {
       const double* colLower = clp->getColLower();    // Here we can use the const versions (see SCIPchgBounds)
       const double* colUpper = clp->getColUpper();
@@ -1393,14 +1409,10 @@ SCIP_RETCODE SCIPlpiGetCols(
       BMScopyMemoryArray( ub, colUpper + firstcol, (lastcol - firstcol + 1));
    }
 
-   assert( nnonz != 0 || beg == 0);
-   assert( nnonz != 0 || ind == 0);
-   assert( nnonz != 0 || val == 0);
-
-   if ( nnonz != 0 )
+   if ( nnonz != NULL )
    {
       CoinPackedMatrix* M = clp->matrix();
-      assert( M != 0 );
+      assert( M != NULL );
       assert( M->getNumCols() == clp->numberColumns() );
 
       const CoinBigIndex* Mbeg = M->getVectorStarts();   // can use const versions
@@ -1426,30 +1438,31 @@ SCIP_RETCODE SCIPlpiGetCols(
 
 
 /** gets rows from LP problem object; the arrays have to be large enough to store all values.
- *  Either both, lhs and rhs, have to be 0, or both have to be non-0,
- *  either nnonz, beg, ind, and val have to be 0, or all of them have to be non-0.
+ *  Either both, lhs and rhs, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
  */
 SCIP_RETCODE SCIPlpiGetRows(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get from LP */
    int                   lastrow,            /**< last row to get from LP */
-   SCIP_Real*            lhs,                /**< buffer to store left hand side vector, or 0 */
-   SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or 0 */
-   int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or 0 */
-   int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or 0 */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or 0 */
-   SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or 0 */
+   SCIP_Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
+   SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
+   int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetRows()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    ClpSimplex* clp = lpi->clp;
-   assert( (lhs != 0 && rhs != 0) || (lhs == 0 && rhs == 0) );
-   if ( lhs != 0 )
+   if ( lhs != NULL )
    {
       const double* rowLower = clp->getRowLower();    // Here we can use the const versions (see SCIPchgSides)
       const double* rowUpper = clp->getRowUpper();
@@ -1458,16 +1471,12 @@ SCIP_RETCODE SCIPlpiGetRows(
       BMScopyMemoryArray( rhs, rowUpper + firstrow, (lastrow - firstrow + 1) );
    }
 
-   assert( nnonz != 0 || beg == 0);
-   assert( nnonz != 0 || ind == 0);
-   assert( nnonz != 0 || val == 0);
-
-   if ( nnonz != 0 )
+   if ( nnonz != NULL )
    {
       ClpMatrixBase* M = clp->rowCopy();   // get row view on matrix
-      if ( M == 0 ) // can happen e.g. if no LP was solved yet ...
+      if ( M == NULL ) // can happen e.g. if no LP was solved yet ...
 	 M = clp->clpMatrix()->reverseOrderedCopy();
-      assert( M != 0 );
+      assert( M != NULL );
       assert( M->getNumRows() == clp->numberRows() );
 
       const CoinBigIndex* Mbeg = M->getVectorStarts();
@@ -1497,12 +1506,18 @@ SCIP_RETCODE SCIPlpiGetColNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get name from LP */
    int                   lastcol,            /**< last column to get name from LP */
-   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
-   char*                 namestorage,        /**< storage for col names */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for col names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(colnames != NULL || namestoragesize == 0);
+   assert(namestorage != NULL || namestoragesize == 0);
+   assert(namestoragesize >= 0);
+   assert(storageleft != NULL);
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1513,12 +1528,18 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get name from LP */
    int                   lastrow,            /**< last row to get name from LP */
-   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
-   char*                 namestorage,        /**< storage for row names */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for row names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(rownames != NULL || namestoragesize == 0);
+   assert(namestorage != NULL || namestoragesize == 0);
+   assert(namestoragesize >= 0);
+   assert(storageleft != NULL);
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1534,6 +1555,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
+   assert(success != NULL);
 
    /* unstable situations cannot be ignored */
    *success = FALSE;
@@ -1572,10 +1594,10 @@ SCIP_RETCODE SCIPlpiGetObj(
 {
    SCIPdebugMessage("calling SCIPlpiGetObj()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
-   assert(vals != 0);
+   assert(vals != NULL);
 
    const double* obj = lpi->clp->getObjCoefficients();    // Here we can use the const versions (see SCIPchgObj)
 
@@ -1590,14 +1612,14 @@ SCIP_RETCODE SCIPlpiGetBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get objective value for */
    int                   lastcol,            /**< last column to get objective value for */
-   SCIP_Real*            lbs,                /**< array to store lower bound values, or 0 */
-   SCIP_Real*            ubs                 /**< array to store upper bound values, or 0 */
+   SCIP_Real*            lbs,                /**< array to store lower bound values, or NULL */
+   SCIP_Real*            ubs                 /**< array to store upper bound values, or NULL */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
 
    if ( lbs != 0 )
@@ -1621,14 +1643,14 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get sides for */
    int                   lastrow,            /**< last row to get sides for */
-   SCIP_Real*            lhss,               /**< array to store left hand side values, or 0 */
-   SCIP_Real*            rhss                /**< array to store right hand side values, or 0 */
+   SCIP_Real*            lhss,               /**< array to store left hand side values, or NULL */
+   SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSides()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
 
    if ( lhss != 0 )
@@ -1657,11 +1679,11 @@ SCIP_RETCODE SCIPlpiGetCoef(
 {
    SCIPdebugMessage("calling SCIPlpiGetCoef()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(0 <= col && col < lpi->clp->numberColumns());
    assert(0 <= row && row < lpi->clp->numberRows());
-   assert(val != 0);
+   assert(val != NULL);
 
    *val = lpi->clp->matrix()->getCoefficient(row, col);
 
@@ -1686,8 +1708,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    SCIPdebugMessage("calling Clp primal(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
@@ -1759,8 +1781,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    SCIPdebugMessage("calling Clp dual(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
@@ -1835,8 +1857,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover           /**< perform crossover */
    )
 {
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
@@ -1875,6 +1897,8 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    // currently do nothing; in the future: use code as in OSI
    return SCIP_OKAY;
 }
@@ -1884,6 +1908,8 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    // currently do nothing; in the future: use code as in OSI
    return SCIP_OKAY;
 }
@@ -1906,12 +1932,12 @@ SCIP_RETCODE lpiStrongbranch(
 {
    SCIPdebugMessage("calling SCIPlpiStrongbranch() on variable %d (%d iterations)\n", col, itlim);
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(down != 0);
-   assert(up != 0);
-   assert(downvalid != 0);
-   assert(upvalid != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(down != NULL);
+   assert(up != NULL);
+   assert(downvalid != NULL);
+   assert(upvalid != NULL);
 
    ClpSimplex* clp = lpi->clp;
 
@@ -2066,14 +2092,14 @@ SCIP_RETCODE lpiStrongbranches(
 {
    SCIPdebugMessage("calling SCIPlpiStrongbranches() on %d variables (%d iterations)\n", ncols, itlim);
 
-   assert( lpi != 0 );
-   assert( lpi->clp != 0 );
-   assert( cols != 0 );
-   assert( psols != 0 );
-   assert( down != 0 );
-   assert( up != 0 );
-   assert( downvalid != 0 );
-   assert( upvalid != 0 );
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert( cols != NULL );
+   assert( psols != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
 
    ClpSimplex* clp = lpi->clp;
 
@@ -2339,10 +2365,10 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 {
    SCIPdebugMessage("calling SCIPlpiGetSolFeasibility()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(primalfeasible != 0);
-   assert(dualfeasible != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(primalfeasible != NULL);
+   assert(dualfeasible != NULL);
 
    if ( lpi->clp->primalFeasible() )
       *primalfeasible = TRUE;
@@ -2382,8 +2408,8 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 {
    SCIPdebugMessage("calling SCIPlpiExistsPrimalRay()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
@@ -2400,8 +2426,8 @@ SCIP_Bool SCIPlpiHasPrimalRay(
 {
    SCIPdebugMessage("calling SCIPlpiHasPrimalRay()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
@@ -2416,8 +2442,8 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
 {
    SCIPdebugMessage("calling SCIPlpiIsPrimalUnbounded()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    return ( lpi->clp->isProvenDualInfeasible() && lpi->clp->primalFeasible() );
 }
@@ -2430,8 +2456,8 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
 {
    SCIPdebugMessage("calling SCIPlpiIsPrimalInfeasible()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* Should return ClpModel::isProvenPrimalInfeasible() (which returns status == 1), but the
     * following is correct (Clp will not be changed). The secondaryStatus is 1 if the dual simplex
@@ -2449,8 +2475,8 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 {
    SCIPdebugMessage("calling SCIPlpiIsPrimalFeasible()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    return ( lpi->clp->primalFeasible() );
 }
@@ -2465,8 +2491,8 @@ SCIP_Bool SCIPlpiExistsDualRay(
 {
    SCIPdebugMessage("calling SCIPlpiExistsDualRay()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
     * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
@@ -2483,8 +2509,8 @@ SCIP_Bool SCIPlpiHasDualRay(
 {
    SCIPdebugMessage("calling SCIPlpiHasDualRay()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
     * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
@@ -2511,8 +2537,8 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
 {
    SCIPdebugMessage("calling SCIPlpiIsDualUnbounded()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* The dual seems to be unbounded if the status is 1 (primal unbounded), the secondaryStatus is
     * not 1 (i.e., the dual simplex has not stopped because of an objective limit exceedence), and
@@ -2528,8 +2554,8 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
 {
    SCIPdebugMessage("calling SCIPlpiIsDualInfeasible()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    return ( lpi->clp->isProvenDualInfeasible() );
 }
@@ -2542,8 +2568,8 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 {
    SCIPdebugMessage("calling SCIPlpiIsDualFeasible()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    return ( lpi->clp->dualFeasible() );
 }
@@ -2556,8 +2582,8 @@ SCIP_Bool SCIPlpiIsOptimal(
 {
    SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    if ( SCIPlpiIsObjlimExc(lpi) )
       return FALSE;
@@ -2574,8 +2600,8 @@ SCIP_Bool SCIPlpiIsStable(
 {
    SCIPdebugMessage("calling SCIPlpiIsStable()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /*  We first check if status is ok, i.e., is one of the following:
     *   0 - optimal
@@ -2612,8 +2638,8 @@ SCIP_Bool SCIPlpiIsObjlimExc(
 {
    SCIPdebugMessage("calling SCIPlpiIsObjlimExc()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* if status == 1 (primal infeasible) and secondaryStatus == 1 then Clp hit the dual bound */
    if ( lpi->clp->status() == 1 )
@@ -2642,8 +2668,8 @@ SCIP_Bool SCIPlpiIsIterlimExc(
 {
    SCIPdebugMessage("calling SCIPlpiIsIterlimExc()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* status == 3 means that Clp stopped on time or iteration limit
     * secondary status == 9 means that status was 3 and Clp stopped on time */
@@ -2658,8 +2684,8 @@ SCIP_Bool SCIPlpiIsTimelimExc(
 {
    SCIPdebugMessage("calling SCIPlpiIsTimelimExc()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    /* status == 3 means that Clp stopped on time or iteration limit
     * secondary status == 9 means that status was 3 and Clp stopped on time */
@@ -2674,8 +2700,8 @@ int SCIPlpiGetInternalStatus(
 {
    SCIPdebugMessage("calling SCIPlpiGetInternalStatus()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    return lpi->clp->status();
 }
@@ -2689,9 +2715,9 @@ SCIP_RETCODE SCIPlpiGetObjval(
 {
    SCIPdebugMessage("calling SCIPlpiGetObjval()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(objval != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(objval != NULL);
 
    *objval = lpi->clp->objectiveValue();
 
@@ -2702,38 +2728,38 @@ SCIP_RETCODE SCIPlpiGetObjval(
 /** gets primal and dual solution vectors */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            objval,             /**< stores the objective value, may be 0 if not needed */
-   SCIP_Real*            primsol,            /**< primal solution vector, may be 0 if not needed */
-   SCIP_Real*            dualsol,            /**< dual solution vector, may be 0 if not needed */
-   SCIP_Real*            activity,           /**< row activity vector, may be 0 if not needed */
-   SCIP_Real*            redcost             /**< reduced cost vector, may be 0 if not needed */
+   SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
+   SCIP_Real*            primsol,            /**< primal solution vector, may be NULL if not needed */
+   SCIP_Real*            dualsol,            /**< dual solution vector, may be NULL if not needed */
+   SCIP_Real*            activity,           /**< row activity vector, may be NULL if not needed */
+   SCIP_Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSol()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    ClpSimplex* clp = lpi->clp;
-   if( objval != 0 )
+   if( objval != NULL )
       *objval = clp->objectiveValue();
 
-   if( primsol != 0 )
+   if( primsol != NULL )
    {
       const double* sol = clp->getColSolution();
       BMScopyMemoryArray( primsol, sol, clp->numberColumns() );
    }
-   if( dualsol != 0 )
+   if( dualsol != NULL )
    {
       const double* dsol = clp->getRowPrice();
       BMScopyMemoryArray( dualsol, dsol, clp->numberRows() );
    }
-   if( activity != 0 )
+   if( activity != NULL )
    {
       const double* act = clp->getRowActivity();
       BMScopyMemoryArray( activity, act, clp->numberRows() );
    }
-   if( redcost != 0 )
+   if( redcost != NULL )
    {
       const double* red = clp->getReducedCost();
       BMScopyMemoryArray( redcost, red, clp->numberColumns() );
@@ -2751,14 +2777,14 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 {
    SCIPdebugMessage("calling SCIPlpiGetPrimalRay()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(ray != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(ray != NULL);
 
    /* Unbounded ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
    const double* clpray = lpi->clp->unboundedRay();
 
-   if ( clpray == 0 )
+   if ( clpray == NULL )
       return SCIP_LPERROR;
 
    BMScopyMemoryArray( ray, clpray, lpi->clp->numberColumns() );
@@ -2776,14 +2802,14 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 {
    SCIPdebugMessage("calling SCIPlpiGetDualfarkas()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(dualfarkas != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(dualfarkas != NULL);
 
    /* Infeasibility ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
    const double* dualray = lpi->clp->infeasibilityRay();
 
-   if ( dualray == 0 )
+   if ( dualray == NULL )
       return SCIP_LPERROR;
 
    BMScopyMemoryArray( dualfarkas, dualray, lpi->clp->numberRows() );
@@ -2806,8 +2832,9 @@ SCIP_RETCODE SCIPlpiGetIterations(
    int*                  iterations          /**< pointer to store the number of iterations of the last solve call */
    )
 {
-   assert(lpi != 0);
-   assert(iterations != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(iterations != NULL);
 
    *iterations = lpi->clp->numberIterations();
 
@@ -2848,19 +2875,19 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 SCIP_RETCODE SCIPlpiGetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array to store column basis status, or 0 */
-   int*                  rstat               /**< array to store row basis status, or 0 */
+   int*                  cstat,              /**< array to store column basis status, or NULL */
+   int*                  rstat               /**< array to store row basis status, or NULL */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBase()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    ClpSimplex* clp = lpi->clp;
 
    // slower but easier to understand (and portable)
-   if( rstat != 0 )
+   if( rstat != NULL )
    {
       for( int i = 0; i < clp->numberRows(); ++i )
       {
@@ -2895,7 +2922,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       }
    }
 
-   if( cstat != 0 )
+   if( cstat != NULL )
    {
       for( int j = 0; j < clp->numberColumns(); ++j )
       {
@@ -2942,8 +2969,10 @@ SCIP_RETCODE SCIPlpiSetBase(
 {
    SCIPdebugMessage("calling SCIPlpiSetBase()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(rstat != NULL);
+   assert(cstat != NULL);
 
    invalidateSolution(lpi);
 
@@ -2955,7 +2984,6 @@ SCIP_RETCODE SCIPlpiSetBase(
    const double* lhs = clp->getRowLower();
    const double* rhs = clp->getRowUpper();
 
-   assert( rstat != 0 || clp->numberRows() == 0 );
    for( int i = 0; i < clp->numberRows(); ++i )
    {
       int status = rstat[i];
@@ -2993,7 +3021,6 @@ SCIP_RETCODE SCIPlpiSetBase(
    const double* lb = clp->getColLower();
    const double* ub = clp->getColUpper();
 
-   assert( cstat != 0 || clp->numberColumns() == 0 );
    for( int j = 0; j < clp->numberColumns(); ++j )
    {
       int status = cstat[j];
@@ -3057,8 +3084,8 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 {
    SCIPdebugMessage("calling SCIPlpiGetBasisInd()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(bind != 0);
 
    ClpSimplex* clp = lpi->clp;
@@ -3106,16 +3133,16 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
-                                               *  (-1: if we do not store sparsity informations) */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
 
-   assert( lpi != 0 );
-   assert( lpi->clp != 0 );
-   assert( coef != 0 );
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(coef != NULL);
    assert( 0 <= r && r <= lpi->clp->numberRows() );
 
    /* can only return dense result */
@@ -3145,16 +3172,16 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
-                                               *  (-1: if we do not store sparsity informations) */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
 
-   assert( lpi != 0 );
-   assert( lpi->clp != 0 );
-   assert( coef != 0 );
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(coef != NULL);
    assert( 0 <= c && c <= lpi->clp->numberRows() ); /* basis matrix is nrows * nrows */
 
    /* can only return dense result */
@@ -3178,18 +3205,18 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or 0 */
+   const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
-                                              *  (-1: if we do not store sparsity informations) */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvARow()\n");
 
-   assert( lpi != 0 );
-   assert( lpi->clp != 0 );
-   assert( coef != 0 );
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(coef != NULL);
    assert( 0 <= r && r <= lpi->clp->numberRows() );
 
    /* can only return dense result */
@@ -3214,15 +3241,15 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
-                                               *  (-1: if we do not store sparsity informations) */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
 
-   assert( lpi != 0 );
-   assert( lpi->clp != 0 );
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert( coef != 0 );
    assert( 0 <= c && c <= lpi->clp->numberColumns() );
 
@@ -3258,10 +3285,10 @@ SCIP_RETCODE SCIPlpiGetState(
 {
    SCIPdebugMessage("calling SCIPlpiGetState()\n");
 
-   assert(blkmem != 0);
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(lpistate != 0);
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(lpistate != NULL);
 
    int ncols = lpi->clp->numberColumns();
    int nrows = lpi->clp->numberRows();
@@ -3293,7 +3320,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information), or NULL */
    )
 {  /* lint --e{715} */
    int lpncols;
@@ -3302,9 +3329,13 @@ SCIP_RETCODE SCIPlpiSetState(
 
    SCIPdebugMessage("calling SCIPlpiSetState()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(lpistate != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(blkmem != NULL);
+
+   /* if there was no basis information available, the LPI state was not stored */
+   if( lpistate == NULL )
+      return SCIP_OKAY;
 
    lpncols = lpi->clp->numberColumns();
    lpnrows = lpi->clp->numberRows();
@@ -3350,8 +3381,8 @@ SCIP_RETCODE SCIPlpiClearState(
 {
    SCIPdebugMessage("calling SCIPlpiClearState()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    lpi->clp->allSlackBasis(true);
    lpi->validFactorization = false;
@@ -3368,8 +3399,9 @@ SCIP_RETCODE SCIPlpiFreeState(
 {
    SCIPdebugMessage("calling SCIPlpiFreeState()\n");
 
-   assert(lpi != 0);
+   assert(lpi != NULL);
    assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    if ( *lpistate != NULL )
       lpistateFree(lpistate, blkmem);
@@ -3380,9 +3412,10 @@ SCIP_RETCODE SCIPlpiFreeState(
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL*/
    )
 {
+   assert(lpi != NULL);
    return (lpistate != NULL);
 }
 
@@ -3393,6 +3426,9 @@ SCIP_RETCODE SCIPlpiReadState(
    )
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(fname != NULL);
 
    /*  Read a basis from the given filename,
     *  returns -1 on file error, 0 if no values, 1 if values
@@ -3403,13 +3439,16 @@ SCIP_RETCODE SCIPlpiReadState(
    return SCIP_OKAY;
 }
 
-/** writes LP state (like basis information) to a file */
+/** writes LPi state (i.e. basis information) to a file */
 SCIP_RETCODE SCIPlpiWriteState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(fname != NULL);
 
    /*  Write the basis in MPS format to the specified file.
     *  If writeValues true, writes values of structurals
@@ -3447,6 +3486,8 @@ SCIP_RETCODE SCIPlpiGetNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
 {
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
    assert(lpinorms != NULL);
 
    (*lpinorms) = NULL;
@@ -3460,7 +3501,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 {
    assert(lpinorms == NULL);
@@ -3473,7 +3514,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 {
    assert(lpinorms == NULL);
@@ -3503,8 +3544,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
 {
    SCIPdebugMessage("calling SCIPlpiGetIntpar()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(ival != 0);
 
    switch( type )
@@ -3547,8 +3588,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 {
    SCIPdebugMessage("calling SCIPlpiSetIntpar()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    // Handle pricing separately ...
    if( type == SCIP_LPPAR_PRICING )
@@ -3649,8 +3690,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
 {
    SCIPdebugMessage("calling SCIPlpiGetRealpar()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
    assert(dval != 0);
 
    switch( type )
@@ -3686,8 +3727,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 {
    SCIPdebugMessage("calling SCIPlpiSetRealpar()\n");
    SCIPdebugMessage("setting parameter %d to value %g.\n", type, dval);
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
 
    switch( type )
    {
@@ -3730,6 +3771,7 @@ SCIP_Real SCIPlpiInfinity(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /* lint --e{715} */
+   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiInfinity()\n");
 
    return COIN_DBL_MAX;
@@ -3742,6 +3784,7 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val                 /**< value to check */
    )
 {  /* lint --e{715} */
+   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
 
    return (val >= COIN_DBL_MAX);
@@ -3784,8 +3827,9 @@ SCIP_RETCODE SCIPlpiReadLP(
 {
    SCIPdebugMessage("calling SCIPlpiReadLP()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(fname != NULL);
 
    // WARNING: can only read mps files
 
@@ -3812,8 +3856,9 @@ SCIP_RETCODE SCIPlpiWriteLP(
 {
    SCIPdebugMessage("calling SCIPlpiWriteLP() - %s\n", fname);
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(fname != NULL);
 
    /*  write file in MPS format
     *  parameters:

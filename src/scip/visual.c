@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -662,13 +662,17 @@ void SCIPvisualFoundSolution(
    SCIP_SOL*             sol                 /**< solution that has been found */
    )
 {
-   if( node == NULL || !set->visual_dispsols || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+   if( node == NULL || ! set->visual_dispsols )
       return;
 
    if( visual->vbcfile != NULL )
    {
       SCIP_Real obj;
       size_t nodenum;
+
+      /* if we are in probing, determine original parent node */
+      while ( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+         node = SCIPnodeGetParent(node);
 
       /* get node num from hash map */
       assert(node != NULL);

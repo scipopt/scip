@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -10527,6 +10527,12 @@ SCIP_RETCODE SCIPfreeProb(
    /* if we free the problem, we do not have to transfer transformed solutions to the original space, so temporarily disable it */
    transsolorig = scip->set->misc_transsolsorig;
    scip->set->misc_transsolsorig = FALSE;
+
+   /* release variables and constraints captured by reoptimization */
+   if( scip->set->reopt_enable || scip->reopt != NULL)
+   {
+      SCIP_CALL( SCIPreoptReleaseData(scip->reopt, scip->set, scip->mem->probmem) );
+   }
 
    SCIP_CALL( SCIPfreeTransform(scip) );
    /* for some reason the free transform can generate events caught in the globalbnd eventhander
