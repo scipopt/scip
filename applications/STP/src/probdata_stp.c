@@ -93,6 +93,9 @@ struct SCIP_ProbData
    int                   mode;               /**< solving mode selected by the user (Cut, Price, Flow) */
    SCIP_Bool             bigt;               /**< stores whether the 'T' model is being used (not relevant in Cut mode) */
    GRAPH*                graph;              /**< the graph */
+#ifdef WITH_UG
+   GRAPH*                orggraph;          /**< copy of presolved graph needed for UG */
+#endif
    SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of path constraints (needed only in the Price mode) */
@@ -450,7 +453,7 @@ SCIP_RETCODE probdataFree(
    {
       for( t = 0; t < (*probdata)->realnterms; ++t )
       {
-	 /* release constraints and variables */
+         /* release constraints and variables */
          for( e = 0; e < (*probdata)->nnodes - 1; ++e )
          {
             SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->pathcons[t * ((*probdata)->nnodes - 1 ) + e])) );
@@ -458,14 +461,14 @@ SCIP_RETCODE probdataFree(
          for( e = 0; e < (*probdata)->nedges; ++e )
          {
             SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->flowvars[t * (*probdata)->nedges + e]) );
-	 }
+         }
          if( (*probdata)->bigt )
-	    break;
+            break;
       }
       SCIPfreeMemoryArrayNull(scip, &(*probdata)->flowvars);
    }
    /* release edge constraints (Price or Flow) */
-   if( (*probdata)->mode != MODE_CUT)
+   if( (*probdata)->mode != MODE_CUT )
    {
       for( t = 0; t < (*probdata)->realnterms; ++t )
       {
@@ -473,8 +476,8 @@ SCIP_RETCODE probdataFree(
          {
             SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->edgecons[t * (*probdata)->nedges + e])) );
          }
-	 if( (*probdata)->bigt )
-	    break;
+         if( (*probdata)->bigt )
+            break;
 
       }
       SCIPfreeMemoryArrayNull(scip, &((*probdata)->edgecons));
@@ -1268,6 +1271,16 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       SCIP_CALL( graph_mincut_init(scip, graphcopy) );
 
    SCIP_CALL( probdataCreate(scip, targetdata, graphcopy) );
+
+#ifdef WITH_UG
+   {
+      GRAPH* orggraphcopy;
+      SCIP_CALL( graph_copy(scip, sourcedata->orggraph, &orggraphcopy) );
+      SCIP_CALL( graph_path_init(scip, orggraphcopy) );
+      (*targetdata)->orggraph = orggraphcopy;
+   }
+#endif
+
    (*targetdata)->minelims = sourcedata->minelims;
    (*targetdata)->offset = sourcedata->offset;
    (*targetdata)->norgedges = sourcedata->norgedges;
@@ -1637,10 +1650,16 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
          graph_mincut_exit(scip, (*probdata)->graph);
 
       graph_path_exit(scip, (*probdata)->graph);
-
       graph_free(scip, &((*probdata)->graph), TRUE);
    }
 
+#ifdef WITH_UG
+   if( (*probdata)->orggraph != NULL )
+   {
+      graph_path_exit(scip, (*probdata)->orggraph);
+      graph_free(scip, &((*probdata)->orggraph), TRUE);
+   }
+#endif
    /* free the (original) probdata */
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -1670,7 +1689,9 @@ SCIP_DECL_PROBTRANS(probtransStp)
 
    /* create transform probdata */
    SCIP_CALL( probdataCreate(scip, targetdata, sourcedata->graph) );
-
+#ifdef WITH_UG
+   (*targetdata)->orggraph = sourcedata->orggraph;
+#endif
    (*targetdata)->nlayers = sourcedata->nlayers;
    (*targetdata)->nedges = sourcedata->nedges;
    (*targetdata)->nnodes = sourcedata->nnodes;
@@ -1807,13 +1828,27 @@ SCIP_DECL_PROBTRANS(probtransStp)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_PROBINITSOL(probinitsolStp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(probdata != NULL);
 
+#ifdef WITH_UG
+   assert(probdata->orggraph != NULL);
+   graph_copy_data(scip, probdata->orggraph, probdata->graph);
+
+   printf("PROB INIT %d \n\n \n", 0);
+#endif
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_PROBEXITSOL(probexitsolStp)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(probdata != NULL);
+   printf("PROB EXIT %d \n\n \n", 0);
 
    if( probdata->logfile != NULL )
    {
@@ -1927,9 +1962,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    char* logfilename;
    char tmpfilename[SCIP_MAXSTRLEN];
    char* probname;
-#ifdef PRINT_PRESOL
-   char presolvefilename[SCIP_MAXSTRLEN];
-#endif
 
    assert(scip != NULL);
 
@@ -1995,6 +2027,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
    SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
+   SCIP_CALL( SCIPsetProbInitsol(scip, probinitsolStp) );
    SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolStp) );
    SCIP_CALL( SCIPsetProbCopy(scip, probcopyStp) );
 
@@ -2134,6 +2167,16 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, TRUE) );
 
    graph = packedgraph;
+
+#ifdef WITH_UG
+   {
+      GRAPH* newgraph;
+      graph_copy(scip, graph, &(newgraph));
+      probdata->orggraph = graph;
+      graph = newgraph;
+   }
+#endif
+
    probdata->graph = graph;
    probdata->stp_type = graph->stp_type;
 
@@ -2151,71 +2194,28 @@ SCIP_RETCODE SCIPprobdataCreate(
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/trivial/freq", -1));
    }
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
+
 
    /* update type for MWCSP (might be RMWCSP now) */
    mw = (graph->stp_type == STP_MWCSP);
 
-   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
+   probdata->usesymcons = FALSE;
+   probdata->usecyclecons = FALSE;
 
-   if( cyclecons == CONS_ALWAYS )
-      probdata->usecyclecons = TRUE;
-   else if( cyclecons == CONS_SPECIFIC && graph->edges <= CYC_CONS_LIMIT )
-      probdata->usecyclecons = TRUE;
-   else
-      probdata->usecyclecons = FALSE;
-
-   if( symcons == CONS_ALWAYS )
-      probdata->usesymcons = TRUE;
-   else if( symcons == CONS_SPECIFIC && graph->terms <= SYM_CONS_LIMIT )
-      probdata->usesymcons = TRUE;
-   else
-      probdata->usesymcons = FALSE;
-
-   probdata->usesymcons = probdata->usesymcons && (mw || pc);
-
-   if( probdata->usesymcons  )
-      SCIPdebugMessage("USE SYM CONS: %d \n", graph->terms);
-   else
-      SCIPdebugMessage("NO SYM CONS: \n");
-
-#if 0 //presolving info output (bad hack)
-   FILE *fptr;
-
-   unsigned int o = graph->norgmodelknots + graph->norgmodeledges;
-   int l = SCIPgetRandomInt(0, 10, &o);
-
-   sleep(l);
-
-   fptr = fopen("redStats.txt", "a");
-   //  fptr=fopen("singleReduction.txt","a");
-   assert(fptr!=NULL);
-
-   if( graph->stp_type == STP_RPCSPG )
+   if( pc || mw )
    {
-      fprintf(fptr, "%d       %d      %d      %d     %f         %s \n",
-            (graph->knots - graph->terms + 1), graph->norgmodelknots,
-            ((graph->edges) / 2 - 2 * (graph->terms - 1)),
-            graph->norgmodeledges / 2, SCIPgetTotalTime(scip), probname);
-   }
-   else if( graph->stp_type == STP_PCSPG
-         || graph->stp_type == STP_MWCSP )
-   {
-      fprintf(fptr, "%d       %d      %d      %d     %f        %s\n",
-            (graph->knots - graph->terms), graph->norgmodelknots,
-            ((graph->edges) / 2 - 3 * (graph->terms - 1)),
-            graph->norgmodeledges / 2, SCIPgetTotalTime(scip), probname);
-   }
-   else
-   {
-      fprintf(fptr, "%d  %d  %d  %d  %f          %s\n", (graph->knots),
-            graph->orgknots, ((graph->edges) / 2), graph->orgedges / 2,
-            SCIPgetReadingTime(scip), probname);
-   }
-   fclose(fptr);
+      if( cyclecons == CONS_ALWAYS || (cyclecons == CONS_SPECIFIC && graph->edges <= CYC_CONS_LIMIT) )
+         probdata->usecyclecons = TRUE;
 
-   return SCIP_ERROR;
+      if( symcons == CONS_ALWAYS || (symcons == CONS_SPECIFIC && graph->terms <= SYM_CONS_LIMIT) )
+         probdata->usesymcons = TRUE;
 
-#endif
+      if( probdata->usesymcons  )
+         SCIPdebugMessage("USE SYM CONS: %d \n", graph->terms);
+      else
+         SCIPdebugMessage("NO SYM CONS: \n");
+   }
 
    /* create model */
    if( graph != NULL )
@@ -2225,6 +2225,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       /* init shortest path algorithm (needed for creating path variables) */
       SCIP_CALL( graph_path_init(scip, graph) );
+
+#ifdef WITH_UG
+      SCIP_CALL( graph_path_init(scip, probdata->orggraph) );
+#endif
 
       if( probdata->mode == MODE_CUT )
       {
@@ -2771,8 +2775,11 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    assert(probdata != NULL);
 
    edgevars = probdata->edgevars;
-
+#ifdef WITH_UG
+   graph = probdata->orggraph;
+#else
    graph = probdata->graph;
+#endif
 
    assert(graph != NULL);
 
@@ -3612,8 +3619,8 @@ void initReceivedSubproblem(
    const char*           setppcConsNames     /**< number of setppc constraints */
    )
 {
-   printf("received lin %s n: %d\n", linearConsNames, lLinearConsNames);
-   printf("received ppc %s n: %d \n", setppcConsNames, lSetppcConsNames);
+   printf("received lin %s n: %d\n\n", linearConsNames, lLinearConsNames);
+   printf("received ppc %s n: %d \n\n", setppcConsNames, lSetppcConsNames);
 
 
 #ifdef WITH_UG

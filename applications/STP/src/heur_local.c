@@ -1985,7 +1985,6 @@ SCIP_DECL_HEURFREE(heurFreeLocal)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemoryArray(scip, &(heurdata->lastsolindices));
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 

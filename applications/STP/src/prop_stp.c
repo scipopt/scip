@@ -59,7 +59,10 @@
 #define REDUCTION_WAIT_RATIO             0.08 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
 
 /**@} */
-
+#ifdef WITH_UG
+extern
+int getUgRank(void);
+#endif
 
 /*
  * Data structures
@@ -559,8 +562,6 @@ SCIP_DECL_PROPFREE(propFreeStp)
    /* free propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
-   assert(propdata->fixingbounds == NULL);
-   assert(propdata->propgraph == NULL);
 
    SCIPfreeMemory(scip, &propdata);
 
@@ -633,7 +634,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    callreduce = FALSE;
 
    const SCIP_Longint nodenumber2 = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-   printf("(dual cost)i am at node %lld fix: %d  allfix: %d  \n", nodenumber2, nfixed, propdata->nfixededges);
+   printf("(dual cost)i am at node %lld fix: %d  allfix: %d  rank: %d\n", nodenumber2, nfixed, propdata->nfixededges, getUgRank());
 
    assert(SCIPgetDepth(scip) != 0 || propdata->nfixededges <= graph->edges);
 
