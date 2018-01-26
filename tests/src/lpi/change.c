@@ -851,6 +851,8 @@ Test(change, testlpiwritereadstatemethods)
    FILE *file = fopen(fname, "r");
    FILE *file2 = fopen(fname2, "r");
    cr_assert_file_contents_eq(file, file2);
+
+   SCIP_CALL( SCIPlpiClear(lpi) );
 }
 
 /** test SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear */
@@ -891,8 +893,10 @@ Test(change, testlpiwritereadlpmethods)
    cr_assert_arr_eq( redcost, redcost2, 2*sizeof(SCIP_Real) );
 
    SCIP_CALL( SCIPlpiWriteLP(lpi, fname2) );
+   SCIP_CALL( SCIPlpiClear(lpi) );
 
    FILE *file = fopen(fname, "r");
    FILE *file2 = fopen(fname2, "r");
    cr_assert_file_contents_eq(file, file2);
+
 }
