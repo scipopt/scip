@@ -622,7 +622,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
       propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
       SCIP_CALL( graph_copy(scip, graph, &(propdata->propgraph)) );
       assert(propdata->nfixededges == 0);
-      printf("init propgraph at node %lld \n", propdata->propgraphnodenumber);
    }
 
    nfixed = 0;
@@ -632,11 +631,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_CALL( dualcostVarfixing(scip, vars, propdata, &nfixed, graph) );
 
    callreduce = FALSE;
-
-   const SCIP_Longint nodenumber2 = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-   printf("(dual cost)i am at node %lld fix: %d  allfix: %d  rank: %d\n", nodenumber2, nfixed, propdata->nfixededges, getUgRank());
-
-   assert(SCIPgetDepth(scip) != 0 || propdata->nfixededges <= graph->edges);
 
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT )
    {
@@ -658,7 +652,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
       else if( SCIPisGT(scip, redratio, REDUCTION_WAIT_RATIO) && SCIPgetDepth(scip) == 0 )
       {
          callreduce = TRUE;
-         assert(propdata->nfixededges <= graph->edges);
       }
    }
 
@@ -670,7 +663,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
       /* call reduced cost based based variable fixing */
       SCIP_CALL( redbasedVarfixing(scip, vars, propdata, &nfixed, &probisinfeas, graph) );
-      printf("(red based) i am at node %lld fix: %d  allfix: %d  \n", nodenumber2, nfixed, propdata->nfixededges);
 
       propdata->postrednfixededges = 0;
 
@@ -727,7 +719,6 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
-   printf("INIT SOL %d \n\n\n", 0);
 
    propdata->nfails = 0;
    propdata->ncalls = 0;

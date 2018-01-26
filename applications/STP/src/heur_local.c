@@ -2004,8 +2004,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolLocal)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
 
-   printf("INIT HEUR LOCAL  %d \n\n", 0);
-
    heurdata->nfails = 1;
    heurdata->nbestsols = DEFAULT_NBESTSOLS;
 

@@ -1838,7 +1838,6 @@ SCIP_DECL_PROBINITSOL(probinitsolStp)
    assert(probdata->orggraph != NULL);
    graph_copy_data(scip, probdata->orggraph, probdata->graph);
 
-   printf("PROB INIT %d \n\n \n", 0);
 #endif
    return SCIP_OKAY;
 }
