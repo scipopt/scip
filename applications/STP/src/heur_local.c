@@ -2022,8 +2022,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolLocal)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   printf("EXIT HEUR LOCAL  %d \n\n", 0);
-
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);

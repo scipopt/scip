@@ -33,6 +33,16 @@
 extern "C" {
 #endif
 
+/** parse constraint name and apply changes to graph or array */
+EXTERN
+SCIP_RETCODE STPStpBranchruleParseConsname(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  vertexchgs,         /**< array to store changes or NULL */
+   GRAPH*                graph,              /**< graph to modify or NULL */
+   const char*           consname,           /**< constraint name */
+   SCIP_Bool             deletehistory       /**< delete history of graph? */
+   );
+
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
 EXTERN
 SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(

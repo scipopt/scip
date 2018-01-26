@@ -501,6 +501,85 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
  * branching rule specific interface methods
  */
 
+/** parse constraint name and apply changes to graph or array */
+SCIP_RETCODE STPStpBranchruleParseConsname(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  vertexchgs,         /**< array to store changes or NULL */
+   GRAPH*                graph,              /**< graph to modify or NULL */
+   const char*           consname,           /**<  constraint name */
+   SCIP_Bool             deletehistory       /**< delete history of graph? */
+)
+{
+   /* terminal inclusion constraint? */
+   if( strncmp(consname, "consin", 6) == 0 )
+   {
+      char* tailptr;
+      const int term = (int) strtol(consname + 6, &tailptr, 10);
+
+      SCIPdebugMessage("make terminal %d \n", term);
+
+      if( graph != NULL && !Is_term(graph->term[term]) )
+      {
+         if( graph->stp_type == STP_PCSPG )
+         {
+            if( Is_pterm(graph->term[term]) )
+               graph_pc_chgPrize(scip, graph, FARAWAY, term);
+         }
+         else if( graph->stp_type == STP_RPCSPG )
+         {
+            assert(0 && "not implemented");
+         }
+         else
+         {
+            graph_knot_chg(graph, term, 0);
+         }
+      }
+
+      if( vertexchgs != NULL )
+         vertexchgs[term] = BRANCH_STP_VERTEX_TERM;
+   }
+   /* node removal constraint? */
+   else if( strncmp(consname, "consout", 7) == 0 )
+   {
+      char* tailptr;
+      const int vert = (int) strtol(consname + 7, &tailptr, 10);
+
+      SCIPdebugMessage("delete vertex %d \n", vert);
+
+      if( graph != NULL )
+      {
+         assert(!Is_term(graph->term[vert]));
+
+         if( graph->stp_type == STP_PCSPG )
+         {
+            if( Is_pterm(graph->term[vert]) )
+            {
+               int todo; // fix arc vars
+               graph_pc_deleteTerm(scip, graph, vert);
+            }
+            graph_knot_del(scip, graph, vert, deletehistory);
+         }
+         else if( graph->stp_type == STP_RPCSPG )
+         {
+            assert(0 && "not implemented");
+         }
+         else
+         {
+            graph_knot_del(scip, graph, vert, deletehistory);
+         }
+      }
+
+      if( vertexchgs != NULL )
+         vertexchgs[vert] = BRANCH_STP_VERTEX_KILLED;
+   }
+   else
+   {
+      printf("found unknown constraint at b&b node \n");
+      return SCIP_ERROR;
+   }
+   return SCIP_OKAY;
+}
+
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
 SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -528,6 +607,8 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    {
       char* consname;
 
+      assert(SCIPnodeGetNAddedConss(node) == 1);
+
       if( SCIPnodeGetNAddedConss(node) != 1 )
          continue;
 
@@ -535,73 +616,7 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
       SCIPnodeGetAddedConss(node, &parentcons, &naddedconss, 1);
       consname = (char*) SCIPconsGetName(parentcons);
 
-      /* terminal inclusion constraint? */
-      if( strncmp(consname, "consin", 6) == 0 )
-      {
-         char* tailptr;
-         const int term = (int) strtol(consname + 6, &tailptr, 10);
-
-         SCIPdebugMessage("make terminal %d \n", term);
-
-         if( graph != NULL && !Is_term(graph->term[term]) )
-         {
-            if( graph->stp_type == STP_PCSPG )
-            {
-               if( Is_pterm(graph->term[term]) )
-                  graph_pc_chgPrize(scip, graph, FARAWAY, term);
-            }
-            else if( graph->stp_type == STP_RPCSPG )
-            {
-               assert(0 && "not implemented");
-            }
-            else
-            {
-               graph_knot_chg(graph, term, 0);
-            }
-         }
-
-         if( vertexchgs != NULL )
-            vertexchgs[term] = BRANCH_STP_VERTEX_TERM;
-      }
-      /* node removal constraint? */
-      else if( strncmp(consname, "consout", 7) == 0 )
-      {
-         char* tailptr;
-         const int vert = (int) strtol(consname + 7, &tailptr, 10);
-
-         SCIPdebugMessage("delete vertex %d \n", vert);
-
-         if( graph != NULL)
-         {
-            assert(!Is_term(graph->term[vert]));
-
-            if( graph->stp_type == STP_PCSPG )
-            {
-               if( Is_pterm(graph->term[vert]) )
-               {
-                  int todo; // fix arc vars
-                  graph_pc_deleteTerm(scip, graph, vert);
-               }
-               graph_knot_del(scip, graph, vert, TRUE);
-            }
-            else if( graph->stp_type == STP_RPCSPG )
-            {
-               assert(0 && "not implemented");
-            }
-            else
-            {
-               graph_knot_del(scip, graph, vert, TRUE);
-            }
-         }
-
-         if( vertexchgs != NULL )
-            vertexchgs[vert] = BRANCH_STP_VERTEX_KILLED;
-      }
-      else
-      {
-         printf("found unknown constraint at b&b node \n");
-         return SCIP_ERROR;
-      }
+      SCIP_CALL( STPStpBranchruleParseConsname(scip, vertexchgs, graph, consname, TRUE) );
    }
 
    return SCIP_OKAY;

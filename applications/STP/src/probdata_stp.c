@@ -48,6 +48,8 @@
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
+#include "branch_stp.h"
+
 
 #define STP_AGG_SYM
 #define CENTER_OK    0           /**< do nothing */
@@ -1847,7 +1849,6 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(probdata != NULL);
-   printf("PROB EXIT %d \n\n \n", 0);
 
    if( probdata->logfile != NULL )
    {
@@ -3618,21 +3619,32 @@ void initReceivedSubproblem(
    const char*           setppcConsNames     /**< number of setppc constraints */
    )
 {
-   printf("received lin %s n: %d\n\n", linearConsNames, lLinearConsNames);
-   printf("received ppc %s n: %d \n\n", setppcConsNames, lSetppcConsNames);
-
-
 #ifdef WITH_UG
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+
+   graph = SCIPprobdataGetGraph(probdata);
+
    for( int i = 0; i < lLinearConsNames; i++ )
    {
-      printf("first lin %s \n", getBranchLinearConsName(linearConsNames, i));
+      const char* consname = getBranchLinearConsName(linearConsNames, i);
+      printf("add lin cons %s \n", consname);
+      if( consname != NULL)
+         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, NULL, graph, consname, FALSE) );
    }
 
    for( int i = 0; i < lSetppcConsNames; i++ )
    {
-      printf("first ppc %s \n", getBranchSetppcConsName(setppcConsNames, i));
+      const char* consname = getBranchSetppcConsName(setppcConsNames, i);
+      printf("add ppc cons %s \n", consname);
+      if( consname != NULL)
+         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, NULL, graph, consname, FALSE) );
    }
-
-   printf("ok %d \n", 0);
+#else
+   assert(0 && "only call me when using UG");
 #endif
 }
