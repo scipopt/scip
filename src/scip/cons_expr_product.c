@@ -664,6 +664,8 @@ SCIP_RETCODE computeFacet(
    if( SCIPisLE(scip, *violation, 0.0) )
       goto CLEANUP;
 
+   assert(!SCIPisZero(scip, midval));
+
    /*
     *  5. check and adjust facet with the algorithm of Rikun et al.
     */
