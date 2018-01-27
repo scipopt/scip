@@ -68,14 +68,14 @@ struct SCIP_ConsExpr_NlhdlrExprData
 
    SCIP_INTERVAL         linactivity;        /**< activity of linear part */
 
-   /* activities of quadratic parts as defined in nlhdlrIntervarQuadratic */
+   /* activities of quadratic parts as defined in nlhdlrIntervalQuadratic */
    SCIP_Real             minquadfiniteact;   /**< minimum activity of quadratic part where only terms with finite min
                                                activity contribute */
-   SCIP_Real             maxquadfiniteact;   /**< maximum activity of quadratic part, where only terms with finite max
+   SCIP_Real             maxquadfiniteact;   /**< maximum activity of quadratic part where only terms with finite max
                                                activity contribute */
    int                   nneginfinityquadact;/**< number of quadratic terms contributing -infinity to activity */
    int                   nposinfinityquadact;/**< number of quadratic terms contributing +infinity to activity */
-   SCIP_INTERVAL*        quadactivities;     /**< activity of each quadratic function as defined in nlhdlrIntevalQuadratic */
+   SCIP_INTERVAL*        quadactivities;     /**< activity of each quadratic term as defined in nlhdlrIntervalQuadratic */
 };
 
 /*
@@ -1060,7 +1060,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
             SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
          }
 
-         /* TODO: under which assumptions do we know that we just need to compute min or max? */
+         /* TODO: under which assumptions do we know that we just need to compute min or max? its probably the locks that give some information here */
          quadub = SCIPintervalQuadUpperBound(SCIP_INTERVAL_INFINITY, quadexpr.sqrcoef, b,
                SCIPgetConsExprExprInterval(quadexpr.expr));
 
