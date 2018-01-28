@@ -1172,15 +1172,15 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
     * One way of achieving this is by, for each expression expr_i, write the quadratic expression as
     * a_i expr^2_i + expr_i ( \sum_{j \in J_i} b_ij expr_j + c_i ) + quadratic expression in expr_k for k \neq i
     * then compute the interval b = [\sum_{j \in J_i} b_ij expr_j + c_i], where J_i are all the indices j such that the
-    * bilinear expression expr_i expr_j appears, and use some technique (like the one in nlhdlrIntevalQuadratic), to
+    * bilinear expression expr_i expr_j appears, and use some technique (like the one in nlhdlrIntervalQuadratic), to
     * evaluate the activity rest_i = [quadratic expression in expr_k for k \neq i].
     * Then, solve a_i expr_i^2 + b expr_i = [expr] - rest_i =: rhs_i.
     * However, this might be expensive, specially computing rest_i. Hence, we implement a simpler version, namely,
-    * we use the same partition as in nlhdlrIntevalQuadratic for the bilinear terms. This way,
-    * b = [\sum_{j \in P_i} b_ij expr_j + c_i], where P_i is defined as in nlhdlrIntevalQuadratic, all the indices j
+    * we use the same partition as in nlhdlrIntervalQuadratic for the bilinear terms. This way,
+    * b = [\sum_{j \in P_i} b_ij expr_j + c_i], where P_i is defined as in nlhdlrIntervalQuadratic, all the indices j
     * such that expr_i expr_j appears in that order, and rest_i = sum_{k \neq i} [\min q_k, \max q_k] where
     * q_k = a_k expr_k^2 + [\sum_{j \in P_k} b_jk expr_j + c_k] expr_k. The intervals [\min q_k, \max q_k] were
-    * already computed in nlhdlrIntevalQuadratic, so we just reuse them.
+    * already computed in nlhdlrIntervalQuadratic, so we just reuse them.
     *
     * TODO: in cons_quadratic there seems to be a further technique that tries, when propagating expr_i, to borrow a
     * bilinear term expr_k expr_i when the quadratic function for expr_k is simple enough.

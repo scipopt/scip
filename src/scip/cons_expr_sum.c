@@ -1365,7 +1365,7 @@ SCIPreverseConsExprExprPropagateWeightedSum(
    for( c = 0; c < nexprs; ++c )
    {
       SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprInterval(exprs[c]),
-         weights[c]);
+         weights[c]);  /*lint !e613 */
 
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
          ++maxlinactivityinf;
@@ -1436,7 +1436,7 @@ SCIPreverseConsExprExprPropagateWeightedSum(
 
       /* try to tighten the bounds of the expression */
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, exprs[c], childbounds, force, reversepropqueue,
-            infeasible, nreductions) );
+            infeasible, nreductions) );  /*lint !e613 */
    }
 
 TERMINATE:
