@@ -516,6 +516,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
       return SCIP_OKAY;
 
+   SCIPdebugMsg(scip, "checking if expr %p is a proper quadratic\n", (void*)expr);
    /* check if expression is a proper quadratic expression */
    properquadratic = FALSE;
    SCIP_CALL( SCIPhashmapCreate(&seenexpr, SCIPblkmem(scip), 2*SCIPgetConsExprExprNChildren(expr)) );
@@ -551,6 +552,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    if( ! properquadratic )
       return SCIP_OKAY;
 
+   SCIPdebugMsg(scip, "expr %p is proper quadratic: checking convexity\n", (void*)expr);
+
    /* expridx maps expressions to indices; if index > 0, it is its index in the linexprs array, otherwise -index-1 is
     * its index in the quadexprterms array
     */
@@ -570,7 +573,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
       coef = SCIPgetConsExprExprSumCoefs(expr)[c];
 
       assert(child != NULL);
-      assert(! SCIPisZero(scip, coef)); /* TODO maybe this should be only coef != 0.0, since the original problem might have bad numerics */
+      assert(coef != 0.0);
 
       if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
             SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
@@ -626,6 +629,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 
    if( nlexprdata->curvature == SCIP_EXPRCURV_CONVEX )
    {
+      SCIPdebugMsg(scip, "expr %p is convex when replacing factors of bilinear terms, bases of squares and every other term by their aux vars\n",
+            (void*)expr);
+
       /* we will estimate the expression from below, that is handle expr <= auxvar */
       *enforcedbelow = TRUE;
       *success = TRUE;
@@ -633,6 +639,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    else if( nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
    {
+      SCIPdebugMsg(scip, "expr %p is concave when replacing factors of bilinear terms, bases of squares and every other term by their aux vars\n",
+            (void*)expr);
+
       /* we will estimate the expression from above, that is handle expr >= auxvar */
       *enforcedabove = TRUE;
       *success = TRUE;
@@ -640,6 +649,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    else
    {
+      SCIPdebugMsg(scip, "expr %p is not convex\n", (void*)expr);
+
       /* we can't handle this expression, free data */
       SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
       return SCIP_OKAY;
@@ -729,9 +740,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
             SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
             "concave");
 
-      if( activity > side && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
+      if( activity - side > minviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
          rowprep->sidetype = SCIP_SIDETYPE_RIGHT;
-      else if( activity < side && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
+      else if( minviolation < side - activity && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
          rowprep->sidetype = SCIP_SIDETYPE_LEFT;
       else
          goto CLEANUP;
@@ -829,13 +840,18 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
-      SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-      (*ncuts)++;
+      /* check that sides of row are finite */
+      if( (SCIP_SIDETYPE_RIGHT == rowprep->sidetype && !SCIPisInfinity(scip, SCIProwGetRhs(row)))
+         || (SCIP_SIDETYPE_LEFT == rowprep->sidetype && !SCIPisInfinity(scip, -SCIProwGetLhs(row))) )
+      {
+         SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
+         (*ncuts)++;
 
-      if( infeasible )
-         *result = SCIP_CUTOFF;
-      else
-         *result = SCIP_SEPARATED;
+         if( infeasible )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+      }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }

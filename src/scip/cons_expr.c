@@ -40,6 +40,7 @@
 #include "scip/cons_expr_entropy.h"
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_cos.h"
+#include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/cons_expr_iterator.h"
@@ -640,7 +641,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
          assert(targetexprhdlr != NULL);
 
          /* if the source is a variable expression create a variable expression directly; otherwise copy the expression data */
-         if( strcmp(expr->exprhdlr->name, "var") == 0 )
+         if( SCIPisConsExprExprVar(expr) )
          {
             SCIP_VAR* sourcevar;
             SCIP_VAR* targetvar;
@@ -1547,6 +1548,26 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
    return SCIP_OKAY;
 }
 
+/** expression walk callback to count the number of variable expressions; common sub-expressions are counted
+ * multiple times
+ */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(getNVarsLeaveExpr)
+{
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(data != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   if( SCIPisConsExprExprVar(expr) )
+   {
+      int* nvars = (int*)data;
+      ++(*nvars);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** expression walk callback to collect all variable expressions */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
@@ -1563,7 +1584,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    /* add variable expression if not seen so far; there is only one variable expression representing a variable */
-   if( strcmp(expr->exprhdlr->name, "var") == 0 && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
+   if( SCIPisConsExprExprVar(expr) && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
    {
       assert(SCIPgetNTotalVars(scip) >= getvarsdata->nvarexprs + 1);
 
@@ -2201,7 +2222,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
 
    /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
    if( expr->children[expr->walkcurrentchild]->difftag != bwdiffdata->difftag
-      && strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "var") == 0 )
+      && SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
    {
       expr->children[expr->walkcurrentchild]->derivative = 0.0;
    }
@@ -2237,7 +2258,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
     * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
     * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
     */
-   if( strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "var") != 0 )
+   if( !SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
       expr->children[expr->walkcurrentchild]->derivative = expr->derivative * derivative;
    else
       expr->children[expr->walkcurrentchild]->derivative += expr->derivative * derivative;
@@ -2564,7 +2585,7 @@ SCIP_RETCODE propConss(
           */
          if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
          {
-            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
+            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d)\n", SCIPconsGetName(conss[i]), roundnr);
             SCIPdebugPrintCons(scip, conss[i], NULL);
 
             cutoff = FALSE;
@@ -2615,14 +2636,34 @@ SCIP_RETCODE propConss(
    return SCIP_OKAY;
 }
 
+/** returns the total number of variables in an expression
+ *
+ * @note the function counts variables in common sub-expressions multiple times; use this function to get a descent
+ *       upper bound on the number of unique variables in an expression
+ */
+SCIP_RETCODE SCIPgetConsExprExprNVars(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   int*                    nvars             /**< buffer to store the total number of variables */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nvars != NULL);
+
+   *nvars = 0;
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getNVarsLeaveExpr, (void*)nvars) );
+
+   return SCIP_OKAY;
+}
+
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
  * to be at least of size the number of variables in the expression which is bounded by SCIPgetNVars() since there are
  * no two different variable expression sharing the same variable
  *
  * @note function captures variable expressions
  */
-static
-SCIP_RETCODE getVarExprs(
+SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
@@ -2638,7 +2679,7 @@ SCIP_RETCODE getVarExprs(
    getvarsdata.nvarexprs = 0;
    getvarsdata.varexprs = varexprs;
 
-   /* use a hash map to dicide whether we have stored a variable expression already */
+   /* use a hash map to decide whether we have stored a variable expression already */
    SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPgetNTotalVars(scip)) );
 
    /* collect all variable expressions */
@@ -2671,7 +2712,7 @@ SCIP_RETCODE storeVarExprs(
    /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNVars() */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
 
-   SCIP_CALL( getVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
    assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
 
    /* realloc array if there are less variable expression than variables */
@@ -2790,7 +2831,7 @@ SCIP_RETCODE catchVarEvents(
    for( i = 0; i < consdata->nvarexprs; ++i )
    {
       assert(consdata->varexprs[i] != NULL);
-      assert(strcmp(consdata->varexprs[i]->exprhdlr->name, "var") == 0);
+      assert(SCIPisConsExprExprVar(consdata->varexprs[i]));
 
       var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
       assert(var != NULL);
@@ -2878,7 +2919,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    varexpr = ((SCIP_VAREVENTDATA*) eventdata)->varexpr;
    assert(varexpr != NULL);
-   assert(strcmp(varexpr->exprhdlr->name, "var") == 0);
+   assert(SCIPisConsExprExprVar(varexpr));
 
    var = SCIPgetConsExprExprVarVar(varexpr);
    assert(var != NULL);
@@ -4570,8 +4611,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       assert(!expr->enfos[e]->issepainit);
 
       /* check whether expression needs to be under- or overestimated */
-      underestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
-      overestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
       assert(underestimate || overestimate);
 
       /* call the separation initialization callback of the nonlinear handler */
@@ -4655,19 +4696,20 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       ncuts = 0;
       separated = FALSE;
 
+
       /* decide whether to under- or overestimate */
       if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
       {
          /* the expression could be evaluated, then look at sign of violation */
          violation = expr->evalvalue - SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
-         underestimate = SCIPisLT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksNeg(expr) > 0;
-         overestimate = SCIPisGT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksPos(expr) > 0;
+         overestimate = SCIPisLT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksNeg(expr) > 0;
+         underestimate = SCIPisGT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksPos(expr) > 0;
       }
       else
       {
          /* if expression could not be evaluated, then both under- and overestimate should be considered */
-         underestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
-         overestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+         overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+         underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
       }
 
       /* no violation w.r.t. the original variables -> skip expression */
@@ -4925,9 +4967,17 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
 
       if( !(*infeasible) && consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
       {
-         /* backward propagation should have tighthened the bounds of the variable */
-         assert(SCIPvarGetLbLocal(SCIPgetConsExprExprVarVar(consdata->expr)) - consdata->lhs >= -SCIPfeastol(scip));
-         assert(SCIPvarGetUbLocal(SCIPgetConsExprExprVarVar(consdata->expr)) - consdata->rhs <=  SCIPfeastol(scip));
+         /* propagation may not have tightened the bounds of the variable if small boundchanges were not forced
+          * thus, ensure here that variable bounds are within constraint sides
+          */
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, SCIPgetConsExprExprVarVar(consdata->expr), consdata->lhs, TRUE, infeasible, NULL) );
+         }
+         if( !*infeasible && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, SCIPgetConsExprExprVarVar(consdata->expr), consdata->rhs, TRUE, infeasible, NULL) );
+         }
 
          /* delete the redundant constraint locally */
          SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
@@ -7206,6 +7256,16 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    return expr->exprdata;
 }
 
+/** returns whether an expression is a variable expression */
+SCIP_Bool SCIPisConsExprExprVar(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return strcmp(expr->exprhdlr->name, "var") == 0;
+}
+
 /** returns the variable used for linearizing a given expression (return value might be NULL)
  *
  * @note for variable expression it returns the corresponding variable
@@ -7216,7 +7276,7 @@ SCIP_VAR* SCIPgetConsExprExprAuxVar(
 {
    assert(expr != NULL);
 
-   return strcmp(expr->exprhdlr->name, "var") == 0 ? SCIPgetConsExprExprVarVar(expr) : expr->auxvar;
+   return SCIPisConsExprExprVar(expr) ? SCIPgetConsExprExprVarVar(expr) : expr->auxvar;
 }
 
 /** sets the expression data of an expression
@@ -7606,7 +7666,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    }
 
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "tighten bounds of ");
+      SCIPinfoMessage(scip, NULL, "tighten bounds of expr ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "");
       SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, newlb, newub);
@@ -7745,10 +7805,20 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
 
    varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
    assert(varexpr != NULL);
-   assert(strcmp(varexpr->exprhdlr->name, "var") == 0);
+   assert(SCIPisConsExprExprVar(varexpr));
 
    /* use difftag to decide whether the variable belongs to the expression */
    return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->derivative;
+}
+
+/** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
+SCIP_Real SCIPgetConsExprExprDerivative(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->derivative;
 }
 
 /** returns the interval from the last interval evaluation of an expression (interval can be empty) */
@@ -7881,7 +7951,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    }
 
    /* create and capture auxiliary variable */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%d", conshdlrdata->auxvarid);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%s_%d", expr->exprhdlr->name, conshdlrdata->auxvarid);
    ++conshdlrdata->auxvarid;
 
    /* type of auxiliary variable depends on integrality information of the expression */
@@ -8407,6 +8477,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* include nonlinear handler for quadratics */
    SCIP_CALL( SCIPincludeConsExprNlhdlrQuadratic(scip, conshdlr) );
+
+   /* include nonlinear handler for convex expressions */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrConvex(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
