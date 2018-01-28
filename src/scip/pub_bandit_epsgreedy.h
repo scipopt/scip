@@ -55,6 +55,7 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
+   SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
    int                   nactions,           /**< the number of possible actions */
    unsigned int          initseed            /**< initial seed for random number generation */
    );

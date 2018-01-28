@@ -26,7 +26,6 @@
 #include "scip/scip.h"
 
 #define BANDIT_NAME           "eps-greedy"
-#define DEFAULT_WEIGHT 0.2
 /*
  * Data structures
  */
@@ -36,7 +35,10 @@ struct SCIP_BanditData
 {
    SCIP_Real             eps;                /**< epsilon parameter (between 0 and 1) to control epsilon greedy */
    SCIP_Real*            weights;            /**< weights for every action */
+   SCIP_Real*            priorities;         /**< saved priorities for tie breaking */
+   int*                  sels;               /**< individual number of selections per action */
    int                   nselections;        /**< counter for the number of selection calls */
+   SCIP_Bool             preferrecent;       /**< should the weights be updated in an exponentially decaying way? */
 };
 
 /*
@@ -56,6 +58,8 @@ SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy)
    assert(banditdata->weights != NULL);
 
    BMSfreeBlockMemoryArray(blkmem, &banditdata->weights, SCIPbanditGetNActions(bandit));
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->priorities, SCIPbanditGetNActions(bandit));
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->sels, SCIPbanditGetNActions(bandit));
    BMSfreeBlockMemory(blkmem, &banditdata);
 
    SCIPbanditSetData(bandit, NULL);
@@ -93,13 +97,15 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
    if( randnr >= curreps )
    {
       SCIP_Real* weights = banditdata->weights;
+      SCIP_Real* priorities = banditdata->priorities;
       int j;
-      SCIP_Real maxreward;
+      SCIP_Real maxweight;
 
       assert(weights != NULL);
+      assert(priorities != NULL);
 
       /* pick the element with the largest reward */
-      maxreward = weights[0];
+      maxweight = weights[0];
       *selection = 0;
 
       /* determine reward for every element */
@@ -107,10 +113,12 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
       {
          SCIP_Real reward = weights[j];
 
-         if( maxreward < reward )
+         /* select the action that maximizes the reward, breaking ties by action priorities */
+         if( maxweight < reward
+               || (reward >= maxweight - 1e-6 && priorities[j] > priorities[*selection] ) )
          {
             *selection = j;
-            maxreward = reward;
+            maxweight = reward;
          }
       }
    }
@@ -134,8 +142,18 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy)
    assert(banditdata != NULL);
 
    /* use geometrically decreasing weights for older observations */
-   banditdata->weights[selection] *= 0.9;
-   banditdata->weights[selection] += 0.1 * score;
+   if( banditdata->preferrecent )
+   {
+      banditdata->weights[selection] *= 0.9;
+      banditdata->weights[selection] += 0.1 * score;
+   }
+   else
+   {
+      /* update average score */
+      SCIP_Real diff = score - banditdata->weights[selection];
+      ++banditdata->sels[selection];
+      banditdata->weights[selection] += diff / (SCIP_Real)(banditdata->sels[selection]);
+   }
 
    return SCIP_OKAY;
 }
@@ -147,6 +165,7 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy)
    SCIP_Real* weights;
    int w;
    int nactions;
+   SCIP_RANDNUMGEN* rng;
 
    assert(bandit != NULL);
 
@@ -156,44 +175,31 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy)
    weights = banditdata->weights;
    nactions = SCIPbanditGetNActions(bandit);
    assert(weights != NULL);
+   assert(banditdata->priorities != NULL);
    assert(nactions > 0);
 
-   /* reset weights to reflect priorities, if priorities are given */
+   rng = SCIPbanditGetRandnumgen(bandit);
+   assert(rng != NULL);
+
+   /* alter priorities slightly to make them unique */
    if( priorities != NULL )
    {
-      SCIP_Real priosum;
-      SCIP_Real normalization;
-
-      /* compute priority sum for normalization */
-      priosum = priorities[0];
       for( w = 1; w < nactions; ++w )
       {
          assert(priorities[w] >= 0);
-         priosum += priorities[w];
-      }
-
-      if( priosum == 0 || priosum == nactions)
-      {
-         /* initialize all weights with the default weight */
-         for( w = 0; w < nactions; ++w )
-            weights[w] = DEFAULT_WEIGHT;
-      }
-      else
-      {
-         /* use DEFAULT_WEIGHT as the standard epsilon greedy weight for uninitialized neighborhoods */
-         normalization = DEFAULT_WEIGHT * nactions / priosum;
-
-         /* reset weights */
-         for( w = 0; w < nactions; ++w )
-            weights[w] = priorities[w] * normalization;
+         banditdata->priorities[w] = priorities[w] + SCIPrandomGetReal(rng, -1e-6, 1e6);
       }
    }
    else
    {
-      /* reset weights */
+      /* use random priorities */
       for( w = 0; w < nactions; ++w )
-         weights[w] = DEFAULT_WEIGHT;
+         banditdata->priorities[w] = SCIPrandomGetReal(rng, 0.0, 1.0);
    }
+
+   /* reset weights and selection counters to 0 */
+   BMSclearMemoryArray(weights, nactions);
+   BMSclearMemoryArray(banditdata->sels, nactions);
 
    banditdata->nselections = 0;
 
@@ -212,6 +218,7 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
+   SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
    int                   nactions,           /**< the positive number of possible actions */
    unsigned int          initseed            /**< initial random seed */
    )
@@ -223,8 +230,11 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    assert(eps >= 0.0);
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->weights, nactions) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->priorities, nactions) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->sels, nactions) );
    banditdata->eps = eps;
    banditdata->nselections = 0;
+   banditdata->preferrecent = preferrecent;
 
    SCIP_CALL( SCIPbanditCreate(epsgreedy, vtable, blkmem, bufmem, priorities, nactions, initseed, banditdata) );
 
@@ -237,6 +247,7 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
+   SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
    int                   nactions,           /**< the positive number of possible actions */
    unsigned int          initseed            /**< initial seed for random number generation */
    )
@@ -253,7 +264,7 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    }
 
    SCIP_CALL( SCIPbanditCreateEpsgreedy(SCIPblkmem(scip), SCIPbuffer(scip), vtable, epsgreedy,
-         priorities, eps, nactions, SCIPinitializeRandomSeed(scip, (int)(initseed % INT_MAX))) );
+         priorities, eps, preferrecent, nactions, SCIPinitializeRandomSeed(scip, (int)(initseed % INT_MAX))) );
 
    return SCIP_OKAY;
 }
