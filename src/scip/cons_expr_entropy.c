@@ -25,6 +25,9 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr.h"
 
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
+
 #include <string.h>
 
 /* fundamental expression handler properties */
@@ -48,16 +51,20 @@ SCIP_RETCODE separatePointEntropy(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< entropy expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
    SCIP_CONSEXPR_EXPR* child;
+   SCIP_ROWPREP* rowprep;
    SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
    SCIP_Real refpoint;
    SCIP_Real coef;
    SCIP_Real constant;
+   SCIP_Real coefrange;
+   SCIP_Real viol;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -121,13 +128,22 @@ SCIP_RETCODE separatePointEntropy(
    }
 
    /* create cut */
-   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "entropy_cut", 0, NULL, NULL,
-         overestimate ? -constant : -SCIPinfinity(scip),
-         overestimate ? SCIPinfinity(scip) : -constant,
-         !overestimate, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, !overestimate) );
+   SCIPaddRowprepConstant(rowprep, constant);
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, coef) );
 
-   SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
-   SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, coef) );
+   /* take care of cut numerics */
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+
+   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
+   {
+      SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "entropy_cut");  /* @todo make cutname unique, e.g., add LP number */
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
+   }
+
+   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }
@@ -519,15 +535,9 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaEntropy)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointEntropy(scip, conshdlr, expr, sol, overestimate, &cut) );
+   SCIP_CALL( separatePointEntropy(scip, conshdlr, expr, sol, minviolation, overestimate, &cut) );
 
-   /* failed to compute a cut */
-   if( cut == NULL )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
-
-   /* cut violation or numerics were too bad */
+   /* failed to compute a nice cut */
    if( cut == NULL )
       return SCIP_OKAY;
 
