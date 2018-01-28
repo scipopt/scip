@@ -1098,7 +1098,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
             SCIPintervalSetRoundingMode(roundmode);
          }
          if( quadub >= SCIP_INTERVAL_INFINITY )
-            nlhdlrexprdata->nneginfinityquadact++;
+            nlhdlrexprdata->nposinfinityquadact++;
          else
          {
             SCIP_ROUNDMODE roundmode;
