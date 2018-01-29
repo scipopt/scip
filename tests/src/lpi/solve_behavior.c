@@ -218,9 +218,17 @@ Test(solve_behavior, testbarriersolve, .signal = SIGABRT)
    SCIP_CALL( SCIPlpiSolveBarrier(lpi, true) );
    SCIP_CALL( SCIPlpiSolveBarrier(lpi, false) );
 
-   if( SCIPlpiHasBarrierSolve() )
-   {
-      cr_assert(!SCIPlpiWasSolved(lpi));
-   }
+   /* Problem is optimal - optimal, should be solved */
+   cr_assert( SCIPlpiWasSolved(lpi) );
 
+   cr_assert( SCIPlpiHasPrimalSolve() );
+
+   if( !SCIPlpiHasBarrierSolve() )
+   {
+      /* make sure problem was solved with dual */
+      if ( !SCIPlpiHasDualSolve() )
+      {
+         /* make sure problem was solved with primal */
+      }
+   }
 }
