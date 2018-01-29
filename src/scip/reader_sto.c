@@ -14,20 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sto.c
- * @brief  (extended) STO file reader
- * @author Thorsten Koch
- * @author Tobias Achterberg
- * @author Marc Pfetsch
- * @author Stefan Heinz
- * @author Stefan Vigerske
- * @author Michael Winkler
- *
- * This reader/writer handles STO files in extended STO format, as it
- * is used by CPLEX. In the extended format the limits on variable
- * name lengths and coefficients are considerably relaxed. The columns
- * in the format are then separated by whitespaces.
- *
- * @todo Check whether constructing the names for aggregated constraint yields name clashes (aggrXXX).
+ * @brief  STO file reader
+ * @author Stephen J. Maher
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -45,11 +33,8 @@
 #include "scip/benders_default.h"
 
 #define READER_NAME             "storeader"
-#define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
+#define READER_DESC             "file reader for stochastic information of stochastic programs in the SMPS file format"
 #define READER_EXTENSION        "sto"
-
-#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the sto file? */
-#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
 #define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
 
@@ -59,15 +44,12 @@
 
 #define STO_MAX_LINELEN  1024
 #define STO_MAX_NAMELEN   256
-#define STO_MAX_VALUELEN   26
-#define STO_MAX_FIELDLEN   20
 
 #define STO_DEFAULT_ARRAYSIZE          100
 #define STO_DEFAULT_ENTRIESSIZE         20
 #define STO_DEFAULT_BLOCKARRAYSIZE       5
-#define STO_DEFAULT_CHILDRENSIZE       5
+#define STO_DEFAULT_CHILDRENSIZE         5
 
-#define PATCH_CHAR    '_'
 #define BLANK         ' '
 
 typedef struct StoScenario STOSCENARIO;
@@ -170,6 +152,7 @@ SCIP_RETCODE createScenarioData(
    return SCIP_OKAY;
 }
 
+/** frees the memory used for the scenario tree */
 static
 SCIP_RETCODE freeScenarioTree(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -239,6 +222,7 @@ SCIP* getScenarioScip(
    return scenario->scip;
 }
 
+#ifdef BENDERSBRANCH
 /** creates the subproblem array. This array will be the same size as the number of children */
 static
 SCIP_RETCODE createScenarioSubprobArray(
@@ -253,6 +237,7 @@ SCIP_RETCODE createScenarioSubprobArray(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** adds a scenario to the subproblem array */
 static
@@ -270,6 +255,7 @@ void addScenarioSubproblem(
    scenario->nsubproblems++;
 }
 
+#ifdef BENDERSBRANCH
 /** returns the subproblem array for the scenario */
 static
 SCIP** getScenarioSubprobArray(
@@ -280,6 +266,7 @@ SCIP** getScenarioSubprobArray(
 
    return scenario->subproblems;
 }
+#endif
 
 /** returns the number of children for a given scenario */
 static
@@ -541,8 +528,9 @@ SCIP_Real getScenarioEntryValue(
    return scenario->values[entry];
 }
 
-/** copy scenario
-    in the case of blocks, the scenarios must be combined */
+/** copies a scenario.
+ * In the case of blocks, the scenarios must be combined
+ */
 static
 SCIP_RETCODE copyScenario(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -580,8 +568,9 @@ SCIP_RETCODE copyScenario(
    return SCIP_OKAY;
 }
 
-/** merge scenarios
-    in the case of blocks, the scenarios must be combined */
+/** merge scenarios.
+ *  In the case of blocks, the scenarios must be combined
+ */
 static
 SCIP_RETCODE mergeScenarios(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -637,7 +626,7 @@ SCIP_RETCODE scenarioAddChild(
    return SCIP_OKAY;
 }
 
-/* recursively adds the scenarios to the reader data */
+/** recursively adds the scenarios to the reader data */
 static
 SCIP_RETCODE buildScenarioTree(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -960,6 +949,7 @@ SCIP_RETCODE createReaderdata(
    return SCIP_OKAY;
 }
 
+/** frees the reader data */
 static
 SCIP_RETCODE freeReaderdata(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -1004,8 +994,6 @@ SCIP_RETCODE stoinputCreate(
    (*stoi)->f3          = NULL;
    (*stoi)->f4          = NULL;
    (*stoi)->f5          = NULL;
-
-   //SCIP_CALL( SCIPgetBoolParam(scip, "reading/usebenders", &((*stoi)->usebenders)) );
 
    return SCIP_OKAY;
 }
@@ -1275,7 +1263,7 @@ SCIP_Bool stoinputReadLine(
    return TRUE;
 }
 
-/** Process NAME section. */
+/** Process STOCH section. */
 static
 SCIP_RETCODE readStoch(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1369,7 +1357,15 @@ SCIP_RETCODE readBlocks(
       if( stoinputField0(stoi) != NULL )
       {
          if( !strcmp(stoinputField0(stoi), "BLOCKS") )
+         {
             stoinputSetSection(stoi, STO_BLOCKS);
+            if( strcmp(stoinputField1(stoi), "DISCRETE") )
+            {
+               SCIPerrorMessage("Sorry, %s blocks stucture is not currently supported.\n", stoinputField1(stoi));
+               SCIPerrorMessage("Only DISCRETE blocks are supported.\n");
+               goto TERMINATE;
+            }
+         }
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
          {
             SCIP_CALL( createScenariosFromBlocks(scip, readerdata, blocks, numblocks, numblocksperblock, numstages) );
@@ -1529,7 +1525,15 @@ SCIP_RETCODE readScenarios(
          }
 
          if( !strcmp(stoinputField0(stoi), "SCENARIOS") )
+         {
             stoinputSetSection(stoi, STO_SCENARIOS);
+            if( strcmp(stoinputField1(stoi), "DISCRETE") )
+            {
+               SCIPerrorMessage("Sorry, %s scenarios is not currently supported.\n", stoinputField1(stoi));
+               SCIPerrorMessage("Only DISCRETE scenarios are supported.\n");
+               goto TERMINATE;
+            }
+         }
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
             stoinputSetSection(stoi, STO_ENDATA);
          else
@@ -1650,7 +1654,16 @@ SCIP_RETCODE readIndep(
       if( stoinputField0(stoi) != NULL )
       {
          if( !strcmp(stoinputField0(stoi), "INDEP") )
+         {
             stoinputSetSection(stoi, STO_INDEP);
+
+            if( strcmp(stoinputField1(stoi), "DISCRETE") )
+            {
+               SCIPerrorMessage("Sorry, %s independent scenarios is not currently supported.\n", stoinputField1(stoi));
+               SCIPerrorMessage("Only DISCRETE independent scenarios are supported.\n");
+               goto TERMINATE;
+            }
+         }
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
          {
             SCIP_CALL( createScenariosFromBlocks(scip, readerdata, blocks, numblocks, numblocksperblock, numstages) );
@@ -1776,6 +1789,22 @@ SCIP_Real computeScenarioProbability(
    return probability;
 }
 
+/** gets the variable name */
+static
+void getScenarioEntityName(
+   char*                 name,               /**< the name to be returned */
+   const char*           varname,            /**< the root of the variable name */
+   int                   stagenum,           /**< the stage number */
+   int                   scenarionum         /**< the scenario number */
+   )
+{
+   if( stagenum < 0 )
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", varname, scenarionum);
+   else
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", varname, stagenum, scenarionum);
+}
+
+
 /** add variables to the scenario  */
 static
 SCIP_RETCODE addScenarioVarsToProb(
@@ -1816,8 +1845,7 @@ SCIP_RETCODE addScenarioVarsToProb(
 #endif
 
       /* creating a variable as a copy of the original variable. */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPvarGetName(vars[i]),
-         getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
+      getScenarioEntityName(name, SCIPvarGetName(vars[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
       SCIP_CALL( SCIPcreateVar(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
             obj, vartype, SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,
             NULL, NULL) );
@@ -1860,8 +1888,8 @@ SCIP_RETCODE findScenarioVar(
       if( getScenarioStageNum(scip, checkscen) == 0 )
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(consvar));
       else
-         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPvarGetName(consvar),
-            getScenarioStageNum(scip, checkscen), getScenarioNum(scip, checkscen));
+         getScenarioEntityName(varname, SCIPvarGetName(consvar), getScenarioStageNum(scip, checkscen),
+            getScenarioNum(scip, checkscen));
 
       (*scenariovar) = SCIPfindVar(scip, varname);
 
@@ -1904,8 +1932,8 @@ SCIP_RETCODE getScenarioDecompVar(
       if( getScenarioStageNum(scip, checkscen) == 0 )
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(consvar));
       else
-         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPvarGetName(consvar),
-            getScenarioStageNum(scip, checkscen), getScenarioNum(scip, checkscen));
+         getScenarioEntityName(varname, SCIPvarGetName(consvar), getScenarioStageNum(scip, checkscen),
+            getScenarioNum(scip, checkscen));
 
 
       /* first checking whether the variable is included in the scenario */
@@ -1972,8 +2000,7 @@ SCIP_RETCODE addScenarioConsToProb(
          continue;
 
       /* creating a linear constraint as a copy of the original constraint. */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPconsGetName(conss[i]),
-         getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
+      getScenarioEntityName(name, SCIPconsGetName(conss[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 0, NULL, NULL, SCIPgetLhsLinear(scip, conss[i]),
             SCIPgetRhsLinear(scip, conss[i]), SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]),
             SCIPconsIsEnforced(conss[i]), SCIPconsIsChecked(conss[i]), SCIPconsIsMarkedPropagate(conss[i]),
@@ -2044,12 +2071,13 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    vars = SCIPtimGetStageVars(scip, stagenum);
    nvars = SCIPtimGetStageNVars(scip, stagenum);
 
+   /* this if 0 will be removed when the stochastic reader is merged with the Benders' branch */
+#ifdef BENDERSBRANCH
    if( decomp )
    {
       SCIP_CALL( SCIPcreate(&scenarioscip) );
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPgetProbName(scip),
-         getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
+      getScenarioEntityName(name, SCIPgetProbName(scip), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
 
       /* creating the problem */
       SCIP_CALL( SCIPcreateProbBasic(scenarioscip, name) );
@@ -2067,6 +2095,9 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          SCIP_CALL( createScenarioSubprobArray(scenarioscip, scenario) );
    }
    else
+#else
+   assert(!decomp);
+#endif
       scenarioscip = scip;
 
    /* adding the scenarioscip to the scenario */
@@ -2090,8 +2121,10 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    }
 
    /* adding the Benders' decomposition */
+#ifdef BENDERSBRANCH
    if( decomp && getScenarioNChildren(scenario) > 0 )
       SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubprobArray(scenario), getScenarioNChildren(scenario)) );
+#endif
 
    /* computing the probability for the scenario */
    probability = computeScenarioProbability(scenarioscip, scenario);
@@ -2108,8 +2141,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       char OBJ[] = "obj";
 
       /* finding the constraint associated with the row */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryRow(scenario, i),
-         getScenarioStageNum(scenarioscip, scenario), getScenarioNum(scenarioscip, scenario));
+      getScenarioEntityName(name, getScenarioEntryRow(scenario, i), getScenarioStageNum(scenarioscip, scenario),
+         getScenarioNum(scenarioscip, scenario));
       cons = SCIPfindCons(scenarioscip, name);
 
       if( strcmp(getScenarioEntryCol(scenario, i), RHS) == 0 || strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
@@ -2129,8 +2162,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          strstr(getScenarioEntryRow(scenario, i), OBJ) != NULL )
       {
          /* finding the variable associated with the column */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryCol(scenario, i),
-            getScenarioStageNum(scenarioscip, scenario), getScenarioNum(scenarioscip, scenario));
+         getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
+            getScenarioNum(scenarioscip, scenario));
          var = SCIPfindVar(scenarioscip, name);
 
          /* changing the coefficient for the variable */
@@ -2139,8 +2172,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       else
       {
          /* finding the variable associated with the column */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryCol(scenario, i),
-            getScenarioStageNum(scenarioscip, scenario), getScenarioNum(scenarioscip, scenario));
+         getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
+            getScenarioNum(scenarioscip, scenario));
          var = SCIPfindVar(scenarioscip, name);
 
          if( var == NULL )
@@ -2236,6 +2269,8 @@ SCIP_RETCODE buildFullProblem(
 }
 
 
+/* this if 0 will be removed when the stochastic reader is merged with the Benders' branch */
+#ifdef BENDERSBRANCH
 /* build the stochastic program completely as a MIP, i.e. no decomposition */
 static
 SCIP_RETCODE buildDecompProblem(
@@ -2279,6 +2314,7 @@ SCIP_RETCODE buildDecompProblem(
 
    return SCIP_OKAY;
 }
+#endif
 
 
 /** Read LP in "STO File Format".
@@ -2345,9 +2381,13 @@ SCIP_RETCODE readSto(
 
    if( !error )
    {
+#ifdef BENDERSBRANCH
       if( readerdata->usebenders )
          SCIP_CALL_TERMINATE( retcode, buildDecompProblem(scip, readerdata), TERMINATE );
       else
+#else
+      assert(!readerdata->usebenders);
+#endif
          SCIP_CALL_TERMINATE( retcode, buildFullProblem(scip, readerdata), TERMINATE );
    }
 
