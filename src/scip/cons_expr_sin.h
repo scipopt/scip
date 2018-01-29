@@ -23,10 +23,12 @@
 #ifndef __SCIP_CONS_EXPR_SIN_H__
 #define __SCIP_CONS_EXPR_SIN_H__
 
-
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_sin.h"
+
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
 
 #define NEWTON_NITERATIONS    100
 #define NEWTON_PRECISION      1e-12
@@ -72,12 +74,12 @@ SCIP_RETCODE SCIPcomputeCutsSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_ROW**            secant,             /**< pointer to store the secant */
-   SCIP_ROW**            ltangent,           /**< pointer to store the left tangent */
-   SCIP_ROW**            rtangent,           /**< pointer to store the right tangent */
-   SCIP_ROW**            lmidtangent,        /**< pointer to store the left middle tangent */
-   SCIP_ROW**            rmidtangent,        /**< pointer to store the right middle tangent */
-   SCIP_ROW**            soltangent,         /**< pointer to store the solution tangent */
+   SCIP_ROWPREP**        secant,             /**< pointer to store the secant */
+   SCIP_ROWPREP**        ltangent,           /**< pointer to store the left tangent */
+   SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
+   SCIP_ROWPREP**        lmidtangent,        /**< pointer to store the left middle tangent */
+   SCIP_ROWPREP**        rmidtangent,        /**< pointer to store the right middle tangent */
+   SCIP_ROWPREP**        soltangent,         /**< pointer to store the solution tangent */
    SCIP_Real             refpoint,           /**< point that is to be seperated (can be SCIP_INVALID) */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */

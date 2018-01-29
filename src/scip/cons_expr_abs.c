@@ -27,6 +27,9 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_abs.h"
 
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
+
 #define EXPRHDLR_NAME         "abs"
 #define EXPRHDLR_DESC         "absolute expression"
 #define EXPRHDLR_PRECEDENCE  70000
@@ -262,6 +265,7 @@ SCIP_RETCODE computeCutsAbs(
    z = SCIPgetConsExprExprAuxVar(expr);
    assert(x != NULL);
    assert(z != NULL);
+   /* z = abs(x) */
 
    vars[0] = z;
    vars[1] = x;
@@ -295,26 +299,56 @@ SCIP_RETCODE computeCutsAbs(
       lb = SCIPvarGetLbLocal(x);
       ub = SCIPvarGetUbLocal(x);
 
-      /* it does not make sense to add a cut if child variable is unbounded, fixed, non-positive, or non-negative */
-      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub)
-         && SCIPisLT(scip, lb, 0.0) && SCIPisGT(scip, ub, 0.0)
-         && !SCIPisEQ(scip, lb, ub) )
+      /* it does not make sense to add a cut if child variable is unbounded or fixed */
+      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) && !SCIPisEQ(scip, lb, ub) )
       {
-         SCIP_Real alpha;
-
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_secant_%s", SCIPvarGetName(x));
 
-         /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
-          *
-          * z - |ub| <= alpha * (x - ub)  <=> alpha * ub - |ub| <= -z + alpha * x
-          */
-         alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
-         coefs[1] = alpha;
+         if( !SCIPisPositive(scip, ub) )
+         {
+            /* z = -x, so add -z-x >= 0 here (-z-x <= 0 is the underestimator that is added above) */
+            coefs[1] = -1.0;
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
+         }
+         else if( !SCIPisNegative(scip, lb) )
+         {
+            /* z =  x, so add -z+x >= 0 here (-z+x <= 0 is the underestimator that is added above) */
+            coefs[1] =  1.0;
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
+         }
+         else
+         {
+            /* z = abs(x), x still has mixed sign */
+            SCIP_Real alpha;
+            SCIP_ROWPREP* rowprep;
+            SCIP_Real coefrange;
 
-         /* secants are only valid locally */
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, (alpha * ub - REALABS(ub)), SCIPinfinity(scip),
-               TRUE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
+            /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
+             *
+             * z - |ub| <= alpha * (x - ub)  <=> alpha * ub - |ub| <= -z + alpha * x
+             */
+            alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
+
+            /* create row preparation */
+            SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
+            SCIPaddRowprepSide(rowprep, alpha * ub - REALABS(ub));
+            coefs[1] = alpha;
+            SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 2, vars, coefs) );
+
+            /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
+            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
+
+            /* if coefrange is good and no variable has been removed, then create SCIP_ROW */
+            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
+            {
+               memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, secant, rowprep, conshdlr) );
+            }
+
+            SCIPfreeRowprep(scip, &rowprep);
+         }
       }
    }
 
@@ -345,23 +379,18 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
    /* add cuts */
    if( exprdata->rowneg != NULL )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowneg, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, exprdata->rowneg, FALSE, infeasible) );
    }
 
    if( !*infeasible && exprdata->rowpos != NULL )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowpos, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, exprdata->rowpos, FALSE, infeasible) );
    }
 
    /* it might happen that we could not compute a secant (because of fixed or unbounded variables) */
    if( !*infeasible && secant != NULL )
    {
-      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &secant, NULL, -SCIPinfinity(scip)) );
-
-      if( secant != NULL )
-      {
-         SCIP_CALL( SCIPaddCut(scip, NULL, secant, FALSE, infeasible) );
-      }
+      SCIP_CALL( SCIPaddRow(scip, secant, FALSE, infeasible) );
    }
 
    /* release secant */
@@ -434,10 +463,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
    {
       SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, TRUE, FALSE, NULL, NULL, &rows[2]) );
 
-      /* massage secant */
-      if( rows[2] != NULL )
+      /* check whether violation >= minviolation */
+      if( rows[2] != NULL && -SCIPgetRowSolFeasibility(scip, rows[2], sol) < minviolation )
       {
-         SCIP_CALL( SCIPmassageConsExprExprCut(scip, &rows[2], sol, minviolation) );
+         SCIP_CALL( SCIPreleaseRow(scip, &rows[2]) );
       }
    }
 
@@ -455,7 +484,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
       violation = -SCIPgetRowSolFeasibility(scip, rows[i], sol);
       if( SCIPisGE(scip, violation, minviolation) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, rows[i], FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, rows[i], FALSE, &infeasible) );
          *ncuts += 1;
 
          if( infeasible )

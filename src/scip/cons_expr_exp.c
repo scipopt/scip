@@ -28,6 +28,9 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_exp.h"
 
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
+
 #define EXPRHDLR_NAME         "exp"
 #define EXPRHDLR_DESC         "exponential expression"
 #define EXPRHDLR_PRECEDENCE  85000
@@ -50,11 +53,13 @@ SCIP_RETCODE separatePointExp(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< exponential expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
    SCIP_CONSEXPR_EXPR* child;
+   SCIP_ROWPREP* rowprep;
    SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
    SCIP_Real refpoint;
@@ -62,6 +67,8 @@ SCIP_RETCODE separatePointExp(
    SCIP_Real linconstant;
    SCIP_Bool islocal;
    SCIP_Bool success;
+   SCIP_Real viol;
+   SCIP_Real coefrange;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -103,17 +110,26 @@ SCIP_RETCODE separatePointExp(
       islocal = FALSE; /* linearization are globally valid */
    }
 
-   /* create cut if it was successful */
-   if( success )
-   {
-      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "exp_cut", 0, NULL, NULL,
-            overestimate ? -linconstant : -SCIPinfinity(scip),
-            overestimate ? SCIPinfinity(scip) : -linconstant,
-            islocal, FALSE, FALSE) );
+   /* give up if not successful */
+   if( !success )
+      return SCIP_OKAY;
 
-      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
-      SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, lincoef) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, islocal) );
+   SCIPaddRowprepConstant(rowprep, linconstant);
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, lincoef) );
+
+   /* take care of cut numerics */
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+
+   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
+   {
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "exp_cut");  /* @todo make cutname unique, e.g., add LP number */
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
    }
+
+   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }
@@ -306,20 +322,14 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointExp(scip, conshdlr, expr, sol, overestimate, &cut) );
+   SCIP_CALL( separatePointExp(scip, conshdlr, expr, sol, minviolation, overestimate, &cut) );
 
-   /* failed to compute a cut */
-   if( cut == NULL )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
-
-   /* cut violation or numerics were too bad */
+   /* failed to compute a good cut */
    if( cut == NULL )
       return SCIP_OKAY;
 
    /* add cut */
-   SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
    *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
    *ncuts += 1;
 

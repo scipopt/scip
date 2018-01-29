@@ -30,6 +30,9 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_sum.h"
 
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
+
 #define EXPRHDLR_NAME         "pow"
 #define EXPRHDLR_DESC         "power expression"
 #define EXPRHDLR_PRECEDENCE  55000
@@ -72,11 +75,13 @@ SCIP_RETCODE separatePointPow(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
    SCIP_CONSEXPR_EXPR* child;
+   SCIP_ROWPREP* rowprep;
    SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
    SCIP_Real childlb;
@@ -87,6 +92,8 @@ SCIP_RETCODE separatePointPow(
    SCIP_Real linconstant;
    SCIP_Bool islocal;
    SCIP_Bool success;
+   SCIP_Real viol;
+   SCIP_Real coefrange;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -138,30 +145,34 @@ SCIP_RETCODE separatePointPow(
          SCIPaddSquareLinearization(scip, 1.0, refpoint, SCIPvarIsIntegral(childvar), &lincoef, &linconstant, &success);
          islocal = FALSE; /* linearizations are globally valid */
       }
-
-      /* @todo  allow lhs/rhs of +/- infinity? */
-      if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
-      {
-         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, islocal ? "square_secant" : "square_linearization", 0, NULL, NULL, -SCIPinfinity(scip),
-               SCIPinfinity(scip), islocal, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, lincoef) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
-
-         if( overestimate )
-         {
-            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
-         }
-      }
    }
    else
    {
       /* @todo can not be handled so far */
+      success = FALSE;
+      islocal = TRUE; /* for lint */
    }
+
+   /* give up if not successful */
+   if( !success )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, islocal) );
+   SCIPaddRowprepConstant(rowprep, linconstant);
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, lincoef) );
+
+   /* take care of cut numerics */
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+
+   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
+   {
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, islocal ? "square_secant" : "square_linearization");  /* @todo make cutname unique, e.g., add LP number */
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
+   }
+
+   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }
@@ -659,20 +670,14 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaPow)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointPow(scip, conshdlr, expr, sol, overestimate, &cut) );
+   SCIP_CALL( separatePointPow(scip, conshdlr, expr, sol, minviolation, overestimate, &cut) );
 
    /* failed to compute a cut */
    if( cut == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
-
-   /* cut violation or numerics were too bad */
-   if( cut == NULL )
-      return SCIP_OKAY;
-
    /* add cut */
-   SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
    *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
 
    *ncuts += 1;
