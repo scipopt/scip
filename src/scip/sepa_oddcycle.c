@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -959,13 +959,14 @@ SCIP_RETCODE generateOddCycleCut(
       }
       i = pred[i];
    }
+   assert(startnode == i);
 
    /* insert startnode */
    if( startnode < nbinvars )
    {
       /* inserting original variable */
       SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[startnode], 1.0) );
-      incut[i] = TRUE;
+      incut[startnode] = TRUE;
    }
    else
    {
@@ -1010,7 +1011,7 @@ SCIP_RETCODE generateOddCycleCut(
    {
       SCIP_Bool infeasible;
 
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
       ++sepadata->ncuts;
       if ( nlifted > 0 )
          ++sepadata->nliftedcuts;
@@ -3536,10 +3537,11 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
-{
+{  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    int depth;
    int ncalls;
+   /* cppcheck-suppress unassignedVariable */
    int oldnliftedcuts;
 
    *result = SCIP_DIDNOTRUN;

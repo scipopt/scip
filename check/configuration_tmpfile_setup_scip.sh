@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -84,7 +84,12 @@ fi
 # if seed counter is positive add random seed shift
 if test $s -gt 0
 then
-    echo set randomization randomseedshift "$s + $GLBSEEDSHIFT" >> $TMPFILE
+    echo set randomization randomseedshift $(($s + $GLBSEEDSHIFT)) >> $TMPFILE
+else
+    if test $GLBSEEDSHIFT -gt 0
+    then
+        echo set randomization randomseedshift $GLBSEEDSHIFT >> $TMPFILE
+    fi
 fi
 
 # avoid solving LPs in case of LPS=none
@@ -111,7 +116,7 @@ if test "$VISUALIZE" = true
 then
     BAKFILENAME="`basename $TMPFILE .tmp`.dat"
     echo visualization output set to "$BAKFILENAME"
-    echo set visual bakfilename "results/${BAKFILENAME}" >> $TMPFILE
+    echo set visual bakfilename "$OUTPUTDIR/${BAKFILENAME}" >> $TMPFILE
 fi
 
 if test "$REOPT" = false

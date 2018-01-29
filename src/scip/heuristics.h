@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,8 +24,13 @@
 #ifndef __SCIP_HEURISTICS_H__
 #define __SCIP_HEURISTICS_H__
 
-
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_scip.h"
+#include "scip/type_heur.h"
+#include "scip/type_misc.h"
+#include "scip/type_retcode.h"
+#include "scip/type_sol.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

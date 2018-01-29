@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -83,19 +83,6 @@ int SCIPrelaxGetPriority(
 EXTERN
 int SCIPrelaxGetFreq(
    SCIP_RELAX*           relax               /**< relaxation handler */
-   );
-
-/** returns whether the relaxation handler contains all LP rows */
-EXTERN
-SCIP_Bool SCIPrelaxIncludesLp(
-   SCIP_RELAX*           relax               /**< relaxation handler */
-   );
-
-/** defines whether the relaxation handler contains all LP rows */
-EXTERN
-void SCIPrelaxSetIncludesLp(
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
 /** gets time in seconds used in this relaxator for setting up for next stages */

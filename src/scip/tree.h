@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -712,6 +712,8 @@ SCIP_RETCODE SCIPtreeStartProbing(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_Bool             strongbranching     /**< is the probing mode used for strongbranching? */
    );
 
@@ -775,7 +777,6 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -804,6 +805,24 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
+/** stores relaxation solution before diving or probing */
+extern
+SCIP_RETCODE SCIPtreeStoreRelaxSol(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve */
+   );
+
+/** restores relaxation solution after diving or probing */
+extern
+SCIP_RETCODE SCIPtreeRestoreRelaxSol(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve */
    );
 
 

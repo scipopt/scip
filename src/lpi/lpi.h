@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,10 +14,29 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi.h
- * @ingroup INTERNALAPI
+ * @ingroup LPIS
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
  * @author Marc Pfetsch
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_LPI_H__
+#define __SCIP_LPI_H__
+
+
+#include "scip/def.h"
+#include "blockmemshell/memory.h"
+#include "scip/type_retcode.h"
+#include "lpi/type_lpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**@addtogroup LPIS
  *
  * This file specifies a generic LP solver interface used by SCIP to create, modify, and solve linear programs of the
  * form
@@ -40,33 +59,31 @@
  * - If (A * x)_i = rhs, then i is at its upper bound (SCIP_BASESTAT_UPPER).
  * - If the slack variable for row i is basic, it has SCIP_BASESTAT_BASIC status.
  *
- * If the solvers use their status differently, the have to be corrected.
+ * If the solvers use their status differently, those status codes have to be corrected.
  *
  * In the methods accessing information about the (inverse of the) basis matrix, the interface assumes the following
  * column-oriented format: slack variables of rows have coefficient +1 and the basis matrix is a regular m times m
  * submatrix of (A,I), where m is the number of rows and I is the identity matrix. This means that if, internally, the
- * LP solver uses coefficients -1 for some of the slack variables, then rows associated with slacks variables whose
+ * LP solver uses coefficients -1 for some of the slack variables, then every row associated with a slack variable whose
  * coefficient is -1 should be negated in order to return the result in terms of the LP interface definition.
  *
  * The creation of a new LP should always be done in the following ways: Either one can use SCIPlpiLoadColLP() or one
- * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively. It
- * is an error, if matrix entries are added for rows or columns that have not been added before.
+ * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively.
+ * Adding matrix entries for a row or column that have not been added before will result in an error.
+ *
+ * The handling of the objective limit is as follows, if supported by the LP-solver: If the objective is larger than the
+ * objective limit for minimization problems or smaller than the objective limit for maximization problems, the solution
+ * process can be stopped. This naturally occurs in a branch-and-bound process, where the objective limit is set to the
+ * value of the best solution found so far. If the problem is a minimization problem and we use the dual simplex, the
+ * dual feasible solutions are maximized. If their value are larger than the objective limit, the process can be
+ * stopped. In this case, no feasible integer solution can be found in the corresponding branch.
+ *
+ * Some LP-solvers also support the opposite setting, but this can easily be checked after the solution process (i.e.,
+ * for a minimization problem a check whether the optimal value is smaller than the limit). Note that this check can
+ * only be determined at the end of the optimization. Thus, we do not support this.
+ *
+ * @{
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_LPI_H__
-#define __SCIP_LPI_H__
-
-
-#include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
-#include "lpi/type_lpi.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
  * Miscellaneous Methods
@@ -103,7 +120,7 @@ EXTERN
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
-   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    );
 
 /**@} */
@@ -167,7 +184,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
 /** adds columns to the LP
  *
- *  @note ind array is not checked for duplicates, problems may appear if indeces are added more than once
+ *  @note ind array is not checked for duplicates, problems may appear if indices are added more than once
  */
 EXTERN
 SCIP_RETCODE SCIPlpiAddCols(
@@ -202,7 +219,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
 /** adds rows to the LP
  *
- *  @note ind array is not checked for duplicates, problems may appear if indeces are added more than once
+ *  @note ind array is not checked for duplicates, problems may appear if indices are added more than once
  */
 EXTERN
 SCIP_RETCODE SCIPlpiAddRows(
@@ -245,9 +262,9 @@ EXTERN
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
-   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    );
 
 /** changes left and right hand sides of rows */
@@ -330,6 +347,7 @@ SCIP_RETCODE SCIPlpiGetNCols(
    );
 
 /** gets the objective sense of the LP */
+EXTERN
 SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
@@ -355,7 +373,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    );
 
@@ -372,7 +390,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    );
 
@@ -382,10 +400,10 @@ SCIP_RETCODE SCIPlpiGetColNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get name from LP */
    int                   lastcol,            /**< last column to get name from LP */
-   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
-   char*                 namestorage,        /**< storage for col names */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for col names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    );
 
 /** gets row names */
@@ -394,10 +412,10 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get name from LP */
    int                   lastrow,            /**< last row to get name from LP */
-   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
-   char*                 namestorage,        /**< storage for row names */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for row names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    );
 
 /** gets objective coefficients from LP problem object */
@@ -769,7 +787,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    );
 
-/** get dense row of inverse basis matrix B^-1
+/** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -782,11 +800,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    );
 
-
-/** get dense column of inverse basis matrix B^-1
+/** get column of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -803,10 +820,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    );
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+/** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -820,10 +837,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    );
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -836,7 +853,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    );
 
 /**@} */
@@ -866,7 +883,7 @@ EXTERN
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information), or NULL */
    );
 
 /** clears current LPi state (like basis information) of the solver */
@@ -897,7 +914,7 @@ SCIP_RETCODE SCIPlpiReadState(
    const char*           fname               /**< file name */
    );
 
-/** writes LPi state (like basis information) to a file */
+/** writes LPi state (i.e. basis information) to a file */
 EXTERN
 SCIP_RETCODE SCIPlpiWriteState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -929,7 +946,7 @@ extern
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    );
 
 /** frees LPi pricing norms information */
@@ -937,7 +954,7 @@ extern
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    );
 
 
@@ -1037,6 +1054,9 @@ SCIP_RETCODE SCIPlpiWriteLP(
    );
 
 /**@} */
+
+/**@} */
+
 
 #ifdef __cplusplus
 }

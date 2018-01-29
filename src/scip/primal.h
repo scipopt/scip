@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -339,14 +339,23 @@ void SCIPprimalUpdateVarObj(
    SCIP_Real             newobj              /**< new objective value */
    );
 
-/** retransforms all existing solutions to original problem space */
+/** retransforms all existing solutions to original problem space
+ *
+ * @note as a side effect, the objective value of the solutions can change (numerical errors)
+ * so we update the objective cutoff value and upper bound accordingly
+ */
 extern
 SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** tries to transform original solution to the transformed problem space */
@@ -374,6 +383,19 @@ SCIP_RETCODE SCIPprimalTransformSol(
    int                   solvalssize,        /**< size of solvals and solvalset arrays, should be >= number of active
                                               *   variables */
    SCIP_Bool*            added               /**< pointer to store whether the solution was added */
+   );
+
+/** is the updating of violations enabled for this problem? */
+extern
+SCIP_Bool SCIPprimalUpdateViolations(
+   SCIP_PRIMAL*          primal              /**< problem data */
+   );
+
+/** set whether the updating of violations is turned on */
+extern
+void SCIPprimalSetUpdateViolations(
+   SCIP_PRIMAL*          primal,             /**< problem data */
+   SCIP_Bool             updateviolations    /**< TRUE to enable violation updates, FALSE otherwise */
    );
 
 #ifdef __cplusplus

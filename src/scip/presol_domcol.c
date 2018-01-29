@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1070,8 +1070,8 @@ SCIP_RETCODE detectParallelCols(
    /* loop over all rows */
    for( r = 0; r < nrows; ++r )
    {
-      /* we consider only equations or ranged rows */
-      if( !SCIPmatrixIsRowRhsInfinity(matrix, r) )
+      /* we consider only non-empty equations or ranged rows */
+      if( !SCIPmatrixIsRowRhsInfinity(matrix, r) && SCIPmatrixGetRowNNonzs(matrix, r) > 0 )
       {
          rowpnt = SCIPmatrixGetRowIdxPtr(matrix, r);
          rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, r);
@@ -1107,6 +1107,8 @@ SCIP_RETCODE detectParallelCols(
 
             i++;
          }
+
+         assert(i > 0);
 
          /* sort on the pclass values */
          if( i > 1 )

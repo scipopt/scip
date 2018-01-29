@@ -2771,7 +2771,6 @@ ipcount/zeroOne/OA:6-13.lp.gz
 IPdata/Oldmiplib/gams.mps.gz
 IPdata/Oldmiplib/gt1.mps.gz
 IPdata/Oldmiplib/fast2586.lp.gz
-IPdata/Oldmiplib/adrud.mps.gz
 jtl/bc.mps.gz
 jtl/prod1.mps.gz
 jtl/irp.mps.gz
@@ -3301,7 +3300,6 @@ miplib2/air01.mps.gz
 miplib2/pipex.mps.gz
 miplib2/mod014.mps.gz
 miplib2/air06.mps.gz
-miplib2/adrud.mps.gz
 miplib2/set1cl.mps.gz
 miplib2/gt1.mps.gz
 miplib2/cracpb1.mps.gz

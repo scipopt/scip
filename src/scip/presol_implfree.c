@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1201,6 +1201,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                assert(SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, row)) ||
                   SCIPisInfinity(scip, rhs) ||
                   SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, row), rhs));
+               assert(multiaggcoef != 0.0);
 
                /* we have to distinguished two cases */
                if( !SCIPisInfinity(scip, rhs) )

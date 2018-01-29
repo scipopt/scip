@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1277,21 +1277,11 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** computes a partitioning into edge-concave aggregations for a given (quadratic) nonlinear row; each aggregation has
- *  to contain a cycle with an odd number of positive weighted edges (good cycles) in the corresponding graph representation
- *
- *  For this we use the following algorithm:
- *
- *  -# use a MIP model based on binary flow variables to compute good cycles and store the implied subgraphs as an e.c. aggr.
- *    -# if we find a good cycle, store the implied subgraph, delete it from the graph representation and go to 1)
- *    -# if the MIP model is infeasible (there are no good cycles), STOP
- *  -# we compute a large clique C if the MIP model fails (because of working limits, etc)
- *    -# if we find a good cycle in C, store the implied subgraph of C, delete it from the graph representation and go to 1)
- *    -# if C is not large enough, STOP
- */
+/** helper function for searchEcAggr() */
 static
-SCIP_RETCODE searchEcAggr(
+SCIP_RETCODE doSeachEcAggr(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_SOL*             sol,                /**< current solution (might be NULL) */
@@ -1302,19 +1292,19 @@ SCIP_RETCODE searchEcAggr(
    int*                  nfound              /**< pointer to store the number of found e.c. aggregations */
    )
 {
-   SCIP* subscip;
-   TCLIQUE_GRAPH* graph;
+   TCLIQUE_GRAPH* graph = NULL;
    SCIP_VAR** forwardarcs;
    SCIP_VAR** backwardarcs;
    SCIP_VAR** quadvars;
    SCIP_Real* nodeweights;
    SCIP_Real timelimit;
+   int nunsucces = 0;
+   int nedges = 0;
    int nquadelems;
    int nquadvars;
-   int nunsucces;
-   int nedges;
    int i;
 
+   assert(subscip != NULL);
    assert(quadvar2aggr != NULL);
    assert(nfound != NULL);
 
@@ -1322,14 +1312,18 @@ SCIP_RETCODE searchEcAggr(
    nquadvars = SCIPnlrowGetNQuadVars(nlrow);
    nquadelems = SCIPnlrowGetNQuadElems(nlrow);
 
-   graph = NULL;
    *nfound = 0;
-   nunsucces = 0;
+
+   /* arrays to store all arc variables of the MIP model; note that we introduce variables even for loops in the graph
+    * to have an easy mapping from the edges of the graph to the quadratic elements
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodeweights, nquadvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &forwardarcs, nquadelems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &backwardarcs, nquadelems) );
 
    /* inititialize mapping from quadvars to e.c. aggregation index (-1: quadvar is in no aggregation); compute node
     * weights
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodeweights, nquadvars) );
    for( i = 0; i < SCIPnlrowGetNQuadVars(nlrow); ++i )
    {
       SCIP_VAR* var = quadvars[i];
@@ -1338,15 +1332,6 @@ SCIP_RETCODE searchEcAggr(
       SCIPdebugMsg(scip, "%s = %e (%e in [%e, %e])\n", SCIPvarGetName(var), nodeweights[i], SCIPgetSolVal(scip, sol, var),
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
    }
-
-   /* create and set up a sub-SCIP */
-   SCIP_CALL( SCIPcreate(&subscip) );
-
-   /* arrays to store all arc variables of the MIP model; note that we introduce variables even for loops in the graph
-    * to have an easy mapping from the edges of the graph to the quadratic elements
-    */
-   SCIP_CALL( SCIPallocBlockMemoryArray(subscip, &forwardarcs, nquadelems) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(subscip, &backwardarcs, nquadelems) );
 
    SCIP_CALL( createMIP(scip, subscip, sepadata, nlrow, rhsaggr, forwardarcs, backwardarcs, nodeweights, &nedges) );
    assert(nedges >= 0);
@@ -1409,8 +1394,8 @@ SCIP_RETCODE searchEcAggr(
          }
 
          /* 2.a - search and store a single edge-concave aggregation by computing a clique with a good cycle */
-         SCIP_CALL( searchEcAggrWithCliques(scip, graph, sepadata, nlrow, quadvar2aggr, *nfound, rhsaggr,
-               &foundaggr, &foundclique) );
+         SCIP_CALL_FINALLY( searchEcAggrWithCliques(scip, graph, sepadata, nlrow, quadvar2aggr, *nfound, rhsaggr,
+               &foundaggr, &foundclique), tcliqueFree(&graph) );
 
          if( foundaggr )
          {
@@ -1438,7 +1423,7 @@ SCIP_RETCODE searchEcAggr(
       }
 
       /* exclude all edges used in the last aggregation and nodes found in the clique solution */
-      SCIP_CALL( updateMIP(subscip, nlrow, forwardarcs, backwardarcs, quadvar2aggr, &nedges) );
+      SCIP_CALL_FINALLY( updateMIP(subscip, nlrow, forwardarcs, backwardarcs, quadvar2aggr, &nedges), tcliqueFree(&graph) );
    }
 
 TERMINATE:
@@ -1462,11 +1447,48 @@ TERMINATE:
       SCIP_CALL( SCIPreleaseVar(subscip, &backwardarcs[i]) );
    }
 
-   SCIPfreeBlockMemoryArray(subscip, &backwardarcs, nquadelems);
-   SCIPfreeBlockMemoryArray(subscip, &forwardarcs, nquadelems);
-   SCIP_CALL( SCIPfree(&subscip) );
-
+   SCIPfreeBufferArray(scip, &backwardarcs);
+   SCIPfreeBufferArray(scip, &forwardarcs);
    SCIPfreeBufferArray(scip, &nodeweights);
+
+   return SCIP_OKAY;
+}
+
+/** computes a partitioning into edge-concave aggregations for a given (quadratic) nonlinear row; each aggregation has
+ *  to contain a cycle with an odd number of positive weighted edges (good cycles) in the corresponding graph representation
+ *
+ *  For this we use the following algorithm:
+ *
+ *  -# use a MIP model based on binary flow variables to compute good cycles and store the implied subgraphs as an e.c. aggr.
+ *    -# if we find a good cycle, store the implied subgraph, delete it from the graph representation and go to 1)
+ *    -# if the MIP model is infeasible (there are no good cycles), STOP
+ *  -# we compute a large clique C if the MIP model fails (because of working limits, etc)
+ *    -# if we find a good cycle in C, store the implied subgraph of C, delete it from the graph representation and go to 1)
+ *    -# if C is not large enough, STOP
+ */
+static
+SCIP_RETCODE searchEcAggr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_SOL*             sol,                /**< current solution (might be NULL) */
+   SCIP_Bool             rhsaggr,            /**< consider nonlinear row aggregation for g(x) <= rhs (TRUE) or g(x) >= lhs (FALSE) */
+   int*                  quadvar2aggr,       /**< array to store for each quadratic variable in which edge-concave
+                                              *   aggregation it is stored (< 0: in no aggregation); size has to be at
+                                              *   least SCIPnlrowGetNQuadVars(nlrow) */
+   int*                  nfound              /**< pointer to store the number of found e.c. aggregations */
+   )
+{
+   SCIP* subscip;
+   SCIP_RETCODE retcode;
+
+   /* create and set up a sub-SCIP */
+   SCIP_CALL_FINALLY( SCIPcreate(&subscip), (void)SCIPfree(&subscip) );
+
+   retcode = doSeachEcAggr(scip, subscip, sepadata, nlrow, sol, rhsaggr, quadvar2aggr, nfound);
+
+   SCIP_CALL( SCIPfree(&subscip) );
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2518,7 +2540,7 @@ SCIP_RETCODE computeCut(
       /* add the cut if it is separating the given solution by at least minviolation */
       if( SCIPisGE(scip, cutactivity - nlrowaggr->rhs, sepadata->minviolation) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
          *separated = TRUE;
          SCIPdebugMsg(scip, "added separating cut\n");
       }
@@ -2726,6 +2748,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
    assert(sepadata != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   if( !allowlocal )
+      return SCIP_OKAY;
 
    /* check min- and maximal aggregation size */
    if( sepadata->maxaggrsize < sepadata->minaggrsize )

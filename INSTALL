@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -58,12 +58,22 @@ You will need either the .a or the .so files and can skip the others by
 just pressing return.
 
 The most common compiling issue is that some libraries are missing on
-your system or that they are outdated. SCIP per default requires zlib,
-gmp and readline.  Try compiling with:
-make ZLIB=false READLINE=false GMP=false
-or, better, install them. Note that under Linux-based systems, you
-need to install the developer-versions of gmp/zlib/readline, in order
-to also have the header-files available.
+your system or that they are outdated. SCIP per default requires the
+following packages (with usual names for Linux systems in
+parentheses):
+
+- zlib     (libz-dev)
+- gmp      (libgmp-dev),
+- readline (libreadline-dev), and
+- ncurses  (libncurses-dev)
+
+Note that under Linux-based systems, you need to install the
+developer-versions of gmp/zlib/readline, in order to also have the
+header-files available.
+
+If you are not able or do not want to install these packages, try compiling with:
+make ZLIB=false READLINE=false GMP=false.
+
 
 II Detailed installation description
 ************************************
@@ -102,15 +112,20 @@ compilation settings:
 - $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
               "none", "cppad"
 
+- $(SYM):     the graph automorphism code (needed to handle symmetries) to use
+             "none", "bliss"
+
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode, using Soplex version >= 1.4.0 as LP solver,
-and no expressions interpreter you would have the following names:
+and neither an expressions interpreter nor symmetry handling techniques you would
+have the following names:
 - $(OSTYPE)  = linux
 - $(ARCH)    = x86
 - $(COMP)    = gnu
 - $(OPT)     = dbg
 - $(LPS)     = spx
 - $(EXPRINT) = none
+- $(SYM)     = none
 
 -----------------------------------------------------------------------------
 
@@ -149,6 +164,9 @@ Here is what you have to do to get SCIP running:
    - "ZIMPL=false"     to disable ZIMPL file reader
    - "ZIMPL=auto"      to automatically enable ZIMPL support if and only if the GMP library is available (default)
 
+   - "FILTERSQP=true"  to enable FilterSQP interface
+   - "FILTERSQP=false" to disable FilterSQP interface (default)
+
    - "IPOPT=true"      to enable IPOPT interface (needs IPOPT >= 3.11)
    - "IPOPT=false"     to disable IPOPT interface (default)
 
@@ -166,6 +184,9 @@ Here is what you have to do to get SCIP running:
 
    - "SHARED=false"    to suppress shared libraries
    - "SHARED=true"     to create shared libraries
+
+   - "SYM=bliss"       to use bliss to compute symmetries of a mixed integer program
+   - "SYM=none"        to disable symmetry handling in mixed integer programs
 
    On some machines, you should use gmake instead of make.
 
@@ -295,14 +316,14 @@ make[1]: Entering directory `/sw/scip'
 make[1]: Leaving directory `/sw/scip'
 ---
 
-   Example 4 (default: SoPlex, IPOPT, WORHP):
-   ==========================================
+   Example 4 (default: SoPlex, IPOPT, WORHP, FILTERSQP):
+   =====================================================
 
-   Typing "make IPOPT=true WORHP=true" uses SoPlex as LP solver, and activates
-   the interfaces to IPOPT and WORHP. You will be asked the following questions on
+   Typing "make IPOPT=true WORHP=true FILTERSQP=true" uses SoPlex as LP solver, and activates
+   the interfaces to IPOPT, WORHP, and FilterSQP. You will be asked the following questions on
    the first call to "make" (example answers are already given):
 
-- Current settings: LPS=spx2 OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt EXPRINT=cppad GAMS=false
+- Current settings: LPS=spx2 OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
 
 * SCIP needs some softlinks to external programs, in particular, LP-solvers.
 * Please insert the paths to the corresponding directories/libraries below.
@@ -312,12 +333,22 @@ make[1]: Leaving directory `/sw/scip'
   -> "spxinc" is the path to the SoPlex "src" directory, e.g., "<SoPlex-path>/src".
   -> "libsoplex.*" is the path to the SoPlex library, e.g., "<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a"
   -> "ipopt.linux.x86_64.gnu.opt" is a directory containing the ipopt installation, i.e., "ipopt.linux.x86_64.gnu.opt/include/coin/IpIpoptApplication.hpp", "ipopt.linux.x86_64.gnu.opt/lib/libipopt*", ... should exist.
+  -> "libfiltersqp.linux.x86_64.gnu.*" is the path to the filterSQP library.
+  -> "libbqpd.linux.x86_64.gnu.*" is the path to the BQPD library.
   -> "worhp.linux.x86_64.gnu.opt" is a directory containing the WORHP installation, i.e., "worhp.linux.x86_64.gnu.opt/include/worhp/worhp.h" should exist.
 
 
 > Enter soft-link target file or directory for "lib/static/ipopt.linux.x86_64.gnu.opt" (return if not needed):
 > /sw/ipopt-3.12.5
 -> creating softlink "lib/static/ipopt.linux.x86_64.gnu.opt" -> "/sw/ipopt-3.12.5"
+
+> Enter soft-link target file or directory for "lib/static/libfiltersqp.linux.x86_64.gnu.a" (return if not needed):
+> /sw/libfiltersqp.a
+-> creating softlink "lib/static/libfiltersqp.linux.x86_64.gnu.a" -> "/sw/libfiltersqp.a"
+
+> Enter soft-link target file or directory for "lib/static/libbqpd.linux.x86_64.gnu.a" (return if not needed):
+> /sw/libbqpd.a
+-> creating softlink "lib/static/libbqpd.linux.x86_64.gnu.a" -> "/sw/libbqpd.a"
 
 > Enter soft-link target file or directory for "lib/static/worhp.linux.x86_64.gnu.opt" (return if not needed):
 > /sw/worhp-2.0
@@ -335,7 +366,50 @@ make[1]: Leaving directory `/sw/scip'
    and enter "make links" to generate them again.
 
    After the soft-links have been created, the compilation of the source files should start.
+---
 
+   Example 5 (default: SoPlex, SYM):
+   =====================================================
+
+   Typing "make SYM=bliss" uses SoPlex as LP solver, and activates
+   the symmetry handling routines of SCIP. Symmetry is computed by using the graph automorphism
+   code bliss. You will be asked the following questions on the first call to "make"
+   (example answers are already given):
+
+- Current settings: SYM=bliss
+
+* SCIP needs some softlinks to external programs, in particular, LP-solvers.
+* Please insert the paths to the corresponding directories/libraries below.
+* The links will be installed in the 'lib/include' and 'lib/static' directories.
+* For more information and if you experience problems see the INSTALL file.
+
+  -> "cpxinc" is the path to the CPLEX "include" directory, e.g., "<CPLEX-path>/include/ilcplex".
+  -> "libcplex.*.a" is the path to the CPLEX library, e.g., "<CPLEX-path>/lib/x86-64_linux/static_pic/libcplex.a"
+  -> "libcplex.*.so" is the path to the CPLEX library, e.g., "<CPLEX-path>/bin/x86-64_linux/libcplex1263.so"
+  -> "blissinc" is the path to the BLISS directory, e.g., "<BLISS-path>".
+  -> "libbliss.*.a" is the path to the BLISS library, e.g., "<BLISS-path>/libbliss.a"
+  -> "libbliss.*.so" is the path to the BLISS library, e.g., "<BLISS-path>/libbliss.so"
+
+> Enter soft-link target file or directory for "lib/include/bliss" (return if not needed):
+> /sw/bliss
+-> creating softlink "lib/include/bliss" -> "/sw/bliss"
+
+> Enter soft-link target file or directory for "lib/static/libbliss.linux.x86_64.gnu.a" (return if not needed):
+> /sw/bliss/libbliss.a
+-> creating softlink "lib/static/libbliss.linux.x86_64.gnu.a" -> "/sw/bliss/libbliss.a"
+
+make[1]: Leaving directory `/sw/scip'
+---
+
+   Note on how to (locally) install bliss:
+    - create a target directory for the installation
+    - compile the bliss code within this directory
+
+   If you ever need to modify the soft-link targets, delete the soft-links in the "lib/" subdirectory
+   and enter "make links" to generate them again.
+
+   After the soft-links have been created, the compilation of the source files should start.
+---
 
    Compilation problems:
    =====================
@@ -436,10 +510,10 @@ make[1]: Leaving directory `/sw/scip'
 
    (d) to use MOSEK
        - ln -s <path to directory of mosek.h> <path to SCIP>/lib/include/mskinc
-         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/h lib/include/mskinc")
+         (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/h lib/include/mskinc")
        - ln -s <file libmosek.so> <path to SCIP>/lib/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
          for each operation system and architecture to use
-         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/bin/libmosek.so lib/shared/libmosek.linux.x86.gnu.so")
+         (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/bin/libmosek64.so lib/shared/libmosek.linux.x86_64.gnu.so")
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib/shared
 
    (e) to use CLP
@@ -466,8 +540,19 @@ make[1]: Leaving directory `/sw/scip'
          The path to the WORHP installation is the path under where the Worhp build has been installed.
          It should contain the directories include/worhp with the WORHP header files and the directory lib with the WORHP libraries.
 
-   (i) to use GAMS
+   (i) to use FilterSQP as NLP solver
+       - ln -s <path to FilterSQP library> <path to SCIP>/lib/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).a
+       - ln -s <path to BQPD library> <path to SCIP>/lib/libbqpd.$(OSTYPE).$(ARCH).$(COMP).a
+
+   (j) to use GAMS
        - ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
+
+   (k) to use bliss
+       - ln -s <path to bliss *.hh files> <path to SCIP>/lib/include/bliss
+         (e.g. "cd scip; ln -s ../bliss" lib/include/bliss)
+       - ln -s <file libbliss.[...].a> <path to SCIP>/lib/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).a
+         for each operation system and architecture to use
+         (e.g. "cd scip; ln -s ../bliss/libbliss.a lib.static/libbliss.linux.x86_64.gnu.a")
 
 4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scip.linux.x86.gnu.opt.spx") or just "bin/scip" for the last compiled version

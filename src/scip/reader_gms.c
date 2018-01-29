@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,7 +53,11 @@
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "gmsreader"
+#ifdef WITH_GAMS
 #define READER_DESC             "file writer for MI(NL)(SOC)Ps in GAMS file format"
+#else
+#define READER_DESC             "file reader and writer for MI(NL)(SOC)Ps in GAMS file format"
+#endif
 #define READER_EXTENSION        "gms"
 
 
@@ -1564,8 +1568,9 @@ SCIP_RETCODE printExpr(
             default:
             {
                int i;
-               const char* opstr = SCIPexprGetOperator(expr) == SCIP_EXPR_SUM ? " + " : " * ";
+               char opstr[GMS_MAX_PRINTLEN];
 
+               (void) SCIPsnprintf(opstr, GMS_MAX_PRINTLEN, SCIPexprGetOperator(expr) == SCIP_EXPR_SUM ? " + " : " * ");
                appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
                for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
                {

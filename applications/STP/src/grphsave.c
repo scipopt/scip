@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reduce.c
+/**@file   grphsave.c
  * @brief  Saving routines for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch
@@ -44,7 +44,7 @@ void SCIPwriteStp(
 {
    int i;
    int e;
-   int root = g->source[0];
+   int root = g->source;
    int hopfactor;
 
    assert(g  != NULL);
@@ -136,11 +136,11 @@ void SCIPwriteStp(
    fprintf(fp, "Terminals %d\n", g->terms);
 
    if( g->stp_type == STP_RPCSPG )
-      fprintf(fp, "Root %d\n", g->source[0] + 1);
+      fprintf(fp, "Root %d\n", g->source + 1);
 
    for(i = 0; i < g->knots; i++)
    {
-      if (Is_term(g->term[i]) && (g->stp_type != STP_RPCSPG || i != g->source[0]))
+      if (Is_term(g->term[i]) && (g->stp_type != STP_RPCSPG || i != g->source))
          fprintf(fp, "T %d\n", i + 1);
    }
    fprintf(fp, "End\n\n");

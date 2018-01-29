@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -71,10 +71,14 @@ OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
 VISUALIZE       =       false
 MAXJOBS         =       1
+EXECUTABLE      =       $(MAINFILE)
+BINID           =       $(notdir $(EXECUTABLE))
+OUTPUTDIR       =       results
+CLUSTERNODES    =       all
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	4.0.0.2
+SCIP_VERSION	=	5.0.0.2
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -82,6 +86,7 @@ OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
+SYM		=	none
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -120,6 +125,7 @@ ZLIB		=	true
 GMP		=	true
 ZIMPL		=	false
 IPOPT		=	false
+FILTERSQP	=	false
 WORHP		=	false
 EXPRINT 	=	cppad
 LPSOPT		=	opt
@@ -166,6 +172,7 @@ SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -whi
 			-redef +export-header +export-local +decl-undef +relaxtypes
 
 # third party testing parameters
+FSCIP		=	fscip
 CPLEX		=	cplex
 CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
@@ -183,7 +190,7 @@ LN_s		= 	ln -s
 LN_sf		=	ln -sf
 
 # initial compiler and linker flags
-FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
+FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -DFNAME_$(FORTRAN_NAMING_CONVENTION) -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
@@ -202,6 +209,10 @@ GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
 			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
+# GCCWARN is not only used for GCC!
+ifeq ($(COMP),gnu)
+GCCWARN += -Wno-maybe-uninitialized
+endif
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
@@ -238,6 +249,7 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/nlpi \
 			$(LIBOBJDIR)/xml \
 			$(LIBOBJDIR)/dijkstra \
+			$(LIBOBJDIR)/symmetry \
 			$(LIBOBJDIR)/tinycthread
 SRCDIR		=	src
 BINDIR		=	bin
@@ -460,6 +472,13 @@ TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 
+#-----------------------------------------------------------------------------
+# Symmetry Interface
+#-----------------------------------------------------------------------------
+
+ifeq ($(SYM),bliss)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
 
 #-----------------------------------------------------------------------------
 # External Libraries
@@ -528,6 +547,13 @@ LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE)
 endif
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
+endif
+
+# define flags for FilterSQP
+ifeq ($(FILTERSQP),true)
+FILTERSQPLIBS       =       $(LINKCC_l)filtersqp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)bqpd.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LDFLAGS		+=	$(FILTERSQPLIBS) $(FORTRANLIBS)
+NLPILIBSHORTNAMEFILTERSQP = .filtersqp
 endif
 
 # define flags for WORHP
@@ -608,7 +634,7 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 # NLP interfaces and expression interpreter library
 #-----------------------------------------------------------------------------
 
-NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
+NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
 NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIBNAME).$(LIBEXT)

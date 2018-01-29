@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -326,6 +326,8 @@ void* BMSallocClearMemory_call(
 {
    void* ptr;
 
+   assert(typesize > 0);
+
    debugMessage("calloc %llu elements of %llu bytes [%s:%d]\n", (unsigned long long)num, (unsigned long long)typesize,
       filename, line);
 
@@ -345,7 +347,7 @@ void* BMSallocClearMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num * typesize));
+      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num) * (typesize));
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -733,7 +735,7 @@ struct BMS_ChkMem
 #define CHUNK_GT(ptr,chunk)  ptr >= chunk->storeend
 
 static
-SCIP_DEF_RBTREE_FIND(rbTreeFindChunk, const void*, CHUNK, CHUNK_LT, CHUNK_GT)
+SCIP_DEF_RBTREE_FIND(rbTreeFindChunk, const void*, CHUNK, CHUNK_LT, CHUNK_GT) /*lint !e123*/
 
 
 /** aligns the given byte size corresponding to the minimal alignment */
@@ -2618,6 +2620,7 @@ void* BMSallocBufferMemory_work(
    int                   line                /**< line number in source file of the function call */
    )
 {
+   /* cppcheck-suppress unassignedVariable */
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    size_t bufnum;
@@ -2729,6 +2732,9 @@ void* BMSallocBufferMemory_work(
 #else
    if( buffer->clean )
    {
+      /* we should allocate at least one byte, otherwise BMSallocMemorySize will fail */
+      size = MAX(size,1);
+
       BMSallocClearMemorySize(&ptr, size);
    }
    else
@@ -3009,16 +3015,15 @@ void BMSfreeBufferMemory_work(
    }
 #endif
 
-#ifdef CHECKMEM
+#ifndef NDEBUG
    /* check that the memory is cleared */
    if( buffer->clean )
    {
-      char* tmpptr = (char*)(buffer->data[bufnum]);
-      unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
-      tmpptr += inc;
+      size_t i;
+      uint8_t* tmpptr = (uint8_t*)(buffer->data[bufnum]);
 
-      while( --tmpptr >= (char*)(buffer->data[bufnum]) )
-         assert(*tmpptr == '\0');
+      for( i = 0; i < buffer->size[bufnum]; ++i )
+         assert(tmpptr[i] == 0);
    }
 #endif
 

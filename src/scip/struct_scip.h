@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,6 +89,7 @@ struct Scip
    /* SOLVING */
    SCIP_PRICESTORE*      pricestore;         /**< storage for priced variables */
    SCIP_SEPASTORE*       sepastore;          /**< storage for separated cuts */
+   SCIP_SEPASTORE*       sepastoreprobing;   /**< storage for separated cuts during probing mode */
    SCIP_CONFLICTSTORE*   conflictstore;      /**< storage for conflicts */
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
    SCIP_CUTPOOL*         delayedcutpool;     /**< global delayed cut pool */

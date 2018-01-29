@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -590,7 +590,25 @@ SCIP_Longint SCIPconflictGetNDualrayInfGlobal(
 
 /** gets average length of infeasible dualrays */
 extern
-SCIP_Longint SCIPconflictGetNDualrayInfeasibleNonzeros(
+SCIP_Longint SCIPconflictGetNDualrayInfNonzeros(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of successfully analyzed dual proofs of boundexceeding LPs */
+extern
+SCIP_Longint SCIPconflictGetNDualrayBndSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of globally applied dual proofs of boundexceeding LPs */
+extern
+SCIP_Longint SCIPconflictGetNDualrayBndGlobal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets average length of dual proofs of boundexceeding LPs */
+extern
+SCIP_Longint SCIPconflictGetNDualrayBndNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

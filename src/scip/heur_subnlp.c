@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -169,6 +169,7 @@ SCIP_RETCODE createSubSCIP(
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
          FALSE,  /* branchrules */
          copydisplays, /* displays */
+         FALSE, /* tables */
          FALSE, /* dialogs */
          TRUE,  /* nlpis */
          FALSE, /* benders */
@@ -196,6 +197,7 @@ SCIP_RETCODE createSubSCIP(
    /* get name of the original problem and add "subnlp" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subnlp", SCIPgetProbName(scip));
    SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIPsetSubscipDepth(heurdata->subscip, SCIPgetSubscipDepth(scip) + 1);
 
    /* copy all variables */
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
@@ -280,7 +282,7 @@ SCIP_RETCODE createSubSCIP(
    SCIPhashmapFree(&varsmap);
 
    /* initialize data structure for NLP solve statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(&heurdata->nlpstatistics) );
+   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &heurdata->nlpstatistics) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "misc/catchctrlc", FALSE) );
@@ -345,7 +347,7 @@ SCIP_RETCODE freeSubSCIP(
 
    /* free NLP statistics */
    if( heurdata->nlpstatistics != NULL )
-      SCIPnlpStatisticsFree(&heurdata->nlpstatistics);
+      SCIPnlpStatisticsFree(SCIPblkmem(scip), &heurdata->nlpstatistics);
    assert(heurdata->nlpstatistics == NULL);
 
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, NULL, NULL, NULL, NULL) );
@@ -1754,8 +1756,11 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          /* if we do not really have a startpoint, then we should take care that we do not fix variables to very large values
           *  thus, we set to 0.0 here and project on bounds below
           */
-         if( ABS(fixval) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+         if( REALABS(fixval) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
             fixval = 0.0;
+
+         /* fixing variables to infinity causes problems, we should not have been passed such a solution as refpoint */
+         assert(!SCIPisInfinity(scip, REALABS(fixval)));
 
          /* round fractional variables to the nearest integer,
           *  use exact integral value, if the variable is only integral within numerical tolerances

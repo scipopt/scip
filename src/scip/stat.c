@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -282,6 +282,7 @@ void SCIPstatReset(
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
    stat->nsbdivinglps = 0;
+   stat->nnumtroublelpmsgs = 0;
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;
@@ -293,7 +294,9 @@ void SCIPstatReset(
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
    stat->ninitconssadded = 0;
+   stat->nactiveconssadded = 0;
    stat->externmemestim = 0;
+   stat->nincseparounds = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -313,6 +316,9 @@ void SCIPstatReset(
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
    stat->branchedunbdvar = FALSE;
+   stat->bestefficacy = 0.0;
+   stat->minefficacyfac = 0.5;
+   stat->ncutpoolfails = 0;
 
    stat->ndivesetlpiterations = 0;
    stat->ndivesetcalls = 0;
@@ -479,6 +485,25 @@ void SCIPstatUpdatePrimalDualIntegral(
    stat->lastupperbound = upperbound;
 }
 
+/** update and return the primal-dual integral statistic */
+SCIP_Real SCIPstatGetPrimalDualIntegral(
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob            /**< original problem */
+   )
+{
+   assert(stat != NULL);
+   assert(set != NULL);
+   assert(transprob != NULL);
+   assert(origprob != NULL);
+
+   /* update the primal dual integral first */
+   SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
+
+   return stat->primaldualintegral;
+}
+
 /** reset current branch and bound run specific statistics */
 void SCIPstatResetCurrentRun(
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -518,6 +543,7 @@ void SCIPstatResetCurrentRun(
    stat->ninfeasleaves = 0;
    stat->nfeasleaves = 0;
    stat->branchedunbdvar = FALSE;
+   stat->nnumtroublelpmsgs = 0;
 
    stat->nearlybacktracks = 0;
    stat->nnodesaboverefbound = 0;

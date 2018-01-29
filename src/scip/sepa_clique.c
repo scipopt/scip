@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,7 +81,7 @@ struct TCLIQUE_Graph
    int*                  adjnodesidxs;       /**< indices in adjnodes array of first adjacent nodes for each node */
    int*                  cliqueidsidxs;      /**< indices in cliqueids array of first clique the node is contained in */
    int*                  adjnodes;           /**< adjacent nodes of edges */
-   int*                  cliqueids;          /**< unique ids of cliques */
+   unsigned int*         cliqueids;          /**< unique ids of cliques */
    unsigned int*         cliquetable;        /**< dense bitvector clique table (array stored as a vector) */
    int                   adjnodessize;       /**< size of adjnodes array */
    int                   cliqueidssize;      /**< size of cliqueids array */
@@ -197,7 +197,7 @@ SCIP_RETCODE tcliquegraphAddNode(
    )
 {
    SCIP_VAR* nodevar;
-   int* cliqueids;
+   unsigned int* cliqueids;
    SCIP_CLIQUE** cliques;
    int ncliques;
    int nadjnodes;
@@ -555,7 +555,7 @@ SCIP_Bool nodesHaveCommonClique(
    }
    else
    {
-      int* cliqueids;
+      unsigned int* cliqueids;
       int i1;
       int i2;
       int endi1;
@@ -714,7 +714,6 @@ SCIP_RETCODE newsolCliqueAddRow(
 
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
-   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE, cutoff) );
    SCIP_CALL( SCIPaddPoolCut(scip, cut) );
 
    /* release the row */

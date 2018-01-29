@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -19,6 +19,7 @@ export LANG=C
 REMOVE=0
 UPLOAD=0
 APPEND=0
+EXPIRE=0
 AWKARGS=""
 FILES=""
 
@@ -33,6 +34,11 @@ do
       then
           REMOVE=1
           UPLOAD=1
+      elif test "$i" = "-T"
+      then
+          REMOVE=1
+          UPLOAD=1
+          EXPIRE=1
       else
           AWKARGS="$AWKARGS $i"
       fi
@@ -43,18 +49,19 @@ done
 
 for FILE in $FILES
 do
- 
+
   DIR=`dirname $FILE`
   EVALFILE=`basename $FILE .eval`
   EVALFILE=`basename $EVALFILE .out`
 
-  OUTFILE=$DIR/$EVALFILE.out 
+  OUTFILE=$DIR/$EVALFILE.out
   ERRFILE=$DIR/$EVALFILE.err
   SETFILE=$DIR/$EVALFILE.set
+  METAFILE=$DIR/$EVALFILE.meta
   RESFILE=$DIR/$EVALFILE.res
   TEXFILE=$DIR/$EVALFILE.tex
   PAVFILE=$DIR/$EVALFILE.pav
-  
+
   # check if the eval file exists; if this is the case construct the overall solution files
   if test -e $DIR/$EVALFILE.eval
   then
@@ -90,7 +97,10 @@ do
                 rm -f $FILE
             fi
         else
-            echo Missing $i
+            echo Missing $FILE --
+
+            echo @01 $FILE ==MISSING==  >> $OUTFILE
+            echo                        >> $OUTFILE
         fi
 
         FILE=$i.err
@@ -101,6 +111,11 @@ do
             then
                 rm -f $FILE
             fi
+        else
+            echo Missing $FILE --
+
+            echo @01 $FILE ==MISSING==  >> $ERRFILE
+            echo                        >> $ERRFILE
         fi
 
         FILE=$i.set
@@ -139,7 +154,7 @@ do
 
       # detect test used solver
       SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\2/g'`
-      
+
       echo "Testset " $TSTNAME
       echo "Solver  " $SOLVER
 
@@ -152,7 +167,7 @@ do
 
       # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
       SOLUFILE=""
-      for f in $TSTNAME ${TSTNAME%%_*} all
+      for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
       do
           if test -f testset/${f}.solu
           then
@@ -184,7 +199,13 @@ do
       # upload results to rubberband.zib.de
       if test "$UPLOAD" = "1"
       then
-          rbcli up $OUTFILE $ERRFILE $SETFILE
+          if test "$EXPIRE" = "1"
+          then
+              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+2 weeks"`
+              rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
+          else
+              rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE
+          fi
       fi
   fi
 done

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -856,12 +856,6 @@ int SCIPvarGetNBdchgInfosUb(
 /** returns the value based history for the variable */
 EXTERN
 SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** returns the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-EXTERN
-int SCIPvarGetCliqueComponentIdx(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

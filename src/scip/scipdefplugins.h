@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,6 +60,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_or.h"
+#include "scip/cons_orbisack.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_quadratic.h"
@@ -68,6 +69,7 @@
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_superindicator.h"
+#include "scip/cons_symresack.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/cons_components.h"
@@ -96,6 +98,7 @@
 #include "scip/heur_localbranching.h"
 #include "scip/heur_locks.h"
 #include "scip/heur_lpface.h"
+#include "scip/heur_alns.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_mutation.h"
 #include "scip/heur_mpec.h"
@@ -146,14 +149,18 @@
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/presol_redvub.h"
+#include "scip/presol_symbreak.h"
 #include "scip/presol_qpkktref.h"
 #include "scip/presol_trivial.h"
 #include "scip/presol_tworowbnd.h"
+#include "scip/presol_sparsify.h"
 #include "scip/presol_stuffing.h"
+#include "scip/presol_symmetry.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_nlobbt.h"
 #include "scip/prop_obbt.h"
+#include "scip/prop_orbitalfixing.h"
 #include "scip/prop_probing.h"
 #include "scip/prop_pseudoobj.h"
 #include "scip/prop_redcost.h"
@@ -183,10 +190,9 @@
 #include "scip/sepa_cgmip.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_closecuts.h"
-#include "scip/sepa_cmir.h"
+#include "scip/sepa_aggregation.h"
 #include "scip/sepa_convexproj.h"
 #include "scip/sepa_disjunctive.h"
-#include "scip/sepa_flowcover.h"
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
@@ -197,10 +203,13 @@
 #include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
+#include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi_worhp.h"
+#include "nlpi/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {

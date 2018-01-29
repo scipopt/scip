@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1652,7 +1652,6 @@ SCIP_RETCODE readConstraints(
       /* check whether we have '<' from a "<->" string */
       if ( *lpinput->token == '<' )
       {
-         SCIP_Bool haveequiv = FALSE;
          int linepos = lpinput->linepos-1;
 
          /* check next token - cannot be a new section */
@@ -1668,21 +1667,18 @@ SCIP_RETCODE readConstraints(
                   if ( *lpinput->token == '>' )
                   {
                      lpinput->linepos = linepos;
-                     strcpy(lpinput->token, "<");
+                     (void) SCIPsnprintf(lpinput->token, 2, "<");
                      syntaxError(scip, lpinput,
                         "SCIP does not support equivalence (<->) indicator constraints; consider using the \"->\" form.");
-                     haveequiv = TRUE;
+                     goto TERMINATE;
                   }
                }
             }
          }
-         if ( ! haveequiv )
-         {
-            lpinput->linepos = linepos;
-            strcpy(lpinput->token, "<");
-            syntaxError(scip, lpinput, "unexpected \"<\".");
-         }
-         goto TERMINATE;
+         /* reset the lpinput for further usage as we have no indicator constraint */
+         lpinput->linepos = linepos;
+         (void) SCIPsnprintf(lpinput->token, 2, "<");
+         strcpy(lpinput->token, "<");
       }
 
       /* check for "->" */
@@ -2155,7 +2151,7 @@ SCIP_RETCODE readSos(
    )
 {
    SCIP_Bool initial, separate, enforce, check, propagate;
-   SCIP_Bool local, modifiable, dynamic, removable;
+   SCIP_Bool local, dynamic, removable;
    char name[SCIP_MAXSTRLEN];
    int cnt = 0;
 
@@ -2168,7 +2164,6 @@ SCIP_RETCODE readSos(
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
-   modifiable = FALSE;
    dynamic = lpinput->dynamicconss;
    removable = lpinput->dynamicrows;
 
@@ -2193,7 +2188,7 @@ SCIP_RETCODE readSos(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the constraint name */
-	    (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
+            (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
 
             name[SCIP_MAXSTRLEN-1] = '\0';
          }
@@ -2235,13 +2230,13 @@ SCIP_RETCODE readSos(
       {
          type = 1;
          SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-               local, modifiable, dynamic, removable) );
+               local, dynamic, removable, FALSE) );
       }
       else if( strcmp(lpinput->token, "S2") == 0 )
       {
          type = 2;
          SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-               local, modifiable, dynamic, removable) );
+               local, dynamic, removable, FALSE) );
       }
       else
       {
@@ -3592,6 +3587,8 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_Real lb;
    SCIP_Real ub;
 
+   SCIP_Bool zeroobj;
+
    assert(scip != NULL);
 
    /* find indicator constraint handler */
@@ -3671,6 +3668,7 @@ SCIP_RETCODE SCIPwriteLp(
    clearLine(linebuffer, &linecnt);
    appendLine(scip, file, linebuffer, &linecnt, " Obj:");
 
+   zeroobj = TRUE;
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -3684,12 +3682,23 @@ SCIP_RETCODE SCIPwriteLp(
       if( SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
 
+      zeroobj = FALSE;
+
       /* we start a new line; therefore we tab this line */
       if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", SCIPvarGetObj(var), varname );
+
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   /* add a linear term to avoid troubles when reading the lp file with another MIP solver */
+   if( zeroobj && nvars >= 1 )
+   {
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[0]));
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " 0 %s", varname );
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
