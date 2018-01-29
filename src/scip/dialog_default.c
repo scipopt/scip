@@ -1401,6 +1401,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
    int subidx;
    int i;
 
+   idxstr = NULL;
+   idx = 0;
+   subidx = 0;
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1540,6 +1544,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
    int idx;
    int subidx;
    int i;
+
+   idxstr = NULL;
+   idx = 0;
+   subidx = 0;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 

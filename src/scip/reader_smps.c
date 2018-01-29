@@ -186,16 +186,6 @@ SCIP_DECL_READERCOPY(readerCopySmps)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-/**! [SnippetReaderFreeSmps] */
-static
-SCIP_DECL_READERFREE(readerFreeSmps)
-{
-   return SCIP_OKAY;
-}
-/**! [SnippetReaderFreeSmps] */
-
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadSmps)
@@ -207,14 +197,17 @@ SCIP_DECL_READERREAD(readerReadSmps)
    char newfilename[SCIP_MAXSTRLEN];
    char* fromlastslash;
    char parent[SCIP_MAXSTRLEN];
-   int parentlen;
+   size_t parentlen;
 
    assert(scip != NULL);
    assert(filename != NULL);
 
-   fromlastslash = strrchr(filename, '/');
+   fromlastslash = (char*) strrchr(filename, '/');
 
-   parentlen = strlen(filename) - (strlen(fromlastslash) - 1);
+   if( fromlastslash == NULL )
+      parentlen = strlen(filename);
+   else
+      parentlen = strlen(filename) - (strlen(fromlastslash) - 1);
 
    strncpy(parent, filename, parentlen);
    parent[parentlen] = '\0';
@@ -288,7 +281,6 @@ SCIP_RETCODE SCIPincludeReaderSmps(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopySmps) );
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeSmps) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadSmps) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteSmps) );
 
