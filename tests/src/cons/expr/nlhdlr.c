@@ -31,6 +31,9 @@
 
 #include <string.h>
 
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
+
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_expr.h"
@@ -328,14 +331,15 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 {
    SCIP_VAR* auxvar;
-   SCIP_ROW* cut = NULL;
+   SCIP_ROWPREP* rowprep = NULL;
    SCIP_Bool infeasible;
    SCIP_Real xval;
    SCIP_Real yval;
    SCIP_Real xcoef;
    SCIP_Real ycoef;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
+   SCIP_Real side;
+   SCIP_Real coefrange;
+   SCIP_Real viol;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -367,21 +371,14 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
        */
       xcoef = nlhdlrexprdata->xcoef + 2.0 * nlhdlrexprdata->xxcoef * xval + nlhdlrexprdata->xycoef * yval;
       ycoef = nlhdlrexprdata->ycoef + 2.0 * nlhdlrexprdata->yycoef * yval + nlhdlrexprdata->xycoef * xval;
-      if( !overestimate )
-      {
-         lhs = -SCIPinfinity(scip);
-         rhs = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
-      }
-      else
-      {
-         lhs = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
-         rhs = SCIPinfinity(scip);
-      }
+      side = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
+      side = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
 
-      SCIP_CALL( SCIPcreateRowCons(scip, &cut, conshdlr, "testhdlrcut_cvx", 0, NULL, NULL, lhs, rhs, FALSE, FALSE, TRUE) );
-      SCIP_CALL( SCIPaddVarToRow(scip, cut, nlhdlrexprdata->varx, xcoef) );
-      SCIP_CALL( SCIPaddVarToRow(scip, cut, nlhdlrexprdata->vary, ycoef) );
-      SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, -1.0) );
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+      SCIPaddRowprepSide(rowprep, side);
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->varx, xcoef) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->vary, ycoef) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
       /* SCIP_CALL( SCIPprintRow(scip, cut, NULL) ); */
    }
@@ -390,36 +387,43 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       /* we do not implement separation for this side (and did not advertise to do so in detect) */
    }
 
-   if( cut == NULL )
+   if( rowprep == NULL )
       return SCIP_OKAY;
 
    /* check whether its violation and numerical properties are ok (and maybe improve) */
-   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
 
-   if( cut == NULL )
-      return SCIP_OKAY;
+   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
+   {
+      SCIP_ROW* cut;
 
-   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
+      SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "testhdlrcut_cvx");
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, conshdlr) );
 
-   /* add cut */
-   SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
-   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-   *ncuts += 1;
+      assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
+
+      /* add cut */
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+      *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   if( *result == SCIP_CUTOFF )
-   {
-      SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "add cut with violation %e\n", -SCIPgetRowSolFeasibility(scip, cut, sol));
-   }
-   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+      if( *result == SCIP_CUTOFF )
+      {
+         SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "add cut with violation %e\n", -SCIPgetRowSolFeasibility(scip, cut, sol));
+      }
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
-   /* release cut */
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+      /* release cut */
+      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   }
+
+   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }
