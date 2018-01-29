@@ -372,7 +372,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       xcoef = nlhdlrexprdata->xcoef + 2.0 * nlhdlrexprdata->xxcoef * xval + nlhdlrexprdata->xycoef * yval;
       ycoef = nlhdlrexprdata->ycoef + 2.0 * nlhdlrexprdata->yycoef * yval + nlhdlrexprdata->xycoef * xval;
       side = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
-      side = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
       SCIPaddRowprepSide(rowprep, side);
