@@ -343,7 +343,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
       if( cuts[i] == NULL )
          continue;
 
-      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
 
       if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
       {
