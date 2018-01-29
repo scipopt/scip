@@ -169,6 +169,7 @@ set(scipsources
     scip/reader_ccg.c
     scip/reader_cip.c
     scip/reader_cnf.c
+    scip/reader_cor.c
     scip/reader_diff.c
     scip/reader_fix.c
     scip/reader_fzn.c
@@ -183,6 +184,9 @@ set(scipsources
     scip/reader_ppm.c
     scip/reader_rlp.c
     scip/reader_sol.c
+    scip/reader_sto.c
+    scip/reader_smps.c
+    scip/reader_tim.c
     scip/reader_wbo.c
     scip/reader_zpl.c
     scip/sepa_cgmip.c
