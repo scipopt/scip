@@ -166,7 +166,7 @@ SCIP_RETCODE separatePointPow(
    /* take care of cut numerics */
    SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
 
-   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
+   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
    {
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, islocal ? "square_secant" : "square_linearization");  /* @todo make cutname unique, e.g., add LP number */
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );

@@ -253,7 +253,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
          {
             SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
 
-            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
+            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
             {
                /* make a SCIP_ROW and add to LP */
                SCIP_ROW* row;
