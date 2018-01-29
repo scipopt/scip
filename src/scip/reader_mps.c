@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -135,6 +135,14 @@ struct SparseMatrix
    int                   sentries;           /**< number of slots in the arrays */
 };
 typedef struct SparseMatrix SPARSEMATRIX;
+
+/** struct for mapping cons names to numbers */
+struct ConsNameFreq
+{
+   const char*           consname;           /**< name of the constraint */
+   int                   freq;               /**< how often we have seen the name */
+};
+typedef struct ConsNameFreq CONSNAMEFREQ;
 
 /** creates the mps input structure */
 static
@@ -1719,7 +1727,6 @@ SCIP_RETCODE readSOS(
    SCIP_Bool check;
    SCIP_Bool propagate;
    SCIP_Bool local;
-   SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
    char name[MPS_MAX_NAMELEN] = { '\0' };
@@ -1736,7 +1743,6 @@ SCIP_RETCODE readSOS(
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
-   modifiable = FALSE;
    dynamic = mpsi->dynamicconss;
    removable = mpsi->dynamicrows;
 
@@ -1788,7 +1794,7 @@ SCIP_RETCODE readSOS(
 
          /* check name */
          if( mpsinputField2(mpsi) != NULL )
-	    (void)SCIPmemccpy(name, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+            (void)SCIPmemccpy(name, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
          else
          {
             /* create new name */
@@ -1800,13 +1806,13 @@ SCIP_RETCODE readSOS(
          {
             /* we do not know the name of the constraint */
             SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-                  local, modifiable, dynamic, removable) );
+                  local, dynamic, removable, FALSE) );
          }
          else
          {
             assert( type == 2 );
             SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-                  local, modifiable, dynamic, removable) );
+                  local, dynamic, removable, FALSE) );
          }
          consType = type;
          SCIPdebugMsg(scip, "created constraint <%s> of type %d.\n", name, type);
@@ -2608,7 +2614,6 @@ SCIP_RETCODE readMps(
       SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
    }
 
- /* cppcheck-suppress unusedLabel */
  TERMINATE:
    mpsinputFree(scip, &mpsi);
 
@@ -2621,6 +2626,28 @@ SCIP_RETCODE readMps(
 /*
  * local methods for writing problem
  */
+
+/** gets the key (i.e. the name) of the given namefreq */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyNamefreq)
+{  /*lint --e{715}*/
+   CONSNAMEFREQ* consnamefreq = (CONSNAMEFREQ*)elem;
+
+   assert(consnamefreq != NULL);
+   assert(consnamefreq->consname != NULL);
+
+   return (void*)consnamefreq->consname;
+}
+
+/** returns TRUE iff both keys (i.e. strings) are equal up to max length*/
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqString)
+{  /*lint --e{715}*/
+   const char* string1 = (const char*)key1;
+   const char* string2 = (const char*)key2;
+
+   return (strncmp(string1, string2, MPS_MAX_NAMELEN - 1) == 0);
+}
 
 /** hash key retrieval function for variables */
 static
@@ -3081,23 +3108,28 @@ SCIP_RETCODE checkConsnames(
    SCIP_Bool*            error               /**< pointer to store whether all constraint names exist */
    )
 {
+   SCIP_HASHTABLE* consfreq;
+   CONSNAMEFREQ* consnamefreqs;
    SCIP_CONS* cons;
    char* consname;
-   int faulty;
    int i;
 
    assert(scip != NULL);
    assert(maxnamelen != NULL);
 
-   faulty = 0;
    *error = FALSE;
 
    /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &consnamefreqs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, consnames, nconss) );
+   SCIP_CALL( SCIPhashtableCreate(&consfreq, SCIPblkmem(scip), SCIP_HASHSIZE_NAMES,
+         hashGetKeyNamefreq, hashKeyEqString, SCIPhashKeyValString, NULL) );
 
    for( i = 0; i < nconss; ++i )
    {
+      CONSNAMEFREQ* consnamefreq;
       size_t l;
+      int freq;
 
       cons = conss[i];
       assert( cons != NULL );
@@ -3107,41 +3139,64 @@ SCIP_RETCODE checkConsnames(
 
       l = strlen(SCIPconsGetName(cons));
 
-      if( l >= MPS_MAX_NAMELEN )
-      {
-         faulty++;
-         l = MPS_MAX_NAMELEN - 1;
-      }
-
       if( l == 0 )
       {
          SCIPwarningMessage(scip, "At least one name of a constraint is empty, so file will be written with generic names.\n");
-
-         --i;  /*lint !e445*/
-         for( ; i >= 0; --i)  /*lint !e445*/
-         {
-            SCIPfreeBufferArray(scip, &((*consnames)[i]));
-         }
-         SCIPfreeBufferArray(scip, consnames);
-
          *error = TRUE;
 
-         return SCIP_OKAY;
+         goto TERMINATE;
+      }
+
+      consnamefreqs[i].consname = SCIPconsGetName(cons);
+      consnamefreqs[i].freq = 0;
+      freq = 0;
+
+      /* check for duplicate names */
+      if( NULL != (consnamefreq = (CONSNAMEFREQ *)SCIPhashtableRetrieve(consfreq, (void*)SCIPconsGetName(cons))) )
+      {
+         consnamefreq->freq += 1;
+         consnamefreqs[i] = *consnamefreq;
+         freq = consnamefreq->freq;
+      }
+      SCIP_CALL( SCIPhashtableInsert(consfreq, (void*)(&consnamefreqs[i])) );
+
+      /* the new length is the length of the old name + a '_' and the freq number which has floor(log10(freq)) + 1 characters */
+      if( freq > 0 )
+         l = l + 1 + (size_t)log10((SCIP_Real) freq) + 1;
+
+      if( l >= MPS_MAX_NAMELEN )
+      {
+         SCIPwarningMessage(scip, "Constraints have duplicate name and are too long to fix, so file will be written with generic names.\n");
+         *error = TRUE;
+
+         goto TERMINATE;
       }
 
       (*maxnamelen) = MAX(*maxnamelen, (unsigned int) l);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) l + 1) );
-      (void) SCIPsnprintf(consname, (int)l + 1, "%s", SCIPconsGetName(cons) );
+      if( freq > 0 )
+         (void) SCIPsnprintf(consname, (int)l + 1, "%s_%d", SCIPconsGetName(cons), freq);
+      else
+         (void) SCIPsnprintf(consname, (int)l + 1, "%s", SCIPconsGetName(cons));
 
       (*consnames)[i] = consname;
    }
 
-   if( faulty > 0 )
+TERMINATE:
+   SCIPfreeBufferArray(scip, &consnamefreqs);
+
+   if( *error )
    {
-      SCIPwarningMessage(scip, "there are %d constraint names which have to be cut down to %d characters; MPS file might be corrupted\n",
-         faulty, MPS_MAX_NAMELEN - 1);
+      --i;  /*lint !e445*/
+      for( ; i >= 0; --i)  /*lint !e445*/
+      {
+         SCIPfreeBufferArray(scip, &((*consnames)[i]));
+      }
+      SCIPfreeBufferArray(scip, consnames);
    }
+
+   SCIPhashtableFree(&consfreq);
 
    return SCIP_OKAY;
 }
@@ -3360,7 +3415,7 @@ void printBoundSection(
    int                   nvars,              /**< number of active variables */
    SCIP_VAR**            aggvars,            /**< needed aggregated variables */
    int                   naggvars,           /**< number of aggregated variables */
-   SCIP_VAR**            fixvars,            /**< all fixed variables */
+   SCIP_VAR**            fixvars,            /**< all fixed variables (or NULL if nfixvars is 0) */
    int                   nfixvars,           /**< number of fixed variables */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    const char**          varnames,           /**< array with variable names */
@@ -3376,8 +3431,9 @@ void printBoundSection(
    const char* varname;
    char valuestr[MPS_MAX_VALUELEN] = { '\0' };
 
-   assert( scip != NULL );
-   assert( vars != NULL );
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(nfixvars == 0 || fixvars != NULL);
 
    sectionName = FALSE;
 
@@ -3576,7 +3632,9 @@ void printBoundSection(
    {
       /* we should print the transformed problem, otherwise no fixed variable should exists */
       assert(transformed);
+      assert(fixvars != NULL && fixvars[v] != NULL);
 
+      /* cppcheck-suppress nullPointer */
       var = fixvars[v];
 
       assert(var != NULL);
@@ -3946,6 +4004,10 @@ SCIP_RETCODE SCIPwriteMps(
    /* print NAME of the problem */
    SCIPinfoMessage(scip, file, "%-14s%s\n", "NAME", name);
 
+   /* print OBJSENSE of the problem */
+   SCIPinfoMessage(scip, file, "OBJSENSE\n");
+   SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MAXIMIZE ? "  MAX" : "  MIN");
+
    /* start ROWS section */
    SCIPinfoMessage(scip, file, "ROWS\n");
 
@@ -3966,10 +4028,6 @@ SCIP_RETCODE SCIPwriteMps(
        */
       if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT || ((SCIPvarGetNLocksDown(var) == 0) && (SCIPvarGetNLocksUp(var) == 0)) )
       {
-         /* convert maximization problem into minimization since MPS format the objective is to minimize */
-         if( objsense == SCIP_OBJSENSE_MAXIMIZE )
-            value *= -1.0;
-
          assert( matrix->nentries < matrix->sentries );
 
          matrix->values[matrix->nentries] = value;
@@ -3998,7 +4056,6 @@ SCIP_RETCODE SCIPwriteMps(
 
       /* construct constraint name */
       consname = consnames[c];
-      assert( 0 == strncmp(consname, SCIPconsGetName(cons), maxnamelen) );
 
       if( strcmp(conshdlrname, "linear") == 0 )
       {
@@ -4580,8 +4637,6 @@ SCIP_RETCODE SCIPwriteMps(
 
    if( nfixedvars > 0 )
    {
-      /* cppcheck-suppress nullPointerRedundantCheck */
-      assert(fixvars != NULL);
       SCIPfreeBufferArray(scip, &fixvars);
    }
 

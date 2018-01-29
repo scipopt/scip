@@ -401,7 +401,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # check indentation of function parameters closing parenthesis
       if ( $checkindent == 1 && $documentationpos <= 0 && $depth == 0 && $inenumstruct == 0 )
       {
-	 if ( ! (($str =~ /SCIP_DECL_/) || ($str =~ /TCLIQUE_/) || ($str =~ /SORTTPL\_/) || ($str =~ /define/) ) )
+	 if ( ! (($str =~ /SCIP_DECL_/) || ($str =~ /DECL_/) || ($str =~ /TCLIQUE_/) || ($str =~ /SORTTPL\_/) || ($str =~ /define/) ) )
 	 {
 	    # check for ")"
 	    my $pos = index($str, ")");

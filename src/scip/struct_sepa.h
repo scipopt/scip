@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -62,6 +62,7 @@ struct SCIP_Sepa
    int                   freq;               /**< frequency for calling separator */
    int                   ncallsatnode;       /**< number of times, this separator was called at the current node */
    int                   ncutsfoundatnode;   /**< number of cutting planes found at the current node */
+   int                   expbackoff;         /**< base for exponential increase of frequency at which the separator is called */
    SCIP_Bool             usessubscip;        /**< does the separator use a secondary SCIP instance? */
    SCIP_Bool             delay;              /**< should separator be delayed, if other separators found cuts? */
    SCIP_Bool             lpwasdelayed;       /**< was the LP separation delayed at the last call? */

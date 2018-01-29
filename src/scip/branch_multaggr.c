@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -768,7 +768,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 
       if( SCIPgetNRuns(scip) != branchruledata->nrun )
       {
-         SCIP_VAR** fixvars = NULL;
+         SCIP_VAR** fixvars;
          int nfixvars;
          int i;
 
@@ -821,7 +821,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 
    /* compute strong branching among the array of fractional variables in order to get the best one */
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown,
-         branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand, allowaddcons,
+         branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand,
          branchruledata->maxproprounds, branchruledata->probingbounds, TRUE,
          &bestcandpos, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 

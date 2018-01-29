@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -260,6 +260,7 @@ void SCIPgmlWriteClosing(
  */
 
 /**@defgroup SparseSol Sparse Solution
+ * @ingroup DataStructures
  * @brief sparse storage for multiple integer solutions
  *
  * @{
@@ -488,9 +489,8 @@ INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
    int exp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)exp;
+   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)(uint16_t)exp;
 }
-
 
 /** creates a hash table */
 EXTERN
@@ -568,6 +568,19 @@ void SCIPhashtableRemoveAll(
 EXTERN
 SCIP_Longint SCIPhashtableGetNElements(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** gives the number of entries in the internal arrays of a hash table */
+EXTERN
+int SCIPhashtableGetNEntries(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** gives the element at the given index or NULL if entry at that index has no element */
+EXTERN
+void* SCIPhashtableGetEntry(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   int                   entryidx            /**< index of hash table entry */
    );
 
 /** returns the load of the given hash table in percentage */
@@ -868,6 +881,20 @@ SCIP_Real SCIPhashmapEntryGetImageReal(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
+/** sets pointer image of a hashmap entry */
+EXTERN
+void SCIPhashmapEntrySetImage(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   void*                 image               /**< new image */
+   );
+
+/** sets real image of a hashmap entry */
+EXTERN
+void SCIPhashmapEntrySetImageReal(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   SCIP_Real             image               /**< new image */
+   );
+
 /** removes all entries in a hash map. */
 EXTERN
 SCIP_RETCODE SCIPhashmapRemoveAll(
@@ -876,6 +903,107 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
 
 /**@} */
 
+
+/*
+ * Hash Set
+ */
+
+/**@defgroup HashSet Hash Set
+ * @ingroup DataStructures
+ * @brief very lightweight hash set of pointers
+ *
+ * @{
+ */
+
+/** creates a hash set of pointers */
+EXTERN
+SCIP_RETCODE SCIPhashsetCreate(
+   SCIP_HASHSET**        hashset,            /**< pointer to store the created hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   int                   size                /**< initial size of the hash set; it is guaranteed that the set is not
+                                              *   resized if at most that many elements are inserted */
+   );
+
+/** frees the hash set */
+EXTERN
+void SCIPhashsetFree(
+   SCIP_HASHSET**        hashset,            /**< pointer to the hash set */
+   BMS_BLKMEM*           blkmem              /**< block memory used to store hash set entries */
+   );
+
+/** inserts new element into the hash set */
+EXTERN
+SCIP_RETCODE SCIPhashsetInsert(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   void*                 element             /**< element to insert */
+   );
+
+/** checks whether an element exists in the hash set */
+EXTERN
+SCIP_Bool SCIPhashsetExists(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< element to search for */
+   );
+
+/** removes an element from the hash set, if it exists */
+EXTERN
+SCIP_RETCODE SCIPhashsetRemove(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< origin to remove from the list */
+   );
+
+/** prints statistics about hash set usage */
+EXTERN
+void SCIPhashsetPrintStatistics(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/** indicates whether a hash set has no entries */
+EXTERN
+SCIP_Bool SCIPhashsetIsEmpty(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the number of elements in a hash set */
+EXTERN
+int SCIPhashsetGetNElements(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the number of slots of a hash set */
+EXTERN
+int SCIPhashsetGetNSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the array of hash set slots; contains all elements in indetermined order and may contain NULL values */
+EXTERN
+void** SCIPhashsetGetSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** removes all entries in a hash set. */
+EXTERN
+void SCIPhashsetRemoveAll(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPhashsetIsEmpty(hashset)        ((hashset)->nelements == 0)
+#define SCIPhashsetGetNElements(hashset)   ((hashset)->nelements)
+#define SCIPhashsetGetNSlots(hashset)      (1u << (64 - (hashset)->shift))
+#define SCIPhashsetGetSlots(hashset)       ((hashset)->slots)
+
+#endif
+
+/**@} */
 
 
 /*
@@ -1076,9 +1204,7 @@ int SCIPprofileGetLatestFeasibleStart(
  * Directed graph
  */
 
-/**@defgroup DirectedGraph Directed Graph
- * @ingroup DataStructures
- * @brief graph structure with common algorithms for directed and undirected graphs
+/**@addtogroup DirectedGraph
  *
  * @{
  */
@@ -1481,6 +1607,51 @@ void SCIPbtSetRoot(
 
 /**@} */
 
+/**@addtogroup DisjointSet
+ *
+ * @{
+ */
+
+/*
+ * Disjoined Set data structure
+ */
+
+/** clears the disjoint set (union find) structure \p uf */
+EXTERN
+void SCIPdisjointsetClear(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/** finds and returns the component identifier of this \p element */
+EXTERN
+int SCIPdisjointsetFind(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   element             /**< element to be found */
+   );
+
+/** merges the components containing the elements \p p and \p q */
+EXTERN
+void SCIPdisjointsetUnion(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   p,                  /**< first element */
+   int                   q,                  /**< second element */
+   SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
+   );
+
+/** returns the number of independent components in this disjoint set (union find) data structure */
+EXTERN
+int SCIPdisjointsetGetComponentCount(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/** returns the size (number of nodes) of this disjoint set (union find) data structure */
+EXTERN
+int SCIPdisjointsetGetSize(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/* @} */
+
 /*
  * Numerical methods
  */
@@ -1496,6 +1667,13 @@ void SCIPbtSetRoot(
 EXTERN
 SCIP_Real SCIPcalcMachineEpsilon(
    void
+   );
+
+/** returns the next representable value of from in the direction of to */
+EXTERN
+SCIP_Real SCIPnextafter(
+   SCIP_Real             from,               /**< value from which the next representable value should be returned */
+   SCIP_Real             to                  /**< direction in which the next representable value should be returned */
    );
 
 /** calculates the greatest common divisor of the two given values */

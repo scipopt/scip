@@ -1,0 +1,3 @@
+read ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+display linclass
+quit

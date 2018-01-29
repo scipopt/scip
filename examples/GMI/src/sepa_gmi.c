@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -779,7 +779,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
                /* flush all changes before adding the cut */
                SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
 
                /* add global cuts that are not implicit bound changes to the cut pool */
                if( ! cutislocal && SCIProwGetNNonz(cut) > 1 )

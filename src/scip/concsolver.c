@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -183,7 +183,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    /* in deterministic mode use number of nonzeros and variables to get a good initial synchronization frequency
     * in opportunistic mode use the frequency as set by the user
     */
-   if( set->parallel_mode == SCIP_PARA_DETERMINISTIC )
+   if( set->parallel_mode == (int) SCIP_PARA_DETERMINISTIC )
       (*concsolver)->syncfreq = 0.01 * set->scip->stat->nnz * SCIPgetNVars(set->scip) * set->concurrent_freqinit;
    else
       (*concsolver)->syncfreq = set->concurrent_freqinit;

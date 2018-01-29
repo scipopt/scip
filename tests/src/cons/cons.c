@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -128,7 +128,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpUnittest)
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], 1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], 1.0) );
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
    SCIP_CALL( SCIPreleaseRow(scip, &row));
 
    *result = SCIP_SEPARATED;

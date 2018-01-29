@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,19 @@ extern "C" {
 EXTERN
 SCIP_RETCODE SCIPincludeHeurLocks(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/** apply fix-and-propagate scheme based on variable locks
+ *
+ *  @note probing mode of SCIP needs to be enabled before
+ */
+EXTERN
+SCIP_RETCODE SCIPapplyLockFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
+   SCIP_Bool*            cutoff,             /**< pointer to store if a cutoff was detected */
+   SCIP_Bool*            allrowsfulfilled    /**< pointer to store if all rows became redundant */
    );
 
 #ifdef __cplusplus

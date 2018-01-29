@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,7 +20,7 @@
  *
  */
 
-/* This heuristic takes a infeasible solution and tries to repair it.
+/* This heuristic takes an infeasible solution and tries to repair it.
  * This can happen by variable fixing as long as the sum of all potential possible shiftings
  * is higher than alpha*slack or slack variables with a strong penalty on the objective function.
  * This heuristic cannot run if variable fixing and slack variables are turned off.
@@ -243,7 +243,7 @@ static
 SCIP_RETCODE tryFixVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SCIP_SOL*             sol,                /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution data structure */
    SCIP_Real*            potential,          /**< array with all potential values */
    SCIP_Real*            slack,              /**< array with all slack values */
    SCIP_VAR*             var,                /**< variable to be fixed? */
@@ -258,6 +258,7 @@ SCIP_RETCODE tryFixVar(
    SCIP_COL* col;
    SCIP_Real* vals;
    SCIP_Real alpha;
+   SCIP_Real solval;
    int nrows;
    int i;
    int sgn;
@@ -274,11 +275,13 @@ SCIP_RETCODE tryFixVar(
    *infeasible = TRUE;
    *fixed = FALSE;
 
-   if( SCIPisFeasLT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbGlobal(var)) )
+   solval = SCIPgetSolVal(scip, sol, var);
+
+   if( SCIPisFeasLT(scip, solval, SCIPvarGetLbGlobal(var)) )
    {
       return SCIP_OKAY;
    }
-   if( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetUbGlobal(var)) )
+   if( SCIPisFeasGT(scip, solval, SCIPvarGetUbGlobal(var)) )
    {
       return SCIP_OKAY;
    }
@@ -290,11 +293,11 @@ SCIP_RETCODE tryFixVar(
 
    if( NULL == rows )
    {
-      SCIP_CALL( SCIPfixVar(subscip, subvar, SCIPgetSolVal(scip, sol, var),
+      SCIP_CALL( SCIPfixVar(subscip, subvar, solval,
                infeasible, fixed) );
       assert(!*infeasible && *fixed);
       heurdata->nvarfixed++;
-      SCIPdebugMsg(scip,"Variable %s is fixed to %g\n",SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var));
+      SCIPdebugMsg(scip,"Variable %s is fixed to %g\n",SCIPvarGetName(var), solval);
       return SCIP_OKAY;
    }
    assert(NULL != rows);
@@ -359,8 +362,7 @@ SCIP_RETCODE tryFixVar(
       }
    }
 
-   SCIP_CALL( SCIPfixVar(subscip, subvar, SCIPgetSolVal(scip, sol, var),
-         infeasible, fixed) );
+   SCIP_CALL( SCIPfixVar(subscip, subvar, solval, infeasible, fixed) );
    assert(!*infeasible && *fixed);
    heurdata->nvarfixed++;
    SCIPdebugMsg(scip,"Variable %s is fixed to %g\n",SCIPvarGetName(var),
@@ -400,6 +402,14 @@ SCIP_RETCODE checkCands(
    for( i = 0; i < nfracvars; ++i)
    {
       SCIP_Real value = SCIPgetSolVal(scip, sol, vars[i]);
+
+      if( SCIPisInfinity(scip, REALABS(value)) )
+      {
+         *success = FALSE;
+         SCIPdebugMsg(scip, "Variable with infinite solution value");
+
+         return SCIP_OKAY;
+      }
       if( !SCIPisFeasIntegral(scip, value) )
       {
          if( roundit )
@@ -425,6 +435,19 @@ SCIP_RETCODE checkCands(
          }
       }
    }
+
+   /* ensure that no other variables have infinite LP solution values */
+   for( ; i < nvars; ++i )
+   {
+      if( SCIPisInfinity(scip, REALABS(SCIPgetSolVal(scip, sol, vars[i]))) )
+      {
+         *success = FALSE;
+         SCIPdebugMsg(scip, "Variable with infinite solution value");
+
+         return SCIP_OKAY;
+      }
+   }
+
    SCIPdebugMsg(scip, "All variables rounded.\n");
    return SCIP_OKAY;
 }
@@ -1277,28 +1300,28 @@ SCIP_RETCODE SCIPincludeHeurRepair(
 
    heurdata->filename = NULL;
    /* add string parameter for filename containing a solution */
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/filename",
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/filename",
          "file name of a solution to be used as infeasible starting point, [-] if not available",
          &heurdata->filename, FALSE, DEFAULT_FILENAME, NULL, NULL) );
 
    /* add bool parameter for decision how to deal with unfractional cands */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/roundit",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/roundit",
          "True : fractional variables which are not fractional in the given solution are rounded, "
          "FALSE : solving process of this heuristic is stopped. ",
          &heurdata->roundit, FALSE, DEFAULT_ROUNDIT, NULL, NULL));
 
    /* add bool parameter for decision how the objective function should be */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/useobjfactor",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useobjfactor",
          "should a scaled objective function for original variables be used in repair subproblem?",
          &heurdata->useobjfactor, FALSE, DEFAULT_USEOBJFACTOR, NULL, NULL));
 
    /* add bool parameter for decision if variable fixings should be used */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usevarfix",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usevarfix",
          "should variable fixings be used in repair subproblem?",
          &heurdata->usevarfix, FALSE, DEFAULT_USEVARFIX, NULL, NULL));
 
    /* add bool parameter for decision how the objective function should be */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/useslackvars",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useslackvars",
          "should slack variables be used in repair subproblem?",
          &heurdata->useslackvars, FALSE, DEFAULT_USESLACKVARS, NULL, NULL));
 

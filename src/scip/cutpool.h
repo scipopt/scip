@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -68,12 +68,22 @@ SCIP_RETCODE SCIPcutpoolClear(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** checks if cut is already existing */
+extern
+SCIP_Bool SCIPcutpoolIsCutNew(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   );
+
 /** if not already existing, adds row to cut pool and captures it */
 extern
 SCIP_RETCODE SCIPcutpoolAddRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row                 /**< cutting plane to add */
    );
 
@@ -83,6 +93,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row                 /**< cutting plane to add */
    );
 

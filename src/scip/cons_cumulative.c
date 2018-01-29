@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1219,28 +1219,36 @@ int computeTotalEnergy(
  * @{
  */
 
-/** solve single cumulative condition using SCIP and a single cumulative constraint */
+/** setup and solve subscip to solve single cumulative condition  */
 static
-SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
+SCIP_RETCODE setupAndSolveCumulativeSubscip(
+   SCIP*                 subscip,            /**< subscip data structure */
+   SCIP_Real*            objvals,            /**< array of objective coefficients for each job (linear objective function), or NULL if none */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   njobs,              /**< number of jobs (activities) */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes (-1: no limit) */
+   SCIP_Real             timelimit,          /**< time limit for solving in seconds */
+   SCIP_Real             memorylimit,        /**< memory limit for solving in mega bytes (MB) */
+   SCIP_Real*            ests,               /**< array of earliest start times for each job */
+   SCIP_Real*            lsts,               /**< array of latest start times for each job */
+   SCIP_Bool*            infeasible,         /**< pointer to store if the subproblem was infeasible */
+   SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
+   SCIP_Bool*            solved,             /**< pointer to store if the problem is solved (to optimality) */
+   SCIP_Bool*            error               /**< pointer to store if an error occurred */
+   )
 {
-   SCIP* subscip;
    SCIP_VAR** subvars;
    SCIP_CONS* cons;
-   SCIP_RETCODE retcode;
+
    char name[SCIP_MAXSTRLEN];
    int v;
+   SCIP_RETCODE retcode;
 
-   assert(njobs > 0);
-
-   (*solved) = FALSE;
-   (*infeasible) = FALSE;
-   (*unbounded) = FALSE;
-   (*error) = FALSE;
-
-   SCIPdebugMessage("solve independent cumulative condition with %d variables\n", njobs);
-
-   /* initialize the sub-problem */
-   SCIP_CALL( SCIPcreate(&subscip) );
+   assert(subscip != NULL);
 
    /* copy all plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
@@ -1255,7 +1263,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    {
       SCIP_Real objval;
 
-      /* construct varibale name */
+      /* construct variable name */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", v);
 
       if( objvals == NULL )
@@ -1297,9 +1305,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   /* forbid recursive call of heuristics and separators solving subMIPs
-    * todo: really? This method was part of 3.0.1 but not in v31-Bugfix
-    */
+   /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
    /* solve single cumulative constraint by branch and bound */
@@ -1374,7 +1380,40 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
 
    SCIPfreeBlockMemoryArray(subscip, &subvars, njobs);
 
+   return SCIP_OKAY;
+}
+
+/** solve single cumulative condition using SCIP and a single cumulative constraint */
+static
+SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
+{
+   SCIP* subscip;
+
+   SCIP_RETCODE retcode;
+
+   assert(njobs > 0);
+
+   (*solved) = FALSE;
+   (*infeasible) = FALSE;
+   (*unbounded) = FALSE;
+   (*error) = FALSE;
+
+   SCIPdebugMessage("solve independent cumulative condition with %d variables\n", njobs);
+
+   /* initialize the sub-problem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   /* create and solve the subproblem. catch possible errors */
+   retcode = setupAndSolveCumulativeSubscip(subscip, objvals, durations, demands,
+         njobs, capacity, hmin, hmax,
+         maxnodes, timelimit, memorylimit,
+         ests, lsts,
+         infeasible, unbounded, solved, error);
+
+   /* free the subscip in any case */
    SCIP_CALL( SCIPfree(&subscip) );
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2251,6 +2290,9 @@ SCIP_RETCODE checkCumulativeCondition(
    int endindex;           /* index of endsolvalues with: endsolvalues[endindex] > curtime */
    int j;
 
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+
    assert(scip != NULL);
    assert(violated != NULL);
 
@@ -2297,6 +2339,8 @@ SCIP_RETCODE checkCumulativeCondition(
 
    endindex = 0;
    freecapacity = capacity;
+   absviol = 0.0;
+   relviol = 0.0;
 
    /* check each start point of a job whether the capacity is kept or not */
    for( j = 0; j < nvars; ++j )
@@ -2322,6 +2366,13 @@ SCIP_RETCODE checkCumulativeCondition(
          ++endindex;
       }
       assert(freecapacity <= capacity);
+
+      /* update absolute and relative violation */
+      if( absviol < (SCIP_Real) (-freecapacity) )
+      {
+         absviol = -freecapacity;
+         relviol = SCIPrelDiff((SCIP_Real)(capacity - freecapacity), (SCIP_Real)capacity);
+      }
 
       /* check freecapacity to be smaller than zero */
       if( freecapacity < 0 && curtime >= hmin )
@@ -2354,6 +2405,10 @@ SCIP_RETCODE checkCumulativeCondition(
          break;
       }
    } /*lint --e{850}*/
+
+   /* update constraint violation in solution */
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    /* free all buffer arrays */
    SCIPfreeBufferArray(scip, &endindices);
@@ -7362,7 +7417,6 @@ SCIP_RETCODE propagateCumulativeCondition(
             nchgbds, initialized, explanation, cutoff), TERMINATE );
    }
    /* free resource profile */
-   /* cppcheck-suppress unusedLabel */
 TERMINATE:
    SCIPprofileFree(&profile);
 
@@ -7691,17 +7745,22 @@ SCIP_RETCODE computeAlternativeBounds(
       {
          SCIP_PROFILE* profile;
 
+         SCIP_RETCODE retcode = SCIP_OKAY;
+
          /* create empty resource profile with infinity resource capacity */
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
          /* create worst case resource profile */
-         SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands) );
+         retcode = SCIPcreateWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands);
 
          hmin = SCIPcomputeHmin(scip, profile, consdata->capacity);
          hmax = SCIPcomputeHmax(scip, profile, consdata->capacity);
 
          /* free worst case profile */
          SCIPprofileFree(&profile);
+
+         if( retcode != SCIP_OKAY )
+            return retcode;
       }
       else
       {
@@ -7963,7 +8022,7 @@ SCIP_RETCODE propagateAllConss(
    nvars = SCIPgetNVars(scip);
    oldnfixedvars = *nfixedvars;
 
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &downlocks, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &uplocks, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &alternativelbs, nvars) );
@@ -8694,7 +8753,7 @@ SCIP_RETCODE addRelaxation(
       if( !SCIProwIsInLP(consdata->demandrows[r]) )
       {
          assert(consdata->demandrows[r] != NULL);
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE, infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, consdata->demandrows[r], FALSE, infeasible) );
       }
    }
 
@@ -8750,7 +8809,7 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol,  consdata->demandrows[r], FALSE, cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, consdata->demandrows[r], FALSE, cutoff) );
             if ( *cutoff )
             {
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -8837,13 +8896,14 @@ SCIP_RETCODE separateCoverCutsCons(
       }
    }
 
-   if( SCIPisFeasNegative(scip, minfeasibility) )
+   assert(!SCIPisFeasNegative(scip, minfeasibility) || row != NULL);
+
+   if( row != NULL && SCIPisFeasNegative(scip, minfeasibility) )
    {
       SCIPdebugMsg(scip, "cumulative constraint <%s> separated 1 cover cut with feasibility %g\n",
          SCIPconsGetName(cons), minfeasibility);
 
-      assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       if ( *cutoff )
          return SCIP_OKAY;
@@ -8874,13 +8934,15 @@ SCIP_RETCODE separateCoverCutsCons(
       }
    }
 
-   if( SCIPisFeasNegative(scip, minfeasibility) )
+   assert(!SCIPisFeasNegative(scip, minfeasibility) || row != NULL);
+
+   if( row != NULL && SCIPisFeasNegative(scip, minfeasibility) )
    {
       SCIPdebugMsg(scip, "cumulative constraint <%s> separated 1 cover cut with feasibility %g\n",
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       if ( *cutoff )
          return SCIP_OKAY;
@@ -8895,7 +8957,6 @@ static
 SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  startindices,       /**< permutation with rspect to the start times */
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
@@ -8948,7 +9009,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
 
-   SCIP_CALL( SCIPaddCut(scip, sol, row, TRUE, &infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
    assert( ! infeasible );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -9042,7 +9103,7 @@ SCIP_RETCODE separateConsOnIntegerVariables(
       if( freecapacity < 0 && curtime >= hmin)
       {
          /* create capacity restriction row for current event point */
-         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, sol, startindices, curtime, j+1, endindex, lower) );
+         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, startindices, curtime, j+1, endindex, lower) );
          *separated = TRUE;
       }
    } /*lint --e{850}*/
@@ -9592,7 +9653,7 @@ SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
    /* create worst case resource profile */
-   SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, nvars, vars, durations, demands) );
+   SCIP_CALL_FINALLY( SCIPcreateWorstCaseProfile(scip, profile, nvars, vars, durations, demands), SCIPprofileFree(&profile) );
 
    /* print resource profile in if SCIP_DEBUG is defined */
    SCIPdebug( SCIPprofilePrint(profile, SCIPgetMessagehdlr(scip), NULL) );
@@ -10662,6 +10723,7 @@ SCIP_RETCODE tightenCapacity(
    /* check whether capacity can be tightened and whether demands need to be adjusted */
    if( bestcapacity < consdata->capacity )
    {
+      /* cppcheck-suppress unassignedVariable */
       int oldnchgcoefs;
 
       SCIPdebug(oldnchgcoefs = *nchgcoefs; )
@@ -14210,7 +14272,6 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
 
    /* create closing of the GML format */
    SCIPgmlWriteClosing(file);
-   /* cppcheck-suppress unusedLabel */
 TERMINATE:
    /* close file */
    fclose(file);

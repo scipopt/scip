@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,22 +31,18 @@ extern "C" {
 #endif
 
 /** create solver interface for filterSQP solver */
-extern
 SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
    );
 
 /** gets string that identifies filterSQP */
-extern
 const char* SCIPgetSolverNameFilterSQP(void);
 
 /** gets string that describes filterSQP */
-extern
 const char* SCIPgetSolverDescFilterSQP(void);
 
 /** returns whether filterSQP is available, i.e., whether it has been linked in */
-extern
 SCIP_Bool SCIPisFilterSQPAvailableFilterSQP(void);
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -894,7 +894,7 @@ SCIP_RETCODE createRow(
       if( SCIPgetDepth(scip) == 0 || SCIPisCutEfficacious(scip, NULL, row) )
       {
          SCIPdebug( SCIPprintRow(scip, row, NULL) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
          (*rowadded) = TRUE;
       }
 

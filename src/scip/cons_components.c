@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -367,7 +367,7 @@ SCIP_RETCODE componentSetupWorkingSol(
    }
 
    /* set up debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    {
       PROBLEM* problem;
       SCIP* scip;
@@ -421,15 +421,20 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPcreate(subscip) );
 
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
+#ifdef SCIP_MORE_DEBUG /* we print statistics later, so we need to copy statistics tables */
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, &success) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
+#endif
 
    /* the plugins were successfully copied */
    if( success )
    {
       SCIP_CONSHDLR* newconshdlr;
       SCIP_CONSHDLRDATA* newconshdlrdata;
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       SCIP_Bool isvalid = FALSE;
 #endif
 
@@ -451,7 +456,7 @@ SCIP_RETCODE createSubscip(
       /* reduce the effort spent for hash tables; however, if the debug solution is enabled and valid in this subtree,
        * hash tables are needed for installing the debug solution
        */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
       if( !isvalid && SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
 #endif
@@ -2305,7 +2310,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       /* loop over all components */
       for( comp = 0; comp < ncompsmaxsize && !SCIPisStopped(scip); comp++ )
       {
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPgetStage(subscip) > SCIP_STAGE_INIT )
          {
             SCIP_CALL( SCIPfree(&subscip) );
@@ -2369,21 +2374,24 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
          }
 
             /* set up debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          {
-            SCIP_SOL* debugsol = NULL;
+            SCIP_SOL* debugsol;
             SCIP_Real val;
             int i;
 
-            SCIPdebugSolEnable(subscip);
-
             SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
-            assert(debugsol != NULL);
 
-            for( i = 0; i < ncompvars; ++i )
+            /* set solution values in the debug solution if it is available */
+            if( debugsol != NULL )
             {
-               SCIP_CALL( SCIPdebugGetSolVal(scip, compvars[i], &val) );
-               SCIP_CALL( SCIPdebugAddSolVal(subscip, subvars[i], val) );
+               SCIPdebugSolEnable(subscip);
+
+               for( i = 0; i < ncompvars; ++i )
+               {
+                  SCIP_CALL( SCIPdebugGetSolVal(scip, compvars[i], &val) );
+                  SCIP_CALL( SCIPdebugAddSolVal(subscip, subvars[i], val) );
+               }
             }
          }
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,10 @@ volatile double b = 2.34567;
 
 /* corresponds to exact rational number 6628035890302157/536870912 */
 volatile double c = 12345678.9;
+
+/* example for a number where floor is failing in double precision (see issue #1873) */
+volatile double xhi = -2.881951920481567e+17;
+volatile double xlo = 6.0078125;
 
 /* TEST SUITE */
 TestSuite(dbldblarith);
@@ -146,4 +150,36 @@ Test(dbldblarith, sqrt, .description = "tests sqrt with double double arithmetic
    cr_assert_lt(fabs(result - 1.0000000000000072514), 1e-14, "double precision has to large error");
 
    printf("error with double: %.18g, error with dbldbl: %.18g\n", fabs(result - 1.0000000000000072514), fabs((dbldblres + dbldblreserr) - 1.0000000000000072514));
+}
+
+
+Test(dbldblarith, floor_ceil, .description = "tests floor/ceil with double double arithmetic")
+{
+   double tmphi;
+   double tmplo;
+   volatile double resultfloor;
+   volatile double resultceil;
+   volatile double dbldblfloorres;
+   volatile double dbldblfloorreserr;
+   volatile double dbldblceilres;
+   volatile double dbldblceilreserr;
+
+   resultfloor = floor(xhi + xlo);
+   resultceil = ceil(-xhi - xlo);
+
+   cr_assert_eq(resultfloor, (-resultceil), "floor(x) should be equal to -ceil(-x)");
+
+   SCIPdbldblFloor2(dbldblfloorres, dbldblfloorreserr, xhi, xlo);
+   SCIPdbldblCeil2(dbldblceilres, dbldblceilreserr, -xhi, -xlo);
+
+   printf("ceil(- (%.16g + %.16g)) = %.16g + %.16g  floor(%.16g + %.16g) = %.16g + %.16g\n", xhi, xlo, dbldblceilres, dbldblceilreserr, xhi, xlo, dbldblfloorres, dbldblfloorreserr);
+
+   cr_assert_eq(dbldblfloorres, -dbldblceilres, "floor(x) should be equal to -ceil(-x)");
+   cr_assert_eq(dbldblfloorreserr, -dbldblceilreserr, "floor(x) should be equal to -ceil(-x)");
+
+   SCIPdbldblSum22(tmphi, tmplo, xhi, xlo, -dbldblfloorres, -dbldblfloorreserr);
+   cr_assert_eq((tmphi + tmplo), 0.0078125, "double double arithmetic floor should give the correct result 0.0078125");
+
+   SCIPdbldblSum21(tmphi, tmplo, xhi, xlo, -resultfloor);
+   cr_assert_eq((tmphi + tmplo),  6.0078125, "double precision floor should give the incorrect result 6.0078125");
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -208,6 +208,190 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
+/** setup and solve mutation sub-SCIP */
+static
+SCIP_RETCODE setupAndSolveSubscipMutation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SCIP_HEUR*            heur,               /**< mutation heuristic */
+   SCIP_VAR**            fixedvars,          /**< array to store the variables that should be fixed in the subproblem */
+   SCIP_Real*            fixedvals,          /**< array to store the fixing values to fix variables in the subproblem */
+   int                   nfixedvars,         /**< the number of variables that should be fixed */
+   SCIP_Longint          nsubnodes,          /**< node limit for the subproblem */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   )
+{
+   SCIP_VAR** subvars;                       /* subproblem's variables                              */
+   SCIP_VAR** vars;                          /* original problem's variables                        */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HEURDATA* heurdata;
+   SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
+   SCIP_Real upperbound;
+   int nvars;                                /* number of original problem's variables              */
+   int i;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(heur != NULL);
+   assert(fixedvars != NULL);
+   assert(fixedvals != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
+
+   /* create a problem copy as sub SCIP */
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", fixedvars, fixedvals, nfixedvars,
+         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
+
+   for( i = 0; i < nvars; i++ )
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
+
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
+
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+   /* use best estimate node selection */
+   if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
+   }
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+   }
+
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
+   }
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
+
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no decutions shall be
+    * made for the original SCIP
+    */
+   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
+   }
+
+   /* add an objective cutoff */
+   assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
+
+   upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+   if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
+   {
+      cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip)
+                     + heurdata->minimprove * SCIPgetLowerbound(scip);
+   }
+   else
+   {
+      if( SCIPgetUpperbound(scip) >= 0 )
+         cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip);
+      else
+         cutoff = (1 + heurdata->minimprove) * SCIPgetUpperbound(scip);
+   }
+   cutoff = MIN(upperbound, cutoff);
+   SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
+
+   /* solve the subproblem
+    *
+    * Errors in solving the subproblem should not kill the overall solving process
+    * Hence, the return code is caught but only in debug mode, SCIP will stop.
+    */
+   SCIPdebugMsg(scip, "Solve Mutation subMIP\n");
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+   /* transfer variable statistics from sub-SCIP */
+   SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+
+   heurdata->usednodes += SCIPgetNNodes(subscip);
+
+   /* check, whether a solution was found */
+   if( SCIPgetNSols(subscip) > 0 )
+   {
+      SCIP_SOL** subsols;
+      int nsubsols;
+
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      success = FALSE;
+      for( i = 0; i < nsubsols && !success; ++i )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+      }
+      if( success )
+         *result = SCIP_FOUNDSOL;
+   }
+
+   /* free subproblem */
+   SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of primal heuristic
@@ -289,7 +473,6 @@ SCIP_DECL_HEUREXIT(heurExitMutation)
    return SCIP_OKAY;
 }
 
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecMutation)
@@ -299,21 +482,14 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
 
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                                    */
    SCIP* subscip;                            /* the subproblem created by mutation                  */
-   SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** fixedvars;                     /* array to store variables that should be fixed in the subproblem */
    SCIP_Real* fixedvals;                     /* array to store fixing values for the variables */
-   SCIP_VAR** subvars;                       /* subproblem's variables                              */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
 
-   SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
    SCIP_Real maxnnodesr;
-   SCIP_Real upperbound;
 
    int nfixedvars;
    int nbinvars;
    int nintvars;
-   int nvars;                                /* number of original problem's variables              */
-   int i;
 
    SCIP_Bool success;
 
@@ -344,7 +520,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
 
    /* only call heuristic, if discrete variables are present */
    if( nbinvars + nintvars == 0 )
@@ -369,6 +545,12 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   if( !success )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
 
@@ -382,165 +564,18 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       goto TERMINATE;
    }
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
-
-   if( !success )
-      goto TERMINATE;
-
    *result = SCIP_DIDNOTFIND;
 
    /* initializing the subproblem */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    SCIP_CALL( SCIPcreate(&subscip) );
 
-   /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
+   /* setup and solve the subproblem and catch the return code */
+   retcode = setupAndSolveSubscipMutation(scip, subscip, heur, fixedvars, fixedvals, nfixedvars, nsubnodes, result);
 
-   /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", fixedvars, fixedvals, nfixedvars,
-         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
-
-   for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-#ifdef SCIP_DEBUG
-   /* for debugging, enable full output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#else
-   /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-#endif
-
-   /* set limits for the subproblem */
-   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
-
-   /* forbid recursive call of heuristics and separators solving subMIPs */
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-   /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-   /* use best estimate node selection */
-   if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
-   }
-
-   /* activate uct node selection at the top of the tree */
-   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
-   }
-
-   /* use inference branching */
-   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-   }
-
-   /* enable conflict analysis and restrict conflict pool */
-   if( !SCIPisParamFixed(subscip, "conflict/enable") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
-   }
-
-   /* speed up sub-SCIP by not checking dual LP feasibility */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-   /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
-    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no decutions shall be
-    * made for the original SCIP
-    */
-   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
-   }
-
-   /* add an objective cutoff */
-   assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
-
-   upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-   if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
-   {
-      cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip)
-            + heurdata->minimprove * SCIPgetLowerbound(scip);
-   }
-   else
-   {
-      if( SCIPgetUpperbound(scip) >= 0 )
-         cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip);
-      else
-         cutoff = (1 + heurdata->minimprove) * SCIPgetUpperbound(scip);
-   }
-   cutoff = MIN(upperbound, cutoff);
-   SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
-
-   /* solve the subproblem */
-   SCIPdebugMsg(scip, "Solve Mutation subMIP\n");
-   retcode = SCIPsolve(subscip);
-
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-      SCIPwarningMessage(scip, "Error while solving subproblem in Mutation heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-      SCIPABORT();
-   }
-   else
-   {
-      /* transfer variable statistics from sub-SCIP */
-      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
-   }
-
-   /* print solving statistics of subproblem if we are in SCIP's debug mode */
-   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
-
-   heurdata->usednodes += SCIPgetNNodes(subscip);
-
-   /* check, whether a solution was found */
-   if( SCIPgetNSols(subscip) > 0 )
-   {
-      SCIP_SOL** subsols;
-      int nsubsols;
-
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
-      }
-      if( success )
-         *result = SCIP_FOUNDSOL;
-   }
-
-   /* free subproblem */
-   SCIPfreeBufferArray(scip, &subvars);
+   /* free the subscip in any case */
    SCIP_CALL( SCIPfree(&subscip) );
+   SCIP_CALL( retcode );
+
    /* free storage for subproblem fixings */
  TERMINATE:
    SCIPfreeBufferArray(scip, &fixedvals);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -227,6 +227,22 @@ SCIP_VAR* SCIPgetBinaryVarIndicator(
 EXTERN
 SCIP_VAR* SCIPgetSlackVarIndicator(
    SCIP_CONS*            cons                /**< indicator constraint */
+   );
+
+/** sets upper bound for slack variable corresponding to indicator constraint
+ *
+ *  Use with care if you know that the maximal violation of the corresponding constraint is at most @p ub. This bound
+ *  might be improved automatically during the solution process.
+ *
+ *  @pre This method should only be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetSlackVarUb(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_CONS*            cons,                /**< indicator constraint */
+   SCIP_Real             ub                   /**< upper bound for slack variable */
    );
 
 /** checks whether indicator constraint is violated w.r.t. sol */

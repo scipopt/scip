@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,4 +70,11 @@
  * described in heur_init.c.  The organization of the data for the problem is described in the
  * problem data file (probdata_coloring.c). The file readers are described in reader_col.c and
  * reader_csol.c.
+ *
+ * Compiling the Coloring application
+ * ----------------------------------
+ *
+ * See the @ref INSTALL "Install file"
+ *
+ *
  */

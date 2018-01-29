@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -77,6 +77,8 @@ function setStatusToFail(statusstr)
 # 'Better' means larger for minimization problems, else 'smaller'.
 function isDualBoundBetter()
 {
+   if( !(prob in sol) )
+      return 0;
    # objective sense of 1 means minimization
    if( (objsense == 1 && db-sol[prob] > reltol) || ( objsense == -1 && sol[prob]-db > reltol) )
       return 1;
@@ -88,7 +90,7 @@ function isDualBoundBetter()
 # 'Better' means smaller for minimization problems, else 'larger'.
 function isPrimalBoundBetter()
 {
-   if( prob not in sol )
+   if( !(prob in sol) )
       return 0;
    # objective sense of 1 means minimization
    if( (objsense == 1 && sol[prob] - pb > reltol) || (objsense == -1 && pb - sol[prob] > reltol) )
@@ -149,7 +151,9 @@ BEGIN {
    onlyinsolufile = 0;          # should only instances be reported that are included in the .solu file?
    onlyintestfile = 0;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
-   useshortnames = 1;           # should problem name be truncated to fit into column?
+   if (useshortnames == "") {
+       useshortnames = 1;       # should problem name be truncated to fit into column?
+   }
    writesolufile = 0;           # should a solution file be created from the results? Use '1' for writing a new solution file, or '2' for writing an update
                                 # respecting the previous solu file information and updating it by better solution values for previously unsolved instances
    printsoltimes = 0;           # should the times until first and best solution be shown
@@ -158,7 +162,7 @@ BEGIN {
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;
-   namelength = 18;             # maximal length of instance names (can be increased)
+   namelength = 35;             # maximal length of instance names (can be increased)
    usetimestamps = 0;
 
    nprobs = 0;

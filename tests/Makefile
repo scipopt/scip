@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -53,6 +53,7 @@ override COMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* COMP=\([^@]*\).*/\
 override EXPRINT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* EXPRINT=\([^@]*\).*/\1/')
 override GAMS		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GAMS=\([^@]*\).*/\1/')
 override GMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GMP=\([^@]*\).*/\1/')
+override SYM		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SYM=\([^@]*\).*/\1/')
 override IPOPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* IPOPT=\([^@]*\).*/\1/')
 override IPOPTOPT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* IPOPTOPT=\([^@]*\).*/\1/')
 override LPS		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* LPS=\([^@]*\).*/\1/')
@@ -173,7 +174,7 @@ endif
 .PHONY: all
 all:            Criterion $(OBJDIR) $(OBJDIRS) $(BINDIRS) $(UNITTESTSBIN)
 		make ctestrunner
-		ctest --output-on-failure
+		setarch `uname -m` -R ctest --output-on-failure
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -195,10 +196,12 @@ $(BINDIRS):
 		@echo "-> Creating $@ directory"
 		@-mkdir -p $@
 
+# run the tests with address space layout randomization disabled, as this isn't
+# compatible with Criterions parametrized tests (https://github.com/Snaipe/Criterion/issues/208)
 .PHONY: test
 test:           $(UNITTESTSBIN)
 		make ctestrunner
-		ctest --output-on-failure
+		setarch `uname -m` -R ctest --output-on-failure
 
 .PHONY: ctestrunner
 ctestrunner: 	$(UNITTESTSBIN)
