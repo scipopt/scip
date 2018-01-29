@@ -129,6 +129,11 @@
 #define TABLE_POSITION_CONC              20000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONC        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_BENDERS               "benders"
+#define TABLE_DESC_BENDERS               "benders' decomposition statistics table"
+#define TABLE_POSITION_BENDERS           21000                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_BENDERS     SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
+
 /*
  * Callback methods of statistics table
  */
@@ -401,6 +406,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputConc)
    return SCIP_OKAY;
 }
 
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputBenders)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintBendersStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * statistics table specific interface methods
@@ -439,6 +456,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
       assert(SCIPfindTable(scip, TABLE_NAME_ROOT) != NULL );
       assert(SCIPfindTable(scip, TABLE_NAME_SOL) != NULL );
       assert(SCIPfindTable(scip, TABLE_NAME_CONC) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_BENDERS) != NULL );
 
       return SCIP_OKAY;
    }
@@ -511,6 +529,11 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_COMPRESSION, TABLE_DESC_COMPRESSION, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCompression,
          NULL, TABLE_POSITION_COMPRESSION, TABLE_EARLIEST_STAGE_COMPRESSION) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_BENDERS) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BENDERS, TABLE_DESC_BENDERS, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBenders,
+         NULL, TABLE_POSITION_BENDERS, TABLE_EARLIEST_STAGE_BENDERS) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_LP) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_LP, TABLE_DESC_LP, TRUE,

@@ -46498,8 +46498,7 @@ void SCIPprintConcsolverStatistics(
 }
 
 /** display Benders' decomposition statistics */
-static
-void printBendersStatistics(
+void SCIPprintBendersStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -46507,6 +46506,11 @@ void printBendersStatistics(
    SCIP_BENDERS** benders;
    int nbenders;
    int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintBendersStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPgetNActiveBenders(scip) )
       return;
