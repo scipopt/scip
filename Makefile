@@ -604,14 +604,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_veclendiving.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
-			scip/heur_crossover-benders.o \
-			scip/heur_dins-benders.o \
-			scip/heur_gins-benders.o \
-			scip/heur_localbranching-benders.o \
-			scip/heur_mutation-benders.o \
-			scip/heur_proximity-benders.o \
-			scip/heur_rens-benders.o \
-			scip/heur_rins-benders.o \
 			scip/message_default.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_breadthfirst.o \
