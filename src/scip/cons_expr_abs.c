@@ -390,12 +390,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
    /* it might happen that we could not compute a secant (because of fixed or unbounded variables) */
    if( !*infeasible && secant != NULL )
    {
-      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &secant, NULL, -SCIPinfinity(scip)) );
-
-      if( secant != NULL )
-      {
-         SCIP_CALL( SCIPaddCut(scip, NULL, secant, FALSE, infeasible) );
-      }
+      SCIP_CALL( SCIPaddCut(scip, NULL, secant, FALSE, infeasible) );
    }
 
    /* release secant */
