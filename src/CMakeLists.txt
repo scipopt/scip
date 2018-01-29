@@ -201,7 +201,15 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/benders_default.c
+    scip/benderscut_opt.c
+    scip/benderscut_feas.c
+    scip/benderscut_int.c
+    scip/misc_benders.c
     scip/table_default.c
+    scip/benders.c
+    scip/benderscut.c
+    scip/bendersdefcuts.c
     scip/boundstore.c
     scip/branch.c
     scip/clock.c
