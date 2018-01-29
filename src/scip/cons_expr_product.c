@@ -37,6 +37,9 @@
 
 #include "scip/pub_misc.h"
 
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
+
 #define EXPRHDLR_NAME         "prod"
 #define EXPRHDLR_DESC         "product of children"
 #define EXPRHDLR_PRECEDENCE  50000
@@ -1095,15 +1098,19 @@ SCIP_RETCODE separatePointProduct(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_CONSEXPR_EXPR* child;
+   SCIP_ROWPREP* rowprep;
    SCIP_VAR* auxvar;
    SCIP_VAR* var;
    SCIP_Bool success;
+   SCIP_Real viol;
+   SCIP_Real coefrange;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -1184,26 +1191,27 @@ SCIP_RETCODE separatePointProduct(
             SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &lincoefx, &lincoefy, &linconstant,
             &success);
 
-      /* @todo allow lhs/rhs of +/- infinity? */
-      if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
+      /* give up if not successful */
+      if( !success )
+         return SCIP_OKAY;
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+      SCIPaddRowprepConstant(rowprep, linconstant);
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 3) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, x, lincoefx) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, y, lincoefy) );
+
+      /* take care of cut numerics */
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+
+      if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
       {
-         /* McCormicks are only valid locally */
-         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "mccormick", 0, NULL, NULL, -SCIPinfinity(scip),
-                  SCIPinfinity(scip), TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoefx) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, y, lincoefy) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
-
-         if( overestimate )
-         {
-            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
-         }
+         SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "mccormick");  /* @todo make cutname unique, e.g., add LP number */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
       }
+
+      SCIPfreeRowprep(scip, &rowprep);
 
       return SCIP_OKAY;
    }
@@ -1302,21 +1310,22 @@ SCIP_RETCODE separatePointProduct(
       if( SCIPisLE(scip, violation, 0.0) )
          goto CLEANUP;
 
-      /* build cut; multilinear cuts are only valid locally */
-      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "multilinear", 0, NULL, NULL, -SCIPinfinity(scip),
-               SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+      SCIPaddRowprepConstant(rowprep, facet[nvars]);
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nvars+1) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+      SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nvars, vars, facet) );
 
-      SCIP_CALL( SCIPaddVarsToRow(scip, *cut, nvars, vars, facet) );
-      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+      /* take care of cut numerics */
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
 
-      if( overestimate )
+      if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
       {
-         SCIP_CALL( SCIPchgRowLhs(scip, *cut, -facet[nvars]) );
+         SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "multilinear");  /* @todo make cutname unique, e.g., add LP number */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
       }
-      else
-      {
-         SCIP_CALL( SCIPchgRowRhs(scip, *cut, -facet[nvars]) );
-      }
+
+      SCIPfreeRowprep(scip, &rowprep);
 
 CLEANUP:
       SCIPfreeBufferArray(scip, &vars);
@@ -1811,13 +1820,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    *ncuts = 0;
 
    /* try to find a cut */
-   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, overestimate, &cut) );
-
-   if( cut == NULL )
-      return SCIP_OKAY;
-
-   /* check whether its violation and numerical properties are ok (and maybe improve) */
-   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
+   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, minviolation, overestimate, &cut) );
 
    if( cut == NULL )
       return SCIP_OKAY;
