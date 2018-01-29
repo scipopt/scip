@@ -139,7 +139,7 @@ SCIP_RETCODE separatePointEntropy(
 
    if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
    {
-      SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "entropy_cut");  /* @todo make cutname unique, e.g., add LP number */
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "entropy_cut");  /* @todo make cutname unique, e.g., add LP number */
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
    }
 
@@ -240,7 +240,7 @@ SCIP_RETCODE reverseProp(
 
    /* set values on the child bounds */
    infvalue = (childinf == 0.0 ? 0.0 : -childinf * log(childinf));
-   supvalue = (childsup == SCIPinfinity(scip) ? -SCIPinfinity(scip) : -childsup * log(childsup));
+   supvalue = (SCIPisInfinity(scip, childsup) ? -SCIPinfinity(scip) : -childsup * log(childsup));
 
    /*
     * consider bounds implied on the upper bound of the child
@@ -260,7 +260,7 @@ SCIP_RETCODE reverseProp(
    }
    else if( SCIPisGT(scip, supvalue, exprsup) )
    {
-      bound = reversePropBinarySearch(scip, childinf, MIN(childsup, exp(-1.0)), FALSE, exprsup);
+      bound = reversePropBinarySearch(scip, childinf, MIN(childsup, exp(-1.0)), FALSE, exprsup);  /*lint !e666 */
       assert(bound <= childsup);
       childsup = MAX(childsup, bound);
    }
@@ -283,7 +283,7 @@ SCIP_RETCODE reverseProp(
    }
    else if( SCIPisGT(scip, infvalue, exprsup) )
    {
-      bound = reversePropBinarySearch(scip, MAX(childinf, exp(-1.0)), childsup, FALSE, exprsup);
+      bound = reversePropBinarySearch(scip, MAX(childinf, exp(-1.0)), childsup, FALSE, exprsup);  /*lint !e666 */
       assert(bound >= childinf);
       childinf = MAX(childinf, bound);
    }

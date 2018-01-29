@@ -343,7 +343,7 @@ SCIP_RETCODE computeCutsAbs(
             /* if coefrange is good and no variable has been removed, then create SCIP_ROW */
             if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
             {
-               memcpy(rowprep->name, name, SCIP_MAXSTRLEN);
+               memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
                SCIP_CALL( SCIPgetRowprepRowCons(scip, secant, rowprep, conshdlr) );
             }
 

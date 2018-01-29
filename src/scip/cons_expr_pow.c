@@ -150,6 +150,7 @@ SCIP_RETCODE separatePointPow(
    {
       /* @todo can not be handled so far */
       success = FALSE;
+      islocal = TRUE; /* for lint */
    }
 
    /* give up if not successful */
@@ -167,7 +168,7 @@ SCIP_RETCODE separatePointPow(
 
    if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
    {
-      SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, islocal ? "square_secant" : "square_linearization");  /* @todo make cutname unique, e.g., add LP number */
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, islocal ? "square_secant" : "square_linearization");  /* @todo make cutname unique, e.g., add LP number */
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
    }
 

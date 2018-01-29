@@ -1207,7 +1207,7 @@ SCIP_RETCODE separatePointProduct(
 
       if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
       {
-         SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "mccormick");  /* @todo make cutname unique, e.g., add LP number */
+         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "mccormick");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
       }
 
@@ -1321,7 +1321,7 @@ SCIP_RETCODE separatePointProduct(
 
       if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
       {
-         SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "multilinear");  /* @todo make cutname unique, e.g., add LP number */
+         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "multilinear");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
       }
 

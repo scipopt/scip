@@ -125,7 +125,7 @@ SCIP_RETCODE separatePointExp(
 
    if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
    {
-      SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "exp_cut");  /* @todo make cutname unique, e.g., add LP number */
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "exp_cut");  /* @todo make cutname unique, e.g., add LP number */
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
    }
 

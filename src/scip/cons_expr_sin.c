@@ -321,7 +321,7 @@ SCIP_Bool computeLeftMidTangentSin(
       *issecant = TRUE;
    }
 
-   if( tangentpoint == lb )
+   if( tangentpoint == lb )  /*lint !e777 */
       return FALSE;
 
    /* compute secant between lower bound and connection point */
@@ -405,7 +405,7 @@ SCIP_Bool computeRightMidTangentSin(
       *issecant = TRUE;
    }
 
-   if( tangentpoint == ub )
+   if( tangentpoint == ub )  /*lint !e777 */
       return FALSE;
 
    /* compute secant between lower bound and connection point */
