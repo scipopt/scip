@@ -252,6 +252,7 @@ Test(complex, test1)
 {
    int i;
    SCIP_Real binvrow[3];
+   SCIP_Real binvcol[3];
    SCIP_Real coef[3];
    int cstats[3];
    int nrows;
@@ -294,19 +295,46 @@ Test(complex, test1)
    cr_expect_float_eq(binvrow[1], 1.0, EPS);
    cr_expect_float_eq(binvrow[2], 0.5, EPS);
 
-   /* check basis inverse matrix */
-   SCIP_CALL( SCIPlpiGetBInvCol(lpi, i, coef, NULL, NULL) );
+   /* check basis inverse */
+   SCIP_CALL( SCIPlpiGetBInvCol(lpi, i, binvcol, NULL, NULL) );
 
-   /* column of basis inverse should be (0, 0, -1) */
-   cr_expect_float_eq(coef[0], 0.0, EPS);
-   cr_expect_float_eq(coef[1], 0.0, EPS);
-   cr_expect_float_eq(coef[2], -1.0, EPS);
+   int exp_vars[] = {-2, 1, 2};
+   float exp_vals[] = {0.0, 0.0, -1.0};
+
+   for( int idx = 0; idx < nrows; idx++ )
+   {
+      for( int j = 0; j < nrows; j++)
+      {
+         if (exp_vars[j] == binvcol[idx])
+         {
+            cr_expect_float_eq(binvcol[idx], exp_vals[j], EPS);
+         }
+      }
+   }
 
    /* check basis inverse times nonbasic matrix */
-   SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, binvrow, coef, NULL, NULL) );
+   SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, NULL, coef, NULL, NULL) );
 
    /* row of basis inverse times nonbasic matrix should be (-0.5, 0, 0) */
    cr_expect_float_eq(coef[0], -0.5, EPS);
    cr_expect_float_eq(coef[1], 0.0, EPS);
    cr_expect_float_eq(coef[2], 0.0, EPS);
+
+   /* check basis inverse times nonbasic matrix */
+   SCIP_CALL( SCIPlpiGetBInvACol(lpi, 0, coef, NULL, NULL) );
+
+   int exp_avars[] = {-2, 1, 2};
+   float exp_avals[] = {-0.5, 0.5, 1.0};
+
+   /* column of basis inverse times nonbasic matrix */
+   for( int idx = 0; idx < nrows; idx++ )
+   {
+      for( int j = 0; j < nrows; j++)
+      {
+         if (exp_avars[j] == binvcol[idx])
+         {
+            cr_expect_float_eq(coef[idx], exp_avals[j], EPS);
+         }
+      }
+   }
 }
