@@ -230,8 +230,9 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
 {
    SCIP_Real childlb;
    SCIP_Real childub;
+   SCIP_Real coefrange;
 
-   SCIP_ROW* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
+   SCIP_ROWPREP* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
    int i;
 
    *infeasible = FALSE;
@@ -245,23 +246,24 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
       SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
             SCIP_INVALID, childlb, childub, TRUE) );
 
-      for( i = 0; i < 5; ++i )
+      for( i = 0; i < 5; ++i)
       {
          /* only the cuts which could be created are added */
          if( !*infeasible && cuts[i] != NULL )
          {
-            SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
+            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
 
-            if( cuts[i] != NULL )
+            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
-            }
-         }
+               /* make a SCIP_ROW and add to LP */
+               SCIP_ROW* row;
 
-         /* release the row */
-         if( cuts[i] != NULL )
-         {
-            SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            }
+
+            SCIPfreeRowprep(scip, &cuts[i]);
          }
       }
    }
@@ -272,23 +274,24 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
       SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
             SCIP_INVALID, childlb, childub, FALSE) );
 
-      for( i = 0; i < 5; ++i )
+      for( i = 0; i < 5; ++i)
       {
          /* only the cuts which could be created are added */
-         if (!*infeasible && cuts[i] != NULL)
+         if( !*infeasible && cuts[i] != NULL )
          {
-            SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
+            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
 
-            if (cuts[i] != NULL)
+            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
-            }
-         }
+               /* make a SCIP_ROW and add to LP */
+               SCIP_ROW* row;
 
-         /* release the row */
-         if (cuts[i] != NULL)
-         {
-            SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            }
+
+            SCIPfreeRowprep(scip, &cuts[i]);
          }
       }
    }
@@ -302,11 +305,13 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
-   SCIP_ROW* cuts[4] = {NULL, NULL, NULL, NULL};
+   SCIP_ROWPREP* cuts[4] = {NULL, NULL, NULL, NULL};
    SCIP_Real refpoint;
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Bool infeasible;
+   SCIP_Real viol;
+   SCIP_Real coefrange;
    int i;
 
    /* get expression data */
@@ -338,14 +343,17 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
       if( cuts[i] == NULL )
          continue;
 
-      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], sol, minviolation) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
 
-      if( cuts[i] == NULL )
-         continue;
-
-      if( SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, cuts[i], sol), minviolation) )
+      if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, cuts[i], FALSE, &infeasible) );
+         /* make a SCIP_ROW and add to LP */
+         SCIP_ROW* row;
+
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
          *ncuts += 1;
 
          if( infeasible )
@@ -357,11 +365,13 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
             *result = SCIP_SEPARATED;
       }
 
-      /* release the secant */
-      if( cuts[i] != NULL )
-      {
-         SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
-      }
+      SCIPfreeRowprep(scip, &cuts[i]);
+   }
+
+   /* if we stopped due to infeasibilility, free remaining cuts */
+   for( ; i < 4; ++i )
+   {
+      SCIPfreeRowprep(scip, &cuts[i]);
    }
 
    return SCIP_OKAY;

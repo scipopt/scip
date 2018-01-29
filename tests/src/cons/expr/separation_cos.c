@@ -23,25 +23,28 @@
 #include "separation.h"
 
 static
-void checkCut(SCIP_ROW* cut, SCIP_VAR* childvar, SCIP_Real lhs, SCIP_Real rhs, SCIP_Real varcoef)
+void checkCut(SCIP_ROWPREP* cut, SCIP_VAR* childvar, SCIP_Real lhs, SCIP_Real rhs, SCIP_Real varcoef)
 {
    SCIP_VAR* var;
    SCIP_Real coef;
+   SCIP_Real side;
    int i;
 
    cr_assert(cut != NULL);
-   cr_expect_eq(SCIProwGetNNonz(cut), 2);
-   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
-   assert(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
 
-   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
+   cr_assert(SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs));
+   side = SCIPisInfinity(scip, -lhs) ? rhs : lhs;
+   cr_expect(SCIPisEQ(scip, cut->side, side));
+
+   cr_expect_eq(cut->nvars, 2);
+   for( i = 0; i < 2; ++i )
    {
-      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
-      coef = SCIProwGetVals(cut)[i];
+      var = cut->vars[i];
+      coef = cut->coefs[i];
 
-      if( var == SCIPvarGetTransVar(childvar) )
+      if( var == childvar )
          cr_expect(SCIPisEQ(scip, coef, varcoef));
-      else if( var == SCIPvarGetTransVar(auxvar) )
+      else if( var == auxvar )
          cr_expect_eq(coef, -1.0);
       else
          cr_expect(FALSE, "found an unknown variable");
@@ -54,12 +57,12 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_ROW* secant;
-   SCIP_ROW* ltangent;
-   SCIP_ROW* rtangent;
-   SCIP_ROW* lmidtangent;
-   SCIP_ROW* rmidtangent;
-   SCIP_ROW* soltangent;
+   SCIP_ROWPREP* secant;
+   SCIP_ROWPREP* ltangent;
+   SCIP_ROWPREP* rtangent;
+   SCIP_ROWPREP* lmidtangent;
+   SCIP_ROWPREP* rmidtangent;
+   SCIP_ROWPREP* soltangent;
    SCIP_Real newtonpoint;
    SCIP_Real refpoint;
    SCIP_Real childlb;
@@ -104,8 +107,8 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
 
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &ltangent) );
-   SCIP_CALL( SCIPreleaseRow(scip, &rmidtangent) );
+   SCIPfreeRowprep(scip, &ltangent);
+   SCIPfreeRowprep(scip, &rmidtangent);
 
    /*
     * test initial underestimation
@@ -128,8 +131,8 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
    checkCut(rmidtangent, x, -SCIPinfinity(scip), -5 * SIN(newtonpoint) - COS(5), -SIN(newtonpoint));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &lmidtangent) );
-   SCIP_CALL( SCIPreleaseRow(scip, &rmidtangent) );
+   SCIPfreeRowprep(scip, &lmidtangent);
+   SCIPfreeRowprep(scip, &rmidtangent);
 
    /*
     * test solution overestimation
@@ -152,7 +155,7 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
    checkCut(soltangent, x, 0.5 * SIN(-0.5) - COS(-0.5), SCIPinfinity(scip), -SIN(-0.5));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &soltangent) );
+   SCIPfreeRowprep(scip, &soltangent);
 
    /*
     * test solution underestimation
@@ -175,7 +178,7 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
    checkCut(soltangent, x, -SCIPinfinity(scip), -4.0 * SIN(4.0) - COS(4.0), -SIN(4.0));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &soltangent) );
+   SCIPfreeRowprep(scip, &soltangent);
 
    /*
     * test point where solution tangent is not feasible
@@ -202,8 +205,8 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
    checkCut(rmidtangent, x, -SCIPinfinity(scip), -5 * SIN(newtonpoint) - COS(5), -SIN(newtonpoint));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &lmidtangent) );
-   SCIP_CALL( SCIPreleaseRow(scip, &rmidtangent) );
+   SCIPfreeRowprep(scip, &lmidtangent);
+   SCIPfreeRowprep(scip, &rmidtangent);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -215,12 +218,12 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
 )
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_ROW* secant;
-   SCIP_ROW* ltangent;
-   SCIP_ROW* rtangent;
-   SCIP_ROW* lmidtangent;
-   SCIP_ROW* rmidtangent;
-   SCIP_ROW* soltangent;
+   SCIP_ROWPREP* secant;
+   SCIP_ROWPREP* ltangent;
+   SCIP_ROWPREP* rtangent;
+   SCIP_ROWPREP* lmidtangent;
+   SCIP_ROWPREP* rmidtangent;
+   SCIP_ROWPREP* soltangent;
    SCIP_Real newtonpoint;
    SCIP_Real refpoint;
    SCIP_Real childlb;
@@ -262,7 +265,7 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
    checkCut(rmidtangent, y, 3 * SIN(newtonpoint) - COS(-3), SCIPinfinity(scip), -SIN(newtonpoint));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &rmidtangent) );
+   SCIPfreeRowprep(scip, &rmidtangent);
 
    /*
     * test initial underestimation
@@ -285,8 +288,8 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
    checkCut(lmidtangent, y, -SCIPinfinity(scip), 6 * SIN(newtonpoint) - COS(-6), -SIN(newtonpoint));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &rtangent) );
-   SCIP_CALL( SCIPreleaseRow(scip, &lmidtangent) );
+   SCIPfreeRowprep(scip, &rtangent);
+   SCIPfreeRowprep(scip, &lmidtangent);
 
    /*
     * test solution overestimation
@@ -309,7 +312,7 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
    checkCut(soltangent, y, 5.7 * SIN(-5.7) - COS(-5.7), SCIPinfinity(scip), -SIN(-5.7));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &soltangent) );
+   SCIPfreeRowprep(scip, &soltangent);
 
    /*
     * test solution underestimation
@@ -332,7 +335,7 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
    checkCut(soltangent, y, -SCIPinfinity(scip), 3.5 * SIN(-3.5) - COS(-3.5), -SIN(-3.5));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &soltangent) );
+   SCIPfreeRowprep(scip, &soltangent);
 
    /*
     * test point where solution tangent is infeasible
@@ -356,7 +359,7 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
    checkCut(rmidtangent, y, 3 * SIN(newtonpoint) - COS(-3), SCIPinfinity(scip), -SIN(newtonpoint));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &rmidtangent) );
+   SCIPfreeRowprep(scip, &rmidtangent);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -369,12 +372,12 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
 )
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_ROW* secant;
-   SCIP_ROW* ltangent;
-   SCIP_ROW* rtangent;
-   SCIP_ROW* lmidtangent;
-   SCIP_ROW* rmidtangent;
-   SCIP_ROW* soltangent;
+   SCIP_ROWPREP* secant;
+   SCIP_ROWPREP* ltangent;
+   SCIP_ROWPREP* rtangent;
+   SCIP_ROWPREP* lmidtangent;
+   SCIP_ROWPREP* rmidtangent;
+   SCIP_ROWPREP* soltangent;
    SCIP_Real refpoint;
    SCIP_Real childlb;
    SCIP_Real childub;
@@ -413,7 +416,7 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
    checkCut(secant, w, COS(4) - 2 * COS(2), SCIPinfinity(scip), 0.5 * (COS(4) - COS(2)));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &secant) );
+   SCIPfreeRowprep(scip, &secant);
 
    /*
     * test initial underestimation
@@ -434,8 +437,8 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
    checkCut(rtangent, w, -SCIPinfinity(scip), -4 * SIN(4) - COS(4), -SIN(4));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &ltangent) );
-   SCIP_CALL( SCIPreleaseRow(scip, &rtangent) );
+   SCIPfreeRowprep(scip, &ltangent);
+   SCIPfreeRowprep(scip, &rtangent);
 
    /* note: solution overestimation doesn't make sense in [1,3] */
 
@@ -460,7 +463,7 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
    checkCut(soltangent, w, -SCIPinfinity(scip), -3 * SIN(3) - COS(3), -SIN(3));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &soltangent) );
+   SCIPfreeRowprep(scip, &soltangent);
 
    /*
     * test point where solution tangent is infeasible (overestimation)
@@ -483,7 +486,7 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
    checkCut(secant, w, COS(4) - 2 * COS(2), SCIPinfinity(scip), 0.5 * (COS(4) - COS(2)));
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &secant) );
+   SCIPfreeRowprep(scip, &secant);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

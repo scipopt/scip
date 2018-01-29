@@ -506,12 +506,12 @@ SCIP_RETCODE SCIPcomputeCutsSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_ROW**            secant,             /**< pointer to store the secant */
-   SCIP_ROW**            ltangent,           /**< pointer to store the left tangent */
-   SCIP_ROW**            rtangent,           /**< pointer to store the right tangent */
-   SCIP_ROW**            lmidtangent,        /**< pointer to store the left middle tangent */
-   SCIP_ROW**            rmidtangent,        /**< pointer to store the right middle tangent */
-   SCIP_ROW**            soltangent,         /**< pointer to store the solution tangent */
+   SCIP_ROWPREP**        secant,             /**< pointer to store the secant */
+   SCIP_ROWPREP**        ltangent,           /**< pointer to store the left tangent */
+   SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
+   SCIP_ROWPREP**        lmidtangent,        /**< pointer to store the left middle tangent */
+   SCIP_ROWPREP**        rmidtangent,        /**< pointer to store the right middle tangent */
+   SCIP_ROWPREP**        soltangent,         /**< pointer to store the solution tangent */
    SCIP_Real             refpoint,           /**< point that is to be seperated (can be SCIP_INVALID) */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */
@@ -523,11 +523,8 @@ SCIP_RETCODE SCIPcomputeCutsSin(
    SCIP_VAR* childvar;
    SCIP_Real lincoef;
    SCIP_Real linconst;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
    SCIP_Real shiftfactor;
    SCIP_Bool success;
-   char name[SCIP_MAXSTRLEN];
    char exprname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
@@ -578,17 +575,17 @@ SCIP_RETCODE SCIPcomputeCutsSin(
 
       if( success )
       {
+         SCIP_CALL( SCIPcreateRowprep(scip, secant, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
+         (void) SCIPsnprintf((*secant)->name, SCIP_MAXSTRLEN, "%s_secant_%s", exprname, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
+
+         SCIPaddRowprepSide(*secant, underestimate ? -linconst : linconst);
+
          /* for cos expressions, the cut is shifted back to match original bounds */
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
-         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
+         SCIPaddRowprepConstant(*secant, lincoef * shiftfactor);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_secant_%s", exprname, SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, lhs, rhs,
-               TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *secant, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *secant, childvar, lincoef) );
+         SCIP_CALL( SCIPensureRowprepSize(scip, *secant, 2) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *secant, auxvar, -1.0) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *secant, childvar, lincoef) );
       }
    }
 
@@ -604,17 +601,17 @@ SCIP_RETCODE SCIPcomputeCutsSin(
 
       if( success )
       {
+         SCIP_CALL( SCIPcreateRowprep(scip, ltangent, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
+         (void) SCIPsnprintf((*ltangent)->name, SCIP_MAXSTRLEN, "%s_ltangent_%s", exprname, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
+
+         SCIPaddRowprepSide(*ltangent, underestimate ? -linconst : linconst);
+
          /* for cos expressions, the cut is shifted back to match original bounds */
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
-         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
+         SCIPaddRowprepConstant(*ltangent, lincoef * shiftfactor);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_ltangent_%s", exprname, SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, ltangent, conshdlr, name, lhs, rhs,
-               TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, childvar, lincoef) );
+         SCIP_CALL( SCIPensureRowprepSize(scip, *ltangent, 2) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *ltangent, auxvar, -1.0) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *ltangent, childvar, lincoef) );
       }
    }
 
@@ -630,17 +627,17 @@ SCIP_RETCODE SCIPcomputeCutsSin(
 
       if( success )
       {
+         SCIP_CALL( SCIPcreateRowprep(scip, rtangent, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
+         (void) SCIPsnprintf((*rtangent)->name, SCIP_MAXSTRLEN, "%s_rtangent_%s", exprname, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
+
+         SCIPaddRowprepSide(*rtangent, underestimate ? -linconst : linconst);
+
          /* for cos expressions, the cut is shifted back to match original bounds */
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
-         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
+         SCIPaddRowprepConstant(*rtangent, lincoef * shiftfactor);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rtangent_%s", exprname, SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rtangent, conshdlr, name, lhs, rhs,
-               TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, childvar, lincoef) );
+         SCIP_CALL( SCIPensureRowprepSize(scip, *rtangent, 2) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *rtangent, auxvar, -1.0) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *rtangent, childvar, lincoef) );
       }
    }
 
@@ -656,17 +653,17 @@ SCIP_RETCODE SCIPcomputeCutsSin(
 
       if( success )
       {
+         SCIP_CALL( SCIPcreateRowprep(scip, soltangent, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
+         (void) SCIPsnprintf((*soltangent)->name, SCIP_MAXSTRLEN, "%s_soltangent_%s", exprname, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
+
+         SCIPaddRowprepSide(*soltangent, underestimate ? -linconst : linconst);
+
          /* for cos expressions, the cut is shifted back to match original bounds */
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
-         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
+         SCIPaddRowprepConstant(*soltangent, lincoef * shiftfactor);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_soltangent_%s", exprname, SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, lhs, rhs,
-               TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, lincoef) );
+         SCIP_CALL( SCIPensureRowprepSize(scip, *soltangent, 2) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *soltangent, auxvar, -1.0) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *soltangent, childvar, lincoef) );
       }
    }
 
@@ -676,7 +673,7 @@ SCIP_RETCODE SCIPcomputeCutsSin(
     */
    if( lmidtangent != NULL && (secant == NULL || *secant == NULL) && (soltangent == NULL || *soltangent == NULL) )
    {
-      SCIP_ROW** cutbuffer;
+      SCIP_ROWPREP** cutbuffer;
       SCIP_Bool issecant;
 
       *lmidtangent = NULL;
@@ -691,17 +688,17 @@ SCIP_RETCODE SCIPcomputeCutsSin(
 
       if( success )
       {
+         SCIP_CALL( SCIPcreateRowprep(scip, cutbuffer, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
+         (void) SCIPsnprintf((*cutbuffer)->name, SCIP_MAXSTRLEN, "%s_lmidtangent_%s", exprname, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
+
+         SCIPaddRowprepSide(*cutbuffer, underestimate ? -linconst : linconst);
+
          /* for cos expressions, the cut is shifted back to match original bounds */
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
-         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
+         SCIPaddRowprepConstant(*cutbuffer, lincoef * shiftfactor);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lmidtangent_%s", exprname, SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
-               TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *cutbuffer, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cutbuffer, childvar, lincoef) );
+         SCIP_CALL( SCIPensureRowprepSize(scip, *cutbuffer, 2) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *cutbuffer, auxvar, -1.0) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *cutbuffer, childvar, lincoef) );
       }
    }
    else if( lmidtangent != NULL )
@@ -712,7 +709,7 @@ SCIP_RETCODE SCIPcomputeCutsSin(
     */
    if( rmidtangent != NULL && (secant == NULL || *secant == NULL) && (soltangent == NULL || *soltangent == NULL) )
    {
-      SCIP_ROW** cutbuffer;
+      SCIP_ROWPREP** cutbuffer;
       SCIP_Bool issecant;
 
       *rmidtangent = NULL;
@@ -727,17 +724,17 @@ SCIP_RETCODE SCIPcomputeCutsSin(
 
       if( success )
       {
+         SCIP_CALL( SCIPcreateRowprep(scip, cutbuffer, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
+         (void) SCIPsnprintf((*cutbuffer)->name, SCIP_MAXSTRLEN, "%s_rmidtangent_%s", exprname, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
+
+         SCIPaddRowprepSide(*cutbuffer, underestimate ? -linconst : linconst);
+
          /* for cos expressions, the cut is shifted back to match original bounds */
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
-         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
+         SCIPaddRowprepConstant(*cutbuffer, lincoef * shiftfactor);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rmidtangent_%s", exprname, SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
-               TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *cutbuffer, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cutbuffer, childvar, lincoef) );
+         SCIP_CALL( SCIPensureRowprepSize(scip, *cutbuffer, 2) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *cutbuffer, auxvar, -1.0) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *cutbuffer, childvar, lincoef) );
       }
    }
    else if( rmidtangent != NULL )
@@ -988,8 +985,9 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 {  /*lint --e{715}*/
    SCIP_Real childlb;
    SCIP_Real childub;
+   SCIP_Real coefrange;
 
-   SCIP_ROW* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
+   SCIP_ROWPREP* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
    int i;
 
    *infeasible = FALSE;
@@ -1007,17 +1005,19 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
          /* only the cuts which could be created are added */
          if( !*infeasible && cuts[i] != NULL )
          {
-            SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
+            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
 
-            if( cuts[i] != NULL ) {
-               SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
+            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
+            {
+               /* make a SCIP_ROW and add to LP */
+               SCIP_ROW* row;
+
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
-         }
 
-         /* release the row */
-         if( cuts[i] != NULL )
-         {
-            SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
+            SCIPfreeRowprep(scip, &cuts[i]);
          }
       }
    }
@@ -1031,19 +1031,21 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
       for( i = 0; i < 5; ++i )
       {
          /* only the cuts which could be created are added */
-         if (!*infeasible && cuts[i] != NULL) {
-            SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
-
-            if (cuts[i] != NULL)
-            {
-               SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
-            }
-         }
-
-         /* release the row */
-         if (cuts[i] != NULL)
+         if( !*infeasible && cuts[i] != NULL )
          {
-            SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
+            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
+
+            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
+            {
+               /* make a SCIP_ROW and add to LP */
+               SCIP_ROW* row;
+
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            }
+
+            SCIPfreeRowprep(scip, &cuts[i]);
          }
       }
    }
@@ -1057,11 +1059,13 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
-   SCIP_ROW* cuts[4] = {NULL, NULL, NULL, NULL};
+   SCIP_ROWPREP* cuts[4] = {NULL, NULL, NULL, NULL};
    SCIP_Real refpoint;
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Bool infeasible;
+   SCIP_Real viol;
+   SCIP_Real coefrange;
    int i;
 
    /* get expression data */
@@ -1093,14 +1097,17 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
       if( cuts[i] == NULL )
          continue;
 
-      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], sol, minviolation) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
 
-      if( cuts[i] == NULL )
-         continue;
-
-      if( SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, cuts[i], sol), minviolation) )
+      if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, cuts[i], FALSE, &infeasible) );
+         /* make a SCIP_ROW and add to LP */
+         SCIP_ROW* row;
+
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
          *ncuts += 1;
 
          if( infeasible )
@@ -1112,11 +1119,13 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
             *result = SCIP_SEPARATED;
       }
 
-      /* release the secant */
-      if( cuts[i] != NULL )
-      {
-         SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
-      }
+      SCIPfreeRowprep(scip, &cuts[i]);
+   }
+
+   /* if we stopped due to infeasibilility, free remaining cuts */
+   for( ; i < 4; ++i )
+   {
+      SCIPfreeRowprep(scip, &cuts[i]);
    }
 
    return SCIP_OKAY;
