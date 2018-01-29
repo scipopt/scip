@@ -1510,9 +1510,6 @@ SCIP_RETCODE readScenarios(
 
             /* freeing the scenario */
             SCIP_CALL( freeScenarioTree(scip, &scenario) );
-
-            scenario = NULL;
-            addscenario = FALSE;
          }
 
          if( !strcmp(stoinputField0(stoi), "SCENARIOS") )
@@ -1542,9 +1539,6 @@ SCIP_RETCODE readScenarios(
 
             /* freeing the scenario */
             SCIP_CALL( freeScenarioTree(scip, &scenario) );
-
-            scenario = NULL;
-            addscenario = FALSE;
          }
 
          if( strcmp(wrongroot, stoinputField3(stoi)) == 0 )
@@ -1632,9 +1626,6 @@ SCIP_RETCODE readIndep(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &numblocksperblock, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocksperblocksize, STO_DEFAULT_ARRAYSIZE) );
-
-   blockindex = 0;
-   blocknum = 0;
 
    /* initialising the stage names record */
    numstages = 0;
