@@ -349,7 +349,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
       return SCIP_OKAY;
 
    /* add cut */
-   SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
    *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
 
    *ncuts += 1;

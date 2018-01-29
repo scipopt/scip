@@ -379,18 +379,18 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
    /* add cuts */
    if( exprdata->rowneg != NULL )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowneg, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, exprdata->rowneg, FALSE, infeasible) );
    }
 
    if( !*infeasible && exprdata->rowpos != NULL )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowpos, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, exprdata->rowpos, FALSE, infeasible) );
    }
 
    /* it might happen that we could not compute a secant (because of fixed or unbounded variables) */
    if( !*infeasible && secant != NULL )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, secant, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, secant, FALSE, infeasible) );
    }
 
    /* release secant */
@@ -484,7 +484,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
       violation = -SCIPgetRowSolFeasibility(scip, rows[i], sol);
       if( SCIPisGE(scip, violation, minviolation) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, rows[i], FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, rows[i], FALSE, &infeasible) );
          *ncuts += 1;
 
          if( infeasible )

@@ -1828,7 +1828,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
 
    /* add cut */
-   SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
    *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
    *ncuts += 1;
 

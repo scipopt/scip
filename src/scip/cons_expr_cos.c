@@ -259,7 +259,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
                SCIP_ROW* row;
 
                SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
 
@@ -287,7 +287,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
                SCIP_ROW* row;
 
                SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
 
@@ -351,7 +351,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
          SCIP_ROW* row;
 
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
          *ncuts += 1;

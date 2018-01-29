@@ -960,7 +960,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
    SCIP_CALL( separatePointSum(scip, conshdlr, expr, overestimate, underestimate, &exprdata->row) );
    assert(exprdata->row != NULL);
 
-   SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->row, FALSE, infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, exprdata->row, FALSE, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -1021,7 +1021,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    {
       SCIP_Bool infeasible;
 
-      SCIP_CALL( SCIPaddCut(scip, sol, exprdata->row, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, exprdata->row, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
       *ncuts += 1;
 

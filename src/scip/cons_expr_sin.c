@@ -984,7 +984,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
                SCIP_ROW* row;
 
                SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
 
