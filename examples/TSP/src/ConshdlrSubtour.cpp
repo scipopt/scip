@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -196,7 +196,7 @@ SCIP_RETCODE sepaSubtour(
             if( SCIPisCutEfficacious(scip, sol, row) )
             {
                SCIP_Bool infeasible;
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
                if ( infeasible )
                   *result = SCIP_CUTOFF;
                else

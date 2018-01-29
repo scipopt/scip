@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -25,6 +25,7 @@
 #include <iosfwd>
 #include <memory>
 #include <vector>
+#include <tuple>
 
 #include "polyscip_types.h"
 

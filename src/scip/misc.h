@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -324,9 +324,24 @@ int SCIPptrarrayGetMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+extern
+SCIP_RETCODE SCIPdisjointsetCreate(
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   ncomponents         /**< number of components */
+   );
+
+/** frees the disjoint set (union find) data structure */
+extern
+void SCIPdisjointsetFree(
+   SCIP_DISJOINTSET**    djset,              /**< pointer to disjoint set (union find) data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
 /** SCIP digraph functions
  *
- * internal digraph functions (see \ref DigraphMethods for public digraph methods)
+ * internal digraph functions (see \ref DirectedGraph for public digraph methods)
  */
 
 /** creates directed graph structure */

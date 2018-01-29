@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,7 @@
 /** structure to hold all necessary data to define a linear constraint for the unit tests */
 struct LinData
 {
-   char*                 names[MEMSIZE];     /**< name string for every variable */
+   const char            names[MEMSIZE][SCIP_MAXSTRLEN]; /**< name string for every variable */
    SCIP_Real             coefs[MEMSIZE];     /**< array of linear coefficients */
    SCIP_Real             lhs;                /**< left hand side of the linear constraint */
    SCIP_Real             rhs;                /**< right hand side of the constraint */
@@ -234,7 +234,7 @@ Test(parsing_linear, equation_onevariable, .description = "test if an equation c
    lindata.lhs = 5.0;
    lindata.rhs = 5.0;
    lindata.coefs[0] = 5.0;
-   lindata.names[0] = (char *)"v1";
+   BMScopyMemoryArray(lindata.names[0], "v1", 3);
    lindata.nnonz = 1;
 
    sprintf(filename, FNAME, "equation_onevariable");
@@ -246,7 +246,7 @@ Test(parsing_linear, free_constraint, .description = "test if a free row is corr
 {
    /* left and right hand side are initialized to infinity */
    lindata.coefs[0] = 5.0;
-   lindata.names[0] = (char *)"v1";
+   BMScopyMemoryArray(lindata.names[0], "v1", 3);
    lindata.nnonz = 1;
 
    sprintf(filename, FNAME, "free_constraint");
@@ -259,7 +259,7 @@ Test(parsing_linear, infeasible_constraint, .description = "test infeasible cons
    lindata.lhs = 10.0;
    lindata.rhs = 0.0;
    lindata.coefs[0] = 5.0;
-   lindata.names[0] = (char *)"v1";
+   BMScopyMemoryArray(lindata.names[0], "v1", 3);
    lindata.nnonz = 1;
 
    sprintf(filename, FNAME, "infeasible_constraint");

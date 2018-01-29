@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -514,13 +514,12 @@ SCIP_RETCODE selectBranchVar(
    }
 
    /* there were candidates, but no variable was selected; this can only happen if the branching points are huge values
-    * for all variables on which we cannot branch
+    * for all non-continuous variables on which we cannot branch
     * @todo delay the node?
     */
    if( (*brvar) == NULL )
    {
       SCIPerrorMessage("no branching could be created: all external candidates have huge bounds\n");
-      SCIPABORT();
       return SCIP_BRANCHERROR; /*lint !e527*/
    }
 
@@ -680,8 +679,8 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 
    if( brvar == NULL )
    {
-      SCIPerrorMessage("branchExecextPscost failed to select a branching variable from %d candidates\n", nprioexterncands);
-      *result = SCIP_DIDNOTRUN;
+      /* can happen if all candidates were non-continous variables with huge bounds */
+      *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
 

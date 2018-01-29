@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1411,7 +1411,11 @@ SCIP_RETCODE cliqueGetCommonSuccessorsSOS1(
    /* determine successors of variable var[0] that are not in the clique */
    assert(vars[0] != NULL );
    ind =  varGetNodeSOS1(conshdlrdata, vars[0]);
-   assert( ind >= 0 && ind < SCIPdigraphGetNNodes(conflictgraph) );
+
+   if( ind == -1 )
+      return SCIP_INVALIDDATA;
+
+   assert( ind < SCIPdigraphGetNNodes(conflictgraph) );
    nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
    succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
 
@@ -5421,8 +5425,10 @@ SCIP_RETCODE enforceConflictgraph(
             SCIP_VAR* var;
 
             var = vars[i];
-            indi =  varGetNodeSOS1(conshdlrdata, var);
-            assert( indi >= 0 );
+            indi = varGetNodeSOS1(conshdlrdata, var);
+
+            if( indi == -1 )
+               return SCIP_INVALIDDATA;
 
             if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
             {
@@ -5430,7 +5436,9 @@ SCIP_RETCODE enforceConflictgraph(
                {
                   var = vars[j];
                   indj = varGetNodeSOS1(conshdlrdata, var);
-                  assert( indj >= 0 );
+
+                  if( indj == -1 )
+                     return SCIP_INVALIDDATA;
 
                   if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
                   {
@@ -6236,7 +6244,7 @@ SCIP_RETCODE addBoundCutSepa(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, rowlb, FALSE, &infeasible) );
          if ( infeasible )
             *cutoff = TRUE;
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
@@ -6253,7 +6261,7 @@ SCIP_RETCODE addBoundCutSepa(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, rowub, FALSE, &infeasible) );
          if ( infeasible )
             *cutoff = TRUE;
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
@@ -6915,7 +6923,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       /* put corresponding rows into LP */
       if ( rowub != NULL && ! SCIProwIsInLP(rowub) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowub) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, rowub, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if ( solvedinitlp )
@@ -6927,7 +6935,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
 
       if ( ! (*cutoff) && rowlb != NULL && ! SCIProwIsInLP(rowlb) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowlb) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, rowlb, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if ( solvedinitlp )
@@ -7148,7 +7156,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                if ( ! SCIProwIsInLP(cut) && SCIPisCutEfficacious(scip, NULL, cut) )
                {
                   SCIP_Bool infeasible;
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
                   if ( infeasible )
                   {
                      genbreak = TRUE;
@@ -9196,9 +9204,13 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldnchgbds;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
+   /* cppcheck-suppress unassignedVariable */
    int oldnupgdconss;
    int nremovedvars;
 
@@ -9462,6 +9474,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
             {
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                *result = SCIP_INFEASIBLE;
+
+               /* update constraint violation in solution */
+               if ( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
                if ( printreason )
                {

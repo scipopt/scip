@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -448,11 +448,13 @@ void SCIPnlpiSetPriority(
 
 /** creates an NLP statistics structure */
 SCIP_RETCODE SCIPnlpStatisticsCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
    );
 
 /** frees an NLP statistics structure */
 void SCIPnlpStatisticsFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
    );
 

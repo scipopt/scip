@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,12 +13,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reduce.c
+/**@file   grphload.c
  * @brief  Methods for loading Steiner problems in .stp format
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  *
- * This file includes methods for reading a Steiner problem in .stp format
+ * This file includes methods for reading a Steiner problem in .stp format.
  *
  * A list of all interface methods can be found in grph.h.
  *
@@ -37,7 +37,17 @@
 #include <assert.h>
 #include <stdarg.h>        /* message: va_list etc */
 
+#if defined(_MSC_VER)
+#include  <io.h>
+#endif
+
+#if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER)
+#ifndef R_OK
+#define R_OK 1
+#endif
+#else
 #include <unistd.h>        /* R_OK  */
+#endif
 
 #include "portab.h"
 #include "grph.h"
@@ -620,8 +630,11 @@ static int start_section(
                (*inclname == '\0') ? basename : inclname,
                EXTSEP,
                temp.section->extension);
-
+#if defined(_MSC_VER)
+            if (_access(temp.filename, R_OK))
+#else
             if (access(temp.filename, R_OK))
+#endif
             {
                /* We can't access the include file.
                 * If the section is optional, we just ignore
@@ -831,8 +844,6 @@ SCIP_RETCODE graph_load(
    int          termcount = 0;
    int          nobstacles = -1;
    int          scale_order = 1;
-   int          is_gridgraph = FALSE;
-   int          has_coordinates = FALSE;
    int          obstacle_counter = 0;
    int**        scaled_coordinates = NULL;
    int**        obstacle_coords = NULL;
@@ -961,7 +972,7 @@ SCIP_RETCODE graph_load(
             message(MSG_ERROR, &curf, err_unknown_s, keyword);
          else
          {
-            char* format = (char*) p->format;
+            char newformat[5] = "";
             assert(p != NULL);
 
             message(MSG_DEBUG, &curf, msg_keyword_sd, p->keyword, p->sw_code);
@@ -969,18 +980,11 @@ SCIP_RETCODE graph_load(
             /* Yes, so lets get the rest of the line if possible
              */
             if( (stp_type == STP_MWCSP || stp_type == STP_RMWCSP) && p->format != NULL && (p->sw_code == KEY_TERMINALS_T || p->sw_code == KEY_GRAPH_E) )
-            {
-               if( p->sw_code == KEY_TERMINALS_T)
-                  format = (char*)"nn";
-               else if( p->sw_code == KEY_GRAPH_E )
-                  format = (char*)"nn";
-            }
+               strcpy(newformat, "nn");
+            else if( stp_type == STP_SAP && p->sw_code == KEY_GRAPH_A )
+               strcpy(newformat, "nnnn");
 
-            if( stp_type == STP_SAP && p->sw_code == KEY_GRAPH_A )
-            {
-               format = (char*)"nnnn";
-            }
-            if( p->format == NULL || !get_arguments(&curf, (const char*) format, s, para) )
+            if( p->format == NULL || !get_arguments(&curf, (const char*)( newformat[0] != '\0' ? newformat : p->format ), s, para) )
             {
                /* Now, what should we do ?
                 */
@@ -1088,12 +1092,13 @@ SCIP_RETCODE graph_load(
                   if( g == NULL )
                   {
                      if( stp_type == STP_GSTP )
-                        SCIP_CALL( graph_init(scip, graph, nodes * 2, edges * 2 + nodes * nodes, 1, 0) );
+                        SCIP_CALL( graph_init(scip, graph, nodes * 2, edges * 2 + nodes * nodes, 1) );
                      else
-                        SCIP_CALL( graph_init(scip, graph, nodes, edges * 2, 1, 0) );
+                        SCIP_CALL( graph_init(scip, graph, nodes, edges * 2, 1) );
+
                      g = *graph;
                      assert(g != NULL);
-                     assert(g->source[0] == UNKNOWN);
+                     assert(g->source == UNKNOWN);
                      for( i = 0; i < nodes; i++ )
                         graph_knot_add(g, -1);
 
@@ -1204,7 +1209,7 @@ SCIP_RETCODE graph_load(
                   }
                   assert(g == NULL);
 
-                  // ætodo fix problem with edges over obstacles
+                  // todo fix problem with edges over obstacles
                   message(MSG_FATAL, &curf, "Obstacle avoiding RSMT problems are currently not supported in this format \n");
 
                   SCIP_CALL( graph_obstgrid_create(scip, graph, scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order) );
@@ -1222,7 +1227,7 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-                          SCIP_CALL( graph_rootmaxweight_transform(scip, g) );
+                           SCIP_CALL( graph_pc_2rmw(scip, g) );
                         }
                         else
                         {
@@ -1236,7 +1241,7 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-                          SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
+                           SCIP_CALL( graph_pc_2mw(scip, g, g->prize) );
                         }
                         else
                         {
@@ -1247,11 +1252,11 @@ SCIP_RETCODE graph_load(
                      }
                      else if( stp_type == STP_PCSPG )
                      {
-                        SCIP_CALL( graph_prize_transform(scip, g) );
+                        SCIP_CALL( graph_pc_2pc(scip, g) );
                      }
                      else if( stp_type == STP_RPCSPG )
                      {
-                        SCIP_CALL( graph_rootprize_transform(scip, g) );
+                        SCIP_CALL( graph_pc_2rpc(scip, g) );
                      }
                   }
                   curf.section = &section_table[0];
@@ -1265,7 +1270,7 @@ SCIP_RETCODE graph_load(
                      assert(terms == nodes);
                      assert(g != NULL);
                      if( g->prize == NULL )
-                        SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), terms) );
+                        SCIP_CALL( graph_pc_init(scip, g, terms, -1) );
                   }
                   break;
                case KEY_TERMINALS_GROUPS :
@@ -1282,7 +1287,7 @@ SCIP_RETCODE graph_load(
 
                   if ((int)para[0].n <= nodes)
                   {
-                     g->source[0] = (int)para[0].n - 1;
+                     g->source = (int)para[0].n - 1;
                      graph_knot_chg(g, (int)para[0].n - 1, 0);
                   }
                   else
@@ -1295,11 +1300,12 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_ROOTP :
                   assert(g != NULL);
                   assert(terms > 0);
-                  g->source[0] = (int)para[0].n - 1;
+                  g->source = (int)para[0].n - 1;
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
                   stp_type = STP_RPCSPG;
                   if( g->prize == NULL )
-                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
+                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
+
                   g->prize[(int)para[0].n - 1] = FARAWAY;
                   break;
                case KEY_TERMINALS_T :
@@ -1328,7 +1334,7 @@ SCIP_RETCODE graph_load(
                   {
                      assert(stp_type != STP_RPCSPG);
                      stp_type = STP_PCSPG;
-                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
+                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
                   }
                   g->prize[(int)para[0].n - 1] = (double)para[1].n;
                   termcount++;
@@ -1399,7 +1405,6 @@ SCIP_RETCODE graph_load(
 
                   break;
                case KEY_COORDINATES_GRID :
-                  is_gridgraph = TRUE;
                   break;
                case KEY_PRESOLVE_FIXED :
                   if (presol != NULL)
@@ -1454,12 +1459,12 @@ SCIP_RETCODE graph_load(
    {
       assert(g != NULL);
 
-      if( g->source[0] == UNKNOWN )
+      if( g->source == UNKNOWN )
       {
          for( i = 0; i < g->knots; i++ )
             if ((g->term[i] == 0)
-               && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
-               g->source[0] = i;
+               && ((g->source < 0) || (g->grad[i] > g->grad[g->source])))
+               g->source = i;
       }
 
       if( g->stp_type == UNKNOWN )
@@ -1469,11 +1474,9 @@ SCIP_RETCODE graph_load(
          else
             g->stp_type = STP_SPG;
       }
-      graph_flags(g, (has_coordinates ? GRAPH_HAS_COORDINATES : 0)
-         | (is_gridgraph ? GRAPH_IS_GRIDGRAPH    : 0));
 
       (void)printf(msg_finish_dddd,
-         g->knots, g->edges, g->terms, g->source[0]);
+         g->knots, g->edges, g->terms, g->source);
 
       assert(graph_valid(g));
       return SCIP_OKAY;

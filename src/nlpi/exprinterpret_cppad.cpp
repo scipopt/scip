@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,7 +60,10 @@ using std::vector;
 #define SCIPInterval_NAMESPACE CppAD
 #include "nlpi/intervalarithext.h"
 
-SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+namespace CppAD
+{
+   SCIP_Real SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+}
 using CppAD::SCIPInterval;
 
 /* CppAD needs to know a fixed upper bound on the number of threads at compile time.

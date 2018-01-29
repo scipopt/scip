@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -85,7 +85,7 @@ namespace polyscip {
     /**
      * Ostream operator
      * @param os Output stream
-     * @param proj Projection to write to stream
+     * @param p Projection to write to stream
      * @return Output stream
      */
     ostream& operator<<(ostream& os, const TwoDProj& p) {
@@ -96,7 +96,7 @@ namespace polyscip {
     /**
      * Ostream operator
      * @param os Output stream
-     * @param nd_proj Non-dominated projections to write to stream
+     * @param nd Non-dominated projections to write to stream
      * @return Output stream
      */
     ostream& operator<<(ostream& os, const NondomProjections& nd) {
@@ -770,8 +770,7 @@ namespace polyscip {
         assert (size == orig_vals.size());
         auto is_dominated = false;
 
-        auto ret = SCIPfreeTransform(scip_);
-        assert (ret == SCIP_OKAY);
+        SCIP_CALL_ABORT( SCIPfreeTransform(scip_) );
 
         auto new_cons = vector<SCIP_CONS*>{};
         // add objective value constraints
@@ -780,8 +779,7 @@ namespace polyscip {
                                          orig_vals[i],
                                          -SCIPinfinity(scip_),
                                          outcome[i]);
-            ret =  SCIPaddCons(scip_, cons);
-            assert (ret == SCIP_OKAY);
+            SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
             new_cons.push_back(cons);
         }
 
@@ -807,14 +805,11 @@ namespace polyscip {
             polyscip_status_ = PolyscipStatus::Error;
         }
 
-        ret = SCIPfreeTransform(scip_);
-        assert (ret == SCIP_OKAY);
+        SCIP_CALL_ABORT( SCIPfreeTransform(scip_) );
         // release and delete added constraints
         for (auto cons : new_cons) {
-            ret = SCIPdelCons(scip_, cons);
-            assert (ret == SCIP_OKAY);
-            ret = SCIPreleaseCons(scip_, addressof(cons));
-            assert (ret == SCIP_OKAY);
+            SCIP_CALL_ABORT( SCIPdelCons(scip_, cons) );
+            SCIP_CALL_ABORT( SCIPreleaseCons(scip_, addressof(cons)) );
         }
 
         return is_dominated;
@@ -835,8 +830,7 @@ namespace polyscip {
         // add constraints on objective values given by box
         auto obj_val_cons = vector<SCIP_CONS *>{};
         if (SCIPisTransformed(scip_)) {
-            auto ret = SCIPfreeTransform(scip_);
-            assert (ret == SCIP_OKAY);
+            SCIP_CALL_ABORT( SCIPfreeTransform(scip_) );
         }
         for (size_t i=0; i<box.size(); ++i) {
             auto interval = box.getInterval(i);
@@ -844,8 +838,7 @@ namespace polyscip {
                                              orig_vals[i],
                                              interval.first,
                                              interval.second - cmd_line_args_.getDelta());
-            auto ret = SCIPaddCons(scip_, new_cons);
-            assert (ret == SCIP_OKAY);
+            SCIP_CALL_ABORT( SCIPaddCons(scip_, new_cons) );
             obj_val_cons.push_back(new_cons);
         }
 
@@ -857,14 +850,11 @@ namespace polyscip {
 
         // release and delete objective value constraints
         if (SCIPisTransformed(scip_)) {
-            auto ret = SCIPfreeTransform(scip_);
-            assert (ret == SCIP_OKAY);
+            SCIP_CALL_ABORT( SCIPfreeTransform(scip_) );
         }
         for (auto cons : obj_val_cons) {
-            auto ret = SCIPdelCons(scip_, cons);
-            assert (ret == SCIP_OKAY);
-            ret = SCIPreleaseCons(scip_, addressof(cons));
-            assert (ret == SCIP_OKAY);
+            SCIP_CALL_ABORT( SCIPdelCons(scip_, cons) );
+            SCIP_CALL_ABORT( SCIPreleaseCons(scip_, addressof(cons)) );
         }
 
         // check computed subproblem results
@@ -1164,7 +1154,7 @@ namespace polyscip {
                                                      last_proj.getSecond(),
                                                      left_proj.getSecond()));
             for (auto c : obj_val_cons) {
-                SCIPaddCons(scip_, c);
+                SCIP_CALL_ABORT( SCIPaddCons(scip_, c) );
             }
 
             auto ref_point = std::make_pair(left_proj.getFirst() - 1., last_proj.getSecond() - 1.);
@@ -1185,7 +1175,7 @@ namespace polyscip {
                                                                ref_point.second,
                                                                beta_2));
             for (auto c : var_trans_cons) {
-                SCIPaddCons(scip_, c);
+                SCIP_CALL_ABORT( SCIPaddCons(scip_, c) );
             }
 
             solve();
@@ -1212,10 +1202,10 @@ namespace polyscip {
             }
 
             // release and delete variable transformation constraints
-            SCIPfreeTransform(scip_);
+            SCIP_CALL_ABORT( SCIPfreeTransform(scip_) );
             for (auto c : var_trans_cons) {
-                SCIPdelCons(scip_, c);
-                SCIPreleaseCons(scip_, addressof(c));
+                SCIP_CALL_ABORT( SCIPdelCons(scip_, c) );
+                SCIP_CALL_ABORT( SCIPreleaseCons(scip_, addressof(c)) );
             }
 
             if (new_proj) {
@@ -1247,10 +1237,10 @@ namespace polyscip {
                 new_proj.reset();
             }
 
-            SCIPfreeTransform(scip_);
+            SCIP_CALL_ABORT( SCIPfreeTransform(scip_) );
             for (auto c : obj_val_cons) {
-                SCIPdelCons(scip_, c);
-                SCIPreleaseCons(scip_, addressof(c));
+                SCIP_CALL_ABORT( SCIPdelCons(scip_, c) );
+                SCIP_CALL_ABORT( SCIPreleaseCons(scip_, addressof(c)) );
             }
 
         }

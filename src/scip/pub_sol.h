@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -111,6 +111,47 @@ int SCIPsolGetIndex(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** get maximum absolute bound violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsBoundViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative bound violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelBoundViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute integrality violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsIntegralityViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute LP row violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsLPRowViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative LP row violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelLPRowViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute constraint violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsConsViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative constraint violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelConsViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
 
 #ifdef NDEBUG
 

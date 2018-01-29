@@ -38,7 +38,10 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_reopt.h ../../src/scip/pub_var.h ../../src/lpi/lpi.h \
  ../../src/nlpi/pub_expr.h ../../src/scip/intervalarith.h \
  ../../src/nlpi/type_exprinterpret.h ../../src/scip/presolve.h \
- ../../src/scip/cuts.h ../../src/scip/heuristics.h \
+ ../../src/scip/cuts.h ../../src/scip/set.h ../../src/scip/struct_set.h \
+ ../../src/scip/message.h ../../src/scip/debug.h \
+ ../../src/scip/type_cuts.h ../../src/scip/struct_cuts.h \
+ ../../src/scip/dbldblarith.h ../../src/scip/heuristics.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/type_objcloneable.h \
  ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
  ../../src/objscip/type_objprobcloneable.h ../../src/objscip/objdialog.h \
@@ -83,24 +86,25 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_locks.h \
  ../../src/scip/heur_lpface.h ../../src/scip/heur_multistart.h \
- ../../src/scip/heur_mutation.h ../../src/scip/heur_nlpdiving.h \
- ../../src/scip/heur_objpscostdiving.h ../../src/scip/heur_octane.h \
- ../../src/scip/heur_ofins.h ../../src/scip/heur_oneopt.h \
- ../../src/scip/heur_pscostdiving.h ../../src/scip/heur_proximity.h \
- ../../src/scip/heur_randrounding.h ../../src/scip/heur_rens.h \
- ../../src/scip/heur_reoptsols.h ../../src/scip/heur_repair.h \
- ../../src/scip/heur_rins.h ../../src/scip/heur_rootsoldiving.h \
- ../../src/scip/heur_rounding.h ../../src/scip/heur_shiftandpropagate.h \
- ../../src/scip/heur_shifting.h ../../src/scip/heur_simplerounding.h \
- ../../src/scip/heur_subnlp.h ../../src/scip/heur_trivial.h \
- ../../src/scip/heur_trivialnegation.h ../../src/scip/heur_trysol.h \
- ../../src/scip/heur_twoopt.h ../../src/scip/heur_undercover.h \
- ../../src/scip/heur_vbounds.h ../../src/scip/heur_veclendiving.h \
- ../../src/scip/heur_zeroobj.h ../../src/scip/heur_zirounding.h \
- ../../src/scip/nodesel_bfs.h ../../src/scip/nodesel_breadthfirst.h \
- ../../src/scip/nodesel_dfs.h ../../src/scip/nodesel_estimate.h \
- ../../src/scip/nodesel_hybridestim.h ../../src/scip/nodesel_uct.h \
- ../../src/scip/nodesel_restartdfs.h ../../src/scip/presol_boundshift.h \
+ ../../src/scip/heur_mutation.h ../../src/scip/heur_mpec.h \
+ ../../src/scip/heur_nlpdiving.h ../../src/scip/heur_objpscostdiving.h \
+ ../../src/scip/heur_octane.h ../../src/scip/heur_ofins.h \
+ ../../src/scip/heur_oneopt.h ../../src/scip/heur_pscostdiving.h \
+ ../../src/scip/heur_proximity.h ../../src/scip/heur_randrounding.h \
+ ../../src/scip/heur_rens.h ../../src/scip/heur_reoptsols.h \
+ ../../src/scip/heur_repair.h ../../src/scip/heur_rins.h \
+ ../../src/scip/heur_rootsoldiving.h ../../src/scip/heur_rounding.h \
+ ../../src/scip/heur_shiftandpropagate.h ../../src/scip/heur_shifting.h \
+ ../../src/scip/heur_simplerounding.h ../../src/scip/heur_subnlp.h \
+ ../../src/scip/heur_trivial.h ../../src/scip/heur_trivialnegation.h \
+ ../../src/scip/heur_trysol.h ../../src/scip/heur_twoopt.h \
+ ../../src/scip/heur_undercover.h ../../src/scip/heur_vbounds.h \
+ ../../src/scip/heur_veclendiving.h ../../src/scip/heur_zeroobj.h \
+ ../../src/scip/heur_zirounding.h ../../src/scip/nodesel_bfs.h \
+ ../../src/scip/nodesel_breadthfirst.h ../../src/scip/nodesel_dfs.h \
+ ../../src/scip/nodesel_estimate.h ../../src/scip/nodesel_hybridestim.h \
+ ../../src/scip/nodesel_uct.h ../../src/scip/nodesel_restartdfs.h \
+ ../../src/scip/presol_boundshift.h \
  ../../src/scip/presol_convertinttobin.h ../../src/scip/presol_domcol.h \
  ../../src/scip/presol_implfree.h ../../src/scip/presol_dualagg.h \
  ../../src/scip/presol_dualcomp.h ../../src/scip/presol_dualinfer.h \
@@ -124,12 +128,13 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/reader_sol.h ../../src/scip/reader_wbo.h \
  ../../src/scip/reader_zpl.h ../../src/scip/sepa_eccuts.h \
  ../../src/scip/sepa_cgmip.h ../../src/scip/sepa_clique.h \
- ../../src/scip/sepa_closecuts.h ../../src/scip/sepa_cmir.h \
+ ../../src/scip/sepa_closecuts.h ../../src/scip/sepa_aggregation.h \
  ../../src/scip/sepa_convexproj.h ../../src/scip/sepa_disjunctive.h \
- ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gauge.h \
- ../../src/scip/sepa_gomory.h ../../src/scip/sepa_impliedbounds.h \
- ../../src/scip/sepa_intobj.h ../../src/scip/sepa_mcf.h \
- ../../src/scip/sepa_oddcycle.h ../../src/scip/sepa_rapidlearning.h \
- ../../src/scip/sepa_strongcg.h ../../src/scip/sepa_zerohalf.h \
- ../../src/scip/scipshell.h ../../src/scip/concsolver_scip.h \
- ../../src/nlpi/nlpi_ipopt.h
+ ../../src/scip/sepa_gauge.h ../../src/scip/sepa_gomory.h \
+ ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
+ ../../src/scip/sepa_mcf.h ../../src/scip/sepa_oddcycle.h \
+ ../../src/scip/sepa_rapidlearning.h ../../src/scip/sepa_strongcg.h \
+ ../../src/scip/sepa_zerohalf.h ../../src/scip/scipshell.h \
+ ../../src/scip/concsolver_scip.h ../../src/nlpi/nlpi_ipopt.h \
+ ../../src/nlpi/nlpi_filtersqp.h ../../src/nlpi/nlpi_worhp.h \
+ ../../src/nlpi/nlpi_all.h

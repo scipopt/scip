@@ -62,20 +62,11 @@ testblis:
 .PHONY: testcluster
 testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk
 		cd check; \
-		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
-		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
+		$(SHELL) ./check_cluster.sh $(TEST) $(EXECUTABLE) $(SETTINGS) \
+		$(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
-
-.PHONY: testnodes
-testnodes:
-		cd check; \
-                $(SHELL) ./check_nodes.sh $(TEST) $(MAINFILE) $(SETTINGS) \
-                $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
-                $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
-                $(QUEUETYPE) $(QUEUE) $(NODES) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES);
 
 .PHONY: testclusterfscip
 testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh check/configuration_set_fscip.sh check/configuration_logfiles_fscip.sh check/evalcheck_cluster.sh check/check.awk
@@ -93,7 +84,7 @@ testclustercpx:
                 $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
                 $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
                 $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES);
 
 .PHONY: testclustercbc
 testclustercbc:

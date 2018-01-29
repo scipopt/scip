@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -942,7 +942,7 @@ SCIP_RETCODE createSubSCIP(
    /* create sub-SCIP copy of CIP, copy interesting plugins */
    success = TRUE;
    SCIP_CALL( SCIPcopyPlugins(scip, heurdata->subscip, TRUE, FALSE, TRUE, FALSE, TRUE,
-         FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, &success) );
+         FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, &success) );
 
    if( success == FALSE )
    {

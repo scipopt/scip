@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,4 +32,8 @@
  *  - resource-constrained project scheduling problem with minimal and maximal time lags (RCPSP/max) (see reader_sch.h)
  *  - pack instances (see reader_rcp.h)
  *
+ * Compiling the Scheduling application
+ * ------------------------------------
+ *
+ * See the @ref INSTALL "Install file"
  */

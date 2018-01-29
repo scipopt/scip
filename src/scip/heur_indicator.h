@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,7 +55,8 @@ SCIP_RETCODE SCIPheurPassIndicator(
    SCIP_HEUR*            heur,               /**< indicator heuristic */
    int                   nindconss,          /**< number of indicator constraints */
    SCIP_CONS**           indconss,           /**< indicator constraints */
-   SCIP_Bool*            solcand             /**< values for indicator variables in partial solution */
+   SCIP_Bool*            solcand,            /**< values for indicator variables in partial solution */
+   SCIP_Real             obj                 /**< objective of solution */
    );
 
 /* @} */

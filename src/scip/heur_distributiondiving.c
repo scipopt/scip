@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -380,7 +380,7 @@ SCIP_RETCODE calcBranchScore(
    ncolrows = SCIPcolGetNNonz(varcol);
    varlb = SCIPvarGetLbLocal(var);
    varub = SCIPvarGetUbLocal(var);
-   assert(SCIPisFeasLT(scip, varlb, varub));
+   assert(varub - varlb > 0.5);
    vartype = SCIPvarGetType(var);
 
    /* calculate mean and variance of variable uniform distribution before and after branching */

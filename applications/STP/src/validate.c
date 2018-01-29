@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   portab.h
+/**@file   validate.c
  * @brief  Method to validate Steiner problem solutions
  * @author Thorsten Koch
  * @author Gerald Gamrath
@@ -35,7 +35,7 @@
 static void show(
    GRAPH*  g,
    int     vars,
-   char*   state,
+   STP_Bool*   state,
    double* xval)
 {
    int i;
@@ -105,13 +105,11 @@ static void trail(
    int           i,
    const double* xval,
    int           tail,
-   char*         connected,
+   int*          connected,
    int           hop,
    int           max_hops)
 {
    int k;
-
-   assert(connected[i] >= 0);
 
    if( connected[i] < 2 )
    {
@@ -138,14 +136,14 @@ static void trail2(
    const GRAPH*  g,
    int           layer,
    const double* xval,
-   char*         connected,
+   STP_Bool*         connected,
    int           max_hops)
 {
    int* stackstart = malloc((size_t)g->knots * sizeof(int));
    int* stackedge = malloc((size_t)g->knots * sizeof(int));
    int* stacktail = malloc((size_t)g->knots * sizeof(int));
    int k;
-   int i = g->source[layer];
+   int i = g->source;
    int stacksize = 1;
 
    stackstart[0] = i;
@@ -203,14 +201,14 @@ static void trail2(
 /*--- Returns  : TRUE / FALSE                                             ---*/
 /*---------------------------------------------------------------------------*/
 /** validates whether a (LP) solution is feasible */
-SCIP_RETCODE SCIPvalidateStpSol(
+SCIP_RETCODE SCIPStpValidateSol(
    SCIP* scip,
    const GRAPH*  g,
    const double* xval,
    SCIP_Bool*    feasible
 		     )
 {
-   char* connected;
+   int* connected;
    int   ret       = TRUE;
    int   i;
    int   layer;
@@ -233,10 +231,10 @@ SCIP_RETCODE SCIPvalidateStpSol(
    {
 #if 0
       if (layer > 0)
-         memset(connected, 0, (size_t)g->knots * sizeof(char));
+         memset(connected, 0, (size_t)g->knots * sizeof(STP_Bool));
 #endif
 #if 1
-      trail(g, g->source[layer], xval + layer * g->edges, -1,
+      trail(g, g->source, xval + layer * g->edges, -1,
          connected,
          0, 1000000000);
 #else

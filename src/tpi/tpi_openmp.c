@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -338,7 +338,7 @@ int SCIPtpiGetThreadNum(
 SCIP_RETCODE SCIPtpiCreateJob(
    SCIP_JOB**            job,                /**< pointer to the job that will be created */
    int                   jobid,              /**< the id for the current job */
-   int                   (*jobfunc)(void* args),/**< pointer to the job function */
+   SCIP_RETCODE          (*jobfunc)(void* args),/**< pointer to the job function */
    void*                 jobarg              /**< the job's argument */
    )
 {
@@ -422,7 +422,7 @@ SCIP_Bool isJobWaiting(
 
          currjob = currjob->nextjob;
       }
-      while( TRUE );
+      while( TRUE ); /*lint !e506*/
    }
 
    return FALSE;
@@ -465,7 +465,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
             if( currjob == _jobqueues->finishedjobs.firstjob )
                _jobqueues->finishedjobs.firstjob = currjob->nextjob;
             else
-               prevjob->nextjob = currjob->nextjob;
+               prevjob->nextjob = currjob->nextjob; /*lint !e613*/
 
             if( currjob == _jobqueues->finishedjobs.lastjob )
                _jobqueues->finishedjobs.lastjob = prevjob;

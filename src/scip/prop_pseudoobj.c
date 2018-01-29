@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -314,8 +314,7 @@ SCIP_DECL_HASHKEYEQ(cliqueIsHashkeyEq)
 static
 SCIP_DECL_HASHKEYVAL(cliqueGetHashkeyVal)
 {  /*lint --e{715}*/
-   assert( SCIPcliqueGetId((SCIP_CLIQUE*) key) >= 0 );
-   return (unsigned int) SCIPcliqueGetId((SCIP_CLIQUE*) key);
+   return SCIPcliqueGetId((SCIP_CLIQUE*) key);
 }
 
 /*
@@ -859,6 +858,9 @@ SCIP_RETCODE collectMinactImplicVars(
    cliques = SCIPvarGetCliques(var, varfixing);
    ncliques = SCIPvarGetNCliques(var, varfixing);
 
+   if( uselesscliques == NULL )
+      return SCIP_INVALIDDATA;
+
 #ifndef NDEBUG
    /* check that the marker array is reset */
    for( c = 0; c < nbinobjvars; ++c )
@@ -869,8 +871,6 @@ SCIP_RETCODE collectMinactImplicVars(
    for( c = 0; c < ncliques; ++c )
    {
       SCIP_Bool useless;
-
-      assert(uselesscliques != NULL);
 
       clique = cliques[c];
       assert(clique != NULL);
@@ -2008,7 +2008,7 @@ SCIP_RETCODE adjustCutoffbound(
    int                   inferinfo,          /**< inference information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_HASHTABLE*       addedvars,          /**< hash table which contains variable which are already added or implict given as reason for the resolve, or NULL */
+   SCIP_HASHTABLE*       addedvars,          /**< hash table which contains variables which are already added or implicitly given as reason for the resolve, or NULL */
    SCIP_Real*            cutoffbound         /**< pointer to store the adjusted cutoff bound */
    )
 {
@@ -2046,7 +2046,10 @@ SCIP_RETCODE adjustCutoffbound(
          end = objimplics->nlbimpls + objimplics->nubimpls;
       }
 
-      SCIP_CALL( getConflictImplics(scip, objimplics->objvars, start, end, bdchgidx, addedvars, cutoffbound, &foundimplics) );
+      if( addedvars != NULL )
+      {
+         SCIP_CALL( getConflictImplics(scip, objimplics->objvars, start, end, bdchgidx, addedvars, cutoffbound, &foundimplics) );
+      }
    }
    else
    {
@@ -2080,7 +2083,7 @@ SCIP_RETCODE adjustCutoffbound(
             newbound -= 1 - 10 * SCIPfeastol(scip);
       }
 
-      /* adjust the cutoff bound by the portion the inference variable contributes to the presudo objective activitiy
+      /* adjust the cutoff bound by the portion the inference variable contributes to the presudo objective activity
        * (minactivity)
        */
       assert(!SCIPisNegative(scip, objval * (newbound - glbbound)));
@@ -3073,7 +3076,7 @@ SCIP_RETCODE propagateLowerboundBinvar(
    SCIP_Real ubobjchg;
 
    assert(SCIPvarIsBinary(var));
-   assert(SCIPisLE(scip, lowerbound, maxpseudoobjact));
+   assert(SCIPisDualfeasLE(scip, lowerbound, maxpseudoobjact));
    assert(!SCIPisInfinity(scip, maxpseudoobjact));
 
    /*@todo Instead of running always over all implications use SCIP_OBJIMPLICS in the same way as for the propagation of

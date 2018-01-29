@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -949,7 +949,7 @@ SCIP_DECL_NLPIFREE( nlpiFreeWorhp )
    assert(data != NULL);
    assert(data->blkmem != NULL);
 
-   BMSfreeMemory(&data);
+   BMSfreeBlockMemory(data->blkmem, &data);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -2379,7 +2379,7 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    assert(nlpi   != NULL);
 
    /* create Worhp solver interface data */
-   SCIP_ALLOC( BMSallocMemory(&nlpidata) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &nlpidata) );
    BMSclearMemory(nlpidata);
 
    nlpidata->blkmem = blkmem;

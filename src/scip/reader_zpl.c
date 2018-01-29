@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,10 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
 #include "zimpl/bool.h"
@@ -50,6 +54,10 @@
 
 #include "zimpl/xlpglue.h"
 #include "zimpl/zimpllib.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #define READER_NAME             "zplreader"
 #define READER_DESC             "file reader for ZIMPL model files"
@@ -1612,7 +1620,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
          NULL, FALSE, "-", NULL, NULL) );
 
-   (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
+   (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10); /*lint !e778*/
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)"));
 #else
    SCIPwarningMessage(scip, "SCIP does only support ZIMPL 3.2.0 and higher. Please update your ZIMPL version %d.%d.%d\n",

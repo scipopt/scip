@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,6 +55,10 @@
 #include "IpLapack.hpp"
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
+#endif
+
+#if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12))
+#error "The Ipopt interface requires at least 3.12."
 #endif
 
 using namespace Ipopt;
@@ -694,6 +698,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
  *
  *  return: void pointer to problem instance
  */
+static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
 {
    assert(nlpi    != NULL);

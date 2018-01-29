@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -121,6 +121,15 @@ void SCIPstatUpdatePrimalDualIntegral(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_Real             primalbound,        /**< current primal bound in transformed problem, or infinity */
    SCIP_Real             dualbound           /**< current lower bound in transformed space, or -infinity */
+   );
+
+/** update and return the primal-dual integral statistic */
+extern
+SCIP_Real SCIPstatGetPrimalDualIntegral(
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob            /**< original problem */
    );
 
 /** reset current branch and bound run specific statistics */

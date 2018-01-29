@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2158,7 +2158,7 @@ SCIP_RETCODE readNonlinearExprs(
 
          *constype = NONLINEAR;
       }
-   /* cppcheck-suppress unusedLabel */
+
    TERMINATE:
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -2217,7 +2217,6 @@ SCIP_RETCODE readSOScons(
    SCIP_Bool check;
    SCIP_Bool propagate;
    SCIP_Bool local;
-   SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
    char name[SCIP_MAXSTRLEN];
@@ -2229,7 +2228,6 @@ SCIP_RETCODE readSOScons(
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
-   modifiable = FALSE;
    dynamic = dynamicconss;
    removable = dynamicrows;
 
@@ -2322,11 +2320,11 @@ SCIP_RETCODE readSOScons(
       {
       case 1:
          SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable) );
+            local, dynamic, removable, FALSE) );
          break;
       case 2:
          SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable) );
+            local, dynamic, removable, FALSE) );
          break;
       default:
          SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */

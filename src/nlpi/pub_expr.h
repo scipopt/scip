@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -768,7 +768,8 @@ SCIP_RETCODE SCIPexprParse(
    const char*           str,                /**< pointer to the string to be parsed */
    const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
    int*                  nvars,              /**< buffer to store number of variables */
-   int*                  varnames            /**< buffer to store variable names, prefixed by index (as int) */
+   int*                  varnames,           /**< buffer to store variable names, prefixed by index (as int) */
+   int                   varnameslength      /**< length of the varnames buffer array */
    );
 
 /**@} */

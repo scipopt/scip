@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1127,7 +1127,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
             else
             {
                /* shrink dynamic size arrays to their minimal sizes */
-               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
+               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs, \
                      (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
                BMSfreeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
 
@@ -1139,9 +1139,9 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          else
          {
             /* shrink dynamic size arrays to their minimal sizes */
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs, \
                   (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs, \
                   (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
             /* convert into static domain change */
@@ -1972,7 +1972,6 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
-   (*var)->clqcomponentidx = -1;
 
    stat->nvaridx++;
 
@@ -2225,6 +2224,7 @@ SCIP_RETCODE parseBounds(
    )
 {
    char token[SCIP_MAXSTRLEN];
+   char* tmpend;
 
    SCIPsetDebugMsg(set, "parsing bounds: '%s'\n", str);
 
@@ -2242,7 +2242,7 @@ SCIP_RETCODE parseBounds(
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
    str = *endptr;
-   SCIP_CALL( parseValue(set, token, lb, endptr) );
+   SCIP_CALL( parseValue(set, token, lb, &tmpend) );
 
    /* get upper bound */
    SCIP_CALL( parseValue(set, str, ub, endptr) );
@@ -4040,7 +4040,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             k = ntmpvars2 - 1;
             pos = ntmpvars + ntmpvars2 - 1;
             ntmpvars += ntmpvars2;
-            ntmpvars2 = 0;
+
             while( v >= 0 && k >= 0 )
             {
                assert(pos >= 0);
@@ -4904,6 +4904,9 @@ SCIP_RETCODE tryAggregateIntVars(
    }
    c = (SCIP_Longint)(SCIPsetFeasFloor(set, rhs));
 
+   if( REALABS((SCIP_Real)(c/a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
+      return SCIP_OKAY;
+
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
    if( (a == 1 || a == -1) && SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER )
    {
@@ -5158,6 +5161,9 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
       scalar = -scalary/scalarx;
       constant = rhs/scalarx;
+
+      if( REALABS(constant) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
+         return SCIP_OKAY;
 
       /* check aggregation for integer feasibility */
       if( SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINUOUS
@@ -7185,7 +7191,7 @@ SCIP_RETCODE varEventLbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.lb); /*lint !e777*/
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -7223,7 +7229,7 @@ SCIP_RETCODE varEventUbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.ub); /*lint !e777*/
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -7280,8 +7286,10 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)))
-      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && SCIPsetIsIntegral(set, newbound))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)
+            || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
+      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && (SCIPsetIsIntegral(set, newbound)
+            || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
@@ -7301,10 +7309,10 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    SCIPsetDebugMsg(set, "process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
-      return SCIP_OKAY;
-   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) && var->glbdom.lb != var->locdom.lb ) /*lint !e777*/
       newbound = var->glbdom.lb;
+   else if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
+      return SCIP_OKAY;
 
    /* change the bound */
    oldbound = var->locdom.lb;
@@ -7445,8 +7453,10 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)))
-      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && SCIPsetIsIntegral(set, newbound))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)
+            || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
+      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && (SCIPsetIsIntegral(set, newbound)
+            || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
@@ -7466,10 +7476,10 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    SCIPsetDebugMsg(set, "process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
-      return SCIP_OKAY;
-   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) && var->glbdom.ub != var->locdom.ub  ) /*lint !e777*/
       newbound = var->glbdom.ub;
+   else if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
+      return SCIP_OKAY;
 
    /* change the bound */
    oldbound = var->locdom.ub;
@@ -7627,7 +7637,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
    SCIPsetDebugMsg(set, "changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->locdom.lb, newbound) )
+   if( SCIPsetIsEQ(set, var->locdom.lb, newbound) && (!SCIPsetIsEQ(set, var->glbdom.lb, newbound) || var->locdom.lb == newbound) ) /*lint !e777*/
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -7753,7 +7763,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
    SCIPsetDebugMsg(set, "changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->locdom.ub, newbound) )
+   if( SCIPsetIsEQ(set, var->locdom.ub, newbound) && (!SCIPsetIsEQ(set, var->glbdom.ub, newbound) || var->locdom.ub == newbound) ) /*lint !e777*/
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -15328,6 +15338,12 @@ SCIP_Real SCIPvarGetVSIDSCurrentRun(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
+   if( dir != SCIP_BRANCHDIR_DOWNWARDS && dir != SCIP_BRANCHDIR_UPWARDS )
+   {
+      SCIPerrorMessage("invalid branching direction %d when asking for VSIDS value\n", dir);
+      return SCIP_INVALID;
+   }
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -17735,26 +17751,6 @@ SCIP_Real SCIPvarGetVSIDS(
       return SCIPvarGetVSIDS_rec(var, stat, dir);
 }
 
-/** returns the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-int SCIPvarGetCliqueComponentIdx(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   return var->clqcomponentidx;
-}
-
-/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-void SCIPvarSetCliqueComponentIdx(
-   SCIP_VAR*             var,                /**< problem variable */
-   int                   idx                 /**< clique component index of this variable */
-   )
-{
-   assert(var != NULL);
-   var->clqcomponentidx = idx;
-}
-
-
 /** includes event handler with given data in variable's event filter */
 SCIP_RETCODE SCIPvarCatchEvent(
    SCIP_VAR*             var,                /**< problem variable */
@@ -17774,7 +17770,7 @@ SCIP_RETCODE SCIPvarCatchEvent(
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPsetDebugMsg(set, "catch event of type 0x%"SCIP_EVENTTYPE_FORMAT" of variable <%s> with handler %p and data %p\n",
+   SCIPsetDebugMsg(set, "catch event of type 0x%" SCIP_EVENTTYPE_FORMAT " of variable <%s> with handler %p and data %p\n",
       eventtype, var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
