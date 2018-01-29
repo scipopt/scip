@@ -246,7 +246,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
       SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
             SCIP_INVALID, childlb, childub, TRUE) );
 
-      for( i = 0; i < 5; ++i)
+      for( i = 0; i < 5; ++i )
       {
          /* only the cuts which could be created are added */
          if( !*infeasible && cuts[i] != NULL )
@@ -274,7 +274,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
       SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
             SCIP_INVALID, childlb, childub, FALSE) );
 
-      for( i = 0; i < 5; ++i)
+      for( i = 0; i < 5; ++i )
       {
          /* only the cuts which could be created are added */
          if( !*infeasible && cuts[i] != NULL )
