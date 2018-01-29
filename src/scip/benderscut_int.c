@@ -36,14 +36,13 @@
 #define BENDERSCUT_DESC             "Laporte and Louveaux Benders' decomposition integer cut"
 #define BENDERSCUT_PRIORITY         0
 #define BENDERSCUT_LPCUT            FALSE
-#define BENDERSCUT_MUSTAGG          TRUE        /** Must all subproblems be aggregated for the generation of this cut */
 
 
 
 #define SCIP_DEFAULT_SOLTOL               1e-2  /** The tolerance used to determine optimality of the solution */
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
 
-#define SCIP_DEFAULT_CUTCONSTANT          -10000
+#define SCIP_DEFAULT_CUTCONSTANT          -10000.0
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "bendersintcutnodesolved"
@@ -144,7 +143,7 @@ SCIP_RETCODE updateCutConstant(
    for( i = 0; i < nvars; i++ )
    {
       if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
-         SCIPchgVarObjProbing(masterprob, vars[i], 0);
+         SCIP_CALL( SCIPchgVarObjProbing(masterprob, vars[i], 0.0) );
    }
 
    /* solving an LP for all subproblems to find the lower bound */
@@ -157,7 +156,7 @@ SCIP_RETCODE updateCutConstant(
       if( SCIPvarGetStatus(auxiliaryvar) != SCIP_VARSTATUS_COLUMN )
          continue;
 
-      SCIPchgVarObjProbing(masterprob, auxiliaryvar, 1.0);
+      SCIP_CALL( SCIPchgVarObjProbing(masterprob, auxiliaryvar, 1.0) );
 
       /* solving the probing LP to get a lower bound on the auxiliary variables */
       SCIP_CALL( SCIPsolveProbingLP(masterprob, -1, &lperror, &cutoff) );
@@ -167,7 +166,7 @@ SCIP_RETCODE updateCutConstant(
 
       SCIPdebugMessage("Cut constant for subproblem %d: %g\n", i, benderscutdata->subprobconstant[i]);
 
-      SCIPchgVarObjProbing(masterprob, auxiliaryvar, 0.0);
+      SCIP_CALL( SCIPchgVarObjProbing(masterprob, auxiliaryvar, 0.0) );
 
       benderscutdata->firstcut[i] = TRUE;
    }
@@ -327,7 +326,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
       lhs = SCIProwGetLhs(row);
    else
       lhs = SCIPgetLhsLinear(masterprob, cons);
-   verifyobj = lhs;
+   verifyobj = lhs;     /*lint !e838*/
 
    if( addcut )
       verifyobj -= SCIPgetRowSolActivity(masterprob, row, sol);
@@ -335,7 +334,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
       verifyobj -= SCIPgetActivityLinear(masterprob, cons, sol);
 #endif
 
-   //assert(SCIPisFeasEQ(masterprob, verifyobj, subprobobj));
+   assert(SCIPisFeasEQ(masterprob, verifyobj, subprobobj));
 
    return SCIP_OKAY;
 }

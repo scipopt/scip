@@ -285,7 +285,6 @@ SCIP_Real BDconsGetLhs(
 }
 
 /** returns the dual farkas sol of an arbitrary SCIP constraint */
-extern
 SCIP_Real BDconsGetDualfarkas(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
@@ -346,7 +345,6 @@ SCIP_Real BDconsGetDualfarkas(
 }
 
 /** returns the dual sol of an arbitrary SCIP constraint */
-extern
 SCIP_Real BDconsGetDualsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
@@ -409,7 +407,6 @@ SCIP_Real BDconsGetDualsol(
 
 
 /** returns the row of an arbitrary SCIP constraint */
-extern
 SCIP_ROW* BDconsGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
@@ -469,13 +466,11 @@ SCIP_ROW* BDconsGetRow(
       SCIPdebugMessage("WARNING: NOT IMPLEMENTED");
       return NULL;
    }
-   return NULL;
 }
 
 
 
 /** adds a coefficient to an arbitrary SCIP constraint */
-extern
 SCIP_RETCODE BDconsAddCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -507,7 +502,7 @@ SCIP_RETCODE BDconsAddCoef(
    }
    else if( strcmp(conshdlrname, "knapsack") == 0 )
    {
-      SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, var, val) );
+      SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, var, (SCIP_Longint) val) );
    }
    else if( strcmp(conshdlrname, "varbound") == 0 )
    {
@@ -544,7 +539,6 @@ SCIP_RETCODE BDconsAddCoef(
 
 
 /** adds a coefficient to an arbitrary SCIP constraint */
-extern
 SCIP_RETCODE BDconsChgCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */

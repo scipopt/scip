@@ -83,7 +83,7 @@ struct SCIP_Benders
 
 
    /* data for the Magnanti-Wong cut strengthening */
-   int                   maxlpiterfactor;    /**< the factor for the maximum number of lp iterations. */
+   SCIP_Real             maxlpiterfactor;    /**< the factor for the maximum number of lp iterations. */
    SCIP_SOL*             relintsol;          /**< the relative interior point used for the Magnanti-Wong technique. */
    SCIP_SOL*             currentsol;         /**< the current solution used to fix variables in the subproblem. */
    SCIP_VAR**            mwauxiliaryvars;    /**< the auxiliary variables for the magnanti-wong method */

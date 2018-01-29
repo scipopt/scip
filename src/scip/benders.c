@@ -65,9 +65,6 @@
 #define UPPERBOUND_EVENTHDLR_NAME        "bendersupperbound"
 #define UPPERBOUND_EVENTHDLR_DESC        "found solution event handler to terminate subproblem solve for a given upper bound"
 
-#define HEUR_RENS "rens"
-#define HEUR_RINS "rins"
-
 
 struct SCIP_EventhdlrData
 {
@@ -447,7 +444,6 @@ SCIP_RETCODE performMagnantiWongTechnique(
          SCIP_VAR* consvar;
          SCIP_Real consval;
 
-         consvar = consvars[j];
          consval = consvals[j];
 
          /* TODO: Do we need the problem variable? */
@@ -874,13 +870,15 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    assert(valid != NULL);
    assert(set->scip != NULL);
 
+   (*valid) = FALSE;
+
    if( benders->benderscopy != NULL && set->benders_copybenders )
    {
       SCIPsetDebugMsg(set, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)set->scip);
       SCIP_CALL( benders->benderscopy(set->scip, benders, valid) );
 
       /* if the copy was valid, then the Benders cuts are copied. */
-      if( valid )
+      if( (*valid) )
       {
          targetbenders = SCIPsetFindBenders(set, SCIPbendersGetName(benders));
 
@@ -1389,7 +1387,7 @@ SCIP_RETCODE createAndAddTransferredCut(
    if( sourcebenders->cutsascons )
    {
       SCIP_CALL( SCIPcreateConsBasicLinear(sourcescip, &transfercons, cutname, 0, NULL, NULL, lhs, rhs) );
-      SCIPsetConsRemovable(sourcescip, transfercons, TRUE);
+      SCIP_CALL( SCIPsetConsRemovable(sourcescip, transfercons, TRUE) );
    }
    else
       SCIP_CALL( SCIPcreateEmptyRowCons(sourcescip, &transfercut, consbenders, cutname, lhs, rhs, FALSE,
@@ -1410,9 +1408,9 @@ SCIP_RETCODE createAndAddTransferredCut(
       }
 
       if( sourcebenders->cutsascons )
-         SCIP_CALL( SCIPaddCoefLinear(sourcescip, transfercons, sourcevar, vals[i]) );
+         SCIP_CALL( SCIPaddCoefLinear(sourcescip, transfercons, sourcevar, vals[i]) );    /*lint !e644*/
       else
-         SCIP_CALL( SCIPaddVarToRow(sourcescip, transfercut, sourcevar, vals[i]) );
+         SCIP_CALL( SCIPaddVarToRow(sourcescip, transfercut, sourcevar, vals[i]) );       /*lint !e644*/
 
       /* NOTE: There could be a problem with the auxiliary variables. They may not be copied. */
    }
@@ -1850,7 +1848,6 @@ SCIP_RETCODE SCIPbendersExec(
     * is solved. Also, in a distributed computation, then it may be adventageous to only solve some subproblems before
     * resolving the master problem. As such, for a problem to be optimal, then (optimal && allchecked) == TRUE */
    optimal = TRUE;
-   allchecked = FALSE;
    nchecked = 0;
 
    assert(benders != NULL);
@@ -1904,7 +1901,7 @@ SCIP_RETCODE SCIPbendersExec(
    if( benders->ncalls == 0 || type == CHECK || onlylpcheck )
       numtocheck = nsubproblems;
    else
-      numtocheck = SCIPsetCeil(set, nsubproblems*benders->subprobfrac);
+      numtocheck = (int) SCIPsetCeil(set, (SCIP_Real) nsubproblems*benders->subprobfrac);
    benders->firstchecked = benders->lastchecked;
 
    /* allocating memory for the infeasible subproblem array */
@@ -1937,7 +1934,6 @@ SCIP_RETCODE SCIPbendersExec(
    {
       numnotopt = 0;
       subproblemcount = 0;
-      subprobssolved = 0;
 
       if( type == CHECK && sol == NULL )
       {
@@ -2009,7 +2005,7 @@ SCIP_RETCODE SCIPbendersExec(
 
                      /* only increment the checked count if the subproblem is not an LP, or the solve loop is the MIP
                       * solving loop. Hence, the LP are solved once and the MIPs are solved twice */
-                     if( lpsub || (l > 0 && !lpsub) || onlylpcheck )
+                     if( (l == 0 && lpsub) || (l > 0 && !lpsub) || onlylpcheck )
                         nchecked++;
 
 
@@ -2040,7 +2036,7 @@ SCIP_RETCODE SCIPbendersExec(
 
       /* Preparing the data for the Magnanti-Wong technique */
       if( !(*infeasible) )
-         prepareMagnantiWongTechnique(set->scip, benders, sol);
+         SCIP_CALL( prepareMagnantiWongTechnique(set->scip, benders, sol) );
 
 
       /* Generating cuts for the subproblems. */
@@ -2311,7 +2307,6 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
 
 /** Solve a Benders' decomposition subproblems. This will either call the user defined method or the generic solving
  * methods. If the generic method is called, then the subproblem must be set up before calling this method. */
-extern
 SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2379,15 +2374,15 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
    /* modifying all of the parameters */
    SCIP_CALL( SCIPgetIntParam(subproblem, "lp/disablecutoff", &prevCutoffParam) );
-   SCIPsetIntParam(subproblem, "lp/disablecutoff", 1);
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", 1) );
 
    SCIP_CALL( SCIPgetCharParam(subproblem, "lp/initalgorithm", &prevInitAlgParam) );
-   SCIPsetCharParam(subproblem, "lp/initalgorithm", 'd');
+   SCIP_CALL( SCIPsetCharParam(subproblem, "lp/initalgorithm", 'd') );
    SCIP_CALL( SCIPgetCharParam(subproblem, "lp/resolvealgorithm", &prevResolveAlgParam) );
-   SCIPsetCharParam(subproblem, "lp/resolvealgorithm", 'd');
+   SCIP_CALL( SCIPsetCharParam(subproblem, "lp/resolvealgorithm", 'd') );
 
    SCIP_CALL( SCIPgetBoolParam(subproblem, "misc/alwaysgetduals", &prevDualParam) );
-   SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", TRUE);
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", TRUE) );
 
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
    //SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
@@ -2403,10 +2398,10 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
    //SCIP_CALL( SCIPprintStatistics(subprob, NULL) );
 
-   SCIPsetIntParam(subproblem, "lp/disablecutoff", prevCutoffParam);
-   SCIPsetCharParam(subproblem, "lp/initalgorithm", prevInitAlgParam);
-   SCIPsetCharParam(subproblem, "lp/resolvealgorithm", prevResolveAlgParam);
-   SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", prevDualParam);
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", prevCutoffParam) );
+   SCIP_CALL( SCIPsetCharParam(subproblem, "lp/initalgorithm", prevInitAlgParam) );
+   SCIP_CALL( SCIPsetCharParam(subproblem, "lp/resolvealgorithm", prevResolveAlgParam) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", prevDualParam) );
 
    return SCIP_OKAY;
 }

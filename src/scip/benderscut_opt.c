@@ -204,7 +204,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
       lhs = SCIProwGetLhs(row);
    else
       lhs = SCIPgetLhsLinear(masterprob, cons);
-   verifyobj = lhs;
+   verifyobj = lhs;  /*lint !e838*/
 
    if( addcut )
       verifyobj -= SCIPgetRowSolActivity(masterprob, row, sol);
