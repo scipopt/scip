@@ -51,6 +51,7 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    {
       SCIP_CALL( SCIPlpiFree(&lpi) );
    }
+   /* This name is necessary because if CPLEX reads a problem from a file its problemname will be the filename. */
    SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "lpi_change_test_problem.lp", SCIP_OBJSEN_MAXIMIZE) );
 
    SCIP_Real obj[100] = { 1.0, 1.0 };
@@ -617,22 +618,30 @@ Test(change, testrowmethods)
 
          beg[nrows] = nnonz;
          newbeg[nrows] = newnnonz;
+
+         int occurrences, indold, indnew;
+         /* check each row seperately */
          for( j = 0; j < nrows; j++ )
          {
             cr_assert_float_eq(lhs[j], newlhs[j], 1e-16);
             cr_assert_float_eq(rhs[j], newrhs[j], 1e-16);
-            for( int s = beg[j]; s < beg[j+1]; s++ )
+
+            /* We add a row where the indices are not sorted, some lp solvers give them back sorted (e.g. soplex), some others don't (e.g. cplex).
+             * Therefore we cannot simply assert the ind and val arrays to be equal, but have to search for and check each value individually. */
+            for( indold = beg[indold]; indold < beg[j+1]; indold++ )
             {
-               int indcount = 0;
-               for( int x = beg[j]; x < beg[j+1]; x++ )
+               occurrences = 0;
+               /* for each value ind associated to the current row search for it in the newind array */
+               for( indnew = beg[j]; x < beg[j+1]; indnew++ )
                {
-                  if( ind[s] == newind[x] )
+                  if( ind[indold] == newind[indnew] )
                   {
-                     indcount = indcount + 1;
-                     cr_assert_float_eq( val[s], newval[x], 1e-16, "expected %g got %g\n", val[s], newval[x] );
+                     occurrences = occurrences + 1;
+                     cr_assert_float_eq( val[indold], newval[indnew], 1e-16, "expected %g got %g\n", val[indold], newval[indnew] );
                   }
                }
-               cr_assert_eq(indcount, 1);
+               /* assert that we found only one occurrence in the current row */
+               cr_assert_eq(occurrences, 1);
             }
          }
       }

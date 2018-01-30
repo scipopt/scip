@@ -295,19 +295,26 @@ Test(complex, test1)
    cr_expect_float_eq(binvrow[1], 1.0, EPS);
    cr_expect_float_eq(binvrow[2], 0.5, EPS);
 
-   /* check basis inverse */
-   SCIP_CALL( SCIPlpiGetBInvCol(lpi, i, binvcol, NULL, NULL) );
+   /* check first column of basis inverse */
+   SCIP_CALL( SCIPlpiGetBInvCol(lpi, 0, binvcol, NULL, NULL) );
 
+   /* expected values for the first column of BInv with corresponding variables */
    int exp_vars[] = {-2, 1, 2};
    float exp_vals[] = {0.0, 0.0, -1.0};
 
-   for( int idx = 0; idx < nrows; idx++ )
+   int idx, entry;
+   /* The columns will be in the same order, however the rows will be permuted.
+    * For each row/entry we check that it corresponds to the value of the corresponding variable.
+    * The correspondance variable - row/entry is given by basinds. */
+   for( entry = 0; entry < nrows; entry++ )
    {
-      for( int j = 0; j < nrows; j++)
+      /* for the given entry try each variable in exp_vars */
+      for( idx = 0; idx < nrows; idx++)
       {
-         if (exp_vars[j] == binvcol[idx])
+         /* Check that the value is the expected one if the column corresponds to the current variable given in exp_vars */
+         if (exp_vars[idx] == basinds[entry])
          {
-            cr_expect_float_eq(binvcol[idx], exp_vals[j], EPS);
+            cr_expect_float_eq(binvcol[entry], exp_vals[idx], EPS);
          }
       }
    }
@@ -320,20 +327,24 @@ Test(complex, test1)
    cr_expect_float_eq(coef[1], 0.0, EPS);
    cr_expect_float_eq(coef[2], 0.0, EPS);
 
-   /* check basis inverse times nonbasic matrix */
+   /* check first column of basis inverse times nonbasic matrix */
    SCIP_CALL( SCIPlpiGetBInvACol(lpi, 0, coef, NULL, NULL) );
 
-   int exp_avars[] = {-2, 1, 2};
+   /* expected values for the first column of BAInv with corresponding variables */
    float exp_avals[] = {-0.5, 0.5, 1.0};
 
-   /* column of basis inverse times nonbasic matrix */
-   for( int idx = 0; idx < nrows; idx++ )
+   /* The columns will be in the same order, however the rows will be permuted.
+    * For each row/entry we check that it corresponds to the value of the corresponding variable.
+    * The correspondance variable - row/entry is given by basinds. */
+   for( entry = 0; entry < nrows; entry++ )
    {
-      for( int j = 0; j < nrows; j++)
+      /* for the given entry try each variable in exp_vars */
+      for( idx = 0; idx < nrows; idx++)
       {
-         if (exp_avars[j] == binvcol[idx])
+         /* Check that the value is the expected one if the column corresponds to the current variable given in exp_vars */
+         if (exp_vars[idx] == basinds[entry])
          {
-            cr_expect_float_eq(coef[idx], exp_avals[j], EPS);
+            cr_expect_float_eq(coef[entry], exp_avals[idx], EPS);
          }
       }
    }
