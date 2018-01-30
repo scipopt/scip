@@ -108,7 +108,7 @@ struct StoInput
    const char*           f4;
    const char*           f5;
    char                  probname[STO_MAX_NAMELEN];
-   char                  typename[STO_MAX_NAMELEN];
+   char                  stochtype[STO_MAX_NAMELEN];
 };
 typedef struct StoInput STOINPUT;
 
@@ -976,7 +976,7 @@ SCIP_RETCODE stoinputCreate(
    (*stoi)->haserror    = FALSE;
    (*stoi)->buf     [0] = '\0';
    (*stoi)->probname[0] = '\0';
-   (*stoi)->typename[0] = '\0';
+   (*stoi)->stochtype[0] = '\0';
    (*stoi)->f0          = NULL;
    (*stoi)->f1          = NULL;
    (*stoi)->f2          = NULL;
@@ -1113,16 +1113,16 @@ void stoinputSetProbname(
 
 /** set the type name in the sto input structure to given objective name */
 static
-void stoinputSetTypename(
+void stoinputSetStochtype(
    STOINPUT*             stoi,               /**< sto input structure */
-   const char*           typename            /**< name of the scenario type */
+   const char*           stochtype            /**< name of the scenario type */
    )
 {
    assert(stoi != NULL);
-   assert(typename != NULL);
-   assert(strlen(typename) < sizeof(stoi->typename));
+   assert(stochtype != NULL);
+   assert(strlen(stochtype) < sizeof(stoi->stochtype));
 
-   (void)SCIPmemccpy(stoi->typename, typename, '\0', STO_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(stoi->stochtype, stochtype, '\0', STO_MAX_NAMELEN - 1);
 }
 
 static
@@ -1325,7 +1325,7 @@ SCIP_RETCODE readBlocks(
       return SCIP_OKAY;
    }
 
-   stoinputSetTypename(stoi, stoinputField1(stoi));
+   stoinputSetStochtype(stoi, stoinputField1(stoi));
 
    /* initialising the block data */
    numblocks = 0;
@@ -1486,7 +1486,7 @@ SCIP_RETCODE readScenarios(
       return SCIP_OKAY;
    }
 
-   stoinputSetTypename(stoi, stoinputField1(stoi));
+   stoinputSetStochtype(stoi, stoinputField1(stoi));
 
    /* initialising the scen names record */
    numscenarios = 0;
@@ -1618,7 +1618,7 @@ SCIP_RETCODE readIndep(
       return SCIP_OKAY;
    }
 
-   stoinputSetTypename(stoi, stoinputField1(stoi));
+   stoinputSetStochtype(stoi, stoinputField1(stoi));
 
    /* initialising the block data */
    numblocks = 0;
