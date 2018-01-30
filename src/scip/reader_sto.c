@@ -37,6 +37,7 @@
 #define READER_EXTENSION        "sto"
 
 #define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
+#define BENDERSBRANCH
 
 /*
  * sto reader internal methods
