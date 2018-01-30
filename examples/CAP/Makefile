@@ -37,8 +37,7 @@ include $(SCIPDIR)/make/make.project
 MAINNAME	=	cap
 CMAINOBJ	=	cmain.o \
 				probdata_cap.o \
-				reader_cap.o \
-				vardata_cap.o
+				reader_cap.o
 
 CXXMAINOBJ	=
 

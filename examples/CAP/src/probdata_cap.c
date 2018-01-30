@@ -30,28 +30,43 @@
  *  ** @brief Problem data which is accessible in all places
  *  *
  *  *   This problem data is used to store the input of the cap instance, all variables which are created, and all
- *  *   constraints.
+ *  *   constraints. In addition, the probdata stores the data structures for the decomposed problem. This permits the
+ *  *   use of Benders' decomposition to solve the stochastic program.
  *  *
  * struct SCIP_ProbData
  * {
- *    SCIP_VAR**            vars;         **< all exiting variables in the problem *
- *    SCIP_CONS**           conss;        **< set partitioning constraints for each item exactly one *
- *    SCIP_Longint*         weights;      **< array of item weights *
- *    int*                  ids;          **< array of item ids *
- *    int                   nvars;        **< number of generated variables *
- *    int                   varssize;     **< size of the variable array *
- *    int                   nitems;       **< number of items *
- *    SCIP_Longint          capacity;     **< bin capacity *
+ *    SCIP**                subproblems;        **< the Benders' decomposition subproblems *
+ *    SCIP_VAR**            facilityvars;       **< all variables representing facilities *
+ *    SCIP_VAR***           subfacilityvars;    **< duplicates of the facility variables in the subproblems *
+ *    SCIP_VAR****          customervars;       **< all variables representing the satisfaction of demand per scenario *
+ *    SCIP_CONS***          capconss;           **< capacity constraints per facility per scenario *
+ *    SCIP_CONS***          demandconss;        **< demand constraints per customer per scenario *
+ *    SCIP_CONS*            sufficientcap;      **< ensuring sufficient capacity is provided to satisfy demand (relatively complete recourse) *
+ *    SCIP_Real**           costs;              **< the transportation costs to a customer from a facility *
+ *    SCIP_Real**           demands;            **< the customer demands per scenario *
+ *    SCIP_Real*            capacity;           **< the capacity of each facility *
+ *    SCIP_Real*            fixedcost;          **< the fixed cost of openning each facility *
+ *    int                   ncustomers;         **< the number of customers *
+ *    int                   nfacilities;        **< the number of facilities *
+ *    int                   nscenarios;         **< the number of scenarios *
+ *    SCIP_Bool             usebenders;         **< whether Benders' decomposition is used *
  * };
  * \endcode
  *
- * The function SCIPprobdataCreate(), which is called in the \ref reader_bpa.c "reader plugin" after the input file was
- * parsed, initializes the problem data structure and creates the problem in the SCIP environment. For this, it creates
- * for each item of the cap problem one set covering constraint and creates an initial set of variables for the
- * packings. Note that the set covering constraints have to have the <code>modifiable</code>-flag set to TRUE. This is
- * necessary to tell the solver that these constraints are not completed yet. This means, during the search new
- * variables/packings might be added.  The solver needs this information because certain reductions are not allowed.
- * See the body of the function SCIPprobdataCreate() for more details.
+ * The function SCIPprobdataCreate() manages the creation of the CAP instance in SCIP. There are two types of
+ * formulations that can be produced in this example. The first is the compact formulation. The second is the
+ * reformulated problem that decomposes the stochastic problem by scenarios. This alternative formulations is solved
+ * using Benders' decomposition.
+ *
+ * Benders' decomposition is invoked by calling the interface function SCIPcreateBendersDefault(). The parameters for
+ * this function are a SCIP instance for the master problem, an array of SCIP instances for the subproblems and an
+ * array of weights (or probabilities) for the scenarios. The scenario subproblems must be created with variables that
+ * correspond to a master problem equivalent. These corresponding variables must have the same variable name as the
+ * counterpart in the master problem. This is important for creating the variable mapping between the master and
+ * subproblems for setting up the subproblem and generating Benders' cuts. The master problem variable copies that are
+ * added to the subproblems must have an objective coefficient of 0.0. This is inline with the classical application of
+ * Benders' decomposition.
+ *
  *
  * A list of all interface methods can be found in probdata_cap.h.
  */
@@ -61,7 +76,6 @@
 #include <string.h>
 
 #include "probdata_cap.h"
-#include "vardata_cap.h"
 
 #include "scip/cons_linear.h"
 #include "scip/benders_default.h"
@@ -119,7 +133,6 @@ SCIP_RETCODE createOriginalproblem(
 {
    SCIP_CONS* cons;
    SCIP_VAR* var;
-   SCIP_VARDATA* vardata;
    SCIP_Real maxdemand;
    SCIP_Real coeff;
    int i;
@@ -176,7 +189,7 @@ SCIP_RETCODE createOriginalproblem(
    for( i = 0; i < nfacilities; i++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "facility_%d", i);
-      SCIP_CALL( SCIPcreateVarCAP(scip, &var, name, 0, 1, fixedcost[i], SCIP_VARTYPE_BINARY) );
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, fixedcost[i], SCIP_VARTYPE_BINARY) );
 
       SCIP_CALL( SCIPaddVar(scip, var) );
 
@@ -185,12 +198,6 @@ SCIP_RETCODE createOriginalproblem(
 
       /* capturing the variable since it is stored in the probdata */
       SCIP_CALL( SCIPcaptureVar(scip, var) );
-
-      /* creates the variable data */
-      SCIP_CALL( SCIPvardataCreateCAP(scip, &vardata, MASTER, nscenarios) );
-
-      /* add the variable data to the variable */
-      SCIPvarSetData(var, vardata);
 
       /* adding the variable to the capacity constriants */
       for( j = 0; j < nscenarios; j++ )
@@ -212,7 +219,7 @@ SCIP_RETCODE createOriginalproblem(
          {
             coeff = costs[i][j]/(SCIP_Real)nscenarios;
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customer(%d,%d,%d)", i, j, k);
-            SCIP_CALL( SCIPcreateVarCAP(scip, &var, name, 0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) );
 
             SCIP_CALL( SCIPaddVar(scip, var) );
 
@@ -221,12 +228,6 @@ SCIP_RETCODE createOriginalproblem(
 
             /* capturing the variable since it is stored in the probdata */
             SCIP_CALL( SCIPcaptureVar(scip, var) );
-
-            /* creates the variable data */
-            SCIP_CALL( SCIPvardataCreateCAP(scip, &vardata, SUBPROB, 1) );
-
-            /* add the variable data to the variable */
-            SCIPvarSetData(var, vardata);
 
             if( costs[i][j] > 0 )
             {
@@ -261,7 +262,6 @@ SCIP_RETCODE createMasterproblem(
    )
 {
    SCIP_VAR* var;
-   SCIP_VARDATA* vardata;
    SCIP_Real maxdemand;
    int i;
    int j;
@@ -290,7 +290,7 @@ SCIP_RETCODE createMasterproblem(
    for( i = 0; i < nfacilities; i++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "facility_%d", i);
-      SCIP_CALL( SCIPcreateVarCAP(scip, &var, name, 0, 1, fixedcost[i], SCIP_VARTYPE_BINARY) );
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, fixedcost[i], SCIP_VARTYPE_BINARY) );
 
       SCIP_CALL( SCIPaddVar(scip, var) );
 
@@ -299,12 +299,6 @@ SCIP_RETCODE createMasterproblem(
 
       /* capturing the variable since it is stored in the probdata */
       SCIP_CALL( SCIPcaptureVar(scip, var) );
-
-      /* creates the variable data */
-      SCIP_CALL( SCIPvardataCreateCAP(scip, &vardata, MASTER, nscenarios) );
-
-      /* add the variable data to the variable */
-      SCIPvarSetData(var, vardata);
 
       /* adding the variable to the sufficient capacity constriants */
       SCIP_CALL( SCIPaddCoefLinear(scip, (*sufficientcap), var, capacity[i]) );
@@ -337,7 +331,6 @@ SCIP_RETCODE createSubproblems(
 {
    SCIP_CONS* cons;
    SCIP_VAR* var;
-   SCIP_VARDATA* vardata;
    SCIP_Real coeff;
    int i;
    int j;
@@ -378,7 +371,7 @@ SCIP_RETCODE createSubproblems(
       for( j = 0; j < nscenarios; j++ )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "facility_%d", i);
-         SCIP_CALL( SCIPcreateVarCAP(subproblems[j], &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPcreateVarBasic(subproblems[j], &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
 
          SCIP_CALL( SCIPaddVar(subproblems[j], var) );
 
@@ -387,21 +380,6 @@ SCIP_RETCODE createSubproblems(
 
          /* capturing the variable since it is stored in the probdata */
          SCIP_CALL( SCIPcaptureVar(subproblems[j], var) );
-
-         /* creates the variable data */
-         SCIP_CALL( SCIPvardataCreateCAP(subproblems[j], &vardata, SUBPROB, 1) );
-
-         /* adds the master variable to the variable mapping */
-         SCIPvardataAddVarMapping(vardata, facilityvars[i], -1);
-
-         /* add the variable data to the variable */
-         SCIPvarSetData(var, vardata);
-
-         /* getting the variable data for the master variable */
-         vardata = SCIPvarGetData(facilityvars[i]);
-
-         /* adds the subproblem variable to the variable mapping */
-         SCIPvardataAddVarMapping(vardata, var, j);
 
          /* adding the variable to the capacity constriants */
          SCIP_CALL( SCIPaddCoefLinear(subproblems[j], capconss[i][j], subfacilityvars[i][j], -capacity[i]) );
@@ -420,7 +398,7 @@ SCIP_RETCODE createSubproblems(
          {
             coeff = costs[i][j]/(SCIP_Real)nscenarios;
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customer(%d,%d,%d)", i, j, k);
-            SCIP_CALL( SCIPcreateVarCAP(subproblems[k], &var, name, 0, SCIPinfinity(subproblems[k]), coeff, SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPcreateVarBasic(subproblems[k], &var, name, 0.0, SCIPinfinity(subproblems[k]), coeff, SCIP_VARTYPE_CONTINUOUS) );
 
             SCIP_CALL( SCIPaddVar(subproblems[k], var) );
 
@@ -429,12 +407,6 @@ SCIP_RETCODE createSubproblems(
 
             /* capturing the variable since it is stored in the probdata */
             SCIP_CALL( SCIPcaptureVar(subproblems[k], var) );
-
-            /* creates the variable data */
-            SCIP_CALL( SCIPvardataCreateCAP(subproblems[k], &vardata, SUBPROB, 1) );
-
-            /* add the variable data to the variable */
-            SCIPvarSetData(var, vardata);
 
             if( costs[i][j] > 0 )
             {
