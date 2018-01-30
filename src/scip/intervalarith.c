@@ -2759,16 +2759,28 @@ void SCIPintervalEntropy(
       return;
    }
 
-   /* compute infimum */
-   infcand1 = operand.inf <= 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.inf), SCIP_REAL_MAX) * operand.inf, SCIP_REAL_MAX));
-   infcand2 = SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.sup), SCIP_REAL_MAX) * operand.sup, SCIP_REAL_MAX));
-   inf = MIN(infcand1, infcand2);
+   /* compute infimum = MIN(entropy(op.inf), entropy(op.sup)) and supremum = MAX(MIN(entropy(op.inf), entropy(op.sup))) */
 
-   /* compute supremum */
-   supcand1 = operand.inf <= 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.inf), SCIP_REAL_MIN) * operand.inf, SCIP_REAL_MIN));
-   supcand2 = SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.sup), SCIP_REAL_MIN) * operand.sup, SCIP_REAL_MIN));
-   assert(infcand1 <= supcand1);
-   assert(infcand2 <= supcand2);
+   /* first, compute the logarithms (roundmode nearest, then nextafter) */
+   assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
+   infcand1 = operand.inf > 0.0 ? SCIPnextafter(log(operand.inf), SCIP_REAL_MAX) : 0.0;
+   infcand2 = SCIPnextafter(log(operand.sup), SCIP_REAL_MAX);
+   supcand1 = operand.inf > 0.0 ? SCIPnextafter(log(operand.inf), SCIP_REAL_MIN) : 0.0;
+   supcand2 = SCIPnextafter(log(operand.sup), SCIP_REAL_MIN);
+
+   /* second, multiply with operand.inf/sup using upward rounding
+    * thus, for infinum, negate after muliplication; for supremum, negate before multiplication
+    */
+   SCIPintervalSetRoundingModeUpwards();
+   infcand1 = SCIPnegateReal(operand.inf * infcand1);
+   infcand2 = SCIPnegateReal(operand.sup * infcand2);
+   supcand1 = SCIPnegateReal(operand.inf) * supcand1;
+   supcand2 = SCIPnegateReal(operand.sup) * supcand2;
+
+   /* restore original rounding mode (asserted to be "to-nearest" above) */
+   SCIPintervalSetRoundingModeToNearest();
+
+   inf = MIN(infcand1, infcand2);
 
    extr = exp(-1.0);
    if( operand.inf <= extr && extr <= operand.sup )
