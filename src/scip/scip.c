@@ -33305,6 +33305,9 @@ void SCIPaddSquareLinearization(
    SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    )
 {
+   SCIP_Real constant;
+   SCIP_Real coef;
+
    assert(scip != NULL);
    assert(lincoef != NULL);
    assert(linconstant != NULL);
@@ -33333,9 +33336,9 @@ void SCIPaddSquareLinearization(
          return;
       }
 
-      *lincoef += 2.0 * tmp;
+      coef = 2.0 * tmp;
       tmp *= refpoint;
-      *linconstant -= tmp;
+      constant = -tmp;
    }
    else
    {
@@ -33343,23 +33346,21 @@ void SCIPaddSquareLinearization(
        * = sqrcoef * (-f*(f+1) + (2*f+1)*x)
        */
       SCIP_Real f;
-      SCIP_Real coef;
-      SCIP_Real constant;
 
       f = SCIPfloor(scip, refpoint);
 
       coef     =  sqrcoef * (2.0 * f + 1.0);
       constant = -sqrcoef * f * (f + 1.0);
-
-      if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
-      {
-         *success = FALSE;
-         return;
-      }
-
-      *lincoef     += coef;
-      *linconstant += constant;
    }
+
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef     += coef;
+   *linconstant += constant;
 }
 
 /** computes coefficients of secant of a square term */
