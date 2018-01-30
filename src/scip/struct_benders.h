@@ -67,8 +67,6 @@ struct SCIP_Benders
    SCIP_Bool             cutrelax;           /**< should Benders' cuts be generated for relaxation solutions? */
 
    /* additional Benders' decomposition parameters */
-   SCIP_Bool             usemagnantiwong;    /**< Should the Magnanti-Wong cut strengthening technique be used? */
-   SCIP_Bool             computerelint;      /**< Should the relative interior point be computed? */
    SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
    SCIP_Bool             lnscheck;           /**< Should Benders' decomposition be used in LNS heuristics? */
    int                   lnsmaxdepth;        /**< The maximum depth at which the LNS check is performed */
@@ -81,14 +79,6 @@ struct SCIP_Benders
    SCIP_Bool             iscopy;             /**< is the Benders' decomposition struct a copy */
    SCIP_HASHMAP*         mastervarsmap;      /**< hash map for the master variables from the subscip to the master */
 
-
-   /* data for the Magnanti-Wong cut strengthening */
-   SCIP_Real             maxlpiterfactor;    /**< the factor for the maximum number of lp iterations. */
-   SCIP_SOL*             relintsol;          /**< the relative interior point used for the Magnanti-Wong technique. */
-   SCIP_SOL*             currentsol;         /**< the current solution used to fix variables in the subproblem. */
-   SCIP_VAR**            mwauxiliaryvars;    /**< the auxiliary variables for the magnanti-wong method */
-   SCIP_Real             updatefactor;       /**< the factor used to update the core point between iterations */
-   SCIP_Bool             coreptupdated;      /**< indicates whether the core point has been updated. */
 
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */

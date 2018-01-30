@@ -212,7 +212,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
       verifyobj -= SCIPgetActivityLinear(masterprob, cons, sol);
 #endif
 
-   assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj) || SCIPbendersGetUseMagnantiWong(benders));
+   assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj));
 
    assert(cons != NULL);
 

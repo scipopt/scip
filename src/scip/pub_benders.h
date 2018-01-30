@@ -203,12 +203,6 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** returns whether the Magnanti-Wong method has been applied */
-EXTERN
-SCIP_Bool SCIPbendersGetUseMagnantiWong(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   );
-
 /* returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
 EXTERN
 SCIP_Bool SCIPbendersSubprobIsLP(

@@ -43,9 +43,6 @@
 #include "scip/misc_benders.h"
 
 /* Defaults for parameters */
-#define SCIP_DEFAULT_USEMW               FALSE  /** Should Magnanti-Wong cut strengthening be used? */
-#define SCIP_DEFAULT_COMPUTERELINT       FALSE  /** Should the relative interior point be computed? */
-#define SCIP_DEFAULT_UPDATEFACTOR          0.5  /** The factor to update the relative interior point? */
 #define SCIP_DEFAULT_TRANSFERCUTS         TRUE  /** Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
 #define SCIP_DEFAULT_CUTSASCONS           TRUE  /** Should the transferred cuts be added as constraints? */
 //#define SCIP_DEFAULT_CUTSASCONS          FALSE  /** Should the transferred cuts be added as constraints? */
@@ -55,7 +52,6 @@
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0 /** the fraction of subproblems that are solved in each iteration */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar"
-#define MW_AUXILIARYVAR_NAME  "##MWauxiliaryvar##"
 
 /* event handler properties */
 #define NODEFOCUS_EVENTHDLR_NAME         "bendersnodefocus"
@@ -331,406 +327,6 @@ struct SCIP_VarData
 };
 
 
-#if 0
-/** fix master problem variables to core point */
-static
-SCIP_RETCODE fixVarsToCorePoint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< the event handler data */
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_VAR* mastervar;
-   SCIP_Real solval;
-   int nvars;
-   int i;
-   SCIP_Bool fixed;
-   SCIP_Bool infeasible;
-
-   assert(scip != NULL);
-   assert(eventhdlrdata != NULL);
-
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
-
-   for( i = 0; i < nvars; i++ )
-   {
-      mastervar = SCIPgetBendersMasterVar(eventhdlrdata->masterprob, eventhdlrdata->benders, vars[i]);
-
-      if( mastervar != NULL )
-      {
-         solval = SCIPgetSolVal(eventhdlrdata->masterprob, eventhdlrdata->relintsol, mastervar);
-
-         /* fixing the variable in the subproblem */
-         SCIP_CALL( SCIPfixVar(scip, vars[i], solval, &infeasible, &fixed) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-#endif
-
-/** perform the Magnanti-Wong technique */
-/*  TODO: If the problem contains SetPPC or logic or constraints, then it is not possible to apply M-W.  */
-static
-SCIP_RETCODE performMagnantiWongTechnique(
-   SCIP_BENDERS*         benders,            /**< the benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   probnum             /**< the subproblem number */
-   )
-{
-   SCIP* subproblem;
-   SCIP_CONS** conss;
-   SCIP_CONS** origconss;
-   SCIP_Real* vals;
-   SCIP_Real objval;
-   int nconss;
-   int norigconss;
-   int i;
-   SCIP_Bool infeasible;
-
-   assert(benders != NULL);
-   assert(set != NULL);
-   assert(probnum >= 0 && probnum < benders->nsubproblems);
-
-   /* a relative interior point is required for the Magnanti-Wong technique */
-   if( benders->relintsol == NULL )
-      return SCIP_OKAY;
-
-   subproblem = SCIPbendersSubproblem(benders, probnum);
-
-   if( SCIPgetStatus(subproblem) != SCIP_STATUS_OPTIMAL )
-      return SCIP_OKAY;
-
-   assert(subproblem != NULL);
-
-   /* retreiving the coefficients of the auxiliary variable */
-
-   /* getting all constraints from the subproblem */
-   conss = SCIPgetConss(subproblem);
-   nconss = SCIPgetNConss(subproblem);
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(subproblem, &vals, nconss) );
-
-   /* looping over all constraints to find the currently active rows. This will give the LHS/RHS that is necessary for
-    * the Magnanti-Wong auxiliary variable. */
-   for( i = 0; i < nconss; i++ )
-   {
-      SCIP_Real dualsol;
-      SCIP_VAR** consvars;
-      SCIP_Real* consvals;
-      int nconsvars;
-      int j;
-
-      vals[i] = 0;
-
-      dualsol = BDconsGetDualsol(subproblem, conss[i]);
-
-      if( SCIPisPositive(subproblem, dualsol) )
-         vals[i] = BDconsGetLhs(subproblem, conss[i]);
-      else
-         vals[i] = BDconsGetRhs(subproblem, conss[i]);
-
-      /* retreiving the bound contribution of the fixed variables */
-      nconsvars = BDconsGetNVars(subproblem, conss[i]);
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &consvars, nconsvars) );
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &consvals, nconsvars) );
-      SCIP_CALL( BDconsGetVars(subproblem, conss[i], consvars, nconsvars) );
-      SCIP_CALL( BDconsGetVals(subproblem, conss[i], consvals, nconsvars) );
-
-      /* loop over all variables with non-zero coefficient */
-      for( j = 0; j < nconsvars; j++ )
-      {
-         SCIP_VAR* consvar;
-         SCIP_Real consval;
-
-         consval = consvals[j];
-
-         /* TODO: Do we need the problem variable? */
-         consvar = SCIPvarGetProbvar(consvars[j]);
-
-         if( SCIPisEQ(subproblem, SCIPvarGetLbLocal(consvar), SCIPvarGetUbLocal(consvar)) )
-            vals[i] -= consval * SCIPvarGetLbLocal(consvar);
-      }
-
-      SCIPfreeBufferArray(subproblem, &consvars);
-      SCIPfreeBufferArray(subproblem, &consvals);
-   }
-
-   /* Getting the objective function value for the current solution */
-   objval = SCIPgetSolTransObj(subproblem, SCIPgetBestSol(subproblem));
-
-   /* freeing the solution data from the previous run. */
-   SCIP_CALL( SCIPendProbing(subproblem) );
-   SCIP_CALL( SCIPstartProbing(subproblem) );
-
-   /* updating the coefficients of the auxiliary variable */
-
-   /* getting all constraints from the subproblem */
-   origconss = SCIPgetOrigConss(subproblem);
-   norigconss = SCIPgetNOrigConss(subproblem);
-   assert(norigconss == nconss);
-
-   /* looping over all constraints to add the auxiliary variable. */
-   for( i = 0; i < norigconss; i++ )
-      SCIP_CALL( BDconsChgCoef(subproblem, origconss[i], benders->mwauxiliaryvars[probnum], vals[i]) );
-
-   /* changing the objective coefficient of the auxiliary variable */
-   SCIP_CALL( SCIPchgVarObj(subproblem, benders->mwauxiliaryvars[probnum], objval) );
-
-   /* changing the upper and lower bound of the auxiliary variable */
-   SCIP_CALL( SCIPchgVarLb(subproblem, benders->mwauxiliaryvars[probnum], -SCIPinfinity(subproblem)) );
-   SCIP_CALL( SCIPchgVarUb(subproblem, benders->mwauxiliaryvars[probnum], SCIPinfinity(subproblem)) );
-
-   /* solving the subproblem with the updated solution and additional variable */
-   SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, benders->relintsol, probnum, 0, TRUE, &infeasible, LP) );
-   assert(!infeasible);
-
-   /* freeing the values array memory */
-   SCIPfreeBlockMemoryArray(subproblem, &vals, nconss);
-
-   return SCIP_OKAY;
-}
-
-
-
-/** clean up after the Magnanti-Wong technique
- *  TODO: Need to look at if keeping the auxiliary variable is affecting the cuts generated. */
-static
-SCIP_RETCODE cleanupMagnantiWong(
-   SCIP_BENDERS*         benders,            /**< the benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   probnum             /**< the subproblem number */
-   )
-{
-   SCIP* subproblem;
-   SCIP_Bool infeasible;
-   SCIP_Bool fixed;
-
-   assert(benders != NULL);
-   assert(set != NULL);
-   assert(probnum >= 0 && probnum < benders->nsubproblems);
-
-   subproblem = SCIPbendersSubproblem(benders, probnum);
-
-   assert(subproblem != NULL);
-
-   /* a relative interior point is required for the Magnanti-Wong technique */
-   if( !benders->usemagnantiwong || SCIPgetStatus(subproblem) != SCIP_STATUS_OPTIMAL )
-      return SCIP_OKAY;
-
-   /* freeing the solution data from the previous run. */
-   SCIP_CALL( SCIPendProbing(subproblem) );
-   SCIP_CALL( SCIPstartProbing(subproblem) );
-
-   /* creating the auxiliary variable */
-   SCIP_CALL( SCIPfixVar(subproblem, benders->mwauxiliaryvars[probnum], 0.0, &infeasible, &fixed) );
-   assert(!infeasible);
-   assert(fixed);
-
-   return SCIP_OKAY;
-}
-
-
-/** Adds the Magnanti-Wong auxiliary variables to the subproblems */
-static
-SCIP_RETCODE addMagnantiWongAuxiliaryVars(
-   SCIP_BENDERS*         benders             /**< benders */
-   )
-{
-   SCIP* subproblem;
-   SCIP_VAR* auxiliaryvar;
-   int nsubproblems;
-   int i;
-   char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
-
-   assert(benders != NULL);
-
-   nsubproblems = SCIPbendersGetNSubproblems(benders);
-
-   /* creating the auxiliary variable */
-   for( i = 0; i < nsubproblems; i++ )
-   {
-      subproblem = SCIPbendersSubproblem(benders, i);
-      assert(subproblem != NULL);
-
-      /* if no optimality cuts have been added for this subproblem, then the auxiliary variable will be created and
-       * added */
-      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", MW_AUXILIARYVAR_NAME );
-      SCIP_CALL( SCIPcreateVarBasic(subproblem, &auxiliaryvar, varname, 0.0, 0.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-
-      SCIP_CALL( SCIPaddVar(subproblem, auxiliaryvar) );
-
-      benders->mwauxiliaryvars[i] = auxiliaryvar;
-
-      SCIP_CALL( SCIPreleaseVar(subproblem, &auxiliaryvar) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-
-/** updates the core point for the Magnanti-Wong method */
-static
-SCIP_RETCODE updateRelativeInteriorPoint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_Real updateval;
-   int nvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(benders != NULL);
-
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
-
-   for( i = 0; i < nvars; i++ )
-   {
-      updateval = benders->updatefactor * SCIPgetSolVal(scip, benders->relintsol, vars[i])
-         + (1 - benders->updatefactor) * SCIPgetSolVal(scip, sol, vars[i]);
-      SCIP_CALL( SCIPsetSolVal(scip, benders->relintsol, vars[i], updateval) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-
-
-/** constructs a core point for the Magnanti-Wong method */
-static
-SCIP_RETCODE constructRelativeInteriorPoint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL**            sol                 /**< the solution to be constructed */
-   )
-{
-   SCIP_VAR** vars;
-   int nvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(*sol == NULL);
-
-   SCIP_CALL( SCIPcreateSol(scip, sol, NULL) );
-
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
-
-   for( i = 0; i < nvars; i++ )
-      SCIP_CALL( SCIPsetSolVal(scip, (*sol), vars[i], SCIPgetSolVal(scip, NULL, vars[i])) );
-      //SCIP_CALL( SCIPsetSolVal(scip, (*sol), vars[i], 1.0) );
-
-   return SCIP_OKAY;
-}
-
-
-
-
-/** compute the relative interior point for the Magnanti-Wong method */
-static
-SCIP_RETCODE computeRelativeInteriorPoint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   /* check whether we have to compute a relative interior point */
-   if( benders->computerelint )
-   {
-      /* if relative interior point is not available ... */
-      if ( benders->relintsol == NULL )
-      {
-         //SCIP_Longint nlpiters;
-         SCIP_Real timelimit;
-         int iterlimit;
-
-         /* prepare time limit */
-         SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-         if ( ! SCIPisInfinity(scip, timelimit) )
-            timelimit -= SCIPgetSolvingTime(scip);
-         /* exit if no time left */
-         if ( timelimit <= 0.0 )
-            return SCIP_OKAY;
-
-         iterlimit = INT_MAX;
-#if 0
-         /* determine iteration limit */
-         if ( benders->maxlpiterfactor < 0.0 || SCIPisInfinity(scip, benders->maxlpiterfactor) )
-            iterlimit = INT_MAX;
-         else
-         {
-            /* determine iteration limit; the number of iterations in the root is only set after its solution, but the
-             * total number of LP iterations is always updated. */
-            if ( SCIPgetDepth(scip) == 0 )
-               nlpiters = SCIPgetNLPIterations(scip);
-            else
-               nlpiters = SCIPgetNRootLPIterations(scip);
-            iterlimit = (int)(sepadata->maxlpiterfactor * nlpiters);
-            iterlimit = MAX(iterlimit, SCIP_MIN_LPITERS);
-            if ( iterlimit <= 0 )
-               return SCIP_OKAY;
-         }
-#endif
-
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (time limit: %g, iter limit: %d) ...\n", timelimit, iterlimit);
-         SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, TRUE, timelimit, iterlimit,
-               &benders->relintsol) );
-      }
-   }
-   else
-   {
-      /* get best solution (NULL if not present) */
-      if( benders->relintsol == NULL )
-      {
-         if( SCIPgetBestSol(scip) == NULL )
-         {
-            if( sol == NULL )
-               SCIP_CALL( constructRelativeInteriorPoint(scip, &benders->relintsol) );
-            else
-               benders->relintsol = sol;
-         }
-         else
-            benders->relintsol = SCIPgetBestSol(scip);
-      }
-      else
-      {
-         SCIP_CALL( updateRelativeInteriorPoint(scip, benders, sol) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/* prepares the data for Magnanti-Wong cut strengthening technique */
-static
-SCIP_RETCODE prepareMagnantiWongTechnique(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< the benders' decomposition */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   assert(scip != NULL);
-   assert(benders != NULL);
-
-   if( benders->usemagnantiwong )
-   {
-      /* compute the relative interior point. */
-      SCIP_CALL( computeRelativeInteriorPoint(scip, benders, sol) );
-
-      /* setting current solution in the event handler data */
-      benders->currentsol = sol;
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** adds the auxiliary variables to the Benders' decomposition master problem */
 static
 SCIP_RETCODE addAuxiliaryVariablesToMaster(
@@ -971,11 +567,6 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->sourcescip = NULL;
    (*benders)->iscopy = FALSE;
    (*benders)->mastervarsmap = NULL;
-   (*benders)->maxlpiterfactor = 1.0;
-   (*benders)->updatefactor = SCIP_DEFAULT_UPDATEFACTOR;
-   (*benders)->coreptupdated = FALSE;
-   (*benders)->relintsol = NULL;
-   (*benders)->currentsol = NULL;
    (*benders)->addedsubprobs = 0;
    (*benders)->nlpsubprobs = 0;
    (*benders)->subprobscreated = FALSE;
@@ -990,7 +581,6 @@ SCIP_RETCODE SCIPbendersCreate(
 
    /* setting the subproblem arrays to NULL */
    (*benders)->subproblems = NULL;
-   (*benders)->mwauxiliaryvars = NULL;
    (*benders)->auxiliaryvars = NULL;
    (*benders)->subprobobjval = NULL;
    (*benders)->bestsubprobobjval = NULL;
@@ -1021,16 +611,6 @@ SCIP_RETCODE SCIPbendersCreate(
 
    /* These parameters are left for the user to decide in a settings file. This departs from the usual SCIP convention
     * where the settings available at the creation of the plugin can be set in the function call. */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/usemagnantiwong", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should the Magnanti-Wong cut strengthening technique be used?");
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->usemagnantiwong, FALSE, SCIP_DEFAULT_USEMW, NULL, NULL) ); /*lint !e740*/
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/computerelint", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should the relative interior point be computed?");
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->computerelint, FALSE, SCIP_DEFAULT_COMPUTERELINT, NULL, NULL) ); /*lint !e740*/
-
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/transfercuts", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should Benders' cuts from LNS heuristics be transferred to the main SCIP instance?");
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
@@ -1084,9 +664,6 @@ SCIP_RETCODE SCIPbendersFree(
       SCIP_CALL( SCIPbenderscutFree(&((*benders)->benderscuts[i]), set) );
    }
    BMSfreeMemoryArrayNull(&(*benders)->benderscuts);
-
-   if( (*benders)->relintsol != NULL )
-      SCIP_CALL( SCIPfreeSol(set->scip, &(*benders)->relintsol) );
 
    SCIPclockFree(&(*benders)->bendersclock);
    SCIPclockFree(&(*benders)->setuptime);
@@ -1321,10 +898,6 @@ SCIP_RETCODE SCIPbendersInit(
 
    if( benders->bendersinit != NULL )
       SCIP_CALL( benders->bendersinit(set->scip, benders) );
-
-   /* if the Magnanti-Wong technique is used, then auxiliary variable must be added to the subproblem */
-   if( benders->usemagnantiwong )
-      SCIP_CALL( addMagnantiWongAuxiliaryVars(benders) );
 
    /* if the Benders' decomposition is a copy, then a variable mapping between the master problem variables is required */
    if( benders->iscopy )
@@ -1743,7 +1316,6 @@ SCIP_RETCODE SCIPbendersActivate(
 
       /* allocating memory for the subproblems arrays */
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblems, benders->nsubproblems) );
-      SCIP_ALLOC( BMSallocMemoryArray(&benders->mwauxiliaryvars, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvars, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->bestsubprobobjval, benders->nsubproblems) );
@@ -1753,7 +1325,6 @@ SCIP_RETCODE SCIPbendersActivate(
       for( i = 0; i < benders->nsubproblems; i++ )
       {
          benders->subproblems[i] = NULL;
-         benders->mwauxiliaryvars[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
          benders->subprobobjval[i] = SCIPsetInfinity(set);
          benders->bestsubprobobjval[i] = SCIPsetInfinity(set);
@@ -1787,7 +1358,6 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->bestsubprobobjval);
       BMSfreeMemoryArray(&benders->subprobobjval);
       BMSfreeMemoryArray(&benders->auxiliaryvars);
-      BMSfreeMemoryArray(&benders->mwauxiliaryvars);
       BMSfreeMemoryArray(&benders->subproblems);
    }
 
@@ -1893,9 +1463,6 @@ SCIP_RETCODE SCIPbendersExec(
    /* when Benders' is used in the LNS heuristics, only the LP of the master/subproblems is checked, i.e. no integer
     * cuts are generated. This assumes that in the LNS heuristics the subproblems are all LPs. */
    onlylpcheck = benders->iscopy && benders->lnscheck;
-
-   /* stating that the core point has not been updated for this iteration */
-   benders->coreptupdated = FALSE;
 
    nsubproblems = SCIPbendersGetNSubproblems(benders);
    if( benders->ncalls == 0 || type == CHECK || onlylpcheck )
@@ -2034,20 +1601,9 @@ SCIP_RETCODE SCIPbendersExec(
       subprobssolved = subproblemcount;
 
 
-      /* Preparing the data for the Magnanti-Wong technique */
-      if( !(*infeasible) )
-         SCIP_CALL( prepareMagnantiWongTechnique(set->scip, benders, sol) );
-
-
       /* Generating cuts for the subproblems. */
       benderscuts = SCIPbendersGetBenderscuts(benders);
       nbenderscuts = SCIPbendersGetNBenderscuts(benders);
-
-      /* if the Magnanti-Wong enhancement technique is used, then an additional cutloop is performed. */
-      /* TODO: create a parameter to modify the behaviour of the cutloops. */
-      ncutloops = 1;
-      if( benders->usemagnantiwong && !(*infeasible) )
-         ncutloops = 2;
 
       /* It is only possible to add cuts to the problem if it has not already been solved */
       if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED )
@@ -2062,39 +1618,32 @@ SCIP_RETCODE SCIPbendersExec(
          {
             SCIP_Bool lpsub = SCIPbendersSubprobIsLP(benders, i);
 
-            for( j = 0; j < ncutloops; j++ )
+            for( j = 0; j < nbenderscuts; j++ )
             {
-               /* Performing cut enhancement techniques */
-               if( j == 1 )
-                  SCIP_CALL( performMagnantiWongTechnique(benders, set, i) );
+               SCIP_RESULT cutresult;
+               int prevaddedcuts;
 
-               for( k = 0; k < nbenderscuts; k++ )
+               assert(benderscuts[j] != NULL);
+
+               prevaddedcuts = SCIPbenderscutGetNAddedCons(benderscuts[j]) + SCIPbenderscutGetNAddedCuts(benderscuts[j]);
+
+               /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
+                * the first iteration of the solve loop. */
+               if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[j]))
+                  || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[j])) )
+                  //|| (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[j]) && i == 0) )
                {
-                  SCIP_RESULT cutresult;
-                  int prevaddedcuts;
+                  SCIP_CALL( SCIPbenderscutExec(benderscuts[j], set, benders, sol, i, type, &cutresult) );
 
-                  assert(benderscuts[k] != NULL);
-
-                  prevaddedcuts = SCIPbenderscutGetNAddedCons(benderscuts[k]) + SCIPbenderscutGetNAddedCuts(benderscuts[k]);
-
-                  /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
-                   * the first iteration of the solve loop. */
-                  if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[k]))
-                     || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k])) )
-                     //|| (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k]) && i == 0) )
+                  if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
                   {
-                     SCIP_CALL( SCIPbenderscutExec(benderscuts[k], set, benders, sol, i, type, &cutresult) );
+                     *result = cutresult;
 
-                     if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
-                     {
-                        *result = cutresult;
-
-                        benders->ncutsfound++;
-                     }
+                     benders->ncutsfound++;
                   }
-
-                  addedcuts += (SCIPbenderscutGetNAddedCons(benderscuts[k]) + SCIPbenderscutGetNAddedCuts(benderscuts[k]) - prevaddedcuts);
                }
+
+               addedcuts += (SCIPbenderscutGetNAddedCons(benderscuts[j]) + SCIPbenderscutGetNAddedCuts(benderscuts[j]) - prevaddedcuts);
             }
 
             subproblemcount++;
@@ -2155,9 +1704,6 @@ SCIP_RETCODE SCIPbendersExec(
    while( subproblemcount < subprobssolved )
       //for( i = 0; i < benders->nsubproblems; i++ )
    {
-      /* cleaning up after performing Magnanti-Wong */
-      SCIP_CALL( cleanupMagnantiWong(benders, set, i) );
-
       SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, i) );
 
       subproblemcount++;
@@ -2706,8 +2252,7 @@ SCIP_VAR* SCIPbendersGetVar(
    assert(benders->bendersgetvar != NULL);
 
    /* if the variable name matches the auxiliary variable, then the master variable is returned as NULL */
-   if( strstr(SCIPvarGetName(var), AUXILIARYVAR_NAME) != NULL
-      || strstr(SCIPvarGetName(var), MW_AUXILIARYVAR_NAME) != NULL)
+   if( strstr(SCIPvarGetName(var), AUXILIARYVAR_NAME) != NULL )
       return NULL;
 
    return benders->bendersgetvar(set->scip, benders, var, probnumber);
@@ -3223,16 +2768,6 @@ void SCIPbendersSortBenderscutsName(
       benders->benderscutssorted = FALSE;
       benders->benderscutsnamessorted = TRUE;
    }
-}
-
-/** returns whether the Magnanti-Wong method has been applied */
-SCIP_Bool SCIPbendersGetUseMagnantiWong(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   )
-{
-   assert(benders != NULL);
-
-   return benders->usemagnantiwong;
 }
 
 /* sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
