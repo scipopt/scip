@@ -2734,37 +2734,43 @@ void SCIPintervalEntropy(
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
-   SCIP_Real infvalue;
-   SCIP_Real supvalue;
+   SCIP_Real infcand1;
+   SCIP_Real infcand2;
+   SCIP_Real supcand1;
+   SCIP_Real supcand2;
+   SCIP_Real extr;
+   SCIP_Real inf;
+   SCIP_Real sup;
 
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
+   /* check whether the domain is empty */
    if( operand.sup < 0.0 )
    {
       SCIPintervalSetEmpty(resultant);
       return;
    }
 
-   if( operand.sup >= infinity )
-      supvalue = -infinity;
-   else
-      supvalue = (operand.sup == 0.0 ? 0.0 : -operand.sup * log(operand.sup));
+   /* compute infimum */
+   infcand1 = operand.inf <= 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.inf), SCIP_REAL_MAX) * operand.inf, SCIP_REAL_MAX));
+   infcand2 = operand.sup == 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.sup), SCIP_REAL_MAX) * operand.sup, SCIP_REAL_MAX));
+   inf = MIN(infcand1, infcand2);
 
-   /* if inf < 0, we treat it as 0 */
-   infvalue = (operand.inf <= 0.0 ? 0.0 : -operand.inf * log(operand.inf));
+   /* compute supremum */
+   supcand1 = operand.inf <= 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.inf), SCIP_REAL_MIN) * operand.inf, SCIP_REAL_MIN));
+   supcand2 = operand.sup == 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.sup), SCIP_REAL_MIN) * operand.sup, SCIP_REAL_MIN));
+   assert(infcand1 <= supcand1);
+   assert(infcand2 <= supcand2);
 
-   /* non-monotone case */
-   if( operand.inf <= exp(-1.0) )
-   {
-      SCIPintervalSetBounds(resultant, MIN(infvalue, supvalue),
-         operand.sup <= exp(-1.0) ? supvalue : exp(-1.0));
-   }
-   /* monotone case */
+   extr = exp(-1.0);
+   if( operand.inf <= extr && extr <= operand.sup )
+      sup = MAX3(supcand1, supcand2, SCIPnextafter(extr, SCIP_REAL_MAX)); /*lint !e666*/
    else
-   {
-      SCIPintervalSetBounds(resultant, supvalue, infvalue);
-   }
+      sup = MAX(supcand1, supcand2);
+
+   assert(inf <= sup);
+   SCIPintervalSetBounds(resultant, inf, sup);
 }
 
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
