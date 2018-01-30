@@ -1198,6 +1198,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
    {
       /* start with infinite interval [-inf,+inf] */
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
    }
 
    assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
@@ -1247,10 +1248,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
 
    if( propdata->tightenauxvars )
    {
-      /* reset interval of expression before calling SCIPtightenConsExprExprInterval(); this ensures that for an interval
-       * that is not [-inf,+inf] the bounds of the auxiliary variable will be updated
-       */
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
+      /* tighten bounds of expression interval and the auxiliary variable */
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, propdata->force, NULL, &propdata->aborted, &ntightenings) );
 
       if( propdata->aborted )
