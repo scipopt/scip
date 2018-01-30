@@ -2734,6 +2734,8 @@ void SCIPintervalEntropy(
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
+   SCIP_Real loginf;
+   SCIP_Real logsup;
    SCIP_Real infcand1;
    SCIP_Real infcand2;
    SCIP_Real supcand1;
@@ -2763,10 +2765,12 @@ void SCIPintervalEntropy(
 
    /* first, compute the logarithms (roundmode nearest, then nextafter) */
    assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-   infcand1 = operand.inf > 0.0 ? SCIPnextafter(log(operand.inf), SCIP_REAL_MAX) : 0.0;
-   infcand2 = SCIPnextafter(log(operand.sup), SCIP_REAL_MAX);
-   supcand1 = operand.inf > 0.0 ? SCIPnextafter(log(operand.inf), SCIP_REAL_MIN) : 0.0;
-   supcand2 = SCIPnextafter(log(operand.sup), SCIP_REAL_MIN);
+   loginf = operand.inf > 0.0 ? log(operand.inf) : 0.0;
+   logsup = log(operand.sup);
+   infcand1 = operand.inf > 0.0 ? SCIPnextafter(loginf, SCIP_REAL_MAX) : 0.0;
+   infcand2 = SCIPnextafter(logsup, SCIP_REAL_MAX);
+   supcand1 = operand.inf > 0.0 ? SCIPnextafter(loginf, SCIP_REAL_MIN) : 0.0;
+   supcand2 = SCIPnextafter(logsup, SCIP_REAL_MIN);
 
    /* second, multiply with operand.inf/sup using upward rounding
     * thus, for infinum, negate after muliplication; for supremum, negate before multiplication
@@ -2784,7 +2788,10 @@ void SCIPintervalEntropy(
 
    extr = exp(-1.0);
    if( operand.inf <= extr && extr <= operand.sup )
-      sup = MAX3(supcand1, supcand2, SCIPnextafter(extr, SCIP_REAL_MAX)); /*lint !e666*/
+   {
+      extr = SCIPnextafter(extr, SCIP_REAL_MAX);
+      sup = MAX3(supcand1, supcand2, extr);
+   }
    else
       sup = MAX(supcand1, supcand2);
 
