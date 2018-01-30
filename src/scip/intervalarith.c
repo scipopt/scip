@@ -2752,14 +2752,21 @@ void SCIPintervalEntropy(
       return;
    }
 
+   /* handle special case of domain being [0,0] */
+   if( operand.sup == 0.0 )
+   {
+      SCIPintervalSet(resultant, 0.0);
+      return;
+   }
+
    /* compute infimum */
    infcand1 = operand.inf <= 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.inf), SCIP_REAL_MAX) * operand.inf, SCIP_REAL_MAX));
-   infcand2 = operand.sup == 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.sup), SCIP_REAL_MAX) * operand.sup, SCIP_REAL_MAX));
+   infcand2 = SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.sup), SCIP_REAL_MAX) * operand.sup, SCIP_REAL_MAX));
    inf = MIN(infcand1, infcand2);
 
    /* compute supremum */
    supcand1 = operand.inf <= 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.inf), SCIP_REAL_MIN) * operand.inf, SCIP_REAL_MIN));
-   supcand2 = operand.sup == 0.0 ? 0.0 : SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.sup), SCIP_REAL_MIN) * operand.sup, SCIP_REAL_MIN));
+   supcand2 = SCIPnegateReal(SCIPnextafter(SCIPnextafter(log(operand.sup), SCIP_REAL_MIN) * operand.sup, SCIP_REAL_MIN));
    assert(infcand1 <= supcand1);
    assert(infcand2 <= supcand2);
 
