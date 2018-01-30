@@ -94,45 +94,45 @@
 #define TABLE_POSITION_COMPRESSION       13000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_COMPRESSION SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_BENDERS               "benders"
+#define TABLE_DESC_BENDERS               "benders' decomposition statistics table"
+#define TABLE_POSITION_BENDERS           14000                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_BENDERS     SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
+
 #define TABLE_NAME_LP                    "lp"
 #define TABLE_DESC_LP                    "lp statistics table"
-#define TABLE_POSITION_LP                14000                  /**< the position of the statistics table */
+#define TABLE_POSITION_LP                15000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_LP          SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_NLP                   "nlp"
 #define TABLE_DESC_NLP                   "nlp statistics table"
-#define TABLE_POSITION_NLP               15000                  /**< the position of the statistics table */
+#define TABLE_POSITION_NLP               16000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NLP         SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_RELAX                 "relaxator"
 #define TABLE_DESC_RELAX                 "relaxator statistics table"
-#define TABLE_POSITION_RELAX             16000                  /**< the position of the statistics table */
+#define TABLE_POSITION_RELAX             17000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_RELAX       SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_TREE                  "tree"
 #define TABLE_DESC_TREE                  "tree statistics table"
-#define TABLE_POSITION_TREE              17000                  /**< the position of the statistics table */
+#define TABLE_POSITION_TREE              18000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_TREE        SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_ROOT                  "root"
 #define TABLE_DESC_ROOT                  "root statistics table"
-#define TABLE_POSITION_ROOT              18000                  /**< the position of the statistics table */
+#define TABLE_POSITION_ROOT              19000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_ROOT        SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_SOL                   "solution"
 #define TABLE_DESC_SOL                   "solution statistics table"
-#define TABLE_POSITION_SOL               19000                  /**< the position of the statistics table */
+#define TABLE_POSITION_SOL               20000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_SOL         SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_CONC                  "concurrentsolver"
 #define TABLE_DESC_CONC                  "concurrent solver statistics table"
-#define TABLE_POSITION_CONC              20000                  /**< the position of the statistics table */
+#define TABLE_POSITION_CONC              21000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONC        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
-
-#define TABLE_NAME_BENDERS               "benders"
-#define TABLE_DESC_BENDERS               "benders' decomposition statistics table"
-#define TABLE_POSITION_BENDERS           21000                  /**< the position of the statistics table */
-#define TABLE_EARLIEST_STAGE_BENDERS     SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 /*
  * Callback methods of statistics table
