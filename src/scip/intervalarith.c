@@ -2734,37 +2734,69 @@ void SCIPintervalEntropy(
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
-   SCIP_Real infvalue;
-   SCIP_Real supvalue;
+   SCIP_Real loginf;
+   SCIP_Real logsup;
+   SCIP_Real infcand1;
+   SCIP_Real infcand2;
+   SCIP_Real supcand1;
+   SCIP_Real supcand2;
+   SCIP_Real extr;
+   SCIP_Real inf;
+   SCIP_Real sup;
 
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
+   /* check whether the domain is empty */
    if( operand.sup < 0.0 )
    {
       SCIPintervalSetEmpty(resultant);
       return;
    }
 
-   if( operand.sup >= infinity )
-      supvalue = -infinity;
-   else
-      supvalue = (operand.sup == 0.0 ? 0.0 : -operand.sup * log(operand.sup));
-
-   /* if inf < 0, we treat it as 0 */
-   infvalue = (operand.inf <= 0.0 ? 0.0 : -operand.inf * log(operand.inf));
-
-   /* non-monotone case */
-   if( operand.inf <= exp(-1.0) )
+   /* handle special case of domain being [0,0] */
+   if( operand.sup == 0.0 )
    {
-      SCIPintervalSetBounds(resultant, MIN(infvalue, supvalue),
-         operand.sup <= exp(-1.0) ? supvalue : exp(-1.0));
+      SCIPintervalSet(resultant, 0.0);
+      return;
    }
-   /* monotone case */
-   else
+
+   /* compute infimum = MIN(entropy(op.inf), entropy(op.sup)) and supremum = MAX(MIN(entropy(op.inf), entropy(op.sup))) */
+
+   /* first, compute the logarithms (roundmode nearest, then nextafter) */
+   assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
+   loginf = operand.inf > 0.0 ? log(operand.inf) : 0.0;
+   logsup = log(operand.sup);
+   infcand1 = operand.inf > 0.0 ? SCIPnextafter(loginf, SCIP_REAL_MAX) : 0.0;
+   infcand2 = SCIPnextafter(logsup, SCIP_REAL_MAX);
+   supcand1 = operand.inf > 0.0 ? SCIPnextafter(loginf, SCIP_REAL_MIN) : 0.0;
+   supcand2 = SCIPnextafter(logsup, SCIP_REAL_MIN);
+
+   /* second, multiply with operand.inf/sup using upward rounding
+    * thus, for infinum, negate after muliplication; for supremum, negate before multiplication
+    */
+   SCIPintervalSetRoundingModeUpwards();
+   infcand1 = SCIPnegateReal(operand.inf * infcand1);
+   infcand2 = SCIPnegateReal(operand.sup * infcand2);
+   supcand1 = SCIPnegateReal(operand.inf) * supcand1;
+   supcand2 = SCIPnegateReal(operand.sup) * supcand2;
+
+   /* restore original rounding mode (asserted to be "to-nearest" above) */
+   SCIPintervalSetRoundingModeToNearest();
+
+   inf = MIN(infcand1, infcand2);
+
+   extr = exp(-1.0);
+   if( operand.inf <= extr && extr <= operand.sup )
    {
-      SCIPintervalSetBounds(resultant, supvalue, infvalue);
+      extr = SCIPnextafter(extr, SCIP_REAL_MAX);
+      sup = MAX3(supcand1, supcand2, extr);
    }
+   else
+      sup = MAX(supcand1, supcand2);
+
+   assert(inf <= sup);
+   SCIPintervalSetBounds(resultant, inf, sup);
 }
 
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
