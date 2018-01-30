@@ -628,11 +628,11 @@ Test(change, testrowmethods)
 
             /* We add a row where the indices are not sorted, some lp solvers give them back sorted (e.g. soplex), some others don't (e.g. cplex).
              * Therefore we cannot simply assert the ind and val arrays to be equal, but have to search for and check each value individually. */
-            for( indold = beg[indold]; indold < beg[j+1]; indold++ )
+            for( indold = beg[j]; indold < beg[j+1]; indold++ )
             {
                occurrences = 0;
                /* for each value ind associated to the current row search for it in the newind array */
-               for( indnew = beg[j]; x < beg[j+1]; indnew++ )
+               for( indnew = beg[j]; indnew < beg[j+1]; indnew++ )
                {
                   if( ind[indold] == newind[indnew] )
                   {
