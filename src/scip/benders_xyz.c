@@ -74,6 +74,8 @@ SCIP_DECL_BENDERSCOPY(bendersCopyXyz)
    SCIPerrorMessage("method of xyz Benders' decompostion not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
+   (*valid) = TRUE;
+
    return SCIP_OKAY;
 }
 #else
