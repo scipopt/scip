@@ -2745,13 +2745,14 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    SCIPdebugMessage("loading basis %p/%p into QSopt\n", (void*)cstat, (void*)rstat);
-
-   ncols = QSget_colcount(lpi->prob);
-   nrows = QSget_rowcount(lpi->prob);
 
    SCIP_CALL( ensureTabMem(lpi, ncols) );
    SCIP_CALL( ensureRowMem(lpi, nrows) );
@@ -2765,7 +2766,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    /* now we must transform QSopt codes into SCIP codes */
    for( i = 0; i < nrows; ++i )
    {
-      switch( rstat[i] )
+      switch( rstat[i] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_LOWER:
          irstat[i] = QS_ROW_BSTAT_LOWER;
@@ -2780,14 +2781,14 @@ SCIP_RETCODE SCIPlpiSetBase(
             irstat[i] = QS_ROW_BSTAT_UPPER;
          break;
       default:
-         SCIPerrorMessage("Unknown row basic status %d", rstat[i]);
+         SCIPerrorMessage("Unknown row basic status %d", rstat[i]); /*lint !e613*/
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    for( i = 0; i < ncols; ++i )
    {
-      switch( cstat[i] )
+      switch( cstat[i] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_LOWER:
          icstat[i] = QS_COL_BSTAT_LOWER;
@@ -2802,7 +2803,7 @@ SCIP_RETCODE SCIPlpiSetBase(
          icstat[i] = QS_COL_BSTAT_FREE;
          break;
       default:
-         SCIPerrorMessage("Unknown column basic status %d", cstat[i]);
+         SCIPerrorMessage("Unknown column basic status %d", cstat[i]); /*lint !e613*/
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
