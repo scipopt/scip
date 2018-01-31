@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -546,6 +546,7 @@ struct SCIP_Set
    char*                 visual_bakfilename; /**< name of the BAK tool output file, or - if no BAK output should be created */
    SCIP_Bool             visual_realtime;    /**< should the real solving time be used instead of time step counter in visualization? */
    SCIP_Bool             visual_dispsols;    /**< should the node where solutions are found be visualized? */
+   SCIP_Bool             visual_displb;      /**< should lower bound information be visualized? */
    SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
    /* Reading */

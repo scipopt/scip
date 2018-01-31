@@ -1,9 +1,7 @@
 #!groovy
 
-updateGitlabCommitStatus name: 'cmake compilation', state: 'pending'
-node ('nightly') {
-    updateGitlabCommitStatus name: 'cmake compilation', state: 'running'
-    try{
+gitlabCommitStatus(name: 'cmake compilation') {
+    node ('nightly') {
         timeout(1) {
             stage('Clean') {
                  cleanWs() // clean workspace
@@ -64,13 +62,7 @@ node ('nightly') {
                     }
                 }
             }
-            gitlabCommitStatus(name: 'cmake compilation') {
-                parallel paramjobs
-            }
+            parallel paramjobs
         }
-    } catch(error){
-        echo "ERROR: Problem running the pipeline: ${error}"
-        updateGitlabCommitStatus name: 'cmake compilation', state: 'failed'
-        currentBuild.result = 'FAILURE'
     }
 }
