@@ -675,8 +675,8 @@ SCIP_RETCODE addVarNameToStorage(
 
    if( varnames != NULL )
    {
-      SCIPensureBlockMemoryArray(scip, varnames, varnamessize, (*nvars) + 1);
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*varnames)[(*nvars)], colname, strlen(colname) + 1) );
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, varnames, varnamessize, (*nvars) + 1) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*varnames)[(*nvars)], colname, strlen(colname) + 1) );     /*lint !e866*/
       (*nvars)++;
    }
 
@@ -697,8 +697,8 @@ SCIP_RETCODE addConsNameToStorage(
 
    if( consnames != NULL )
    {
-      SCIPensureBlockMemoryArray(scip, consnames, consnamessize, (*ncons) + 1);
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consnames)[(*ncons)], rowname, strlen(rowname) + 1) );
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, consnames, consnamessize, (*ncons) + 1) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consnames)[(*ncons)], rowname, strlen(rowname) + 1) );    /*lint !e866*/
       (*ncons)++;
    }
 

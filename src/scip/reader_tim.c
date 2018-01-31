@@ -61,8 +61,6 @@ struct SCIP_ReaderData
 {
    SCIP_Bool             read;               /**< flag to indicate whether the time file has been read */
    int                   nstages;            /**< the number of stages in the stochastic program */
-   const char*           name;               /**< the name of the problem that this time file relates to */
-   const char*           type;               /**< the problem type */
    const char**          stagestartvars;     /**< the variables that start each stage */
    const char**          stagestartcons;     /**< the constraints that start each stage */
    const char**          stagenames;         /**< the name of the stage */
@@ -91,7 +89,7 @@ struct TimInput
    const char*           f2;
    const char*           f3;
    char                  probname[TIM_MAX_NAMELEN];
-   char                  typename[TIM_MAX_NAMELEN];
+   char                  stochtype[TIM_MAX_NAMELEN];
    const char**          stagestartvars;
    const char**          stagestartcons;
    const char**          stagenames;
@@ -229,6 +227,7 @@ SCIP_RETCODE createReaderdata(
    )
 {
    SCIP_READERDATA* readerdata;
+   int hashmapsize;
    int nvars;
    int i;
 
@@ -254,26 +253,25 @@ SCIP_RETCODE createReaderdata(
    for( i = 0; i < readerdata->nstages; i++ )
    {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &readerdata->stagestartvars[i],
-            timi->stagestartvars[i], strlen(timi->stagestartvars[i]) + 1) );
+            timi->stagestartvars[i], strlen(timi->stagestartvars[i]) + 1) );  /*lint !e866*/
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &readerdata->stagestartcons[i],
-            timi->stagestartcons[i], strlen(timi->stagestartcons[i]) + 1) );
+            timi->stagestartcons[i], strlen(timi->stagestartcons[i]) + 1) );  /*lint !e866*/
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &readerdata->stagenames[i],
-            timi->stagenames[i], strlen(timi->stagenames[i]) + 1) );
+            timi->stagenames[i], strlen(timi->stagenames[i]) + 1) );          /*lint !e866*/
 
       /* creating the data for the stages */
-      SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata->stages[i]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata->stages[i]) );        /*lint !e866*/
       readerdata->stages[i]->nvars = 0;
       readerdata->stages[i]->nconss = 0;
       readerdata->stages[i]->varssize = TIM_DEFAULT_ARRAYSIZE;
       readerdata->stages[i]->conssize = TIM_DEFAULT_ARRAYSIZE;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->stages[i]->vars, readerdata->stages[i]->varssize) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->stages[i]->conss, readerdata->stages[i]->conssize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->stages[i]->vars, readerdata->stages[i]->varssize) );      /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->stages[i]->conss, readerdata->stages[i]->conssize) );     /*lint !e866*/
 
       /* creating the hashmaps */
-      SCIP_CALL( SCIPhashmapCreate(&readerdata->stages[i]->varnametovar, SCIPblkmem(scip),
-            SCIPceil(scip, nvars/readerdata->nstages)) );
-      SCIP_CALL( SCIPhashmapCreate(&readerdata->stages[i]->consnametocons, SCIPblkmem(scip),
-            SCIPceil(scip, nvars/readerdata->nstages)) );
+      hashmapsize = (int) SCIPceil(scip, (SCIP_Real) nvars/(SCIP_Real) readerdata->nstages);
+      SCIP_CALL( SCIPhashmapCreate(&readerdata->stages[i]->varnametovar, SCIPblkmem(scip), hashmapsize) );
+      SCIP_CALL( SCIPhashmapCreate(&readerdata->stages[i]->consnametocons, SCIPblkmem(scip), hashmapsize) );
    }
 
 
@@ -313,7 +311,7 @@ void freeReaderdata(
          /* freeing the memory for the stage data */
          SCIPfreeBlockMemoryArray(scip, &readerdata->stages[i]->vars, readerdata->stages[i]->varssize);
          SCIPfreeBlockMemoryArray(scip, &readerdata->stages[i]->conss, readerdata->stages[i]->conssize);
-         SCIPfreeBlockMemory(scip, &readerdata->stages[i]);
+         SCIPfreeBlockMemory(scip, &readerdata->stages[i]);    /*lint !e866*/
       }
 
       SCIPfreeBlockMemoryArray(scip, &readerdata->stages, readerdata->nstages);
@@ -345,7 +343,7 @@ SCIP_RETCODE timinputCreate(
    (*timi)->haserror    = FALSE;
    (*timi)->buf     [0] = '\0';
    (*timi)->probname[0] = '\0';
-   (*timi)->typename[0] = '\0';
+   (*timi)->stochtype[0] = '\0';
    (*timi)->f0          = NULL;
    (*timi)->f1          = NULL;
    (*timi)->f2          = NULL;
@@ -477,16 +475,16 @@ void timinputSetProbname(
 
 /** set the problem type name in the tim input structure to given objective name */
 static
-void timinputSetTypename(
+void timinputSetStochtype(
    TIMINPUT*             timi,               /**< tim input structure */
-   const char*           typename            /**< name of the problem type to set */
+   const char*           stochtype            /**< name of the problem type to set */
    )
 {
    assert(timi != NULL);
-   assert(typename != NULL);
-   assert(strlen(typename) < sizeof(timi->typename));
+   assert(stochtype != NULL);
+   assert(strlen(stochtype) < sizeof(timi->stochtype));
 
-   (void)SCIPmemccpy(timi->typename, typename, '\0', TIM_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(timi->stochtype, stochtype, '\0', TIM_MAX_NAMELEN - 1);
 }
 
 /** set the problem var name that starts a stage in the tim input structure to given objective name */
@@ -501,7 +499,7 @@ SCIP_RETCODE timinputSetStageStartVar(
    assert(timi != NULL);
    assert(varname != NULL);
 
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &timi->stagestartvars[stagenum], varname, strlen(varname) + 1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &timi->stagestartvars[stagenum], varname, strlen(varname) + 1) );  /*lint !e866*/
 
    return SCIP_OKAY;
 }
@@ -518,7 +516,7 @@ SCIP_RETCODE timinputSetStageStartCons(
    assert(timi != NULL);
    assert(consname != NULL);
 
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &timi->stagestartcons[stagenum], consname, strlen(consname) + 1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &timi->stagestartcons[stagenum], consname, strlen(consname) + 1) );   /*lint !e866*/
 
    return SCIP_OKAY;
 }
@@ -535,7 +533,7 @@ SCIP_RETCODE timinputSetStageName(
    assert(timi != NULL);
    assert(stagename != NULL);
 
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &timi->stagenames[stagenum], stagename, strlen(stagename) + 1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &timi->stagenames[stagenum], stagename, strlen(stagename) + 1) );  /*lint !e866*/
 
    return SCIP_OKAY;
 }
@@ -704,9 +702,9 @@ SCIP_RETCODE readPeriods(
 
    /* This has to be the Line with the name. */
    if( timinputField1(timi) == NULL )
-      timinputSetTypename(timi, "LP");
+      timinputSetStochtype(timi, "LP");
    else
-      timinputSetTypename(timi, timinputField1(timi));
+      timinputSetStochtype(timi, timinputField1(timi));
 
    while( timinputReadLine(timi) )
    {

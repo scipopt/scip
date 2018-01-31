@@ -108,8 +108,7 @@ struct StoInput
    const char*           f4;
    const char*           f5;
    char                  probname[STO_MAX_NAMELEN];
-   char                  typename[STO_MAX_NAMELEN];
-   SCIP_Bool             usebenders;
+   char                  stochtype[STO_MAX_NAMELEN];
 };
 typedef struct StoInput STOINPUT;
 
@@ -183,7 +182,7 @@ SCIP_RETCODE freeScenarioTree(
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->stagename, strlen((*scenariotree)->stagename) + 1);
 
    for( i = (*scenariotree)->nsubproblems - 1; i >= 0; i-- )
-      SCIPfree(&(*scenariotree)->subproblems[i]);
+      SCIP_CALL( SCIPfree(&(*scenariotree)->subproblems[i]) );
 
    if( (*scenariotree)->nsubproblems > 0 )
       SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, (*scenariotree)->nchildren);
@@ -465,8 +464,8 @@ SCIP_RETCODE addScenarioEntry(
       scenario->entriessize = newsize;
    }
 
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scenario->rownames[scenario->nentries], rowname, strlen(rowname) + 1) );
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scenario->colnames[scenario->nentries], colname, strlen(colname) + 1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scenario->rownames[scenario->nentries], rowname, strlen(rowname) + 1) );   /*lint !e866*/
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scenario->colnames[scenario->nentries], colname, strlen(colname) + 1) );   /*lint !e866*/
 
    scenario->values[scenario->nentries] = value;
    scenario->nentries++;
@@ -771,7 +770,6 @@ SCIP_RETCODE buildScenariosFromBlocks(
    int                   blocknum            /**< the block number */
    )
 {
-   SCIP_Bool processed;
    int i;
    int j;
 
@@ -783,9 +781,7 @@ SCIP_RETCODE buildScenariosFromBlocks(
    for( i = blocknum + 1; i < numblocks; i++ )
    {
       /* it is only necessary to process the next block in the list the belongs to the given stage. */
-      if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) == 0 )
-         processed = TRUE;
-      else
+      if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) != 0 )
          continue;
 
       for( j = 0; j < numblocksperblock[i]; j++ )
@@ -799,9 +795,6 @@ SCIP_RETCODE buildScenariosFromBlocks(
          /* the last block needs to be removed so that a new block can be used in its place */
          (*numblocksforscen)--;
       }
-
-      if( processed )
-         break;
    }
 
    /* when all blocks have been inspected, then it is possible to build the scenario */
@@ -983,7 +976,7 @@ SCIP_RETCODE stoinputCreate(
    (*stoi)->haserror    = FALSE;
    (*stoi)->buf     [0] = '\0';
    (*stoi)->probname[0] = '\0';
-   (*stoi)->typename[0] = '\0';
+   (*stoi)->stochtype[0] = '\0';
    (*stoi)->f0          = NULL;
    (*stoi)->f1          = NULL;
    (*stoi)->f2          = NULL;
@@ -1120,16 +1113,16 @@ void stoinputSetProbname(
 
 /** set the type name in the sto input structure to given objective name */
 static
-void stoinputSetTypename(
+void stoinputSetStochtype(
    STOINPUT*             stoi,               /**< sto input structure */
-   const char*           typename            /**< name of the scenario type */
+   const char*           stochtype            /**< name of the scenario type */
    )
 {
    assert(stoi != NULL);
-   assert(typename != NULL);
-   assert(strlen(typename) < sizeof(stoi->typename));
+   assert(stochtype != NULL);
+   assert(strlen(stochtype) < sizeof(stoi->stochtype));
 
-   (void)SCIPmemccpy(stoi->typename, typename, '\0', STO_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(stoi->stochtype, stochtype, '\0', STO_MAX_NAMELEN - 1);
 }
 
 static
@@ -1332,7 +1325,7 @@ SCIP_RETCODE readBlocks(
       return SCIP_OKAY;
    }
 
-   stoinputSetTypename(stoi, stoinputField1(stoi));
+   stoinputSetStochtype(stoi, stoinputField1(stoi));
 
    /* initialising the block data */
    numblocks = 0;
@@ -1405,7 +1398,7 @@ SCIP_RETCODE readBlocks(
             {
                int newsize;
                newsize = SCIPcalcMemGrowSize(scip, numblocksperblock[blocknum] + 1);
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum], newsize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum], newsize) ); /*lint !e866*/
                blocksperblocksize[blocknum] = newsize;
             }
          }
@@ -1493,12 +1486,13 @@ SCIP_RETCODE readScenarios(
       return SCIP_OKAY;
    }
 
-   stoinputSetTypename(stoi, stoinputField1(stoi));
+   stoinputSetStochtype(stoi, stoinputField1(stoi));
 
    /* initialising the scen names record */
    numscenarios = 0;
    (void) SCIPsnprintf(scennames, SCIP_MAXSTRLEN, "ROOT");
 
+   scenario = NULL;
    addscenario = FALSE;
 
    /* initialising the root scenario in the reader data */
@@ -1516,8 +1510,6 @@ SCIP_RETCODE readScenarios(
 
             /* freeing the scenario */
             SCIP_CALL( freeScenarioTree(scip, &scenario) );
-
-            addscenario = FALSE;
          }
 
          if( !strcmp(stoinputField0(stoi), "SCENARIOS") )
@@ -1547,8 +1539,6 @@ SCIP_RETCODE readScenarios(
 
             /* freeing the scenario */
             SCIP_CALL( freeScenarioTree(scip, &scenario) );
-
-            addscenario = FALSE;
          }
 
          if( strcmp(wrongroot, stoinputField3(stoi)) == 0 )
@@ -1628,7 +1618,7 @@ SCIP_RETCODE readIndep(
       return SCIP_OKAY;
    }
 
-   stoinputSetTypename(stoi, stoinputField1(stoi));
+   stoinputSetStochtype(stoi, stoinputField1(stoi));
 
    /* initialising the block data */
    numblocks = 0;
@@ -1636,9 +1626,6 @@ SCIP_RETCODE readIndep(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &numblocksperblock, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocksperblocksize, STO_DEFAULT_ARRAYSIZE) );
-
-   blockindex = 0;
-   blocknum = 0;
 
    /* initialising the stage names record */
    numstages = 0;
@@ -1701,7 +1688,7 @@ SCIP_RETCODE readIndep(
          {
             int newsize;
             newsize = SCIPcalcMemGrowSize(scip, numblocksperblock[blocknum] + 1);
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum], newsize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum], newsize) );   /*lint !e866*/
             blocksperblocksize[blocknum] = newsize;
          }
       }
@@ -2144,7 +2131,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       if( strcmp(getScenarioEntryCol(scenario, i), RHS) == 0 || strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
       {
          /* if the constraint is an equality constraint, then the LHS must also be changed */
-         if( SCIPgetLhsLinear(scenarioscip, cons) == SCIPgetRhsLinear(scenarioscip, cons) )
+         if( SCIPgetLhsLinear(scenarioscip, cons) >= SCIPgetRhsLinear(scenarioscip, cons) )
          {
             SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
             SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
