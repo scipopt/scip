@@ -127,6 +127,10 @@ SCIP_RETCODE separatePointEntropy(
       constant = refpoint;
    }
 
+   /* give up if the constant or coefficient is too large */
+   if( SCIPisInfinity(scip, REALABS(constant)) || SCIPisInfinity(scip, REALABS(coef)) )
+      return SCIP_OKAY;
+
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, !overestimate) );
    SCIPaddRowprepConstant(rowprep, constant);
