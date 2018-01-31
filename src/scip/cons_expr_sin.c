@@ -541,14 +541,19 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
    return SCIP_OKAY;
 }
 
-/** helper function to create cuts for point- or initial separation
+/** helper function to create cuts for sine and cosine separation
  *
- *  A total of 6 different cuts can be generated. All except soltangent are independent of a specific solution and
- *  use only the bounds of the child variable. If their pointers are passed with NULL, the respective computation
- *  is not performed at all. If one of the computations fails or turns out to be irrelevant, the respective argument
- *  pointer is set to NULL.
+ *  The following 6 cuts can be generated:
+ *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
+ *  - ltangent/rtangent: tangents at the points (lb,sin(lb)) or (ub,sin(ub))
+ *  - lmidtangent/rmidtangent: tangent at some other point that goes through (lb,sin(lb)) or (ub,sin(ub))
+ *  - soltangent: tangent at specified refpoint
+
+ *  All except soltangent are independent of a specific solution and use only the bounds of the child variable.
+ *  If their pointers are passed with NULL, the respective computation is not performed at all. If one of the
+ *  computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
  */
-SCIP_RETCODE SCIPcomputeCutsSin(
+SCIP_RETCODE SCIPcomputeCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
@@ -692,7 +697,7 @@ SCIP_RETCODE SCIPcomputeCutsSin(
 
       if( success )
       {
-         /* if the cut connects bounds it is stored in secant */
+         /* if the cut connects bounds, it is stored in secant */
          SCIP_CALL( assembleRowprep(scip, (issecant && secant != NULL) ? secant : lmidtangent, "lmidtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
       }
    }
@@ -715,7 +720,7 @@ SCIP_RETCODE SCIPcomputeCutsSin(
 
       if( success )
       {
-         /* if the cut connects bounds it is stored in secant */
+         /* if the cut connects bounds, it is stored in secant */
          SCIP_CALL( assembleRowprep(scip, (issecant && secant != NULL) ? secant : rmidtangent, "rmidtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
       }
    }
@@ -979,7 +984,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    /* compute underestimating cuts */
    if( underestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
             SCIP_INVALID, childlb, childub, TRUE) );
 
       for( i = 0; i < 5; ++i)
@@ -1007,7 +1012,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    /* compute overestimating cuts */
    if( overestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
             SCIP_INVALID, childlb, childub, FALSE) );
 
       for( i = 0; i < 5; ++i )
@@ -1071,7 +1076,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
     *  - cuts[1] = secant connecting (ub,sin(ubx)) with right tangent point
     *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
     */
-   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
+   SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
          refpoint, childlb, childub, !overestimate) );
 
    for( i = 0; i < 4; ++i )

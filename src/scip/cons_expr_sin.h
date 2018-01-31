@@ -62,15 +62,20 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
    SCIP_INTERVAL*        newbounds           /**< buffer to store new child bounds */
 );
 
-/** helper function to create cuts for point- or initial separation for sine and cosine expressions
+/** helper function to create cuts for sine and cosine separation
  *
- *  A total of 6 different cuts can be generated. All except soltangent are independent of a specific solution and
- *  use only the bounds of the child variable. If their pointers are passed with NULL, the respective computation
- *  is not performed at all. If one of the computations fails or turns out to be irrelevant, the respective argument
- *  pointer is set to NULL
+ *  The following 6 cuts can be generated:
+ *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
+ *  - ltangent/rtangent: tangents at the points (lb,sin(lb)) or (ub,sin(ub))
+ *  - lmidtangent/rmidtangent: tangent at some other point that goes through (lb,sin(lb)) or (ub,sin(ub))
+ *  - soltangent: tangent at specified refpoint
+
+ *  All except soltangent are independent of a specific solution and use only the bounds of the child variable.
+ *  If their pointers are passed with NULL, the respective computation is not performed at all. If one of the
+ *  computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
  */
 EXTERN
-SCIP_RETCODE SCIPcomputeCutsSin(
+SCIP_RETCODE SCIPcomputeCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */

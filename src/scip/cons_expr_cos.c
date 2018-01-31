@@ -243,7 +243,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    /* compute underestimating cuts */
    if( underestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
             SCIP_INVALID, childlb, childub, TRUE) );
 
       for( i = 0; i < 5; ++i )
@@ -271,7 +271,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    /* compute overestimating cuts */
    if( overestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
             SCIP_INVALID, childlb, childub, FALSE) );
 
       for( i = 0; i < 5; ++i )
@@ -335,7 +335,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
     *  - cuts[1] = secant connecting (ub,cos(ubx)) with right tangent point
     *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
     */
-   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
+   SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
          refpoint, childlb, childub, !overestimate) );
 
    for( i = 0; i < 4; ++i )
