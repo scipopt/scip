@@ -3830,28 +3830,16 @@ SCIP_RETCODE generateCut(
    /* check and improve numerics */
    if( rowprep != NULL )
    {
-      SCIP_Real coefrange;
+      SCIP_Bool success;
 
       SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
 
       /* we should not need SCIPmergeRowprep() with only 2 vars in the row */
       assert(rowprep->nvars <= 2);
 
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, minviol, &coefrange, NULL) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, minviol, NULL, &success) );
 
-      if( coefrange >= conshdlrdata->cutmaxrange )
-      {
-         SCIPdebugMsg(scip, "skip cut for constraint <%s> because of very large range: %g\n", SCIPconsGetName(cons), coefrange);
-      }
-      else if( SCIPisInfinity(scip, REALABS(rowprep->side)) )
-      {
-         SCIPdebugMsg(scip, "skip cut for constraint <%s> because of very large side: %g\n", SCIPconsGetName(cons), rowprep->side);
-      }
-      else if( rowprep->nvars > 0 && SCIPisInfinity(scip, REALABS(rowprep->coefs[0])) )
-      {
-         SCIPdebugMsg(scip, "skip cut for constraint <%s> because of very large coef: %g\n", SCIPconsGetName(cons), rowprep->coefs[0]);
-      }
-      else
+      if( success )
       {
          SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
       }
@@ -5679,7 +5667,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
    int                c;
    SCIP_Real          xlb;
    SCIP_Real          xub;
-   SCIP_Real          coefrange;
+   SCIP_Bool          success;
 
    assert(scip  != NULL);
    assert(conshdlr != NULL);
@@ -5714,8 +5702,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->exponent, consdata->xoffset, consdata->power, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z) );
                if( rowprep != NULL )
                {
-                  SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
-                  if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
+                  SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), NULL, &success) );
+                  if( success )
                   {
                      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
@@ -5738,8 +5726,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->x, consdata->z, FALSE) );
                assert(rowprep != NULL);
 
-               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
-               if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
+               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), NULL, &success) );
+               if( success )
                {
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
@@ -5765,8 +5753,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->x, consdata->z, FALSE) );
                assert(rowprep != NULL);
 
-               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
-               if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
+               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), NULL, &success) );
+               if( success )
                {
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
@@ -5795,8 +5783,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->exponent, -consdata->xoffset, consdata->power, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z) );
                if( rowprep != NULL )
                {
-                  SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
-                  if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
+                  SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), NULL, &success) );
+                  if( success )
                   {
                      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
@@ -5819,8 +5807,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->x, consdata->z, FALSE) );
                assert(rowprep != NULL);
 
-               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
-               if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
+               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), NULL, &success) );
+               if( success )
                {
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
@@ -5846,8 +5834,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->x, consdata->z, FALSE) );
                assert(rowprep != NULL);
 
-               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
-               if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
+               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), NULL, &success) );
+               if( success )
                {
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 

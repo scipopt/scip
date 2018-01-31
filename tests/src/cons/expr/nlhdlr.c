@@ -338,8 +338,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
    SCIP_Real xcoef;
    SCIP_Real ycoef;
    SCIP_Real side;
-   SCIP_Real coefrange;
-   SCIP_Real viol;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -390,9 +389,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       return SCIP_OKAY;
 
    /* check whether its violation and numerical properties are ok (and maybe improve) */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
 
-   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
+   if( success )
    {
       SCIP_ROW* cut;
 

@@ -267,22 +267,16 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
 
    /* check build cut and check violation */
    {
-      SCIP_Real coefrange;
-      SCIP_Real viol;
       SCIP_ROW* row;
       SCIP_Bool infeasible;
-
-      viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
-
-      if( viol <= 0.0 )
-         goto CLEANUP;
+      SCIP_Bool success;
 
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, 1e7, minviolation, &coefrange, &viol) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
 
-      if( coefrange > 1e7 || viol < minviolation ) /* magic number should maybe be given in as argument? */
+      if( !success )
          goto CLEANUP;
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );

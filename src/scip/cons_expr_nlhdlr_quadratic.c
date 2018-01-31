@@ -819,39 +819,26 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
 
    /* check build cut and check violation */
    {
-      SCIP_Real coefrange;
-      SCIP_Real viol;
       SCIP_ROW* row;
       SCIP_Bool infeasible;
-
-      viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
-
-      if( viol <= 0.0 )
-         goto CLEANUP;
 
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, 1e7, minviolation, &coefrange, &viol) );
-      success = coefrange <= 1e7; /* magic number should maybe be given in as argument? */
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
 
-      if( !success || viol < minviolation )
+      if( !success )
          goto CLEANUP;
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
-      /* check that sides of row are finite */
-      if( (SCIP_SIDETYPE_RIGHT == rowprep->sidetype && !SCIPisInfinity(scip, SCIProwGetRhs(row)))
-         || (SCIP_SIDETYPE_LEFT == rowprep->sidetype && !SCIPisInfinity(scip, -SCIProwGetLhs(row))) )
-      {
-         SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-         (*ncuts)++;
+      SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
+      (*ncuts)++;
 
-         if( infeasible )
-            *result = SCIP_CUTOFF;
-         else
-            *result = SCIP_SEPARATED;
-      }
+      if( infeasible )
+         *result = SCIP_CUTOFF;
+      else
+         *result = SCIP_SEPARATED;
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }

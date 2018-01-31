@@ -7600,27 +7600,11 @@ SCIP_RETCODE generateCut(
    /* cleanup and improve cut */
    if( success )
    {
-      SCIP_Real coefrange;
-
       /* merge terms */
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, minefficacy, &coefrange, &viol) );
-      success = coefrange <= conshdlrdata->cutmaxrange;
-   }
-
-   /* check that side is finite */ /*lint --e{514} */
-   success &= !SCIPisInfinity(scip, REALABS(rowprep->side)); /*lint !e514*/
-
-   /* check whether maximal coef is finite, if any */ /*lint --e{514} */
-   success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0])); /*lint !e514*/
-
-   /* check if reference point violates cut sufficiently */
-   if( success && !SCIPisInfinity(scip, -minefficacy) && viol < minefficacy ) /*lint !e644*/
-   {
-      SCIPdebugMsg(scip, "skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), viol, minefficacy);
-      success = FALSE;
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, minefficacy, &viol, &success) );
    }
 
    /* generate row */
@@ -16568,6 +16552,14 @@ void rowprepCleanupSide(
  * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
+ * Thus, the coef.range can be obtained via REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]) (if nvars>0).
+ *
+ * success is set to TRUE if and only if the rowprep satisfies the following:
+ * - the coef.range is below maxcoefrange
+ * - the violation is at least minviol
+ * - the violation is reliable or minviol == 0
+ * - the absolute value of coefficients are below SCIPs value of infinity
+ * - the absolute value of the side is below SCIPs value of infinity
  */
 SCIP_RETCODE SCIPcleanupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16575,11 +16567,12 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
    SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
-   SCIP_Real*            coefrange,          /**< buffer to store coefrange of cleaned up cut, or NULL if not of interest */
-   SCIP_Real*            viol                /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
+   SCIP_Real*            viol,               /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
+   SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
    )
 {
    SCIP_Real myviol;
+   SCIP_Bool violreliable = TRUE;
 #ifdef SCIP_DEBUG
    SCIP_Real mincoef = 1.0;
    SCIP_Real maxcoef = 1.0;
@@ -16604,8 +16597,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
    /* improve coefficient range by aggregating out variables */
    rowprepCleanupImproveCoefrange(scip, rowprep, sol, maxcoefrange);
 
-   /* get current violation in sol */
-   myviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
+   /* get current violation in sol (reliability info only needed if success is not NULL) */
+   myviol = SCIPgetRowprepViolation(scip, rowprep, sol, success != NULL ? &violreliable : NULL);  /*lint !e826*/
    assert(myviol >= 0.0);
 
 #ifdef SCIP_DEBUG
@@ -16619,7 +16612,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* if there is interest in achieving some minimal violation, then possibly scale up to increase violation, updates myviol */
+   /* if there is interest in achieving some minimal violation, then possibly scale up to increase violation
+    * this updates myviol; since this is only scaling the cut, it doesn't change anything about the reliability of the violation value */
    if( minviol > 0.0 )
    {
       /* first, try to achieve scip's minefficacy (typically 1e-4) */
@@ -16629,7 +16623,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
       rowprepCleanupScaleup(scip, rowprep, &myviol, minviol);
    }
 
-   /* scale down to improve numerics, updates myviol */
+   /* scale down to improve numerics, updates myviol (reliability doesn't change) */
    rowprepCleanupScaledown(scip, rowprep, &myviol, MAX(SCIPgetSepaMinEfficacy(scip), minviol)); /*lint !e666*/
 
 #ifdef SCIP_DEBUG
@@ -16648,6 +16642,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
+#if 0
    /* compute final coefrange, if requested by caller */
    if( coefrange != NULL )
    {
@@ -16655,6 +16650,53 @@ SCIP_RETCODE SCIPcleanupRowprep(
          *coefrange = REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]);
       else
          *coefrange = 1.0;
+   }
+#endif
+
+   /* check whether rowprep could be turned into a reasonable row */
+   if( success != NULL )
+   {
+      *success = TRUE;
+
+      /* check whether the coef.range is below maxcoefrange */
+      if( rowprep->nvars > 0 && REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]) > maxcoefrange )
+      {
+         SCIPdebugMsg(scip, "rowprep coefrange %g is above the limit %g\n", REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]), maxcoefrange);
+         *success = FALSE;
+      }
+
+      /* check whether coefficients are below SCIPinfinity (terms are order by coef value) */
+      if( *success && rowprep->nvars > 0 && SCIPisInfinity(scip, REALABS(rowprep->coefs[0])) )
+      {
+         SCIPdebugMsg(scip, "rowprep coefficient %g is beyond value for infinity\n", rowprep->coefs[0]);
+         *success = FALSE;
+      }
+
+      /* check whether the absolute value of the side is below SCIPinfinity */
+      if( *success && SCIPisInfinity(scip, REALABS(rowprep->side)) )
+      {
+         SCIPdebugMsg(scip, "rowprep side %g is beyond value for infinity\n", rowprep->side);
+         *success = FALSE;
+      }
+
+      /* check if violation is at least minviol and reliable, if minviol > 0 */
+      if( *success && minviol > 0.0 )
+      {
+         /* may need to recompute violation if coefs or side was modified above */
+         if( myviol == SCIP_INVALID )  /*lint !e777 */
+            myviol = SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable);
+
+         if( !violreliable )
+         {
+            SCIPdebugMsg(scip, "rowprep violation %g is not reliable\n", myviol);
+            *success = FALSE;
+         }
+         else if( myviol < minviol )
+         {
+            SCIPdebugMsg(scip, "rowprep violation %g is below minimal violation %g\n", myviol, minviol);
+            *success = FALSE;
+         }
+      }
    }
 
    /* If we updated myviol correctly, then it should coincide with freshly computed violation.

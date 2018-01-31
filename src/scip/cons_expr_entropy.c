@@ -63,8 +63,7 @@ SCIP_RETCODE separatePointEntropy(
    SCIP_Real refpoint;
    SCIP_Real coef;
    SCIP_Real constant;
-   SCIP_Real coefrange;
-   SCIP_Real viol;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -135,9 +134,9 @@ SCIP_RETCODE separatePointEntropy(
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, coef) );
 
    /* take care of cut numerics */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
 
-   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
+   if( success )
    {
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "entropy_cut");  /* @todo make cutname unique, e.g., add LP number */
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );

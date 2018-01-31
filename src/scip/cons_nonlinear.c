@@ -5411,8 +5411,6 @@ SCIP_RETCODE generateCut(
 
    if( success )
    {
-      SCIP_Real coefrange;
-
       /* add coefficients for linear variables */
       SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
 
@@ -5420,16 +5418,7 @@ SCIP_RETCODE generateCut(
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* cleanup row */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, maxrange, minviol, &coefrange, NULL) );
-
-      /* check that coefficient range is ok */
-      success = coefrange <= maxrange;
-
-      /* check that side is finite */ /*lint --e{514} */
-      success &= !SCIPisInfinity(scip, REALABS(rowprep->side));
-
-      /* check whether maximal coef is finite, if any */
-      success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, maxrange, minviol, NULL, &success) );
    }
 
    if( success )
