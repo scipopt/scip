@@ -30,6 +30,7 @@ fixed bugs:
   barrier without crossover in lpi_msk
 - copy parameter settings to sub-SCIPs in SCIPcopyLargeNeighborhoodSearch() also when copying only LP rows
 - fixed a check for fixed variables in Binpacking example
+- generate deprecation warnings when using SCIPaddCut
 
 SCIP version 5.0.0
 ==================
