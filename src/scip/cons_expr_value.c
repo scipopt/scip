@@ -126,16 +126,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
    return SCIP_OKAY;
 }
 
-/** expression reverse propagaton callback */
-static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropValue)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("Unexpected call of reverse propagation callback of value expression handler.");
-   SCIPABORT();
-
-   return SCIP_OKAY; /*lint !e527*/
-}
-
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
@@ -211,7 +201,6 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityValue) );

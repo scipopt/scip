@@ -199,14 +199,17 @@ typedef struct
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
 } EXPRBWDIFF_DATA;
 
-/** data passed on during expression evaluation over a box */
+/** data passed on during expression forward propagation */
 typedef struct
 {
    unsigned int          boxtag;             /**< box tag */
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an empty interval */
    SCIP_Bool             intersect;          /**< should the computed expression interval be intersected with the existing one? */
+   SCIP_Bool             force;              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool             tightenauxvars;     /**< should the bounds of auxiliary variables be tightened? */
    SCIP_Real             varboundrelax;      /**< by how much to relax variable bounds (at most) */
-} EXPRINTEVAL_DATA;
+   int                   ntightenings;       /**< number of tightenings found */
+} FORWARDPROP_DATA;
 
 /** data passed on during collecting all expression variables */
 typedef struct
@@ -1129,16 +1132,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
    return SCIP_OKAY;
 }
 
-/** expression walk callback when evaluating expression on intervals, called before child is visited */
+/** expression walk callback for forward propagation, called before child is visited */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprVisitChild)
 {  /*lint --e{715}*/
-   EXPRINTEVAL_DATA* propdata;
+   FORWARDPROP_DATA* propdata;
 
    assert(expr != NULL);
    assert(data != NULL);
 
-   propdata = (EXPRINTEVAL_DATA*)data;
+   propdata = (FORWARDPROP_DATA*)data;
 
    /* skip child if it has been evaluated already */
    if( propdata->boxtag != 0 && propdata->boxtag == expr->children[expr->walkcurrentchild]->intevaltag )
@@ -1161,20 +1164,21 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
    return SCIP_OKAY;
 }
 
-/** expression walk callback when evaluating expression on intervals, called when expression is left */
+/** expression walk callback for forward propagation, called when expression is left */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLR* nlhdlr;
-   EXPRINTEVAL_DATA* propdata;
+   FORWARDPROP_DATA* propdata;
    SCIP_INTERVAL interval;
    SCIP_INTERVAL nlhdlrinterval;
+   int ntightenings = 0;
    int e;
 
    assert(expr != NULL);
    assert(data != NULL);
 
-   propdata = (EXPRINTEVAL_DATA*)data;
+   propdata = (FORWARDPROP_DATA*)data;
 
    /* set tag in any case */
    expr->intevaltag = propdata->boxtag;
@@ -1194,6 +1198,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    {
       /* start with infinite interval [-inf,+inf] */
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
    }
 
    assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
@@ -1232,19 +1237,39 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
       SCIPintervalIntersect(&interval, interval, expr->interval);
    }
 
-   if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
+   /* check whether the resulting interval is empty */
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
    {
-      /* update expression interval */
-      SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+      SCIPintervalSetEmpty(&expr->interval);
+      *result = SCIP_CONSEXPREXPRWALK_ABORT;
+      propdata->aborted = TRUE;
+      return SCIP_OKAY;
+   }
+
+   if( propdata->tightenauxvars )
+   {
+      /* tighten bounds of expression interval and the auxiliary variable */
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, propdata->force, NULL, &propdata->aborted, &ntightenings) );
+
+      if( propdata->aborted )
+      {
+         SCIPintervalSetEmpty(&expr->interval);
+         *result = SCIP_CONSEXPREXPRWALK_ABORT;
+         return SCIP_OKAY;
+      }
    }
    else
    {
-      /* stop if interval is empty */
-      SCIPintervalSetEmpty(&expr->interval);
-      propdata->aborted = TRUE;
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
+      /* update expression interval */
+      SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
    }
+
+   /* continue with forward propagation */
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   /* update statistics */
+   if( propdata->ntightenings != -1 )
+      propdata->ntightenings += ntightenings;
 
    return SCIP_OKAY;
 }
@@ -2268,6 +2293,67 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
 
 /**@} */  /* end of differentiation methods */
 
+/** propagate bounds of the expressions in a given expression tree and tries to tighten the bounds of the auxiliary
+ *  variables accordingly
+ */
+static
+SCIP_RETCODE forwardPropExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
+   SCIP_Real               varboundrelax,    /**< amount by which variable bounds should be relaxed (at most) */
+   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
+   SCIP_Bool*              infeasible,       /**< buffer to store whether the problem is infeasible (NULL if not needed) */
+   int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
+   )
+{
+   FORWARDPROP_DATA propdata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(varboundrelax >= 0.0);
+
+   if( infeasible != NULL )
+      *infeasible = FALSE;
+   if( ntightenings != NULL )
+      *ntightenings = 0;
+
+   /* if value is up-to-date, then nothing to do */
+   if( boxtag != 0 && expr->intevaltag == boxtag )
+      return SCIP_OKAY;
+
+   propdata.aborted = FALSE;
+   propdata.boxtag = boxtag;
+   propdata.intersect = intersect;
+   propdata.force = force;
+   propdata.tightenauxvars = tightenauxvars;
+   propdata.varboundrelax = varboundrelax;
+   propdata.ntightenings = (ntightenings == NULL) ? -1 : 0;
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, forwardPropExprVisitChild, NULL, forwardPropExprLeaveExpr,
+      &propdata) );
+
+   /* evaluation leads to an empty interval -> detected infeasibility */
+   if( propdata.aborted )
+   {
+      SCIPintervalSetEmpty(&expr->interval);
+      expr->intevaltag = boxtag;
+
+      if( infeasible != NULL)
+         *infeasible = TRUE;
+   }
+
+   if( ntightenings != NULL )
+   {
+      assert(propdata.ntightenings >= 0);
+      *ntightenings = propdata.ntightenings;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
  *  root expression will be intersected with the [lhs,rhs] which might lead to an empty interval
  */
@@ -2305,7 +2391,7 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals
     * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
     */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0, SCIPepsilon(scip)) );
+   SCIP_CALL( forwardPropExpr(scip, consdata->expr, intersect, force, TRUE, SCIPepsilon(scip), 0, infeasible, ntightenings) );
 
    /* @todo delete constraint locally if they are redundant w.r.t. bounds used by the LP solver; the LP solution might
     * violate variable bounds by more than SCIPfeastol() because of relative comparisons
@@ -2328,11 +2414,7 @@ SCIP_RETCODE forwardPropCons(
 #endif
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(consdata->expr)) )
-   {
-      *infeasible = TRUE;
-   }
-   else
+   if( !(*infeasible) )
    {
       /* compare root expression interval with constraint sides; store the result in the root expression */
       SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
@@ -7590,24 +7672,11 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP_Real               varboundrelax     /**< amount by which variable bounds should be relaxed (at most) */
    )
 {
-   EXPRINTEVAL_DATA propdata;
-
    /* if value is up-to-date, then nothing to do */
    if( boxtag != 0 && expr->intevaltag == boxtag )
       return SCIP_OKAY;
 
-   propdata.aborted = FALSE;
-   propdata.boxtag = boxtag;
-   propdata.intersect = intersect;
-   propdata.varboundrelax = varboundrelax;
-
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, intevalExprVisitChild, NULL, intevalExprLeaveExpr, &propdata) );
-
-   if( propdata.aborted )
-   {
-      SCIPintervalSetEmpty(&expr->interval);
-      expr->intevaltag = boxtag;
-   }
+   SCIP_CALL( forwardPropExpr(scip, expr, intersect, FALSE, FALSE, varboundrelax, boxtag, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -7645,7 +7714,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    *cutoff = FALSE;
 
    /* check if the new bounds lead to an empty interval */
-   if( SCIPintervalGetInf(newbounds) > oldub || SCIPintervalGetSup(newbounds) < oldlb )
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) || SCIPintervalGetInf(newbounds) > oldub
+      || SCIPintervalGetSup(newbounds) < oldlb )
    {
       SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
@@ -7697,7 +7767,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
        * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
        */
       var = SCIPgetConsExprExprAuxVar(expr);
-      if( var != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+      if( var != NULL && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) )
       {
          SCIP_Bool tightened;
 
