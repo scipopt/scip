@@ -2380,6 +2380,224 @@ SCIP_Real SCIPaggrRowGetRhs(
    return QUAD_TO_DBL(aggrrow->rhs);
 }
 
+/** filters the given array of cuts to enforce a maximum parallelism constraints
+ *  for the given cut; moves filtered cuts to the end of the array and returns number of selected cuts */
+static
+int filterWithParallelism(
+   SCIP_ROW*             cut,                /**< cut to filter orthogonality with */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   SCIP_Real*            scores,             /**< array with scores of cuts to perform selection algorithm */
+   int                   ncuts,              /**< number of cuts in given array */
+   SCIP_Real             goodscore,          /**< threshold for the score to be considered a good cut */
+   SCIP_Real             goodmaxparall,      /**< maximal parallelism for good cuts */
+   SCIP_Real             maxparall           /**< maximal parallelism for all cuts that are not good */
+   )
+{
+   int i;
+
+   for( i = ncuts - 1; i >= 0; --i )
+   {
+      SCIP_Real thisparall;
+      SCIP_Real thismaxparall;
+
+      thisparall = SCIProwGetParallelism(cut, cuts[i], 'e');
+      thismaxparall = scores[i] >= goodscore ? goodmaxparall : maxparall;
+
+      if( thisparall > thismaxparall )
+      {
+         --ncuts;
+         SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+         SCIPswapReals(&scores[i], &scores[ncuts]);
+      }
+   }
+
+   return ncuts;
+}
+
+/** move the cut with the highest score to the first position in the array; there must be at least one cut */
+static
+void selectBestCut(
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   SCIP_Real*            scores,             /**< array with scores of cuts to perform selection algorithm */
+   int                   ncuts               /**< number of cuts in given array */
+   )
+{
+   int i;
+   int bestpos;
+   SCIP_Real bestscore;
+
+   assert(ncuts > 0);
+
+   bestscore = scores[0];
+   bestpos = 0;
+
+   for( i = 1; i < ncuts; ++i )
+   {
+      if( scores[i] > bestscore )
+      {
+         bestpos = i;
+         bestscore = scores[i];
+      }
+   }
+
+   SCIPswapPointers((void**) &cuts[bestpos], (void**) &cuts[0]);
+   SCIPswapReals(&scores[bestpos], &scores[0]);
+}
+
+/** perform a cut selection algorithm for the given array of cuts; the array is partitioned
+ *  so that the selected cuts come first and the remaining ones are at the end of the array
+ */
+SCIP_RETCODE SCIPselectCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   int                   ncuts,              /**< number of cuts in given array */
+   int                   nforcedcuts,        /**< number of forced cuts at start of given array */
+   int                   maxselectedcuts,    /**< maximal number of cuts to select */
+   int*                  nselectedcuts       /**< pointer to return number of selected cuts */
+   )
+{
+   int i;
+   SCIP_Real* scores;
+   SCIP_Real goodscore;
+   SCIP_Real goodmaxparall;
+   SCIP_Real maxparall;
+   SCIP_Real efficacyfac;
+   SCIP_SOL* sol;
+
+   /* if all cuts are forced cuts no selection is required */
+   if( nforcedcuts >= MIN(ncuts, maxselectedcuts) )
+   {
+      *nselectedcuts = nforcedcuts;
+      return SCIP_OKAY;
+   }
+
+   *nselectedcuts = 0;
+   SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncuts) );
+
+   sol = SCIPgetBestSol(scip);
+
+   efficacyfac = scip->set->sepa_efficacyfac;
+
+   goodscore = 0.0;
+
+   /* if there is an incumbent and the factor is not 0.0, compute directed cutoff distances for the incumbent */
+   if( sol != NULL && scip->set->sepa_dircutoffdistfac > 0.0 )
+   {
+      for( i = 0; i < ncuts; ++i )
+      {
+         SCIP_Real objparallelism;
+         SCIP_Real intsupport;
+         SCIP_Real efficacy;
+
+         intsupport = scip->set->sepa_intsupportfac > 0.0 ?
+         scip->set->sepa_intsupportfac * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) :
+         0.0;
+
+         objparallelism = scip->set->sepa_objparalfac > 0.0 ? scip->set->sepa_objparalfac * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
+
+         efficacy = SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp);
+
+         if( SCIProwIsLocal(cuts[i]) )
+         {
+            scores[i] = scip->set->sepa_dircutoffdistfac * efficacy;
+         }
+         else
+         {
+            scores[i] = SCIProwGetLPSolCutoffDistance(cuts[i], scip->set, scip->stat, sol, scip->lp);
+            scores[i] = scip->set->sepa_dircutoffdistfac * MAX(scores[i], efficacy);
+         }
+
+         efficacy *= efficacyfac;
+         scores[i] += objparallelism + intsupport + efficacy;
+
+         /* add small term to prefer global pool cuts */
+         scores[i] += SCIProwIsInGlobalCutpool(cuts[i]) ? 1e-4 : 0.0;
+
+         goodscore = MAX(goodscore, scores[i]);
+      }
+   }
+   else
+   {
+      efficacyfac += scip->set->sepa_dircutoffdistfac;
+      for( i = 0; i < ncuts; ++i )
+      {
+         SCIP_Real objparallelism;
+         SCIP_Real intsupport;
+         SCIP_Real efficacy;
+
+         intsupport = scip->set->sepa_intsupportfac > 0.0 ?
+         scip->set->sepa_intsupportfac * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) :
+         0.0;
+
+         objparallelism = scip->set->sepa_objparalfac > 0.0 ? scip->set->sepa_objparalfac * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
+
+         efficacy = efficacyfac > 0.0 ?
+         efficacyfac * SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp) :
+         0.0;
+
+         scores[i] = objparallelism + intsupport + efficacy;
+
+         /* add small term to prefer global pool cuts */
+         scores[i] += SCIProwIsInGlobalCutpool(cuts[i]) ? 1e-4 : 0.0;
+
+         goodscore = MAX(goodscore, scores[i]);
+      }
+   }
+
+   /* compute values for filtering cuts */
+   goodscore *= 0.9;
+   maxparall = 1.0 - scip->set->sepa_minorthoroot;
+   goodmaxparall = MAX(0.5, 1.0 - scip->set->sepa_minorthoroot);
+
+   /* perform cut selection algorithm for the cuts */
+   {
+      int nnonforcedcuts;
+      SCIP_ROW** nonforcedcuts;
+      SCIP_Real* nonforcedscores;
+
+      nnonforcedcuts = ncuts - nforcedcuts;
+      nonforcedcuts = cuts + nforcedcuts;
+      nonforcedscores = scores + nforcedcuts;
+
+      /* select the forced cuts first */
+      *nselectedcuts = nforcedcuts;
+      for( i = 0; i < nforcedcuts && nnonforcedcuts > 0; ++i )
+      {
+         nnonforcedcuts = filterWithParallelism(cuts[i], nonforcedcuts, nonforcedscores, nnonforcedcuts, goodscore, goodmaxparall, maxparall);
+      }
+
+      /* if the maximal number of cuts was exceeded after selecting the forced cuts, we can stop here */
+      if( *nselectedcuts >= maxselectedcuts )
+         goto TERMINATE;
+
+      /* now greedily select the remaining cuts */
+      while( nnonforcedcuts > 0 )
+      {
+         SCIP_ROW* selectedcut;
+
+         selectBestCut(nonforcedcuts, nonforcedscores, nnonforcedcuts);
+         selectedcut = nonforcedcuts[0];
+         ++(*nselectedcuts);
+
+         /* if the maximal number of cuts was selected, we can stop here */
+         if( *nselectedcuts == maxselectedcuts )
+            goto TERMINATE;
+
+         /* move the pointers to the next position and filter the remaining cuts to enforce the maximum parallelism constraint */
+         ++nonforcedcuts;
+         ++nonforcedscores;
+         --nnonforcedcuts;
+
+         nnonforcedcuts = filterWithParallelism(selectedcut, nonforcedcuts, nonforcedscores, nnonforcedcuts, goodscore, goodmaxparall, maxparall);
+      }
+   }
+
+  TERMINATE:
+   SCIPfreeBufferArray(scip, &scores);
+
+   return SCIP_OKAY;
+}
+
 /* =========================================== c-MIR =========================================== */
 
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */

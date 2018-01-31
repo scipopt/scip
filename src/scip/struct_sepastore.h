@@ -38,7 +38,6 @@ extern "C" {
 struct SCIP_SepaStore
 {
    SCIP_ROW**            cuts;               /**< array with separated cuts sorted by score */
-   SCIP_Real*            scores;             /**< score for each separated cut: weighted sum of efficacy and objective parallelism and integral support */
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
    int                   nforcedcuts;        /**< number of forced separated cuts (first positions in cuts array) */
