@@ -7589,7 +7589,7 @@ SCIP_RETCODE generateCut(
    /* check if reference point violates cut at least a little bit */
    if( success && !SCIPisInfinity(scip, -minefficacy) )
    {
-      viol = SCIPgetRowprepViolation(scip, rowprep, sol);
+      viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
       if( viol <= 0.0 ) /*lint !e644*/
       {
          SCIPdebugMsg(scip, "skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), viol, minefficacy);
@@ -16025,17 +16025,28 @@ void SCIPaddRowprepConstant(
    SCIPaddRowprepSide(rowprep, -constant);
 }
 
-/** computes violation of cut in a given solution */
+/** computes violation of cut in a given solution
+ *
+ * Can return whether the violation value is reliable from a float-point accuracy point of view.
+ * The value will not be deemed reliable when its calculation involved the subtraction of large numbers.
+ * To be precise, the violation of an inequality \f$ \sum_i a_ix_i \leq b \f$ in a solution \f$x^*\f$ is deemed
+ * reliable if \f$ |\sum_i a_ix^*_i - b| > 9e-16 \max (|b|, \max_i |a_ix^*_i|) \f$.
+ */
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
-   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
+   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
+   SCIP_Bool*            reliable            /**< buffer to store whether computed violation is reliable (numerically), or NULL if not of interest */
    )
 {
    SCIP_Real activity;
+   SCIP_Real maxterm;
+   SCIP_Real term;
+   SCIP_Real violation;
    int i;
 
    activity = 0.0;
+   maxterm = REALABS(rowprep->side);
    for( i = 0; i < rowprep->nvars; ++i )
    {
       /* Loose variable have the best bound as LP solution value.
@@ -16044,15 +16055,32 @@ SCIP_Real SCIPgetRowprepViolation(
        * So when calculating the row activity for an LP solution, we treat loose variable as if they were already column variables.
        */
       if( sol != NULL || SCIPvarGetStatus(rowprep->vars[i]) != SCIP_VARSTATUS_LOOSE )
-         activity += rowprep->coefs[i] * SCIPgetSolVal(scip, sol, rowprep->vars[i]);
+      {
+         term = rowprep->coefs[i] * SCIPgetSolVal(scip, sol, rowprep->vars[i]);
+         activity += term;
+
+         if( reliable != NULL && REALABS(term) > maxterm )
+            maxterm = REALABS(term);
+      }
    }
 
    if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-      /* cut is activity <= side -> violation is activity - side, if positive */
-      return MAX(activity - rowprep->side, 0.0);
+      /* cut is activity <= side -> violation is activity - side (if positive) */
+      violation = activity - rowprep->side;
    else
-      /* cut is activity >= side -> violation is side - activity, if positive */
-      return MAX(rowprep->side - activity, 0.0);
+      /* cut is activity >= side -> violation is side - activity (if positive) */
+      violation = rowprep->side - activity;
+
+   /* In double precision, the mantissa (or significand) of a floating point number has 52 bit.
+    * Therefore, if the exponent in the violation is 52 (or more) less than the one of maxterm,
+    * then it is essentially random.
+    * Thus, if |violation| is below 2^{-52}*maxterm, it is completely unreliable.
+    * We require here something about 2^{-50} (= 0x1p-50 in C99), which is approx. 9e-16.
+    */
+   if( reliable != NULL )
+      *reliable = REALABS(violation) > 9e-16 * maxterm;
+
+   return MAX(violation, 0.0);
 }
 
 /** Merge terms that use same variable and eliminate zero coefficients.
@@ -16577,7 +16605,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    rowprepCleanupImproveCoefrange(scip, rowprep, sol, maxcoefrange);
 
    /* get current violation in sol */
-   myviol = SCIPgetRowprepViolation(scip, rowprep, sol);
+   myviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
    assert(myviol >= 0.0);
 
 #ifdef SCIP_DEBUG
@@ -16632,11 +16660,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
    /* If we updated myviol correctly, then it should coincide with freshly computed violation.
     * I leave this assert off for now, since getting the tolerance in the EQ correctly is not trivial. We recompute viol below anyway.
     */
-   /* assert(myviol == SCIP_INVALID || SCIPisEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol))); */
+   /* assert(myviol == SCIP_INVALID || SCIPisEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol, NULL))); */
 
    /* compute final violation, if requested by caller */
    if( viol != NULL )  /*lint --e{777} */
-      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol) : myviol;
+      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol, NULL) : myviol;
 
    return SCIP_OKAY;
 }

@@ -824,7 +824,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       SCIP_ROW* row;
       SCIP_Bool infeasible;
 
-      viol = SCIPgetRowprepViolation(scip, rowprep, sol);
+      viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
 
       if( viol <= 0.0 )
          goto CLEANUP;

@@ -761,12 +761,19 @@ void SCIPaddRowprepConstant(
 #define SCIPaddRowprepConstant(rowprep, constant)  SCIPaddRowprepSide(rowprep, -(constant))
 #endif
 
-/** computes violation of cut in a given solution */
+/** computes violation of cut in a given solution
+ *
+ * Can return whether the violation value is reliable from a float-point accuracy point of view.
+ * The value will not be deemed reliable when its calculation involved the subtraction of large numbers.
+ * To be precise, the violation of an inequality \f$ \sum_i a_ix_i \leq b \f$ in a solution \f$x^*\f$ is deemed
+ * reliable if \f$ |\sum_i a_ix^*_i - b| > 9e-16 \max (|b|, \max_i |a_ix^*_i|) \f$.
+ */
 EXTERN
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
-   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
+   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
+   SCIP_Bool*            reliable            /**< buffer to store whether computed violation is reliable (numerically), or NULL if not of interest */
 );
 
 /** Merge terms that use same variable and eliminate zero coefficients.
