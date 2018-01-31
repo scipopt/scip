@@ -15,6 +15,10 @@ if [ "${TESTSET}" == "" ]; then
   TESTSET=short
   echo "No testset provided, defaulting to 'short'."
 fi
+if [ "${OUTPUTDIR}" == "" ]; then
+  OUTPUTDIR=results
+  echo "No setting provided, defaulting to 'default'."
+fi
 if [ "${SETTING}" == "" ]; then
   SETTING=default
   echo "No setting provided, defaulting to 'default'."
@@ -23,6 +27,7 @@ fi
 # exporting some variables to the environment for check/jenkins_failcheck.sh to use
 export TESTSET
 export SETTING
+export OUTPUTDIR
 
 # get some relevant information
 # process optional variables

@@ -211,12 +211,12 @@ while [ $PERM -le $PERMUTE ]; do
   #################
 
   # SCIP check files are check.TESTSET.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
-  BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}"
+  BASEFILE="check/${OUTPUTDIR}/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}"
   EVALFILE=`ls ${BASEFILE}*eval`
   # if no evalfile was found --> check if this is fscip output
   if [ "${EVALFILE}" == "" ]; then
       echo "Ignore previous ls error; looking again for eval file"
-      BASEFILE="check/results/check.${TESTSET}.fscip.*.${SETTING}" # we do not use permutations with fiber scip
+      BASEFILE="check/${OUTPUTDIR}/check.${TESTSET}.fscip.*.${SETTING}" # we do not use permutations with fiber scip
       EVALFILE=`ls ${BASEFILE}*eval`
   fi
 
@@ -224,7 +224,7 @@ while [ $PERM -le $PERMUTE ]; do
   if [ "${EVALFILE}" == "" ]; then
       echo "Couldn't find eval file, sending email"
       SUBJECT="ERROR ${SUBJECTINFO}"
-      echo -e "Aborting because the .eval file cannot be found.\n\nTried:\n${BASEFILE}.eval\ncheck/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}*eval\n\nDirectory: `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+      echo -e "Aborting because the .eval file cannot be found.\n\nTried:\n${BASEFILE}.eval\ncheck/${OUTPUTDIR}/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}*eval\n\nDirectory: `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
       exit 1
   fi
 

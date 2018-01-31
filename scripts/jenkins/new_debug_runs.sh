@@ -29,6 +29,7 @@
 GITBRANCH=master
 
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
+# SPX_DIR=/nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly #TODO
 SPX_DIR=/OPTI/adm_timo/soplex_${GITBRANCH}_Debug
 
 # evaluate commandline arguments
@@ -51,7 +52,7 @@ DAY_OF_WEEK=`date +%u`
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Don't add LPS=xxx and LPSOPT=xxx but instead use VERSION=[scipspxopt|scipspxdbg|scipcpx].
 
-SCIP_FLAGS="COMP=gnu IPOPT=true OPT=opt SYM=bliss USRFLAGS=-Werror ZIMPL=false"
+SCIP_FLAGS="COMP=gnu IPOPT=true OPT=dbg SYM=bliss USRFLAGS=-Werror ZIMPL=false"
 RANDOMSEED=`date +%Y%m%d`
 
 # use associative arrays, this requires bash4
@@ -106,7 +107,7 @@ fi
 declare -A TODAYS_JOBS
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
-  TODAYS_JOBS[$i]=${JOBS[${DAY_OF_WEEK},$i]}
+  TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results$i"
 done
 
 # Print some information about what is happening
@@ -132,6 +133,7 @@ mkdir -p settings
 # symlink spx
 ln -s ${SPX_DIR}/src lib/include/spxinc
 ln -s ${SPX_DIR}/lib/libsoplex.linux.x86_64.gnu.opt.a lib/static/libsoplex.linux.x86_64.gnu.opt.a
+ln -s ${SPX_DIR}/lib/libsoplex.linux.x86_64.gnu.dbg.a lib/static/libsoplex.linux.x86_64.gnu.dbg.a
 
 # symlink cpx
 ln -s /optimi/usr/sw/cplex/include/ilcplex lib/include/cpxinc
@@ -193,5 +195,5 @@ ln -s /optimi/kombadon/MINLP check/
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS="${TODAYS_JOBS[$i]}"
   echo "Submitting job with configuration:\n- compilation: '${SCIPFLAGS}'\n- make testcluster: ${FLAGS}'"
-  make testcluster ${FLAGS} | ${FLAGS} check/jenkins_check_results.sh
+  echo "make testcluster ${FLAGS} | ${FLAGS} check/jenkins_check_results.sh"
 done
