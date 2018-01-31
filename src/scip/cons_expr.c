@@ -7767,8 +7767,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
        * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
        */
       var = SCIPgetConsExprExprAuxVar(expr);
-      if( var != NULL && (SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || SCIPgetStage(scip) == SCIP_STAGE_SOLVING
-         || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) )
+      if( var != NULL && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) )
       {
          SCIP_Bool tightened;
 
