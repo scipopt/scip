@@ -1823,15 +1823,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    if( cut == NULL )
       return SCIP_OKAY;
 
-   /* in a perfect world, the following assert should hold:
-    * assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
-    * however, with floating point roundoff errors, the feasibility computed by a row can be different than the one in a rowprep, so we with the row again
-    * a better fix would be to abandon the rowprep already, see also #2107 */
-   if( -SCIPgetRowSolFeasibility(scip, cut, sol) < minviolation )
-   {
-      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-      return SCIP_OKAY;
-   }
+   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
 
    /* add cut */
    SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
