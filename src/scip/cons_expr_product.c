@@ -1377,15 +1377,6 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       EXPRNODE* tomerge;
       EXPRNODE* first;
 
-      /* if the simplified coefficient is 0, we can return value 0 */
-      if( simplifiedcoef == 0.0 )
-      {
-         SCIP_CALL( freeExprlist(scip, &finalchildren) );
-         SCIP_CALL( freeExprlist(scip, &unsimplifiedchildren) );
-         assert(finalchildren == NULL);
-         break;
-      }
-
       first = listPopFirst(&unsimplifiedchildren);
       assert(first != NULL);
 
@@ -1399,6 +1390,15 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
 
       /* free first */
       SCIP_CALL( freeExprlist(scip, &first) );
+
+      /* if the simplified coefficient is 0, we can return value 0 */
+      if( simplifiedcoef == 0.0 )
+      {
+         SCIP_CALL( freeExprlist(scip, &finalchildren) );
+         SCIP_CALL( freeExprlist(scip, &unsimplifiedchildren) );
+         assert(finalchildren == NULL);
+         break;
+      }
    }
 
    /* build product expression from finalchildren and post-simplify */
