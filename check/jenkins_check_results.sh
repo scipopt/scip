@@ -2,18 +2,27 @@
 
 #
 # Usage:
-# make testcluster | PERMUTE=permutations VERSION=scipbinversion PERF=performance check/jenkins_check_results.sh TESTSET SETTING
+# make testcluster | TESTSET=testset SETTING=setting PERMUTE=permutations VERSION=scipbinversion PERF=performance check/jenkins_check_results.sh
 
 # This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
 # runs ./evalcheck_cluster.sh and greps for fails, among other things
-# To know which results to process with evalcheck_cluster, TESTSET and SETTING must be provided explicitly.
 # optional: VERSION specifies the scip binary which should be used, PERF=performance enables rubberband support in jenkins_failcheck.sh.
 # The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 
 # set up environment for jenkins_failcheck.sh
-export TESTSET=$1
-export SETTING=$2
+if [ "${TESTSET}" == "" ]; then
+  TESTSET=short
+  echo "No testset provided, defaulting to 'short'."
+fi
+if [ "${SETTING}" == "" ]; then
+  SETTING=default
+  echo "No setting provided, defaulting to 'default'."
+fi
+
+# exporting some variables to the environment for check/jenkins_failcheck.sh to use
+export TESTSET
+export SETTING
 
 # get some relevant information
 # process optional variables
@@ -45,8 +54,12 @@ then
     export GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2 | `
 fi
 
-export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
-export LPS=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
+if [ "${OPT}" == "" ]; then
+  export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
+fi
+if [ "${LPS}" == "" ]; then
+  export LPS=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
+fi
 
 # read from stdin
 CANCEL_FILE=${TESTSET}_${SETTING}_${LPS}_cancel.txt
