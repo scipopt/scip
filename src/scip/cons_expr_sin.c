@@ -33,8 +33,6 @@
 #define EXPRHDLR_PRECEDENCE   91000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(82457.0)
 
-#define MAXCHILDABSVAL        1e+6                       /**< maximum absolute value that is accepted for propagation */
-
 /*
  * Data structures
  */
@@ -466,13 +464,6 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
 {
    SCIP_Real newinf = childbounds.inf;
    SCIP_Real newsup = childbounds.sup;
-
-   /* if the absolute values of the bounds are too large, skip reverse propagation */
-   if( ABS(newinf) > MAXCHILDABSVAL || ABS(newsup) > MAXCHILDABSVAL )
-   {
-      SCIPintervalSetEmpty(newbounds);
-      return SCIP_OKAY;
-   }
 
    if( !SCIPisInfinity(scip, -newinf) )
    {
