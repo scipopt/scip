@@ -1,20 +1,20 @@
 #! /bin/bash -x
 
 # Usage:
-# make testcluster | TESTSET=testset SETTING=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERF=performance check/jenkins_check_results.sh
+# make testcluster | TESTSET=testset SETTING=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERF=performance check/jenkins_check_results_cmake.sh
 # or export the above mentioned variables and simply run
-# make testcluster | check/jenkins_check_results.sh
+# make testcluster | check/jenkins_check_results_cmake.sh
 
 # This script is supposed to be used when you compiled your scip with cmake.
-# This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck.sh
+# This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck_cmake.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
 # runs ./evalcheck_cluster.sh and greps for fails, among other things
-# optional: EXECUTABLE specifies the scip binary which should be used, PERF=performance enables rubberband support in jenkins_failcheck.sh.
+# optional: EXECUTABLE specifies the scip binary which should be used, PERF=performance enables rubberband support in jenkins_failcheck_cmake.sh.
 # The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 
 echo "This is jenkins_check_results_cmake.sh running."
 
-# set up environment for jenkins_failcheck.sh
+# set up environment for jenkins_failcheck_cmake.sh
 if [ "${TESTSET}" == "" ]; then
   TESTSET=short
   echo "No testset provided, defaulting to '${TESTSET}'."
@@ -33,7 +33,7 @@ if [ "${EXECUTABLE}" == "" ]; then
 fi
 echo "Using executable '${EXECUTABLE}'."
 
-# exporting the variables to the environment for check/jenkins_failcheck.sh to use
+# exporting the variables to the environment for check/jenkins_failcheck_cmake.sh to use
 export TESTSET
 export OUTPUTDIR
 export SETTING
