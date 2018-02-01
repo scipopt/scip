@@ -177,17 +177,17 @@ SCIP_BINARY=${BUILD_DIR}/bin/scip
 
 # NOTES:
 #  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
-
-# MIP settings
-${SCIP_BINARY} -c "set rand rand ${RANDOMSEED} set diffsave settings/Default_${RANDOMSEED}.set q"
-${SCIP_BINARY} -c "set heur emph aggr set rand rand ${RANDOMSEED} set diffsave settings/heuraggr_${RANDOMSEED}.set q"
-${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set rand rand ${RANDOMSEED} set diffsave settings/presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
-
-# MINLP settings
-${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
-${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_Default_${RANDOMSEED}.set q"
-${SCIP_BINARY} -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_heuraggr_${RANDOMSEED}.set q"
-${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
+# TODO
+# # MIP settings
+# ${SCIP_BINARY} -c "set rand rand ${RANDOMSEED} set diffsave settings/Default_${RANDOMSEED}.set q"
+# ${SCIP_BINARY} -c "set heur emph aggr set rand rand ${RANDOMSEED} set diffsave settings/heuraggr_${RANDOMSEED}.set q"
+# ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set rand rand ${RANDOMSEED} set diffsave settings/presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
+#
+# # MINLP settings
+# ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
+# ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_Default_${RANDOMSEED}.set q"
+# ${SCIP_BINARY} -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_heuraggr_${RANDOMSEED}.set q"
+# ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
 
 # create more required symlinks
 ln -fs /optimi/kombadon/IP check/
@@ -201,6 +201,6 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
   export ${FLAGS}
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
-  make testcluster ${FLAGS} | check/jenkins_check_results.sh
+  make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
 
