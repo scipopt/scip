@@ -945,7 +945,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
    for( i = 0; i < 2; ++i )
    {
       SCIP_ROWPREP* rowprep;
-      SCIP_Real coefrange;
+      SCIP_Bool success;
 
       if( (i == 0 && !overestimate) || (i == 1 && !underestimate) )
          continue;
@@ -955,10 +955,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
       assert(rowprep != NULL);
 
       /* clean-up rowprep */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
 
       /* try to create a SCIP_ROW and add it to the initial LP */
-      if( coefrange <= SCIP_CONSEXPR_CUTMAXRANGE )
+      if( success )
       {
          SCIP_ROW* row;
 
@@ -991,8 +991,8 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 {  /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
-   SCIP_Real coefrange;
    SCIP_Real viol;
+   SCIP_Bool success;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1001,10 +1001,11 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    assert(rowprep != NULL);
 
    /* clean-up rowprep */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &viol,
+      &success) );
 
    /* try to create a SCIP_ROW and add it to the initial LP */
-   if( coefrange <= SCIP_CONSEXPR_CUTMAXRANGE && viol >= minviolation )
+   if( success && viol >= minviolation )
    {
       SCIP_ROW* row;
       SCIP_Bool infeasible;
