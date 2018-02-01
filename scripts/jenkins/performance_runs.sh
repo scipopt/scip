@@ -61,6 +61,7 @@ DAY_OF_WEEK=`date +%u`
 #  - For all jobs the calls to 'make' and 'make testcluster' the flags are concatenated from
 #      the given flags and the SCIP_FLAGS.
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
+#  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 # FORMAT:
 #    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx MEM=100 QUEUE=opt TESTSET=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
 
@@ -72,7 +73,7 @@ declare -A JOBS
 
 # jobs running on saturday
 JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TESTSET=mipdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance"
-JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TESTSET=minlpdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance PERMUTE=4"
+JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TESTSET=minlpdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance PERMUTE=4"
 
 
 #########################

@@ -63,6 +63,7 @@ DAY_OF_WEEK=`date +%u`
 #      the given flags and the SCIP_FLAGS.
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Don't add LPS=xxx and LPSOPT=xxx but instead use EXECUTABLE=[scipdbgspx|scipdbgcpx].
+#  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 # FORMAT:
 #    JOBS[x,y]="EXECUTABLE=scipdbgspx MEM=100 QUEUE=opt TESTSET=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
 
