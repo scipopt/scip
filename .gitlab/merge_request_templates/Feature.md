@@ -14,3 +14,4 @@
 **:warning: If this merge introduces an API change:**
 * [ ] Look for a satisfactory solution that ensures backwards compatibility.
 * [ ] Increase SCIP_APIVERSION after the merge.
+* [ ] Interface changes must be documented in doc/xternal.c and the CHANGELOG.
