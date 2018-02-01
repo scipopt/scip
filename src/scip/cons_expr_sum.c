@@ -1009,7 +1009,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    assert(rowprep != NULL);
 
    /* clean-up rowprep */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
 
    /* try to create a SCIP_ROW and add it to the initial LP */
    if( coefrange <= SCIP_CONSEXPR_CUTMAXRANGE && viol >= minviolation )
