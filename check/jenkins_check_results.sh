@@ -85,7 +85,7 @@ do
     stringarray=($line)
     slurmjobids[$i]=${stringarray[-1]}
     ((i++))
-    echo "${stringarray[-1]}" >> $CANCEL_FILE
+    echo "${stringarray[-1]}" >> "${CANCEL_FILE}"
   fi
 done < /dev/stdin
 
@@ -93,9 +93,11 @@ echo "To cancel the jobs run"
 echo 'for jobid in `cat '$CANCEL_FILE'`; do scancel $jobid; done'
 echo "This is an experimental feature, use with caution. In particular, make sure no two jobs have the same TESTSET, SETTING and LPS combination!"
 
+env
+
 # build job ids string for sbatch dependency
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute checker after all jobs completed
-sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=100 --partition=mip-dbg --account=mip check/jenkins_failcheck.sh
+#sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=100 --partition=mip-dbg --account=mip check/jenkins_failcheck.sh
