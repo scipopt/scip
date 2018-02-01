@@ -36,7 +36,7 @@ if [ "${GITBRANCH}" == "" ]; then
 fi
 
 if [ "${GITBRANCH}" != "master" ]; then
-  if [[ ${GITBRANCH} =~ "bugfix" ]]; then
+  if ! [[ ${GITBRANCH} =~ "bugfix" ]]; then
     echo "Branch is neither 'master' nor 'bugfix'. Something is wrong. Exiting."
     exit 1
   fi
