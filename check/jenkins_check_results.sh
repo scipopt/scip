@@ -1,8 +1,12 @@
-#! /bin/bash
+#! /bin/bash -x
 
-#
 # Usage:
+# make testcluster | TESTSET=testset SETTING=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERF=performance check/jenkins_check_results.sh
 # make testcluster | TESTSET=testset SETTING=setting PERMUTE=permutations VERSION=scipbinversion PERF=performance check/jenkins_check_results.sh
+# or export the above mentioned variables and simply run
+# make testcluster | check/jenkins_check_results.sh
+# NOTE:
+# Provide either a VERSION or an EXECUTABLE (EXECUTABLE will be used over VERSION)
 
 # This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
@@ -13,35 +17,48 @@
 # set up environment for jenkins_failcheck.sh
 if [ "${TESTSET}" == "" ]; then
   TESTSET=short
-  echo "No testset provided, defaulting to 'short'."
+  echo "No testset provided, defaulting to '${TESTSET}'."
 fi
 if [ "${OUTPUTDIR}" == "" ]; then
   OUTPUTDIR=results
-  echo "No setting provided, defaulting to 'default'."
+  echo "No no outputdir provided, defaulting to '${OUTPUTDIR}'."
 fi
 if [ "${SETTING}" == "" ]; then
   SETTING=default
-  echo "No setting provided, defaulting to 'default'."
+  echo "No setting provided, defaulting to '${SETTING}'."
 fi
+if [ "${EXECUTABLE}" == "" ]; then
+  if [ "${VERSION}" == "" ]; then
+    EXECUTABLE=bin/scip
+    echo "Neither version nor executable provided, defaulting to '${EXECUTABLE}'."
+  else
+    EXECUTABLE=`ls bin/scip-${VERSION}*|head -n 1`
+  fi
+fi
+echo "Using executable '${EXECUTABLE}'."
 
-# exporting some variables to the environment for check/jenkins_failcheck.sh to use
+# exporting the variables to the environment for check/jenkins_failcheck.sh to use
 export TESTSET
-export SETTING
 export OUTPUTDIR
+export SETTING
+export EXECUTABLE
 
 # get some relevant information
 # process optional variables
 if [ "${PERF}" != "" ]; then
   export PERFORMANCE=${PERF}
 fi
-if [ "${VERSION}" == "" ]; then
-  # when version not given explicitly, recover it from executable
-  SCIPVERSIONOUTPUT=`bin/scip -v | sed -e 's/$/@/'`
-  export SCIPVERSION=scip-`echo $SCIPVERSIONOUTPUT | sed -e 's/.* VERSION=\([^@]*\).*/\1/'`
-else
-  export SCIPVERSION="scip-${VERSION}"
-  SCIPVERSIONOUTPUT=`bin/${SCIPVERSION}* -v | sed -e 's/$/@/'`
+
+export SCIPVERSIONOUTPUT=`${EXECUTABLE} -v | sed -e 's/$/@/'`
+export SCIPVERSION=scip-`echo ${SCIPVERSIONOUTPUT} | sed -e 's/.* VERSION=\([^@]*\).*/\1/'`
+if [ "${OPT}" == "" ]; then
+  OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
 fi
+if [ "${LPS}" == "" ]; then
+  LPS=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
+fi
+export OPT
+export LPS
 
 # if PERMUTE is not a number, set it to 0
 re='^[0-9]+$'
@@ -49,7 +66,6 @@ if ! [[ $PERMUTE =~ $re ]] ; then
   PERMUTE="0"
 fi
 export PERMUTE
-
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 
 # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
@@ -57,13 +73,6 @@ export GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
 if [ "${GITBRANCH}" = "" ];
 then
     export GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2 | `
-fi
-
-if [ "${OPT}" == "" ]; then
-  export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
-fi
-if [ "${LPS}" == "" ]; then
-  export LPS=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
 fi
 
 # read from stdin
