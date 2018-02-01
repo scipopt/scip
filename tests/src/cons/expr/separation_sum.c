@@ -27,6 +27,7 @@ Test(separation, sum, .init = setup, .fini = teardown,
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
+   SCIP_ROWPREP* rowprep;
    SCIP_ROW* cut;
    int i;
 
@@ -39,14 +40,18 @@ Test(separation, sum, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
-   /* compute cut */
-   cut = NULL;
-   SCIP_CALL( separatePointSum(scip, conshdlr, expr, TRUE, TRUE, &cut) );
+   /* compute rowprep */
+   rowprep = NULL;
+   SCIP_CALL( separatePointSum(scip, conshdlr, expr, TRUE, &rowprep) );
+   cr_assert(rowprep != NULL);
 
-   assert(cut != NULL);
+   /* compute cut */
+   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, conshdlr) );
+   cr_assert(cut != NULL);
+
    cr_assert_eq(SCIProwGetNNonz(cut), 3);
    cr_assert_eq(SCIProwGetLhs(cut), -1.5);
-   cr_assert_eq(SCIProwGetRhs(cut), -1.5);
+   cr_assert_eq(SCIProwGetRhs(cut), SCIPinfinity(scip));
 
    for( i = 0; i < SCIProwGetNNonz(cut); ++i )
    {
@@ -67,5 +72,6 @@ Test(separation, sum, .init = setup, .fini = teardown,
    }
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   SCIPfreeRowprep(scip, &rowprep);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
