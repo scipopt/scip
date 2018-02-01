@@ -61,12 +61,12 @@ for testset in mipdev-solvable; do
     done
 done
 
-cp ~/sap-400-pure.set settings/.
-for testset in sapdev-solvable; do
-    for setting in sap-400-pure; do
-        make testcluster $SCIP_FLAGS TEST=$testset SETTINGS=$setting EXCLUSIVE=true TIME=7200 MEM=35000 QUEUE=M630v2 | PERF=performance check/jenkins_check_results.sh $testset $setting
-    done
-done
+# cp ~/sap-400-pure.set settings/.
+# for testset in sapdev-solvable; do
+#     for setting in sap-400-pure; do
+#         make testcluster $SCIP_FLAGS TEST=$testset SETTINGS=$setting EXCLUSIVE=true TIME=7200 MEM=35000 QUEUE=M630v2 | PERF=performance check/jenkins_check_results.sh $testset $setting
+#     done
+# done
 
 echo "limits/gap = 0.0001" > settings/minlp.set
 echo "numerics/checkfeastolfac = 10.0" >> settings/minlp.set
