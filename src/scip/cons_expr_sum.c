@@ -935,13 +935,9 @@ SCIP_RETCODE separatePointSum(
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
    int i;
 
    assert(overestimate || underestimate);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
 
    *infeasible = FALSE;
 
@@ -994,13 +990,9 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_ROWPREP* rowprep;
    SCIP_Real coefrange;
    SCIP_Real viol;
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1026,7 +1018,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "add cut with violation %e\n", violation);
-      SCIP_CALL( SCIPprintRow(scip, exprdata->row, NULL) );
+      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
    }
 
