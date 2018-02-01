@@ -6,6 +6,8 @@
 # Note: TESTSET, GITHASH, etc are read from the environment, see
 # jenkins_check_results.sh
 
+echo "This is jenkins_failcheck.sh running."
+
 sleep 5
 
 #################################

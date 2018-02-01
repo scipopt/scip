@@ -8,6 +8,8 @@
 
 sleep 5
 
+echo "This is jenkins_failcheck_cmake.sh running."
+
 #################################
 # AWK scripts for later         #
 #################################

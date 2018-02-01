@@ -12,6 +12,8 @@
 # optional: VERSION specifies the scip binary which should be used, PERF=performance enables rubberband support in jenkins_failcheck.sh.
 # The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 
+echo "This is jenkins_check_results.sh running."
+
 # set up environment for jenkins_failcheck.sh
 export TESTSET=$1
 export SETTING=$2

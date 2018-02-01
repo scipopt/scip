@@ -14,12 +14,14 @@
 # TODO
 
 # Usage: from scip root execute
-#        ./script.sh GITBRANCH=master
+#        ./debug_runs.sh GITBRANCH=master
 
 # Arguments | defaultvalue                             | possibilities
 # ----------|------------------------------------------|--------------
 # GITBRANCH | master                                   | master, bugfix
 # SPX_DIR   | /OPTI/adm_timo/soplex_${GITBRANCH}_Debug | *
+
+echo "This is debug_runs.sh running."
 
 ######################################
 ### evaluate commandline arguments ###
