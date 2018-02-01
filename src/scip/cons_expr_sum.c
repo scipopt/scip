@@ -978,10 +978,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 static
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
 
    return SCIP_OKAY;
 }
