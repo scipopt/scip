@@ -766,7 +766,7 @@ void SCIPaddRowprepConstant(
  * Can return whether the violation value is reliable from a float-point accuracy point of view.
  * The value will not be deemed reliable when its calculation involved the subtraction of large numbers.
  * To be precise, the violation of an inequality \f$ \sum_i a_ix_i \leq b \f$ in a solution \f$x^*\f$ is deemed
- * reliable if \f$ |\sum_i a_ix^*_i - b| > 9e-16 \max (|b|, \max_i |a_ix^*_i|) \f$.
+ * reliable if \f$ |\sum_i a_ix^*_i - b| >= 2^-50 \max (|b|, \max_i |a_ix^*_i|) \f$.
  */
 EXTERN
 SCIP_Real SCIPgetRowprepViolation(
