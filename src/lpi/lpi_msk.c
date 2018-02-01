@@ -1248,8 +1248,8 @@ SCIP_RETCODE SCIPlpiClear(
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
 
-   SCIP_CALL( SCIPlpiDelRows(lpi, 0, nrows) );
-   SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols) );
+   SCIP_CALL( SCIPlpiDelRows(lpi, 0, nrows - 1) );
+   SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols - 1) );
 
    return SCIP_OKAY;
 }
