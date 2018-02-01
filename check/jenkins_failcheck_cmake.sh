@@ -171,7 +171,7 @@ EOF
 SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1`
 
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
-RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${BRANCH}_${TESTSET}_${SETTING}_${SCIP_BUILDDIR}_rbdb.txt"
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${TESTSET}_${SETTING}_${SCIP_BUILDDIR}_rbdb.txt"
 touch $RBDB
 OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
 NEWTIMESTAMP=`date '+%F-%H-%M'`
@@ -188,7 +188,7 @@ while [ $PERM -le $PERMUTE ]; do
   # we use a name that is unique per test sent to the cluster (a jenkins job
   # can have several tests sent to the cluster, that is why the jenkins job
   # name (i.e, the directory name) is not enough)
-  DATABASE="/nfs/OPTI/adm_timo/databases/${BRANCH}_${TESTSET}_${SETTING}_${SCIP_BUILDDIR}${PERM_ENDING}txt"
+  DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${TESTSET}_${SETTING}_${SCIP_BUILDDIR}${PERM_ENDING}txt"
   TMPDATABASE="$DATABASE.tmp"
   STILLFAILING="${DATABASE}_SF.tmp"
   OUTPUT="${DATABASE}_output.tmp"

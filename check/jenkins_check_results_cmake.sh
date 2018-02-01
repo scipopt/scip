@@ -38,6 +38,7 @@ export TESTSET
 export OUTPUTDIR
 export SETTING
 export EXECUTABLE
+export GITBRANCH
 
 # get some relevant information
 # process optional variables

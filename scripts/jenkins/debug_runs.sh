@@ -212,11 +212,10 @@ ln -fs /optimi/kombadon/MINLP check/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  export ${FLAGS}
   for j in "EXECUTABLE MEM QUEUE TESTSET TIME PERMUTE PERFORMANCE"; do
     unset $j
   done
-  echo "${EXECUTABLE} ${MEM} ${QUEUE} ${TESTSET} ${TIME} ${PERMUTE} ${PERFORMANCE}"
+  export ${FLAGS}
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
