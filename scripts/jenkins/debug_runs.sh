@@ -32,7 +32,7 @@ if [ "${GITBRANCH}" == "" ]; then
   # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
   GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
   if [ "${GITBRANCH}" == "" ]; then
-      GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2 | `
+      GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2`
   fi
 fi
 
@@ -213,6 +213,10 @@ ln -fs /optimi/kombadon/MINLP check/
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
   export ${FLAGS}
+  for j in "EXECUTABLE MEM QUEUE TESTSET TIME PERMUTE PERFORMANCE"; do
+    unset $j
+  done
+  echo "${EXECUTABLE} ${MEM} ${QUEUE} ${TESTSET} ${TIME} ${PERMUTE} ${PERFORMANCE}"
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
