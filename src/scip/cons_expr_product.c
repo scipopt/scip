@@ -1109,8 +1109,6 @@ SCIP_RETCODE separatePointProduct(
    SCIP_VAR* auxvar;
    SCIP_VAR* var;
    SCIP_Bool success;
-   SCIP_Real viol;
-   SCIP_Real coefrange;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -1203,9 +1201,9 @@ SCIP_RETCODE separatePointProduct(
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, y, lincoefy) );
 
       /* take care of cut numerics */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
 
-      if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
+      if( success )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "mccormick");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
@@ -1317,9 +1315,9 @@ SCIP_RETCODE separatePointProduct(
       SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nvars, vars, facet) );
 
       /* take care of cut numerics */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
 
-      if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
+      if( success )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "multilinear");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
@@ -1825,15 +1823,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    if( cut == NULL )
       return SCIP_OKAY;
 
-   /* in a perfect world, the following assert should hold:
-    * assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
-    * however, with floating point roundoff errors, the feasibility computed by a row can be different than the one in a rowprep, so we with the row again
-    * a better fix would be to abandon the rowprep already, see also #2107 */
-   if( -SCIPgetRowSolFeasibility(scip, cut, sol) < minviolation )
-   {
-      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-      return SCIP_OKAY;
-   }
+   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
 
    /* add cut */
    SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );

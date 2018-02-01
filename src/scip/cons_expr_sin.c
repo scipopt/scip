@@ -972,7 +972,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 {  /*lint --e{715}*/
    SCIP_Real childlb;
    SCIP_Real childub;
-   SCIP_Real coefrange;
+   SCIP_Bool success;
 
    SCIP_ROWPREP* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
    int i;
@@ -992,9 +992,9 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
          /* only the cuts which could be created are added */
          if( !*infeasible && cuts[i] != NULL )
          {
-            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
+            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
 
-            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
+            if( success && cuts[i]->nvars == 2 )
             {
                /* make a SCIP_ROW and add to LP */
                SCIP_ROW* row;
@@ -1020,9 +1020,9 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
          /* only the cuts which could be created are added */
          if( !*infeasible && cuts[i] != NULL )
          {
-            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
+            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
 
-            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
+            if( success && cuts[i]->nvars == 2 )
             {
                /* make a SCIP_ROW and add to LP */
                SCIP_ROW* row;
@@ -1051,8 +1051,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Bool infeasible;
-   SCIP_Real viol;
-   SCIP_Real coefrange;
+   SCIP_Bool success;
    int i;
 
    /* get expression data */
@@ -1084,9 +1083,9 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
       if( cuts[i] == NULL )
          continue;
 
-      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
 
-      if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE && cuts[i]->nvars == 2 )
+      if( success )
       {
          /* make a SCIP_ROW and add to LP */
          SCIP_ROW* row;
