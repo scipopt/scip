@@ -53,13 +53,6 @@ fi
 export PERMUTE
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 
-# GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
-export GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
-if [ "${GITBRANCH}" = "" ];
-then
-    export GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2 | `
-fi
-
 # read from stdin
 # OUTPUTDIR identifies a testrun uniquely
 CANCEL_FILE=${OUTPUTDIR}_cancel.txt

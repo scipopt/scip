@@ -10,8 +10,7 @@
 ###################
 
 # This script is used by cijenkins.zib.de.
-# Depending on the day of the week this script will start different testruns on the cluster
-# TODO
+# Depending on the day of the week this script will start different testruns on the cluster.
 
 # Usage: from scip root execute
 #        ./debug_runs.sh GITBRANCH=master
@@ -28,7 +27,22 @@ echo "This is debug_runs.sh running."
 ######################################
 
 # set default arguments
-GITBRANCH=master
+# If no branch is given, try to guess the branch based on the current directory
+if [ "${GITBRANCH}" == "" ]; then
+  # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
+  GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
+  then
+  if [ "${GITBRANCH}" == "" ]; then
+      GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2 | `
+  fi
+fi
+
+if [ "${GITBRANCH}" != "master" ]; then
+  if [[ ${GITBRANCH} =~ "bugfix" ]]; then
+    echo "Branch is neither 'master' nor 'bugfix'. Something is wrong. exiting."
+    exit 1
+  fi
+fi
 
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
 SOPLEX_DIR=/OPTI/adm_timo/soplex_${GITBRANCH}_Debug/
@@ -56,7 +70,9 @@ DAY_OF_WEEK=`date +%u`
 #  - For all jobs the calls to 'make' and 'make testcluster' the flags are concatenated from
 #      the given flags and the SCIP_FLAGS.
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
-#  - Don't add LPS=xxx and LPSOPT=xxx but instead use VERSION=[scipspxopt|scipspx|scipcpx].
+#  - Don't add LPS=xxx and LPSOPT=xxx but instead use EXECUTABLE=[scipspx|scipcpx].
+# FORMAT:
+#    JOBS[x,y]="EXECUTABLE=scipspx MEM=100 QUEUE=opt TESTSET=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
 
 RANDOMSEED=`date +%Y%m%d`
 
@@ -90,12 +106,8 @@ declare -A JOBS
 # # jobs running on sunday
 # JOBS[7,1]="EXECUTABLE=scipspx MEM=6000 QUEUE=opt TESTSET=minlpdev-solvable TIME=7200 SETTING=default"
 
-# TESTING #TODO
-JOBS[1,1]="EXECUTABLE=scipspx MEM=100 QUEUE=opt TESTSET=short TIME=10 SETTING=default"
-JOBS[2,1]="EXECUTABLE=scipspx MEM=100 QUEUE=opt TESTSET=short TIME=10 SETTING=default"
-JOBS[3,1]="EXECUTABLE=scipspx MEM=100 QUEUE=opt TESTSET=short TIME=10 SETTING=default"
-JOBS[4,1]="EXECUTABLE=scipspx MEM=100 QUEUE=opt TESTSET=short TIME=10 SETTING=default"
-JOBS[5,1]="EXECUTABLE=scipspx MEM=100 QUEUE=opt TESTSET=short TIME=10 SETTING=default"
+JOBS[4,1]="EXECUTABLE=scipspx MEM=100 QUEUE=opt TESTSET=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
+JOBS[4,2]="EXECUTABLE=scipcpx MEM=100 QUEUE=opt TESTSET=short TIME=10"
 
 #########################
 ### process variables ###
@@ -179,17 +191,17 @@ SCIP_BINARY=${BUILD_DIR}/bin/scip
 
 # NOTES:
 #  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
-# TODO
-# # MIP settings
-# ${SCIP_BINARY} -c "set rand rand ${RANDOMSEED} set diffsave settings/Default_${RANDOMSEED}.set q"
-# ${SCIP_BINARY} -c "set heur emph aggr set rand rand ${RANDOMSEED} set diffsave settings/heuraggr_${RANDOMSEED}.set q"
-# ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set rand rand ${RANDOMSEED} set diffsave settings/presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
-#
-# # MINLP settings
-# ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
-# ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_Default_${RANDOMSEED}.set q"
-# ${SCIP_BINARY} -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_heuraggr_${RANDOMSEED}.set q"
-# ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
+
+# MIP settings
+${SCIP_BINARY} -c "set rand rand ${RANDOMSEED} set diffsave settings/Default_${RANDOMSEED}.set q"
+${SCIP_BINARY} -c "set heur emph aggr set rand rand ${RANDOMSEED} set diffsave settings/heuraggr_${RANDOMSEED}.set q"
+${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set rand rand ${RANDOMSEED} set diffsave settings/presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
+
+# MINLP settings
+${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
+${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_Default_${RANDOMSEED}.set q"
+${SCIP_BINARY} -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_heuraggr_${RANDOMSEED}.set q"
+${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
 
 # create more required symlinks
 ln -fs /optimi/kombadon/IP check/
