@@ -74,7 +74,9 @@ declare -A JOBS
 # jobs running on saturday
 JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TESTSET=mipdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance"
 JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TESTSET=minlpdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance PERMUTE=4"
-JOBS[6,3]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TESTSET=sapdev-solvable TIME=3600 SETTING=sap-500-pure PERFORMANCE=performance"
+
+# jobs running on sunday
+JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TESTSET=sapdev-solvable TIME=3600 SETTING=sap-500-pure PERFORMANCE=performance"
 
 # copy sap-500-pure settings
 cp ~/sap-500-pure.set settings/.
