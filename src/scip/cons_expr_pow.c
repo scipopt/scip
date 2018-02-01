@@ -92,8 +92,6 @@ SCIP_RETCODE separatePointPow(
    SCIP_Real linconstant;
    SCIP_Bool islocal;
    SCIP_Bool success;
-   SCIP_Real viol;
-   SCIP_Real coefrange;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -164,9 +162,9 @@ SCIP_RETCODE separatePointPow(
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, lincoef) );
 
    /* take care of cut numerics */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &coefrange, &viol) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
 
-   if( viol >= minviolation && coefrange < SCIP_CONSEXPR_CUTMAXRANGE )
+   if( success )
    {
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, islocal ? "square_secant" : "square_linearization");  /* @todo make cutname unique, e.g., add LP number */
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );

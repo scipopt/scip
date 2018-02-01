@@ -761,12 +761,19 @@ void SCIPaddRowprepConstant(
 #define SCIPaddRowprepConstant(rowprep, constant)  SCIPaddRowprepSide(rowprep, -(constant))
 #endif
 
-/** computes violation of cut in a given solution */
+/** computes violation of cut in a given solution
+ *
+ * Can return whether the violation value is reliable from a float-point accuracy point of view.
+ * The value will not be deemed reliable when its calculation involved the subtraction of large numbers.
+ * To be precise, the violation of an inequality \f$ \sum_i a_ix_i \leq b \f$ in a solution \f$x^*\f$ is deemed
+ * reliable if \f$ |\sum_i a_ix^*_i - b| >= 2^-50 \max (|b|, \max_i |a_ix^*_i|) \f$.
+ */
 EXTERN
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
-   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
+   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
+   SCIP_Bool*            reliable            /**< buffer to store whether computed violation is reliable (numerically), or NULL if not of interest */
 );
 
 /** Merge terms that use same variable and eliminate zero coefficients.
@@ -790,6 +797,14 @@ void SCIPmergeRowprepTerms(
  * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
+ * Thus, the coef.range can be obtained via REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]) (if nvars>0).
+ *
+ * success is set to TRUE if and only if the rowprep satisfies the following:
+ * - the coef.range is below maxcoefrange
+ * - the violation is at least minviol
+ * - the violation is reliable or minviol == 0
+ * - the absolute value of coefficients are below SCIPs value of infinity
+ * - the absolute value of the side is below SCIPs value of infinity
  */
 EXTERN
 SCIP_RETCODE SCIPcleanupRowprep(
@@ -798,8 +813,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
    SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
-   SCIP_Real*            coefrange,          /**< buffer to store coefrange of cleaned up cut, or NULL if not of interest */
-   SCIP_Real*            viol                /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
+   SCIP_Real*            viol,               /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
+   SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
 );
 
 /** scales a rowprep

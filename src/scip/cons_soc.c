@@ -1100,7 +1100,7 @@ SCIP_RETCODE generateSparseCut(
 
       if( *rowprep != NULL )
       {
-         efficacy = SCIPgetRowprepViolation(scip, *rowprep, sol);
+         efficacy = SCIPgetRowprepViolation(scip, *rowprep, sol, NULL);
          if( SCIPisGT(scip, efficacy, goodefficacy) ||
             (maxnz >= consdata->nvars && SCIPisGT(scip, efficacy, minefficacy)) )
          {
@@ -1180,7 +1180,7 @@ SCIP_RETCODE separatePoint(
 
       if( SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) && !SCIPisInfinity(scip, consdata->violation) )
       {
-         SCIP_Real efficacy;
+         SCIP_Bool cleanupsuccess;
 
          rowprep = NULL;
 
@@ -1206,9 +1206,9 @@ SCIP_RETCODE separatePoint(
           * (as there can exist for soc cons), then SCIPmergeRowprep would be necessary.
           */
          /* cleanup rowprep (there is no limit on coefrange for cons_soc) TODO add a coefrange limit? */
-         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIPinfinity(scip), minefficacy, NULL, &efficacy) );
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIPinfinity(scip), minefficacy, NULL, &cleanupsuccess) );
 
-         if( SCIPisLE(scip, efficacy, minefficacy) )
+         if( !cleanupsuccess )
          {
             SCIPfreeRowprep(scip, &rowprep);
             continue;
@@ -1306,7 +1306,7 @@ SCIP_RETCODE addLinearizationCuts(
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
-         if( SCIPgetRowprepViolation(scip, rowprep, NULL) >= minefficacy )
+         if( SCIPgetRowprepViolation(scip, rowprep, NULL, NULL) >= minefficacy )
          {
             SCIP_ROW* row;
 

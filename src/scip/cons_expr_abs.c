@@ -323,7 +323,7 @@ SCIP_RETCODE computeCutsAbs(
             /* z = abs(x), x still has mixed sign */
             SCIP_Real alpha;
             SCIP_ROWPREP* rowprep;
-            SCIP_Real coefrange;
+            SCIP_Bool success;
 
             /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
              *
@@ -338,10 +338,10 @@ SCIP_RETCODE computeCutsAbs(
             SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 2, vars, coefs) );
 
             /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
-            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, &coefrange, NULL) );
+            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
 
-            /* if coefrange is good and no variable has been removed, then create SCIP_ROW */
-            if( coefrange < SCIP_CONSEXPR_CUTMAXRANGE && rowprep->nvars == 2 )
+            /* if rowprep is good, then create SCIP_ROW */
+            if( success )
             {
                memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
                SCIP_CALL( SCIPgetRowprepRowCons(scip, secant, rowprep, conshdlr) );
