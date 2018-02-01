@@ -5,6 +5,7 @@
 # or export the above mentioned variables and simply run
 # make testcluster | check/jenkins_check_results.sh
 
+# This script is supposed to be used when you compiled your scip with cmake.
 # This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
 # runs ./evalcheck_cluster.sh and greps for fails, among other things
@@ -58,7 +59,7 @@ then
 fi
 
 # read from stdin
-# OUTPUDIR identifies a testrun uniquely
+# OUTPUTDIR identifies a testrun uniquely
 CANCEL_FILE=${OUTPUTDIR}_cancel.txt
 i=0
 while read line
@@ -83,4 +84,4 @@ jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute checker after all jobs completed
-#sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=100 --partition=mip-dbg --account=mip check/jenkins_failcheck_cmake.sh
+sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=100 --partition=mip-dbg --account=mip check/jenkins_failcheck_cmake.sh

@@ -1,9 +1,10 @@
-#! /bin/bash
+#! /bin/bash -x
 
 #
 # Usage:
 # make testcluster | PERMUTE=permutations VERSION=scipbinversion PERF=performance check/jenkins_check_results.sh TESTSET SETTING
 
+# This script is supposed to be used when you compiled your scip with make.
 # This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
 # runs ./evalcheck_cluster.sh and greps for fails, among other things
@@ -58,7 +59,7 @@ do
     stringarray=($line)
     slurmjobids[$i]=${stringarray[-1]}
     ((i++))
-    echo "${stringarray[-1]}" >> $CANCEL_FILE
+    echo "${stringarray[-1]}" >> "${CANCEL_FILE}"
   fi
 done < /dev/stdin
 
