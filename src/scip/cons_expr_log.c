@@ -259,6 +259,8 @@ SCIP_RETCODE separatePointLog(
    SCIP_Real refpoint;
    SCIP_Real lincoef;
    SCIP_Real linconstant;
+   SCIP_Real lb;
+   SCIP_Real ub;
    SCIP_Bool islocal;
    SCIP_Bool success;
 
@@ -288,10 +290,12 @@ SCIP_RETCODE separatePointLog(
    linconstant = 0.0;
    success = TRUE;
 
+   lb = SCIPvarGetLbLocal(childvar);
+   ub = SCIPvarGetUbLocal(childvar);
+
    /* adjust the reference points */
-   refpoint = SCIPisLT(scip, refpoint, SCIPvarGetLbLocal(childvar)) ? SCIPvarGetLbLocal(childvar) : refpoint;
-   refpoint = SCIPisGT(scip, refpoint, SCIPvarGetUbLocal(childvar)) ? SCIPvarGetUbLocal(childvar) : refpoint;
-   assert(SCIPisLE(scip, refpoint, SCIPvarGetUbLocal(childvar)) && SCIPisGE(scip, refpoint, SCIPvarGetLbLocal(childvar)));
+   refpoint = MAX(MIN(refpoint, ub), lb);
+   assert(SCIPisLE(scip, refpoint, ub) && SCIPisGE(scip, refpoint, lb));
 
    if( overestimate )
    {
@@ -300,8 +304,7 @@ SCIP_RETCODE separatePointLog(
    }
    else
    {
-      SCIPaddLogSecant(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), &lincoef, &linconstant,
-         &success);
+      SCIPaddLogSecant(scip, lb, ub, &lincoef, &linconstant, &success);
       islocal = TRUE; /* secants are only valid locally */
    }
 
