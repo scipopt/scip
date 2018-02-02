@@ -19,7 +19,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define SCIP_DEBUG
 #include <assert.h>
 
 #include "scip/benderscut_feas.h"
@@ -167,7 +167,11 @@ SCIP_RETCODE computeStandardFeasibilityCut(
           * In computing the contribution of the fixed variables, we don't need to solution value because this is
           * given by the upper bound of the variable. */
          if( mastervar != NULL )
+         {
+            SCIPdebugMessage("Computing Farkas LHS: dualsol %g consval %g varUB %g varLB %g\n",
+               dualsol, consval, SCIPvarGetUbLocal(consvar), SCIPvarGetLbLocal(consvar));
             farkaslhs -= dualsol * consval * SCIPvarGetUbLocal(consvar);
+         }
       }
 #endif
 
@@ -244,7 +248,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 #ifndef NDEBUG
    /* TODO: Not sure about how to generate the solution for the first assert. Need to check */
    //assert(SCIPgetActivityLinear(masterprob, cut, pricingsol) < SCIPgetLhsLinear(masterprob, cut));
-   assert(farkasact < farkaslhs);
+   SCIPdebugMessage("Checking Farkas proof - activity = %g, lhs = %g\n", farkasact, farkaslhs);
+   //assert(farkasact < farkaslhs);
    SCIPfreeBufferArray(subproblem, &farkascoefs);
 #endif
 

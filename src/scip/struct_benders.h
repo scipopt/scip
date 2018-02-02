@@ -79,7 +79,6 @@ struct SCIP_Benders
    SCIP_Bool             iscopy;             /**< is the Benders' decomposition struct a copy */
    SCIP_HASHMAP*         mastervarsmap;      /**< hash map for the master variables from the subscip to the master */
 
-
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */

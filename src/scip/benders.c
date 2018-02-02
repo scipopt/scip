@@ -18,7 +18,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 //#define SCIP_MOREDEBUG
 #include <assert.h>
 #include <string.h>
@@ -1625,7 +1625,7 @@ SCIP_RETCODE SCIPbendersExec(
 
                assert(benderscuts[j] != NULL);
 
-               prevaddedcuts = SCIPbenderscutGetNAddedCons(benderscuts[j]) + SCIPbenderscutGetNAddedCuts(benderscuts[j]);
+               prevaddedcuts = SCIPbenderscutGetNFound(benderscuts[j]);
 
                /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
                 * the first iteration of the solve loop. */
@@ -1643,7 +1643,7 @@ SCIP_RETCODE SCIPbendersExec(
                   }
                }
 
-               addedcuts += (SCIPbenderscutGetNAddedCons(benderscuts[j]) + SCIPbenderscutGetNAddedCuts(benderscuts[j]) - prevaddedcuts);
+               addedcuts += (SCIPbenderscutGetNFound(benderscuts[j]) - prevaddedcuts);
             }
 
             subproblemcount++;
@@ -1696,7 +1696,7 @@ SCIP_RETCODE SCIPbendersExec(
    /* calling the post-solve call back for the Benders' decomposition algorithm. This allows the user to work directly
     * with the solved subproblems and the master problem */
    if( benders->benderspostsolve != NULL )
-      SCIP_CALL( benders->benderspostsolve(set->scip, benders, (*infeasible)) );
+      SCIP_CALL( benders->benderspostsolve(set->scip, benders, sol, (*infeasible)) );
 
    /* freeing the subproblems after the cuts are generated */
    i = benders->firstchecked;
