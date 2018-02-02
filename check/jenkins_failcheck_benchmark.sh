@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # This script uploads and checks for fails in a SCIP run.
 # Sends an email if errors are detected. Is not meant to be use directly,
@@ -7,8 +7,9 @@
 # jenkins_check_results_benchmark.sh
 # Careful: WE ARE IN check/ !
 
-sleep 5
+echo "This is jenkins_failcheck_benchmark.sh running."
 
+sleep 5
 
 # evaluate the run and upload it to rubberband
 echo "Evaluating the runs and uploading them to rubberband."
