@@ -41,7 +41,7 @@ SEEDS=${24}
 GLBSEEDSHIFT=${25}
 
 # check if all variables defined (by checking the last one)
-if test -z $SEEDS
+if test -z $GLBSEEDSHIFT
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
