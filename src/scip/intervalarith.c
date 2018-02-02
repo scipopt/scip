@@ -2551,6 +2551,16 @@ void SCIPintervalSin(
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
+   else if( operand.inf == operand.sup ) /*lint !e777 */
+   {
+      SCIP_Real tmp;
+
+      assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
+      tmp = sin(operand.inf);
+      resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
+      resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
+      return;
+   }
 
    /* compute extreme point that is left to operand.inf */
    k = (int) floor(operand.inf/M_PI - 0.5);
@@ -2641,6 +2651,16 @@ void SCIPintervalCos(
    if( intervallen >= 2*M_PI )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+   else if( operand.inf == operand.sup ) /*lint !e777 */
+   {
+      SCIP_Real tmp;
+
+      assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
+      tmp = cos(operand.inf);
+      resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
+      resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
       return;
    }
 
