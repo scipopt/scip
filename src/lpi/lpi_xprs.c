@@ -1180,6 +1180,8 @@ SCIP_RETCODE SCIPlpiClear(
 
    SCIPdebugMessage("clearing Xpress LP\n");
 
+   invalidateSolution(lpi);
+
    /* create an empty LP in this */
    CHECK_ZERO( lpi->messagehdlr, XPRSloadlp(lpi->xprslp, lpi->name, 0, 0, NULL, NULL, NULL, NULL, &zero, NULL, NULL, NULL, NULL, NULL) );
 
