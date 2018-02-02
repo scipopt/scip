@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "scip/branch_relpscost.h"
+#include "scip/branch_treemodel.h"
 #include "scip/cons_and.h"
 #include "scip/pub_misc.h"
 
@@ -108,6 +109,7 @@ struct SCIP_BranchruleData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   startrandseed;      /**< start random seed for random number generation */
    SCIP_Bool             usesmallweightsitlim; /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
+   SCIP_BRANCHTREEMODEL* treemodel;          /**< Parameters for the Treemodel branching rules */
 };
 
 /*
@@ -1454,9 +1456,12 @@ static
 SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
+   branchruledata = SCIPbranchruleGetData(branchrule);
+
+   /* free Treemodel parameter data structure */
+   SCIPtreemodelFree(scip, &branchruledata->treemodel);
 
    /* free branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
    SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -1700,6 +1705,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
+
+   /** Initialise the Treemodel branching rules */
+   SCIPtreemodelInit(scip, &branchruledata->treemodel);
 
    return SCIP_OKAY;
 }
