@@ -1201,9 +1201,9 @@ SCIP_RETCODE separatePointProduct(
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, y, lincoefy) );
 
       /* take care of cut numerics */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &violation, &success) );
 
-      if( success )
+      if( success && violation >= minviolation )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "mccormick");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
@@ -1315,9 +1315,9 @@ SCIP_RETCODE separatePointProduct(
       SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nvars, vars, facet) );
 
       /* take care of cut numerics */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &violation, &success) );
 
-      if( success )
+      if( success && violation >= minviolation )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "multilinear");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
