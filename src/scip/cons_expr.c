@@ -2360,6 +2360,7 @@ SCIP_RETCODE forwardPropExpr(
 static
 SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
@@ -2387,6 +2388,19 @@ SCIP_RETCODE forwardPropCons(
    /* propagate active and non-deleted constraints only */
    if( SCIPconsIsDeleted(cons) || !SCIPconsIsActive(cons) )
       return SCIP_OKAY;
+
+   /* handle constant expressions separately; either the problem is infeasible or the constraint is redundant */
+   if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      SCIP_Real value = SCIPgetConsExprExprValue(consdata->expr);
+      if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasLT(scip, value - consdata->lhs, 0.0))
+         || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasGT(scip, value - consdata->rhs, 0.0)) )
+         *infeasible = TRUE;
+      else
+         *redundant = TRUE;
+
+      return SCIP_OKAY;
+   }
 
    /* use 0 tag to recompute intervals
     * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
@@ -2416,8 +2430,12 @@ SCIP_RETCODE forwardPropCons(
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( !(*infeasible) )
    {
+      /* relax sides by SCIPepsilon() and handle infinite sides */
+      SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - SCIPepsilon(scip);
+      SCIP_Real rhs = SCIPisInfinity(scip, consdata->rhs) ? SCIP_INTERVAL_INFINITY : consdata->rhs + SCIPepsilon(scip);
+
       /* compare root expression interval with constraint sides; store the result in the root expression */
-      SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
+      SCIPintervalSetBounds(&interval, lhs, rhs);
 
       /* consider auxiliary variable stored in the root expression
        * it might happen that some other plug-ins tighten the bounds of these variables
@@ -2674,7 +2692,7 @@ SCIP_RETCODE propConss(
             redundant = FALSE;
             ntightenings = 0;
 
-            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), force, &cutoff, &redundant, &ntightenings) );
+            SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], (roundnr != 0), force, &cutoff, &redundant, &ntightenings) );
             assert(ntightenings >= 0);
             *nchgbds += ntightenings;
 
