@@ -56,13 +56,12 @@
  */
 
 #define DEFAULT_MAXNWAITINGROUNDS        3    /**< maximum number of rounds to wait until propagating again */
-#define REDUCTION_WAIT_RATIO             0.08 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
-
-/**@} */
 #ifdef WITH_UG
-extern
-int getUgRank(void);
+#define REDUCTION_WAIT_RATIO             0.02 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
+#else
+#define REDUCTION_WAIT_RATIO             0.08 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
 #endif
+/**@} */
 
 /*
  * Data structures
@@ -654,6 +653,14 @@ SCIP_DECL_PROPEXEC(propExecStp)
          callreduce = TRUE;
       }
    }
+#ifdef WITH_UG
+   if( propdata->ncalls == 1 && SCIPgetDepth(scip) == 0 )
+   {
+      SCIPdebugMessage("trigger UG root reductions \n");
+      callreduce = TRUE;
+   }
+
+#endif
 
    if( callreduce )
    {
