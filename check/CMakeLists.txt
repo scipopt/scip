@@ -81,7 +81,7 @@ set(settings_fastMIP
     "separating_off"
   )
 set(settings_MINLP
-    "checkfeastolfac10"
+    "minlp"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -93,12 +93,12 @@ set(settings_MINLP
     "separating_aggressive"
 )
 set(settings_Bivariate
-    "checkfeastolfac10"
+    "minlp"
     "bivariate"
 )
 
 set(settings_Bilinrelax
-    "checkfeastolfac10"
+    "minlp"
     "bilinrelax"
   )
 

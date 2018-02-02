@@ -2771,13 +2771,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    )
 {
    int* slackstats;
+   int ncols;
    int nrows;
    int r;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   /*  get the number of rows/columns */
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
@@ -2787,9 +2793,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    invalidateSolution(lpi);
 
-   /* get the number of rows */
-   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-
    SCIP_ALLOC( BMSallocMemoryArray(&slackstats, nrows) );
 
    /* XPRSloadbasis expects the basis status for the column and the slack column, since SCIP has the basis status for
@@ -2797,12 +2800,12 @@ SCIP_RETCODE SCIPlpiSetBase(
     */
    for( r = 0; r < nrows; ++r )
    {
-      if (rstat[r] == (int) SCIP_BASESTAT_LOWER)
+      if (rstat[r] == (int) SCIP_BASESTAT_LOWER) /*lint !e613*/
          slackstats[r] = (int) SCIP_BASESTAT_UPPER;
-      else if (rstat[r] == (int) SCIP_BASESTAT_UPPER)
+      else if (rstat[r] == (int) SCIP_BASESTAT_UPPER) /*lint !e613*/
          slackstats[r] = (int) SCIP_BASESTAT_LOWER;
       else
-         slackstats[r] = rstat[r];
+         slackstats[r] = rstat[r]; /*lint !e613*/
    }
 
    /* load basis information into Xpress
