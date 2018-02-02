@@ -288,7 +288,7 @@ void checkChgCoef(int row, int col, SCIP_Real newval)
 
    SCIP_Real val;
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
-   cr_assert_eq(newval, val);
+   cr_assert_float_eq(newval, val, EPS);
 }
 
 TheoryDataPoints(change, testchgcoef) =
@@ -854,26 +854,24 @@ Test(change, testlpiwritereadstatemethods)
    int rstat2[2];
    SCIP_OBJSEN sense;
    /* 2x2 problem */
-   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
-   const char* fname = "testlpiwriteandreadstate.lp";
+   cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
-   SCIP_CALL( SCIPlpiWriteState(lpi, fname) );
+   SCIP_CALL( SCIPlpiWriteState(lpi, "testlpiwriteandreadstate.bas") );
    SCIP_CALL( SCIPlpiGetBase(lpi, cstat, rstat) );
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
-   const char* fname2 = "testlpiwriteandreadstate2.lp";
-   SCIP_CALL( SCIPlpiReadState(lpi, fname) );
+   SCIP_CALL( SCIPlpiReadState(lpi, "testlpiwriteandreadstate.bas") );
    SCIP_CALL( SCIPlpiGetBase(lpi, cstat2, rstat2) );
 
    cr_assert_arr_eq( cstat, cstat2, 2*sizeof(int) );
    cr_assert_arr_eq( rstat, rstat2, 2*sizeof(int) );
 
-   SCIP_CALL( SCIPlpiWriteState(lpi, fname2) );
+   SCIP_CALL( SCIPlpiWriteState(lpi, "testlpiwriteandreadstate2.bas") );
 
-   FILE *file = fopen(fname, "r");
-   FILE *file2 = fopen(fname2, "r");
+   FILE *file = fopen("testlpiwriteandreadstate.bas", "r");
+   FILE *file2 = fopen("testlpiwriteandreadstate2.bas", "r");
    cr_assert_file_contents_eq(file, file2);
 
    SCIP_CALL( SCIPlpiClear(lpi) );
@@ -896,7 +894,7 @@ Test(change, testlpiwritereadlpmethods)
 
    SCIP_OBJSEN sense;
    /* 2x2 problem */
-   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
+   cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primsol, dualsol, activity, redcost) );
@@ -908,7 +906,7 @@ Test(change, testlpiwritereadlpmethods)
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    SCIP_CALL( SCIPlpiGetSol(lpi, &objval2, primsol2, dualsol2, activity2, redcost2) );
-   cr_assert_eq( objval, objval2 );
+   cr_assert_float_eq( objval, objval2, EPS );
    cr_assert_arr_eq( primsol, primsol2, 2*sizeof(SCIP_Real) );
    cr_assert_arr_eq( dualsol, dualsol2, 2*sizeof(SCIP_Real) );
    cr_assert_arr_eq( activity, activity2, 2*sizeof(SCIP_Real) );

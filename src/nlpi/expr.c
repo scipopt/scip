@@ -9994,7 +9994,7 @@ void exprgraphPrintNodeExpression(
       break;
 
    default:
-      SCIPmessageFPrintInfo(messagehdlr, file, SCIPexpropGetName(node->op));
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s", SCIPexpropGetName(node->op));
       break;
    } /*lint !e788*/
 }
