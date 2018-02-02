@@ -1823,24 +1823,26 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    if( cut == NULL )
       return SCIP_OKAY;
 
-   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
-
-   /* add cut */
-   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
-   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-   *ncuts += 1;
+   /* it might happen that the violation is not reliable and thus we check it here again */
+   if( SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, cut, sol), minviolation) )
+   {
+      /* add cut */
+      SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
+      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+      *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   if( *result == SCIP_CUTOFF )
-   {
-      SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "add cut with violation %e\n", -SCIPgetRowSolFeasibility(scip, cut, sol));
-   }
-   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+      if( *result == SCIP_CUTOFF )
+      {
+         SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "add cut with violation %e\n", -SCIPgetRowSolFeasibility(scip, cut, sol));
+      }
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
+   }
 
    /* release cut */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
