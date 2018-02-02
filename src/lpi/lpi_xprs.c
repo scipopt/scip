@@ -29,11 +29,16 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
 #include <assert.h>
+#include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h> /*lint --e{766}*/
+#endif
 
 #include "xprs.h"
 #include "scip/bitencode.h"
+#include "scip/pub_misc.h"
 #include "lpi/lpi.h"
 
 #ifndef XPRS_LPQUICKPRESOLVE
@@ -3619,38 +3624,140 @@ SCIP_Bool SCIPlpiIsInfinity(
  * @{
  */
 
-/** reads LP from a file */
+/** reads LP from a file
+ *
+ * The file extension defines the format. That can be lp or mps. Any given file name needs to have one of these two
+ * extension. If not nothing is read and a SCIP_READERROR is returned.
+ */
 SCIP_RETCODE SCIPlpiReadLP(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
+   char* basename = NULL;
+   char* compression = NULL;
+   char* extension = NULL;
+   char* filename = NULL;
+   char* path = NULL;
+   char* xpressfilename = NULL;
+
+   int size;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(fname != NULL);
 
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
-   CHECK_ZERO( lpi->messagehdlr, XPRSreadprob(lpi->xprslp, fname, "") );
+   /* get the length of the file name */
+   size = (int)strlen(fname)+1;
 
-   return SCIP_OKAY;
+   /* check that the file name is longer than Xpress can handle */
+   if (size > XPRS_MAXPROBNAMELENGTH)
+     return SCIP_WRITEERROR;
+
+   /* get char array for the file name we pass to Xpress */
+   SCIP_ALLOC( BMSallocMemoryArray(&xpressfilename, size) );
+
+   /* copy filename to be able to split it into its components */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&filename, fname, size) );
+
+   /* get path, base file name, extension, and compression of the given file name */
+   SCIPsplitFilename(filename, &path, &basename, &extension, &compression);
+
+   /* construct file name without extension */
+   if (path != NULL)
+     SCIPsnprintf(xpressfilename, size, "%s/%s", path, basename);
+   else
+     SCIPsnprintf(xpressfilename, size, "%s", basename);
+
+   /* check that the file name did not has a compression extension, has an lp or mps extension, and actually a base name */
+   if (compression != NULL || extension == NULL || basename == NULL)
+     retcode = SCIP_READERROR;
+   if (strcasecmp(extension, "mps") == 0) {
+     CHECK_ZERO( lpi->messagehdlr, XPRSreadprob(lpi->xprslp, xpressfilename, "") );
+   }
+   else if (strcasecmp(extension, "lp") == 0) {
+     CHECK_ZERO( lpi->messagehdlr, XPRSreadprob(lpi->xprslp, xpressfilename, "l") );
+   }
+   else
+     retcode = SCIP_READERROR;
+
+   /* free array */
+   BMSfreeMemoryArrayNull(&filename);
+   BMSfreeMemoryArrayNull(&xpressfilename);
+
+   return retcode;
 }
 
-/** writes LP to a file */
+/** writes LP to a file
+ *
+ * The file extension defines the format. That can be lp or mps. Any given file name needs to have one of these two
+ * extension. If not nothing is written and a SCIP_WRITEERROR is returned.
+ */
 SCIP_RETCODE SCIPlpiWriteLP(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
+   char* basename = NULL;
+   char* compression = NULL;
+   char* extension = NULL;
+   char* filename = NULL;
+   char* path = NULL;
+   char* xpressfilename = NULL;
+
+   int size;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(fname != NULL);
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
-   CHECK_ZERO( lpi->messagehdlr, XPRSwriteprob(lpi->xprslp, fname, "p") );
+   /* get the length of the file name */
+   size = (int)strlen(fname)+1;
 
-   return SCIP_OKAY;
+   /* check that the file name is longer than Xpress can handle */
+   if (size > XPRS_MAXPROBNAMELENGTH)
+     return SCIP_WRITEERROR;
+
+   /* get char array for the file name we pass to Xpress */
+   SCIP_ALLOC( BMSallocMemoryArray(&xpressfilename, size) );
+
+   /* copy filename to be able to split it into its components */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&filename, fname, size) );
+
+   /* get path, base file name, extension, and compression of the given file name */
+   SCIPsplitFilename(filename, &path, &basename, &extension, &compression);
+
+   /* construct file name without extension */
+   if (path != NULL)
+     SCIPsnprintf(xpressfilename, size, "%s/%s", path, basename);
+   else
+     SCIPsnprintf(xpressfilename, size, "%s", basename);
+
+   /* check that the file name did not has a compression extension, has an lp or mps extension, and actually a base name */
+   if (compression != NULL || extension == NULL || basename == NULL)
+     retcode = SCIP_WRITEERROR;
+   if (strcasecmp(extension, "mps") == 0) {
+     CHECK_ZERO( lpi->messagehdlr, XPRSwriteprob(lpi->xprslp, xpressfilename, "p") );
+   }
+   else if (strcasecmp(extension, "lp") == 0) {
+     CHECK_ZERO( lpi->messagehdlr, XPRSwriteprob(lpi->xprslp, xpressfilename, "lp") );
+   }
+   else
+     retcode = SCIP_WRITEERROR;
+
+   /* free array */
+   BMSfreeMemoryArrayNull(&filename);
+   BMSfreeMemoryArrayNull(&xpressfilename);
+
+   return retcode;
 }
 
 /**@} */
