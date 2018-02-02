@@ -167,10 +167,10 @@ testcluster:	$(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
-		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
+		$(notdir $(MAINFILE)) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(OPTCOMMAND);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES);
 
 .PHONY: tags
 tags:
