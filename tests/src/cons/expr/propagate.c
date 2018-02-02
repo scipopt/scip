@@ -534,7 +534,7 @@ Test(propagate, unbounded_sub_expression)
 
    SCIP_CALL( forwardPropCons(scip, conshdlr, cons, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
    cr_assert_not(infeasible);
-   cr_assert(CHECK_EXPRINTERVAL(scip, expr, -5.0, SCIPinfinity(scip)));
+   cr_assert(CHECK_EXPRINTERVAL(scip, expr, -5.0, SCIP_INTERVAL_INFINITY));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -553,7 +553,7 @@ Test(propagate, unbounded_sub_expression)
 
    SCIP_CALL( forwardPropCons(scip, conshdlr, cons, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
    cr_assert_not(infeasible);
-   cr_assert(CHECK_EXPRINTERVAL(scip, expr, -SCIPinfinity(scip), SCIPinfinity(scip)));
+   cr_assert(CHECK_EXPRINTERVAL(scip, expr, -SCIP_INTERVAL_INFINITY, SCIP_INTERVAL_INFINITY));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -574,7 +574,7 @@ Test(propagate, unbounded_sub_expression)
 
    SCIP_CALL( forwardPropCons(scip, conshdlr, cons, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
    cr_assert_not(infeasible);
-   cr_assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, SCIPinfinity(scip)));
+   cr_assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, SCIP_INTERVAL_INFINITY));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -636,7 +636,7 @@ Test(propagate, infeas_after_forwardprop)
 
    SCIP_CALL( forwardPropCons(scip, conshdlr, cons, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
    cr_assert(infeasible);
-   cr_assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
+   cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -650,7 +650,7 @@ Test(propagate, infeas_after_forwardprop)
    cr_assert(SCIPconsIsActive(cons));
 
    SCIP_CALL( forwardPropCons(scip, conshdlr, cons, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
-   cr_assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
+   cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)));
    cr_assert(infeasible);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -665,7 +665,7 @@ Test(propagate, infeas_after_forwardprop)
    cr_assert(SCIPconsIsActive(cons));
 
    SCIP_CALL( forwardPropCons(scip, conshdlr,cons, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
-   cr_assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
+   cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)));
    cr_assert(infeasible);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -722,7 +722,7 @@ Test(propagate, infeas_after_backwardprop)
    /* reverse propagation of cons1 should lead to an empty interval for x */
    SCIP_CALL( reversePropConss(scip, &cons1, 1, TRUE, &infeasible, &ntightenings) );
    cr_assert(infeasible);
-   cr_assert(SCIPintervalIsEmpty(SCIPinfinity(scip), expr1->children[0]->interval));
+   cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr1->children[0]->interval));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
