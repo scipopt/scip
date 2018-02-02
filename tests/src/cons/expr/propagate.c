@@ -117,10 +117,10 @@ Test(propagate, sum)
    SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
-   cr_expect(SCIPisEQ(scip, expr->interval.inf, 0.5), "Expecting 0.5, got %g\n",  expr->interval.inf);
-   cr_expect(SCIPisEQ(scip, expr->interval.sup, 1.5));
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.inf, -1.5), "Expecting -1.5, got %g\n", expr->children[0]->interval.inf);
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.sup, 1.0));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.inf, 0.5), "Expecting 0.5, got %g\n",  expr->interval.inf);
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.sup, 1.5));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.inf, -1.5), "Expecting -1.5, got %g\n", expr->children[0]->interval.inf);
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.sup, 1.0));
    cr_expect(SCIPisFeasEQ(scip, expr->children[1]->interval.inf, -3.0), "Expecting -3.0, got %.20f\n", expr->children[1]->interval.inf);
    cr_expect(SCIPisFeasEQ(scip, expr->children[1]->interval.sup, 1.0));
 
@@ -160,12 +160,12 @@ Test(propagate, product)
    cr_assert_not(infeasible);
 
    /* test stuff */
-   cr_expect(SCIPisEQ(scip, expr->interval.inf, 1.0 / 8.0), "Expecting %g and got %g\n", 1.0/8.0, expr->interval.inf);
-   cr_expect(SCIPisEQ(scip, expr->interval.sup, 1.0));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.inf, 1.0 / 8.0), "Expecting %g and got %g\n", 1.0/8.0, expr->interval.inf);
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.sup, 1.0));
 
    expraux = expr->children[0];
-   cr_expect(SCIPisEQ(scip, expraux->interval.inf, 1.0 / 4.0), "Expecting %g and got %g\n", 1.0, expraux->interval.inf);
-   cr_expect(SCIPisEQ(scip, expraux->interval.sup, 2.0));
+   cr_expect(SCIPisFeasEQ(scip, expraux->interval.inf, 1.0 / 4.0), "Expecting %g and got %g\n", 1.0, expraux->interval.inf);
+   cr_expect(SCIPisFeasEQ(scip, expraux->interval.sup, 2.0));
 
    cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->interval.inf, 1.0), "Expecting %g and got %g\n", 1.0, expraux->children[0]->interval.inf);
    cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->interval.sup, 8.0), "Expecting %g and got %g\n", 8.0, expraux->children[0]->interval.sup);
@@ -211,8 +211,8 @@ Test(propagate, abs)
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.inf, -2.5));
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.sup, 2.5));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.inf, -2.5));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.sup, 2.5));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -249,10 +249,10 @@ Test(propagate, exp)
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
-   cr_expect(SCIPisEQ(scip, expr->interval.inf, exp(-1)));
-   cr_expect(SCIPisEQ(scip, expr->interval.sup, 2.0));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.inf, exp(-1)));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.sup, 2.0));
    cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.inf, -1.0));
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.sup, log(2.0)));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.sup, log(2.0)));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -289,10 +289,10 @@ Test(propagate, log)
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
-   cr_expect(SCIPisEQ(scip, expr->interval.inf, -1.0));
-   cr_expect(SCIPisEQ(scip, expr->interval.sup, 1.0));
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.inf, exp(-1.0)));
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.sup, exp(1.0)));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.inf, -1.0));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.sup, 1.0));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.inf, exp(-1.0)));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.sup, exp(1.0)));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -329,10 +329,10 @@ Test(propagate, sin)
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
-   cr_expect(SCIPisEQ(scip, expr->interval.inf, SIN(-1)));
-   cr_expect(SCIPisEQ(scip, expr->interval.sup, 0.5));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.inf, SIN(-1)));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.sup, 0.5));
    cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.inf, -1.0));
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.sup, ASIN(0.5)));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.sup, ASIN(0.5)));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
