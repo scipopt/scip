@@ -3806,21 +3806,24 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 
    SCIPdebugMessage("Calling SCIPlpiGetBInvCol (%d)\n", lpi->lpid);
 
-   MOSEK_CALL( MSK_getnumcon(lpi->task,&nrows) );
-   MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
+   MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
+
+   /* set coefficient for slack variables to be 1 instead of -1 */
+   MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_ON) );
+
+   /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+   SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
+   /* initialize rhs of system to be a dense +/- unit vector (needed for MSK_solvewithbasis()) */
+   for (i = 0; i < nrows; ++i)
+      coef[i] = 0.0;
+   coef[c] = 1.0; /* unit vector e_c */
 
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
       *ninds = 1;
       inds[0]= c;
-      coef[c] = 1; /* Unit vector e_col */
-
-      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
-      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
 
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
       assert( *ninds <= nrows );
@@ -3832,15 +3835,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 
       SCIP_ALLOC( BMSallocMemoryArray(&sub, nrows) );
 
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
       numnz = 1;
       sub[0]= c;
-      coef[c] = 1; /* Unit vector e_col */
-
-      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
-      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
 
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
       assert( numnz <= nrows );
@@ -3865,7 +3861,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
  */
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   row,                /**< row number */
+   int                   r,                  /**< row number */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
@@ -3883,21 +3879,25 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIPdebugMessage("Calling SCIPlpiGetBInvRow (%d)\n", lpi->lpid);
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
+
+   /* set coefficient for slack variables to be 1 instead of -1 */
    MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_ON) );
+
+   /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+   SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
+   /* initialize rhs of system to be a dense +/- unit vector (needed for MSK_solvewithbasis()) */
+   for (i = 0; i < nrows; ++i)
+      coef[i] = 0.0;
+   coef[r] = 1.0; /* unit vector e_r */
 
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
       *ninds = 1;
-      inds[0]= row;
-      coef[row] = 1; /* Unit vector e_row */
+      inds[0]= r;
 
-      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
-      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
-
+      /* solve transposed system */
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, ninds, inds, coef) );
       assert( *ninds <= nrows );
    }
@@ -3908,17 +3908,12 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
       SCIP_ALLOC( BMSallocMemoryArray(&sub, nrows) );
 
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
       numnz = 1;
-      sub[0] = row;
-      coef[row] = 1; /* Unit vector e_row */
+      sub[0] = r;
 
-      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
-      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
-
+      /* solve transposed system */
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, &numnz, sub, coef) );
+      assert( numnz <= nrows );
 
       BMSfreeMemoryArray(&sub);
    }
@@ -3953,7 +3948,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int ncols;
    int numnz;
    int* csub;
-   int didalloc;
+   int didalloc = 0;
    double* cval;
    double* binv;
    int i;
@@ -3966,7 +3961,9 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    SCIPdebugMessage("Calling SCIPlpiGetBInvARow (%d)\n", lpi->lpid);
 
-   didalloc = 0;
+   /* can currently only return dense result */
+   if ( ninds != NULL )
+      *ninds = -1;
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
@@ -3988,17 +3985,16 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* binvrow*A */
    for (i = 0; i < ncols; ++i)
    {
-      coef[i] = 0;
-
       MOSEK_CALL( MSK_getacol(lpi->task, i, &numnz, csub, cval) );
 
-      /* construct dense vector */
+      /* compute dense vector */
+      coef[i] = 0.0;
       for (k = 0; k < numnz; ++k)
+      {
+         assert( 0 <= csub[k] && csub[k] < nrows );
          coef[i] += binv[csub[k]] * cval[k];
+      }
    }
-
-   if ( ninds != NULL )
-      *ninds = -1;
 
    /* free memory arrays */
    BMSfreeMemoryArray(&cval);
@@ -4042,23 +4038,28 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    MOSEK_CALL( MSK_getacolnumnz(lpi->task, c, &numnz) );
    SCIP_ALLOC( BMSallocMemoryArray(&val, numnz+1) );
 
+   /* set coefficient for slack variables to be 1 instead of -1 */
+   MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_ON) );
+
+   /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+   SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
    /* init coefficients */
    for (i = 0; i < nrows; ++i)
-      coef[i] = 0;
+      coef[i] = 0.0;
 
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
+      /* fill column into dense vector */
       MOSEK_CALL( MSK_getacol(lpi->task, c, &numnz, inds, val) );
-
       for (i = 0; i < numnz; ++i)
+      {
+         assert( 0 <= inds[i] && inds[i] < nrows );
          coef[inds[i]] = val[i];
+      }
 
       *ninds = numnz;
-      MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
-
-      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
-      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
 
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
       assert( *ninds <= nrows );
@@ -4068,19 +4069,18 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       int* sub;
       SCIP_ALLOC( BMSallocMemoryArray(&sub, nrows) );
 
+      /* fill column into dense vector */
       MOSEK_CALL( MSK_getacol(lpi->task, c, &numnz, sub, val) );
-
       for (i = 0; i < numnz; ++i)
+      {
+         assert( 0 <= sub[i] && sub[i] < nrows );
          coef[sub[i]] = val[i];
+      }
+
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 
       if ( ninds != NULL )
          *ninds = numnz;
-      MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
-
-      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
-      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
-
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 
       BMSfreeMemoryArray(&sub);
    }
