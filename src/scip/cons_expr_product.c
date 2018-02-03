@@ -1161,6 +1161,7 @@ SCIP_RETCODE separatePointProduct(
       SCIP_Real linconstant;
       SCIP_Real refpointx;
       SCIP_Real refpointy;
+      SCIP_Real violation;
 
       /* collect first variable */
       child = SCIPgetConsExprExprChildren(expr)[0];
