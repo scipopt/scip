@@ -16,6 +16,7 @@
 /**@file   bases.c
  * @brief  unit test for checking the settings of slack variables in a basis of the lpi
  * @author Marc Pfetsch
+ * @author Franziska Schloesser
  *
  * The behavior of different LP solvers w.r.t. the slack variables should not differ, if interfaced by LPI.
  */
@@ -123,7 +124,7 @@ Test(simple, test2)
    /* get basis */
    SCIP_CALL( SCIPlpiGetBase(lpi, &cstat, &rstat) );
 
-   /* the variable should be basic and the slack variable at the upper bound */
+   /* the variable should be basic and the slack variable at the lower bound */
    assert( cstat == SCIP_BASESTAT_BASIC );
    assert( rstat == SCIP_BASESTAT_LOWER );
 }
@@ -151,14 +152,13 @@ Test(simple, test3)
    /* get basis */
    SCIP_CALL( SCIPlpiGetBase(lpi, &cstat, &rstat) );
 
-   /* the variable should be basic and the slack variable at the upper bound */
+   /* the variable should be basic and the slack variable at the lower bound */
    assert( cstat == SCIP_BASESTAT_BASIC );
    assert( rstat == SCIP_BASESTAT_LOWER );
 }
 
 Test(simple, test4)
 {
-
    int cstat;
    int rstat;
 
@@ -250,7 +250,6 @@ TestSuite(complex, .init = setup_complex, .fini = teardown);
 /*** TESTS ***/
 Test(complex, test1)
 {
-   int i;
    SCIP_Real binvrow[3];
    SCIP_Real binvcol[3];
    SCIP_Real coef[3];
@@ -258,12 +257,23 @@ Test(complex, test1)
    int nrows;
    int rstats[3];
    int basinds[3];
+   int idx;
+   int entry;
+   int i;
 
-   /* solve problem */
+   /* expected values for the first column of BInv with corresponding variables */
+   int exp_vars[] = {-2, 1, 2};
+   float exp_vals[] = {0.0, 0.0, -1.0};
+
+   /* expected values for the first column of BAInv with corresponding variables */
+   float exp_avals[] = {-0.5, 0.5, 1.0};
+
+   /* ------------------------------------- */
+   /* first solve problem */
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
    SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-   cr_assert_float_eq(objval, 14, EPS);
+   cr_assert_float_eq(objval, 14.0, EPS);
 
    /* the optimal basis should be: {x2, x3, slack for second row} */
    SCIP_CALL( SCIPlpiGetBase(lpi, cstats, rstats) );
@@ -285,9 +295,10 @@ Test(complex, test1)
       if ( basinds[i] < 0 )
          break;
    }
+   /* assert that we found the slack variable in the basis */
    cr_assert_lt(i, nrows);
 
-   /* check basis inverse */
+   /* check basis inverse for the row corresponding to the basic slack variable */
    SCIP_CALL( SCIPlpiGetBInvRow(lpi, i, binvrow, NULL, NULL) );
 
    /* row of basis inverse should be (0, 1, 0.5) */
@@ -298,28 +309,25 @@ Test(complex, test1)
    /* check first column of basis inverse */
    SCIP_CALL( SCIPlpiGetBInvCol(lpi, 0, binvcol, NULL, NULL) );
 
-   /* expected values for the first column of BInv with corresponding variables */
-   int exp_vars[] = {-2, 1, 2};
-   float exp_vals[] = {0.0, 0.0, -1.0};
-
-   int idx, entry;
-   /* The columns will be in the same order, however the rows will be permuted.
+   /* The columns will be in the same order, however, the rows might be permuted.
     * For each row/entry we check that it corresponds to the value of the corresponding variable.
-    * The correspondance variable - row/entry is given by basinds. */
+    * The correspondance variable to row/entry is given by basinds. */
    for( entry = 0; entry < nrows; entry++ )
    {
       /* for the given entry try each variable in exp_vars */
       for( idx = 0; idx < nrows; idx++)
       {
-         /* Check that the value is the expected one if the column corresponds to the current variable given in exp_vars */
-         if (exp_vars[idx] == basinds[entry])
+         /* Check that the value is the expected one if the column corresponds to the current variable given in exp_vars. */
+         if ( exp_vars[idx] == basinds[entry] )
          {
             cr_expect_float_eq(binvcol[entry], exp_vals[idx], EPS);
          }
       }
    }
 
-   /* check basis inverse times nonbasic matrix */
+   /* check basis inverse times nonbasic matrix for row corresponding to the basic slack variable */
+   cr_assert_geq(i, 0);
+   cr_assert_lt(i, nrows);
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, NULL, coef, NULL, NULL) );
 
    /* row of basis inverse times nonbasic matrix should be (-0.5, 0, 0) */
@@ -330,19 +338,16 @@ Test(complex, test1)
    /* check first column of basis inverse times nonbasic matrix */
    SCIP_CALL( SCIPlpiGetBInvACol(lpi, 0, coef, NULL, NULL) );
 
-   /* expected values for the first column of BAInv with corresponding variables */
-   float exp_avals[] = {-0.5, 0.5, 1.0};
-
-   /* The columns will be in the same order, however the rows will be permuted.
+   /* The columns will be in the same order, however, the rows will be permuted.
     * For each row/entry we check that it corresponds to the value of the corresponding variable.
-    * The correspondance variable - row/entry is given by basinds. */
+    * The correspondance variable to row/entry is given by basinds. */
    for( entry = 0; entry < nrows; entry++ )
    {
       /* for the given entry try each variable in exp_vars */
       for( idx = 0; idx < nrows; idx++)
       {
-         /* Check that the value is the expected one if the column corresponds to the current variable given in exp_vars */
-         if (exp_vars[idx] == basinds[entry])
+         /* Check that the value is the expected one if the column corresponds to the current variable given in exp_vars. */
+         if ( exp_vars[idx] == basinds[entry] )
          {
             cr_expect_float_eq(coef[entry], exp_avals[idx], EPS);
          }
