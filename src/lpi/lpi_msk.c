@@ -3773,82 +3773,6 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-/** get column of inverse basis matrix B^-1
- *
- *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
- *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
- *        see also the explanation in lpi.h.
- *
- *  @todo check that the result is in terms of the LP interface definition
- *
- *  @todo check if this should invalidate the solution
- */
-SCIP_RETCODE SCIPlpiGetBInvCol(
-   SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
-                                              *   you have to call SCIPlpiGetBasisInd() to get the array which links the
-                                              *   B^-1 column numbers to the row and column numbers of the LP!
-                                              *   c must be between 0 and nrows-1, since the basis has the size
-                                              *   nrows * nrows */
-   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
-   int*                  inds,               /**< array to store the non-zero indices, or NULL */
-   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                              *   (-1: if we do not store sparsity information) */
-   )
-{
-   int nrows;
-   int i;
-
-   assert(MosekEnv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->task != NULL);
-   assert(coef != NULL);
-
-   SCIPdebugMessage("Calling SCIPlpiGetBInvCol (%d)\n", lpi->lpid);
-
-   MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
-
-   /* set coefficient for slack variables to be 1 instead of -1 */
-   MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_ON) );
-
-   /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
-   SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
-
-   /* initialize rhs of system to be a dense +/- unit vector (needed for MSK_solvewithbasis()) */
-   for (i = 0; i < nrows; ++i)
-      coef[i] = 0.0;
-   coef[c] = 1.0; /* unit vector e_c */
-
-   /* check whether we require a dense or sparse result vector */
-   if ( ninds != NULL && inds != NULL )
-   {
-      *ninds = 1;
-      inds[0]= c;
-
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
-      assert( *ninds <= nrows );
-   }
-   else
-   {
-      int* sub;
-      int numnz;
-
-      SCIP_ALLOC( BMSallocMemoryArray(&sub, nrows) );
-
-      numnz = 1;
-      sub[0]= c;
-
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
-      assert( numnz <= nrows );
-
-      BMSfreeMemoryArray(&sub);
-   }
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
-
-   return SCIP_OKAY;
-}
-
-
 /** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
@@ -3920,6 +3844,81 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
 
    SCIPdebugMessage("End SCIPlpiGetBInvRow (%d)\n", lpi->lpid);
+
+   return SCIP_OKAY;
+}
+
+/** get column of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ *
+ *  @todo check if this should invalidate the solution
+ */
+SCIP_RETCODE SCIPlpiGetBInvCol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
+                                              *   you have to call SCIPlpiGetBasisInd() to get the array which links the
+                                              *   B^-1 column numbers to the row and column numbers of the LP!
+                                              *   c must be between 0 and nrows-1, since the basis has the size
+                                              *   nrows * nrows */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *   (-1: if we do not store sparsity information) */
+   )
+{
+   int nrows;
+   int i;
+
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->task != NULL);
+   assert(coef != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetBInvCol (%d)\n", lpi->lpid);
+
+   MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
+
+   /* set coefficient for slack variables to be 1 instead of -1 */
+   MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_ON) );
+
+   /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+   SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
+   /* initialize rhs of system to be a dense +/- unit vector (needed for MSK_solvewithbasis()) */
+   for (i = 0; i < nrows; ++i)
+      coef[i] = 0.0;
+   coef[c] = 1.0; /* unit vector e_c */
+
+   /* check whether we require a dense or sparse result vector */
+   if ( ninds != NULL && inds != NULL )
+   {
+      *ninds = 1;
+      inds[0]= c;
+
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
+      assert( *ninds <= nrows );
+   }
+   else
+   {
+      int* sub;
+      int numnz;
+
+      SCIP_ALLOC( BMSallocMemoryArray(&sub, nrows) );
+
+      numnz = 1;
+      sub[0]= c;
+
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
+      assert( numnz <= nrows );
+
+      BMSfreeMemoryArray(&sub);
+   }
+   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
 
    return SCIP_OKAY;
 }
@@ -4007,7 +4006,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    return SCIP_OKAY;
 }
-
 
 /** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
