@@ -30,14 +30,8 @@
 
 #define EPS 1e-6
 
+/* global variable for LPI */
 static SCIP_LPI* lpi;
-static SCIP_Real obj;
-static SCIP_Real vals[2];
-static SCIP_Real lhs;
-static SCIP_Real rhs;
-static SCIP_Real val;
-static SCIP_Real objval;
-static int ind;
 
 
 /*** TEST SUITE SIMPLE ***/
@@ -47,17 +41,15 @@ void setup_simple(void)
    int nrows;
    int ncols;
    int beg = 0;
-   SCIP_Real lb;
-   SCIP_Real ub;
+   SCIP_Real lb = 0.0;
+   SCIP_Real ub = 3.0;
+   SCIP_Real lhs = 1.0;
+   SCIP_Real rhs = 2.0;
+   SCIP_Real obj = 1.0;
+   SCIP_Real val = 1.0;
+   int ind = 0;
 
-   ind = 0;
    lpi = NULL;
-   obj = 1.0;
-   lb = 0.0;
-   ub = 3.0;
-   lhs = 1.0;
-   rhs = 2.0;
-   val = 1.0;
 
    /* create LPI */
    SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
@@ -133,6 +125,9 @@ Test(simple, test3)
 {
    int cstat;
    int rstat;
+   SCIP_Real lhs = 1.0;
+   SCIP_Real rhs;
+   int ind = 0;
 
    /* modify LP to:
     *   min x
@@ -161,6 +156,9 @@ Test(simple, test4)
 {
    int cstat;
    int rstat;
+   SCIP_Real lhs;
+   SCIP_Real rhs = 1.0;
+   int ind = 0;
 
    /* modify LP to:
     *   max x
@@ -170,7 +168,6 @@ Test(simple, test4)
 
    /* change row sides */
    lhs = -SCIPlpiInfinity(lpi);
-   rhs = 1.0;
    SCIP_CALL( SCIPlpiChgSides(lpi, 1, &ind, &lhs, &rhs) );
 
    /* solve problem */
@@ -192,8 +189,12 @@ void setup_complex(void)
    int beg = 0;
    int inds[2];
    int nrows;
+   SCIP_Real vals[2];
    SCIP_Real lb;
    SCIP_Real ub;
+   SCIP_Real obj;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
 
    /* create LPI */
    SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
@@ -253,6 +254,7 @@ Test(complex, test1)
    SCIP_Real binvrow[3];
    SCIP_Real binvcol[3];
    SCIP_Real coef[3];
+   SCIP_Real objval;
    int cstats[3];
    int nrows;
    int rstats[3];
