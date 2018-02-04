@@ -1539,6 +1539,12 @@ SCIP_RETCODE checkConsQuadraticProblem(
    int mayincrease;
    int maydecrease;
    int objind = -1;
+   
+   SCIP_VAR* origObjVar;
+   SCIP_Real origObjConstant = 0.0;
+   SCIP_Real origObjScalar = 1.0;
+   SCIP_Real origObjUb;
+   SCIP_Real origObjLb;
 
    *objrhs = 0.0;
    *scale = 0.0;
@@ -1643,15 +1649,19 @@ SCIP_RETCODE checkConsQuadraticProblem(
                || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
              )
       )
-      *scale = -1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
-                           * has coefficient -1 */
+   {
+      *scale = -coef; /* value by which we have to scale the quadratic constraint such that the objective variable
+                       * has coefficient -1 */
+   }
    else if( SCIPisFeasNegative(scip, obj)
              && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
                   || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
                 )
            )
-      *scale = 1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
-                          * has coefficient 1 */
+   {
+      *scale = coef; /* value by which we have to scale the quadratic constraint such that the objective variable
+                      * has coefficient 1 */
+   }
    else
       return SCIP_OKAY;
    assert( *objvar != NULL && ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
@@ -1675,7 +1685,45 @@ SCIP_RETCODE checkConsQuadraticProblem(
            && ( SCIPvarGetNLocksDown(*objvar) != 0 || SCIPvarGetNLocksUp(*objvar) != 1 ) )
          return SCIP_OKAY;
    }
+   
+   /* check bounds of original objective variable */
+   origObjVar = lintermvars[objind];
+   SCIP_CALL( SCIPvarGetOrigvarSum(&origObjVar, &origObjScalar, &origObjConstant) );
+   if (origObjVar == NULL)
+      return SCIP_OKAY;
+  
+   if (SCIPisFeasPositive(scip, origObjScalar))
+   {
+	   origObjUb = SCIPvarGetUbOriginal(origObjVar);
+	   origObjLb = SCIPvarGetLbOriginal(origObjVar);
+   }
+   else
+   {
+	   origObjUb = -SCIPvarGetLbOriginal(origObjVar);
+	   origObjLb = -SCIPvarGetUbOriginal(origObjVar);
+       origObjScalar *= -1;
+       origObjConstant *= -1;	   
+   }
+   
+   /* not every optimal solution of the problem is a KKT point if the objective variable is bounded */
+   if( SCIPisFeasPositive(scip, obj))
+   {	  
+	  if ( !SCIPisInfinity(scip, -origObjLb))
+	     return SCIP_OKAY;
+	  if ( !SCIPisInfinity(scip, origObjUb)
+		  && !SCIPisFeasLE(scip, quadrhs/coef, (origObjUb-origObjConstant)/origObjScalar) )
+	     return SCIP_OKAY;
+   }
+   else
+   {			  
+      if ( !SCIPisInfinity(scip, origObjUb) )
+	     return SCIP_OKAY;
+	  if ( !SCIPisInfinity(scip, -origObjLb)
+		  && !SCIPisFeasGE(scip, quadlhs/coef, (origObjLb-origObjConstant)/origObjScalar) )
+	     return SCIP_OKAY;
+   }
 
+   
    *isqp = TRUE;
 
    return SCIP_OKAY;
@@ -1961,7 +2009,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    else
       SCIPdebugMsg(scip, "added the KKT conditions to the quadratic program\n");
 
-   /*SCIP_CALL( SCIPwriteTransProblem(scip, "trafoQP.lp", NULL, FALSE ) );*/
+   /* SCIP_CALL( SCIPwriteTransProblem(scip, "trafoQP.lp", NULL, FALSE ) ); */
 
    return SCIP_OKAY;
 }
