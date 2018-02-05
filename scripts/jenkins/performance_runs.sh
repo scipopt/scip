@@ -74,6 +74,7 @@ declare -A JOBS
 # jobs running on saturday
 JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TESTSET=mipdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance"
 JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TESTSET=minlpdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance PERMUTE=4"
+TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GIT_BRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
 JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TESTSET=sapdev-solvable TIME=3600 SETTING=sap-500-pure PERFORMANCE=performance"
@@ -88,6 +89,7 @@ cp ~/sap-500-pure.set settings/.
 
 # To improve accessibility move todays jobs into seperate array
 TODAYS_N_JOBS=0
+TODAYS_N_TRIGGERS=0
 
 # NOTE: only check up to 10 runs. If there are more there is something wrong...
 for i in `seq 1 10`; do
@@ -114,6 +116,14 @@ done
 echo "Today is `date +%A`. Running the following ${TODAYS_N_JOBS} jobs (index ${DAY_OF_WEEK},*):"
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   echo "- job configuration: '${TODAYS_JOBS[$i]}'"
+done
+echo "Triggering the following jobs:"
+for i in `seq 1 10`; do
+  if [ "${TRIGGER[${DAY_OF_WEEK},$i]}" == "" ]; then
+    break
+  fi
+  echo "- ${TRIGGER[${DAY_OF_WEEK},$i]}"
+  TODAYS_N_TRIGGERS=$i
 done
 
 #########################
@@ -157,3 +167,8 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
 
+# NOTE: only check up to 10 triggers. If there are more there is something wrong...
+echo "Triggering the following jobs:"
+for i in `seq 1 ${TODAYS_N_TRIGGERS}`; do
+  curl -I "${TRIGGER[${DAY_OF_WEEK},$i]}"
+done
