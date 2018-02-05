@@ -4556,7 +4556,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    if( emptyname )
    {
       SCIPerrorMessage("LP Error: MOSEK cannot write state since name of %s %d is empty.\n",
-            v < nvars ? "variable" : "constraint", v < nvars ? v : c);
+            v < nvars ? "variable" : "constraint", v < nvars ? v : c);/*lint !e644*/
       return SCIP_LPERROR;
    }
 
