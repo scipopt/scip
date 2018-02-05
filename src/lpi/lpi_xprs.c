@@ -3671,9 +3671,9 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    /* construct file name without extension */
    if (path != NULL)
-     SCIPsnprintf(xpressfilename, size, "%s/%s", path, basename);
+     (void) SCIPsnprintf(xpressfilename, size, "%s/%s", path, basename);
    else
-     SCIPsnprintf(xpressfilename, size, "%s", basename);
+     (void) SCIPsnprintf(xpressfilename, size, "%s", basename);
 
    /* check that the file name did not has a compression extension, has an lp or mps extension, and actually a base name */
    if (compression != NULL || extension == NULL || basename == NULL)
@@ -3739,9 +3739,9 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
    /* construct file name without extension */
    if (path != NULL)
-     SCIPsnprintf(xpressfilename, size, "%s/%s", path, basename);
+     (void) SCIPsnprintf(xpressfilename, size, "%s/%s", path, basename);
    else
-     SCIPsnprintf(xpressfilename, size, "%s", basename);
+     (void) SCIPsnprintf(xpressfilename, size, "%s", basename);
 
    /* check that the file name did not has a compression extension, has an lp or mps extension, and actually a base name */
    if (compression != NULL || extension == NULL || basename == NULL)
