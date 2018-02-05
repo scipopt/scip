@@ -254,6 +254,33 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** returns true if the given history contains a valid ratio */
+extern
+SCIP_Bool SCIPhistoryIsRatioValid(
+   SCIP_HISTORY*        history
+);
+
+/** returns the most recent ratio computed given the variable history */
+extern
+SCIP_Real SCIPhistoryGetLastRatio(
+   SCIP_HISTORY*        history
+);
+
+/** returns the most recent value of r/l used to compute this variable's ratio */
+extern
+SCIP_Real SCIPhistoryGetLastBalance(
+   SCIP_HISTORY*
+);
+
+/** sets the ratio history for a particular variable */
+extern
+void SCIPhistorySetRatioHistory(
+   SCIP_HISTORY*        history,
+   SCIP_Bool            valid,
+   SCIP_Real            ratio,
+   SCIP_Real            balance
+);
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -295,6 +322,11 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
       ? (SCIP_Real)(history)->cutoffsum[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0.0)
 #define SCIPhistoryGetAvgBranchdepth(history,dir)  ((history)->nbranchings[dir] > 0 \
       ? (SCIP_Real)(history)->branchdepthsum[dir]/(SCIP_Real)(history)->nbranchings[dir] : 1.0)
+#define SCIPhistoryIsRatioValid(history) ((history)->ratiovalid)
+#define SCIPhistoryGetLastRatio(history) ((history)->ratio)
+#define SCIPhistorySetRatioHistory(history,newvalid,newratio,newbalance) (history)->ratiovalid = newvalid, \
+    (history)->ratio = newratio, (history)->balance = newbalance
+#define SCIPhistoryGetLastBalance(history) ((history)->balance)
 
 #endif
 
