@@ -876,6 +876,26 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       BMSfreeMemoryArray(&bkc);
    }
 
+   if( colnames != NULL )
+   {
+      int c;
+
+      for( c = 0; c < ncols; c++ )
+      {
+         MOSEK_CALL( MSK_putvarname(lpi->task, c, colnames[c]) );
+      }
+   }
+
+   if( rownames != NULL )
+   {
+      int r;
+
+      for( r = 0; r < nrows; r++ )
+      {
+         MOSEK_CALL( MSK_putconname(lpi->task, r, rownames[r]) );
+      }
+   }
+
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiLoadColLP") );
 #endif
@@ -958,6 +978,16 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
 
    BMSfreeMemoryArray(&bkx);
+
+   if( colnames != NULL )
+   {
+      int c;
+
+      for( c = 0; c < ncols; c++ )
+      {
+         MOSEK_CALL( MSK_putvarname(lpi->task, c, colnames[c]) );
+      }
+   }
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiAddCols") );
@@ -1127,6 +1157,16 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    BMSfreeMemoryArray(&bkc);
 
+   if( rownames != NULL )
+   {
+      int r;
+
+      for( r = 0; r < nrows; r++ )
+      {
+         MOSEK_CALL( MSK_putconname(lpi->task, r, rownames[r]) );
+      }
+   }
+
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiAddRows") );
 #endif
@@ -1248,8 +1288,8 @@ SCIP_RETCODE SCIPlpiClear(
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
 
-   SCIP_CALL( SCIPlpiDelRows(lpi, 0, nrows) );
-   SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols) );
+   SCIP_CALL( SCIPlpiDelRows(lpi, 0, nrows - 1) );
+   SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols - 1) );
 
    return SCIP_OKAY;
 }
@@ -4449,6 +4489,8 @@ SCIP_RETCODE SCIPlpiReadState(
 
    SCIPdebugMessage("reading LP state from file <%s>\n", fname);
 
+   lpi->clearstate = FALSE;
+
    MOSEK_CALL( MSK_readsolution(lpi->task, MSK_SOL_BAS, fname) );
 
    return SCIP_OKAY;
@@ -4460,6 +4502,13 @@ SCIP_RETCODE SCIPlpiWriteState(
    const char*           fname               /**< file name */
    )
 {
+   int v;
+   int nvars;
+   int c;
+   int nconss;
+   SCIP_Bool emptyname = FALSE;
+   char name[SCIP_MAXSTRLEN];
+
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
@@ -4472,6 +4521,41 @@ SCIP_RETCODE SCIPlpiWriteState(
    {
       SCIPdebugMessage("No LP state written, since it was cleared after the last solve \n");
       return SCIP_OKAY;
+   }
+
+   /* If any rows or columns have empty names, MOSEK will make up names like C1 and X1, but will no
+    * longer recognize them when reading the same state file back in, therefore we return an error in
+    * this case
+    */
+   MOSEK_CALL( MSK_getnumvar(lpi->task, &nvars) );
+   for( v = 0; v < nvars; v++ )
+   {
+      MOSEK_CALL( MSK_getvarname(lpi->task, v, SCIP_MAXSTRLEN, name) );
+      if( strcmp(name, "") == 0 )
+      {
+         emptyname = TRUE;
+         break;
+      }
+   }
+   if( !emptyname )
+   {
+      MOSEK_CALL( MSK_getnumcon(lpi->task, &nconss) );
+      for( c = 0; c < nconss; c++ )
+      {
+         MOSEK_CALL( MSK_getconname(lpi->task, c, SCIP_MAXSTRLEN, name) );
+         if( strcmp(name, "") == 0 )
+         {
+            emptyname = TRUE;
+            break;
+         }
+      }
+   }
+
+   if( emptyname )
+   {
+      SCIPerrorMessage("LP Error: MOSEK cannot write state since name of %s %d is empty.\n",
+            v < nvars ? "variable" : "constraint", v < nvars ? v : c);/*lint !e644*/
+      return SCIP_LPERROR;
    }
 
    /* set parameter to be able to write */
