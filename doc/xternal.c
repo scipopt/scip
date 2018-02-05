@@ -7553,15 +7553,6 @@
  * \htmlinclude faq.inc
  */
 
-/**@page INSTALL Installation information
- * \verbinclude INSTALL
- */
-
-/**@page INSTALL_CMAKE Installation information (CMake)
- * \verbinclude INSTALL_CMAKE
- */
-
-
 /**@page RELEASENOTES Release notes
  *
  * Please consult the <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6629">release report</a> for version 5.0 that explains many of the new features in detail.
