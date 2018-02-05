@@ -23,9 +23,13 @@
 
 #include "scip/branch_treemodel.h"
 
+#include "scip/history.h"
+#include "scip/var.h"
+
 #include <limits.h>
 
-#define DEFAULT_ENABLE         TRUE     /**< should candidate branching variables be scored using the Treemodel rule? */
+/* Default parameters for the Treemodel branching rules */
+#define DEFAULT_ENABLE         FALSE    /**< should candidate branching variables be scored using the Treemodel rule? */
 #define DEFAULT_HIGHRULE       'r'      /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
 #define DEFAULT_LOWRULE        'd'      /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
 #define DEFAULT_HEIGHT         10       /**< estimated tree height at which we switch from using the low rule to the high rule */
@@ -35,21 +39,672 @@
 #define DEFAULT_MAXSVTSHEIGHT  100      /**< maximum height to compute the SVTS score exactly before approximating */
 #define DEFAULT_FALLBACKINF    'r'      /**< which method should be used as a fallback if the tree size estimates are infinite? ('d'efault, 'r'atio) */
 #define DEFAULT_FALLBACKNOPRIM 'r'      /**< which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio) */
+#define DEFAULT_SMALLPSCOST    0.1      /**< threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching */
 
 /** Parameters required by the Treemodel branching rules */
 struct SCIP_BranchTreemodel
 {
-   SCIP_Bool             enabled;            /**< should candidate branching variables be scored using the Treemodel rule? */
-   char                  highrule;           /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-   char                  lowrule;            /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-   int                   height;             /**< estimated tree height at which we switch from using the low rule to the high rule */
-   char                  filterhigh;         /**< should dominated candidates be filtered before using the high scoring function? ('a'uto, 't'rue, 'f'alse) */
-   char                  filterlow;          /**< should dominated candidates be filtered before using the low scoring function? ('a'uto, 't'rue, 'f'alse) */
-   int                   maxfpiter;          /**< maximum number of fixed-point iterations when computing the ratio */
-   int                   maxsvtsheight;      /**< maximum height to compute the SVTS score exactly before approximating */
-   char                  fallbackinf;        /**< which method should be used as a fallback if the tree size estimates are infinite? ('d'efault, 'r'atio) */
-   char                  fallbacknoprim;     /**< which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio) */
+   SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel rule? */
+   char                 highrule;            /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+   char                 lowrule;             /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+   int                  height;              /**< estimated tree height at which we switch from using the low rule to the high rule */
+   char                 filterhigh;          /**< should dominated candidates be filtered before using the high scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
+   char                 filterlow;           /**< should dominated candidates be filtered before using the low scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
+   int                  maxfpiter;           /**< maximum number of fixed-point iterations when computing the ratio [ADVANCED] */
+   int                  maxsvtsheight;       /**< maximum height to compute the SVTS score exactly before approximating [ADVANCED] */
+   char                 fallbackinf;         /**< which method should be used as a fallback if the tree size estimates are infinite? ('d'efault, 'r'atio) [ADVANCED] */
+   char                 fallbacknoprim;      /**< which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio) [ADVANCED] */
+   SCIP_Real            smallpscost;         /**< threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching [ADVANCED] */
 };
+
+/** Branching encoding of a variable's ratio
+ * A variable's ratio is defined based upon its left and right LP gains, as the unique root > 1 of
+ * the polynomial x^r - x^(r-l) -1, where l and r are the left and right LP gains.
+ * We store the root as upratio^(invleft), with invleft = 1/l. An extra boolean stores whether
+ * the encoded ratio is valid, i.e. there were no numerical problems when computing it */
+struct SCIP_BranchRatio
+{
+   SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomia with gains (1, rightgain/leftgain) */
+   SCIP_Real             invleft;           /**< "INVverse left gain, i.e. 1/leftgain */
+   SCIP_Bool             valid;             /**< True iff the ratio computed is valid */
+};
+typedef struct SCIP_BranchRatio SCIP_BRANCHRATIO;
+
+/** A comparison method for the next method. It simply compares two SCIP_Real */
+static
+SCIP_DECL_SORTINDCOMP(sciprealcomp)
+{
+   SCIP_Real* value = (SCIP_Real*) dataptr;
+   SCIP_Real diffval;
+
+   assert(value != NULL);
+   assert(ind1 >= 0 && ind2 >= 0);
+
+   diffval = value[ind1] - value[ind2];
+   if( diffval < 0 )
+      return 1;
+   else if( diffval > 0)
+      return -1;
+   else
+      return 0;
+}
+
+/** Given a pair of arrays of real non-negative values (a,b), with a <= b, computes
+ * the pairs that belong to the pareto front (with a tolerance).
+ * In other words, we are looking for non-dominated pairs of values.
+ * One value and one array are computed after this method.
+ * The value is the number of non-dominated elements.
+ * The array is a boolean array that indicates if an element is dominated.
+ * In case of a draw, only one variable is considered as non-dominated.
+ */
+static
+SCIP_RETCODE findNonDominatedVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            a,                  /**< the first set of values */
+   SCIP_Real*            b,                  /**< the second set of values */
+   int                   size,               /**< the size of array a (and b) */
+   int*                  ndominated,         /**< returns the number of dominated elements */
+   SCIP_Bool*            dominated           /**< returns the array of booleans that determine if an element is dominated */
+)
+{
+   int* permb;
+   int* bestcurrents;
+   int nbestcurrent;
+   int indexinpermb;
+   int origindex;
+   int iterbestcurrent;
+   SCIP_Real bestcurrenta;
+   SCIP_Real besta;
+   SCIP_Real currentb;
+
+   assert(scip != NULL);
+   assert(a != NULL);
+   assert(b != NULL);
+   assert(ndominated != NULL);
+   assert(dominated != NULL);
+   assert(size > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestcurrents, size) );
+
+   /* we first find the permutation of indices of array b that corresponds to the array of a non-decreasing sort of its values */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permb, size) );
+   for( origindex=0; origindex<size; ++origindex )
+      permb[origindex] = origindex;
+   SCIPsortInd(permb, sciprealcomp, (void*)b, size);
+
+   *ndominated=0;
+   /* Now we will traverse the pair of arrays a and b by non-decreasing order of values of b *
+    * and mark the (non) dominated pairs */
+
+   /* The current max value of a for all pairs that (almost) have the same value b */
+   bestcurrenta = a[permb[0]];
+
+   /* the current value b */
+   currentb = b[permb[0]];
+   /* the best pair(s) for the current value b */
+   bestcurrents[0] = permb[0];
+   nbestcurrent = 1;
+   /* the value a to "beat" to be non-dominated */
+   besta = -1;
+   for( indexinpermb=1; indexinpermb<size; ++indexinpermb )
+   {
+      origindex=permb[indexinpermb];
+      assert(b[origindex] <= currentb);
+      if( SCIPisLT(scip, b[origindex], currentb) )
+      {
+         /* If the above is true, then we went through all the previous elements that had value currentb */
+         /* Thus the best element for value currentb is non-dominated if its value bestcurrenta is better
+          * than the previous best besta */
+         if ( bestcurrenta > besta )
+         {
+            for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+               dominated[bestcurrents[iterbestcurrent]] = FALSE;
+
+            besta = bestcurrenta;
+         }
+         else
+         {
+            for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+            {
+               dominated[bestcurrents[iterbestcurrent]] = TRUE;
+               ++(*ndominated);
+            }
+         }
+         bestcurrenta = a[origindex];
+         currentb = b[origindex];
+         bestcurrents[0] = origindex;
+         nbestcurrent = 1;
+      }
+      else
+      {
+         /* Then the b values are (almost) equal and we need to compare values a */
+         if( SCIPisGT(scip, a[origindex], bestcurrenta) )
+         {
+            /* Then the new value is better than the old one(s) */
+            for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+            {
+               dominated[bestcurrents[iterbestcurrent]] = TRUE;
+               ++(*ndominated);
+            }
+
+            bestcurrenta = a[origindex];
+            bestcurrents[0] = origindex;
+            nbestcurrent = 1;
+         }
+         else
+         {
+            /* Then the new value is equal or dominated */
+            if( SCIPisEQ(scip, a[origindex], bestcurrenta) )
+            {
+               bestcurrents[nbestcurrent] = origindex;
+               ++nbestcurrent;
+            }
+            else
+            {
+               dominated[origindex] = TRUE;
+               ++(*ndominated);
+            }
+         }
+      }
+   }
+   /* Finally, we have to look at the last best variable */
+   if ( bestcurrenta > besta )
+   {
+      for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+         dominated[bestcurrents[iterbestcurrent]] = FALSE;
+   }
+   else
+   {
+      for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+      {
+         dominated[bestcurrents[iterbestcurrent]] = TRUE;
+         ++(*ndominated);
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &bestcurrents);
+   SCIPfreeBufferArray(scip, &permb);
+   return SCIP_OKAY;
+}
+
+/** Returns true iff the variable with given gains has a ratio better (i.e smaller) than the given one */
+static
+SCIP_Bool hasBetterRatio(
+   SCIP_BRANCHRATIO *branchratio,        /**< The variable's ratio to compare against */
+   SCIP_Real leftgain,           /**< the left gain of a variable */
+   SCIP_Real rightgain           /**< the right gain of a variable */
+)
+{
+   SCIP_Real result = -1;
+
+   assert(branchratio != NULL);
+   assert(branchratio->valid);
+   assert(leftgain <= rightgain);
+
+   /* We evaluate the characteristic polynomial of the variable on the given ratio. */
+   if( leftgain > 0 && rightgain > 0 )
+      result = pow(branchratio->upratio, rightgain * branchratio->invleft) - pow(branchratio->upratio, (rightgain - leftgain) * branchratio->invleft) - 1;
+
+   /* If the result is positive, then it has a better ratio. */
+   return (result > 0);
+}
+
+/** Computes the variable ratio corresponding to the left and right gains */
+static
+void computeVarRatio(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_BRANCHTREEMODEL*   treemodel,        /**< Treemodel parameter data structure */
+   SCIP_VAR*               var,              /**< the candidate branching variable */
+   SCIP_Real               leftgain,         /**< the left gain of the variable */
+   SCIP_Real               rightgain,        /**< the right gain of the variable */
+   SCIP_BRANCHRATIO*       branchratio       /**< storage for the computed ratio */
+)
+{
+   SCIP_Real ratio = 1;
+   SCIP_Real newratio;
+   SCIP_Real r;
+   int iters;
+
+   assert(leftgain >= 0);
+   assert(rightgain >= leftgain);
+
+   if( leftgain == 0 || rightgain == 0 ) {
+      branchratio->valid = FALSE;
+      return;
+   }
+
+   /* We scale left and right gains by dividing both by left*/
+   r = rightgain / leftgain;
+
+   /* In the case where l and r are very close r may become < 1 */
+   if( r <= 1 ) {
+      branchratio->valid = TRUE;
+      branchratio->upratio = 2;
+      branchratio->invleft = 1.0 / leftgain;
+      return;
+   }
+
+   /* Check if this ratio has already been computed */
+   if( SCIPhistoryIsRatioValid(var->history) && SCIPisEQ(scip, SCIPhistoryGetLastBalance(var->history), r) ) {
+      branchratio->valid = TRUE;
+      branchratio->upratio = SCIPhistoryGetLastRatio(var->history);
+      branchratio->invleft = 1.0 / leftgain;
+      return;
+   }
+
+   /* Initialise the ratio at the previously computed ratio (if applicable) otherwise
+    * use the lower bound 2^(1/r) <= phi <= 2^(1/l).
+    * Note that we only use the previous ratio if the previous value of r/l was larger,
+    * ie. the previous ratio was smaller since we want to initialise at a lower bound.
+    */
+   newratio = pow(2, 1.0/r);
+   if( SCIPhistoryIsRatioValid(var->history) && SCIPhistoryGetLastBalance(var->history) > r
+       && SCIPhistoryGetLastRatio(var->history) > newratio )
+      newratio = SCIPhistoryGetLastRatio(var->history);
+
+   /* Depending on the value of rightgain/leftgain, we have two different methods to compute the ratio
+    * If this value if bigger than 100, we use a fixed-point method. Otherwise, we use Laguerre's method
+    * This is strictly for numerical efficiency and based on experiments.
+    */
+
+   /* Use Laguerre's method */
+   if( r <= 100 ) {
+      /* We relax the epsilon after 5 iterations since we may not have enough precision to achieve any better convergence */
+      for( iters = 0; ((iters <= 5 && !SCIPisEQ(scip, ratio, newratio)) || (iters > 5 && !SCIPisSumEQ(scip, ratio, newratio))) && iters < treemodel->maxfpiter && newratio > 1; iters++ ) {
+         double G, H, a, p, p1, p2;
+         double phi_r = pow(ratio, r);
+
+         ratio = newratio;
+         p = phi_r - phi_r / ratio - 1;
+         if( p != 0 ) {
+            p1 = (r * phi_r - (r-1) * phi_r / ratio) / ratio;
+            p2 = (r * (r-1) *  phi_r - (r-1) * (r-2) * phi_r / ratio) / ratio / ratio;
+            G = p1 / p;
+            H = G*G - (p2/p);
+            a = r / (G + ((0<=G)-(G<0)) * sqrt((r-1) * (r*H-G*G)));
+            newratio = ratio - a;
+         }
+      }
+   }
+   /* Use fixed point method */
+   else {
+      /* We relax the epsilon after 10 iterations since we may not have enough precision to achieve any better convergence */
+      for( iters = 0; ((iters <= 10 && !SCIPisEQ(scip, ratio, newratio)) || (iters > 10 && !SCIPisSumEQ(scip, ratio, newratio))) && iters < treemodel->maxfpiter && newratio > 1; iters++ ) {
+         ratio = newratio;
+         newratio = pow(1.0-1.0/ratio, -1.0/r);
+      }
+   }
+
+   /* We think that everything worked */
+   if( iters < treemodel->maxfpiter && newratio > 1 ) {
+      branchratio->valid = TRUE;
+      branchratio->upratio = (ratio + newratio) / 2.0;
+      branchratio->invleft = 1.0 / leftgain;
+   }
+   /* We (hopefully) make finding bugs easier by setting these values */
+   else {
+      branchratio->valid = FALSE;
+      branchratio->upratio = -1;
+      branchratio->invleft = -1;
+   }
+
+   /* Update the history */
+   SCIPhistorySetRatioHistory(var->history, branchratio->valid, branchratio->upratio, r);
+}
+
+/** Use the Ratio scoring function to select a branching candidate */
+static
+SCIP_RETCODE selectCandidateUsingRatio(
+   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP_BRANCHTREEMODEL*   treemodel,          /**< Treemodel parameter data structure */
+   SCIP_VAR**              branchcands,        /**< branching candidate storage */
+   SCIP_Real*              mingains,           /**< minimum gain of rounding downwards or upwards */
+   SCIP_Real*              maxgains,           /**< maximum gain of rounding downwards or upwards */
+   SCIP_Bool               filterdominated,    /**< whether dominated variables have been filtered */
+   SCIP_Bool*              dominated,          /**< whether each variable is dominated or not */
+   int                     nbranchcands,       /**< the number of branching candidates */
+   int                     ndominated,         /**< the number of dominated candidates */
+   int*                    bestcand            /**< the best branching candidate found by SCIP */
+)
+{
+   int c;
+   SCIP_BRANCHRATIO branchratio;
+   SCIP_BRANCHRATIO bestbranchratio;
+
+   /* We initialize bestbranchratio at the default bestcand ratio, since it is likely to have
+    * a very good ratio and save evaluations of the ratio for many variables */
+   int referencevar = *bestcand;
+   computeVarRatio(scip, treemodel, branchcands[referencevar], mingains[referencevar], maxgains[referencevar], &bestbranchratio);
+
+   for( c = 0; c < nbranchcands; ++c )
+   {
+      if( (!filterdominated || !dominated[c]) && c != referencevar )
+      {
+         if( !bestbranchratio.valid || hasBetterRatio(&bestbranchratio, mingains[c], maxgains[c]) )
+         {
+            computeVarRatio(scip, treemodel, branchcands[c], mingains[c], maxgains[c], &branchratio);
+
+            if( branchratio.valid )
+            {
+               *bestcand = c;
+               bestbranchratio = branchratio;
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Returns the predicted treesize for the gap and given up and down gains */
+static
+SCIP_Real computeSVTS(
+   SCIP*                    scip,               /**< SCIP data structure */
+   SCIP_BRANCHTREEMODEL*    treemodel,          /**< Treemodel parameter data structure */
+   SCIP_VAR*                var,                /**< the candidate branching variable */
+   SCIP_Real                absgap,             /**< the absolute gap to close (typically the local gap at the current node) */
+   SCIP_Real                leftgain,           /**< prediction of objective gain for rounding downwards */
+   SCIP_Real                rightgain           /**< prediction of objective gain for rounding upwards */
+)
+{
+   SCIP_Real prediction = SCIP_REAL_MAX;
+
+   if( SCIPisGT(scip, leftgain, 0) && !SCIPisInfinity(scip, absgap) )
+   {
+      SCIP_Real treesize;
+      SCIP_Real gaptoreach;
+      SCIP_Real scaledgap;
+      SCIP_Real scaledgain;
+      SCIP_Real mindepth;
+      unsigned int nr;
+      unsigned int ir;
+
+      /* We implicitly set the minimum gain to 1, and the maximum gain and gap accordingly,
+      * as the treesize does not change if we scale the gains and gap by a scalar  */
+      scaledgain = leftgain / rightgain;
+      scaledgap = absgap / leftgain;
+
+      mindepth = ceil(scaledgap / scaledgain);
+
+      /* In the following case we compute the treesize for a smaller gap
+       * and we will deduce the treesize of the scaledgap using the ratio */
+      if( mindepth > treemodel->maxsvtsheight )
+      {
+         gaptoreach = scaledgap * (treemodel->maxsvtsheight - 1) / mindepth;
+
+         assert(!SCIPisInfinity(scip, gaptoreach));
+         assert(gaptoreach > scaledgain);
+      }
+      else
+      {
+         gaptoreach = scaledgap;
+      }
+
+      mindepth = ceil(gaptoreach / scaledgain);
+      assert(mindepth <= treemodel->maxsvtsheight);
+      treesize = 1;
+
+      /* nr is the number of times we turn right to reach a leaf */
+      for( nr = 1; nr <= mindepth; ++nr )
+      {
+         SCIP_Real binomcoeff = 1;
+         for( ir = 1; ir <= nr; ++ir )
+         {
+            binomcoeff *= (nr + ceil((gaptoreach - (nr - 1) * scaledgain)) - ir) / ir;
+         }
+         treesize += binomcoeff;
+      }
+
+      treesize = 2 * treesize -1;
+
+      assert(treesize >= 3);
+
+      if( scaledgap != gaptoreach )
+      {
+         /* If we have not computed the treesize for the scaled gap but for max gap instead,
+          * we use the ratio between two iterations to come up with an estimate of the treesize
+          * for the scaled gap */
+         if( !SCIPisInfinity(scip,treesize) )
+         {
+            SCIP_BRANCHRATIO branchratio;
+            computeVarRatio(scip, treemodel, var, leftgain, rightgain, &branchratio);
+
+            if( branchratio.valid )
+               prediction = treesize*pow(branchratio.upratio, (scaledgap - gaptoreach) * branchratio.invleft);
+         }
+      }
+      else
+      {
+         prediction = treesize;
+      }
+   }
+
+   return prediction;
+}
+
+/** Use the SVTS scoring function to select a branching candidate */
+static
+SCIP_RETCODE selectCandidateUsingSVTS(
+   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP_BRANCHTREEMODEL*   treemodel,          /**< Treemodel parameter data structure */
+   SCIP_VAR**              branchcands,        /**< branching candidate storage */
+   SCIP_Real*              mingains,           /**< minimum gain of rounding downwards or upwards */
+   SCIP_Real*              maxgains,           /**< maximum gain of rounding downwards or upwards */
+   SCIP_Real*              scoresfromothers,   /**< scores from other branching rules */
+   SCIP_Real               localabsgap,        /**< The dual gap at the current node */
+   SCIP_Bool               filterdominated,    /**< whether dominated variables have been filtered */
+   SCIP_Bool*              dominated,          /**< whether each variable is dominated or not */
+   int                     nbranchcands,       /**< the number of branching candidates */
+   int                     ndominated,         /**< the number of dominated candidates */
+   int*                    bestcand            /**< the best branching candidate found by SCIP */
+)
+{
+   int c;
+   SCIP_Real referencetreesize;
+   SCIP_Real score;
+   SCIP_Real bestscore = 0;
+   SCIP_Real avgtreesize = 0;
+   SCIP_Real* treesizes = NULL;
+   int besttscand = *bestcand;
+
+   /* We will first measure the treesize for scip's default variable. If it is infinite then we don't compute
+    * the treesize for other variables (even though it might be finite) and go directly to the fallback strategy */
+   int referencevar = *bestcand;
+
+   if( !SCIPisInfinity(scip, localabsgap) )
+   {
+      referencetreesize = computeSVTS(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar], maxgains[referencevar]);
+
+      if( referencetreesize != SCIP_REAL_MAX )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &treesizes, nbranchcands) );
+         treesizes[referencevar] = referencetreesize;
+
+         for( c = 0; c < nbranchcands; ++c )
+         {
+            if( !filterdominated || !dominated[c] )
+            {
+               if( c != referencevar )
+                  treesizes[c] = computeSVTS(scip, treemodel, branchcands[c], localabsgap, mingains[c], maxgains[c]);
+               else
+                  treesizes[c] = referencetreesize;
+
+               avgtreesize += treesizes[c];
+            }
+            else
+               treesizes[c] = SCIP_REAL_MAX;
+         }
+         avgtreesize = avgtreesize / (nbranchcands - ndominated);
+
+         for( c = 0; c < nbranchcands; ++c )
+         {
+            score = (1.0 - 1.0/(1.0+avgtreesize/treesizes[c])) + 0.01 * scoresfromothers[c];
+            if(score > bestscore)
+            {
+               bestscore = score;
+               besttscand = c;
+            }
+         }
+
+         *bestcand = besttscand;
+
+         SCIPfreeBufferArray(scip, &treesizes);
+      }
+         /* Apply infinite treesize fallback strategy */
+      else if( treemodel->fallbackinf == 'r' )
+      {
+         selectCandidateUsingRatio(scip, treemodel, branchcands, mingains, maxgains, filterdominated, dominated,
+                                   nbranchcands, ndominated, bestcand);
+      }
+   }
+      /* Apply no primal bound fallback strategy */
+   else if( treemodel->fallbacknoprim == 'r' )
+   {
+      selectCandidateUsingRatio(scip, treemodel, branchcands, mingains, maxgains, filterdominated, dominated,
+                                nbranchcands, ndominated, bestcand);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Computes a^b for integer b */
+static
+SCIP_Real integerpow(SCIP_Real a, int b) {
+   SCIP_Real ans = 1.0;
+   for (; b; b /= 2) {
+      if (b & 1) ans *= a;
+      a *= a;
+   }
+   return ans;
+}
+
+/** Returns the sampled tree size for the given lp gains and dual gap */
+static
+SCIP_Real computeSampleTreesize(
+   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP_BRANCHTREEMODEL*   treemodel,          /**< Treemodel parameter data structure */
+   SCIP_VAR*               var,                /**< the candidate branching variable */
+   SCIP_Real               absgap,             /**< the absolute gap to close (typically the local at the current node) */
+   SCIP_Real               leftgain,           /**< The minimum gain from branching on this variable */
+   SCIP_Real               rightgain           /**< The maximum gain from branching on this variable */
+)
+{
+   SCIP_BRANCHRATIO branchratio;
+   SCIP_Real prediction;
+   SCIP_Real leftsize, rightsize, midsize;
+
+   computeVarRatio(scip, treemodel, var, leftgain, rightgain, &branchratio);
+
+   if( branchratio.valid ) {
+      SCIP_Real phi_l = branchratio.upratio;
+      SCIP_Real phi_r = pow(branchratio.upratio, rightgain * branchratio.invleft);
+      int kl = (int)ceil(absgap / leftgain);
+      int kr = (int)ceil(absgap / rightgain);
+      int k = (int)ceil(absgap / (leftgain + rightgain));
+      SCIP_Real phi_lr = phi_l * phi_r;
+      SCIP_Real phi_klr = integerpow(phi_lr, k);
+
+      leftsize = (integerpow(phi_l, kl + 1) - 1.0) / (phi_l - 1.0);
+      rightsize = (integerpow(phi_r, kr + 1) - 1.0) / (phi_r - 1.0);
+
+      if( k * (leftgain + rightgain) < absgap + rightgain )
+         midsize = (1.0 + phi_l) * (phi_klr * phi_lr - 1.0) / (phi_lr - 1.0) - phi_klr * phi_l;
+      else
+         midsize = (1.0 + phi_l) * (phi_klr - 1.0) / (phi_lr - 1.0);
+
+      prediction = (leftsize + rightsize + midsize) / 3.0;
+   }
+   else {
+      prediction = SCIP_REAL_MAX;
+   }
+
+   return prediction;
+}
+
+/** Use the Tree Sampling scoring function to select a branching candidate */
+static
+SCIP_RETCODE selectCandidateUsingSampling(
+   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP_BRANCHTREEMODEL*   treemodel,          /**< Treemodel parameter data structure */
+   SCIP_VAR**              branchcands,        /**< branching candidate storage */
+   SCIP_Real*              mingains,           /**< minimum gain of rounding downwards or upwards */
+   SCIP_Real*              maxgains,           /**< maximum gain of rounding downwards or upwards */
+   SCIP_Real*              scoresfromothers,   /**< scores from other branching rules */
+   SCIP_Real               localabsgap,        /**< The dual gap at the current node */
+   SCIP_Bool               filterdominated,    /**< whether dominated variables have been filtered */
+   SCIP_Bool*              dominated,          /**< whether each variable is dominated or not */
+   int                     nbranchcands,       /**< the number of branching candidates */
+   int                     ndominated,         /**< the number of dominated candidates */
+   int*                    bestcand            /**< the best branching candidate found by SCIP */
+)
+{
+   int c;
+   SCIP_Real referencetreesize;
+   SCIP_Real score;
+   SCIP_Real bestscore = 0;
+   SCIP_Real avgtreesize = 0;
+   SCIP_Real* treesizes = NULL;
+   int besttscand = *bestcand;
+
+   /* We will first measure the treesize for scip's default variable. If it is infinite then we don't compute
+    * the treesize for other variables (even though it might be finite) and go directly to the fallback strategy */
+   int referencevar = *bestcand;
+
+   if( !SCIPisInfinity(scip, localabsgap) )
+   {
+      referencetreesize = computeSampleTreesize(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar], maxgains[referencevar]);
+
+      if( referencetreesize != SCIP_REAL_MAX )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &treesizes, nbranchcands) );
+         treesizes[referencevar] = referencetreesize;
+
+         for( c = 0; c < nbranchcands; ++c )
+         {
+            if( !filterdominated || !dominated[c] )
+            {
+               if( c != referencevar )
+                  treesizes[c] = computeSampleTreesize(scip, treemodel, branchcands[c], localabsgap, mingains[c], maxgains[c]);
+               else
+                  treesizes[c] = referencetreesize;
+
+               avgtreesize += treesizes[c];
+            }
+            else
+               treesizes[c] = SCIP_REAL_MAX;
+         }
+         avgtreesize = avgtreesize / (nbranchcands - ndominated);
+
+         for( c = 0; c < nbranchcands; ++c )
+         {
+            score = (1.0 - 1.0/(1.0+avgtreesize/treesizes[c])) + 0.01 * scoresfromothers[c];
+            if(score > bestscore)
+            {
+               bestscore = score;
+               besttscand = c;
+            }
+         }
+
+         *bestcand = besttscand;
+
+         SCIPfreeBufferArray(scip, &treesizes);
+      }
+      /* Apply infinite treesize fallback strategy */
+      else if( treemodel->fallbackinf == 'r' )
+      {
+         selectCandidateUsingRatio(scip, treemodel, branchcands, mingains, maxgains, filterdominated, dominated,
+            nbranchcands, ndominated, bestcand);
+      }
+   }
+   /* Apply no primal bound fallback strategy */
+   else if( treemodel->fallbacknoprim == 'r' )
+   {
+      selectCandidateUsingRatio(scip, treemodel, branchcands, mingains, maxgains, filterdominated, dominated,
+         nbranchcands, ndominated, bestcand);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** Initialises the Treemodel parameter data structure */
 SCIP_RETCODE SCIPtreemodelInit(
@@ -57,10 +712,9 @@ SCIP_RETCODE SCIPtreemodelInit(
    SCIP_BRANCHTREEMODEL**  treemodel   /**< Treemodel parameter data structure */
    )
 {
-
+   assert(treemodel != NULL);
    SCIP_CALL( SCIPallocBlockMemory(scip, treemodel) );
-
-   assert(treemodel != NULL && *treemodel != NULL);
+   assert(*treemodel != NULL);
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/treemodel/enable",
          "should candidate branching variables be scored using the Treemodel branching rules?", &(*treemodel)->enabled, FALSE, DEFAULT_ENABLE,
@@ -92,6 +746,9 @@ SCIP_RETCODE SCIPtreemodelInit(
    SCIP_CALL( SCIPaddCharParam(scip, "branching/treemodel/fallbacknoprim",
          "which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio)", &(*treemodel)->fallbacknoprim, TRUE, DEFAULT_FALLBACKNOPRIM, "dr",
          NULL, NULL) );
+   SCIP_CALL ( SCIPaddRealParam(scip, "branching/treemodel/smallpscost",
+          "threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching", &(*treemodel)->smallpscost, TRUE, DEFAULT_SMALLPSCOST,
+          0.0, SCIP_REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }
@@ -102,8 +759,136 @@ SCIP_RETCODE SCIPtreemodelFree(
    SCIP_BRANCHTREEMODEL**  treemodel   /**< Treemodel parameter data structure */
    )
 {
-   assert(treemodel != NULL && *treemodel != NULL);
+   assert(treemodel != NULL);
+   assert(*treemodel != NULL);
 
    SCIPfreeBlockMemory(scip, treemodel);
+
+   return SCIP_OKAY;
+}
+
+/** Returns TRUE if the Treemodel branching rules are enabled */
+SCIP_Bool SCIPtreemodelIsEnabled(
+   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP_BRANCHTREEMODEL*   treemodel           /**< Treemodel parameter data structure */
+)
+{
+   return treemodel->enabled;
+}
+
+/** Apply the Treemodel branching rules to attempt to select a better
+ *  branching candidate than the one selected by pseudocost branching
+ */
+SCIP_RETCODE SCIPtreemodelSelectCandidate(
+   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP_BRANCHTREEMODEL*   treemodel,          /**< Treemodel parameter data structure */
+   SCIP_VAR**              branchcands,        /**< branching candidate storage */
+   SCIP_Real*              mingains,           /**< minimum gain of rounding downwards or upwards */
+   SCIP_Real*              maxgains,           /**< maximum gain of rounding downwards or upwards */
+   SCIP_Real*              scoresfrompc,       /**< pseudocost scores of branching candidates */
+   SCIP_Real*              scoresfromothers,   /**< scores from other branching rules */
+   SCIP_Real               avgpscostscore,     /**< average pseudocost score of branching candidates */
+   int                     nbranchcands,       /**< the number of branching candidates */
+   int*                    bestcand            /**< the best branching candidate found by SCIP */
+)
+{
+   SCIP_Real localabsgap;           /* The gap at the current node */
+   int bestcandheight;              /* The height of the best candidate according to SCIP */
+   char scoringfunction;            /* Scoring function to use (based on the estimated tree height) */
+   char filtersetting;              /* Whether we should apply filtering of dominated variables */
+   int c;                           /* Loop counter for branching candidates */
+
+   assert(treemodel != NULL);
+   assert(treemodel->enabled);
+   assert(*bestcand >= 0);
+
+   /* If the pseudocosts are zero, use SCIPs best variable since the Treemodel is not applicable */
+   if ( SCIPisZero(scip, maxgains[*bestcand]) )
+   {
+      return SCIP_OKAY;
+   }
+
+   /* If SCIPs best candidate was selected due to hybrid branching scores
+    * rather than because of pseudocosts, then we keep it.
+    */
+   if( avgpscostscore <= treemodel->smallpscost ) {
+      for (c = 0; c < nbranchcands; ++c)
+      {
+         if( scoresfrompc[c] > scoresfrompc[*bestcand] )
+            return SCIP_OKAY;
+      }
+   }
+
+   /* Compute the dual gap at the current node */
+   if( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
+      localabsgap = SCIPgetUpperbound(scip) - SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
+   else
+      localabsgap = SCIPinfinity(scip);
+
+   /* Compute an estimate of the height of the current node using the bestcand variable */
+   if( !SCIPisInfinity(scip, localabsgap) && SCIPisGT(scip, mingains[*bestcand], 0)
+      && SCIPisLT(scip, localabsgap/mingains[*bestcand], 1.0 * INT_MAX))
+      bestcandheight = (int)(localabsgap/mingains[*bestcand]);
+   else
+      bestcandheight = INT_MAX;
+
+   /* Decide which scoring function to use based on the estimated height of the tree */
+   if ( bestcandheight < treemodel->height )
+   {
+      scoringfunction = treemodel->lowrule;
+      filtersetting = treemodel->filterlow;
+   }
+   else
+   {
+      scoringfunction = treemodel->highrule;
+      filtersetting = treemodel->filterhigh;
+   }
+
+   /* We are going to apply a Treemodel variable selection rule */
+   if( scoringfunction != 'd' )
+   {
+      SCIP_Bool* dominated;            /* Whether variables are dominated */
+      SCIP_Bool autofilter;            /* If auto filtering is chosen, should variables be filtered? */
+      SCIP_Bool filterdominated;       /* Whether we should filter dominated variables */
+      int ndominated;                  /* Number of dominated variables */
+
+      /* Filtering dominated variables is suggested for SVTS and Tree Sampling rules */
+      autofilter = (filtersetting == 'a' && (scoringfunction == 's' || scoringfunction == 't'));
+      filterdominated = (autofilter || filtersetting == 't');
+
+      /* If selected, find the dominated variables */
+      if ( filterdominated )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &dominated, nbranchcands) );
+         SCIP_CALL( findNonDominatedVars(scip, mingains, maxgains, nbranchcands, &ndominated, dominated) );
+      }
+
+      /* Invoke the selected scoring function */
+      switch( scoringfunction )
+      {
+         case 's':
+            SCIP_CALL( selectCandidateUsingSVTS(scip, treemodel, branchcands, mingains, maxgains, scoresfromothers,
+               localabsgap, filterdominated, dominated, nbranchcands, ndominated, bestcand) );
+            break;
+         case 'r':
+            SCIP_CALL( selectCandidateUsingRatio(scip, treemodel, branchcands, mingains, maxgains, filterdominated,
+                dominated, nbranchcands, ndominated, bestcand) );
+            break;
+         case 't':
+            SCIP_CALL( selectCandidateUsingSampling(scip, treemodel, branchcands, mingains, maxgains, scoresfromothers,
+               localabsgap, filterdominated, dominated, nbranchcands, ndominated, bestcand) );
+            break;
+         default:
+            return SCIP_PARAMETERWRONGVAL;
+      }
+
+      /* Free dominated variable buffer if it was used */
+      if ( filterdominated )
+      {
+         assert(dominated != NULL);
+         SCIPfreeBufferArray(scip, &dominated);
+      }
+   }
+
    return SCIP_OKAY;
 }
