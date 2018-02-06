@@ -175,8 +175,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 /** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
+SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreFracdiving)
 {
    SCIP_Real obj;
    SCIP_Real objnorm;
@@ -286,7 +285,7 @@ SCIP_RETCODE SCIPincludeHeurFracdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
-         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreFracdiving) );
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, SCIPdivesetGetScoreFracdiving) );
 
    return SCIP_OKAY;
 }

@@ -24,14 +24,15 @@
 #include <string.h>
 
 #include "scip/heur_allinonediving.h"
-#include "scip/pub_dive.h"
+#include "scip/heuristics.h"
 #include "scip/branch_distribution.h"
+#include "scip/scipdefplugins.h"
 
 #define HEUR_NAME             "allinonediving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the active constraints"
 #define HEUR_DISPCHAR         'a'
 #define HEUR_PRIORITY         -70000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             5
 #define HEUR_FREQOFS          5
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
@@ -40,6 +41,16 @@
 #define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event type to be handled by this event handler */
 #define EVENTHDLR_NAME "eventhdlr_allinonedistribution"
 #define SQUARED(x) ((x) * (x))
+
+/**< bit masks that represent all supported dive types */
+#define DIVETYPES_ACTCONS    SCIP_DIVETYPE_INTEGRALITY
+#define DIVETYPES_DIST       SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVETYPES_GUIDED     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVETYPES_COEF       SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
+#define DIVETYPES_FRAC       SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
+#define DIVETYPES_LINESEARCH SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
+#define DIVETYPES_PSCOST     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVETYPES_VECLEN     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
 
 
 /*
@@ -57,6 +68,9 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  1.0 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 1.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15
+#define DEFAULT_LPSOLVEFREQ 0
+#define DEFAULT_INITIALSEED 12345
 
 
 /* locally defined heuristic data */
@@ -992,113 +1006,9 @@ SCIP_DECL_HEUREXIT(heurExitAllinonediving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-
-
-
-
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
- *  score
- */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
-{
-   SCIP_Bool mayrounddown;
-   SCIP_Bool mayroundup;
-   SCIP_Real downscore;
-   SCIP_Real upscore;
-
-
-   mayrounddown = SCIPvarMayRoundDown(cand);
-   mayroundup = SCIPvarMayRoundUp(cand);
-
-   /* first, calculate the variable score */
-   assert(SCIPdivesetGetWorkSolution(diveset) != NULL);
-   *score = getNActiveConsScore(scip, SCIPdivesetGetWorkSolution(diveset), cand, &downscore, &upscore);
-
-   /* get the rounding direction: prefer an unroundable direction */
-   if( mayrounddown && mayroundup )
-      *roundup = (candsfrac > 0.5);
-   else if( mayrounddown || mayroundup )
-      *roundup = mayrounddown;
-   else
-      *roundup = (downscore > upscore);
-
-   if( *roundup )
-      candsfrac = 1.0 - candsfrac;
-
-   /* penalize too small fractions */
-   if( candsfrac < 0.01 )
-      (*score) *= 0.01;
-
-   /* prefer decisions on binary variables */
-   if( !SCIPvarIsBinary(cand) )
-      (*score) *= 0.01;
-
-   /* penalize variable if it may be rounded */
-   if( mayrounddown || mayroundup )
-      *score -= 3.0;
-
-   assert(!(mayrounddown || mayroundup) || *score <= 0.0);
-
-   return SCIP_OKAY;
-}
-
 /*
  * heuristic specific interface methods
  */
-
-/** returns a score for the given candidate -- the best candidate maximizes the diving score */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
-{
-   SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
-   SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
-
-   if( mayrounddown || mayroundup )
-   {
-      /* choose rounding direction:
-       * - if variable may be rounded in both directions, round corresponding to the fractionality
-       * - otherwise, round in the infeasible direction
-       */
-      if( mayrounddown && mayroundup )
-         *roundup = (candsfrac > 0.5);
-      else
-         *roundup = mayrounddown;
-   }
-   else
-   {
-      /* the candidate may not be rounded */
-      int nlocksdown = SCIPvarGetNLocksDown(cand);
-      int nlocksup = SCIPvarGetNLocksUp(cand);
-      *roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && candsfrac > 0.5));
-   }
-
-   if( *roundup )
-   {
-      candsfrac = 1.0 - candsfrac;
-      *score = SCIPvarGetNLocksUp(cand);
-   }
-   else
-      *score = SCIPvarGetNLocksDown(cand);
-
-
-   /* penalize too small fractions */
-   if( candsfrac < 0.01 )
-      (*score) *= 0.1;
-
-   /* prefer decisions on binary variables */
-   if( !SCIPvarIsBinary(cand) )
-      (*score) *= 0.1;
-
-   /* penalize the variable if it may be rounded. */
-   if( mayrounddown || mayroundup )
-      (*score) -= SCIPgetNLPRows(scip);
-
-   /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
-   assert( (0.0 < candsfrac && candsfrac < 1.0) || SCIPvarIsBinary(cand) );
-
-   return SCIP_OKAY;
-}
 
 /** scoring callback for distribution diving. best candidate maximizes the distribution score */
 static
@@ -1181,251 +1091,6 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
 
    return SCIP_OKAY;
 }
-
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
- *  score
- */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
-{
-   SCIP_Real obj;
-   SCIP_Real objnorm;
-   SCIP_Real objgain;
-   SCIP_Bool mayrounddown;
-   SCIP_Bool mayroundup;
-
-   mayrounddown = SCIPvarMayRoundDown(cand);
-   mayroundup = SCIPvarMayRoundUp(cand);
-
-   /* choose rounding direction:
-    * - if variable may be rounded in either both or neither direction, round corresponding to the fractionality
-    * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
-    *   the current fractional solution
-    */
-   if( mayrounddown != mayroundup )
-      *roundup = mayrounddown;
-   else
-      *roundup = (candsfrac > 0.5);
-
-   obj = SCIPvarGetObj(cand);
-   objnorm = SCIPgetObjNorm(scip);
-
-   /* divide by objective norm to normalize obj into [-1,1] */
-   if( SCIPisPositive(scip, objnorm) )
-      obj /= objnorm;
-
-   /* calculate objective gain and fractionality for the selected rounding direction */
-   if( *roundup )
-   {
-      candsfrac = 1.0 - candsfrac;
-      objgain = obj * candsfrac;
-   }
-   else
-      objgain = -obj * candsfrac;
-
-   assert(objgain >= -1.0 && objgain <= 1.0);
-
-      /* penalize too small fractions */
-      if( candsfrac < 0.01 )
-         candsfrac += 10.0;
-
-      /* prefer decisions on binary variables */
-      if( !SCIPvarIsBinary(cand) )
-         candsfrac *= 1000.0;
-
-      /* prefer variables which cannot be rounded by scoring their fractionality */
-      if( !(mayrounddown || mayroundup) )
-         *score = -candsfrac;
-      else
-         *score =  -2.0 - objgain;
-
-      return SCIP_OKAY;
-}
-
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
- *  score
- */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreGuideddiving)
-{
-   SCIP_SOL* bestsol;
-   SCIP_Real bestsolval;
-   SCIP_Real obj;
-   SCIP_Real objnorm;
-   SCIP_Real objgain;
-
-   bestsol = SCIPgetBestSol(scip);
-   assert(bestsol != NULL);
-   assert(!SCIPsolIsOriginal(bestsol));
-
-   bestsolval = SCIPgetSolVal(scip, bestsol, cand);
-
-   /* variable should be rounded (guided) into the direction of its incumbent solution value */
-   if( candsol < bestsolval )
-      *roundup = TRUE;
-   else
-      *roundup = FALSE;
-
-   obj = SCIPvarGetObj(cand);
-   objnorm = SCIPgetObjNorm(scip);
-
-   /* divide by objective norm to normalize obj into [-1,1] */
-   if( SCIPisPositive(scip, objnorm) )
-      obj /= objnorm;
-
-   /* calculate objective gain and fractionality for the selected rounding direction */
-   if( *roundup )
-   {
-      candsfrac = 1.0 - candsfrac;
-      objgain = obj * candsfrac;
-   }
-   else
-      objgain = -obj * candsfrac;
-
-   assert(objgain >= -1.0 && objgain <= 1.0);
-
-   /* penalize too small fractions */
-   if( candsfrac < 0.01 )
-      candsfrac *= 0.1;
-
-   /* prefer decisions on binary variables */
-   if( !SCIPvarIsBinary(cand) )
-      candsfrac *= 0.1;
-
-   /* prefer variables which cannot be rounded by scoring their fractionality */
-   if( !(SCIPvarMayRoundDown(cand) || SCIPvarMayRoundUp(cand)) )
-      *score = -candsfrac;
-   else
-      *score = -2.0 - objgain;
-
-   return SCIP_OKAY;
-}
-
-/** calculate score and preferred rounding direction for the candidate variable */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreVeclendiving)
-{
-   SCIP_Real obj;
-   SCIP_Real objdelta;
-   SCIP_Real colveclen;
-
-   obj = SCIPvarGetObj(cand);
-   *roundup = (obj >= 0.0);
-   objdelta = ((*roundup) ? (1.0 - candsfrac) * obj : -candsfrac * obj);
-   assert(objdelta >= 0.0);
-
-   colveclen = (SCIPvarGetStatus(cand) == SCIP_VARSTATUS_COLUMN ? SCIPcolGetNNonz(SCIPvarGetCol(cand)) : 0.0);
-
-   /* larger score is better */
-   *score = (colveclen + 1.0) / (objdelta + SCIPsumepsilon(scip));
-
-   /* prefer decisions on binary variables */
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-      *score *= 0.001;
-
-   return SCIP_OKAY;
-
-}
-
-/** returns a score for the given candidate -- the best candidate maximizes the diving score */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
-{
-   SCIP_Real pscostdown;
-   SCIP_Real pscostup;
-   SCIP_Real pscostquot;
-
-   SCIP_Bool mayrounddown;
-   SCIP_Bool mayroundup;
-
-   mayrounddown = SCIPvarMayRoundDown(cand);
-   mayroundup = SCIPvarMayRoundUp(cand);
-
-
-   /* bound fractions to not prefer variables that are nearly integral */
-   candsfrac = MAX(candsfrac, 0.1);
-   candsfrac = MIN(candsfrac, 0.9);
-
-   pscostdown = SCIPgetVarPseudocostVal(scip, cand, 0.0 - candsfrac);
-   pscostup = SCIPgetVarPseudocostVal(scip, cand, 1.0 - candsfrac);
-
-   /*  determine the candidate direction. if the variable may be trivially rounded in one direction, take the other direction;
-    *  otherwise, consider first the direction from the root solution, second the candidate fractionality, and
-    *  last the direction of smaller pseudo costs
-    */
-   assert(pscostdown >= 0.0 && pscostup >= 0.0);
-   if( mayrounddown != mayroundup )
-      *roundup = mayrounddown;
-   else if( candsol < SCIPvarGetRootSol(cand) - 0.4 )
-      *roundup = FALSE;
-   else if( candsol > SCIPvarGetRootSol(cand) + 0.4 )
-      *roundup = TRUE;
-   else if( candsfrac < 0.3 )
-      *roundup = FALSE;
-   else if( candsfrac > 0.7 )
-      *roundup = TRUE;
-   else
-      *roundup = (pscostdown >= pscostup);
-
-   if( *roundup )
-      pscostquot = sqrt(candsfrac) * (1.0 + pscostdown) / (1.0 + pscostup);
-   else
-      pscostquot = sqrt(1.0 - candsfrac) * (1.0 + pscostup) / (1.0 + pscostdown);
-
-   /* prefer decisions on binary variables */
-   if( SCIPvarIsBinary(cand) && !(SCIPvarMayRoundDown(cand) || SCIPvarMayRoundUp(cand)))
-      pscostquot *= 1000.0;
-
-   assert(pscostquot >= 0);
-   *score = pscostquot;
-
-   return SCIP_OKAY;
-}
-
-/** returns a score for the given candidate -- the best candidate maximizes the diving score */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
-{
-   SCIP_Real rootsolval;
-   SCIP_Real distquot;
-
-   rootsolval = SCIPvarGetRootSol(cand);
-
-   /* preferred branching direction is further away from the root LP solution */
-   if( SCIPisLT(scip, candsol, rootsolval) )
-   {
-      /* round down*/
-      *roundup = FALSE;
-      distquot = (candsfrac + SCIPsumepsilon(scip)) / (rootsolval - candsol);
-
-      /* avoid roundable candidates */
-      if( SCIPvarMayRoundDown(cand) )
-         distquot *= 1000.0;
-   }
-   else if( SCIPisGT(scip, candsol, rootsolval) )
-   {
-      /* round up */
-      distquot = (1.0 - candsfrac) / (candsol - rootsolval);
-
-      /* avoid roundable candidates */
-      if( SCIPvarMayRoundUp(cand) )
-         distquot *= 1000.0;
-      *roundup = TRUE;
-   }
-   else
-   {
-      /* if the solution values are equal, we arbitrarily select branching downwards;
-       * candidates with equal LP solution values are penalized with an infinite score
-       */
-      *roundup = FALSE;
-      distquot = SCIPinfinity(scip);
-   }
-
-   *score = -distquot;
-
-   return SCIP_OKAY;
-}
-
 
 /** execution method of primal heuristic */
 static
@@ -1570,39 +1235,55 @@ SCIP_RETCODE SCIPincludeHeurAllinonediving(
 
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_actcons", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreActconsdiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 2, DEFAULT_BACKTRACK, TRUE, DIVETYPES_ACTCONS,
+         SCIPdivesetGetScoreActconsdiving) );
 
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_coef", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreCoefdiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 3, DEFAULT_BACKTRACK, TRUE, DIVETYPES_COEF,
+         SCIPdivesetGetScoreCoefdiving) );
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_dist", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreDistributiondiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED, DEFAULT_BACKTRACK, TRUE, DIVETYPES_DIST,
+         divesetGetScoreDistributiondiving) );
 
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_frac", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreFracdiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 5, DEFAULT_BACKTRACK, TRUE, DIVETYPES_FRAC,
+         SCIPdivesetGetScoreFracdiving) );
 
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_guided", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreGuideddiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 7, DEFAULT_BACKTRACK, TRUE, DIVETYPES_GUIDED,
+         SCIPdivesetGetScoreGuideddiving) );
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_pscost", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScorePscostdiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 11, DEFAULT_BACKTRACK, TRUE, DIVETYPES_PSCOST,
+         SCIPdivesetGetScorePscostdiving) );
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_line", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreLinesearchdiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 13, DEFAULT_BACKTRACK, TRUE, DIVETYPES_LINESEARCH,
+         SCIPdivesetGetScoreLinesearchdiving) );
    /* create a diveset (this will automatically install some additional parameters for the heuristic) */
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_veclen", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreVeclendiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 17, DEFAULT_BACKTRACK, TRUE, DIVETYPES_VECLEN,
+         SCIPdivesetGetScoreVeclendiving) );
 
    return SCIP_OKAY;
 }

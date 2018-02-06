@@ -171,8 +171,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
 /* diving setting callbacks */
 
 /** returns a score for the given candidate -- the best candidate maximizes the diving score */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
+SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreLinesearchdiving)
 {  /*lint --e{715}*/
    SCIP_Real rootsolval;
    SCIP_Real distquot;
@@ -277,7 +276,7 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
-         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreLinesearchdiving) );
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, SCIPdivesetGetScoreLinesearchdiving) );
 
    return SCIP_OKAY;
 }

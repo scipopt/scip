@@ -46,6 +46,12 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
+ *  score
+ */
+EXTERN
+SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreGuideddiving);
+
 #ifdef __cplusplus
 }
 #endif

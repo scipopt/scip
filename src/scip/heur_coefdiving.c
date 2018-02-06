@@ -171,8 +171,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 }
 
 /** returns a score for the given candidate -- the best candidate maximizes the diving score */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
+SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreCoefdiving)
 {
    SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
    SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
@@ -287,7 +286,7 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
-         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreCoefdiving) );
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, SCIPdivesetGetScoreCoefdiving) );
 
    return SCIP_OKAY;
 }

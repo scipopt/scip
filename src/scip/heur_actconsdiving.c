@@ -283,8 +283,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
 /** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
+SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreActconsdiving)
 {
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
@@ -372,7 +371,7 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
-         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreActconsdiving) );
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, SCIPdivesetGetScoreActconsdiving) );
 
    return SCIP_OKAY;
 }

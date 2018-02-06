@@ -173,8 +173,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
 }
 
 /** calculate score and preferred rounding direction for the candidate variable */
-static
-SCIP_DECL_DIVESETGETSCORE(divesetGetScoreVeclendiving)
+SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreVeclendiving)
 {
    SCIP_Real obj;
    SCIP_Real objdelta;
@@ -230,7 +229,7 @@ SCIP_RETCODE SCIPincludeHeurVeclendiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic) */
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
-         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreVeclendiving) );
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, SCIPdivesetGetScoreVeclendiving) );
 
    return SCIP_OKAY;
 }
