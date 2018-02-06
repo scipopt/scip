@@ -77,7 +77,7 @@ JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TESTSET=minlpdev-solvable 
 TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GIT_BRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TESTSET=sapdev-solvable TIME=3600 SETTING=sap-500-pure PERFORMANCE=performance"
+JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TESTSET=sapdev-solvable TIME=3600 SETTING=sap-501-pure PERFORMANCE=performance"
 
 # copy sap-500-pure settings
 cp ~/sap-500-pure.set settings/.
