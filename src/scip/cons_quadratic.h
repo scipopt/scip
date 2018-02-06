@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -649,7 +649,8 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    SCIP_VAR** RESTRICT   y,                  /**< array to second variable of each bilinear term */
    int* RESTRICT         nbilinterms,        /**< buffer to store the total number of bilinear terms */
    int* RESTRICT         nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
-   int* RESTRICT         noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   int* RESTRICT         noverests,          /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   SCIP_Real*            maxnonconvexity     /**< estimate of nonconvex eigenvalues of all quadratic constraints containing a bilinear term */
    );
 
 /** adds a globally valid inequality of the form xcoef x <= ycoef y + constant for a bilinear term (x,y)

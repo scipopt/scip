@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -97,7 +97,10 @@ do
                 rm -f $FILE
             fi
         else
-            echo Missing $i
+            echo Missing $FILE --
+
+            echo @01 $FILE ==MISSING==  >> $OUTFILE
+            echo                        >> $OUTFILE
         fi
 
         FILE=$i.err
@@ -108,6 +111,11 @@ do
             then
                 rm -f $FILE
             fi
+        else
+            echo Missing $FILE --
+
+            echo @01 $FILE ==MISSING==  >> $ERRFILE
+            echo                        >> $ERRFILE
         fi
 
         FILE=$i.set
@@ -159,7 +167,7 @@ do
 
       # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
       SOLUFILE=""
-      for f in $TSTNAME ${TSTNAME%%_*} all
+      for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
       do
           if test -f testset/${f}.solu
           then
@@ -193,7 +201,7 @@ do
       then
           if test "$EXPIRE" = "1"
           then
-              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+3 months"`
+              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+2 weeks"`
               rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
           else
               rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE

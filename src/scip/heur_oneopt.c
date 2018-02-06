@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -258,6 +258,141 @@ SCIP_RETCODE updateRowActivities(
    return SCIP_OKAY;
 }
 
+/** setup and solve oneopt sub-SCIP */
+static
+SCIP_RETCODE setupAndSolveSubscipOneopt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SCIP_HEUR*            heur,               /**< mutation heuristic */
+   SCIP_VAR**            vars,               /**< SCIP variables */
+   SCIP_VAR**            subvars,            /**< subproblem's variables */
+   SCIP_SOL*             bestsol,            /**< incumbent solution */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   SCIP_Bool*            valid               /**< pointer to store the valid value */
+   )
+{
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_SOL** subsols;
+   SCIP_SOL* startsol;
+   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
+   int nsubsols;
+   int nvars;                                /* number of original problem's variables          */
+   int i;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(heur != NULL);
+
+   nvars = SCIPgetNVars(scip);
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
+
+   /* copy complete SCIP instance */
+   *valid = FALSE;
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, valid) );
+   SCIP_CALL( SCIPtransformProb(subscip) );
+
+   /* get variable image */
+   for( i = 0; i < nvars; i++ )
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+   /* copy the solution */
+   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
+   SCIP_CALL( SCIPgetSolVals(scip, bestsol, nvars, vars, subsolvals) );
+
+   /* create start solution for the subproblem */
+   SCIP_CALL( SCIPcreateOrigSol(subscip, &startsol, NULL) );
+   SCIP_CALL( SCIPsetSolVals(subscip, startsol, nvars, subvars, subsolvals) );
+
+   /* try to add new solution to sub-SCIP and free it immediately */
+   *valid = FALSE;
+   SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, FALSE, valid) );
+   SCIPfreeBufferArray(scip, &subsolvals);
+   SCIPhashmapFree(&varmapfw);
+
+   /* deactivate basically everything except oneopt in the sub-SCIP */
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
+
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
+
+   /* if necessary, some of the parameters have to be unfixed first */
+   if( SCIPisParamFixed(subscip, "lp/solvefreq") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in subscip of oneopt heuristic\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "lp/solvefreq") );
+   }
+   SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
+
+   if( SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/freq in subscip of oneopt heuristic\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/freq") );
+   }
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+
+   if( SCIPisParamFixed(subscip, "heuristics/oneopt/forcelpconstruction") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/forcelpconstruction in subscip of oneopt heuristic\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/forcelpconstruction") );
+   }
+   SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/forcelpconstruction", TRUE) );
+
+   /* avoid recursive call, which would lead to an endless loop */
+   if( SCIPisParamFixed(subscip, "heuristics/oneopt/beforepresol") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/beforepresol in subscip of oneopt heuristic\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/beforepresol") );
+   }
+   SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
+
+   if( *valid )
+   {
+      /* errors in solving the subproblem should not kill the overall solving process;
+       * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+       */
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
+
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      *valid = FALSE;
+      for( i = 0; i < nsubsols && !(*valid); ++i )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], valid) );
+         if( *valid )
+            *result = SCIP_FOUNDSOL;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of primal heuristic
  */
@@ -347,21 +482,22 @@ SCIP_DECL_HEURINIT(heurInitOneopt)
    return SCIP_OKAY;
 }
 
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecOneopt)
 {  /*lint --e{715}*/
 
    SCIP_HEURDATA* heurdata;
-   SCIP_SOL* bestsol;                        /* incumbent solution */
-   SCIP_SOL* worksol;                        /* heuristic's working solution */
-   SCIP_VAR** vars;                          /* SCIP variables                */
-   SCIP_VAR** shiftcands;                    /* shiftable variables           */
-   SCIP_ROW** lprows;                        /* SCIP LP rows                  */
-   SCIP_Real* activities;                    /* row activities for working solution */
+   SCIP_SOL* bestsol;                        /* incumbent solution                   */
+   SCIP_SOL* worksol;                        /* heuristic's working solution         */
+   SCIP_VAR** vars;                          /* SCIP variables                       */
+   SCIP_VAR** shiftcands;                    /* shiftable variables                  */
+   SCIP_ROW** lprows;                        /* SCIP LP rows                         */
+   SCIP_Real* activities;                    /* row activities for working solution  */
    SCIP_Real* shiftvals;
    SCIP_Bool shifted;
+
+   SCIP_RETCODE retcode;
 
    SCIP_Real lb;
    SCIP_Real ub;
@@ -410,15 +546,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
    {
-      SCIP*                 subscip;            /* the subproblem created by zeroobj              */
-      SCIP_HASHMAP*         varmapfw;           /* mapping of SCIP variables to sub-SCIP variables */
+      SCIP*                 subscip;            /* the subproblem created by oneopt                */
       SCIP_VAR**            subvars;            /* subproblem's variables                          */
-      SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
 
-      SCIP_SOL* startsol;
-      SCIP_SOL** subsols;
       SCIP_Bool success;
-      int nsubsols;
 
       if( !heurdata->beforepresol )
          return SCIP_OKAY;
@@ -429,119 +560,19 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       if( !success )
          return SCIP_OKAY;
 
+      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
       /* initialize the subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
 
-      /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+      /* setup and solve the subproblem and catch the return code */
+      retcode = setupAndSolveSubscipOneopt(scip, subscip, heur, vars, subvars, bestsol, result, &valid);
 
-      /* copy complete SCIP instance */
-      valid = FALSE;
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, &valid) );
-      SCIP_CALL( SCIPtransformProb(subscip) );
-
-      /* get variable image */
-      for( i = 0; i < nvars; i++ )
-         subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
-      /* copy the solution */
-      SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-      SCIP_CALL( SCIPgetSolVals(scip, bestsol, nvars, vars, subsolvals) );
-
-      /* create start solution for the subproblem */
-      SCIP_CALL( SCIPcreateOrigSol(subscip, &startsol, NULL) );
-      SCIP_CALL( SCIPsetSolVals(subscip, startsol, nvars, subvars, subsolvals) );
-
-      /* try to add new solution to sub-SCIP and free it immediately */
-      valid = FALSE;
-      SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, FALSE, &valid) );
-      SCIPfreeBufferArray(scip, &subsolvals);
-      SCIPhashmapFree(&varmapfw);
-
-      /* deactivate basically everything except oneopt in the sub-SCIP */
-      SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-      SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-      SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-      /* set limits for the subproblem */
-      SCIP_CALL( SCIPcopyLimits(scip, subscip) );
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
-
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-#ifdef SCIP_DEBUG
-      /* for debugging, enable full output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#else
-      /* disable statistic timing inside sub SCIP and output to console */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-#endif
-
-      /* if necessary, some of the parameters have to be unfixed first */
-      if( SCIPisParamFixed(subscip, "lp/solvefreq") )
-      {
-         SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in subscip of oneopt heuristic\n");
-         SCIP_CALL( SCIPunfixParam(subscip, "lp/solvefreq") );
-      }
-      SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
-
-      if( SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
-      {
-         SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/freq in subscip of oneopt heuristic\n");
-         SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/freq") );
-      }
-      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
-
-      if( SCIPisParamFixed(subscip, "heuristics/oneopt/forcelpconstruction") )
-      {
-         SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/forcelpconstruction in subscip of oneopt heuristic\n");
-         SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/forcelpconstruction") );
-      }
-      SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/forcelpconstruction", TRUE) );
-
-      /* avoid recursive call, which would lead to an endless loop */
-      if( SCIPisParamFixed(subscip, "heuristics/oneopt/beforepresol") )
-      {
-         SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/beforepresol in subscip of oneopt heuristic\n");
-         SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/beforepresol") );
-      }
-      SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
-
-      /* speed up sub-SCIP by not checking dual LP feasibility */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-      if( valid )
-      {
-
-         /* errors in solving the subproblem should not kill the overall solving process;
-          * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-          */
-         SCIP_CALL_ABORT( SCIPsolve(subscip) );
-
-#ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
-#endif
-
-         /* check, whether a solution was found;
-          * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-          */
-         nsubsols = SCIPgetNSols(subscip);
-         subsols = SCIPgetSols(subscip);
-         valid = FALSE;
-         for( i = 0; i < nsubsols && !valid; ++i )
-         {
-            SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &valid) );
-            if( valid )
-               *result = SCIP_FOUNDSOL;
-         }
-      }
-
-      /* free subproblem */
-      SCIPfreeBufferArray(scip, &subvars);
+      /* free the subscip in any case */
       SCIP_CALL( SCIPfree(&subscip) );
+      SCIP_CALL( retcode );
+
+      SCIPfreeBufferArray(scip, &subvars);
 
       return SCIP_OKAY;
    }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -479,6 +479,8 @@ SCIP_RETCODE SCIPdebugGetSol(
    assert(scip != NULL);
    assert(sol != NULL);
 
+   *sol = NULL;
+
    /* check whether a debug solution is available */
    if( !debugSolutionAvailable(scip->set) )
       return SCIP_OKAY;
@@ -486,10 +488,7 @@ SCIP_RETCODE SCIPdebugGetSol(
    SCIP_CALL( readSolution(scip->set) );
 
    if( debugsoldata->debugsol == NULL )
-   {
-      *sol = NULL;
       return SCIP_ERROR;
-   }
 
    *sol = debugsoldata->debugsol;
 
@@ -887,11 +886,11 @@ SCIP_RETCODE SCIPdebugCheckRow(
    SCIPsetDebugMsg(set, "debugging solution on row <%s>: %g <= [%g,%g] <= %g\n",
       SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
 
-   /* check row for violation */
-   if( SCIPsetIsFeasLT(set, maxactivity, lhs) || SCIPsetIsFeasGT(set, minactivity, rhs) )
+   /* check row for violation, using absolute LP feasibility tolerance (as LP solver should do) */
+   if( maxactivity + SCIPsetLpfeastol(set) < lhs || minactivity - SCIPsetLpfeastol(set) > rhs )
    {
-      printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%u)\n",
-         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row));
+      printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%u, lpfeastol=%g)\n",
+         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row), SCIPsetLpfeastol(set));
       SCIProwPrint(row, SCIPgetMessagehdlr(set->scip), NULL);
 
       /* output row with solution values */
@@ -1077,9 +1076,12 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       return SCIP_OKAY;
 
    /* check if a solution will be cutoff in tree */
-   if( SCIPgetStage(set->scip) != SCIP_STAGE_EXITSOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_EXITPRESOLVE && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+   if( SCIPgetStage(set->scip) != SCIP_STAGE_EXITSOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_EXITPRESOLVE
+      && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
    {
       SCIP_Bool solisinnode;
+
+      assert(!SCIPisInRestart(set->scip)); /* we can only be "in restart" during exitsolve, see also discussion at #1926 */
 
       solisinnode = FALSE;
 

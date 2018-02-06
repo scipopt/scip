@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,7 +82,7 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
 
    nactions = SCIPbanditGetNActions(bandit);
 
-   /** roll the dice to check if the best element should be picked, or an element at random */
+   /* roll the dice to check if the best element should be picked, or an element at random */
    randnr = SCIPrandomGetReal(rng, 0.0, 1.0);
 
    /* make epsilon decrease with an increasing number of selections */
@@ -98,7 +98,7 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
 
       assert(weights != NULL);
 
-      /** pick the element with the largest reward */
+      /* pick the element with the largest reward */
       maxreward = weights[0];
       *selection = 0;
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3215,6 +3215,14 @@ SCIP_RETCODE paramsetSetPresolvingFast(
 #endif
    {
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly forbid the use of implications in logicor presolving */
+#ifndef NDEBUG
+   if( SCIPsetFindConshdlr(set, "logicor") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/logicor/implications", 0, quiet) );
    }
 
    return SCIP_OKAY;

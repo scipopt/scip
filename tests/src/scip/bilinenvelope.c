@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,13 +53,13 @@ TestSuite(bilinenvelope, .init = setup, .fini = teardown);
 Test(bilinenvelope, gradcut1)
 {
    SCIP_Real bilincoefs[6] = {1.0,   1.0,          1.0,             1.0,          -2.0,         -2.0};
-   SCIP_Real refpointxs[6] = {0.5,   0.0,          0.01,            0.6,          0.5,          0.01};
+   SCIP_Real refpointxs[6] = {0.5,   0.0,          0.02,            0.6,          0.5,          0.02};
    SCIP_Real refpointys[6] = {0.5,   0.0,          0.9,             0.4,          0.5,          0.9};
    SCIP_Bool successs[6]   = {TRUE,  FALSE,        TRUE,            FALSE,        FALSE,        TRUE};
    SCIP_Bool overests[6]   = {FALSE, FALSE,        FALSE,           FALSE,        FALSE,        TRUE};
-   SCIP_Real coefxs[6]     = {0.75,  SCIP_INVALID, 0.1735537190,    SCIP_INVALID, SCIP_INVALID, -2 * 0.1735537190};
-   SCIP_Real coefys[6]     = {0.25,  SCIP_INVALID, 0.00826446281,   SCIP_INVALID, SCIP_INVALID, -2 * 0.008264462810};
-   SCIP_Real constants[6]  = {-0.25, SCIP_INVALID, -0.008264462810, SCIP_INVALID, SCIP_INVALID,  2 * 0.008264462810};
+   SCIP_Real coefxs[6]     = {0.75,  SCIP_INVALID, 0.3055555555555556,    SCIP_INVALID, SCIP_INVALID, -2.0 * 0.3055555555555556};
+   SCIP_Real coefys[6]     = {0.25,  SCIP_INVALID, 0.027777777777777783,   SCIP_INVALID, SCIP_INVALID, -2.0 * 0.027777777777777783};
+   SCIP_Real constants[6]  = {-0.25, SCIP_INVALID, -0.027777777777777783, SCIP_INVALID, SCIP_INVALID,  2.0 * 0.027777777777777783};
    SCIP_Real coefx;
    SCIP_Real coefy;
    SCIP_Real constant;
@@ -72,7 +72,7 @@ Test(bilinenvelope, gradcut1)
       SCIPcomputeBilinEnvelope1(scip, bilincoefs[i], 0.0, 1.0, refpointxs[i], 0.0, 1.0, refpointys[i], overests[i], 1.0,
          1.0, 0.0, &coefx, &coefy, &constant, &success);
 
-      cr_expect(success == successs[i]);
+      cr_expect(success == successs[i], "%d: got %u expect %u", i, success, successs[i]);
       cr_expect(SCIPisEQ(scip, coefx, coefxs[i]));
       cr_expect(SCIPisEQ(scip, coefy, coefys[i]));
       cr_expect(SCIPisEQ(scip, constant, constants[i]));
@@ -132,16 +132,17 @@ Test(bilinenvelope, numerics)
    beta = 16.737537240718815;
    gamma = -4.3942379318411717;
 
-   refpointx = 5.9823947543054832;
-   refpointy = 0.35742386160575151;
+   /* note that the reference point needs to have a minimum distance to the variable bounds */
+   refpointx = 5.2;
+   refpointy = 0.3;
 
    SCIPcomputeBilinEnvelope1(scip, -325.08, lbx, ubx, refpointx, lby, uby, refpointy, FALSE, alpha, beta, gamma,
       &coefx, &coefy, &constant, &success);
 
    cr_expect(success);
-   cr_expect(SCIPisEQ(scip, coefx, -79.4323758414943768));
-   cr_expect(SCIPisEQ(scip, coefy, -1329.5022057691717237));
-   cr_expect(SCIPisEQ(scip, constant, 255.2872785501768647));
+   cr_expect(SCIPisEQ(scip, coefx, -71.50944001201063));
+   cr_expect(SCIPisEQ(scip, coefy, -1449.1811847849826));
+   cr_expect(SCIPisEQ(scip, constant, 250.66525223781193));
 }
 
 /* tests bilinear envelope computation for underestimating c*xy when given two linear inequalities */
@@ -159,15 +160,15 @@ Test(bilinenvelope, twoineqs_underestimate)
    SCIP_Real gamma2 = 0.6;
    int i;
 
-   SCIP_Real bilincoefs[4] = {3.3, 100.3, -1.0, 1.0};
-   SCIP_Real refpointxs[4] = {0.3, -0.5, -0.5, 1.5};
-   SCIP_Real refpointys[4] = {-0.15, -0.1, -0.1, 1.9};
-   SCIP_Real resx[4]       = {-0.0065211228254675, -0.7103545886154844, SCIP_INVALID, 2.1095247095247176};
-   SCIP_Real resy[4]       = {0.17701810527897127, -0.20848736066126078, SCIP_INVALID, 1.33602414037196};
-   SCIP_Real resconst[4]   = {-0.4315548420439882, -0.550126371865518, SCIP_INVALID, -3.350126371865521};
-   SCIP_Bool ressuccess[4] = {TRUE, TRUE, FALSE, TRUE};
+   SCIP_Real bilincoefs[5] = {3.3, 100.3, -1.0, 1.0, 1.0};
+   SCIP_Real refpointxs[5] = {0.3, -0.5, -0.5, 1.0, lbx};
+   SCIP_Real refpointys[5] = {-0.15, -0.1, -0.1, 1.5, uby};
+   SCIP_Real resx[5]       = {-0.0065211228254675, -0.7103545886154844, SCIP_INVALID, 1.45445115010332, SCIP_INVALID};
+   SCIP_Real resy[5]       = {0.17701810527897127, -0.20848736066126078, SCIP_INVALID, 0.9772255750516624, SCIP_INVALID};
+   SCIP_Real resconst[5]   = {-0.4315548420439882, -0.550126371865518, SCIP_INVALID, -1.9213268615442665, SCIP_INVALID};
+   SCIP_Bool ressuccess[5] = {TRUE, TRUE, FALSE, TRUE, FALSE};
 
-   for( i = 0; i < 4; ++i )
+   for( i = 0; i < 5; ++i )
    {
       SCIP_Real constant;
       SCIP_Real coefx;
@@ -178,7 +179,7 @@ Test(bilinenvelope, twoineqs_underestimate)
             alpha1, beta1, gamma1, alpha2, beta2, gamma2, &coefx, &coefy, &constant, &success);
 
       /* check status */
-      cr_expect(success == ressuccess[i]);
+      cr_expect(success == ressuccess[i], "%d: got %u expect %u\n", i, success, ressuccess[i]);
 
       /* check coefficients and the constant if successful */
       if( success )

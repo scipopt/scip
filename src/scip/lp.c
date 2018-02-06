@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -8237,8 +8237,8 @@ SCIP_RETCODE lpFlushChgCols(
             SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
-            assert((SCIPsetIsInfinity(set, lpilb) && SCIPsetIsInfinity(set, col->flushedlb))
-                  || (!SCIPsetIsInfinity(set, lpilb) && !SCIPsetIsInfinity(set, col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
+            assert((SCIPsetIsInfinity(set, -lpilb) && SCIPsetIsInfinity(set, -col->flushedlb))
+                  || (!SCIPsetIsInfinity(set, -lpilb) && !SCIPsetIsInfinity(set, -col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
             assert((SCIPsetIsInfinity(set, lpiub) && SCIPsetIsInfinity(set, col->flushedub))
                   || (!SCIPsetIsInfinity(set, lpiub) && !SCIPsetIsInfinity(set, col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub)));
          }
@@ -8504,6 +8504,13 @@ SCIP_RETCODE SCIPlpFlush(
       lp->flushed = TRUE;
 
       checkLinks(lp);
+   }
+
+   /* if the cutoff bound was changed in between, we want to re-optimize the LP even if nothing else has changed */
+   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) /*lint !e777*/
+   {
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    assert(lp->nlpicols == lp->ncols);
@@ -10199,7 +10206,7 @@ SCIP_RETCODE lpDualSimplex(
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
       SCIPsetDebugMsg("wrote LP to file <%s> (dual simplex, objlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
-         fname, lp->lpiobjlim, lp->lpifeastol, lp->lpidualfeastol, 
+         fname, lp->lpiobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
@@ -12794,6 +12801,9 @@ SCIP_Real SCIPlpGetGlobalPseudoObjval(
       if( SCIPsetIsInfinity(set, -lp->glbpseudoobjval) )
          return -SCIPsetInfinity(set);
 
+      if( SCIPsetIsInfinity(set, lp->glbpseudoobjval) )
+         return SCIPsetInfinity(set);
+
       return lp->glbpseudoobjval;
    }
 }
@@ -12822,6 +12832,9 @@ SCIP_Real SCIPlpGetPseudoObjval(
       /* if the pseudo objective value is smaller than -infinity, we just return -infinity */
       if( SCIPsetIsInfinity(set, -lp->pseudoobjval) )
          return -SCIPsetInfinity(set);
+
+      if( SCIPsetIsInfinity(set, lp->pseudoobjval) )
+         return SCIPsetInfinity(set);
 
       return lp->pseudoobjval;
    }
@@ -17049,21 +17062,24 @@ SCIP_RETCODE computeRelIntPoint(
    SCIP_Real* obj;
    SCIP_Real* lb;
    SCIP_Real* ub;
-   SCIP_Real* colvals;
-   SCIP_Real zero;
-   SCIP_Real minusinf;
-   SCIP_Real plusinf;
+   SCIP_Real* matvals;
+   SCIP_Real* matlhs;
+   SCIP_Real* matrhs;
    SCIP_Real objval;
    SCIP_Real alpha;
-   int* colinds;
+   int* matinds;
+   int* matbeg;
 #ifndef NDEBUG
    int nslacks;
 #endif
    int nnewcols;
+   int ntotnonz = 0;
+   int ntotrows = 0;
+   int matrowidx;
+   int matidx;
+   int cnt;
    int j;
    int i;
-   int beg;
-   int cnt;
 
    assert(lpi != NULL);
 
@@ -17122,23 +17138,37 @@ SCIP_RETCODE computeRelIntPoint(
       {
          assert( !SCIPsetIsInfinity(set, REALABS(row->lhs)) );
          assert( !SCIPsetIsInfinity(set, REALABS(row->rhs)) );
+         ntotnonz += row->nlpcols + 1;
+         ++ntotrows;
       }
-      else if( relaxrows )
+      else
       {
          /* otherwise add slacks for each side if necessary */
-         if( !SCIPsetIsInfinity(set, REALABS(row->lhs)) )
+         if ( ! SCIPsetIsInfinity(set, REALABS(row->lhs)) )
          {
-            obj[nnewcols] = 1.0;
-            lb[nnewcols] = 0.0;
-            ub[nnewcols] = 1.0;
-            ++nnewcols;
+            if ( relaxrows )
+            {
+               lb[nnewcols] = 0.0;
+               ub[nnewcols] = 1.0;
+               obj[nnewcols++] = 1.0;
+               ntotnonz += row->nlpcols + 2;
+            }
+            else
+               ntotnonz += row->nlpcols + 1;
+            ++ntotrows;
          }
-         if( !SCIPsetIsInfinity(set, REALABS(row->rhs)) )
+         if ( ! SCIPsetIsInfinity(set, REALABS(row->rhs)) )
          {
-            obj[nnewcols] = 1.0;
-            lb[nnewcols] = 0.0;
-            ub[nnewcols] = 1.0;
-            ++nnewcols;
+            if ( relaxrows )
+            {
+               lb[nnewcols] = 0.0;
+               ub[nnewcols] = 1.0;
+               obj[nnewcols++] = 1.0;
+               ntotnonz += row->nlpcols + 2;
+            }
+            else
+               ntotnonz += row->nlpcols + 1;
+            ++ntotrows;
          }
       }
    }
@@ -17147,10 +17177,11 @@ SCIP_RETCODE computeRelIntPoint(
    if( inclobjcutoff && relaxrows )
    {
       /* add slacks for right hand side */
-      obj[nnewcols] = 1.0;
       lb[nnewcols] = 0.0;
       ub[nnewcols] = 1.0;
-      ++nnewcols;
+      obj[nnewcols++] = 1.0;
+      ntotnonz += lp->ncols + 2;
+      ++ntotrows;
    }
 
    /* create slacks for bounds */
@@ -17163,22 +17194,29 @@ SCIP_RETCODE computeRelIntPoint(
 
       /* no slacks for fixed variables */
       if( SCIPsetIsEQ(set, col->lb, col->ub) )
-         continue;
-
-      /* add slacks for each bound if necessary */
-      if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
       {
-         obj[nnewcols] = 1.0;
-         lb[nnewcols] = 0.0;
-         ub[nnewcols] = 1.0;
-         ++nnewcols;
+         ++ntotrows;
+         ntotnonz += 2;
       }
-      if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
+      else
       {
-         obj[nnewcols] = 1.0;
-         lb[nnewcols] = 0.0;
-         ub[nnewcols] = 1.0;
-         ++nnewcols;
+         /* add slacks for each bound if necessary */
+         if ( ! SCIPsetIsInfinity(set, REALABS(col->lb)) )
+         {
+            lb[nnewcols] = 0.0;
+            ub[nnewcols] = 1.0;
+            obj[nnewcols++] = 1.0;
+            ntotnonz += 3;
+            ++ntotrows;
+         }
+         if( ! SCIPsetIsInfinity(set, REALABS(col->ub)) )
+         {
+            lb[nnewcols] = 0.0;
+            ub[nnewcols] = 1.0;
+            obj[nnewcols++] = 1.0;
+            ntotnonz += 3;
+            ++ntotrows;
+         }
       }
    }
 #ifndef NDEBUG
@@ -17196,15 +17234,16 @@ SCIP_RETCODE computeRelIntPoint(
    SCIPsetFreeBufferArray(set, &lb);
 
    /* prepare storage for rows */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &colinds, lp->ncols+2) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &colvals, lp->ncols+2) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &matinds, ntotnonz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &matvals, ntotnonz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &matbeg, ntotrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &matlhs, ntotrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &matrhs, ntotrows) );
 
    /* create rows arising from original rows */
    cnt = 0;
-   beg = 0;
-   zero = 0.0;
-   minusinf = -SCIPlpiInfinity(lpi);
-   plusinf  =  SCIPlpiInfinity(lpi);
+   matrowidx = 0;
+   matidx = 0;
    for( i = 0; i < lp->nrows; ++i )
    {
       SCIP_ROW* row;
@@ -17229,89 +17268,114 @@ SCIP_RETCODE computeRelIntPoint(
       rowcols = row->cols;
       rowvals = row->vals;
 
-      /* set up indices */
-      for( j = 0; j < nnonz; ++j )
-      {
-         assert( rowcols[j] != NULL );
-         assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
-         assert( lp->cols[rowcols[j]->lppos] == rowcols[j] );
-         assert( ! SCIPsetIsZero(set, rowvals[j]) );
-         colinds[j] = rowcols[j]->lppos;
-         colvals[j] = rowvals[j];
-      }
-
       /* if we have an equation */
       if( SCIPsetIsEQ(set, lhs, rhs) )
       {
+         /* set up indices */
+         matbeg[matrowidx] = matidx;
+         for( j = 0; j < nnonz; ++j )
+         {
+            assert( rowcols[j] != NULL );
+            assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
+            assert( lp->cols[rowcols[j]->lppos] == rowcols[j] );
+            assert( ! SCIPsetIsZero(set, rowvals[j]) );
+            matinds[matidx] = rowcols[j]->lppos;
+            matvals[matidx++] = rowvals[j];
+            assert( matidx <= ntotnonz );
+         }
+
          /* add artificial variable */
          if ( ! SCIPsetIsZero(set, rhs) )
          {
-            colinds[nnonz] = lp->ncols;
-            colvals[nnonz] = -rhs;
-            ++nnonz;
+            matinds[matidx] = lp->ncols;
+            matvals[matidx++] = -rhs;
+            assert( matidx <= ntotnonz );
          }
 
-         /* add row */
-         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &zero, NULL, nnonz, &beg, colinds, colvals) );
+         matlhs[matrowidx] = 0.0;
+         matrhs[matrowidx++] = 0.0;
+         assert( matrowidx <= ntotrows );
       }
       else
       {
          SCIP_Real abslhs = REALABS(lhs);
          SCIP_Real absrhs = REALABS(rhs);
 
+         assert(!SCIPsetIsEQ(set, lhs, rhs));
+
          /* treat lhs */
          if( !SCIPsetIsInfinity(set, abslhs) )
          {
-            int nnonzlhs;
-
-            assert(!SCIPsetIsEQ(set, lhs, rhs));
-            nnonzlhs = nnonz;
+            /* set up indices */
+            matbeg[matrowidx] = matidx;
+            for( j = 0; j < nnonz; ++j )
+            {
+               assert( rowcols[j] != NULL );
+               assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
+               assert( lp->cols[rowcols[j]->lppos] == rowcols[j] );
+               assert( ! SCIPsetIsZero(set, rowvals[j]) );
+               matinds[matidx] = rowcols[j]->lppos;
+               matvals[matidx++] = rowvals[j];
+               assert( matidx <= ntotnonz );
+            }
 
             /* add artificial variable */
             if ( ! SCIPsetIsZero(set, lhs) )
             {
-               colinds[nnonzlhs] = lp->ncols;
-               colvals[nnonzlhs] = -lhs;
-               ++nnonzlhs;
+               matinds[matidx] = lp->ncols;
+               matvals[matidx++] = -lhs;
+               assert( matidx <= ntotnonz );
             }
 
             if( relaxrows )
             {
                /* add slack variable */
-               colvals[nnonzlhs] = -MAX(1.0, lhs);      /*lint !e679*/
-               colinds[nnonzlhs] = lp->ncols + 1 + cnt; /*lint !e679*/
-               ++nnonzlhs;
+               matvals[matidx] = -MAX(1.0, lhs);      /*lint !e679*/
+               matinds[matidx++] = lp->ncols + 1 + cnt; /*lint !e679*/
+               assert( matidx <= ntotnonz );
                ++cnt;
             }
 
-            SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonzlhs, &beg, colinds, colvals) );
+            matlhs[matrowidx] = 0.0;
+            matrhs[matrowidx++] = SCIPlpiInfinity(lpi);
+            assert( matrowidx <= ntotrows );
          }
 
          /* treat rhs */
          if( !SCIPsetIsInfinity(set, absrhs) )
          {
-            int nnonzrhs;
-
-            assert(!SCIPsetIsEQ(set, lhs, rhs));
-            nnonzrhs = nnonz;
+            /* set up indices */
+            matbeg[matrowidx] = matidx;
+            for( j = 0; j < nnonz; ++j )
+            {
+               assert( rowcols[j] != NULL );
+               assert( 0 <= rowcols[j]->lppos && rowcols[j]->lppos < lp->ncols );
+               assert( lp->cols[rowcols[j]->lppos] == rowcols[j] );
+               assert( ! SCIPsetIsZero(set, rowvals[j]) );
+               matinds[matidx] = rowcols[j]->lppos;
+               matvals[matidx++] = rowvals[j];
+               assert( matidx <= ntotnonz );
+            }
 
             /* add artificial variable */
             if ( ! SCIPsetIsZero(set, rhs) )
             {
-               colinds[nnonzrhs] = lp->ncols;
-               colvals[nnonzrhs] = -rhs;
-               ++nnonzrhs;
+               matinds[matidx] = lp->ncols;
+               matvals[matidx++] = -rhs;
+               assert( matidx <= ntotnonz );
             }
 
             if( relaxrows )
             {
                /* add slack variable */
-               colvals[nnonzrhs] = MAX(1.0, absrhs);    /*lint !e679*/
-               colinds[nnonzrhs] = lp->ncols + 1 + cnt; /*lint !e679*/
-               ++nnonzrhs;
+               matvals[matidx] = MAX(1.0, absrhs);    /*lint !e679*/
+               matinds[matidx++] = lp->ncols + 1 + cnt; /*lint !e679*/
                ++cnt;
             }
-            SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonzrhs, &beg, colinds, colvals) );
+
+            matlhs[matrowidx] = -SCIPlpiInfinity(lpi);
+            matrhs[matrowidx++] = 0.0;
+            assert( matrowidx <= ntotrows );
          }
       }
    }
@@ -17320,14 +17384,13 @@ SCIP_RETCODE computeRelIntPoint(
    if( inclobjcutoff )
    {
       SCIP_Real rhs;
-      int nnonz;
 
       /* get row data */
       assert(lp->looseobjvalinf == 0);
       rhs = lp->cutoffbound - getFiniteLooseObjval(lp, set, prob);
 
       /* set up indices and coefficients */
-      nnonz = 0;
+      matbeg[matrowidx] = matidx;
       for( j = 0; j < lp->ncols; ++j )
       {
          assert( lp->cols[j] != NULL );
@@ -17336,9 +17399,9 @@ SCIP_RETCODE computeRelIntPoint(
 
          if( ! SCIPsetIsZero(set, lp->cols[j]->obj) )
          {
-            colinds[nnonz] = lp->cols[j]->lppos;
-            colvals[nnonz] = lp->cols[j]->obj;
-            ++nnonz;
+            matinds[matidx] = lp->cols[j]->lppos;
+            matvals[matidx++] = lp->cols[j]->obj;
+            assert( matidx <= ntotnonz );
          }
       }
 
@@ -17347,9 +17410,9 @@ SCIP_RETCODE computeRelIntPoint(
       /* add artificial variable */
       if ( ! SCIPsetIsZero(set, rhs) )
       {
-         colinds[nnonz] = lp->ncols;
-         colvals[nnonz] = -rhs;
-         ++nnonz;
+         matinds[matidx] = lp->ncols;
+         matvals[matidx++] = -rhs;
+         assert( matidx <= ntotnonz );
       }
 
       if( relaxrows )
@@ -17357,12 +17420,14 @@ SCIP_RETCODE computeRelIntPoint(
          SCIP_Real absrhs = REALABS(rhs);
 
          /* add slack variable */
-         colvals[nnonz] = MAX(1.0, absrhs);
-         colinds[nnonz] = lp->ncols + 1 + cnt;
-         ++nnonz;
+         matvals[matidx] = MAX(1.0, absrhs);
+         matinds[matidx++] = lp->ncols + 1 + cnt;
+         assert( matidx <= ntotnonz );
          ++cnt;
       }
-      SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz, &beg, colinds, colvals) );
+      matlhs[matrowidx] = -SCIPsetInfinity(set);
+      matrhs[matrowidx++] = 0.0;
+      assert( matrowidx <= ntotrows );
    }
 
    /* create rows arising from bounds */
@@ -17371,29 +17436,32 @@ SCIP_RETCODE computeRelIntPoint(
       SCIP_COL* col;
       SCIP_Real abscollb;
       SCIP_Real abscolub;
-      int nnonz = 1;
 
       col = lp->cols[j];
       assert( col != NULL );
       assert( col->lppos == j );
 
-      /* set up index of column */
-      colinds[0] = j;
-      colvals[0] = 1.0;
-
       /* fixed variable */
       if( SCIPsetIsEQ(set, col->lb, col->ub) )
       {
+         /* set up index of column */
+         matbeg[matrowidx] = matidx;
+
+         matinds[matidx] = j;
+         matvals[matidx++] = 1.0;
+         assert( matidx <= ntotnonz );
+
          /* add artificial variable */
          if ( ! SCIPsetIsZero(set, col->ub) )
          {
-            colinds[nnonz] = lp->ncols;
-            colvals[nnonz] = -col->lb;
-            ++nnonz;
+            matinds[matidx] = lp->ncols;
+            matvals[matidx++] = -col->lb;
+            assert( matidx <= ntotnonz );
          }
 
-         /* add row */
-         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &zero, NULL, nnonz, &beg, colinds, colvals) );
+         matlhs[matrowidx] = 0.0;
+         matrhs[matrowidx++] = 0.0;
+         assert( matrowidx <= ntotrows );
 
          continue;
       }
@@ -17402,53 +17470,74 @@ SCIP_RETCODE computeRelIntPoint(
       abscolub = REALABS(col->ub);
 
       /* lower bound */
-      if( !SCIPsetIsInfinity(set, abscollb) )
+      if ( ! SCIPsetIsInfinity(set, abscollb) )
       {
-         int nnonzlb = nnonz;
+         /* set up index of column */
+         matbeg[matrowidx] = matidx;
+
+         matinds[matidx] = j;
+         matvals[matidx++] = 1.0;
+         assert( matidx <= ntotnonz );
 
          /* add artificial variable */
          if ( ! SCIPsetIsZero(set, col->lb) )
          {
-            colinds[nnonzlb] = lp->ncols;
-            colvals[nnonzlb] = -col->lb;
-            ++nnonzlb;
+            matinds[matidx] = lp->ncols;
+            matvals[matidx++] = -col->lb;
+            assert( matidx <= ntotnonz );
          }
 
          /* add slack variable */
-         colvals[nnonzlb] = -MAX(1.0, abscollb);
-         colinds[nnonzlb] = lp->ncols + 1 + cnt;
-         ++nnonzlb;
+         matvals[matidx] = -MAX(1.0, abscollb);
+         matinds[matidx++] = lp->ncols + 1 + cnt;
+         assert( matidx <= ntotnonz );
          ++cnt;
 
-         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonzlb, &beg, colinds, colvals) );
+         matlhs[matrowidx] = 0.0;
+         matrhs[matrowidx++] = SCIPsetInfinity(set);
+         assert( matrowidx <= ntotrows );
       }
 
       /* upper bound */
-      if( !SCIPsetIsInfinity(set, abscolub) )
+      if ( ! SCIPsetIsInfinity(set, abscolub) )
       {
-         int nnonzub = nnonz;
+         /* set up index of column */
+         matbeg[matrowidx] = matidx;
+
+         matinds[matidx] = j;
+         matvals[matidx++] = 1.0;
+         assert( matidx <= ntotnonz );
 
          /* add artificial variable */
          if ( ! SCIPsetIsZero(set, col->ub) )
          {
-            colinds[nnonzub] = lp->ncols;
-            colvals[nnonzub] = -col->ub;
-            ++nnonzub;
+            matinds[matidx] = lp->ncols;
+            matvals[matidx++] = -col->ub;
+            assert( matidx <= ntotnonz );
          }
 
          /* add slack variable */
-         colvals[nnonzub] = MAX(1.0, abscolub);
-         colinds[nnonzub] = lp->ncols + 1 + cnt;
-         ++nnonzub;
+         matvals[matidx] = MAX(1.0, abscolub);
+         matinds[matidx++] = lp->ncols + 1 + cnt;
+         assert( matidx <= ntotnonz );
          ++cnt;
 
-         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonzub, &beg, colinds, colvals) );
+         matlhs[matrowidx] = -SCIPsetInfinity(set);
+         matrhs[matrowidx++] = 0.0;
+         assert( matrowidx <= ntotrows );
       }
    }
    assert( cnt == nslacks );
+   assert( matrowidx == ntotrows );
 
-   SCIPsetFreeBufferArray(set, &colvals);
-   SCIPsetFreeBufferArray(set, &colinds);
+   /* add rows */
+   SCIP_CALL( SCIPlpiAddRows(lpi, ntotrows, matlhs, matrhs, NULL, matidx, matbeg, matinds, matvals) );
+
+   SCIPsetFreeBufferArray(set, &matrhs);
+   SCIPsetFreeBufferArray(set, &matlhs);
+   SCIPsetFreeBufferArray(set, &matbeg);
+   SCIPsetFreeBufferArray(set, &matvals);
+   SCIPsetFreeBufferArray(set, &matinds);
 
 #ifdef SCIP_OUTPUT
    SCIP_CALL( SCIPlpiWriteLP(lpi, "relativeInterior.lp") );

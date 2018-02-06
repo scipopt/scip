@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -995,14 +995,11 @@ void procPcdata(
    {
       if ( c == EOF )
          ppos->state = XML_STATE_EOF;
-      else if ( c == '<' )
-      {
-         ppos->state = XML_STATE_BEFORE;
-         ungetsymbol(ppos, c);
-      }
       else
       {
-         ppos->state = XML_STATE_ERROR;
+         assert(c == '<');
+         ppos->state = XML_STATE_BEFORE;
+         ungetsymbol(ppos, c);
       }
    }
    else

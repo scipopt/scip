@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,6 +60,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_or.h"
+#include "scip/cons_orbisack.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_quadratic.h"
@@ -68,6 +69,7 @@
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_superindicator.h"
+#include "scip/cons_symresack.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/cons_components.h"
@@ -144,15 +146,18 @@
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/presol_redvub.h"
+#include "scip/presol_symbreak.h"
 #include "scip/presol_qpkktref.h"
 #include "scip/presol_trivial.h"
 #include "scip/presol_tworowbnd.h"
 #include "scip/presol_sparsify.h"
 #include "scip/presol_stuffing.h"
+#include "scip/presol_symmetry.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_nlobbt.h"
 #include "scip/prop_obbt.h"
+#include "scip/prop_orbitalfixing.h"
 #include "scip/prop_probing.h"
 #include "scip/prop_pseudoobj.h"
 #include "scip/prop_redcost.h"

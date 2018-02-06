@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -309,118 +309,39 @@ SCIP_DECL_HEURINIT(heurInitLocalbranching)
    return SCIP_OKAY;
 }
 
-
-/** execution method of primal heuristic */
+/** todo setup And Solve Subscip */
 static
-SCIP_DECL_HEUREXEC(heurExecLocalbranching)
-{  /*lint --e{715}*/
-   SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
-   SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
-
-   SCIP_HEURDATA* heurdata;
-   SCIP* subscip;                            /* the subproblem created by localbranching              */
+SCIP_RETCODE setupAndSolveSubscipLocalbranching(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< the subproblem created by localbranching */
+   SCIP_HEUR*            heur,               /**< localbranching heuristic */
+   SCIP_Longint          nsubnodes,          /**< nodelimit for subscip */
+   SCIP_RESULT*          result              /**< result pointer */
+   )
+{
    SCIP_VAR** subvars;                       /* subproblem's variables                                */
-   SCIP_SOL* bestsol;                        /* best solution so far                                  */
-   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
+   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
+   SCIP_HEURDATA* heurdata;
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_VAR** vars;
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
    SCIP_Real upperbound;
-
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_VAR** vars;
 
    int nvars;
    int i;
 
    SCIP_Bool success;
 
-   assert(heur != NULL);
    assert(scip != NULL);
-   assert(result != NULL);
+   assert(subscip != NULL);
+   assert(heur != NULL);
 
-   *result = SCIP_DIDNOTRUN;
-
-   /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
-
-   /* there should be enough binary variables that a local branching constraint makes sense */
-   if( SCIPgetNBinVars(scip) < 2*heurdata->neighborhoodsize )
-      return SCIP_OKAY;
-
-   *result = SCIP_DELAYED;
-
-   /* only call heuristic, if an IP solution is at hand */
-   if( SCIPgetNSols(scip) <= 0  )
-      return SCIP_OKAY;
-
-   bestsol = SCIPgetBestSol(scip);
-   assert(bestsol != NULL);
-
-   /* only call heuristic, if the best solution comes from transformed problem */
-   if( SCIPsolIsOriginal(bestsol) )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip, bestsol)  < heurdata->nwaitingnodes)
-      return SCIP_OKAY;
-
-   /* only call heuristic, if the best solution does not come from trivial heuristic */
-   if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "trivial") == 0 )
-      return SCIP_OKAY;
-
-   /* reset neighborhood and minnodes, if new solution was found */
-   if( heurdata->lastsol != bestsol )
-   {
-      heurdata->curneighborhoodsize = heurdata->neighborhoodsize;
-      heurdata->curminnodes = heurdata->minnodes;
-      heurdata->emptyneighborhoodsize = 0;
-      heurdata->callstatus = EXECUTE;
-      heurdata->lastsol = bestsol;
-   }
-
-   /* if no new solution was found and local branching also seems to fail, just keep on waiting */
-   if( heurdata->callstatus == WAITFORNEWSOL )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* calculate the maximal number of branching nodes until heuristic is aborted */
-   maxnnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
-
-   /* reward local branching if it succeeded often */
-   maxnnodes = (SCIP_Longint)(maxnnodes * (1.0 + 2.0*(SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur)+1.0)));
-   maxnnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
-   maxnnodes += heurdata->nodesofs;
-
-   /* determine the node limit for the current process */
-   nsubnodes = maxnnodes - heurdata->usednodes;
-   nsubnodes = MIN(nsubnodes, heurdata->maxnodes);
-
-   /* check whether we have enough nodes left to call sub problem solving */
-   if( nsubnodes < heurdata->curminnodes )
-      return SCIP_OKAY;
-
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP */
-   if( !success )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
-   SCIPdebugMsg(scip, "running localbranching heuristic ...\n");
+   assert(heurdata != NULL);
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* initializing the subproblem */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-   SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
@@ -429,6 +350,15 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "localbranching", NULL, NULL, 0, heurdata->uselprows,
          heurdata->copycuts, &success, NULL) );
+
+   SCIPdebugMsg(scip, "Copying SCIP was %ssuccessful.\n", success ? "" : "not ");
+
+   /* if the subproblem could not be created, free memory and return */
+   if( !success )
+   {
+      *result = SCIP_DIDNOTRUN;
+      goto TERMINATE;
+   }
 
    /* create event handler for LP events */
    eventhdlr = NULL;
@@ -441,20 +371,13 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   SCIPdebugMsg(scip, "Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    for (i = 0; i < nvars; ++i)
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-
-   /* if the subproblem could not be created, free memory and return */
-   if( !success )
-   {
-      *result = SCIP_DIDNOTRUN;
-      goto TERMINATE;
-   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -658,9 +581,114 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
  TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
-   SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
+}
+
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecLocalbranching)
+{  /*lint --e{715}*/
+   SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
+   SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
+
+   SCIP_HEURDATA* heurdata;
+   SCIP* subscip;                            /* the subproblem created by localbranching              */
+
+   SCIP_SOL* bestsol;                        /* best solution so far                                  */
+
+   SCIP_Bool success;
+   SCIP_RETCODE retcode;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+
+   /* there should be enough binary variables that a local branching constraint makes sense */
+   if( SCIPgetNBinVars(scip) < 2*heurdata->neighborhoodsize )
+      return SCIP_OKAY;
+
+   *result = SCIP_DELAYED;
+
+   /* only call heuristic, if an IP solution is at hand */
+   if( SCIPgetNSols(scip) <= 0  )
+      return SCIP_OKAY;
+
+   bestsol = SCIPgetBestSol(scip);
+   assert(bestsol != NULL);
+
+   /* only call heuristic, if the best solution comes from transformed problem */
+   if( SCIPsolIsOriginal(bestsol) )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if enough nodes were processed since last incumbent */
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip, bestsol)  < heurdata->nwaitingnodes)
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the best solution does not come from trivial heuristic */
+   if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "trivial") == 0 )
+      return SCIP_OKAY;
+
+   /* reset neighborhood and minnodes, if new solution was found */
+   if( heurdata->lastsol != bestsol )
+   {
+      heurdata->curneighborhoodsize = heurdata->neighborhoodsize;
+      heurdata->curminnodes = heurdata->minnodes;
+      heurdata->emptyneighborhoodsize = 0;
+      heurdata->callstatus = EXECUTE;
+      heurdata->lastsol = bestsol;
+   }
+
+   /* if no new solution was found and local branching also seems to fail, just keep on waiting */
+   if( heurdata->callstatus == WAITFORNEWSOL )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* calculate the maximal number of branching nodes until heuristic is aborted */
+   maxnnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+
+   /* reward local branching if it succeeded often */
+   maxnnodes = (SCIP_Longint)(maxnnodes * (1.0 + 2.0*(SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur)+1.0)));
+   maxnnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
+   maxnnodes += heurdata->nodesofs;
+
+   /* determine the node limit for the current process */
+   nsubnodes = maxnnodes - heurdata->usednodes;
+   nsubnodes = MIN(nsubnodes, heurdata->maxnodes);
+
+   /* check whether we have enough nodes left to call sub problem solving */
+   if( nsubnodes < heurdata->curminnodes )
+      return SCIP_OKAY;
+
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP */
+   if( !success )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+   SCIPdebugMsg(scip, "running localbranching heuristic ...\n");
+
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = setupAndSolveSubscipLocalbranching(scip, subscip, heur, nsubnodes, result);
+
+   SCIP_CALL( SCIPfree(&subscip) );
+
+   return retcode;
 }
 
 

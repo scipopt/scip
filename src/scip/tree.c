@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1045,7 +1045,7 @@ SCIP_RETCODE SCIPnodeFree(
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* inform solution debugger, that the node has been freed */
-   assert( stat->inrestart || SCIPdebugRemoveNode(blkmem, set, *node) ); /*lint !e506 !e774*/
+   SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
 
    /* check, if the node to be freed is the root node */
    isroot = (SCIPnodeGetDepth(*node) == 0);
@@ -2316,20 +2316,24 @@ void SCIPnodeUpdateLowerbound(
       oldbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
+
       if( node->depth == 0 )
       {
          stat->rootlowerbound = newbound;
          if( set->misc_calcintegral )
             SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), newbound);
+         SCIPvisualLowerbound(stat->visual, set, stat, newbound);
       }
-      else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
+      else if ( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
       {
          SCIP_Real lowerbound;
+
          lowerbound = SCIPtreeGetLowerbound(tree, set);
          assert(newbound >= lowerbound);
+         SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
 
          /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
-         if( lowerbound > stat->lastlowerbound )
+         if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) && lowerbound > stat->lastlowerbound )
             SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
       }
    }
@@ -6717,7 +6721,11 @@ SCIP_RETCODE treeBacktrackProbing(
          /* apply the pending bound changes */
          SCIP_CALL( treeApplyPendingBdchgs(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, cliquetable) );
 
-         tree->cutoffdepth = INT_MAX;
+         /* applying the pending bound changes might have changed the cutoff depth; so the highest cutoff depth might
+          * be outside of the deleted part of the probing path now
+          */
+         if( tree->cutoffdepth >= tree->pathlen )
+            tree->cutoffdepth = INT_MAX;
       }
       if( tree->repropdepth >= tree->pathlen )
          tree->repropdepth = INT_MAX;

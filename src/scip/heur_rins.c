@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -84,6 +84,9 @@ struct SCIP_HeurData
 /*
  * Local methods
  */
+
+
+
 
 /** determines variable fixings for RINS
  *
@@ -212,215 +215,41 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-/* ---------------- Callback methods of event handler ---------------- */
-
-/* exec the event handler
- *
- * we interrupt the solution process
- */
 static
-SCIP_DECL_EVENTEXEC(eventExecRins)
+SCIP_DECL_EVENTEXEC(eventExecRins);
+
+/** wrapper for the part of heuristic that runs a subscip. Wrapper is needed to avoid possible ressource leaks */
+static
+SCIP_RETCODE wrapperRins(
+   SCIP*                 scip,               /**< original SCIP data structure                        */
+   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
+   SCIP_HEUR*            heur,               /**< Heuristic pointer                                   */
+   SCIP_HEURDATA*        heurdata,           /**< Heuristic's data                                    */
+   SCIP_VAR**            vars,               /**< original problem's variables                        */
+   SCIP_VAR**            fixedvars,          /**< Fixed variables of original SCIP                    */
+   SCIP_Real*            fixedvals,          /**< Fixed values of original SCIP                       */
+   SCIP_RESULT*          result,             /**< Result pointer                                      */
+   int                   nvars,              /**< Number of variables                                 */
+   int                   nfixedvars,         /**< Number of fixed variables                           */
+   SCIP_Longint          nnodes              /**< Number of nodes in the b&b tree                     */
+   )
 {
-   SCIP_HEURDATA* heurdata;
-
-   assert(eventhdlr != NULL);
-   assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
-   assert(event != NULL);
-   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
-
-   heurdata = (SCIP_HEURDATA*)eventdata;
-   assert(heurdata != NULL);
-
-   /* interrupt solution process of sub-SCIP */
-   if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
-   {
-      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
-      SCIP_CALL( SCIPinterruptSolve(scip) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/*
- * Callback methods of primal heuristic
- */
-
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_HEURCOPY(heurCopyRins)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurRins(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeRins)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert( heur != NULL );
-   assert( scip != NULL );
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
-
-   /* free heuristic data */
-   SCIPfreeBlockMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitRins)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert( heur != NULL );
-   assert( scip != NULL );
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
-
-   /* initialize data */
-   heurdata->usednodes = 0;
-
-   return SCIP_OKAY;
-}
-
-
-/** execution method of primal heuristic */
-static
-SCIP_DECL_HEUREXEC(heurExecRins)
-{  /*lint --e{715}*/
-   SCIP_Longint nnodes;
-
-   SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
-   SCIP* subscip;                            /* the subproblem created by RINS      */
-   SCIP_VAR** vars;                          /* original problem's variables        */
-   SCIP_VAR** subvars;                       /* subproblem's variables              */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
-   SCIP_VAR** fixedvars;
-   SCIP_Real* fixedvals;
-
+   SCIP_VAR** subvars;                       /* variables of the subscip */
+   SCIP_HASHMAP*  varmapfw;                  /* hashmap for mapping between vars of scip and subscip */
+   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events  */
+   SCIP_Real upperbound;                     /* upperbound of the original SCIP */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
-   SCIP_Real upperbound;
-
-   int nvars;
-   int nbinvars;
-   int nintvars;
-   int nfixedvars;
-   int i;
 
    SCIP_Bool success;
 
-   assert( heur != NULL );
-   assert( scip != NULL );
-   assert( result != NULL );
-   assert( SCIPhasCurrentNodeLP(scip) );
-
-   *result = SCIP_DELAYED;
-
-   /* do not call heuristic of node was already detected to be infeasible */
-   if( nodeinfeasible )
-      return SCIP_OKAY;
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
-
-   /* only call heuristic, if an optimal LP solution and a feasible solution are at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNSols(scip) <= 0  )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
-   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if the best solution comes from transformed problem */
-   assert( SCIPgetBestSol(scip) != NULL );
-   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes)
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* calculate the maximal number of branching nodes until heuristic is aborted */
-   nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
-
-   /* reward RINS if it succeeded often */
-   nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nnodes -= (SCIP_Longint)(100.0 * SCIPheurGetNCalls(heur));  /* count the setup costs for the sub-MIP as 100 nodes */
-   nnodes += heurdata->nodesofs;
-
-   /* determine the node limit for the current process */
-   nnodes -= heurdata->usednodes;
-   nnodes = MIN(nnodes, heurdata->maxnodes);
-
-   /* check whether we have enough nodes left to call subproblem solving */
-   if( nnodes < heurdata->minnodes )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-
-   /* check whether discrete variables are available */
-   if( nbinvars == 0 && nintvars == 0 )
-      return SCIP_OKAY;
-
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   /* allocate buffer storage to hold the RINS fixings */
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
-
-   success = FALSE;
-
-   nfixedvars = 0;
-   /* determine possible fixings for RINS: variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( determineFixings(scip, fixedvars, fixedvals, &nfixedvars, nbinvars + nintvars, heurdata->minfixingrate, &success) );
-
-   /* too few variables could be fixed by the RINS scheme */
-   if( !success )
-      goto TERMINATE;
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP */
-   if( !success )
-      goto TERMINATE;
-
-   assert(nfixedvars > 0 && nfixedvars < nbinvars + nintvars);
-
-   *result = SCIP_DIDNOTFIND;
-
-   SCIPdebugMsg(scip, "RINS heuristic fixes %d out of %d binary+integer variables\n", nfixedvars, nbinvars + nintvars);
-   SCIP_CALL( SCIPcreate(&subscip) );
+   int i;
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars,
-         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
+      heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */
@@ -434,7 +263,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* copy subproblem variables from map to obtain the same order */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
@@ -574,9 +403,215 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    }
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+}
+
+/* ---------------- Callback methods of event handler ---------------- */
+
+/* exec the event handler
+ *
+ * we interrupt the solution process
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecRins)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
+   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
+
+   heurdata = (SCIP_HEURDATA*)eventdata;
+   assert(heurdata != NULL);
+
+   /* interrupt solution process of sub-SCIP */
+   if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
+   {
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Callback methods of primal heuristic
+ */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyRins)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurRins(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeRins)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert( heur != NULL );
+   assert( scip != NULL );
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+
+   /* free heuristic data */
+   SCIPfreeBlockMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitRins)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert( heur != NULL );
+   assert( scip != NULL );
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+
+   /* initialize data */
+   heurdata->usednodes = 0;
+
+   return SCIP_OKAY;
+}
+
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecRins)
+{  /*lint --e{715}*/
+   SCIP_Longint nnodes;
+
+   SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
+   SCIP* subscip;                            /* the subproblem created by RINS      */
+   SCIP_VAR** vars;                          /* original problem's variables        */
+   SCIP_VAR** fixedvars;
+   SCIP_Real* fixedvals;
+
+   SCIP_RETCODE retcode;                     /* retcode needed for wrapper method  */
+
+   int nvars;
+   int nbinvars;
+   int nintvars;
+   int nfixedvars;
+
+   SCIP_Bool success;
+
+   assert( heur != NULL );
+   assert( scip != NULL );
+   assert( result != NULL );
+   assert( SCIPhasCurrentNodeLP(scip) );
+
+   *result = SCIP_DELAYED;
+
+   /* do not call heuristic of node was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+
+   /* only call heuristic, if an optimal LP solution and a feasible solution are at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNSols(scip) <= 0  )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the best solution comes from transformed problem */
+   assert( SCIPgetBestSol(scip) != NULL );
+   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if enough nodes were processed since last incumbent */
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes)
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* calculate the maximal number of branching nodes until heuristic is aborted */
+   nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+
+   /* reward RINS if it succeeded often */
+   nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+   nnodes -= (SCIP_Longint)(100.0 * SCIPheurGetNCalls(heur));  /* count the setup costs for the sub-MIP as 100 nodes */
+   nnodes += heurdata->nodesofs;
+
+   /* determine the node limit for the current process */
+   nnodes -= heurdata->usednodes;
+   nnodes = MIN(nnodes, heurdata->maxnodes);
+
+   /* check whether we have enough nodes left to call subproblem solving */
+   if( nnodes < heurdata->minnodes )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
+   /* check whether discrete variables are available */
+   if( nbinvars == 0 && nintvars == 0 )
+      return SCIP_OKAY;
+
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* allocate buffer storage to hold the RINS fixings */
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
+
+   success = FALSE;
+
+   nfixedvars = 0;
+   /* determine possible fixings for RINS: variables with same value in bestsol and LP relaxation */
+   SCIP_CALL( determineFixings(scip, fixedvars, fixedvals, &nfixedvars, nbinvars + nintvars, heurdata->minfixingrate, &success) );
+
+   /* too few variables could be fixed by the RINS scheme */
+   if( !success )
+      goto TERMINATE;
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP */
+   if( !success )
+      goto TERMINATE;
+
+   assert(nfixedvars > 0 && nfixedvars < nbinvars + nintvars);
+
+   *result = SCIP_DIDNOTFIND;
+
+   SCIPdebugMsg(scip, "RINS heuristic fixes %d out of %d binary+integer variables\n", nfixedvars, nbinvars + nintvars);
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = wrapperRins(scip, subscip, heur, heurdata, vars, fixedvars, fixedvals, result, nvars, nfixedvars, nnodes);
+
    SCIP_CALL( SCIPfree(&subscip) );
 
- TERMINATE:
+   SCIP_CALL( retcode );
+
+TERMINATE:
    SCIPfreeBufferArray(scip, &fixedvals);
    SCIPfreeBufferArray(scip, &fixedvars);
 

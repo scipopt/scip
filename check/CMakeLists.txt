@@ -1,7 +1,7 @@
 include(CTest)
 
 add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure --schedule-random
                 DEPENDS scip
                 )
 
@@ -30,8 +30,6 @@ set(settings_default
 #
 set(settings_MIP
     "default"
-    "separating_off"
-    "presolving_off"
     "heuristics_off"
     "separating_fast"
     "presolving_fast"
@@ -39,47 +37,51 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
-    "allaggr"
-    "cgmip"
-    "cgmipstrong"
-    "convertinttobin"
-    "fullstrongbfs"
-    "indicatorlogicor"
-    "mostinf"
-    "distribution"
-    "oddcylcelift"
-    "oddcylce"
-    "oddcylceliftheur"
-    "indicatorsepa"
-    "proporbit"
-    "allfull"
-
-    "cgmipviol"
-#    "dynamic"
-    "heurlprows"
-    "intobj"
-#    "nologicor"
-    "presolaggr"
-    "pscost"
-    "setppclifting"
-    "xorsepaparity"
-#    "cloud"
-    "feaspump20"
+    #constraints
+    "indicatorlogicorsepa"
     "indicatoralterlp"
-    "leastinf"
-    "presolfast"
-    "randomhybrid"
-    "uct_breadth_dualval"
-    "alldisp"
-    "vbcvisualization"
-    "bakvisualization"
-    "solvingphases"
+
+    #presolving and branching
+    "convertinttobin_mostinf"
+    "setppclifting_leastinf"
+    #branching and propagation
+
+    "pscost_proporbitope"
+    #separation and branching
+    "oddcyclelift_randomhybrid"
+    "oddcycle_distribution"
+
+    #separation and heuristics
+    "oddcycleliftheur_feaspump20"
+    "heurlprows"
     "lns_epsgreedy"
     "lns_exp3"
+#    "dynamic"
+    "intobj"
+#    "nologicor"
+    "xorsepaparity"
+    "solvingphases"
+#    "cloud"
+    "uct_breadth_dualval"
 )
-
+#
+# settings to run a reduced MIP test
+#
+set(settings_fastMIP
+    "vbcvisualization"
+    "bakvisualization"
+    "alldisp"
+    "fullstrongbfs"
+    "allfull"
+    "all_aggressive"
+    "cgmip"
+    "cgmipstrong"
+    "cgmipviol"
+    "presolving_off"
+    "separating_off"
+  )
 set(settings_MINLP
-    "checkfeastolfac10"
+    "minlp"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -88,16 +90,26 @@ set(settings_MINLP
     "nlpdiving1-relprop"
     "nlpdivingsolvesubmip"
     "nlpdiving4"
+    "separating_aggressive"
 )
 set(settings_Bivariate
-    "checkfeastolfac10"
+    "minlp"
     "bivariate"
 )
 
 set(settings_Bilinrelax
-    "checkfeastolfac10"
+    "minlp"
     "bilinrelax"
   )
+
+set(settings_Symmetry
+    "orbitalfixing-beforepre"
+    "orbitopes-beforepre"
+    "symresacks-beforepre"
+    "orbitalfixing-afterpre"
+    "orbitopes-afterpre"
+    "symresacks-afterpre"
+    )
 
 set(settings_sparsify
     "sparsifyaggr"
@@ -109,6 +121,27 @@ set(settings_sparsify
 set(instances_Indicator
     "instances/Indicator/mcf128-4-1.lp\;14"
     "instances/Indicator/mcf64-4-1.lp\;10"
+)
+
+set(settings_Cardinality
+    "default"
+#    "upgdcardinality"
+)
+
+set(instances_Readertest
+    "instances/MIP/bell5.mps\;8966406.49"
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/enigma.mps\;0"
+    "instances/MIP/flugpl.mps\;1201500"
+    "instances/MIP/gt2.mps\;21166"
+    "instances/MIP/lseu.mps\;1120"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/misc03.mps\;3360"
+    "instances/MIP/p0033.osil\;3089"
+    "instances/MIP/p0548.mps\;8691"
+    "instances/MIP/stein27.fzn\;18"
+    "instances/MIP/stein27_inf.lp\;+infinity"
+    "instances/MIP/vpm2.fzn\;13.75"
 )
 
 
@@ -135,6 +168,16 @@ set(instances_MIP
     )
 
 #
+# Reduced set of MIP instances for more expensive settings
+#
+set(instances_fastMIP
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/gt2.mps\;21166"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/p0033.osil\;3089"
+    )
+
+#
 # add additional ZIMPL instances if the configuration uses ZIMPL
 #
 if(ZIMPL AND ZIMPL_FOUND)
@@ -142,7 +185,7 @@ if(ZIMPL AND ZIMPL_FOUND)
 list(APPEND
     instances_Indicator
     "/instances/Indicator/indicatortest.zpl\;-2"
-    "../check/instances/Indicator/mcf64-4-1.zpl\;10"
+    "instances/Indicator/mcf64-4-1.zpl\;10"
     )
 #
 # this instance was part of the original coverage tests. However, it causes
@@ -167,11 +210,11 @@ set(instances_MINLP
     )
 set(instances_Bivariate
     "instances/Bivariate/st_qpk1.osil\;-3"
-#    "instances/Bivariate/nvs01.osil\;12.4696688"  # see issue #1809
+    "instances/Bivariate/nvs01.osil\;12.4696688"
    )
 set(instances_Bilinrelax
+    "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
     "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
-    "instances/Bilinrelax/ex5_4_2.osil\;7512.23014449367"
   )
 
 #
@@ -210,6 +253,16 @@ set(instances_SAT
     )
 
 #
+# Cardinality instances. Testing with or without cardinality upgrade
+# should yield the same optimal solution
+#
+set(instances_Cardinality
+#    "instances/Cardinality/atm_5_10_1.lp\;+5.97040200941306e+04"
+    "instances/Cardinality/atm_5_25_1.cip\;+1.40606905557936e+05"
+    "instances/Cardinality/atm_5_25_3.cip\;+1.35160667451104e+05"
+    )
+
+#
 # SOS instances
 #
 set(instances_SOS
@@ -226,6 +279,17 @@ set(instances_SOS
 set(instances_Orbitope
     "instances/Orbitope/packorb_1-FullIns_3.cip\;28"
     "instances/Orbitope/partorb_1-FullIns_3.cip\;4"
+    )
+
+#
+# Symmetry instances
+#
+set(instances_Symmetry
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/rgn.mps\;82.1999974"
+    "instances/MIP/stein27.fzn\;18"
+    "instances/MIP/stein27_inf.lp\;+infinity"
+    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
     )
 
 #
@@ -301,6 +365,7 @@ endmacro(add_instancetests)
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
@@ -310,6 +375,8 @@ add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
+add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
+add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 
 #
 # test writing and reading solutions
@@ -460,3 +527,129 @@ set_tests_properties(write_and_read_settings
                         FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
+
+#
+# define sets of linear classification results
+#
+
+set(linclass_bell5
+  "total             :         91"
+  "singleton         :          2"
+  "precedence        :         17"
+  "varbound          :         18"
+  "mixedbinary       :         26"
+  "general           :         28"
+  )
+
+set(linclass_blend2
+    "total             :        274"
+    "singleton         :         88"
+    "aggregation       :          9"
+    "varbound          :         88"
+    "intknapsack       :          0"
+    "mixedbinary       :         68"
+    "general           :         21"
+    )
+set(linclass_dcmulti
+    "setpacking        :          5"
+    "cardinality       :          3"
+    "invknapsack       :         10"
+    )
+
+set(linclass_egout
+    "total             :         98"
+    "aggregation       :         10"
+    "varbound          :         55"
+    "knapsack          :          0"
+    "intknapsack       :          0"
+    "mixedbinary       :         33"
+    "general           :          0"
+    )
+
+set(linclass_enigma
+    "total             :         21"
+    "varbound          :          0"
+    "setpartition      :         20"
+    "setpacking        :          0"
+    "eqknapsack        :          1"
+    )
+set(linclass_flugpl
+    "total             :         18"
+    "empty             :          0"
+    "free              :          0"
+    "singleton         :          1"
+    "varbound          :          6"
+    "mixedbinary       :          0"
+    "general           :         11"
+    )
+set(linclass_gt2
+    "intknapsack       :         15"
+    )
+set(linclass_lseu
+    "knapsack          :         11"
+    )
+set(linclass_misc03
+    "setpartition      :          5"
+    "setpacking        :          3"
+    "setcovering       :         31"
+    "cardinality       :         21"
+    "invknapsack       :         33"
+    "eqknapsack        :          0"
+    "binpacking        :          2"
+    )
+set(linclass_p0548
+    "empty             :          0"
+    "free              :          0"
+    "singleton         :          2"
+    "aggregation       :          0"
+    "precedence        :         12"
+    "varbound          :         28"
+    "setpartition      :          0"
+    "setpacking        :         22"
+    "setcovering       :          0"
+    "cardinality       :          0"
+    "invknapsack       :          0"
+    "eqknapsack        :          0"
+    "binpacking        :          5"
+    "knapsack          :        107"
+    )
+
+set(linclasstests
+    linclass_bell5
+    linclass_blend2
+    linclass_dcmulti
+    linclass_egout
+    linclass_enigma
+    linclass_flugpl
+    linclass_gt2
+    linclass_lseu
+    linclass_misc03
+    linclass_p0548
+    )
+
+foreach(instance ${instances_MIP})
+    split_instance(${instance})
+    get_filename_component(shortbasename ${basename} NAME_WE)
+    LIST(FIND linclasstests linclass_${shortbasename} linclassfound)
+    if(NOT linclassfound EQUAL -1 )
+        configure_file(interactiveshell/linclass.bat.in interactiveshell/linclass-${basename}.bat)
+        add_test(NAME MIP-linclass-${basename}
+                COMMAND $<TARGET_FILE:scip> -b interactiveshell/linclass-${basename}.bat
+                )
+        set_tests_properties(MIP-linclass-${basename}
+                            PROPERTIES
+                                DEPENDS scip-build
+                            )
+        foreach( pass_regex ${linclass_${shortbasename}} )
+        set_tests_properties(MIP-linclass-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "${pass_regex}"
+                            )
+        endforeach()
+
+    endif()
+
+endforeach()
+
+
+

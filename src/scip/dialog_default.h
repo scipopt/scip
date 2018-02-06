@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -331,6 +331,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality);
 /** dialog execution method for the set limits objective command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
+
+/** dialog execution method for linear constraint type classification */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayLinearConsClassification);
 
 /** creates a root dialog */
 EXTERN

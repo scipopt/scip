@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,8 +17,8 @@
  * @brief  Improvement heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
- * This file implements three local heuristics, namely vertex insertion, key-path exchange and key-vertex elimination,
- * see "Fast Local Search for Steiner Trees in Graphs" by Uchoa and Werneck.
+ * This file implements several local heuristics, including vertex insertion, key-path exchange and key-vertex elimination,
+ * ("Fast Local Search for Steiner Trees in Graphs" by Uchoa and Werneck). Other heuristics are for PCSTP and MWCSP.
  *
  * A list of all interface methods can be found in heur_local.h.
  *
@@ -51,9 +51,13 @@
 
 #define DEFAULT_DURINGROOT    TRUE
 #define DEFAULT_MAXFREQLOC    FALSE
-#define DEFAULT_MAXNBESTSOLS  5
-#define DEFAULT_NBESTSOLS     2
-#define DEFAULT_MINNBESTSOLS  2
+#define DEFAULT_MAXNBESTSOLS  10
+#define DEFAULT_NBESTSOLS     4
+#define DEFAULT_MINNBESTSOLS  4
+
+#define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
+#define GREEDY_EXTENSIONS_MW 10   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
+#define GREEDY_EXTENSIONS    5  /**< Number of extensions for greedy PC heuristic. */
 
 
 /*
@@ -79,9 +83,9 @@ struct SCIP_HeurData
 /** recursive methode for a DFS ordering of graph 'g' */
 static
 void dfsorder(
-   const                 GRAPH* graph,
-   int*                  edges,
-   int*                  node,
+   const GRAPH*          graph,
+   const int*            edges,
+   const int*            node,
    int*                  counter,
    int*                  dfst
    )
@@ -110,7 +114,7 @@ SCIP_RETCODE lca(
    const GRAPH*          graph,
    int                   u,
    UF*                   uf,
-   char*                 nodesmark,
+   STP_Bool*             nodesmark,
    int*                  steineredges,
    IDX**                 lcalists,
    PHNODE**              boundpaths,
@@ -132,8 +136,8 @@ SCIP_RETCODE lca(
       if( steineredges[oedge] == 0 )
       {
          SCIP_CALL( lca(scip, graph, v, uf, nodesmark, steineredges, lcalists, boundpaths, heapsize, vbase) );
-         SCIPSTPunionfindUnion(uf, u, v, FALSE);
-         uf->parent[SCIPSTPunionfindFind(uf, u)] = u;
+         SCIPStpunionfindUnion(uf, u, v, FALSE);
+         uf->parent[SCIPStpunionfindFind(uf, u)] = u;
       }
    }
    nodesmark[u] = TRUE;
@@ -146,12 +150,12 @@ SCIP_RETCODE lca(
       v = vbase[graph->head[oedge]];
       if( nodesmark[v] )
       {
-         ancestor = uf->parent[SCIPSTPunionfindFind(uf, v)];
+         ancestor = uf->parent[SCIPStpunionfindFind(uf, v)];
 
          /* if the ancestor of 'u' and 'v' is one of the two, the boundary-edge is already in boundpaths[u] */
          if( ancestor != u && ancestor != v)
          {
-            SCIP_CALL( SCIPallocMemory(scip, &curr) );
+            SCIP_CALL( SCIPallocBlockMemory(scip, &curr) );
             curr->index = oedge;
             curr->parent = lcalists[ancestor];
             lcalists[ancestor] = curr;
@@ -167,7 +171,7 @@ SCIP_RETCODE lca(
 
 /** checks whether node is crucial, i.e. a terminal or a vertex with degree at least 3 (w.r.t. the steinertree) */
 static
-char nodeIsCrucial(
+STP_Bool nodeIsCrucial(
    const GRAPH* graph,
    int* steineredges,
    int node
@@ -199,47 +203,43 @@ char nodeIsCrucial(
    return TRUE;
 }
 
-/** perform local heuristics on a given Steiner tree */
-SCIP_RETCODE SCIPheurImproveSteinerTree(
+/** perform local heuristics on a given Steiner tree todo delete cost parameter */
+SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   SCIP_Real*            cost,               /**< arc cost array */
-   SCIP_Real*            costrev,            /**< reversed arc cost array */
+   const SCIP_Real*      cost,               /**< arc cost array todo delete this parameter and use graph->cost */
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    )
 {
    NODE* nodes;
    PATH* vnoi;
    int* vbase;
-   int* graphmark;
+   int* const graphmark = graph->mark;
    int e;
    int i;
    int k;
-   int root;
-   int nnodes;
-   int nedges;
-   int probtype;
+   const int root = graph->source;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   const int probtype = graph->stp_type;
    int newnverts;
-   char* steinertree;
-   char pc;
-   char mw;
-   char mwpc;
+   STP_Bool* steinertree;
+   const STP_Bool pc = ((probtype == STP_PCSPG) || (probtype == STP_RPCSPG));
+   const STP_Bool mw = (probtype == STP_MWCSP);
+   const STP_Bool mwpc =  (pc || mw);
+#ifndef NDEBUG
+   const SCIP_Real initialobj = graph_sol_getObj(graph->cost, best_result, 0.0, nedges);
+#endif
 
    assert(graph != NULL);
    assert(cost != NULL);
-   assert(costrev != NULL);
    assert(best_result != NULL);
    assert(graph_valid(graph));
 
-   probtype = graph->stp_type;
-   pc = ((probtype == STP_PCSPG) || (probtype == STP_RPCSPG));
-   mw = (probtype == STP_MWCSP);
-   mwpc = (pc || mw);
-   root = graph->source[0];
-   nnodes = graph->knots;
-   nedges = graph->edges;
    newnverts = 0;
-   graphmark = graph->mark;
+
+   if( graph->grad[root] == 0 || graph->terms == 1 )
+      return SCIP_OKAY;
 
    /* for PC variants test whether solution is trivial */
    if( mwpc )
@@ -247,6 +247,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
          if( !Is_term(graph->term[graph->head[e]]) && best_result[e] )
             break;
+
       if( e == EAT_LAST )
       {
          SCIPdebugMessage("Local heuristic: return trivial \n");
@@ -260,7 +261,10 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
    SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
 
    if( mwpc )
-      SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, best_result, steinertree, &i) );
+   {
+      SCIP_Bool dummy;
+      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, cost, vnoi, best_result, steinertree, &dummy) );
+   }
 
    for( i = 0; i < nnodes; i++ )
    {
@@ -288,15 +292,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
    /* VERTEX INSERTION */
    if( probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP || (mwpc) )
    {
-      NODE* v;
-      NODE* w;
-      NODE* max;
-      SCIP_Real diff;
-      int l;
-      int oedge;
       int newnode;
-      int counter;
-      int insertcount;
       int* insert;
       int* adds;
       int* cuts;
@@ -312,14 +308,14 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
          SCIP_CALL( SCIPallocBufferArray(scip, &cuts2, nnodes) );
          SCIP_CALL( SCIPallocBufferArray(scip, &stdeg, nnodes) );
 
-         for( i = 0; i < nnodes; i++ )
-         {
-            stdeg[i] = 0;
-            if( steinertree[i] )
-               for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-                  if( best_result[e] == CONNECT || best_result[flipedge(e)] == CONNECT )
-                     stdeg[i]++;
-         }
+         BMSclearMemoryArray(stdeg, nnodes);
+
+         for( e = 0; e < nedges; e++ )
+            if( best_result[e] == CONNECT )
+            {
+               stdeg[graph->tail[e]]++;
+               stdeg[graph->head[e]]++;
+            }
       }
       else
       {
@@ -328,151 +324,160 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       }
 
       i = 0;
-      l = 0;
-      w = NULL;
       newnode = 0;
 
       for( ;; )
       {
+         SCIP_Real diff;
+
          /* if vertex i is not in the current ST and has at least two adjacent nodes, it might be added */
          if( !steinertree[i] && graph->grad[i] > 1 && (!mwpc || !Is_term(graph->term[i])) )
          {
-            insertcount = 0;
+            NODE* v;
+            int counter;
+            int lastnodeidx;
+            int insertcount = 0;
 
             /* if an outgoing edge of vertex i points to the current ST, SCIPlinkcuttreeLink the edge to a list */
-            for (oedge = graph->outbeg[i]; oedge != EAT_LAST;
-                  oedge = graph->oeat[oedge])
-               if( steinertree[graph->head[oedge]]
-                     && (!mwpc || !Is_term(graph->term[graph->head[oedge]])) )
+            for( int oedge = graph->outbeg[i]; oedge != EAT_LAST; oedge = graph->oeat[oedge])
+               if( steinertree[graph->head[oedge]] && (!mwpc || !Is_term(graph->term[graph->head[oedge]])) )
                   insert[insertcount++] = oedge;
 
-            if( mw && insertcount > 0 && Is_pterm(graph->term[i]) )
-            {
-               if( Is_pterm(graph->term[i]) )
-               {
-                  SCIPdebugMessage("ADDED VERTEX \n");
-                  v = &nodes[i];
+            /* if there are less than two edges connecting node i and the current tree, continue */
+            if( insertcount <= 1 )
+               goto ENDOFLOOP;
 
-                  SCIPlinkcuttreeLink(v, &nodes[graph->head[insert[0]]],
-                        insert[0]);
-                  SCIPlinkcuttreeEvert(&nodes[root]);
-                  newnode = i;
-                  steinertree[i] = TRUE;
-                  newnverts++;
-               }
+            if( mw )
+               SCIPlinkcuttreeInit(&nodes[i]);
+
+            /* the node to insert */
+            v = &nodes[i];
+
+            SCIPlinkcuttreeLink(v, &nodes[graph->head[insert[0]]], insert[0]);
+
+            lastnodeidx = graph->head[insert[0]];
+
+            if( mw )
+            {
+               assert(!SCIPisPositive(scip, graph->prize[i]));
+
+               diff = -1.0;
+               assert(stdeg != NULL);
+               stdeg[lastnodeidx]++;
             }
+            else
+               diff = graph->cost[v->edge];
 
-            /* if there are at least two edges connecting node i and the current tree, start the insertion process */
-            if( insertcount > 1 && mw == FALSE )
+            counter = 0;
+
+            /* try to add edges between new vertex and tree */
+            for( k = 1; k < insertcount; k++ )
             {
-               /* the node to insert */
-               v = &nodes[i];
+               NODE* firstnode;
+               int firstnodidx;
+               SCIPlinkcuttreeEvert(v);
 
-               SCIPlinkcuttreeLink(v, &nodes[graph->head[insert[0]]],
-                     insert[0]);
+               /* next vertex in the current Steiner tree adjacent to vertex i resp. v (the one being scrutinized for possible insertion) */
+               firstnodidx = graph->head[insert[k]];
+               firstnode = &nodes[firstnodidx];
+
                if( mw )
-                  diff = -1.0;
-               else
-                  diff = graph->cost[v->edge];
-
-               counter = 0;
-               for (k = 1; k < insertcount; k++)
                {
-                  SCIPlinkcuttreeEvert(v);
+                  NODE* chainfirst;
+                  NODE* chainlast;
+                  SCIP_Real minweight;
 
-                  /* next vertex in the current Steiner tree adjacent to vertex i resp. v (the one being scrutinized for possible insertion) */
-                  w = &nodes[graph->head[insert[k]]];
+                  assert(stdeg != NULL);
 
-                  if( mw )
+                  minweight = SCIPlinkcuttreeFindMinChain(scip, graph->prize, graph->head, stdeg, firstnode, &chainfirst, &chainlast);
+
+                  if( SCIPisLT(scip, minweight, graph->prize[i]) )
                   {
-                     assert(stdeg != NULL);
+                     assert(chainfirst != NULL && chainlast != NULL);
+                     for( NODE* mynode = chainfirst; mynode != chainlast; mynode = mynode->parent )
+                     {
+                        int mynodeidx = graph->head[mynode->edge];
+                        steinertree[mynodeidx] = FALSE;
+                        stdeg[mynodeidx] = 0;
+                     }
+
+                     SCIPlinkcuttreeCut(chainfirst);
+                     SCIPlinkcuttreeCut(chainlast);
+
+                     SCIPlinkcuttreeLink(v, firstnode, insert[k]);
                      stdeg[graph->head[insert[k]]]++;
-                     max = SCIPlinkcuttreeFindMinMW(scip, graph->prize,
-                           graph->tail, stdeg, w);
-                     l = graph->tail[max->edge];
 
-                     stdeg[graph->head[insert[k]]]--;
-
-                     if( SCIPisLT(scip, graph->prize[l], graph->prize[i]) )
-                     {
-                        SCIPlinkcuttreeLink(v, w, insert[k]);
-                        diff = 1.0;
-                        printf("(n: %d) minfound: %d of cost %f orgcost %f\n",
-                              insertcount, l, graph->prize[l], graph->prize[i]);
-                        break;
-                     }
-                  }
-                  else
-                  {
-                     /* if there is an edge with cost greater than that of the current edge... */
-                     max = SCIPlinkcuttreeFindMax(scip, graph->cost, w);
-                     if( SCIPisGT(scip, graph->cost[max->edge],
-                           graph->cost[insert[k]]) )
-                     {
-                        diff += graph->cost[insert[k]];
-                        diff -= graph->cost[max->edge];
-                        cuts[counter] = max->edge;
-                        SCIPlinkcuttreeCut(max);
-                        SCIPlinkcuttreeLink(v, w, insert[k]);
-                        assert(v->edge == insert[k]);
-                        adds[counter++] = v->edge;
-                     }
-                  }
-               }
-               if( pc && Is_pterm(graph->term[i]) )
-                  diff -= graph->prize[i];
-
-               /* if the new tree is more expensive than the old one, restore the latter */
-               if( mw )
-               {
-                  if( SCIPisLT(scip, diff, 0.0) )
-                  {
-                     SCIPlinkcuttreeEvert(v);
-                     SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
-                  }
-                  else
-                  {
-                     steinertree[i] = TRUE;
-                     newnverts++;
-                     for (e = graph->outbeg[l]; e != EAT_LAST; e =
-                           graph->oeat[e])
-                        if( best_result[e] == CONNECT
-                              || best_result[flipedge(e)] == CONNECT )
-                           printf("%d connect to %d %d \n", l, graph->tail[l],
-                                 graph->head[l]);
-                     steinertree[l] = FALSE;
+                     diff = graph->prize[i] - minweight;
                      break;
                   }
                }
                else
                {
-                  if( !SCIPisNegative(scip, diff) )
+                  /* if there is an edge with cost greater than that of the current edge... */
+                  NODE* max = SCIPlinkcuttreeFindMax(scip, graph->cost, firstnode);
+                  if( SCIPisGT(scip, graph->cost[max->edge], graph->cost[insert[k]]) )
                   {
-                     SCIPlinkcuttreeEvert(v);
-                     for (k = counter - 1; k >= 0; k--)
-                     {
-                        SCIPlinkcuttreeCut(&nodes[graph->head[adds[k]]]);
-                        SCIPlinkcuttreeEvert(&nodes[graph->tail[cuts[k]]]);
-                        SCIPlinkcuttreeLink(&nodes[graph->tail[cuts[k]]],
-                              &nodes[graph->head[cuts[k]]], cuts[k]);
-                     }
-
-                     /* finally, cut the edge added first (if it had been cut during the insertion process, it would have been restored above) */
-                     SCIPlinkcuttreeEvert(v);
-                     SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
-                  }
-                  else
-                  {
-                     SCIPlinkcuttreeEvert(&nodes[root]);
-                     adds[counter] = insert[0];
-                     newnode = i;
-                     steinertree[i] = TRUE;
-                     newnverts++;
-                     SCIPdebugMessage("ADDED VERTEX \n");
+                     diff += graph->cost[insert[k]];
+                     diff -= graph->cost[max->edge];
+                     cuts[counter] = max->edge;
+                     SCIPlinkcuttreeCut(max);
+                     SCIPlinkcuttreeLink(v, firstnode, insert[k]);
+                     assert(v->edge == insert[k]);
+                     adds[counter++] = v->edge;
                   }
                }
             }
+
+            if( pc && Is_pterm(graph->term[i]) )
+               diff -= graph->prize[i];
+
+            /* if the new tree is more expensive than the old one, restore the latter */
+            if( mw )
+            {
+               if( SCIPisLT(scip, diff, 0.0) )
+               {
+                  assert(stdeg != NULL);
+
+                  SCIPlinkcuttreeEvert(v);
+                  stdeg[lastnodeidx]--;
+                  SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
+               }
+               else
+               {
+                  steinertree[i] = TRUE;
+                  newnverts++;
+               }
+            }
+            else
+            {
+               if( !SCIPisNegative(scip, diff) )
+               {
+                  SCIPlinkcuttreeEvert(v);
+                  for (k = counter - 1; k >= 0; k--)
+                  {
+                     SCIPlinkcuttreeCut(&nodes[graph->head[adds[k]]]);
+                     SCIPlinkcuttreeEvert(&nodes[graph->tail[cuts[k]]]);
+                     SCIPlinkcuttreeLink(&nodes[graph->tail[cuts[k]]],
+                           &nodes[graph->head[cuts[k]]], cuts[k]);
+                  }
+
+                  /* finally, cut the edge added first (if it had been cut during the insertion process, it would have been restored above) */
+                  SCIPlinkcuttreeEvert(v);
+                  SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
+               }
+               else
+               {
+                  SCIPlinkcuttreeEvert(&nodes[root]);
+                  adds[counter] = insert[0];
+                  newnode = i;
+                  steinertree[i] = TRUE;
+                  newnverts++;
+                  SCIPdebugMessage("ADDED VERTEX \n");
+               }
+            }
          }
+
+         ENDOFLOOP:
 
          if( i < nnodes - 1 )
             i++;
@@ -499,9 +504,9 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       if( newnverts > 0  )
       {
          if( mwpc )
-            SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, best_result, steinertree) );
+            SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, best_result, steinertree) );
          else
-            SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, best_result, steinertree) );
+            SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, best_result, steinertree) );
 
          for( i = 0; i < nnodes; i++ )
             SCIPlinkcuttreeInit(&nodes[i]);
@@ -528,13 +533,18 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
          }
       }
 
-#ifdef printDebug
-      obj = 0.0;
-      for( e = 0; e < nedges; e++)
-         obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
-      printf("ObjAfterVertexInsertion=%.12e\n", obj);
+#ifdef SCIP_DEBUG
+      {
+         SCIP_Real obj = 0.0;
+         for( e = 0; e < nedges; e++ )
+            obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
+         printf("ObjAfterVertexInsertion=%.12e\n", obj);
+
+      }
 #endif
    }
+
+   assert(graph_sol_valid(scip, graph, best_result));
 
    /* Key-Vertex Elimination & Key-Path Exchange */
    if( !mw )
@@ -583,18 +593,21 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       int nsupernodes;
       int nboundedges;
       int rootpathstart;
-      char* pinned;
-      char* scanned;
-      char* nodesmark;
+      STP_Bool* pinned;
+      STP_Bool* scanned;
+      STP_Bool* nodesmark;
 
-#ifdef printDebug
-      obj = 0.0;
-      for( e = 0; e < nedges; e++)
+#ifdef SCIP_DEBUG
+      SCIP_Real obj = 0.0;
+      for( e = 0; e < nedges; e++ )
          obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
       printf(" ObjBEFKEYVertexELimination=%.12e\n", obj);
 #endif
+
       for( k = 0; k < nnodes; k++ )
-         graphmark[k] = TRUE;
+         graphmark[k] = (graph->grad[k] > 0);
+
+      graphmark[root] = TRUE;
 
       /* allocate memory */
 
@@ -619,7 +632,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       SCIP_CALL( SCIPallocBufferArray(scip, &nodesmark, nnodes) );
 
       /* initialize data structures */
-      SCIP_CALL( SCIPSTPunionfindInit(scip, &uf, nnodes) );
+      SCIP_CALL( SCIPStpunionfindInit(scip, &uf, nnodes) );
 
       for( nruns = 0; nruns < 3 && localmoves > 0; nruns++ )
       {
@@ -630,18 +643,17 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
          /* find a DFS order of the ST nodes */
          nstnodes = 0;
          dfsorder(graph, best_result, &(root), &nstnodes, dfstree);
-         assert(root == graph->source[0]);
+         assert(root == graph->source);
 
          /* compute a voronoi diagram with the ST nodes as bases */
-         voronoi(scip, graph, graph->cost, graph->cost, steinertree, vbase, vnoi);
+         graph_voronoi(scip, graph, graph->cost, graph->cost, steinertree, vbase, vnoi);
 
          state = graph->path_state;
 
          /* initialize data structures  */
          for( k = 0; k < nnodes; k++ )
          {
-            assert(graphmark[k]);
-            assert(state[k] == CONNECT);
+            assert(state[k] == CONNECT || !graphmark[k]);
 
             pinned[k] = FALSE;
             scanned[k] = FALSE;
@@ -653,8 +665,11 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
             lvledges_start[k] = NULL;
 
+            if( !graphmark[k] )
+               continue;
+
             /* link all nodes to their (respective) voronoi base */
-            SCIP_CALL( SCIPallocMemory(scip, &blists_curr) );
+            SCIP_CALL( SCIPallocBlockMemory(scip, &blists_curr) );
             blists_curr->index = k;
             blists_curr->parent = blists_start[vbase[k]];
             blists_start[vbase[k]] = blists_curr;
@@ -681,7 +696,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                      }
                   }
                }
-
             }
             if( probtype != STP_RPCSPG )
                graphmark[root] = FALSE;
@@ -690,6 +704,9 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
          /* for each node, store all of its outgoing boundary-edges in a (respective) heap*/
          for( e = 0; e < nedges; e += 2 )
          {
+            if( graph->oeat[e] == EAT_FREE )
+               continue;
+
             node = graph->tail[e];
             adjnode = graph->head[e];
             newedges[e] = UNKNOWN;
@@ -710,7 +727,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
          SCIP_CALL( lca(scip, graph, root, &uf, nodesmark, best_result, lvledges_start, boundpaths, heapsize, vbase) );
 
          /* henceforth, the union-find structure will be used on the ST */
-         SCIPSTPunionfindClear(scip, &uf, nnodes);
+         SCIPStpunionfindClear(scip, &uf, nnodes);
 
          /* henceforth, nodesmark will be used to mark the current supervertices (except for the one representing the root-component) */
          for( i = 0; dfstree[i] != root; i++ )
@@ -726,9 +743,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
             crucnode = dfstree[i];
             scanned[crucnode] = TRUE;
 
-#ifdef printDebug
-               printf("iteration %d (%d) \n", i, crucnode);
-#endif
+            SCIPdebugMessage("iteration %d (crucial node: %d) \n", i, crucnode);
 
             /*  has the node been temporarily removed from the ST? */
             if( !graphmark[crucnode] )
@@ -738,7 +753,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
             if( !pinned[crucnode] && !Is_term(graph->term[crucnode]) && nodeIsCrucial(graph, best_result, crucnode) )
             {
                for( k = 0; k < nnodes; k++ )
-                  assert(state[k] == CONNECT);
+                  assert(state[k] == CONNECT || !graphmark[k]);
 
                /* find all (unique) key-paths starting in node 'crucnode' */
                k = UNKNOWN;
@@ -770,7 +785,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                         while( !pinned[adjnode] && !nodeIsCrucial(graph, best_result, adjnode) && steinertree[adjnode] )
                         {
                            /* update the union-find data structure */
-                           SCIPSTPunionfindUnion(&uf, crucnode, adjnode, FALSE);
+                           SCIPStpunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
                            kpnodes[nkpnodes++] = adjnode;
 
@@ -887,8 +902,8 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                   {
                      SCIP_CALL( SCIPpairheapDeletemin(scip, &edge, &edgecost, &boundpaths[l], &heapsize[l]) );
 
-                     node = (vbase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPSTPunionfindFind(&uf, vbase[graph->head[edge]]);
-                     assert( (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPSTPunionfindFind(&uf, vbase[graph->tail[edge]]) == l );
+                     node = (vbase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, vbase[graph->head[edge]]);
+                     assert( (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, vbase[graph->tail[edge]]) == l );
 
                      /* check whether edge 'edge' represents a boundary-path having an endpoint in the kth-component and in the root-component respectively */
                      if( node != UNKNOWN && !nodesmark[node] && graphmark[node] )
@@ -907,8 +922,8 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                   edge = lvledges_curr->index;
                   k = vbase[graph->tail[edge]];
                   l = vbase[graph->head[edge]];
-                  node = (l == UNKNOWN)? UNKNOWN : SCIPSTPunionfindFind(&uf, l);
-                  adjnode = (k == UNKNOWN)? UNKNOWN : SCIPSTPunionfindFind(&uf, k);
+                  node = (l == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, l);
+                  adjnode = (k == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, k);
 
                   /* check whether the current boundary-path connects two child components */
                   if( node != UNKNOWN && nodesmark[node] && adjnode != UNKNOWN && nodesmark[adjnode] )
@@ -920,7 +935,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                   lvledges_curr = lvledges_curr->parent;
                }
 
-               /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for voronoi_repair */
+               /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for graph_voronoiRepair */
                count = 0;
                for( k = 0; k < nkpnodes; k++ )
                {
@@ -955,10 +970,10 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                /* if there are no key-path nodes, something has gone wrong */
                assert(nkpnodes != 0);
 
-               voronoi_repair_mult(scip, graph, graph->cost, &count, vbase, boundedges, &nboundedges, nodesmark, &uf, vnoi);
+               graph_voronoiRepairMult(scip, graph, graph->cost, &count, vbase, boundedges, &nboundedges, nodesmark, &uf, vnoi);
 
                /* create a supergraph, having the endpoints of the key-paths incident to the current crucial node as (super-) vertices */
-               SCIP_CALL( graph_init(scip, &supergraph, nsupernodes, nboundedges * 2, 1, 0) );
+               SCIP_CALL( graph_init(scip, &supergraph, nsupernodes, nboundedges * 2, 1) );
                supergraph->stp_type = STP_SPG;
 
                /* add vertices to the supergraph */
@@ -975,8 +990,8 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                for( l = 0; l < nboundedges; l++ )
                {
                   edge = boundedges[l];
-                  node = SCIPSTPunionfindFind(&uf, vbase[graph->tail[edge]]);
-                  adjnode = SCIPSTPunionfindFind(&uf, vbase[graph->head[edge]]);
+                  node = SCIPStpunionfindFind(&uf, vbase[graph->tail[edge]]);
+                  adjnode = SCIPStpunionfindFind(&uf, vbase[graph->head[edge]]);
 
                   /* if node 'node' or 'adjnode' belongs to the root-component, take the (temporary) root-component identifier instead */
                   node = ((nodesmark[node])? node : k);
@@ -1038,9 +1053,8 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                if( SCIPisLT(scip, mstcost, kpcost) )
                {
                   localmoves++;
-#ifdef printDebug
-                  printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
-#endif
+                  SCIPdebugMessage("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
+
                   /* unmark the original edges spanning the supergraph */
                   for( e = 0; e < nkpedges; e++ )
                   {
@@ -1057,7 +1071,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
                   for( k = 0; k < i; k++ )
                   {
-                     node = SCIPSTPunionfindFind(&uf, dfstree[k]);
+                     node = SCIPStpunionfindFind(&uf, dfstree[k]);
                      if( nodesmark[node] || node == crucnode )
                      {
                         graphmark[dfstree[k]] = FALSE;
@@ -1077,7 +1091,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                      if( !nodesmark[vbase[graph->head[edge]]] )
                      {
                         node = vbase[graph->head[edge]];
-                        k = SCIPSTPunionfindFind(&uf, node);
+                        k = SCIPStpunionfindFind(&uf, node);
                         assert(nodesmark[k]);
                         while( node != k )
                         {
@@ -1092,7 +1106,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                      }
 
                      /* is the vbase of the current boundary-edge tail in the root-component? */
-                     if( !nodesmark[SCIPSTPunionfindFind(&uf, vbase[graph->tail[edge]])] )
+                     if( !nodesmark[SCIPStpunionfindFind(&uf, vbase[graph->tail[edge]])] )
                      {
 
                         best_result[edge] = CONNECT;
@@ -1111,7 +1125,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                         assert( graphmark[node] == TRUE );
 
                         /* is the pinned node its own component identifier? */
-                        if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPSTPunionfindFind(&uf, node) == node )
+                        if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPStpunionfindFind(&uf, node) == node )
                         {
                            graphmark[graph->head[edge]] = FALSE;
                            oldedge = edge;
@@ -1120,7 +1134,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                            {
                               adjnode = graph->head[edge];
                               /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-                              if( best_result[edge] == CONNECT && graphmark[adjnode] && steinertree[adjnode]  && SCIPSTPunionfindFind(&uf, adjnode) != node )
+                              if( best_result[edge] == CONNECT && graphmark[adjnode] && steinertree[adjnode]  && SCIPStpunionfindFind(&uf, adjnode) != node )
                               {
 
                                  assert(scanned[adjnode]);
@@ -1128,7 +1142,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                                  SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
 
                                  /* update the union-find data structure */
-                                 SCIPSTPunionfindUnion(&uf, node, adjnode, FALSE);
+                                 SCIPStpunionfindUnion(&uf, node, adjnode, FALSE);
 
                                  /* move along the key-path until its end (i.e. until a crucial node is reached) */
                                  while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
@@ -1145,10 +1159,10 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                                     if( !steinertree[adjnode]  )
                                        break;
                                     assert(scanned[adjnode]);
-                                    assert(SCIPSTPunionfindFind(&uf, adjnode) != node);
+                                    assert(SCIPStpunionfindFind(&uf, adjnode) != node);
 
                                     /* update the union-find data structure */
-                                    SCIPSTPunionfindUnion(&uf, node, adjnode, FALSE);
+                                    SCIPStpunionfindUnion(&uf, node, adjnode, FALSE);
 
                                     /* meld the heaps */
                                     SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
@@ -1216,7 +1230,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                      SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[supernodes[k]], &heapsize[crucnode], &heapsize[supernodes[k]]);
 
                      /* update the union-find data structure */
-                     SCIPSTPunionfindUnion(&uf, crucnode, supernodes[k], FALSE);
+                     SCIPStpunionfindUnion(&uf, crucnode, supernodes[k], FALSE);
                   }
                }
 
@@ -1276,13 +1290,13 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                      /* check whether edge 'edge' leads to an ancestor of terminal 'crucnode' */
                      if( best_result[edge] == CONNECT && steinertree[adjnode] && graphmark[adjnode] )
                      {
-                        assert( SCIPSTPunionfindFind(&uf, adjnode) != crucnode);
+                        assert( SCIPStpunionfindFind(&uf, adjnode) != crucnode);
                         assert(scanned[adjnode]);
                         /* meld the heaps */
                         SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[adjnode], &heapsize[crucnode], &heapsize[adjnode]);
 
                         /* update the union-find data structure */
-                        SCIPSTPunionfindUnion(&uf, crucnode, adjnode, FALSE);
+                        SCIPStpunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
                         /* move along the key-path until its end (i.e. until a crucial node is reached) */
                         while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
@@ -1299,10 +1313,10 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                            if( !steinertree[adjnode] || !graphmark[adjnode] )
                               break;
                            assert(scanned[adjnode]);
-                           assert(SCIPSTPunionfindFind(&uf, adjnode) != crucnode);
+                           assert(SCIPStpunionfindFind(&uf, adjnode) != crucnode);
 
                            /* update the union-find data structure */
-                           SCIPSTPunionfindUnion(&uf, crucnode, adjnode, FALSE);
+                           SCIPStpunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
                            /* meld the heaps */
                            SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[adjnode], &heapsize[crucnode], &heapsize[adjnode]);
@@ -1316,7 +1330,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                nkpnodes = 0;
 
                for( k = 0; k < nnodes; k++ )
-                  assert( state[k] == CONNECT);
+                  assert(state[k] == CONNECT || !graphmark[k]);
 
                /* find the (unique) key-path containing the parent of the current crucial node 'crucnode' */
                kptailnode = graph->head[nodes[crucnode].edge];
@@ -1363,7 +1377,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                   l = vbase[graph->head[e]];
 
                   assert(graphmark[k]);
-                  node = (l == UNKNOWN || !graphmark[l] )? UNKNOWN : SCIPSTPunionfindFind(&uf, l);
+                  node = (l == UNKNOWN || !graphmark[l] )? UNKNOWN : SCIPStpunionfindFind(&uf, l);
 
                   /* does the boundary-path end in the root component? */
                   if( node != UNKNOWN && node != crucnode && graphmark[l] )
@@ -1421,7 +1435,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
                /* if there is no key path, nothing has to be repaired */
                if( nkpnodes > 0 )
-                  voronoi_repair(scip, graph, graph->cost, &count, vbase, vnoi, &newedge, crucnode, &uf);
+                  graph_voronoiRepair(scip, graph, graph->cost, &count, vbase, vnoi, &newedge, crucnode, &uf);
                else
                   newedge = nodes[crucnode].edge;
 
@@ -1435,10 +1449,10 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                edgecost = vnoi[graph->tail[newedge]].dist + graph->cost[newedge] + vnoi[graph->head[newedge]].dist;
                if( SCIPisLT(scip, edgecost, kpathcost) )
                {
-                  node = SCIPSTPunionfindFind(&uf, vbase[graph->head[newedge]]);
-#ifdef printDebug
-                  printf( "ADDING NEW KEY PATH (%f )\n", edgecost - kpathcost );
-#endif
+                  node = SCIPStpunionfindFind(&uf, vbase[graph->head[newedge]]);
+
+                  SCIPdebugMessage( "ADDING NEW KEY PATH (%f )\n", edgecost - kpathcost );
+
                   localmoves++;
 
                   /* remove old keypath */
@@ -1481,7 +1495,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
                   /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
                   k = newpathend;
-                  assert(SCIPSTPunionfindFind(&uf, newpathend) == crucnode);
+                  assert(SCIPStpunionfindFind(&uf, newpathend) == crucnode);
 
                   while( k != crucnode )
                   {
@@ -1496,7 +1510,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
                   for( k = 0; k < i; k++ )
                   {
-                     if( crucnode == SCIPSTPunionfindFind(&uf, dfstree[k]) )
+                     if( crucnode == SCIPStpunionfindFind(&uf, dfstree[k]) )
                      {
                         graphmark[dfstree[k]] = FALSE;
                         steinertree[dfstree[k]] = FALSE;
@@ -1504,20 +1518,20 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                   }
 
                   /* update union find */
-                  if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPSTPunionfindFind(&uf, node) == node )
+                  if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPStpunionfindFind(&uf, node) == node )
                   {
                      for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
                      {
                         adjnode = graph->head[edge];
                         /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-                        if( best_result[edge] == CONNECT && steinertree[adjnode]  && graphmark[adjnode] && SCIPSTPunionfindFind(&uf, adjnode) != node )
+                        if( best_result[edge] == CONNECT && steinertree[adjnode]  && graphmark[adjnode] && SCIPStpunionfindFind(&uf, adjnode) != node )
                         {
                            assert(scanned[adjnode]);
                            /* meld the heaps */
                            SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
 
                            /* update the union-find data structure */
-                           SCIPSTPunionfindUnion(&uf, node, adjnode, FALSE);
+                           SCIPStpunionfindUnion(&uf, node, adjnode, FALSE);
 
                            /* move along the key-path until its end (i.e. until a crucial node is reached) */
                            while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
@@ -1534,10 +1548,10 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                               if( !steinertree[adjnode]  )
                                  break;
                               assert(scanned[adjnode]);
-                              assert(SCIPSTPunionfindFind(&uf, adjnode) != node);
+                              assert(SCIPStpunionfindFind(&uf, adjnode) != node);
 
                               /* update the union-find data structure */
-                              SCIPSTPunionfindUnion(&uf, node, adjnode, FALSE);
+                              SCIPStpunionfindUnion(&uf, node, adjnode, FALSE);
 
                               /* meld the heaps */
                               SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
@@ -1574,14 +1588,14 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
       TERMINATE:
 
-         SCIPSTPunionfindClear(scip, &uf, nnodes);
+         SCIPStpunionfindClear(scip, &uf, nnodes);
 
          /* free data structures */
          SCIPfreeBufferArray(scip, &kpedges);
          SCIPfreeBufferArray(scip, &kpnodes);
          SCIPfreeBufferArray(scip, &supernodes);
 
-         for( k = nnodes -1; k >= 0 ; k-- )
+         for( k = nnodes - 1; k >= 0; k-- )
          {
             if( boundpaths[k] != NULL )
                SCIPpairheapFree(scip, &boundpaths[k]);
@@ -1591,14 +1605,14 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
             while( lvledges_curr != NULL )
             {
                lvledges_start[k] = lvledges_curr->parent;
-               SCIPfreeMemory(scip, &lvledges_curr);
+               SCIPfreeBlockMemory(scip, &lvledges_curr);
                lvledges_curr = lvledges_start[k];
             }
 
             while( blists_curr != NULL )
             {
                blists_start[k] = blists_curr->parent;
-               SCIPfreeMemory(scip, &blists_curr);
+               SCIPfreeBlockMemory(scip, &blists_curr);
                blists_curr = blists_start[k];
             }
          }
@@ -1609,9 +1623,11 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
             for( i = 0; i < nnodes; i++ )
             {
                steinertree[i] = FALSE;
-               graphmark[i] = TRUE;
+               graphmark[i] = (graph->grad[i] > 0);
                SCIPlinkcuttreeInit(&nodes[i]);
             }
+
+            graphmark[root] = TRUE;
 
             /* create a link-cut tree representing the current Steiner tree */
             for( e = 0; e < nedges; e++ )
@@ -1632,7 +1648,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       }
 
       /* free data structures */
-      SCIPSTPunionfindFree(scip, &uf);
+      SCIPStpunionfindFree(scip, &uf);
       SCIPfreeBufferArray(scip, &nodesmark);
       SCIPfreeBufferArray(scip, &dfstree);
       SCIPfreeBufferArray(scip, &pinned);
@@ -1650,13 +1666,18 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       /******/
    }
 
+#ifdef SCIP_DEBUG
+   {
+      SCIP_Real obj = 0.0;
+      for( e = 0; e < nedges; e++ )
+         obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
 
-#ifdef printDebug
-   obj = 0.0;
-   for( e = 0; e < nedges; e++)
-      obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
+      printf(" ObjAfterHeurLocal=%.12e\n", obj);
+   }
+#endif
 
-   printf(" ObjAfterHeurLocal=%.12e\n", obj);
+#ifndef NDEBUG
+   assert(SCIPisLE(scip, graph_sol_getObj(graph->cost, best_result, 0.0, nedges), initialobj));
 #endif
 
    SCIPfreeBufferArray(scip, &steinertree);
@@ -1667,139 +1688,274 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
    return SCIP_OKAY;
 }
 
-/** local heuristic for (R)PC and MW */
-SCIP_RETCODE extendSteinerTreePcMw(
+/** Greedy Extension local heuristic for (R)PC and MW */
+SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
-   PATH*                 vnoi,               /**< Voronoi data structure array */
-   SCIP_Real*            costrev,            /**< reversed edge cost array*/
-   int*                  vbase,              /**< array to store Voronoi bases to each vertex */
-   int*                  stedge,             /**< array to indicate whether an edge is part of the Steiner tree */
-   char*                 stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
-   int*                  adds                /**< pointer to store number of added vertices */
+   GRAPH*                graph,              /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge cost array*/
+   PATH*                 path,               /**< shortest data structure array */
+   int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
+   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
+   SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
    )
 {
-   int e;
+   GNODE candidates[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
+   int candidatesup[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
+
+   PATH* orgpath;
+   SCIP_PQUEUE* pqueue;
+   SCIP_Real bestsolval;
    int i;
-   int k;
+   int root;
    int nedges;
    int nnodes;
-   int newnverts;
+   int nextensions;
+   int greedyextensions;
+   STP_Bool* stvertextmp;
 
-   assert(adds != NULL);
    assert(scip != NULL);
-   assert(vnoi != NULL);
+   assert(path != NULL);
    assert(graph != NULL);
    assert(stedge != NULL);
-   assert(costrev != NULL);
+   assert(cost != NULL);
    assert(stvertex != NULL);
 
-   *adds = -1;
+   root = graph->source;
    nnodes = graph->knots;
    nedges = graph->edges;
-   newnverts = 1;
 
-   /* init solution vertex array */
+   graph_pc_2transcheck(graph);
+   SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgpath, nnodes) );
 
-   for( i = 0; i < nnodes; i++ )
-      stvertex[i] = FALSE;
+   /* initialize solution vertex array with FALSE */
+   BMSclearMemoryArray(stvertex, nnodes);
 
-   stvertex[graph->source[0]] = TRUE;
+   stvertex[graph->source] = TRUE;
+   path[graph->source].edge = UNKNOWN;
 
-   for( e = 0; e < nedges; e++ )
+   for( int e = 0; e < nedges; e++ )
       if( stedge[e] == CONNECT )
-         stvertex[graph->head[e]] = TRUE;
+      {
+         i = graph->head[e];
+         path[i].edge = e;
+         stvertex[i] = TRUE;
+      }
 
-   /* main loop */
-   while( newnverts > 0)
+   graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
+
+   BMScopyMemoryArray(orgpath, path, nnodes);
+
+   if( graph->stp_type == STP_MWCSP )
+      greedyextensions = GREEDY_EXTENSIONS_MW;
+   else
+      greedyextensions = GREEDY_EXTENSIONS;
+
+   /*** compute solution value and save greedyextensions many best unconnected nodes  ***/
+
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, greedyextensions, 2.0, GNODECmpByDist) );
+
+   bestsolval = 0.0;
+   nextensions = 0;
+   for( i = 0; i < nnodes; i++ )
    {
-      if( graph->stp_type != STP_MWCSP )
-      {
-          for( i = 0; i < nnodes; i++ )
-          {
-             if( Is_pterm(graph->term[i]) && !stvertex[i] )
-             {
-                for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-                {
-                  if( stvertex[graph->head[e]]
-                        && !Is_term(graph->term[graph->head[e]])
-                        && SCIPisLT(scip, graph->cost[e], graph->prize[i]) )
-                  {
-                     stvertex[i] = TRUE;
-                     newnverts++;
-                     SCIPdebugMessage("add terminal  %d  %f < %f \n\n", i,
-                           graph->cost[e], graph->prize[i]);
-                     break;
-                  }
-               }
-            }
-         }
-      }
-      else
-      {
-          for( i = 0; i < nnodes; i++ )
-          {
-             if( Is_pterm(graph->term[i]) && !stvertex[i] )
-             {
-                for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-                {
-                  if( stvertex[graph->head[e]]
-                        && !Is_term(graph->term[graph->head[e]]) )
-                  {
-                     stvertex[i] = TRUE;
-                     newnverts++;
-                     SCIPdebugMessage("add terminal %d  %f head %d:  \n\n", i,
-                           graph->prize[i], graph->head[e]);
-                     break;
-                  }
-               }
-            }
-         }
-      }
+      if( graph->grad[i] == 0 )
+         continue;
 
-      voronoiSteinerTreeExt(scip, graph, costrev, vbase, stvertex, vnoi);
-
-      for( i = 0; i < nnodes; i++ )
+      if( Is_term(graph->term[i]) )
       {
-         if( stvertex[i] && vbase[i] != UNKNOWN && vbase[i] != i && !Is_term(graph->term[i]) )
+         if( i != root )
          {
-            assert(Is_pterm(graph->term[vbase[i]]));
-
-            if( !stvertex[vbase[i]] && SCIPisLT(scip, vnoi[i].dist, 0.0) )
+            int e;
+            SCIP_Bool connect = FALSE;
+            SCIP_Real ecost = -1.0;
+            for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
             {
-               k = i;
+               if( root == graph->tail[e] )
+                  ecost = graph->cost[e];
+               else if( stvertex[graph->tail[e]] )
+                  connect = TRUE;
+            }
 
-               while( k != vbase[i] )
-               {
-                  e = vnoi[k].edge;
-                  k = graph->tail[e];
-                  if( !stvertex[k] )
-                  {
-                     stvertex[k] = TRUE;
-                     newnverts++;
+            if( !connect )
+               bestsolval += ecost;
+         }
+      }
+      else if( stvertex[i] )
+      {
+         bestsolval += graph->cost[orgpath[i].edge];
+      }
+      else if( orgpath[i].edge != UNKNOWN && Is_pterm(graph->term[i]) )
+      {
+         if( nextensions < greedyextensions )
+         {
+            candidates[nextensions].dist = graph->prize[i] - path[i].dist;
+            candidates[nextensions].number = i;
 
-                     SCIPdebugMessage("add vertex %d (vbase: %d, cost: %f \n", k, i, graph->prize[k]);
-                  }
-               }
+            SCIP_CALL( SCIPpqueueInsert(pqueue, &(candidates[nextensions++])) );
+         }
+         else
+         {
+            /* get candidate vertex of minimum value */
+            GNODE* min = (GNODE*) SCIPpqueueFirst(pqueue);
+            if( SCIPisLT(scip, min->dist, graph->prize[i] - path[i].dist) )
+            {
+               min = (GNODE*) SCIPpqueueRemove(pqueue);
+               min->dist = graph->prize[i] - path[i].dist;
+               min->number = i;
+               SCIP_CALL( SCIPpqueueInsert(pqueue, min) );
             }
          }
       }
-
-      *adds += newnverts;
-      newnverts = 0;
    }
+
+   for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS;  restartcount++ )
+   {
+      int l = 0;
+      SCIP_Bool extensionstmp = FALSE;
+
+      i = nextensions;
+
+      /* write extension candidates into array, from max to min */
+      while( SCIPpqueueNElems(pqueue) > 0 )
+      {
+         GNODE* min = (GNODE*) SCIPpqueueRemove(pqueue);
+         assert(i > 0);
+         candidatesup[--i] = min->number;
+      }
+      assert(i == 0);
+
+      /* iteratively insert new subpaths and try to improve solution */
+      for( ; l < nextensions; l++ )
+      {
+         i = candidatesup[l];
+         if( !stvertex[i] )
+         {
+            SCIP_Real newsolval = 0.0;
+            int k = i;
+
+            BMScopyMemoryArray(stvertextmp, stvertex, nnodes);
+            BMScopyMemoryArray(path, orgpath, nnodes);
+
+            /* add new extension */
+            while( !stvertextmp[k] )
+            {
+               stvertextmp[k] = TRUE;
+               assert(orgpath[k].edge != UNKNOWN);
+               k = graph->tail[orgpath[k].edge];
+            }
+
+            graph_path_st_pcmw_extend(scip, graph, cost, path, stvertextmp, &extensionstmp);
+
+            for( int j = 0; j < nnodes; j++ )
+            {
+               if( graph->grad[j] == 0 )
+                  continue;
+
+               if( Is_term(graph->term[j]) )
+               {
+                  if( j != root )
+                  {
+                     int e;
+                     SCIP_Bool connect = FALSE;
+                     SCIP_Real ecost = -1.0;
+                     for( e = graph->inpbeg[j]; e != EAT_LAST; e = graph->ieat[e] )
+                     {
+                        if( root == graph->tail[e] )
+                           ecost = graph->cost[e];
+                        else if( stvertextmp[graph->tail[e]] )
+                           connect = TRUE;
+                     }
+
+                     if( !connect )
+                        newsolval += ecost;
+                  }
+               }
+               else if( stvertextmp[j] )
+               {
+                  newsolval += graph->cost[path[j].edge];
+               }
+            }
+
+            /* new solution value better than old one? */
+            if( SCIPisLT(scip, newsolval, bestsolval) )
+            {
+               *extensions = TRUE;
+
+               bestsolval = newsolval;
+               BMScopyMemoryArray(stvertex, stvertextmp, nnodes);
+
+               /* save greedyextensions many best unconnected nodes  */
+               nextensions = 0;
+
+               for( int j = 0; j < nnodes; j++ )
+               {
+                  orgpath[j].edge = path[j].edge;
+                  orgpath[j].dist = path[j].dist;
+                  if( !stvertex[j] && Is_pterm(graph->term[j]) && path[j].edge != UNKNOWN )
+                  {
+                     if( nextensions < greedyextensions )
+                     {
+                        candidates[nextensions].dist = graph->prize[j] - path[j].dist;
+                        candidates[nextensions].number = j;
+
+                        SCIP_CALL( SCIPpqueueInsert(pqueue, &(candidates[nextensions++])) );
+                     }
+                     else
+                     {
+                        /* get candidate vertex of minimum value */
+                        GNODE* min = (GNODE*) SCIPpqueueFirst(pqueue);
+                        if( SCIPisLT(scip, min->dist, graph->prize[j] - path[j].dist) )
+                        {
+                           min = (GNODE*) SCIPpqueueRemove(pqueue);
+                           min->dist = graph->prize[j] - path[j].dist;
+                           min->number = j;
+                           SCIP_CALL( SCIPpqueueInsert(pqueue, min) );
+                        }
+                     }
+                  }
+               }
+
+               break;
+            } /* if new solution value better than old one? */
+         } /* if !stvertex[i] */
+      } /* for l < nextension */
+      /* no more extensions performed? */
+      if( l == nextensions )
+         break;
+   } /* main loop */
 
    /* have vertices been added? */
-   if( *adds > 0  )
+   if( *extensions )
    {
-      SCIPdebugMessage("\n vertices added! \n");
-      for( e = 0; e < nedges; e++ )
+      SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw found extensions \n");
+      for( int e = 0; e < nedges; e++ )
          stedge[e] = UNKNOWN;
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, stedge, stvertex) );
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, cost, stedge, stvertex) );
    }
+
+   SCIPpqueueFree(&pqueue);
+   SCIPfreeBufferArray(scip, &orgpath);
+   SCIPfreeBufferArray(scip, &stvertextmp);
+
+#ifdef SCIP_DEBUG
+   {
+      SCIP_Real t = 0.0;
+      for( int e = 0; e < nedges; e++ )
+         if( stedge[e] == CONNECT )
+            t += graph->cost[e];
+
+      SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw: exit real cost %f \n", t);
+   }
+#endif
 
    return SCIP_OKAY;
 }
+
+
+
+
+
 
 /*
  * Callback methods of primal heuristic
@@ -1814,7 +1970,7 @@ SCIP_DECL_HEURCOPY(heurCopyLocal)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurLocal(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurLocal(scip) );
 
    return SCIP_OKAY;
 }
@@ -1851,8 +2007,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_SOL** sols;                          /* solutions */
    SCIP_VAR** vars;                          /* SCIP variables */
    SCIP_Real pobj;
-   SCIP_Real* cost;
-   SCIP_Real* costrev;
    SCIP_Real* nval;
    SCIP_Real* xval;
    int i;
@@ -1900,7 +2054,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( SCIPgetBestSol(scip) == NULL )
       return SCIP_OKAY;
 
-   root = graph->source[0];
+   root = graph->source;
    sols = SCIPgetSols(scip);
    nsols = SCIPgetNSols(scip);
    nedges = graph->edges;
@@ -2002,8 +2156,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    }
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
@@ -2016,30 +2168,11 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
          results[e] = UNKNOWN;
    }
 
-   /* swap costs; set high cost if variable is fixed to 0 */
-   for( e = 0; e < nedges; e += 2)
+   if( !graph_sol_valid(scip, graph, results) )
    {
-      if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
-      {
-         costrev[e] = BLOCKED;
-         cost[e + 1] = BLOCKED;
-      }
-      else
-      {
-         costrev[e] = graph->cost[e + 1];
-         cost[e + 1] = costrev[e];
-      }
-
-      if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
-      {
-         costrev[e + 1] = BLOCKED;
-         cost[e] = BLOCKED;
-      }
-      else
-      {
-         costrev[e + 1] = graph->cost[e];
-         cost[e] = costrev[e + 1];
-      }
+      SCIPfreeBufferArray(scip, &nval);
+      SCIPfreeBufferArray(scip, &results);
+      return SCIP_OKAY;
    }
 
    /* pruning necessary? */
@@ -2047,8 +2180,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       !(strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "rec") == 0 ||
          strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "TM") == 0) )
    {
-      int nnodes = graph->knots;
-      char* steinertree;
+      const int nnodes = graph->knots;
+      STP_Bool* steinertree;
       SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
       assert(graph_sol_valid(scip, graph, results));
 
@@ -2066,21 +2199,21 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       }
 
       if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP )
-         SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, results, steinertree) );
+         SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, results, steinertree) );
       else
-         SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, results, steinertree) );
+         SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, results, steinertree) );
 
       SCIPfreeBufferArray(scip, &steinertree);
    }
 
    /* execute local heuristics */
-   SCIP_CALL( SCIPheurImproveSteinerTree(scip, graph, cost, costrev, results) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, results) );
 
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )
       nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
 
-   SCIP_CALL( SCIPvalidateStpSol(scip, graph, nval, &feasible) );
+   SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &feasible) );
 
    /* solution feasible? */
    if( feasible )
@@ -2127,8 +2260,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);
-   SCIPfreeBufferArray(scip, &costrev);
-   SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
 }
@@ -2139,7 +2270,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
 
 /** creates the local primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurLocal(
+SCIP_RETCODE SCIPStpIncludeHeurLocal(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

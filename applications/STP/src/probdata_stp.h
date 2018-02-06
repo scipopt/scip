@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -187,6 +187,13 @@ SCIP_Bool SCIPprobdataIsBigt(
 extern
 SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** writes SPG (no variant!) to a file */
+void SCIPprobdataWriteStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const char*           filename            /**< file name */
    );
 
 /** writes the best solution to a file */

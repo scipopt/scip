@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -96,6 +96,13 @@ then
 
     # wakeup the cluster
     make --makefile=wakeup-slurm wake_M620v3
+elif test $CLUSTERQUEUE = "M630-low"
+then
+    NICE="--nice=10000"
+    CLUSTERQUEUE="M630"
+
+    # wakeup the cluster
+    make --makefile=wakeup-slurm wake_M630
 elif test $CLUSTERQUEUE = "M620x"
 then
     CLUSTERQUEUE="M620,M620v2,M620v3"

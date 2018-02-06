@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -419,7 +419,8 @@ SCIP_Real determineBound(
 
    bound = MIN(slavebound, masterbound);
    assert(!SCIPisInfinity(scip,bound));
-   if( SCIPisFeasZero(scip, bound) )
+
+   if( bound < 0.5 )
       return 0.0;
 
    /* get the necessary row and and column data for each variable */
@@ -976,7 +977,7 @@ SCIP_RETCODE optimize(
 
          assert(SCIPisFeasIntegral(scip, mastersolval));
 
-         assert(opttype == OPTTYPE_INTEGER || (SCIPisFeasEQ(scip, mastersolval, 1.0) || SCIPisFeasEQ(scip, mastersolval, 0.0)));
+         assert(opttype == OPTTYPE_INTEGER || (SCIPisFeasLE(scip, mastersolval, 1.0) || SCIPisFeasGE(scip, mastersolval, 0.0)));
 
          /* initialize the data of the best available shift */
          bestimprovement = 0.0;
@@ -1026,7 +1027,7 @@ SCIP_RETCODE optimize(
 
             assert(SCIPvarGetType(master) == SCIPvarGetType(slave));
             assert(SCIPisFeasIntegral(scip, slavesolval));
-            assert(opttype == OPTTYPE_INTEGER || (SCIPisFeasEQ(scip, slavesolval, 1.0) || SCIPisFeasEQ(scip, slavesolval, 0.0)));
+            assert(opttype == OPTTYPE_INTEGER || (SCIPisFeasLE(scip, mastersolval, 1.0) || SCIPisFeasGE(scip, mastersolval, 0.0)));
 
             /* solution is not feasible w.r.t. the variable bounds, stop optimization in this case */
             if( SCIPisFeasGT(scip, slavesolval, SCIPvarGetUbGlobal(slave)) || SCIPisFeasLT(scip, slavesolval, SCIPvarGetLbGlobal(slave)) )

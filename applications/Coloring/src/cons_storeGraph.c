@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -428,10 +428,12 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
    /* put constraint on the stack */
    if ( conshdlrData->nstack >= conshdlrData->maxstacksize )
    {
-      SCIP_Real newsize = SCIPcalcMemGrowSize(scip, conshdlrData->maxstacksize);
+      int newsize = SCIPcalcMemGrowSize(scip, conshdlrData->nstack + 1);
+
+      SCIPdebugMessage("reallocating Memory for stack! %d --> %d\n", conshdlrData->maxstacksize, newsize);
+
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(conshdlrData->stack), conshdlrData->maxstacksize, newsize) ); /*lint !e715 !e647*/
       conshdlrData->maxstacksize = newsize;
-      SCIPdebugMessage("reallocating Memory for stack! %d --> %d\n", conshdlrData->maxstacksize/2, conshdlrData->maxstacksize);
    }
    conshdlrData->stack[conshdlrData->nstack] = cons;
    ++(conshdlrData->nstack);

@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -347,7 +347,7 @@ void* BMSallocClearMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num * typesize));
+      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num) * (typesize));
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -3015,16 +3015,15 @@ void BMSfreeBufferMemory_work(
    }
 #endif
 
-#ifdef CHECKMEM
+#ifndef NDEBUG
    /* check that the memory is cleared */
    if( buffer->clean )
    {
-      char* tmpptr = (char*)(buffer->data[bufnum]);
-      unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
-      tmpptr += inc;
+      size_t i;
+      uint8_t* tmpptr = (uint8_t*)(buffer->data[bufnum]);
 
-      while( --tmpptr >= (char*)(buffer->data[bufnum]) )
-         assert(*tmpptr == '\0');
+      for( i = 0; i < buffer->size[bufnum]; ++i )
+         assert(tmpptr[i] == 0);
    }
 #endif
 

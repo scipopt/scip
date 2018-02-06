@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,15 +43,11 @@
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_RANDSEED             54 /**< initial random seed */
 
-/*#define MAKECUTINTEGRAL*/        /* try to scale all cuts to integral coefficients */
-#define MAKEINTCUTINTEGRAL     /* try to scale cuts without continuous variables to integral coefficients */
-/*#define FORCECUTINTEGRAL*/       /* discard cut if conversion to integral coefficients failed */
 #define SEPARATEROWS           /* separate rows with integral slack */
 
 #define BOUNDSWITCH              0.9999
 #define POSTPROCESS                TRUE
 #define USEVBDS                    TRUE
-#define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.95
 
@@ -150,8 +146,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIP_Real* cutcoefs;
    SCIP_Real* basisfrac;
    SCIP_Real cutrhs;
-   SCIP_Real maxscale;
-   SCIP_Longint maxdnom;
    int* basisind;
    int* basisperm;
    int* inds;
@@ -163,7 +157,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    int nrows;
    int ncalls;
    int depth;
-   int maxdepth;
    int maxsepacuts;
    int ncuts;
    int c;
@@ -171,7 +164,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    int cutrank;
    SCIP_Bool success;
    SCIP_Bool cutislocal;
-   char normtype;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -232,35 +224,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
       }
    }
 #endif
-
-   /* get the type of norm to use for efficacy calculations */
-   SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
-
-   /* set the maximal denominator in rational representation of strong CG cut and the maximal scale factor to
-    * scale resulting cut to integral values to avoid numerical instabilities
-    */
-   /**@todo find better but still stable strong CG cut settings: look at dcmulti, gesa3, khb0525, misc06, p2756 */
-   maxdepth = SCIPgetMaxDepth(scip);
-   if( depth == 0 )
-   {
-      maxdnom = 1000;
-      maxscale = 1000.0;
-   }
-   else if( depth <= maxdepth/4 )
-   {
-      maxdnom = 1000;
-      maxscale = 1000.0;
-   }
-   else if( depth <= maxdepth/2 )
-   {
-      maxdnom = 100;
-      maxscale = 100.0;
-   }
-   else
-   {
-      maxdnom = 10;
-      maxscale = 10.0;
-   }
 
    *result = SCIP_DIDNOTFIND;
 
@@ -334,8 +297,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   SCIPdebugMsg(scip, "searching strong CG cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
-      ncols, nrows, maxdnom, maxscale, maxsepacuts);
+   SCIPdebugMsg(scip, "searching strong CG cuts: %d cols, %d rows, maxcuts=%d\n",
+      ncols, nrows, maxsepacuts);
 
    /* for all basic columns belonging to integer variables, try to generate a strong CG cut */
    ncuts = 0;
@@ -408,79 +371,51 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          }
 
          assert(success);
-#ifdef MAKECUTINTEGRAL
-         /* try to scale the cut to integral values */
-         SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                                          maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
-#else
-#ifdef MAKEINTCUTINTEGRAL
-         /* try to scale the cut to integral values if there are no continuous variables
-            *  -> leads to an integral slack variable that can later be used for other cuts
-            */
-         if( SCIPgetRowNumIntCols(scip, cut) == SCIProwGetNNonz(cut) )
+
+         if( !SCIPisCutEfficacious(scip, NULL, cut) )
          {
-            SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                                           maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
-         }
-#endif
-#endif
-
-#ifndef FORCECUTINTEGRAL
-         success = TRUE;
-#endif
-
-         if( success ) /*lint !e774*/
-         {
-            if( !SCIPisCutEfficacious(scip, NULL, cut) )
-            {
-               SCIPdebugMsg(scip, " -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                              cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                              SCIPgetCutEfficacy(scip, NULL, cut));
-               /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-               success = FALSE;
-            }
-            else
-            {
-               SCIP_Bool infeasible = FALSE;
-
-               /* flush all changes before adding the cut */
-               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-
-               SCIPdebugMsg(scip, " -> found strong CG cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-                              cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                              SCIPgetCutEfficacy(scip, NULL, cut),
-                              SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                              SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-               /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-
-               if( SCIPisCutNew(scip, cut) )
-               {
-                  if( !cutislocal )
-                  {
-                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                  }
-                  else
-                  {
-                     SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
-                  }
-
-                  ncuts++;
-
-                  if( infeasible )
-                  {
-                     *result = SCIP_CUTOFF;
-                  }
-                  else
-                  {
-                     *result = SCIP_SEPARATED;
-                  }
-               }
-            }
+            SCIPdebugMsg(scip, " -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                           cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                           SCIPgetCutEfficacy(scip, NULL, cut));
+            /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+            success = FALSE;
          }
          else
          {
-            SCIPdebugMsg(scip, " -> strong CG cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                           cutname, SCIPgetRowLPActivity(scip, cut), cutrhs, SCIProwGetNorm(cut), SCIPgetCutEfficacy(scip, NULL, cut));
+            SCIP_Bool infeasible = FALSE;
+
+            /* flush all changes before adding the cut */
+            SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+            SCIPdebugMsg(scip, " -> found strong CG cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                           cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                           SCIPgetCutEfficacy(scip, NULL, cut),
+                           SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                           SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+            /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+
+            if( SCIPisCutNew(scip, cut) )
+            {
+               if( !cutislocal )
+               {
+                  SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
+               }
+
+               ncuts++;
+
+               if( infeasible )
+               {
+                  *result = SCIP_CUTOFF;
+               }
+               else
+               {
+                  *result = SCIP_SEPARATED;
+               }
+            }
          }
 
          /* release the row */

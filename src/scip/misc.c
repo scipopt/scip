@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2135,6 +2135,9 @@ SCIP_RETCODE hashtableInsert(
 {
    uint32_t elemdistance;
    uint32_t pos;
+#ifndef NDEBUG
+   SCIP_Bool swapped = FALSE;
+#endif
 
    assert(hashtable != NULL);
    assert(hashtable->slots != NULL);
@@ -2165,6 +2168,9 @@ SCIP_RETCODE hashtableInsert(
       {
          if( override )
          {
+#ifndef NDEBUG
+            assert(! swapped);
+#endif
             hashtable->slots[pos] = element;
             hashtable->hashes[pos] = hashval;
             return SCIP_OKAY;
@@ -2187,6 +2193,12 @@ SCIP_RETCODE hashtableInsert(
          tmp = hashval;
          hashval = hashtable->hashes[pos];
          hashtable->hashes[pos] = tmp;
+         key = hashtable->hashgetkey(hashtable->userptr, element);
+
+         /* after doing a swap the case that other elements are replaced must not happen anymore */
+#ifndef NDEBUG
+         swapped = TRUE;
+#endif
       }
 
       /* continue until we have found an empty position */
@@ -2589,7 +2601,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (uint64_t) key;
+   return (uint64_t) (uintptr_t) key;
 }
 
 
@@ -6232,16 +6244,15 @@ int SCIPactivityGetEnergy(
  * Resource Profile
  */
 
-/** creates resource profile */
-SCIP_RETCODE SCIPprofileCreate(
+/** helper method to create a profile */
+static
+SCIP_RETCODE doProfileCreate(
    SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
    int                   capacity            /**< resource capacity */
    )
 {
-   assert(profile != NULL);
-   assert(capacity > 0);
-
    SCIP_ALLOC( BMSallocMemory(profile) );
+   BMSclearMemory(*profile);
 
    (*profile)->arraysize = 10;
    SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->timepoints, (*profile)->arraysize) );
@@ -6256,18 +6267,34 @@ SCIP_RETCODE SCIPprofileCreate(
    return SCIP_OKAY;
 }
 
+/** creates resource profile */
+SCIP_RETCODE SCIPprofileCreate(
+   SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
+   int                   capacity            /**< resource capacity */
+   )
+{
+   assert(profile != NULL);
+   assert(capacity > 0);
+
+   SCIP_CALL_FINALLY( doProfileCreate(profile, capacity), SCIPprofileFree(profile) );
+
+   return SCIP_OKAY;
+}
+
 /** frees given resource profile */
 void SCIPprofileFree(
    SCIP_PROFILE**        profile             /**< pointer to the resource profile */
    )
 {
    assert(profile != NULL);
-   assert(*profile != NULL);
 
-   /* free main hash map data structure */
-   BMSfreeMemoryArray(&(*profile)->loads);
-   BMSfreeMemoryArray(&(*profile)->timepoints);
-   BMSfreeMemory(profile);
+   /* free resource profile */
+   if( *profile != NULL )
+   {
+      BMSfreeMemoryArrayNull(&(*profile)->loads);
+      BMSfreeMemoryArrayNull(&(*profile)->timepoints);
+      BMSfreeMemory(profile);
+   }
 }
 
 /** output of the given resource profile */
@@ -7520,18 +7547,19 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    )
 {
-   SCIP_Bool* visited;
+   SCIP_Bool* visited = NULL;
    int* comps;
    int* compstarts;
-   int* stackadjvisited;
-   int* dfsstack;
-   int* dfsnodes;
+   int* stackadjvisited = NULL;
+   int* dfsstack = NULL;
+   int* dfsnodes = NULL;
    int ndfsnodes;
    int ncomps;
    int i;
    int j;
    int k;
    int endidx;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    assert(digraph != NULL);
 
@@ -7539,10 +7567,10 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
    comps = digraph->components;
    compstarts = digraph->componentstarts;
 
-   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocClearMemoryArray(&visited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsnodes, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsstack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stackadjvisited, digraph->nnodes), TERMINATE );
 
    /* sort the components (almost) topologically */
    for( i = 0; i < ncomps; ++i )
@@ -7571,12 +7599,13 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
       }
    }
 
-   BMSfreeMemoryArray(&stackadjvisited);
-   BMSfreeMemoryArray(&dfsstack);
-   BMSfreeMemoryArray(&dfsnodes);
-   BMSfreeMemoryArray(&visited);
+TERMINATE:
+   BMSfreeMemoryArrayNull(&stackadjvisited);
+   BMSfreeMemoryArrayNull(&dfsstack);
+   BMSfreeMemoryArrayNull(&dfsnodes);
+   BMSfreeMemoryArrayNull(&visited);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** returns the number of previously computed undirected components for the given directed graph */
@@ -8524,6 +8553,147 @@ SCIP_Longint SCIPcalcGreComDiv(
    }
 
    return (val1 << t);  /*lint !e703*/
+}
+
+
+/* for the MS compiler, the function nextafter is named _nextafter */
+#if defined(_MSC_VER) && !defined(NO_NEXTAFTER)
+#define nextafter(x,y) _nextafter(x,y)
+#endif
+
+/* on systems where the function nextafter is not defined, we provide an implementation from Sun */
+#ifdef NO_NEXTAFTER
+/* The following implementation of the routine nextafter() comes with the following license:
+ *
+ * ====================================================
+ * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Developed at SunSoft, a Sun Microsystems, Inc. business.
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+#define __HI(x) *(1+(int*)&x)
+#define __LO(x) *(int*)&x
+#define __HIp(x) *(1+(int*)x)
+#define __LOp(x) *(int*)x
+
+static
+double nextafter(double x, double y)
+{
+   int hx;
+   int hy;
+   int ix;
+   int iy;
+   unsigned lx;
+   unsigned ly;
+
+   /* cppcheck-suppress invalidPointerCast */
+   hx = __HI(x);     /* high word of x */
+   /* cppcheck-suppress invalidPointerCast */
+   lx = __LO(x);     /* low  word of x */
+   /* cppcheck-suppress invalidPointerCast */
+   hy = __HI(y);     /* high word of y */
+   /* cppcheck-suppress invalidPointerCast */
+   ly = __LO(y);     /* low  word of y */
+   ix = hx&0x7fffffff;     /* |x| */
+   iy = hy&0x7fffffff;     /* |y| */
+
+   if( ((ix>=0x7ff00000) && ((ix-0x7ff00000)|lx) != 0 ) ||   /* x is nan */
+      ( (iy>=0x7ff00000) && ((iy-0x7ff00000)|ly) != 0 ))     /* y is nan */
+      return x + y;
+
+   /* x == y, return x */
+   if( x == y )
+      return x;
+
+   /* x == 0 */
+   if( (ix|lx) == 0 )
+   {
+      /* return +-minsubnormal */
+      /* cppcheck-suppress invalidPointerCast */
+      __HI(x) = hy&0x80000000;
+      /* cppcheck-suppress invalidPointerCast */
+      __LO(x) = 1;
+      y = x * x;
+      if ( y == x )
+         return y;
+      else
+         return x;  /* raise underflow flag */
+   }
+   /* x > 0 */
+   if( hx >= 0 )
+   {
+      /* x > y, x -= ulp */
+      if( hx > hy || ((hx == hy) && (lx > ly)) )
+      {
+         if ( lx == 0 )
+            hx -= 1;
+         lx -= 1;
+      }
+      else
+      {
+         /* x < y, x += ulp */
+         lx += 1;
+         if ( lx == 0 )
+            hx += 1;
+      }
+   }
+   else
+   {
+      /* x < 0 */
+      if( hy >= 0 || hx > hy || ((hx == hy) && (lx > ly)) )
+      {
+         /* x < y, x -= ulp */
+         if ( lx == 0 )
+            hx -= 1;
+         lx -= 1;
+      }
+      else
+      {
+         /* x > y, x += ulp */
+         lx += 1;
+         if( lx == 0 )
+            hx += 1;
+      }
+   }
+   hy = hx&0x7ff00000;
+   /* overflow  */
+   if( hy >= 0x7ff00000 )
+      return x + x;
+   if( hy < 0x00100000 )
+   {
+      /* underflow */
+      y = x*x;
+      if( y != x )
+      {
+         /* raise underflow flag */
+         /* cppcheck-suppress invalidPointerCast */
+         __HI(y) = hx;
+         /* cppcheck-suppress invalidPointerCast */
+         __LO(y) = lx;
+         return y;
+      }
+   }
+
+   /* cppcheck-suppress invalidPointerCast */
+   __HI(x) = hx;
+   /* cppcheck-suppress invalidPointerCast */
+   __LO(x) = lx;
+   return x;
+}
+#endif
+
+
+/** returns the next representable value of from in the direction of to */
+SCIP_Real SCIPnextafter(
+   SCIP_Real             from,               /**< value from which the next representable value should be returned */
+   SCIP_Real             to                  /**< direction in which the next representable value should be returned */
+   )
+{
+   return nextafter(from, to);
 }
 
 /** calculates the smallest common multiple of the two given values */

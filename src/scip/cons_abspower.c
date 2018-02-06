@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -127,8 +127,6 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Real             cutmaxrange;        /**< maximal coef range (maximal abs coef / minimal abs coef) of a cut in order to be added to LP */
    SCIP_Bool             projectrefpoint;    /**< whether to project the reference point when linearizing a absolute power constraint in a convex region */
    int                   preferzerobranch;   /**< how much we prefer to branch on 0.0 first */
@@ -170,6 +168,15 @@ typedef enum Proprule PROPRULE;
 /*
  * Local methods
  */
+
+/** computes bounds on x in a absolute power constraints for given bounds on z */
+static
+void computeBoundsX(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_INTERVAL         zbnds,              /**< bounds on x that are to be propagated */
+   SCIP_INTERVAL*        xbnds               /**< buffer to store corresponding bounds on z */
+   );
 
 /** power function for square, that should be faster than using pow(x, 2.0) */
 static
@@ -1154,18 +1161,23 @@ SCIP_RETCODE presolveDual(
          /* much simpler case where we can substitute z:
           * min xobj * x + zobj/zcoef * (rhs - sign(x+offset)*abs(x+offset)^exponent)
           * s.t. xlb <= x <= xub
-          *
-          * Since domain propagation had been applied, we can assume that for any valid value for x,
-          * also the corresponding z value is valid.
           */
          SCIP_Real xfix;
          SCIP_Real xlb;
          SCIP_Real xub;
          SCIP_Real zfix;
+         SCIP_INTERVAL xbnds;
+         SCIP_INTERVAL zbnds;
          SCIP_Bool fixed;
 
-         xlb = SCIPvarGetLbGlobal(consdata->x);
-         xub = SCIPvarGetUbGlobal(consdata->x);
+         /* Since domain propagation has been applied, we would like to assume that for any valid value for x,
+          * also the corresponding z value is valid. However, domain propagation only applies sufficiently
+          * strong bound tightenings, so we better recompute the bounds on x.
+          */
+         SCIPintervalSetBounds(&zbnds, SCIPvarGetLbGlobal(consdata->z), SCIPvarGetUbGlobal(consdata->z));
+         computeBoundsX(scip, cons, zbnds, &xbnds);
+         xlb = MAX(SCIPvarGetLbGlobal(consdata->x), xbnds.inf); /*lint !e666*/
+         xub = MIN(SCIPvarGetUbGlobal(consdata->x), xbnds.sup); /*lint !e666*/
 
          if( SCIPisZero(scip, SCIPvarGetObj(consdata->z)) )
          {
@@ -1183,7 +1195,7 @@ SCIP_RETCODE presolveDual(
             else
             {
                /* fix x to best bound */
-               xfix = SCIPvarGetBestBoundGlobal(consdata->x);
+               xfix = (SCIPvarGetObj(consdata->x) >= 0.0) ? xlb : xub;
             }
          }
          else if( consdata->exponent == 2.0 )
@@ -2206,6 +2218,10 @@ SCIP_RETCODE registerBranchingCandidates(
       {
          assert(conss[c] != NULL);  /*lint !e613*/
 
+         /* skip constraints that have been marked to be removed by propagateCons() */
+         if( !SCIPconsIsEnabled(conss[c]) ) /*lint !e613*/
+            continue;
+
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
 
@@ -2270,6 +2286,10 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
+      /* skip constraints that have been marked to be removed by propagateCons() */
+      if( !SCIPconsIsEnabled(conss[c]) )
+         continue;
+
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
@@ -2284,6 +2304,86 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
    if( *brvar != NULL )
    {
       SCIP_CALL( SCIPaddExternBranchCand(scip, *brvar, brvarval, SCIP_INVALID) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/* try to fix almost fixed x variable in violated constraint */
+static
+SCIP_RETCODE fixAlmostFixedX(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility was detected */
+   SCIP_Bool*            reduceddom          /**< buffer to store whether some variable bound was tightened */
+)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Bool tightened;
+   int c;
+
+   assert(scip != NULL);
+   assert(conss != NULL);
+   assert(infeasible != NULL);
+   assert(reduceddom != NULL);
+
+   *infeasible = FALSE;
+   *reduceddom = FALSE;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* if constraint not violated, then continue */
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      lb = SCIPvarGetLbLocal(consdata->x);
+      ub = SCIPvarGetUbLocal(consdata->x);
+
+      /* if x not almost fixed, then continue */
+      if( !SCIPisRelEQ(scip, lb, ub) )
+         continue;
+
+      /* if x fixed already, then continue */
+      if( SCIPisEQ(scip, lb, ub) )
+         continue;
+
+      assert(!SCIPisInfinity(scip, -lb));
+      assert(!SCIPisInfinity(scip,  ub));
+
+      /* try to fix variable */
+      SCIP_CALL( SCIPtightenVarLb(scip, consdata->x, (lb+ub)/2.0, TRUE, infeasible, &tightened) );
+      if( *infeasible )
+      {
+         SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(consdata->x));
+         return SCIP_OKAY;
+      }
+      if( tightened )
+      {
+         SCIPdebugMsg(scip, "Tightened lower bound of almost fixed variable <%s>.\n", SCIPvarGetName(consdata->x));
+         *reduceddom = TRUE;
+      }
+
+      SCIP_CALL( SCIPtightenVarUb(scip, consdata->x, (lb+ub)/2.0, TRUE, infeasible, &tightened) );
+      if( *infeasible )
+      {
+         SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(consdata->x));
+         return SCIP_OKAY;
+      }
+      if( tightened )
+      {
+         SCIPdebugMsg(scip, "Tightened upper bound of almost fixed variable <%s>.\n", SCIPvarGetName(consdata->x));
+         *reduceddom = TRUE;
+      }
+
+      /* stop as soon as one variable has been fixed to start another enfo round */
+      if( *reduceddom )
+         break;
    }
 
    return SCIP_OKAY;
@@ -2950,7 +3050,8 @@ SCIP_RETCODE propagateCons(
    else
       maxact = SCIPinfinity(scip);
 
-   if( SCIPisFeasGE(scip, minact, consdata->lhs) && SCIPisFeasLE(scip, maxact, consdata->rhs) )
+   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisGE(scip, minact, consdata->lhs)) &&
+       (SCIPisInfinity(scip,  consdata->rhs) || SCIPisLE(scip, maxact, consdata->rhs)) )
    {
       SCIPdebugMsg(scip, "absolute power constraint <%s> is redundant: <%s>[%.15g,%.15g], <%s>[%.15g,%.15g]\n",
          SCIPconsGetName(cons),
@@ -3509,7 +3610,10 @@ SCIP_RETCODE generateSecantCut(
 
    /* ignore constraints with fixed x (should be removed soon) */
    if( SCIPisRelEQ(scip, xlb, xub) )
+   {
+      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.20g,%.20g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
       return SCIP_OKAY;
+   }
 
    if( xlb > -xoffset )
       xlb = -xoffset;
@@ -3630,7 +3734,7 @@ SCIP_RETCODE generateCut(
 
    SCIPdebugMsg(scip, "generate cut for constraint <%s> with violated side %d\n", SCIPconsGetName(cons), violside);
    SCIPdebugPrintCons(scip, cons, NULL);
-   SCIPdebugMsg(scip, "xlb = %g  xub = %g  xval = %g\n", SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x), SCIPgetSolVal(scip, sol, consdata->x));
+   SCIPdebugMsg(scip, "xlb = %g  xub = %g  xval = %g  zval = %.15g\n", SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x), SCIPgetSolVal(scip, sol, consdata->x), SCIPgetSolVal(scip, sol, consdata->z));
 
    if( violside == SCIP_SIDETYPE_RIGHT )
    {
@@ -3654,6 +3758,11 @@ SCIP_RETCODE generateCut(
       zcoef = -consdata->zcoef;
       rhs   = -consdata->lhs;
    }
+   /* move reference point onto local domain, if clearly (>eps) outside */
+   if( SCIPisLT(scip, xval, xlb) )
+      xval = xlb;
+   else if( SCIPisGT(scip, xval, xub) )
+      xval = xub;
 
    if( SCIPisInfinity(scip, REALABS(xval)) )
    {
@@ -3708,7 +3817,7 @@ SCIP_RETCODE generateCut(
                consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
       else
          SCIP_CALL( generateLinearizationCut(scip, &rowprep, SCIPconsGetHdlr(cons), xub, consdata->exponent, xoffset, xmult, zcoef, rhs,
-               consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
+               consdata->x, consdata->z, xub+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
    }
    else
    {
@@ -3776,8 +3885,6 @@ SCIP_RETCODE separatePoint(
    SCIP_CONSDATA*     consdata;
    SCIP_SIDETYPE      side;
    SCIP_Real          efficacy;
-   SCIP_Real          feasibility;
-   SCIP_Bool          convex;
    int                c;
    SCIP_ROW*          row;
 
@@ -3800,6 +3907,10 @@ SCIP_RETCODE separatePoint(
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
+      /* skip constraints that are not enabled, e.g., because they were already marked for deletion at this node */
+      if( !SCIPconsIsEnabled(conss[c]) )  /*lint !e613*/
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
@@ -3810,28 +3921,11 @@ SCIP_RETCODE separatePoint(
          if( row == NULL ) /* failed to generate cut */
             continue;
 
-         /* check if we separate in convex area */
-         if( side == SCIP_SIDETYPE_RIGHT )
-         {
-            convex = !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x))
-               && (!SCIPisNegative(scip, SCIPvarGetLbLocal(consdata->x)+consdata->xoffset)
-                  || SCIPgetSolVal(scip, sol, consdata->x)+consdata->xoffset >= -consdata->root*(SCIPvarGetLbLocal(consdata->x)+consdata->xoffset));
-         }
-         else
-         {
-            convex = !SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x))
-               && (!SCIPisPositive(scip, SCIPvarGetUbLocal(consdata->x)+consdata->xoffset)
-                  || SCIPgetSolVal(scip, sol, consdata->x)+consdata->xoffset <= -consdata->root*(SCIPvarGetUbLocal(consdata->x)+consdata->xoffset));
-         }
-
-         feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
-         efficacy = -feasibility;
-
-         /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add,
+         /* if cut is violated sufficiently, then add,
           * unless it corresponds to a bound change that is too weak (<eps) to be added
           */
-         if( (efficacy > minefficacy || (inenforcement && convex && (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPisPositive(scip, efficacy) : SCIPisFeasPositive(scip, efficacy)))) &&
-             SCIPisCutApplicable(scip, row) )
+         efficacy = -SCIPgetRowSolFeasibility(scip, row, sol);
+         if( SCIPisGT(scip, efficacy, minefficacy) && SCIPisCutApplicable(scip, row) )
          {
             SCIP_Bool infeasible;
 
@@ -5056,9 +5150,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_Bool          success;
    SCIP_Bool          cutoff;
    SCIP_Bool          solviolbounds;
-   SCIP_Real          minefficacy;
    SCIP_Real          sepaefficacy;
-   SCIP_Real          leastpossibleefficacy;
    SCIP_Real          maxviol;
    int                nnotify;
    int                c;
@@ -5162,14 +5254,10 @@ SCIP_RETCODE enforceConstraint(
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
-    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least feastol
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
+    * however, we also don't want very weak cuts, so try to reach at least feastol (=lpfeastol by default, though)
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, FALSE, &success,
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), TRUE, FALSE, &success,
          &cutoff, &sepaefficacy) );
    if( cutoff )
    {
@@ -5179,11 +5267,11 @@ SCIP_RETCODE enforceConstraint(
    }
    if( success )
    {
-      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, SCIPfeastol(scip));
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
-   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy,
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, SCIPfeastol(scip),
       maxviol);
 
    /* we are not feasible, the whole node is not infeasible, and we cannot find a reasonable cut
@@ -5191,12 +5279,10 @@ SCIP_RETCODE enforceConstraint(
     */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
-   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, leastpossibleefficacy, TRUE, FALSE,
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPlpfeastol(scip), TRUE, FALSE,
             &success, &cutoff, &sepaefficacy) );
       if( cutoff )
       {
@@ -5213,9 +5299,25 @@ SCIP_RETCODE enforceConstraint(
 
    if( nnotify == 0 && !solinfeasible )
    {
-      /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
-         if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
+      SCIP_Bool reduceddom;
       SCIP_VAR* brvar = NULL;
+
+      /* fallback 2: fix almost-fixed nonlinear variables */
+      SCIP_CALL( fixAlmostFixedX(scip, conss, nconss, &cutoff, &reduceddom) );
+      if( cutoff )
+      {
+         SCIPdebugMsg(scip, "fixing almost fixed var lead to infeasibility.\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( reduceddom )
+      {
+         *result = SCIP_REDUCEDDOM;
+         return SCIP_OKAY;
+      }
+
+      /* fallback 3: separation probably failed because of numerical difficulties;
+         if no-one declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
       SCIP_CALL( registerLargeRelaxValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
       if( brvar == NULL )
       {
@@ -5894,7 +5996,7 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, SCIPgetSepaMinEfficacy(scip)) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -5913,7 +6015,7 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, conshdlrdata->sepainboundsonly, &success, &cutoff, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPgetSepaMinEfficacy(scip), FALSE, conshdlrdata->sepainboundsonly, &success, &cutoff, NULL) );
    if( cutoff )
       *result = SCIP_CUTOFF;
    else if( success )
@@ -5926,7 +6028,6 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          success;
    SCIP_Bool          cutoff;
@@ -5937,9 +6038,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
    assert(conss    != NULL || nconss == 0);
    assert(sol      != NULL);
    assert(result   != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -5953,7 +6051,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, FALSE, &success, &cutoff, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetSepaMinEfficacy(scip), FALSE, FALSE, &success, &cutoff, NULL) );
    if( cutoff )
       *result = SCIP_CUTOFF;
    else if( success )
@@ -6977,14 +7075,6 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdAbspower, exprgraphnodeReformAbspower, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
 
    /* add absolute power constraint handler parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
-         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutefficacyenfofac, FALSE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, FALSE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );

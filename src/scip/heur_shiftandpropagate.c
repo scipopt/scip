@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1012,7 +1012,7 @@ SCIP_RETCODE getOptimalShiftingValue(
             slacksurplus -= val;
 
          /* check if the least violating shift lies within variable bounds and set corresponding array values */
-         if( SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
+         if( !SCIPisInfinity(scip, maxfeasshift) && SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
          {
             steps[i] = maxfeasshift + 1.0;
             violationchange[i] = rowweight;
@@ -1063,7 +1063,11 @@ SCIP_RETCODE getOptimalShiftingValue(
     */
    if( allzero )
    {
-      *beststep = SCIPisFeasGT(scip, slacksurplus, 0.0) ? direction * upperbound : 0.0;
+      if( ! SCIPisInfinity(scip, upperbound) && SCIPisGT(scip, slacksurplus, 0.0) )
+         *beststep = direction * upperbound;
+      else
+         *beststep = 0.0;
+
       return SCIP_OKAY;
    }
 

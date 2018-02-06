@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -129,6 +129,7 @@ SCIP_RETCODE constructCompression(
    unsigned int* leaveids;
    int* nconss;
    int* nvars;
+   int mem_vars;
    int nids;
    int nleaveids;
    int pos_repr_fix;
@@ -183,10 +184,12 @@ SCIP_RETCODE constructCompression(
 
    /* allocate memory to store the old tree */
 
+   mem_vars = 2*SCIPgetNVars(scip);
+
    /* we use normal instead of buffer memory because we may need to reallocate the 2-dimensional arrays */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &vars, size) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &vals, size) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &boundtypes, size) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, size) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, size) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &boundtypes, size) );
 
    /* allocate buffer memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &conss_var, size) );
@@ -200,36 +203,22 @@ SCIP_RETCODE constructCompression(
    for( k = size-1; k < 1; k++ )
    {
       SCIP_REOPTNODE* reoptnode;
-      int mem_vars;
       int mem_conss;
       int nvars2;
       int nafterdualvars;
       SCIPdebug(int c);
 
-      mem_vars = SCIPgetNBinVars(scip);
-
       /* we use normal instead of buffer memory because we may need to reallocate the 2-dimensional arrays */
-      SCIP_CALL( SCIPallocMemoryArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocMemoryArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocMemoryArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars[k], mem_vars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals[k], mem_vars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &boundtypes[k], mem_vars) );
 
       /* get the branching path */
       reoptnode = SCIPgetReoptnode(scip, leaveids[k]);
       assert(reoptnode != NULL);
 
       SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], boundtypes[k], mem_vars, &nvars2, &nafterdualvars);
-
-      /* reallocate memory */
-      if( mem_vars < nvars2 + nafterdualvars )
-      {
-         mem_vars = nvars2 + nafterdualvars;
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
-
-         /* get the branching path */
-         SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], boundtypes[k], mem_vars, &nvars2, &nafterdualvars);
-      }
+      assert(mem_vars >= nvars2 + nafterdualvars);
 
       nvars[k] = nvars2 + nafterdualvars;
 
@@ -351,9 +340,9 @@ SCIP_RETCODE constructCompression(
       SCIPfreeBufferArray(scip, &conss_nvars[k]);
       SCIPfreeBufferArray(scip, &conss_val[k]);
       SCIPfreeBufferArray(scip, &conss_var[k]);
-      SCIPfreeMemoryArray(scip, &boundtypes[k]);
-      SCIPfreeMemoryArray(scip, &vals[k]);
-      SCIPfreeMemoryArray(scip, &vars[k]);
+      SCIPfreeBlockMemoryArray(scip, &boundtypes[k], mem_vars);
+      SCIPfreeBlockMemoryArray(scip, &vals[k], mem_vars);
+      SCIPfreeBlockMemoryArray(scip, &vars[k], mem_vars);
    }
 
    SCIPfreeBufferArray(scip, &nconss);
@@ -361,9 +350,9 @@ SCIP_RETCODE constructCompression(
    SCIPfreeBufferArray(scip, &conss_nvars);
    SCIPfreeBufferArray(scip, &conss_val);
    SCIPfreeBufferArray(scip, &conss_var);
-   SCIPfreeMemoryArray(scip, &boundtypes);
-   SCIPfreeMemoryArray(scip, &vals);
-   SCIPfreeMemoryArray(scip, &vars);
+   SCIPfreeBlockMemoryArray(scip, &boundtypes, size);
+   SCIPfreeBlockMemoryArray(scip, &vals, size);
+   SCIPfreeBlockMemoryArray(scip, &vars, size);
 
    SCIPfreeBlockMemoryArray(scip, &leaveids, nleaveids);
 

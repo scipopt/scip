@@ -5,17 +5,24 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
-set(SCIP_VERSION_MAJOR 4)
+# for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
+if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
+endif()
+
+set(SCIP_VERSION_MAJOR 5)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 1)
 set(SCIP_VERSION_SUB 3)
-set(SCIP_VERSION_API 17)
+set(SCIP_VERSION_API 21)
 
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
 set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${SCIP_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
+set(CPACK_PACKAGE_CONTACT "http://scip.zib.de")
 include(CPack)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -30,7 +37,7 @@ set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
 
 # make 'Release' the default build type
-if(CMAKE_BUILD_TYPE STREQUAL "")
+if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
@@ -49,6 +56,10 @@ option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
 option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
+option(SANITIZE_ADDRESS "should the address sanitizer be enabled in debug mode if available" OFF)
+option(SANITIZE_MEMORY "should the memory sanitizer be enabled in debug mode if available" OFF)
+option(SANITIZE_UNDEFINED "should the undefined behavior sanitizer be enabled in debug mode if available" ON)
+option(SANITIZE_THREAD "should the thread sanitizer be enabled in debug mode if available" OFF)
 option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
@@ -62,6 +73,9 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
+
+set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -90,17 +104,18 @@ if(WIN32)
     add_definitions(-DNO_STRTOK_R)
 endif()
 if(MSVC)
-    add_definitions(/W4)
+#    add_definitions(/W4)
     add_definitions(/wd4100)
+    add_definitions(/wd4244)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 # Visual Studio compiler with static runtime libraries
 if(MSVC AND MT)
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT")
-    set(CMAKE_CXX_FLAGS_DEBUG "/MTd")
-    set(CMAKE_C_FLAGS_RELEASE "/MT")
-    set(CMAKE_C_FLAGS_DEBUG "/MTd")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 endif()
 
 #set expression interpreter file that should be used
@@ -156,17 +171,21 @@ set(NEWLINE "\\\\n")
 # create a target for updating the current git hash
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
+if(EXISTS \${DST})
+   file(STRINGS \${DST} GITHASH_OLD)
+   string(REGEX REPLACE \"#define SCIP_GITHASH \\\"(.*)\\\"\" \"\\\\1\" GITHASH_OLD \${GITHASH_OLD})
+endif()
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
    execute_process(
       COMMAND \${GIT} describe --always --dirty
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
    string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
-   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\n\")
+   if(NOT \${GITHASH} STREQUAL \"\${GITHASH_OLD}\")
+      file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\n\")
+   endif()
 else()
-   # read stored hash from file
-   file(STRINGS \${DST} GITHASH)
-   string(REGEX REPLACE \"#define SCIP_GITHASH \" \"\" GITHASH \${GITHASH})
+   set(GITHASH \${GITHASH_OLD})
 endif()
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
@@ -174,17 +193,7 @@ add_custom_target(scip_update_githash
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/githash.c
                                            -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
 
-# create a target for updating the current build configuration
-file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
-file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=${CMAKE_SYSTEM}${NEWLINE} COMP=${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=${CMAKE_BUILD_TYPE}${NEWLINE}\\\"\n\")
-")
-add_custom_target(scip_update_buildflags
-                  COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c
-                                           -P ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake)
-
 add_definitions(-DWITH_SCIPDEF)
-
-
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
@@ -309,6 +318,26 @@ if(MOSEK_FOUND)
     set(LPS_LIBRARIES ${MOSEK_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
+
+#search the selected symmetry computation program
+if(SYM STREQUAL "bliss")
+    find_package(BLISS)
+    if(BLISS_FOUND)
+        include_directories(${BLISS_INCLUDE_DIRS})
+        set(sym symmetry/compute_symmetry_bliss.cpp)
+        set(SYM_LIBRARIES ${BLISS_LIBRARIES})
+        set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BLISS_CXX_FLAGS}")
+    else()
+        set(sym symmetry/compute_symmetry_none.cpp)
+    endif()
+elseif(SYM STREQUAL "none")
+    set(sym symmetry/compute_symmetry_none.cpp)
+else()
+    message(FATAL_ERROR "option SYM has wrong value")
+endif()
+
+
 
 #
 # enable coverage support

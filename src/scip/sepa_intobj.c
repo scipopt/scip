@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -121,30 +121,17 @@ SCIP_RETCODE createObjRow(
          attendobjvarbound = TRUE;
 
       /* get problem variables */
-      vars = SCIPgetOrigVars(scip);
-      nvars = SCIPgetNOrigVars(scip);
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
 
       /* create objective value inequality */
-      if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
-      {
-         if( attendobjvarbound )
-            intobjval = SCIPceil(scip, SCIPgetDualbound(scip)) - SCIPvarGetLbGlobal(sepadata->objvar);
-         else
-            intobjval = SCIPceil(scip, SCIPgetDualbound(scip));
-         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &sepadata->objrow, sepa, "objrow", intobjval, SCIPinfinity(scip),
-               FALSE, !SCIPallVarsInProb(scip), TRUE) );
-         sepadata->setoff = intobjval;
-      }
+      if( attendobjvarbound )
+         intobjval = SCIPceil(scip, SCIPgetLowerbound(scip)) - SCIPvarGetLbGlobal(sepadata->objvar);
       else
-      {
-         if( attendobjvarbound )
-            intobjval = SCIPceil(scip, SCIPgetDualbound(scip)) - SCIPvarGetUbGlobal(sepadata->objvar);
-         else
-            intobjval = SCIPfloor(scip, SCIPgetDualbound(scip));
-         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &sepadata->objrow, sepa, "objrow", -SCIPinfinity(scip), intobjval,
-               FALSE, !SCIPallVarsInProb(scip), TRUE) );
-         sepadata->setoff = intobjval;
-      }
+         intobjval = SCIPceil(scip, SCIPgetLowerbound(scip));
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &sepadata->objrow, sepa, "objrow", intobjval, SCIPinfinity(scip),
+            FALSE, !SCIPallVarsInProb(scip), TRUE) );
+      sepadata->setoff = intobjval;
 
       SCIP_CALL( SCIPcacheRowExtensions(scip, sepadata->objrow) );
       for( v = 0; v < nvars; ++v )
@@ -191,9 +178,9 @@ SCIP_RETCODE separateCuts(
 
    /* if the current objective value is integral, there is no integral objective value cut */
    if( sol == NULL )
-      objval = SCIPretransformObj(scip, SCIPgetLPObjval(scip));
+      objval = SCIPgetLPObjval(scip);
    else
-      objval = SCIPgetSolOrigObj(scip, sol);
+      objval = SCIPgetSolTransObj(scip, sol);
    if( SCIPisFeasIntegral(scip, objval) )
       return SCIP_OKAY;
 
@@ -204,20 +191,10 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( createObjRow(scip, sepa, sepadata) );
 
    /* adjust the bounds of the objective value variable */
-   if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
-   {
-      intbound = SCIPceil(scip, objval) - sepadata->setoff;
-      SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
-      SCIPdebugMsg(scip, "new objective variable lower bound: <%s>[%g,%g]\n",
-         SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
-   }
-   else
-   {
-      intbound = SCIPfloor(scip, objval) - sepadata->setoff;
-      SCIP_CALL( SCIPtightenVarUb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
-      SCIPdebugMsg(scip, "new objective variable upper bound: <%s>[%g,%g]\n",
-         SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
-   }
+   intbound = SCIPceil(scip, objval) - sepadata->setoff;
+   SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
+   SCIPdebugMsg(scip, "new objective variable lower bound: <%s>[%g,%g]\n",
+      SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
 
    /* add the objective value inequality as a cut to the LP */
    if( infeasible )

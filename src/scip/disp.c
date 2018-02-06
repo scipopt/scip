@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -625,7 +625,7 @@ void SCIPdispTime(
          timepower++;
          val /= timepowerval[timepower];
       }
-      if( REALABS(val) + 0.05 < maxval/100 ) /*lint !e653*/
+      if( REALABS(val) + 0.05 < maxval/100.0 )
          (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.1f%c", width-1, timepowerchar[timepower]);
       else
          (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.0f%c", width-1, timepowerchar[timepower]);

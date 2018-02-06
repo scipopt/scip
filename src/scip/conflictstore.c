@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1096,7 +1096,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    assert(conflictstore->initstoresize <= conflictstore->maxstoresize);
 
    /* return if conflict pool is disabled */
-   if( conflictstore->maxstoresize == 0 )
+   if( conflictstore->maxstoresize <= 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( conflictstoreEnsureMem(conflictstore, set, blkmem, nconflicts+1) );

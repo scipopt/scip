@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -144,7 +144,7 @@ SCIP_RETCODE applyCliqueFixings(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< structure containing heurdata */
    SCIP_VAR**            onefixvars,         /**< array to store all variables which are fixed to one in the cliques */
-   uint8_t*              onefixvals,         /**< array to store the values of all variables fixed to one in the cliques */
+   SCIP_Shortbool*       onefixvals,         /**< array to store the values of all variables fixed to one in the cliques */
    int*                  nonefixvars,        /**< pointer to store the number of variables fixed to one */
    SCIP_Bool*            cutoff              /**< pointer to store whether the propagation stopped with infeasibility */
    )
@@ -597,7 +597,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIP_Bool lperror;
 
    SCIP_VAR** onefixvars;
-   uint8_t* onefixvals;
+   SCIP_Shortbool* onefixvals;
    int nonefixvars;
    SCIP_Bool enabledconflicts;
    SCIP_LPSOLSTAT lpstatus;
@@ -821,7 +821,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
 
    /*************************** Create Conflict ***************************/
-   if( lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT )
+   if( SCIPallColsInLP(scip) && (lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT) )
    {
 #ifndef NOCONFLICT
       /* create own conflict */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,7 +89,9 @@
 #define DEFAULT_GENVBDSDURINGSEPA        TRUE      /**< try to create genvbounds during separation process? */
 #define DEFAULT_PROPAGATEFREQ               0      /**< trigger a propagation round after that many bound tightenings
                                                     *   (0: no propagation) */
-#define DEFAULT_CREATE_BILININEQS       FALSE      /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
+#define DEFAULT_CREATE_BILININEQS        TRUE      /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
+#define DEFAULT_ITLIMITFAC_BILININEQS     3.0      /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
+#define DEFAULT_MINNONCONVEXITY          1e-1      /**< minimum nonconvexity for choosing a bilinear term */
 #define DEFAULT_RANDSEED                  149      /**< initial random seed */
 
 
@@ -156,12 +158,16 @@ struct SCIP_PropData
    SCIP_Longint          nprobingiterations; /**< number of LP iterations during the probing mode */
    SCIP_Longint          nfilterlpiters;     /**< number of LP iterations spend for filtering */
    SCIP_Longint          minitlimit;         /**< minimum LP iteration limit */
+   SCIP_Longint          itlimitbilin;       /**< total LP iterations limit for solving bilinear inequality LPs */
+   SCIP_Longint          itusedbilin;        /**< total LP iterations used for solving bilinear inequality LPs */
    SCIP_Real             dualfeastol;        /**< feasibility tolerance for reduced costs used in obbt; this value is
                                               *   used if SCIP's dual feastol is greater */
    SCIP_Real             conditionlimit;     /**< maximum condition limit used in LP solver (-1.0: no limit) */
    SCIP_Real             boundstreps;        /**< minimal relative improve for strengthening bounds */
    SCIP_Real             itlimitfactor;      /**< LP iteration limit for obbt will be this factor times total LP
                                               *   iterations in root node */
+   SCIP_Real             itlimitfactorbilin; /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
+   SCIP_Real             minnonconvexity;    /**< lower bound on minimum absolute value of nonconvex eigenvalues for a bilinear term */
    SCIP_Bool             applyfilterrounds;  /**< apply filter rounds? */
    SCIP_Bool             applytrivialfilter; /**< should obbt try to use the LP solution to filter some bounds? */
    SCIP_Bool             genvbdsduringfilter;/**< should we try to generate genvbounds during trivial and aggressive
@@ -713,11 +719,11 @@ void exchangeBounds(
 /** helper function to return a corner of the domain of two variables */
 static
 void getCorner(
-   SCIP_VAR*            x,                  /**< first variable */
-   SCIP_VAR*            y,                  /**< second variable */
-   CORNER               corner,             /**< corner */
-   SCIP_Real*           px,                 /**< buffer to store point for x */
-   SCIP_Real*           py                  /**< buffer to store point for y */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   CORNER                corner,             /**< corner */
+   SCIP_Real*            px,                 /**< buffer to store point for x */
+   SCIP_Real*            py                  /**< buffer to store point for y */
    )
 {
    assert(x != NULL);
@@ -751,13 +757,13 @@ void getCorner(
 /** helper function to return the two end points of a diagonal */
 static
 void getCorners(
-   SCIP_VAR*            x,                  /**< first variable */
-   SCIP_VAR*            y,                  /**< second variable */
-   CORNER               corner,             /**< corner */
-   SCIP_Real*           xs,                 /**< buffer to store start point for x */
-   SCIP_Real*           ys,                 /**< buffer to store start point for y */
-   SCIP_Real*           xt,                 /**< buffer to store end point for x */
-   SCIP_Real*           yt                  /**< buffer to store end point for y */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   CORNER                corner,             /**< corner */
+   SCIP_Real*            xs,                 /**< buffer to store start point for x */
+   SCIP_Real*            ys,                 /**< buffer to store start point for y */
+   SCIP_Real*            xt,                 /**< buffer to store end point for x */
+   SCIP_Real*            yt                  /**< buffer to store end point for y */
    )
 {
    assert(x != NULL);
@@ -1413,7 +1419,7 @@ SCIP_DECL_SORTPTRCOMP(compBilinboundsScore)
    BILINBOUND* bound1 = (BILINBOUND*) elem1;
    BILINBOUND* bound2 = (BILINBOUND*) elem2;
 
-   return REALABS(bound1->score - bound2->score) < 1e-6 ? 0 : ( bound1->score > bound2->score ? 1 : -1 );
+   return bound1->score == bound2->score ? 0 : ( bound1->score > bound2->score ? 1 : -1 ); /*lint !e777*/
 }
 
 /** comparison method for two bounds w.r.t. their boundtype */
@@ -2241,7 +2247,6 @@ SCIP_RETCODE applyObbtBilinear(
 {
    SCIP_VAR** vars;
    SCIP_Real oldfeastol;
-   SCIP_Real olddualtol;
    SCIP_Bool lperror;
    SCIP_Longint nolditerations;
    SCIP_Longint nleftiterations;
@@ -2260,8 +2265,6 @@ SCIP_RETCODE applyObbtBilinear(
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   oldfeastol = SCIPfeastol(scip);
-   olddualtol = SCIPdualfeastol(scip);
 
    nolditerations = SCIPgetNLPIterations(scip);
    nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
@@ -2282,13 +2285,14 @@ SCIP_RETCODE applyObbtBilinear(
    /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
    SCIP_CALL( SCIPsolveProbingLP(scip, (int)nleftiterations, &lperror, NULL) );
 
-   /* 4. set feasibility and optimality tolerances */
-   SCIP_CALL( SCIPchgLpfeastol(scip, oldfeastol / 10.0, FALSE) );
-   SCIP_CALL( SCIPchgDualfeastol(scip, olddualtol / 10.0) );
+   /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
+   oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
 
    /* 5. main loop */
    for( i = propdata->lastbilinidx; i < propdata->nbilinbounds
-      && (nleftiterations > 0 || nleftiterations == -1) && !SCIPisStopped(scip); ++i )
+      && (nleftiterations > 0 || nleftiterations == -1)
+      && (propdata->itlimitbilin < 0 || propdata->itlimitbilin > propdata->itusedbilin )
+      && !SCIPisStopped(scip); ++i )
    {
       CORNER corners[4] = {LEFTBOTTOM, LEFTTOP, RIGHTTOP, RIGHTBOTTOM};
       BILINBOUND* bilinbound;
@@ -2340,7 +2344,9 @@ SCIP_RETCODE applyObbtBilinear(
             continue;
 
          /* compute inequality */
+         propdata->itusedbilin -= SCIPgetNLPIterations(scip);
          SCIP_CALL( solveBilinearLP(scip, bilinbound->x, bilinbound->y, xs, ys, xt, yt, &xcoef, &ycoef, &constant, -1L) );
+         propdata->itusedbilin += SCIPgetNLPIterations(scip);
 
          /* update number of LP iterations */
          nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
@@ -2384,9 +2390,8 @@ SCIP_RETCODE applyObbtBilinear(
       SCIP_CALL( SCIPreleaseRow(scip, &(propdata->cutoffrow)) );
    }
 
-   /* 6. restore old tolerances */
-   SCIP_CALL( SCIPchgLpfeastol(scip, oldfeastol, FALSE) );
-   SCIP_CALL( SCIPchgDualfeastol(scip, olddualtol) );
+   /* 6. restore old tolerance */
+   (void) SCIPchgRelaxfeastol(scip, oldfeastol);
 
    return SCIP_OKAY;
 }
@@ -2814,6 +2819,7 @@ SCIP_RETCODE initBounds(
    {
       SCIP_VAR** x;
       SCIP_VAR** y;
+      SCIP_Real* maxnonconvexity;
       int* nunderest;
       int* noverest;
       int nbilins;
@@ -2830,14 +2836,16 @@ SCIP_RETCODE initBounds(
       SCIP_CALL( SCIPallocBufferArray(scip, &y, nbilins) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nunderest, nbilins) );
       SCIP_CALL( SCIPallocBufferArray(scip, &noverest, nbilins) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &maxnonconvexity, nbilins) );
 
       /* get data for bilinear terms */
-      SCIP_CALL( SCIPgetAllBilinearTermsQuadratic(scip, x, y, &nbilins, nunderest, noverest) );
+      SCIP_CALL( SCIPgetAllBilinearTermsQuadratic(scip, x, y, &nbilins, nunderest, noverest, maxnonconvexity) );
 
       /* count the number of interesting bilinear terms */
       propdata->nbilinbounds = 0;
       for( i = 0; i < nbilins; ++i )
-         if( nunderest[i] + noverest[i] > 0 && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
+         if( nunderest[i] + noverest[i] > 0 && propdata->minnonconvexity <= maxnonconvexity[i]
+            && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
             ++(propdata->nbilinbounds);
 
       if( propdata->nbilinbounds == 0 )
@@ -2848,7 +2856,8 @@ SCIP_RETCODE initBounds(
 
       for( i = 0; i < nbilins; ++i )
       {
-         if( nunderest[i] + noverest[i] > 0 && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
+         if( nunderest[i] + noverest[i] > 0 && propdata->minnonconvexity <= maxnonconvexity[i]
+            && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
          {
             SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->bilinbounds[bilinidx]) ); /*lint !e866*/
             BMSclearMemory(propdata->bilinbounds[bilinidx]); /*lint !e866*/
@@ -2882,6 +2891,7 @@ SCIP_RETCODE initBounds(
 
 TERMINATE:
       /* free memory */
+      SCIPfreeBufferArray(scip, &maxnonconvexity);
       SCIPfreeBufferArray(scip, &noverest);
       SCIPfreeBufferArray(scip, &nunderest);
       SCIPfreeBufferArray(scip, &y);
@@ -3068,6 +3078,14 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    /* compute globally inequalities for bilinear terms */
    if( propdata->createbilinineqs )
    {
+      /* set LP iteration limit */
+      if( propdata->itlimitbilin == 0L )
+      {
+         /* no iteration limit if itlimit < 0 or itlimitfactorbilin < 0 */
+         propdata->itlimitbilin = (itlimit < 0 || propdata->itlimitfactorbilin < 0)
+            ? -1L : (SCIP_Longint)(itlimit * propdata->itlimitfactorbilin);
+      }
+
       SCIP_CALL( applyObbtBilinear(scip, propdata, itlimit, result) );
    }
 
@@ -3136,6 +3154,8 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
    }
 
    propdata->nbounds = -1;
+   propdata->itlimitbilin = 0;
+   propdata->itusedbilin = 0;
 
    return SCIP_OKAY;
 }
@@ -3230,6 +3250,14 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/itlimitfactor",
          "multiple of root node LP iterations used as total LP iteration limit for obbt (<= 0: no limit )",
          &propdata->itlimitfactor, FALSE, DEFAULT_ITLIMITFACTOR, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/itlimitfactorbilin",
+         "multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit)",
+         &propdata->itlimitfactorbilin, FALSE, DEFAULT_ITLIMITFAC_BILININEQS, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/minnonconvexity",
+         "minimum absolute value of nonconvex eigenvalues for a bilinear term",
+         &propdata->minnonconvexity, FALSE, DEFAULT_MINNONCONVEXITY, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "propagating/" PROP_NAME "/minitlimit",
          "minimum LP iteration limit",
