@@ -2978,8 +2978,8 @@ SCIP_RETCODE SCIPlpiSetBase(
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
 
-   assert(rstat != NULL || clp->numberRows());
-   assert(cstat != NULL || clp->numberCols());
+   assert(rstat != NULL || lpi->clp->numberRows() == 0);
+   assert(cstat != NULL || lpi->clp->numberColumns() == 0);
 
    invalidateSolution(lpi);
 
