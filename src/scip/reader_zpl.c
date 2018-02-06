@@ -1253,19 +1253,13 @@ Bound* xlp_getupper(
    return bound;
 }
 
-/* set the name of the objective function */
-void xlp_objname(
+/** Set the name and direction of the objective function, i.e. minimization or maximization
+ *  Coefficents of the objective function will be set to all zero.
+ */
+bool xlp_setobj(
    Lps*                  data,               /**< pointer to reader data */
-   const char*           name                /**< name of the objective function */
-   )
-{  /*lint --e{715}*/
-   /* nothing to be done */
-}
-
-/* set the name of the objective function */
-void xlp_setdir(
-   Lps*                  data,               /**< pointer to reader data */
-   bool                  minimize            /**<True if the problem should be minimized, False if it should be maximized  */
+   const char*           name,               /**< name of the objective function */
+   bool                  minimize            /**< True if the problem should be minimized, False if it should be maximized  */
    )
 {
    SCIP* scip;
@@ -1279,28 +1273,11 @@ void xlp_setdir(
    assert(scip != NULL);
 
    if( readerdata->retcode != SCIP_OKAY || readerdata->readerror )
-      return;
+      return FALSE;
 
    objsense = (minimize ? SCIP_OBJSENSE_MINIMIZE : SCIP_OBJSENSE_MAXIMIZE);
    readerdata->retcode = SCIPsetObjsense(scip, objsense);
-}
 
-/** Set the name and direction of the objective function, i.e. minimization or maximization
- *  Coefficents of the objective function will be set to all zero.
- */
-bool xlp_setobj(
-   Lps*                  data,               /**< pointer to reader data */
-   const char*           name,               /**< name of the objective function */
-   bool                  minimize            /**< True if the problem should be minimized, False if it should be maximized  */
-   )
-{
-   assert(data != NULL);
-   assert(name != NULL);
-
-   xlp_objname(data, name);
-   xlp_setdir(data, minimize);
-
-   /* always return FALSE to indicate that the objective has not been set already */
    return FALSE;
 }
 
