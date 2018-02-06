@@ -42,8 +42,11 @@ class PrimalBoundHistoryReader(StatisticReader):
    #         print pointInTime, PrimalBound
             if PrimalBound != self.lastPrimalBound:
                self.lastPrimalBound = PrimalBound
-               self.listOfPoints.append((float(pointInTime),float(PrimalBound)))
-            
+               try:
+                   self.listOfPoints.append((float(pointInTime),float(PrimalBound)))
+               except ValueError:
+                   pass
+
          elif "SCIP Status" in line and self.inTable:
             self.inTable = False
 
@@ -107,13 +110,14 @@ class PrimalBoundHistoryReader(StatisticReader):
                self.inTable = False
             elif self.inTable and "Repeating presolve." in line:
                self.inTable = False
+            elif self.inTable and "Covers:" in line:
+               self.inTable = False
             elif self.inTable and len(line) > 0 and line.startswith(" ") or line.startswith("*"):
                if line=="\n":
                   return None
                nodeinlineidx = 7
                while line[nodeinlineidx] != " " and line[nodeinlineidx] != "+":
                   nodeinlineidx += 1
-               print line
                nnodes = int(line[:nodeinlineidx].split()[-1].strip('*+')) + 1
                if line.startswith("*") or line.startswith("+"):
                   print line

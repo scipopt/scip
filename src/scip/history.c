@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,10 +72,10 @@ void SCIPhistoryReset(
 
    history->pscostcount[0] = 0.0;
    history->pscostcount[1] = 0.0;
-   history->pscostsum[0] = 0.0;
-   history->pscostsum[1] = 0.0;
-   history->pscostsquaressum[0] = 0.0;
-   history->pscostsquaressum[1] = 0.0;
+   history->pscostweightedmean[0] = 0.0;
+   history->pscostweightedmean[1] = 0.0;
+   history->pscostvariance[0] = 0.0;
+   history->pscostvariance[1] = 0.0;
    history->vsids[0] = 0.0;
    history->vsids[1] = 0.0;
    history->conflengthsum[0] = 0.0;
@@ -99,33 +99,58 @@ void SCIPhistoryUnite(
    SCIP_Bool             switcheddirs        /**< should the history entries be united with switched directories */
    )
 {
-   int d;
+   int i;
 
    assert(history != NULL);
    assert(addhistory != NULL);
 
-   d = switcheddirs ? 1 : 0;
+   /* loop over both directions and combine the statistics */
+   for( i = 0; i <= 1; ++i )
+   {
+      int d;
+      d = (switcheddirs ? 1 - i : i);
 
-   history->pscostcount[0] += addhistory->pscostcount[d];
-   history->pscostcount[1] += addhistory->pscostcount[1-d];
-   history->pscostsum[0] += addhistory->pscostsum[d];
-   history->pscostsum[1] += addhistory->pscostsum[1-d];
-   history->pscostsquaressum[0] += addhistory->pscostsquaressum[d];
-   history->pscostsquaressum[1] += addhistory->pscostsquaressum[1-d];
-   history->vsids[0] += addhistory->vsids[d];
-   history->vsids[1] += addhistory->vsids[1-d];
-   history->conflengthsum[0] += addhistory->conflengthsum[d];
-   history->conflengthsum[1] += addhistory->conflengthsum[1-d];
-   history->inferencesum[0] += addhistory->inferencesum[d];
-   history->inferencesum[1] += addhistory->inferencesum[1-d];
-   history->cutoffsum[0] += addhistory->cutoffsum[d];
-   history->cutoffsum[1] += addhistory->cutoffsum[1-d];
-   history->nactiveconflicts[0] += addhistory->nactiveconflicts[d];
-   history->nactiveconflicts[1] += addhistory->nactiveconflicts[1-d];
-   history->nbranchings[0] += addhistory->nbranchings[d];
-   history->nbranchings[1] += addhistory->nbranchings[1-d];
-   history->branchdepthsum[0] += addhistory->branchdepthsum[d];
-   history->branchdepthsum[1] += addhistory->branchdepthsum[1-d];
+      history->pscostcount[i] += addhistory->pscostcount[d];
+
+      /* if both histories a count of zero, there is nothing to do */
+      if( history->pscostcount[i] > 0.0 )
+      {
+         SCIP_Real oldmean;
+
+         oldmean = history->pscostweightedmean[i];
+
+         /* we update the mean as if the history was one observation with a large weight */
+         history->pscostweightedmean[i] += addhistory->pscostcount[d] * (addhistory->pscostweightedmean[d] - history->pscostweightedmean[i]) / history->pscostcount[i];
+
+         /* we update the variance of two sets A and B as S_A+B = S_A + (mu_A)^2 * count_A ...*/
+         /* @todo is there a numerically more stable variant for this merge? */
+         history->pscostvariance[i] = history->pscostvariance[i] + oldmean * oldmean * (history->pscostcount[i] - addhistory->pscostcount[d]) + \
+               /* S_B + (mu_B)^2 * count_B */
+               addhistory->pscostvariance[d] + addhistory->pscostcount[d] * addhistory->pscostweightedmean[d] * addhistory->pscostweightedmean[d] -  \
+               /* - count_A+B * mu_A+B^ 2 */
+               history->pscostcount[i] * history->pscostweightedmean[i] * history->pscostweightedmean[i];
+
+         /* slight violations of nonnegativity are numerically possible */
+         history->pscostvariance[i] = MAX(history->pscostvariance[i], 0.0);
+      }
+#ifndef NDEBUG
+      else
+      {
+         assert(history->pscostweightedmean[i] == 0.0);
+         assert(history->pscostvariance[i] == 0.0);
+      }
+#endif
+
+      history->vsids[i] += addhistory->vsids[d];
+      history->conflengthsum[i] += addhistory->conflengthsum[d];
+      history->inferencesum[i] += addhistory->inferencesum[d];
+      history->cutoffsum[i] += addhistory->cutoffsum[d];
+      history->nactiveconflicts[i] += addhistory->nactiveconflicts[d];
+      history->nbranchings[i] += addhistory->nbranchings[d];
+      history->branchdepthsum[i] += addhistory->branchdepthsum[d];
+
+   }
+
 }
 
 /** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
@@ -142,6 +167,7 @@ void SCIPhistoryUpdatePseudocost(
    SCIP_Real distance;
    SCIP_Real eps;
    SCIP_Real sumcontribution;
+   SCIP_Real olddelta;
    int dir;
 
    assert(history != NULL);
@@ -180,14 +206,15 @@ void SCIPhistoryUpdatePseudocost(
     */
    objdelta += SCIPsetPseudocostdelta(set);
 
-   sumcontribution = weight * objdelta/distance;
+   sumcontribution = objdelta/distance;
    /* update the pseudo cost values */
+   olddelta = sumcontribution - history->pscostweightedmean[dir];
    history->pscostcount[dir] += weight;
-   history->pscostsum[dir] += sumcontribution;
-   history->pscostsquaressum[dir] += sumcontribution * sumcontribution;
+   history->pscostweightedmean[dir] += weight * olddelta / history->pscostcount[dir];
+   history->pscostvariance[dir] = history->pscostvariance[dir] + weight * olddelta * (sumcontribution - history->pscostweightedmean[dir]);
 
-   SCIPdebugMessage("updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
-      (void*)history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostsum[dir]);
+   SCIPsetDebugMsg(set, "updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
+      (void*)history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostweightedmean[dir]);
 }
 
 /**@name Value based history
@@ -401,9 +428,9 @@ SCIP_Real SCIPhistoryGetPseudocost(
    assert(history != NULL);
 
    if( solvaldelta >= 0.0 )
-      return solvaldelta * (history->pscostcount[1] > 0.0 ? history->pscostsum[1] / history->pscostcount[1] : 1.0);
+      return solvaldelta * (history->pscostcount[1] > 0.0 ? history->pscostweightedmean[1] : 1.0);
    else
-      return -solvaldelta * (history->pscostcount[0] > 0.0 ? history->pscostsum[0] / history->pscostcount[0] : 1.0);
+      return -solvaldelta * (history->pscostcount[0] > 0.0 ? history->pscostweightedmean[0] : 1.0);
 }
 
 /** returns the variance of pseudo costs about the mean. */
@@ -421,19 +448,9 @@ SCIP_Real SCIPhistoryGetPseudocostVariance(
    dir = (direction == SCIP_BRANCHDIR_UPWARDS ? 1 : 0);
    correctionfactor = history->pscostcount[dir] - 1.0;
 
-   /* TODO what to do in case of noninteger weights? */
+   /** @todo for an unbiased estimate of the weighted sample variance, we need a correction factor that uses the sum of squared weights */
    if( correctionfactor > 0.9 )
-   {
-      SCIP_Real totalvariance;
-
-      SCIP_Real sum;
-
-      sum = history->pscostsum[dir];
-      totalvariance = history->pscostsquaressum[dir];
-      totalvariance -= (1 / history->pscostcount[dir]) * sum * sum;
-      totalvariance = MAX(0.0, totalvariance);
-      return 1.0 / correctionfactor * totalvariance;
-   }
+      return history->pscostvariance[dir] / correctionfactor;
    else
       return 0.0;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -179,7 +179,7 @@ SCIP_DECL_PRESOLEXEC(presolExecObj)
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   SCIP_CALL( presoldata->objpresol->scip_exec(scip, presol, nrounds,
+   SCIP_CALL( presoldata->objpresol->scip_exec(scip, presol, nrounds, presoltiming,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
          nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
@@ -214,9 +214,8 @@ SCIP_RETCODE SCIPincludeObjPresol(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_,
-         objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_delay_,
-         presolCopyObj,
-         presolFreeObj, presolInitObj, presolExitObj,
+         objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_timing_,
+         presolCopyObj, presolFreeObj, presolInitObj, presolExitObj,
          presolInitpreObj, presolExitpreObj, presolExecObj,
          presoldata) ); /*lint !e429*/
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presolve.h
- * @brief  internal methods for presolving
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods commonly used for presolving
  * @author Michael Winkler
  */
 
@@ -30,7 +31,12 @@
 extern "C" {
 #endif
 
-
+/**@defgroup PublicSpecialPresolveMethods Special Methods
+ * @ingroup PublicPresolverMethods
+ * @brief methods commonly used for presolving
+ *
+ * @{
+ */
 /** try to reduce the necessary variable in a set of variables with corresponding bounds and boundtypes for which one
  *  must be fulfilled
  *
@@ -56,28 +62,22 @@ EXTERN
 SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables array for which at least one must be fulfilled in the
-                                              *   following bounds and boundtypes
-                                              */
+                                              *   following bounds and boundtypes */
    SCIP_Real*            bounds,             /**< bounds array for which at least one must be fulfilled */
-   SCIP_Bool*            boundtypes,         /**< boundtypes array (TRUE == SCIP_BOUNDTYPE_UPPER, FALSE ==
-                                              *   SCIP_BOUNDTYPE_LOWER) for which at least one must be fulfilled
-                                              */
-   SCIP_Bool*            redundants,         /**< array which be filled and then indicate if a variable in the set is
-                                              *   redundant
-                                              */
+   SCIP_Bool*            boundtypes,         /**< boundtypes array (TRUE == SCIP_BOUNDTYPE_UPPER, FALSE == SCIP_BOUNDTYPE_LOWER)
+                                              *   for which at least one must be fulfilled */
+   SCIP_Bool*            redundants,         /**< array which be filled and then indicate if a variable in the set is redundant */
    int                   nvars,              /**< number of variables */
    int*                  nredvars,           /**< pointer to store how many variables can be removed */
    int*                  nglobalred,         /**< pointer to store number of global reductions on variable bounds found
-                                              *   through this set of variables
-                                              */
-   SCIP_Bool*            setredundant,       /**< pointer to store if we found a global reduction on a variable which
-                                              *   was part of the given set of variables, this makes this disjunction
-                                              *   redundant
-                                              */
-   SCIP_Bool             fullshortening      /**< do we want to try the shortening procedure over the whole set (which
-                                              *   might be expensive)
-                                              */
-);
+                                              *   through this set of variables */
+   SCIP_Bool*            setredundant,       /**< pointer to store if we found a global reduction on a variable which was part
+                                              *   of the given set of variables, this makes this disjunction redundant */
+   SCIP_Bool*            glbinfeas,          /**< pointer to store if global infeasibility was detected */
+   SCIP_Bool             fullshortening      /**< do we want to try the shortening procedure over the whole set (which might be expensive) */
+   );
+
+/* @} */
 
 #ifdef __cplusplus
 }

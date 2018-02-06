@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,8 +37,8 @@ namespace scip
  *  @brief C++ wrapper for constraint handlers
  *
  *  This class defines the interface for constraint handlers implemented in C++. Note that there are pure virtual
- *  functions (these have to be implemented). These functions are: scip_trans(), scip_enfolp(), scip_enfops(),
- *  scip_check(), and scip_lock().
+ *  functions (these have to be implemented). These functions are: scip_trans(), scip_enfolp(), scip_enforelax(),
+ *  scip_enfops(), scip_check(), and scip_lock().
  *
  *  - \ref CONS "Instructions for implementing a constraint handler"
  *  - \ref CONSHDLRS "List of available constraint handlers"
@@ -85,14 +85,14 @@ public:
    /** should propagation method be delayed, if other propagators found reductions? */
    const SCIP_Bool scip_delayprop_;
 
-   /** should presolving method be delayed, if other presolvers found reductions? */
-   const SCIP_Bool scip_delaypresol_;
-
    /** should the constraint handler be skipped, if no constraints are available? */
    const SCIP_Bool scip_needscons_;
 
    /** positions in the node solving loop where propagation method of constraint handler should be executed */
-   const unsigned int scip_timingmask_;
+   const SCIP_PROPTIMING scip_proptiming_;
+
+   /**< timing mask of the constraint handler's presolving method */
+   const SCIP_PRESOLTIMING scip_presoltiming_;
 
    /** default constructor */
    ObjConshdlr(
@@ -109,9 +109,9 @@ public:
       int                maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
       SCIP_Bool          delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
       SCIP_Bool          delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
-      SCIP_Bool          delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
       SCIP_Bool          needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-      unsigned int       timingmask          /**< positions in the node solving loop where propagation method of constraint handler should be executed */
+      SCIP_PROPTIMING    proptiming,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+      SCIP_PRESOLTIMING  presoltiming        /**< timing mask of the constraint handler's presolving method */
       )
       : scip_(scip),
         scip_name_(0),
@@ -125,9 +125,9 @@ public:
         scip_maxprerounds_(maxprerounds),
         scip_delaysepa_(delaysepa),
         scip_delayprop_(delayprop),
-        scip_delaypresol_(delaypresol),
         scip_needscons_(needscons),
-        scip_timingmask_(timingmask)
+        scip_proptiming_(proptiming),
+        scip_presoltiming_(presoltiming)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
@@ -257,6 +257,17 @@ public:
     *  @see SCIP_DECL_CONSENFOLP(x) in @ref type_cons.h
     */
    virtual SCIP_DECL_CONSENFOLP(scip_enfolp) = 0;
+
+   /** constraint enforcing method of constraint handler for relaxation solutions
+    *
+    *  @see SCIP_DECL_CONSENFORELAX(x) in @ref type_cons.h
+    */
+   virtual SCIP_DECL_CONSENFORELAX(scip_enforelax)
+   {  /*lint --e{715}*/
+      assert(result != NULL);
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /** constraint enforcing method of constraint handler for pseudo solutions
     *
@@ -406,6 +417,18 @@ public:
    {  /*lint --e{715}*/
 
       (*nvars) = 0;
+      (*success) = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+   /** constraint handler method to suggest dive bound changes during the generic diving algorithm
+    *
+    *  @see SCIP_DECL_CONSGETDIVEBDCHGS(x) in @ref type_cons.h
+    */
+   virtual SCIP_DECL_CONSGETDIVEBDCHGS(scip_getdivebdchgs)
+   {  /*lint --e{715}*/
+
       (*success) = FALSE;
 
       return SCIP_OKAY;

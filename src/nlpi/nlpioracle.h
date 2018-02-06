@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,6 +26,7 @@
 
 #include "scip/type_message.h"
 #include "nlpi/type_nlpi.h"
+#include "nlpi/type_exprinterpret.h"
 
 
 #ifdef __cplusplus
@@ -294,6 +295,12 @@ int SCIPnlpiOracleGetMaxDegree(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
+/** Gives the evaluation capabilities that are shared among all expression trees in the problem. */
+extern
+SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
 /** evaluates the objective function in a given point */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
@@ -319,7 +326,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    SCIP_Real*            convals             /**< pointer to store constraint values */  
    );
 
-/** computes the objective gradient in a given point */
+/** computes the objective gradient in a given point
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -329,7 +339,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_Real*            objgrad             /**< pointer to buffer (dense) objective gradient */  
    );
 
-/** computes a constraints gradient in a given point */
+/** computes a constraints gradient in a given point
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -356,7 +369,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 /** evaluates the Jacobi matrix in a given point
  * 
  *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
+ *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function.
+ *
+ *  @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
@@ -386,6 +401,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
  *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
  *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
  *  Only elements of the lower left triangle and the diagonal are computed.
+ *
+ * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(

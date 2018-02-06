@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_boundwriting.c
+/**@file   examples/Eventhdlr/src/event_boundwriting.c
  * @ingroup EVENTHDLR
  * @brief  event handler for writing primal and dual bound for all open nodes
  * @author Michael Winkler
@@ -332,7 +332,7 @@ SCIP_RETCODE writeBounds(
             SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
             /* create the variable mapping hash map */
-            SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+            SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
             submipdb = SCIP_INVALID;
             valid = FALSE;
@@ -457,7 +457,7 @@ SCIP_DECL_EVENTFREE(eventFreeBoundwriting)
    assert(!eventhdlrdata->isopen);
    assert(eventhdlrdata->file == NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
 
    return SCIP_OKAY;
 }
@@ -477,7 +477,7 @@ SCIP_DECL_EVENTINIT(eventInitBoundwriting)
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
-   eventhdlrdata->lastpb = SCIPinfinity(scip) * SCIPgetObjsense(scip);
+   eventhdlrdata->lastpb = SCIPinfinity(scip) * (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? 1.0 : -1.0);
 
    return SCIP_OKAY;
 }
@@ -522,7 +522,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
    assert(event != NULL);
    assert(((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEFEASIBLE) || ((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEINFEASIBLE) || ((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEBRANCHED));
 
-   SCIPdebugMessage("exec method of event handler for writing primal- and dualbounds\n");
+   SCIPdebugMsg(scip, "exec method of event handler for writing primal- and dualbounds\n");
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -589,10 +589,10 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       {
          int len;
 
-         if( pch-(eventhdlrdata->filename) > (SCIP_MAXSTRLEN - n) )
+         if( (pch-(eventhdlrdata->filename)) > (SCIP_MAXSTRLEN - n) ) /*lint !e776*/
             len = SCIP_MAXSTRLEN - n;
          else
-            len = pch-(eventhdlrdata->filename);
+            len = (int) (pch-(eventhdlrdata->filename));
 
          (void)strncpy(name, eventhdlrdata->filename, (unsigned int)len);
          name[len] = '\0';
@@ -600,7 +600,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
 	 assert(len+n < SCIP_MAXSTRLEN);
          name[len+n] = '\0';
 
-         if( len + n + strlen(&(eventhdlrdata->filename[len])) < SCIP_MAXSTRLEN )
+         if( len + n + strlen(&(eventhdlrdata->filename[len])) < SCIP_MAXSTRLEN ) /*lint !e776*/
          {
             strncat(name, &(eventhdlrdata->filename[len]), strlen(&(eventhdlrdata->filename[len])));
             name[strlen(eventhdlrdata->filename)+n] = '\0';
@@ -670,7 +670,7 @@ SCIP_RETCODE SCIPincludeEventHdlrBoundwriting(
    SCIP_EVENTHDLR* eventhdlr;
 
    /* create bounds reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    initEventhdlrdata(eventhdlrdata);
 
    eventhdlr = NULL;

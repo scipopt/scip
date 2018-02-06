@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+/**@addtogroup DIALOGS
+ *
+ * @{
+ */
 
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 EXTERN
@@ -66,6 +72,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph);
 /** dialog execution method for the display branching command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching);
+
+/** dialog execution method for the display compression command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCompression);
 
 /** dialog execution method for the display conflict command */
 EXTERN
@@ -131,6 +141,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
 
+/** dialog execution method for the display finitesolution command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution);
+
 /** dialog execution method for the display dual solution command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDualSolution);
@@ -142,6 +156,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool);
 /** dialog execution method for the display statistics command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
+
+/** dialog execution method for the display reoptstatistics command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReoptStatistics);
 
 /** dialog execution method for the display transproblem command */
 EXTERN
@@ -174,9 +192,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecFree);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecNewstart);
 
+/** dialog execution method for the transform command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecTransform);
+
 /** dialog execution method for the optimize command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize);
+
+/** dialog execution method for the parallelopt command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt);
 
 /** dialog execution method for the presolve command */
 EXTERN
@@ -234,6 +260,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive);
 
+/** dialog execution method for the set heuristics default command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsDefault);
+
 /** dialog execution method for the set heuristics fast command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast);
@@ -246,6 +276,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive);
 
+/** dialog execution method for the set presolving default command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingDefault);
+
 /** dialog execution method for the set presolving fast command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast);
@@ -257,6 +291,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff);
 /** dialog execution method for the set separating aggressive command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive);
+
+/** dialog execution method for the set separating default command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingDefault);
 
 /** dialog execution method for the set separating fast command */
 EXTERN
@@ -294,12 +332,23 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
 
+/** dialog execution method for linear constraint type classification */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayLinearConsClassification);
+
 /** creates a root dialog */
 EXTERN
 SCIP_RETCODE SCIPcreateRootDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         root                /**< pointer to store the root dialog */
    );
+
+/* @} */
+
+/**@addtogroup DialogIncludes
+ *
+ * @{
+ */
 
 /** includes or updates the default dialog menus in SCIP */
 EXTERN
@@ -318,6 +367,8 @@ EXTERN
 SCIP_RETCODE SCIPincludeDialogDefaultFix(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   implics.h
+ * @ingroup INTERNALAPI
  * @brief  methods for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
@@ -261,6 +262,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
 extern
 void SCIPcliqueDelVar(
    SCIP_CLIQUE*          clique,             /**< clique data structure */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to remove from the clique */
    SCIP_Bool             value               /**< value of the variable in the clique */
    );
@@ -306,7 +308,10 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
 extern
 void SCIPcliquelistRemoveFromCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   SCIP_VAR*             var                 /**< active problem variable the clique list belongs to */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var,                /**< active problem variable the clique list belongs to */
+   SCIP_Bool             irrelevantvar       /**< has the variable become irrelevant, meaning that equality
+                                              *   cliques need to be relaxed? */
    );
 
 /** creates a clique table data structure */
@@ -336,6 +341,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -360,11 +366,37 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    int*                  nchgbds,            /**< pointer to store number of fixed variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+   );
+
+/** computes connected components of the clique graph
+ *
+ *  use depth-first search similarly to the components presolver/constraint handler, representing a clique as a
+ *  path to reduce memory usage, but leaving the connected components the same
+ *
+ *  an update becomes necessary if a clique gets added with variables from different components
+ */
+extern
+SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR**            vars,               /**< array of problem variables, sorted by variable type */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of integer variables */
+   int                   nimplvars           /**< number of implicit integer variables */
+   );
+
+/** returns the index of the connected component of the clique graph that the variable belongs to, or -1  */
+extern
+int SCIPcliquetableGetVarComponentIdx(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns the number of cliques stored in the clique list */
@@ -394,6 +426,12 @@ int SCIPcliquetableGetNCliques(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
+/** gets the number of cliques created so far by the clique table */
+extern
+int SCIPcliquetableGetNCliquesCreated(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
 /** gets the array of cliques stored in the clique table */
 extern
 SCIP_CLIQUE** SCIPcliquetableGetCliques(
@@ -403,6 +441,18 @@ SCIP_CLIQUE** SCIPcliquetableGetCliques(
 /** gets the number of entries in the whole clique table */
 extern
 SCIP_Longint SCIPcliquetableGetNEntries(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
+/** returns the number of clique components, or -1 if update is necessary first */
+extern
+int SCIPcliquetableGetNCliqueComponents(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
+/** returns TRUE iff the connected clique components need an update (because new cliques were added) */
+extern
+SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
@@ -418,7 +468,8 @@ SCIP_Longint SCIPcliquetableGetNEntries(
 #define SCIPcliquetableGetNCliques(cliquetable)      ((cliquetable)->ncliques)
 #define SCIPcliquetableGetCliques(cliquetable)       ((cliquetable)->cliques)
 #define SCIPcliquetableGetNEntries(cliquetable)      ((cliquetable)->nentries)
-
+#define SCIPcliquetableGetNCliqueComponents(cliquetable) (cliquetable->compsfromscratch ? -1 : cliquetable->ncliquecomponents)
+#define SCIPcliquetableNeedsComponentUpdate(cliquetable) (cliquetable->compsfromscratch || cliquetable->djset == NULL)
 #endif
 
 #ifdef __cplusplus

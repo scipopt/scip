@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,15 +21,6 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  *
- * This constraint handler handles linear constraints in their most general form. That is,
- * \f[
- *   lhs \leq \sum_{i=1}^n a_i x_i \leq rhs
- * \f]
- * with \f$a_i \in Q, i = 1,\dots,n\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
- * and decision variables \f$x_i, i = 1,\dots,n\f$ which can be binary, integer, or continuous.
- *
- * Furthermore, this header offers the upgrade functionality of a general linear constraint into a more specific
- * constraint, such as a knapsack constraint, via SCIP_DECL_LINCONSUPGD() and SCIPincludeLinconsUpgrade()
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -43,9 +34,41 @@
 extern "C" {
 #endif
 
+
+
+/*
+ * constraint specific interface methods
+ */
+
+/** creates the handler for linear constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrLinear(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Linear Constraints
+ *
+ * This constraint handler handles linear constraints in their most general form. That is,
+ * \f[
+ *   lhs \leq \sum_{i=1}^n a_i x_i \leq rhs
+ * \f]
+ * with \f$a_i \in Q, i = 1,\dots,n\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
+ * and decision variables \f$x_i, i = 1,\dots,n\f$ which can be binary, integer, or continuous.
+ *
+ * Furthermore, this header offers the upgrade functionality of a general linear constraint into a more specific
+ * constraint, such as a knapsack constraint, via SCIP_DECL_LINCONSUPGD() and SCIPincludeLinconsUpgrade()
+ *
+ * @{
+ */
+
 typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint update method */
-
-
 
 /** upgrading method for linear constraints into more specific constraints
  *
@@ -82,17 +105,6 @@ typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint u
       int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposimplbin, int nnegimplbin, int nposcont, int nnegcont, \
       int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
       SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
-
-
-/*
- * constraint specific interface methods
- */
-
-/** creates the handler for linear constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrLinear(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** includes a linear constraint update method into the linear constraint handler */
 EXTERN
@@ -202,6 +214,34 @@ SCIP_RETCODE SCIPaddCoefLinear(
    SCIP_Real             val                 /**< coefficient of constraint entry */
    );
 
+/** changes coefficient of variable in linear constraint; deletes the variable if coefficient is zero; adds variable if
+ *  not yet contained in the constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint and variable.
+ *
+ *  @note This method requires linear time to search for occurences of the variable in the constraint data.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< new coefficient of constraint entry */
+   );
+
+/** deletes variable from linear constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint and variable.
+ *
+ *  @note This method requires linear time to search for occurences of the variable in the constraint data.
+ */
+EXTERN
+SCIP_RETCODE SCIPdelCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var                 /**< variable of constraint entry */
+   );
+
 /** gets left hand side of linear constraint */
 EXTERN
 SCIP_Real SCIPgetLhsLinear(
@@ -303,6 +343,25 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
+
+/** performs linear constraint type classification as used for MIPLIB
+ *
+ *  iterates through all linear constraints and stores relevant statistics in the linear constraint statistics \p linconsstats.
+ *
+ *  @note only constraints are iterated that belong to the linear constraint handler. If the problem has been presolved already,
+ *  constraints that were upgraded to more special types such as, e.g., varbound constraints, will not be shown correctly anymore.
+ *  Similarly, if specialized constraints were created through the API, these are currently not present.
+ */
+EXTERN
+SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */
+   );
+
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

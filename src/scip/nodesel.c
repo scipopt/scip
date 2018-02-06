@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,14 +31,15 @@
 #include "scip/visual.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
+#include "scip/reopt.h"
+#include "scip/lp.h"
 #include "scip/scip.h"
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
 #include "scip/struct_nodesel.h"
-
-
+#include "scip/struct_scip.h"
 
 /* 
  * node priority queue methods
@@ -205,35 +206,43 @@ SCIP_RETCODE SCIPnodepqSetNodesel(
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    )
 {
+   SCIP_NODEPQ* newnodepq;
+   SCIP_RETCODE retcode;
+   int i;
+
    assert(nodepq != NULL);
    assert(*nodepq != NULL);
    assert((*nodepq)->len >= 0);
    assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
 
-   if( (*nodepq)->nodesel != nodesel )
+   if( (*nodepq)->nodesel == nodesel )
+      return SCIP_OKAY;
+
+   /* create new node priority queue */
+   SCIP_CALL( SCIPnodepqCreate(&newnodepq, set, nodesel) );
+
+   /* resize the new node priority queue to be able to store all nodes */
+   retcode = nodepqResize(newnodepq, set, (*nodepq)->len);
+
+   /* insert all nodes in the new node priority queue */
+   for( i = 0; i < (*nodepq)->len && retcode == SCIP_OKAY; ++i )
    {
-      SCIP_NODEPQ* newnodepq;
-      int i;
-
-      /* create new node priority queue */
-      SCIP_CALL( SCIPnodepqCreate(&newnodepq, set, nodesel) );
-
-      /* resize the new node priority queue to be able to store all nodes */
-      SCIP_CALL( nodepqResize(newnodepq, set, (*nodepq)->len) );
-
-      /* insert all nodes in the new node priority queue */
-      for( i = 0; i < (*nodepq)->len; ++i )
-      {
-         SCIP_CALL( SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]) );
-      }
-
-      /* destroy the old node priority queue without freeing the nodes */
-      SCIPnodepqDestroy(nodepq);
-
-      /* use the new node priority queue */
-      *nodepq = newnodepq;
+      retcode = SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]);
    }
+
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPnodepqDestroy(&newnodepq);
+
+      return retcode;
+   }
+
+   /* destroy the old node priority queue without freeing the nodes */
+   SCIPnodepqDestroy(nodepq);
+
+   /* use the new node priority queue */
+   *nodepq = newnodepq;
 
    return SCIP_OKAY;
 }
@@ -308,7 +317,7 @@ SCIP_RETCODE SCIPnodepqInsert(
    bfsqueue[bfspos] = pos;
    bfsposs[pos] = bfspos;
 
-   SCIPdebugMessage("inserted node %p[%g] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
+   SCIPsetDebugMsg(set, "inserted node %p[%g] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
 
    return SCIP_OKAY;
 }
@@ -353,7 +362,7 @@ SCIP_Bool nodepqDelPos(
    freebfspos = bfsposs[rempos];
    assert(0 <= freebfspos && freebfspos < nodepq->len);
 
-   SCIPdebugMessage("delete node %p[%g] at pos %d and bfspos %d of node queue\n", 
+   SCIPsetDebugMsg(set, "delete node %p[%g] at pos %d and bfspos %d of node queue\n",
       (void*)slots[freepos], SCIPnodeGetLowerbound(slots[freepos]), freepos, freebfspos);
 
    /* remove node of the tree and get a free slot,
@@ -621,6 +630,7 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
@@ -631,7 +641,7 @@ SCIP_RETCODE SCIPnodepqBound(
 
    assert(nodepq != NULL);
 
-   SCIPdebugMessage("bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
+   SCIPsetDebugMsg(set, "bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
    pos = nodepq->len-1;
    while( pos >= 0 )
    {
@@ -641,7 +651,7 @@ SCIP_RETCODE SCIPnodepqBound(
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
-         SCIPdebugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
+         SCIPsetDebugMsg(set, "free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
 
          /* cut off node; because we looped from back to front, the existing children of the node must have a smaller
@@ -665,13 +675,21 @@ SCIP_RETCODE SCIPnodepqBound(
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
 
+         if( set->reopt_enable )
+         {
+            assert(reopt != NULL);
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
+                  SCIPlpGetSolstat(lp), SCIPnodeGetDepth(node) == 0, SCIPtreeGetFocusNode(tree) == node,
+                  SCIPnodeGetLowerbound(node), SCIPtreeGetEffectiveRootDepth(tree)));
+         }
+
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }
       else
          pos--;
    }
-   SCIPdebugMessage(" -> bounded node queue has length %d\n", nodepq->len);
+   SCIPsetDebugMsg(set, " -> bounded node queue has length %d\n", nodepq->len);
 
    return SCIP_OKAY;
 }
@@ -725,7 +743,7 @@ SCIP_RETCODE SCIPnodeselCopyInclude(
 
    if( nodesel->nodeselcopy != NULL )
    {
-      SCIPdebugMessage("including node selector %s in subscip %p\n", SCIPnodeselGetName(nodesel), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including node selector %s in subscip %p\n", SCIPnodeselGetName(nodesel), (void*)set->scip);
       SCIP_CALL( nodesel->nodeselcopy(set->scip, nodesel) );
    }
    return SCIP_OKAY;
@@ -784,7 +802,7 @@ SCIP_RETCODE SCIPnodeselCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/stdpriority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of node selection rule <%s> in standard mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/4,
+                  &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/2,
                   paramChgdNodeselStdPriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/memsavepriority", name);
@@ -945,6 +963,7 @@ SCIP_RETCODE SCIPnodeselSelect(
    SCIP_NODE**           selnode             /**< pointer to store node to be processed next */
    )
 {
+
    assert(nodesel != NULL);
    assert(nodesel->nodeselselect != NULL);
    assert(set != NULL);

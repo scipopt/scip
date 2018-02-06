@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_cutpool.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for storing cuts in a cut pool
  * @author Tobias Achterberg
  */
@@ -54,6 +55,8 @@ struct SCIP_Cutpool
    SCIP_CUT**            cuts;               /**< stored cuts of the pool */
    SCIP_Longint          processedlp;        /**< last LP that has been processed for separating the LP */
    SCIP_Longint          processedlpsol;     /**< last LP that has been processed for separating other solutions */
+   SCIP_Real             processedlpefficacy;/**< minimal efficacy used in last processed LP */
+   SCIP_Real             processedlpsolefficacy;/**< minimal efficacy used in last processed LP for separating other solutions */
    int                   cutssize;           /**< size of cuts array */
    int                   ncuts;              /**< number of cuts stored in the pool */
    int                   nremovablecuts;     /**< number of cuts stored in the pool that are marked to be removable */

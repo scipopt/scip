@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -259,6 +259,12 @@ SCIP_Bool SCIPexprHasUserEstimator(
    SCIP_EXPR*              expr
    );
 
+/** gives the evaluation capability of a user expression */
+EXTERN
+SCIP_EXPRINTCAPABILITY SCIPexprGetUserEvalCapability(
+   SCIP_EXPR*              expr
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -289,6 +295,7 @@ SCIP_Bool SCIPexprHasUserEstimator(
 #define SCIPexprGetMonomialExponents(monomial)    (monomial)->exponents
 #define SCIPexprGetUserData(expr)                 ((SCIP_EXPRDATA_USER*)(expr)->data.data)->userdata
 #define SCIPexprHasUserEstimator(expr)            (((SCIP_EXPRDATA_USER*)expr->data.data)->estimate != NULL)
+#define SCIPexprGetUserEvalCapability(expr)       (((SCIP_EXPRDATA_USER*)expr->data.data)->evalcapability)
 
 #endif
 
@@ -572,13 +579,15 @@ SCIP_RETCODE SCIPexprCreateUser(
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
    SCIP_USEREXPRDATA*    data,               /**< user data for expression, expression assumes ownership */
+   SCIP_EXPRINTCAPABILITY evalcapability,    /**< capability of evaluation functions (partially redundant, currently) */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    );
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
@@ -759,7 +768,8 @@ SCIP_RETCODE SCIPexprParse(
    const char*           str,                /**< pointer to the string to be parsed */
    const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
    int*                  nvars,              /**< buffer to store number of variables */
-   int*                  varnames            /**< buffer to store variable names, prefixed by index (as int) */
+   int*                  varnames,           /**< buffer to store variable names, prefixed by index (as int) */
+   int                   varnameslength      /**< length of the varnames buffer array */
    );
 
 /**@} */
@@ -1164,6 +1174,7 @@ EXTERN
 SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
    int                   monomialidx,        /**< index of monomial */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
    SCIP_EXPRCURV*        curv                /**< buffer to store monomial curvature */
    );
 
@@ -1293,13 +1304,15 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
    SCIP_USEREXPRDATA*    data,               /**< user data for expression, node assumes ownership */
+   SCIP_EXPRINTCAPABILITY evalcapability,    /**< evaluation capability */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    );
 
 /** given a node of an expression graph, splitup a linear part which variables are not used somewhere else in the same expression
@@ -1404,6 +1417,7 @@ void SCIPexprgraphTightenNodeBounds(
    SCIP_EXPRGRAPHNODE*   node,               /**< node in expression graph with no parents */
    SCIP_INTERVAL         nodebounds,         /**< new bounds for node */
    SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes (set to negative value if propagation should always be triggered) */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
    SCIP_Bool*            cutoff              /**< buffer to store whether a node's bounds were propagated to an empty interval */
    );
 
@@ -1540,9 +1554,9 @@ SCIP_RETCODE SCIPexprgraphCreate(
    SCIP_EXPRGRAPH**      exprgraph,          /**< buffer to store pointer to expression graph */
    int                   varssizeinit,       /**< minimal initial size for variables array, or -1 to choose automatically */
    int                   depthinit,          /**< minimal initial depth of expression graph, or -1 to choose automatically */
-   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /** callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
-   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /** callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
-   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /** callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /**< callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /**< callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /**< callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
    void*                 userdata            /**< user data to pass to callback functions */
    );
 

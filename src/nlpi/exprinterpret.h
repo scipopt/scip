@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,6 +42,10 @@
 extern "C" {
 #endif
 
+/**@addtogroup EXPRINTS
+ * @{
+ */
+
 /** gets name and version of expression interpreter */
 EXTERN
 const char* SCIPexprintGetName(void);
@@ -70,6 +74,19 @@ SCIP_RETCODE SCIPexprintFree(
 /** compiles an expression tree and stores compiled data in expression tree */
 EXTERN
 SCIP_RETCODE SCIPexprintCompile(
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   );
+
+/** gives the capability to evaluate an expression by the expression interpreter
+ *
+ * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
+ * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * Hessian for an expression is not available because it contains a user expression that does not provide
+ * Hessians.
+ */
+EXTERN
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
    );
@@ -157,6 +174,8 @@ SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_Real*            val,                /**< buffer to store function value */
    SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
    );
+
+/** @} */
 
 #ifdef __cplusplus
 }

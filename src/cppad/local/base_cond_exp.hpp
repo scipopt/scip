@@ -1,19 +1,19 @@
-/* $Id: base_cond_exp.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
-# ifndef CPPAD_BASE_COND_EXP_INCLUDED
-# define CPPAD_BASE_COND_EXP_INCLUDED
+// $Id$
+# ifndef CPPAD_BASE_COND_EXP_HPP
+# define CPPAD_BASE_COND_EXP_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
-/* 
+/*
 $begin base_cond_exp$$
 $spell
 	alloc
@@ -37,12 +37,10 @@ $spell
 $$
 
 $section Base Type Requirements for Conditional Expressions$$
-$index CondExp, base require$$
-$index base, CondExp require$$
-$index require, base CondExp$$
+$mindex CondExp require CPPAD_COND_EXP_REL$$
 
 $head Purpose$$
-These definitions are required by the user's code to support the 
+These definitions are required by the user's code to support the
 $codei%AD<%Base%>%$$ type for $cref CondExp$$ operations:
 
 $head CompareOp$$
@@ -50,7 +48,7 @@ The following $code enum$$ type is used in the specifications below:
 $codep
 namespace CppAD {
 	// The conditional expression operator enum type
-	enum CompareOp 
+	enum CompareOp
 	{	CompareLt, // less than
 		CompareLe, // less than or equal
 		CompareEq, // equal
@@ -68,7 +66,7 @@ $codei%
 		%cop%, %left%, %right%, %exp_if_true%, %exp_if_false%
 	)
 %$$
-which computes implements the corresponding $cref CondExp$$ 
+which computes implements the corresponding $cref CondExp$$
 function when the result has prototype
 $codei%
 	%Base% %result%
@@ -76,13 +74,13 @@ $codei%
 The argument $icode cop$$ has prototype
 $codei%
 	enum CppAD::CompareOp %cop%
-%$$ 
+%$$
 The other arguments have the prototype
 $codei%
-	const %Base%&  %left% 
-	const %Base%&  %right% 
+	const %Base%&  %left%
+	const %Base%&  %right%
 	const %Base%&  %exp_if_true%
-	const %Base%&  %exp_if_false% 
+	const %Base%&  %exp_if_false%
 %$$
 
 $subhead Ordered Type$$
@@ -103,12 +101,12 @@ namespace CppAD {
 	}
 }
 %$$
-For example, see 
+For example, see
 $cref/double CondExpOp/base_alloc.hpp/CondExpOp/$$.
 For an example of and implementation of $code CondExpOp$$ with
 a more involved $icode Base$$ type see
 $cref/adolc CondExpOp/base_adolc.hpp/CondExpOp/$$.
- 
+
 
 $subhead Not Ordered$$
 If the type $icode Base$$ does not support ordering,
@@ -130,9 +128,8 @@ namespace CppAD {
 %$$
 For example, see
 $cref/complex CondExpOp/base_complex.hpp/CondExpOp/$$.
- 
+
 $head CondExpRel$$
-$index CPPAD_COND_EXP_REL$$
 The macro invocation
 $codei%
 	CPPAD_COND_EXP_REL(%Base%)
@@ -156,8 +153,6 @@ $end
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 
 /*!
-\defgroup base_cond_exp_hpp base_cond_exp.hpp
-\{
 \file base_cond_exp.hpp
 CondExp operations that aid in meeting Base type requirements.
 */
@@ -236,11 +231,11 @@ is the return value is the comparision results in false.
 see \c exp_if_true and \c exp_if_false above.
 */
 template <class CompareType, class ResultType>
-ResultType CondExpTemplate( 
+ResultType CondExpTemplate(
 	enum  CompareOp            cop          ,
 	const CompareType&         left         ,
-	const CompareType&         right        , 
-	const ResultType&          exp_if_true  , 
+	const CompareType&         right        ,
+	const ResultType&          exp_if_true  ,
 	const ResultType&          exp_if_false )
 {	ResultType returnValue;
 	switch( cop )
@@ -282,6 +277,5 @@ ResultType CondExpTemplate(
 	return returnValue;
 }
 
-/*! \} */
 } // END_CPPAD_NAMESPACE
 # endif

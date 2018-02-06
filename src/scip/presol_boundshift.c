@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,8 +33,9 @@
 #define PRESOL_DESC            "converts variables with domain [a,b] to variables with domain [0,b-a]"
 #define PRESOL_PRIORITY         7900000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              0 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
 
+#define MAXABSBOUND             1000.0  /**< maximum absolute variable bounds for aggregation */
 
 /*
  * Default parameter settings
@@ -94,6 +95,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
+/**! [SnippetPresolFreeBoundshift] */
 static
 SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
 {  /*lint --e{715}*/   
@@ -103,11 +105,12 @@ SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
 }
+/**! [SnippetPresolFreeBoundshift] */
 
 
 /** presolving execution method */
@@ -163,6 +166,19 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
 
+      /* it can happen that the variable bounds of integer variables have not been propagated yet or contain
+       * some small noise; this will result in an aggregation that might trigger assertions when updating bounds of
+       * aggregated variables (see #1817)
+       */
+      if( SCIPvarIsIntegral(var) )
+      {
+         assert(SCIPisIntegral(scip, lb));
+         assert(SCIPisIntegral(scip, ub));
+
+         lb = SCIPadjustedVarLb(scip, var, lb);
+         ub = SCIPadjustedVarUb(scip, var, ub);
+      }
+
       assert( SCIPisLE(scip, lb, ub) );
       if( SCIPisEQ(scip, lb, ub) )
          continue;
@@ -176,7 +192,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 #if 0
          SCIPisLT(scip, ub - lb, SCIPinfinity(scip)) &&         /* interval length less than SCIPinfinity(scip) */
 #endif
-         SCIPisLT(scip, ub - lb, (SCIP_Real) presoldata->maxshift) )        /* less than max shifting */
+         SCIPisLT(scip, ub - lb, (SCIP_Real) presoldata->maxshift) &&      /* less than max shifting */
+         SCIPisLE(scip, REALABS(lb), MAXABSBOUND) &&            /* ensures a small constant in aggregation */
+         SCIPisLE(scip, REALABS(ub), MAXABSBOUND) )             /* ensures a small constant in aggregation */
       {
          SCIP_VAR* newvar;
          char newvarname[SCIP_MAXSTRLEN];
@@ -184,7 +202,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          SCIP_Bool redundant;
          SCIP_Bool aggregated;
 
-         SCIPdebugMessage("convert range <%s>[%g,%g] to [%g,%g]\n", SCIPvarGetName(var), lb, ub, 0.0, (ub - lb) );
+         SCIPdebugMsg(scip, "convert range <%s>[%g,%g] to [%g,%g]\n", SCIPvarGetName(var), lb, ub, 0.0, (ub - lb) );
 
          /* create new variable */
          (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_shift", SCIPvarGetName(var));
@@ -212,7 +230,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          assert(!infeasible);
          assert(redundant);
          assert(aggregated);
-         SCIPdebugMessage("var <%s> with bounds [%f,%f] has obj %f\n",
+         SCIPdebugMsg(scip, "var <%s> with bounds [%f,%f] has obj %f\n",
             SCIPvarGetName(newvar),SCIPvarGetLbGlobal(newvar),SCIPvarGetUbGlobal(newvar),SCIPvarGetObj(newvar));
 
          /* release variable */
@@ -244,11 +262,11 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
    SCIP_PRESOL* presolptr;
 
    /* create boundshift presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
    initPresoldata(presoldata);
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecBoundshift,
          presoldata) );
 

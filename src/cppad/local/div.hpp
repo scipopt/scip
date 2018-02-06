@@ -1,12 +1,12 @@
-/* $Id: div.hpp 2773 2013-03-09 06:00:18Z bradbell $ */
-# ifndef CPPAD_DIV_INCLUDED
-# define CPPAD_DIV_INCLUDED
+// $Id$
+# ifndef CPPAD_DIV_HPP
+# define CPPAD_DIV_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -16,12 +16,24 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 //  BEGIN CppAD namespace
 namespace CppAD {
 
+// SV moved the division from operator / into extra function basediv,
+// as disabling the sanitizer check on operator / did not work (gcc 7.2)
+
+template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
+inline Base basediv(const Base& left, const Base& right)
+{
+   return left / right;
+}
+
 template <class Base>
 AD<Base> operator / (const AD<Base> &left , const AD<Base> &right)
 {
 	// compute the Base part
 	AD<Base> result;
-	result.value_  = left.value_ / right.value_;
+	result.value_  = basediv(left.value_, right.value_);
 	CPPAD_ASSERT_UNKNOWN( Parameter(result) );
 
 	// check if there is a recording in progress
@@ -98,4 +110,4 @@ CPPAD_FOLD_AD_VALUED_BINARY_OPERATOR(/)
 
 } // END CppAD namespace
 
-# endif 
+# endif

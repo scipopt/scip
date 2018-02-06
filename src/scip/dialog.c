@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -127,6 +127,20 @@ SCIP_RETCODE removeHistory(
    return SCIP_OKAY;
 }
 
+/** writes command history into file of the specified name */
+static
+SCIP_RETCODE writeHistory(
+   const char*           filename            /**< name of file to (over)write history to */
+   )
+{
+   int retval = write_history(filename);
+
+   if( retval == 0 )
+      return SCIP_OKAY;
+   else
+      return SCIP_FILECREATEERROR;
+}
+
 #else
 
 /** reads a line of input from stdin */
@@ -193,6 +207,17 @@ int getHistoryLength(
 static
 SCIP_RETCODE removeHistory(
    int                   pos                 /**< list position of history entry to remove */
+   )
+{  /*lint --e{715}*/
+   /* nothing to do here */
+   return SCIP_OKAY;
+}
+
+
+/** writes command history into file of the specified name */
+static
+SCIP_RETCODE writeHistory(
+   const char*           filename            /**< name of file to (over)write history to */
    )
 {  /*lint --e{715}*/
    /* nothing to do here */
@@ -293,7 +318,7 @@ SCIP_RETCODE SCIPdialogCopyInclude(
 
    if( dialog->dialogcopy != NULL )
    {
-      SCIPdebugMessage("including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), (void*)set->scip);
       SCIP_CALL( dialog->dialogcopy(set->scip, dialog) );
    }
    return SCIP_OKAY;
@@ -336,6 +361,8 @@ SCIP_RETCODE SCIPdialoghdlrFree(
    )
 {
    assert(dialoghdlr != NULL);
+   if( *dialoghdlr == NULL )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPdialoghdlrSetRoot(scip, *dialoghdlr, NULL) );
    linelistFreeAll(&(*dialoghdlr)->inputlist);
@@ -428,7 +455,84 @@ SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
    return (dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0');
 }
 
-/** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
+/** returns the next line in the handler's command buffer; if the buffer is empty, displays the given prompt or the
+ *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
+ */
+SCIP_RETCODE SCIPdialoghdlrGetLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog */
+   const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
+   char**                inputline,          /**< pointer to store the complete line in the handler's command buffer */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
+   )
+{
+   char path[SCIP_MAXSTRLEN];
+   char p[SCIP_MAXSTRLEN];
+
+   assert(dialoghdlr != NULL);
+   assert(dialoghdlr->buffer != NULL);
+   assert(dialoghdlr->bufferpos < dialoghdlr->buffersize);
+   assert(inputline != NULL);
+
+   /* get input from the user, if the buffer is empty */
+   if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
+   {
+      int len;
+
+      /* clear the buffer */
+      SCIPdialoghdlrClearBuffer(dialoghdlr);
+
+      if( prompt == NULL )
+      {
+         /* use current dialog's path as prompt */
+         SCIPdialogGetPath(dialog, '/', path);
+         (void) SCIPsnprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
+         prompt = p;
+      }
+
+      /* read command line from stdin or from the input line list */
+      SCIP_CALL( readInputLine(dialoghdlr, prompt, endoffile) );
+
+      /* strip trailing spaces */
+      len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+      if( len > 0 )
+      {
+         while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+         {
+            dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
+            len--;
+         }
+      }
+
+      /* insert command in command history */
+      if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
+      {
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos], FALSE) );
+      }
+   }
+
+   /* the last character in the buffer must be a '\0' */
+   dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
+
+
+   /* skip leading spaces: find start of first word */
+   while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+      dialoghdlr->bufferpos++;
+
+   /* copy the complete line */
+   *inputline = &dialoghdlr->buffer[dialoghdlr->bufferpos];
+
+   /* go to the end of the line */
+   dialoghdlr->bufferpos += (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+
+   if( dialoghdlr->buffer[dialoghdlr->buffersize-1] == '\0' )
+      *endoffile = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
 SCIP_RETCODE SCIPdialoghdlrGetWord(
@@ -588,6 +692,7 @@ SCIP_RETCODE SCIPdialoghdlrAddInputLine(
    )
 {
    SCIP_LINELIST* linelist;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    assert(dialoghdlr != NULL);
    assert(dialoghdlr->inputlistptr != NULL);
@@ -595,12 +700,16 @@ SCIP_RETCODE SCIPdialoghdlrAddInputLine(
    assert(inputline != NULL);
 
    SCIP_ALLOC( BMSallocMemory(&linelist) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&linelist->inputline, inputline, strlen(inputline)+1) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSduplicateMemoryArray(&linelist->inputline, inputline, strlen(inputline)+1), TERMINATE );
    linelist->nextline = NULL;
    *dialoghdlr->inputlistptr = linelist;
    dialoghdlr->inputlistptr = &linelist->nextline;
 
-   return SCIP_OKAY;
+ TERMINATE:
+   if( retcode != SCIP_OKAY )
+      BMSfreeMemory(&linelist);
+
+   return retcode;
 }
 
 /** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded
@@ -717,8 +826,12 @@ SCIP_RETCODE SCIPdialogCreate(
    SCIP_DIALOGDATA*      dialogdata          /**< user defined dialog data */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(dialog != NULL);
    assert(name != NULL);
+
+   retcode = SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocMemory(dialog) );
    (*dialog)->dialogcopy = dialogcopy;
@@ -726,10 +839,10 @@ SCIP_RETCODE SCIPdialogCreate(
    (*dialog)->dialogdesc = dialogdesc;
    (*dialog)->dialogfree = dialogfree;
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*dialog)->name, name, strlen(name)+1) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSduplicateMemoryArray(&(*dialog)->name, name, strlen(name)+1), TERMINATE );
    if( desc != NULL )
    {
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*dialog)->desc, desc, strlen(desc)+1) );
+      SCIP_ALLOC_TERMINATE( retcode, BMSduplicateMemoryArray(&(*dialog)->desc, desc, strlen(desc)+1), TERMINATE );
    }
    else
       (*dialog)->desc = NULL;
@@ -745,7 +858,14 @@ SCIP_RETCODE SCIPdialogCreate(
    /* capture dialog */
    SCIPdialogCapture(*dialog);
 
-   return SCIP_OKAY;
+ TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      BMSfreeMemoryArrayNull(&(*dialog)->name);
+      BMSfreeMemory(dialog);
+   }
+
+   return retcode;
 }
 
 /** frees dialog and all of its sub-dialogs */
@@ -1143,4 +1263,12 @@ void SCIPdialogSetData(
    assert(dialog != NULL);
 
    dialog->dialogdata = dialogdata;
+}
+
+/** writes command history to specified filename */
+SCIP_RETCODE SCIPdialogWriteHistory(
+   const char*           filename            /**< file name for (over)writing history */
+   )
+{
+   return writeHistory(filename);
 }

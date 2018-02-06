@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,24 +15,10 @@
 
 /**@file   cons_orbitope.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
+ * @brief  constraint handler for (partitioning/packing/full) orbitope constraints w.r.t. the full symmetric group
  * @author Timo Berthold
  * @author Marc Pfetsch
- *
- * This constraint handler can be used to handle symmetries in certain 0/1-programs. The principle
- * structure is that some variables can be ordered in matrix form, such that permuting columns does
- * not change the validity and objective function value of a solution. That is, the symmetry group
- * of the program contains the full symmetric group obtained by permuting the columns of this
- * matrix. The variables in each row have to be contained in set packing or partitioning
- * constraints.
- *
- * In more mathematical terms the structure has to be as follows: There are 0/1-variables
- * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$. The variables are coupled
- * through set packing or partitioning constraints:
- * \f[
- *    \sum_{j = 1}^q x_{ij} \leq 1  \quad \mbox{or} \quad \sum_{j = 1}^q x_{ij} = 1 \quad \mbox{for all }i = 1, \ldots, p.
- * \f]
- * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -47,11 +33,49 @@ extern "C" {
 #endif
 
 
-/** creates the handler for orbitope constraints and includes it in SCIP */
+/** creates the handler for orbitope constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Orbitope Constraints
+ *
+ * @{
+ *
+ * This constraint handler can be used to handle symmetries in certain 0/1-programs. The principle
+ * structure is that some variables can be ordered in matrix form, such that permuting columns does
+ * not change the validity and objective function value of a solution. That is, the symmetry group
+ * of the program contains the full symmetric group obtained by permuting the columns of this
+ * matrix. These symmetries can be handled by so-called full orbitopes.
+ *
+ * Moreover, if the variables in each row are contained in set packing or partitioning
+ * constraint, these symmetries can be handled by specialized packing or partitioning orbitopes.
+ *
+ * In more mathematical terms the structure has to be as follows: There are 0/1-variables
+ * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$. The variables may be coupled
+ * through set packing or partitioning constraints:
+ * \f[
+ *    \sum_{j = 1}^q x_{ij} \leq 1  \quad \mbox{or} \quad \sum_{j = 1}^q x_{ij} = 1 \quad \mbox{for all }i = 1, \ldots, p.
+ * \f]
+ * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
+ */
+
+/** type of orbitope constraint: full, packing, or partitioning orbitope */
+enum SCIP_OrbitopeType
+{
+   SCIP_ORBITOPETYPE_FULL         = 0,       /**< constraint is a full orbitope constraint:         rowsum(x) unrestricted */
+   SCIP_ORBITOPETYPE_PARTITIONING = 1,       /**< constraint is a partitioning orbitope constraint: rowsum(x) == 1 */
+   SCIP_ORBITOPETYPE_PACKING      = 2        /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
+};
+typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
 
 /** creates and captures a orbitope constraint
  *
@@ -63,7 +87,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
@@ -106,11 +130,15 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop         /**< should propagation be resolved? */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

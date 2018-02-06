@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -40,11 +40,11 @@
  */
 static
 int getMaxSatdegIndex(
-   int*             V,                  /**< non-zero weighted nodes for branching */
-   int              nV,                 /**< number of non-zero weighted nodes for branching */
-   NBC*             gsd,                /**< neighbor color information of all nodes */
-   TCLIQUE_Bool*    iscolored,          /**< coloring status of all nodes */
-   const TCLIQUE_WEIGHT*    weights             /**< weight of nodes in grpah */
+   int*                  V,                  /**< non-zero weighted nodes for branching */
+   int                   nV,                 /**< number of non-zero weighted nodes for branching */
+   NBC*                  gsd,                /**< neighbor color information of all nodes */
+   TCLIQUE_Bool*         iscolored,          /**< coloring status of all nodes */
+   const TCLIQUE_WEIGHT* weights             /**< weight of nodes in grpah */
    )
 {   
    TCLIQUE_WEIGHT maxweight;
@@ -86,11 +86,11 @@ int getMaxSatdegIndex(
 /** gets index of the node in a given set of nodes with maximum weight */
 static
 int getMaxWeightIndex( 
-   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
-   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
-   int*             V,                  /**< non-zero weighted nodes for branching */
-   int              nV                  /**< number of non-zero weighted nodes for branching */
+   TCLIQUE_GETNNODES((*getnnodes)),          /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),        /**< user function to get the node weights */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< pointer to graph data structure */
+   int*                  V,                  /**< non-zero weighted nodes for branching */
+   int                   nV                  /**< number of non-zero weighted nodes for branching */
    )
 {
    const TCLIQUE_WEIGHT* weights;
@@ -130,9 +130,9 @@ int getMaxWeightIndex(
  */
 static
 void updateNeighbor(
-   BMS_CHKMEM*      mem,                /**< block memory */
-   NBC*             pgsd,               /**< pointer to neighbor color information of node to update */
-   LIST_ITV*        pnc                 /**< pointer to given list of color intervals */
+   BMS_CHKMEM*           mem,                /**< block memory */
+   NBC*                  pgsd,               /**< pointer to neighbor color information of node to update */
+   LIST_ITV*             pnc                 /**< pointer to given list of color intervals */
    )
 {
    LIST_ITV head;
@@ -217,20 +217,20 @@ void updateNeighbor(
  *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps
  */
 TCLIQUE_WEIGHT tcliqueColoring( 
-   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
-   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
-   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
-   BMS_CHKMEM*      mem,                /**< block memory */
-   int*             buffer,             /**< buffer of size nnodes */
-   int*             V,                  /**< non-zero weighted nodes for branching */
-   int              nV,                 /**< number of non-zero weighted nodes for branching */
-   NBC*             gsd,                /**< neighbor color information of all nodes */
-   TCLIQUE_Bool*    iscolored,          /**< coloring status of all nodes */
-   TCLIQUE_WEIGHT*  apbound,            /**< pointer to store apriori bound of nodes for branching */ 
-   int*             clique,             /**< buffer for storing the clique */
-   int*             nclique,            /**< pointer to store number of nodes in the clique */
-   TCLIQUE_WEIGHT*  weightclique        /**< pointer to store the weight of the clique */
+   TCLIQUE_GETNNODES((*getnnodes)),          /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),        /**< user function to get the node weights */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)),/**< user function to select adjacent edges */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< pointer to graph data structure */
+   BMS_CHKMEM*           mem,                /**< block memory */
+   int*                  buffer,             /**< buffer of size nnodes */
+   int*                  V,                  /**< non-zero weighted nodes for branching */
+   int                   nV,                 /**< number of non-zero weighted nodes for branching */
+   NBC*                  gsd,                /**< neighbor color information of all nodes */
+   TCLIQUE_Bool*         iscolored,          /**< coloring status of all nodes */
+   TCLIQUE_WEIGHT*       apbound,            /**< pointer to store apriori bound of nodes for branching */ 
+   int*                  clique,             /**< buffer for storing the clique */
+   int*                  nclique,            /**< pointer to store number of nodes in the clique */
+   TCLIQUE_WEIGHT*       weightclique        /**< pointer to store the weight of the clique */
    )
 {
    const TCLIQUE_WEIGHT* weights;
@@ -441,7 +441,6 @@ TCLIQUE_WEIGHT tcliqueColoring(
 
          /* add the new colorinterval [1, range] to the list of chosen colorintervals for node */
          pnc->next = colorinterval;
-         pnc = colorinterval;
       }
       else
       {
@@ -495,7 +494,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
             tocolor -= dif;
             pnc->next = colorinterval;
             pnc = colorinterval;
-         }	
+         }
       }
 
       debugMessage("-> updated neighbors:\n"); 

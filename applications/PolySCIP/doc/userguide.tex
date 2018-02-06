@@ -1,0 +1,284 @@
+\documentclass[11pt,listof=totoc]{scrartcl}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath, amsfonts, amssymb, amsthm}
+\usepackage[colorlinks]{hyperref}
+\usepackage[capitalize]{cleveref}
+\usepackage{url}
+\usepackage[greek,english]{babel}
+
+\theoremstyle{definition}
+\newtheorem{ex}{Example}[section]
+
+\title{PolySCIP user guide}
+\author{Sebastian Schenker}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{General information}
+PolySCIP is a solver for multi-criteria integer programming problems
+and multi-criteria linear programming problems. In other words, it
+aims at solving optimization problems of the form:
+\begin{align*}
+\min / \max~ (c_1^\top x&, \ldots, c_k^\top x) \\
+\mbox{s.t. } Ax &\leq b,\\
+x &\in \mathbb{Z}^n \lor \mathbb{Q}^n,
+\end{align*}
+where $k \geq 2,~ A \in \mathbb{Q}^{m \times n},~ b \in
+\mathbb{Q}^m$.
+
+The name PolySCIP is composed of Poly (from the Greek
+\textgreek{pol'us} meaning ``many'') and SCIP. PolySCIP is part of \href{http://scip.zib.de}{SCIP} and its source code resides in the 'applications' directory.
+
+\section{Installation}
+
+See the INSTALL file in the PolySCIP directory or the section 'Installation' at \url{http://polyscip.zib.de}.
+
+\section{Usage}
+
+The problem file (in \texttt{MOP} format) is the only mandatory command line argument:
+\begin{verbatim}
+polyscip path_to_problem_file/problem_file.mop
+\end{verbatim} runs PolySCIP on the given problem file. To switch off the SCIP solver output you can execute 
+\begin{verbatim}
+polyscip -p scipmip.set path_to_problem_file/problem_file.mop
+\end{verbatim} where \texttt{scipmip.set} is an existing SCIP parameter file (in the PolySCIP folder) containing the line \texttt{display/verblevel=0}. 
+
+To get a complete list of available PolySCIP command line arguments
+execute
+\begin{verbatim}
+polyscip -h
+\end{verbatim}
+\begin{description}
+\item[-h, -{}-help] Display usage information and exit
+\item[ -p | -{}-params <\texttt{param\_file.set}>] Specify a file consisting of SCIP parameter settings
+\begin{itemize}
+ \item PolySCIP comes with the parameter settings file \emph{scipmip.set} 
+ \item A \href{http://scip.zib.de/doc/html_devel/PARAMETERS.php}{list} of all available SCIP parameters is available at \href{http://scip.zib.de}{http://scip.zib.de}
+ \item To switch, e.g., the verbosity level of the internal SCIP solution process to 1, write \texttt{display/verblevel=1} in the \emph{scipmip.set} file and run \emph{polyscip} with \texttt{-p scipmip.set} 
+\end{itemize}
+\item[-W | -{}-writeSolsPath <path>] Path where the solution file should be written to if \textbf{-w} was set
+\item[ -e | -{}-Epsilon <double>] Specify epsilon used in computation of unsupported points; the default value is 1e-3 
+\item[-d | -{}-Delta <double>] Specify delta used in computation of feasible boxes; the default value is 0.01 
+\item[-r | --round <5|10|15>] Round the weighted objective coefficient used in the function 'setWeightedObjective' at the 'r'-th decimal position; this might be helpful in case of numberical troubles with unbounded rays
+\item[-t | -{}-timeLimit <seconds>] Set a time limit in seconds on the overall SCIP computation time
+\item[-o | -{}-noOutcomes] Switch off the output of computed outcomes
+\item[-s | -{}-noSolutions] Switch off the output of computed solutions
+\item[-w | -{}-writeResults] Write results to a file; default path is ./ 
+\item[-v | -{}-verbose] Switch on verbose PolySCIP output
+\item[-x | -{}-extremal] Compute only supported non-dominated extreme point results
+\item[-{}-version] Display PolySCIP version
+\end{description}
+
+\section{File format}\label{sec-format}
+
+The PolySCIP file format (with suffix \texttt{.mop}) is based on the
+widely used \texttt{MPS} file format (see \cite{mps-format},
+\cite{mps-format2}). \texttt{MPS} is column-oriented and all model
+components (variables, rows, etc.)  receive a name. An objective in
+\texttt{MPS} is indicated by an \texttt{N} followed by the name in the
+\texttt{ROWS} section. Similarly, in the \texttt{MOP} format the
+objectives are indicated by \texttt{N} followed by the name in the
+\texttt{ROWS} section. In general, \texttt{MPS} might not be as human
+readable as other formats. However, one of the main reasons to base
+the file format of PolySCIP on it is its easy extension towards
+several objectives and its wide availability in most of the linear and
+integer programming software packages such that available \texttt{MPS}
+parsers could easily be adjusted to parse an \texttt{.mop} file as
+well. Furthermore, no user is expected to write \texttt{.mop} files by
+hand, but to use a modelling language that does the job. See
+\cref{sec-model} for a description of how to use the freely available
+\href{http://zimpl.zib.de}{Zimpl} and the Python script
+\texttt{mult\_zimpl\_to\_mop.py} (comes with PolySCIP) to generate
+\texttt{.mop} files.
+
+The following simple equation-based bi-criteria
+integer problem
+
+\begin{alignat}{4}
+&\mbox{maximize}~~~ &&\mbox{Obj1: } 3&&x_1 + 2 x_2 - 4 x_3 &&
+\nonumber \\
+& &&\mbox{Obj2: } &&x_1 + x_2 + 2 x_3 && \nonumber \\
+&\mbox{subject to} && && && \nonumber \\
+& &&\mbox{Eqn: } &&x_1 + x_2 + x_3 &&= 2 \label{biCritExample}\\
+& &&\mbox{Lower: } &&x_1 + 0.4 x_2 &&\leq 1.5 \nonumber \\
+& && &&x_1,~ x_2,~ x_3 &&\geq 0 \nonumber \\
+& && &&x_1,~ x_2,~ x_3 &&\in \mathbb{Z} \nonumber
+\end{alignat}
+is written in MOP format as follows:
+\begin{verbatim}
+NAME        BICRIT
+OBJSENSE
+ MAX
+ROWS
+ N  Obj1
+ N  Obj2
+ E  Eqn
+ L  Lower
+COLUMNS
+    x#1       Lower              1
+    x#1       Eqn                1
+    x#1       Obj2               1
+    x#1       Obj1               3
+    x#2       Lower            0.4
+    x#2       Eqn                1
+    x#2       Obj2               1
+    x#2       Obj1               2
+    x#3       Eqn                1
+    x#3       Obj2               2
+    x#3       Obj1              -4
+RHS
+    RHS       Eqn                2
+    RHS       Lower            1.5
+BOUNDS
+ LI BOUND     x#1                0
+ LI BOUND     x#2                0
+ LI BOUND     x#3                0
+ENDATA
+\end{verbatim}
+
+\section{User-friendly \texttt{.mop} file generation}\label{sec-model}
+
+\href{http://zimpl.zib.de}{Zimpl} is a freely available modelling
+language (also part of the SCIP Optimization Suite) to translate a
+mathematical model of a problem into a mathematical program in
+\texttt{.mps} (or \texttt{.lp}) file format. Together with the
+\texttt{mult\_zimpl\_to\_mop.py} script (located in the 'mult\_zimpl'
+directory of PolySCIP) it can/should be used to generate your
+\texttt{.mop} files. For a more detailed description of Zimpl, see the
+Zimpl \href{http://zimpl.zib.de/download/zimpl.pdf}{user guide}. In
+this section we will only describe how to make use of it, but not all
+options how to write different models. Zimpl does generally not support several
+objectives; this is where \texttt{mult\_zimpl\_to\_mop.py} comes into
+play. It takes an 'extended' Zimpl file containing several objectives,
+internally rewrites all but the first objectives into constraints,
+calls Zimpl on the rewritten file and changes the file generated by Zimpl
+containing 'artificial' constraint indicators back to objective
+indicators which yields an \texttt{.mop} file.
+
+\begin{itemize}
+\item Zimpl comes with the \href{http://scip.zib.de/#scipoptsuite}{SCIP Optimization Suite}
+\begin{itemize}
+\item Please see the INSTALL file of the SCIP Optimization Suite (you
+  basically just need the GMP library in order to build).
+\end{itemize}
+\item \texttt{mult\_zimpl\_to\_mop.py} is a Python3 script and comes with PolySCIP; it is located in the 'mult\_zimpl' directory
+\begin{itemize}
+\item Execute \texttt{python3 mult\_zimpl\_to\_mop.py your\_model.zpl} to run it on the file \texttt{your\_model.zpl} containing your multi-criteria model
+\item The following command line arguments are available
+\begin{description}
+\item[-h, -{}-help] Show the help message and exit
+\item[-o <basename>] Basename used for the output file; the
+  default is the basename of the input file
+\item[-p <path>] Directory where the generated \texttt{.mop} file should be saved
+\item[-{}-path\_to\_zimpl <path>] Directory where your \emph{zimpl} binary can be found
+\end{description}
+\end{itemize}
+\item[] E.g., if the Zimpl executable is not installed globally but in
+  \texttt{/home/user/bin}, and, furthermore, you would like to save
+  the generated \texttt{.mop} file under \texttt{/tmp}, then execute
+  \texttt{python3 mult\_zimpl\_to\_mop.py -p /tmp/ --path\_to\_zimpl
+    /home/user/bin model.zpl}
+\end{itemize}
+
+Please note (in the following examples) that the direction of optimization,
+i.e., \texttt{minimize} or \texttt{maximize}, is declared only once
+followed by the first objective. All other objectives follow without a
+direction specification implying that all objectives are assumed to be
+either minimized or maximized.
+
+\begin{ex}
+  The bi-criteria maximization problem (\ref{biCritExample}) can be
+  modelled as follows:
+\begin{verbatim}
+set I := {1..3};
+param c1[I] := <1> 3, <2> 2, <3> -4;     #coefficients of the first objective
+param c2[I] := <3> 2 default 1;          #coefficients of the second objective
+param low[I] := <1> 1, <2> 0.4, <3> 0;   #coefficients of the lower constraint
+var x[I] integer >= 0;
+
+maximize Obj1: sum <i> in I: c1[i]*x[i];
+Obj2: sum <i> in I: c2[i]*x[i];
+
+subto Eqn: sum <i> in I: x[i] == 2;
+subto Lower: sum <i> in I: low[i]*x[i] <= 1.5;
+\end{verbatim}
+
+Saving the file, e.g., as test.zpl and running \texttt{mult\_zimpl\_to\_mop.py} on it would generate a file named \texttt{test.mop} which can be solved with PolySCIP.
+\end{ex}
+
+\begin{ex}Assume you want to model a tri-criteria assignment problem
+  and your data is stored in a file named
+  \texttt{my\_data.txt} in the following format: \\
+  3\\
+  5\\
+  6, 1, 20, 2, 3,\\
+  2, 6, 9, 10, 18,\\
+  1, 6, 20, 5, 9,\\
+  6, 8, 6, 9, 6,\\
+  7, 10, 10, 6, 2\\
+  ,\\
+  17, 20, 8, 8, 20,\\
+  10, 13, 1, 10, 15,\\
+  4, 11, 1, 13, 1,\\
+  19, 13, 7, 18, 17,\\
+  15, 3, 5, 1, 11\\
+  ,\\
+  10, 7, 1, 19, 12,\\
+  2, 15, 12, 10, 3,\\
+  11, 20, 16, 12, 9,\\
+  10, 15, 20, 11, 7,\\
+  1, 9, 20, 7, 6\\
+
+  The first line specifies the number of objectives, the second line
+  specifies number of variables and the following three $5 \times 5$
+  matrices contain the objective value coefficients. The
+  tri-criteria assignment problem could then be modeled as follows:
+\begin{verbatim}
+param prob_file := "my_data.txt";
+param no_objs := read prob_file as "1n" use 1;
+param no_vars := read prob_file as "1n" use 1 skip 1;
+
+set I := {1..no_vars};
+set T := {1..no_objs*no_vars*no_vars};
+param coeffs[T] := read prob_file as "n+" match "[0-9]+" skip 2;
+param offset := no_vars*no_vars;
+param Obj1[<i,j> in I*I] := coeffs[(i-1)*no_vars + j];
+param Obj2[<i,j> in I*I] := coeffs[(i-1)*no_vars + j + offset];
+param Obj3[<i,j> in I*I] := coeffs[(i-1)*no_vars + j + 2*offset];
+
+var x[I*I] binary;
+
+minimize Obj1: sum <i,j> in I*I: Obj1[i,j]*x[i,j];
+Obj2: sum <i,j> in I*I: Obj2[i,j]*x[i,j];
+Obj3: sum <i,j> in I*I: Obj3[i,j]*x[i,j];
+
+subto row: forall <i> in I do
+      sum <j> in I: x[i,j] == 1;
+subto col: forall <i> in I do
+      sum <j> in I: x[j,i] == 1;
+\end{verbatim}
+
+Again, saving the file, e.g., as testCube.zpl and running \texttt{mult\_zimpl\_to\_mop.py} on it would generate a file named \texttt{testCube.mop} which can be solved with PolySCIP.
+\end{ex}
+
+Please see the Zimpl
+\href{http://zimpl.zib.de/download/zimpl.pdf}{user guide} for more
+modelling details.
+
+\begin{thebibliography}{}
+\bibitem{mps-format} MPS format (short),
+  \url{https://en.wikipedia.org/wiki/MPS_%28format%29}
+
+\bibitem{mps-format2} MPS format (detailed),
+  \url{http://lpsolve.sourceforge.net/5.5/mps-format.htm}
+
+\bibitem{ZIMPL} ZIMPL webpage,
+  \url{http://zimpl.scip.de}
+\end{thebibliography}
+
+\end{document}

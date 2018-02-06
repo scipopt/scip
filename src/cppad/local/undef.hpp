@@ -1,12 +1,12 @@
-/* $Id: undef.hpp 3067 2013-12-29 17:35:34Z bradbell $ */
-# ifndef CPPAD_UNDEF_INCLUDED
-# define CPPAD_UNDEF_INCLUDED
+// $Id$
+# ifndef CPPAD_UNDEF_HPP
+# define CPPAD_UNDEF_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -29,11 +29,15 @@ Preprecessor definitions that presist after cppad/cppad.hpp is included:
 # undef CPPAD_EIGENVECTOR         in user api
 # undef CPPAD_INTERNAL_SPARSE_SET in user api
 # undef CPPAD_MAX_NUM_THREADS     in user api
+# undef CPPAD_NUMERIC_LIMITS      in user api
 # undef CPPAD_NULL                in user api
 # undef CPPAD_PACKAGE_STRING      in user api
+# undef CPPAD_STANDARD_MATH_UNARY in user api
 # undef CPPAD_TAPE_ADDR_TYPE      in user api
 # undef CPPAD_TAPE_ID_TYPE        in user api
 # undef CPPAD_TESTVECTOR          in user api
+# undef CPPAD_TO_STRING           in user api
+# undef CPPAD_USE_CPLUSPLUS_2011  in user api
 
 # undef CPPAD_TRACK_COUNT    in deprecated api
 # undef CPPAD_TRACK_DEL_VEC  in deprecated api
@@ -52,12 +56,13 @@ Preprecessor definitions that presist after cppad/cppad.hpp is included:
 # undef CppADvector           deprecated version of CPPAD_TEST_VECTOR
 
 // for conditional testing when implicit conversion is not present
-# undef CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE
+# undef CPPAD_DEPRECATED
 -----------------------------------------------------------------------------
 */
-// Preprecessor definitions that do not presist 
+// Preprecessor definitions that do not presist
 # undef CPPAD_ASSERT_NARG_NRES
-# undef CPPAD_ASSERT_NOT_PARALLEL
+# undef CPPAD_ASSERT_ARG_BEFORE_RESULT
+# undef CPPAD_AZMUL
 # undef CPPAD_BOOSTVECTOR
 # undef CPPAD_COND_EXP
 # undef CPPAD_COND_EXP_BASE_REL
@@ -67,23 +72,24 @@ Preprecessor definitions that presist after cppad/cppad.hpp is included:
 # undef CPPAD_FOLD_ASSIGNMENT_OPERATOR
 # undef CPPAD_FOLD_BOOL_VALUED_BINARY_OPERATOR
 # undef CPPAD_FOR_JAC_SWEEP_TRACE
+# undef CPPAD_HAS_COLPACK
 # undef CPPAD_HAS_GETTIMEOFDAY
-# undef CPPAD_HAS_NULLPTR
+# undef CPPAD_HAS_MKSTEMP
+# undef CPPAD_HAS_TMPNAM_S
 # undef CPPAD_INLINE_FRIEND_TEMPLATE_FUNCTION
+# undef CPPAD_LIB_EXPORT
 # undef CPPAD_MAX_NUM_CAPACITY
 # undef CPPAD_MIN_DOUBLE_CAPACITY
 # undef CPPAD_OP_CODE_TYPE
 # undef CPPAD_REVERSE_SWEEP_TRACE
 # undef CPPAD_REV_HES_SWEEP_TRACE
 # undef CPPAD_REV_JAC_SWEEP_TRACE
-# undef CPPAD_SIZE_T_SAME_UNSIGNED_INT
-# undef CPPAD_STANDARD_MATH_UNARY
+# undef CPPAD_SIZE_T_NOT_UNSIGNED_INT
 # undef CPPAD_STANDARD_MATH_UNARY_AD
 # undef CPPAD_STDVECTOR
 # undef CPPAD_TRACE_CAPACITY
 # undef CPPAD_TRACE_THREAD
 # undef CPPAD_TRACK_DEBUG
-# undef CPPAD_USE_FORWARD0SWEEP
 # undef CPPAD_USER_MACRO
 # undef CPPAD_USER_MACRO_ONE
 # undef CPPAD_USER_MACRO_TWO

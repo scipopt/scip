@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cppmain.cpp
+/**@file   examples/TSP/src/cppmain.cpp
  * @brief  main file for C++ TSP example using SCIP as a callable library
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -116,6 +116,9 @@ SCIP_RETCODE runSCIP(
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
+
+   /* we explicitly enable the use of a debug solution for this main SCIP instance */
+   SCIPenableDebugSol(scip);
 
    /* include TSP specific plugins */
    SCIP_CALL( SCIPincludeObjReader(scip, new ReaderTSP(scip), TRUE) );

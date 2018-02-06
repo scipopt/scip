@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -33,17 +33,20 @@
 extern "C" {
 #endif
 
-typedef struct _ITV{
+typedef struct _ITV
+{
    int inf;
    int sup;
 } ITV;
 
-typedef struct _LIST_ITV{
+typedef struct _LIST_ITV
+{
    ITV itv;
    struct _LIST_ITV *next;
 } LIST_ITV;
 
-typedef struct _NBC{
+typedef struct _NBC
+{
    int satdeg;
    LIST_ITV *lcitv;
 } NBC;
@@ -51,25 +54,24 @@ typedef struct _NBC{
 
 
 
-/** colors the positive weighted nodes of a given set of nodes V with the lowest possible number of colors and 
- *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps
- */
+/** colors the positive weighted nodes of a given set of nodes V with the lowest possible number of colors and
+ *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps */
 extern
 TCLIQUE_WEIGHT tcliqueColoring( 
-   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
-   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
-   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
-   BMS_CHKMEM*      mem,                /**< block memory */
-   int*             buffer,             /**< buffer of size nnodes */
-   int*             V,                  /**< non-zero weighted nodes for branching */
-   int              nV,                 /**< number of non-zero weighted nodes for branching */
-   NBC*             gsd,                /**< neighbour color information of all nodes */
-   TCLIQUE_Bool*    iscolored,          /**< coloring status of all nodes */
-   TCLIQUE_WEIGHT*  apbound,            /**< pointer to store apriori bound of nodes for branching */ 
-   int*             clique,             /**< buffer for storing the clique */
-   int*             nclique,            /**< pointer to store number of nodes in the clique */
-   TCLIQUE_WEIGHT*  weightclique        /**< pointer to store the weight of the clique */
+   TCLIQUE_GETNNODES((*getnnodes)),          /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),        /**< user function to get the node weights */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)),/**< user function to select adjacent edges */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< pointer to graph data structure */
+   BMS_CHKMEM*           mem,                /**< block memory */
+   int*                  buffer,             /**< buffer of size nnodes */
+   int*                  V,                  /**< non-zero weighted nodes for branching */
+   int                   nV,                 /**< number of non-zero weighted nodes for branching */
+   NBC*                  gsd,                /**< neighbour color information of all nodes */
+   TCLIQUE_Bool*         iscolored,          /**< coloring status of all nodes */
+   TCLIQUE_WEIGHT*       apbound,            /**< pointer to store apriori bound of nodes for branching */
+   int*                  clique,             /**< buffer for storing the clique */
+   int*                  nclique,            /**< pointer to store number of nodes in the clique */
+   TCLIQUE_WEIGHT*       weightclique        /**< pointer to store the weight of the clique */
    );
 
 #ifdef __cplusplus

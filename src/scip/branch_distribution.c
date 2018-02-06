@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -275,7 +275,7 @@ void SCIPvarCalcDistributionParameters(
  *  random variable x takes a value between -infinity and parameter \p value.
  *
  *  The distribution is given by the respective mean and deviation. This implementation
- *  uses the error function erf().
+ *  uses the error function SCIPerf().
  */
 SCIP_Real SCIPcalcCumulativeDistribution(
    SCIP*                 scip,               /**< current SCIP */
@@ -304,13 +304,13 @@ SCIP_Real SCIPcalcCumulativeDistribution(
    }
    assert( std != 0.0 ); /* for lint */
 
-   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for erf() function */
+   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
    normvalue = (value - mean)/(std * SQRTOFTWO);
 
-   SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
+   SCIPdebugMsg(scip, " Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
 
    /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate
-    * the normvalue and use the oddness of the erf()-function; special treatment for values close to zero.
+    * the normvalue and use the oddness of the SCIPerf()-function; special treatment for values close to zero.
     */
    if( SCIPisFeasZero(scip, normvalue) )
       return .5;
@@ -318,14 +318,14 @@ SCIP_Real SCIPcalcCumulativeDistribution(
    {
       SCIP_Real erfresult;
 
-      erfresult = erf(normvalue);
+      erfresult = SCIPerf(normvalue);
       return  erfresult / 2.0 + 0.5;
    }
    else
    {
       SCIP_Real erfresult;
 
-      erfresult = erf(-normvalue);
+      erfresult = SCIPerf(-normvalue);
 
       return 0.5 - erfresult / 2.0;
    }
@@ -390,7 +390,7 @@ SCIP_Real SCIProwCalcProbability(
       rowprobability = MIN(rhsprob, lhsprob);
 
    SCIPdebug( SCIPprintRow(scip, row, NULL) );
-   SCIPdebugMessage(" Row %s, mean %g, sigma2 %g, LHS %g, RHS %g has probability %g to be satisfied\n",
+   SCIPdebugMsg(scip, " Row %s, mean %g, sigma2 %g, LHS %g, RHS %g has probability %g to be satisfied\n",
       SCIProwGetName(row), mu, sigma2, lhs, rhs, rowprobability);
 
    assert(SCIPisFeasGE(scip, rowprobability, 0.0) && SCIPisFeasLE(scip, rowprobability, 1.0));
@@ -515,7 +515,7 @@ void rowCalculateGauss(
    }
 
    SCIPdebug( SCIPprintRow(scip, row, NULL) );
-   SCIPdebugMessage("  Row %s has a mean value of %g at a sigma2 of %g \n", SCIProwGetName(row), *mu, *sigma2);
+   SCIPdebugMsg(scip, "  Row %s has a mean value of %g at a sigma2 of %g \n", SCIProwGetName(row), *mu, *sigma2);
 }
 
 /** update the up- and downscore of a single variable after calculating the impact of branching on a
@@ -773,9 +773,9 @@ SCIP_RETCODE calcBranchScore(
       /* update the up and down score depending on the chosen scoring parameter */
       SCIP_CALL( SCIPupdateDistributionScore(scip, currentrowprob, newrowprobup, newrowprobdown, upscore, downscore, scoreparam) );
 
-      SCIPdebugMessage("  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
+      SCIPdebugMsg(scip, "  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
          SCIPvarGetName(var), SCIProwGetName(row), currentrowprob, newrowprobup, newrowprobdown);
-      SCIPdebugMessage("  -->  new variable score: %g (for branching up), %g (for branching down)\n",
+      SCIPdebugMsg(scip, "  -->  new variable score: %g (for branching up), %g (for branching down)\n",
          *upscore, *downscore);
    }
 
@@ -784,7 +784,7 @@ SCIP_RETCODE calcBranchScore(
 
 /** free branchrule data */
 static
-SCIP_RETCODE branchruledataFreeArrays(
+void branchruledataFreeArrays(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
@@ -801,8 +801,6 @@ SCIP_RETCODE branchruledataFreeArrays(
 
       branchruledata->memsize = 0;
    }
-
-   return SCIP_OKAY;
 }
 
 /** add variable to the bound change event queue; skipped if variable is already in there, or if variable has
@@ -1015,7 +1013,7 @@ SCIP_DECL_EVENTFREE(eventFreeDistribution)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
@@ -1049,7 +1047,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolDistribution)
    assert(branchruledata != NULL);
 
    /* free row arrays when branch-and-bound data is freed */
-   SCIP_CALL( branchruledataFreeArrays(scip, branchruledata) );
+   branchruledataFreeArrays(scip, branchruledata);
 
    /* drop variable events at the end of branch and bound process (cannot be used after restarts, anyway) */
    if( branchruledata->varfilterposs != NULL)
@@ -1084,8 +1082,8 @@ SCIP_DECL_BRANCHFREE(branchFreeDistribution)
    assert(branchruledata != NULL);
 
    /* free internal arrays first */
-   SCIP_CALL( branchruledataFreeArrays(scip, branchruledata) );
-   SCIPfreeMemory(scip, &branchruledata);
+   branchruledataFreeArrays(scip, branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -1115,7 +1113,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands, NULL) );
 
    if( nlpcands == 0 )
       return SCIP_OKAY;
@@ -1235,14 +1233,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
          }
       }
 
-      SCIPdebugMessage("  Candidate %s has score down %g and up %g \n", SCIPvarGetName(lpcand), downscore, upscore);
-      SCIPdebugMessage("  Best candidate: %s, score %g, direction %d\n", SCIPvarGetName(bestcand), bestscore, bestbranchdir);
+      SCIPdebugMsg(scip, "  Candidate %s has score down %g and up %g \n", SCIPvarGetName(lpcand), downscore, upscore);
+      SCIPdebugMsg(scip, "  Best candidate: %s, score %g, direction %d\n", SCIPvarGetName(bestcand), bestscore, bestbranchdir);
    }
-
+   assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(bestcand, TRUE)));
    assert(bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS || bestbranchdir == SCIP_BRANCHDIR_UPWARDS);
    assert(bestcand != NULL);
 
-   SCIPdebugMessage("  Branching on variable %s with bounds [%g, %g] and solution value <%g>\n", SCIPvarGetName(bestcand),
+   SCIPdebugMsg(scip, "  Branching on variable %s with bounds [%g, %g] and solution value <%g>\n", SCIPvarGetName(bestcand),
       SCIPvarGetLbLocal(bestcand), SCIPvarGetUbLocal(bestcand), SCIPvarGetLPSol(bestcand));
 
    /* branch on the best candidate variable */
@@ -1254,13 +1252,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
    if( bestbranchdir == SCIP_BRANCHDIR_UPWARDS )
    {
       SCIP_CALL( SCIPchgChildPrio(scip, upchild, DEFAULT_PRIORITY) );
-      SCIPdebugMessage("  Changing node priority of up-child.\n");
+      SCIPdebugMsg(scip, "  Changing node priority of up-child.\n");
    }
    else
    {
       assert(bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS);
       SCIP_CALL( SCIPchgChildPrio(scip, downchild, DEFAULT_PRIORITY) );
-      SCIPdebugMessage("  Changing node priority of down-child.\n");
+      SCIPdebugMsg(scip, "  Changing node priority of down-child.\n");
    }
 
    *result = SCIP_BRANCHED;
@@ -1305,7 +1303,7 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
 
    /* create distribution branching rule data */
    branchruledata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
 
    branchruledata->memsize = 0;
    branchruledata->rowmeans = NULL;
@@ -1318,7 +1316,7 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
 
    /* create event handler first to finish branch rule data */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->branchruledata = branchruledata;
 
    branchruledata->eventhdlr = NULL;
@@ -1339,15 +1337,15 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpDistribution) );
 
    /* add distribution branching rule parameters */
-   SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/scoreparam",
+   SCIP_CALL( SCIPaddCharParam(scip, "branching/" BRANCHRULE_NAME "/scoreparam",
          "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w') ",
          &branchruledata->scoreparam, TRUE, DEFAULT_SCOREPARAM, SCOREPARAM_VALUES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/"BRANCHRULE_NAME"/onlyactiverows",
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/" BRANCHRULE_NAME "/onlyactiverows",
          "should only rows which are active at the current node be considered?",
          &branchruledata->onlyactiverows, TRUE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/"BRANCHRULE_NAME"/weightedscore",
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/" BRANCHRULE_NAME "/weightedscore",
          "should the branching score weigh up- and down-scores of a variable",
          &branchruledata->usescipscore, TRUE, DEFAULT_USEWEIGHTEDSCORE, NULL, NULL) );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,7 @@
 #define PRESOL_DESC            "implication graph aggregator"
 #define PRESOL_PRIORITY          -10000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 
 /*
@@ -174,7 +174,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
                else
                   bdchgvals[nbdchgs] = MAX(implbounds[0][i0], implbounds[1][i1]);
 
-               SCIPdebugMessage(" -> <%s> = 0 -> <%s> %s %g, and <%s> = 1 -> <%s> %s %g:  tighten <%s> %s %g\n",
+               SCIPdebugMsg(scip, " -> <%s> = 0 -> <%s> %s %g, and <%s> = 1 -> <%s> %s %g:  tighten <%s> %s %g\n",
                   SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[0][i0]),
                   impltypes[0][i0] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbounds[0][i0],
                   SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[1][i1]),
@@ -206,7 +206,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
                   aggrcoefs[naggregations] = implvarub - implvarlb;
                   aggrconsts[naggregations] = implvarlb;
 
-                  SCIPdebugMessage(" -> <%s> = 0 -> <%s> = %g, and <%s> = 1 -> <%s> = %g:  aggregate <%s> = %g %+g<%s>\n",
+                  SCIPdebugMsg(scip, " -> <%s> = 0 -> <%s> = %g, and <%s> = 1 -> <%s> = %g:  aggregate <%s> = %g %+g<%s>\n",
                      SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[0][i0]), implbounds[0][i0],
                      SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[1][i1]), implbounds[1][i1],
                      SCIPvarGetName(aggrvars[naggregations]), aggrconsts[naggregations], aggrcoefs[naggregations],
@@ -228,7 +228,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
                   aggrcoefs[naggregations] = implvarlb - implvarub;
                   aggrconsts[naggregations] = implvarub;
 
-                  SCIPdebugMessage(" -> <%s> = 0 -> <%s> = %g, and <%s> = 1 -> <%s> = %g:  aggregate <%s> = %g %+g<%s>\n",
+                  SCIPdebugMsg(scip, " -> <%s> = 0 -> <%s> = %g, and <%s> = 1 -> <%s> = %g:  aggregate <%s> = %g %+g<%s>\n",
                      SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[0][i0]), implbounds[0][i0],
                      SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[1][i1]), implbounds[1][i1],
                      SCIPvarGetName(aggrvars[naggregations]), aggrconsts[naggregations], aggrcoefs[naggregations],
@@ -272,7 +272,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
 
       if( infeasible )
       {
-         SCIPdebugMessage(" -> infeasible bound change <%s> %s %g\n", SCIPvarGetName(bdchgvars[v]),
+         SCIPdebugMsg(scip, " -> infeasible bound change <%s> %s %g\n", SCIPvarGetName(bdchgvars[v]),
             bdchgtypes[v] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bdchgvals[v]);
          *result = SCIP_CUTOFF;
       }
@@ -304,7 +304,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
             &infeasible, &redundant, &aggregated) );
       if( infeasible )
       {
-         SCIPdebugMessage(" -> infeasible aggregation <%s> = %g %+g<%s>\n",
+         SCIPdebugMsg(scip, " -> infeasible aggregation <%s> = %g %+g<%s>\n",
             SCIPvarGetName(aggrvars[v]), aggrconsts[v], aggrcoefs[v], SCIPvarGetName(aggraggvars[v]));
          *result = SCIP_CUTOFF;
       }
@@ -337,16 +337,10 @@ SCIP_RETCODE SCIPincludePresolImplics(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presolptr;
 
-   /* create implics presolver data */
-   presoldata = NULL;
-
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolExecImplics,
-         presoldata) );
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING, presolExecImplics, NULL) );
 
    assert(presolptr != NULL);
 

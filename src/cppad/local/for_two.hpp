@@ -1,12 +1,12 @@
-/* $Id: for_two.hpp 2683 2012-12-30 18:17:03Z bradbell $ */
-# ifndef CPPAD_FOR_TWO_INCLUDED
-# define CPPAD_FOR_TWO_INCLUDED
+// $Id$
+# ifndef CPPAD_FOR_TWO_HPP
+# define CPPAD_FOR_TWO_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -23,16 +23,11 @@ $spell
 $$
 
 
-$index partial, second order driver$$
-$index second, order partial driver$$
-$index driver, second order partial$$
 
-$index easy, partial$$
-$index driver, easy partial$$
-$index partial, easy$$
 
 
 $section Forward Mode Second Partial Derivative Driver$$
+$mindex order easy$$
 
 $head Syntax$$
 $icode%ddy% = %f%.ForTwo(%x%, %j%, %k%)%$$
@@ -41,11 +36,11 @@ $icode%ddy% = %f%.ForTwo(%x%, %j%, %k%)%$$
 $head Purpose$$
 We use $latex F : B^n \rightarrow B^m$$ to denote the
 $cref/AD function/glossary/AD Function/$$ corresponding to $icode f$$.
-The syntax above sets 
+The syntax above sets
 $latex \[
 	ddy [ i * p + \ell ]
 	=
-	\DD{ F_i }{ x_{j[ \ell ]} }{ x_{k[ \ell ]} } (x) 
+	\DD{ F_i }{ x_{j[ \ell ]} }{ x_{k[ \ell ]} } (x)
 \] $$
 for $latex i = 0 , \ldots , m-1$$
 and $latex \ell = 0 , \ldots , p$$,
@@ -65,7 +60,7 @@ $codei%
 	const %VectorBase% &%x%
 %$$
 (see $cref/VectorBase/ForTwo/VectorBase/$$ below)
-and its size 
+and its size
 must be equal to $icode n$$, the dimension of the
 $cref/domain/seq_property/Domain/$$ space for $icode f$$.
 It specifies
@@ -78,7 +73,7 @@ $codei%
 %$$
 (see $cref/VectorSize_t/ForTwo/VectorSize_t/$$ below)
 We use $icode p$$ to denote the size of the vector $icode j$$.
-All of the indices in $icode j$$ 
+All of the indices in $icode j$$
 must be less than $icode n$$; i.e.,
 for $latex \ell = 0 , \ldots , p-1$$, $latex j[ \ell ]  < n$$.
 
@@ -90,7 +85,7 @@ $codei%
 (see $cref/VectorSize_t/ForTwo/VectorSize_t/$$ below)
 and its size must be equal to $icode p$$,
 the size of the vector $icode j$$.
-All of the indices in $icode k$$ 
+All of the indices in $icode k$$
 must be less than $icode n$$; i.e.,
 for $latex \ell = 0 , \ldots , p-1$$, $latex k[ \ell ]  < n$$.
 
@@ -102,12 +97,12 @@ $codei%
 (see $cref/VectorBase/ForTwo/VectorBase/$$ below)
 and its size is $latex m * p$$.
 It contains the requested partial derivatives; to be specific,
-for $latex i = 0 , \ldots , m - 1 $$ 
+for $latex i = 0 , \ldots , m - 1 $$
 and $latex \ell = 0 , \ldots , p - 1$$
 $latex \[
 	ddy [ i * p + \ell ]
 	=
-	\DD{ F_i }{ x_{j[ \ell ]} }{ x_{k[ \ell ]} } (x) 
+	\DD{ F_i }{ x_{j[ \ell ]} }{ x_{k[ \ell ]} } (x)
 \] $$
 
 $head VectorBase$$
@@ -124,7 +119,7 @@ if this is not the case.
 
 $head ForTwo Uses Forward$$
 After each call to $cref Forward$$,
-the object $icode f$$ contains the corresponding 
+the object $icode f$$ contains the corresponding
 $cref/Taylor coefficients/glossary/Taylor Coefficient/$$.
 After a call to $code ForTwo$$,
 the zero order Taylor coefficients correspond to
@@ -135,7 +130,7 @@ $head Examples$$
 $children%
 	example/for_two.cpp
 %$$
-The routine 
+The routine
 $cref/ForTwo/for_two.cpp/$$ is both an example and test.
 It returns $code true$$, if it succeeds and $code false$$ otherwise.
 
@@ -149,7 +144,7 @@ namespace CppAD {
 template <typename Base>
 template <typename VectorBase, typename VectorSize_t>
 VectorBase ADFun<Base>::ForTwo(
-	const VectorBase   &x, 
+	const VectorBase   &x,
 	const VectorSize_t &j,
 	const VectorSize_t &k)
 {	size_t i;
@@ -170,7 +165,7 @@ VectorBase ADFun<Base>::ForTwo(
 	CPPAD_ASSERT_KNOWN(
 		x.size() == n,
 		"ForTwo: Length of x not equal domain dimension for f."
-	); 
+	);
 	CPPAD_ASSERT_KNOWN(
 		j.size() == k.size(),
 		"ForTwo: Lenght of the j and k vectors are not equal."
@@ -224,7 +219,7 @@ VectorBase ADFun<Base>::ForTwo(
 				dy     = Forward(2, dx);
 				for(i = 0; i < m; i++)
 					D[i * n + j1 ] = dy[i];
-			} 
+			}
 			j1 = k1;
 		}
 	}

@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-EXAMPLES=(Coloring Binpacking Eventhdlr GMI LOP MIPSolver Queens Scheduler TSP VRP CallableLibrary)
+EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens TSP VRP)
 
 for EXAMPLE in ${EXAMPLES[@]}
 do

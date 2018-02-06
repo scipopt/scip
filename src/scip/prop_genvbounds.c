@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,8 +43,7 @@
                                               *   found reductions? */
 #define PROP_PRESOL_PRIORITY        -2000000 /**< priority of the presolving method (>= 0: before, < 0: after
                                               *   constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY              FALSE /**< should presolving be delay, if other presolvers found
-                                              *   reductions? */
+#define PROP_PRESOLTIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolving method (fast, medium, or exhaustive) */
 #define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates
                                               *   in (-1: no limit) */
 #define DEFAULT_GLOBAL_PROPAGATION      TRUE /**< apply global propagation? */
@@ -70,6 +69,7 @@ struct GenVBound
    SCIP_Real*            coefs;              /**< coefficients a_j of the variables listed in vars */
    SCIP_Real             constant;           /**< constant term in generalized variable bound */
    SCIP_Real             cutoffcoef;         /**< cutoff bound's coefficient */
+   int                   coefssize;          /**< size of coefs array */
    int                   index;              /**< index of this genvbound in genvboundstore array */
    int                   ncoefs;             /**< number of nonzero coefficients a_j */
    SCIP_BOUNDTYPE        boundtype;          /**< type of bound provided by the genvbound, SCIP_BOUNDTYPE_LOWER/UPPER
@@ -86,6 +86,7 @@ struct SCIP_EventData
                                               *   impacted by a change of this bound */
    int*                  startcomponents;    /**< array to store the components corresponding to startindices array */
    int                   nstarts;            /**< number of indices stored in startindices array */
+   int                   startindicessize;   /**< size of the startindices and startcomponents arrays */
 };
 
 /** propagator data */
@@ -109,11 +110,14 @@ struct SCIP_PropData
    int*                  componentsstart;    /**< stores the components starting indices in genvboundstore array; the
                                               *   entry componentsstart[ncomponents] is equal to ngenvbounds, which
                                               *   makes it easier to iterate over all components */
+   int                   componentsstartsize;/**< size of componentsstart array */
    int*                  startindices;       /**< storing indices of components where local propagation should start */
    int*                  startcomponents;    /**< components corresponding to indices stored in startindices array */
+   int                   startindicessize;   /**< size of startindices and startcomponents arrays */
    int*                  gstartindices;      /**< storing indices of components where global propagation, i.e.,
                                               *   propagation of an improved primal bound, should start */
    int*                  gstartcomponents;   /**< components corresponding to indices stored in gstartindices array */
+   int                   gstartindicessize;  /**< size of gstartindices and gstartcomponents arrays */
    SCIP_Real             lastcutoff;         /**< cutoff bound's value last time genvbounds propagator was called */
    int                   genvboundstoresize; /**< size of genvboundstore array */
    int                   ngenvbounds;        /**< number of genvbounds stored in genvboundstore array */
@@ -143,7 +147,7 @@ SCIP_Real getCutoffboundGenVBound(
 {
    assert(scip != NULL);
 
-   SCIPdebugMessage("cutoff = %.9g (%.9g + %.9g * %.9g)\n",
+   SCIPdebugMsg(scip, "cutoff = %.9g (%.9g + %.9g * %.9g)\n",
       (SCIPgetCutoffbound(scip) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip),
       SCIPgetCutoffbound(scip), SCIPgetTransObjoffset(scip), SCIPgetTransObjscale(scip));
 
@@ -191,35 +195,35 @@ void printGenVBound(
 
    if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER )
    {
-      SCIPdebugPrintf("- ");
+      SCIPdebugMsgPrint(scip, "- ");
    }
 
-   SCIPdebugPrintf("<%s> >= ", SCIPvarGetName(genvbound->var));
+   SCIPdebugMsgPrint(scip, "<%s> >= ", SCIPvarGetName(genvbound->var));
 
    first = TRUE;
    for( i = 0; i < genvbound->ncoefs; i++ )
    {
       if( !first )
       {
-         SCIPdebugPrintf(" + ");
+         SCIPdebugMsgPrint(scip, " + ");
       }
 
-      SCIPdebugPrintf("%g * <%s>", genvbound->coefs[i], SCIPvarGetName(genvbound->vars[i]));
+      SCIPdebugMsgPrint(scip, "%g * <%s>", genvbound->coefs[i], SCIPvarGetName(genvbound->vars[i]));
 
       first = FALSE;
    }
 
    if( !SCIPisZero(scip, genvbound->cutoffcoef) )
    {
-      SCIPdebugPrintf(" + %g * cutoff_bound", genvbound->cutoffcoef);
+      SCIPdebugMsgPrint(scip, " + %g * cutoff_bound", genvbound->cutoffcoef);
    }
 
    if( !SCIPisZero(scip, genvbound->constant) )
    {
-      SCIPdebugPrintf(" + %g", genvbound->constant);
+      SCIPdebugMsgPrint(scip, " + %g", genvbound->constant);
    }
 
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 }
 #endif
 
@@ -288,12 +292,10 @@ SCIP_Real getGenVBoundsMinActivityConflict(
    {
       SCIP_Real bound;
 
-      assert(!SCIPisZero(scip, coefs[i]));
-
       if( coefs[i] > 0.0 )
       {
          /* get bound at current bound change */
-         bound = SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE);
+         bound = SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE);
 
          /* if bdchgidx is NULL, assert that we use local bounds */
          assert(bdchgidx != NULL || SCIPisEQ(scip, bound, SCIPvarGetLbLocal(vars[i])));
@@ -305,7 +307,7 @@ SCIP_Real getGenVBoundsMinActivityConflict(
       else
       {
          /* get bound at current bound change */
-         bound = SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE);
+         bound = SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE);
 
          /* if bdchgidx is NULL, assert that we use local bounds */
          assert(bdchgidx != NULL || SCIPisEQ(scip, bound, SCIPvarGetUbLocal(vars[i])));
@@ -355,7 +357,7 @@ SCIP_Real getGenVBoundsBound(
    return boundval;
 }
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
 /** checks whether a generalized variable bound violates the debug solution */
 static
 SCIP_RETCODE checkDebugSolutionGenVBound(
@@ -374,6 +376,13 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
    if( !SCIPdebugIsMainscip(scip) )
       return SCIP_OKAY;
 
+   /* the genvbound must be valid for all cutoff bounds greater equal the objective value of the debug solution */
+   SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+
+   /* check whether a debug solution is available */
+   if( debugsol == NULL )
+      return SCIP_OKAY;
+
    activity = 0.0;
    for( i = 0; i < genvbound->ncoefs; i++ )
    {
@@ -385,8 +394,6 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
             solval == SCIP_UNKNOWN ? "unknown" : "invalid");
    }
 
-   /* the genvbound must be valid for all cutoff bounds greater equal the objective value of the debug solution */
-   SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
    activity += genvbound->cutoffcoef *
       (SCIPgetSolTransObj(scip, debugsol) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip);
    activity += genvbound->constant;
@@ -430,16 +437,18 @@ SCIP_RETCODE createStartingData(
    assert(propdata->ngenvbounds >= 1);
    assert(propdata->ncomponents >= 1);
 
-   SCIPdebugMessage("create starting data\n");
+   SCIPdebugMsg(scip, "create starting data\n");
 
    /* allocate memory for arrays */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->startindices), propdata->ncomponents) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->startcomponents), propdata->ncomponents) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->gstartindices), propdata->ncomponents) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->gstartcomponents), propdata->ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->startindices), propdata->ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->startcomponents), propdata->ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->gstartindices), propdata->ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->gstartcomponents), propdata->ncomponents) );
+   propdata->startindicessize = propdata->ncomponents;
+   propdata->gstartindicessize = propdata->ncomponents;
 
    /* create hashmap */
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->startmap), SCIPblkmem(scip), SCIPcalcHashtableSize(propdata->ncomponents)) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->startmap), SCIPblkmem(scip), propdata->ncomponents) );
 
    propdata->nindices = 0;
    propdata->ngindices = 0;
@@ -457,7 +466,7 @@ SCIP_RETCODE freeStartingData(
    assert(scip != NULL);
    assert(propdata != NULL);
 
-   SCIPdebugMessage("free starting data\n");
+   SCIPdebugMsg(scip, "free starting data\n");
 
    if( propdata->startcomponents != NULL )
    {
@@ -465,8 +474,9 @@ SCIP_RETCODE freeStartingData(
       assert(propdata->startmap != NULL);
       assert(propdata->nindices >= 0);
 
-      SCIPfreeMemoryArray(scip, &(propdata->startindices));
-      SCIPfreeMemoryArray(scip, &(propdata->startcomponents));
+      SCIPfreeBlockMemoryArray(scip, &(propdata->startindices), propdata->startindicessize);
+      SCIPfreeBlockMemoryArray(scip, &(propdata->startcomponents), propdata->startindicessize);
+      propdata->startindicessize = 0;
       SCIPhashmapFree(&(propdata->startmap));
       propdata->nindices = -1;
 
@@ -474,8 +484,9 @@ SCIP_RETCODE freeStartingData(
       assert(propdata->gstartcomponents != NULL);
       assert(propdata->ngindices >= 0);
 
-      SCIPfreeMemoryArray(scip, &(propdata->gstartindices));
-      SCIPfreeMemoryArray(scip, &(propdata->gstartcomponents));
+      SCIPfreeBlockMemoryArray(scip, &(propdata->gstartindices), propdata->gstartindicessize);
+      SCIPfreeBlockMemoryArray(scip, &(propdata->gstartcomponents), propdata->gstartindicessize);
+      propdata->gstartindicessize = 0;
       propdata->ngindices = -1;
    }
 
@@ -506,7 +517,7 @@ SCIP_RETCODE fillGlobalStartingData(
    assert(propdata->gstartcomponents != NULL);
    assert(propdata->ngindices == 0);
 
-   SCIPdebugMessage("fill global starting data\n");
+   SCIPdebugMsg(scip, "fill global starting data\n");
 
    for( i = 0; i < propdata->ncomponents; i++ )
    {
@@ -531,8 +542,14 @@ SCIP_RETCODE fillGlobalStartingData(
    }
 
    /* resize arrays */
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &(propdata->gstartindices), propdata->ngindices) );
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &(propdata->gstartcomponents), propdata->ngindices) );
+   if( propdata->gstartindicessize != propdata->ngindices )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartindices), propdata->gstartindicessize, \
+            propdata->ngindices) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartcomponents), propdata->gstartindicessize, \
+            propdata->ngindices) );
+      propdata->gstartindicessize = propdata->ngindices;
+   }
 
    return SCIP_OKAY;
 }
@@ -568,13 +585,14 @@ SCIP_RETCODE freeComponentsData(
    assert(scip != NULL);
    assert(propdata != NULL);
 
-   SCIPdebugMessage("free components data\n");
+   SCIPdebugMsg(scip, "free components data\n");
 
    if( propdata->componentsstart != NULL )
    {
       assert(propdata->ncomponents > 0);
 
-      SCIPfreeMemoryArray(scip, &(propdata->componentsstart));
+      SCIPfreeBlockMemoryArray(scip, &(propdata->componentsstart), propdata->componentsstartsize);
+      propdata->componentsstartsize = 0;
       propdata->ncomponents = -1;
    }
 
@@ -591,15 +609,75 @@ SCIP_RETCODE freeGenVBound(
    GENVBOUND*            genvbound
    )
 {
+   int i;
+
    assert(scip != NULL);
    assert(genvbound != NULL);
    assert(genvbound->coefs != NULL);
    assert(genvbound->vars != NULL);
+   assert(genvbound->var != NULL);
 
-   SCIPfreeMemoryArray(scip, &(genvbound->coefs));
-   SCIPfreeMemoryArray(scip, &(genvbound->vars));
+   /* release variables */
+   for( i = 0; i < genvbound->ncoefs; ++i )
+   {
+      assert(genvbound->vars[i] != NULL);
+      SCIP_CALL( SCIPreleaseVar(scip, &(genvbound->vars[i])) );
+   }
+   SCIP_CALL( SCIPreleaseVar(scip, &genvbound->var) );
 
-   SCIPfreeMemory(scip, &genvbound);
+   /* free memory */
+   SCIPfreeBlockMemoryArray(scip, &(genvbound->coefs), genvbound->coefssize);
+   SCIPfreeBlockMemoryArray(scip, &(genvbound->vars), genvbound->coefssize);
+   SCIPfreeBlockMemory(scip, &genvbound);
+
+   return SCIP_OKAY;
+}
+
+/** helper function to release all genvbounds */
+static
+SCIP_RETCODE freeGenVBounds(
+   SCIP*                 scip,
+   SCIP_PROPDATA*        propdata
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+
+   if( propdata->genvboundstore != NULL )
+   {
+      /* free genvbounds */
+      for( i = propdata->ngenvbounds - 1; i >= 0; i-- )
+      {
+         SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
+      }
+
+      /* free genvboundstore hashmaps */
+      SCIPhashmapFree(&(propdata->lbgenvbounds));
+      SCIPhashmapFree(&(propdata->ubgenvbounds));
+
+      /* free genvboundstore array */
+      SCIPfreeBlockMemoryArray(scip, &(propdata->genvboundstore), propdata->genvboundstoresize);
+
+      /* set the number of genvbounds to zero */
+      propdata->ngenvbounds = 0;
+
+      /* free componentsstart array */
+      SCIP_CALL( freeComponentsData(scip, propdata) );
+
+      /* free starting indices data */
+      SCIP_CALL( freeStartingData(scip, propdata) );
+
+      /* release the cutoffboundvar and undo the locks */
+      if( propdata->cutoffboundvar != NULL )
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(propdata->cutoffboundvar)) );
+         propdata->cutoffboundvar = NULL;
+         SCIPdebugMsg(scip, "release cutoffboundvar!\n");
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -645,9 +723,9 @@ SCIP_RETCODE resolveGenVBoundPropagation(
     * left-hand side variable
     */
    assert(bdchgidx == NULL || genvbound->boundtype != SCIP_BOUNDTYPE_LOWER || SCIPisEQ(scip,
-         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, SCIPvarGetLbAtIndex(lhsvar, bdchgidx, TRUE)));
+         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, SCIPgetVarLbAtIndex(scip, lhsvar, bdchgidx, TRUE)));
    assert(bdchgidx == NULL || genvbound->boundtype != SCIP_BOUNDTYPE_UPPER || SCIPisEQ(scip,
-         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, -SCIPvarGetUbAtIndex(lhsvar, bdchgidx, TRUE)));
+         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, -SCIPgetVarUbAtIndex(scip, lhsvar, bdchgidx, TRUE)));
 
    /* when creating an initial conflict, bdchgidx is NULL and +/-boundval must exceed the upper/lower bound of the
     * left-hand side variable
@@ -657,7 +735,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    assert(bdchgidx != NULL || genvbound->boundtype != SCIP_BOUNDTYPE_UPPER
       || SCIPisGT(scip, *boundval, -SCIPvarGetLbLocal(lhsvar)));
 
-   SCIPdebugMessage("resolving genvbound propagation: lhs=%s<%s> >= boundval=%.15g\n",
+   SCIPdebugMsg(scip, "resolving genvbound propagation: lhs=%s<%s> >= boundval=%.15g\n",
       genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ? "+" : "-", SCIPvarGetName(lhsvar), *boundval);
 
    /* subtract constant terms from bound value */
@@ -665,12 +743,12 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    tmpboundval -= genvbound->cutoffcoef * getCutoffboundGenVBound(scip);
    tmpboundval -= genvbound->constant;
 
-   SCIPdebugMessage("subtracting constant terms gives boundval=%.15g\n", tmpboundval);
+   SCIPdebugMsg(scip, "subtracting constant terms gives boundval=%.15g\n", tmpboundval);
 
    /* compute minimal activity; if bdchgidx is NULL, we create the initial conflict and use local bounds */
    minactivity = getGenVBoundsMinActivityConflict(scip, genvbound->vars, genvbound->coefs, genvbound->ncoefs, bdchgidx);
 
-   SCIPdebugMessage("minactivity of right-hand side is minactivity=%.15g\n", minactivity);
+   SCIPdebugMsg(scip, "minactivity of right-hand side is minactivity=%.15g\n", minactivity);
 
    /* a genvbound might have been replaced since the propagation took place, hence we have to check that the current
     * genvbound can explain the propagation at the given bound change index; note that by now, with smaller cutoff
@@ -678,7 +756,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
     */
    if( SCIPisLT(scip, minactivity, tmpboundval) )
    {
-      SCIPdebugMessage("minactivity is too small to explain propagation; was genvbound replaced?\n");
+      SCIPdebugMsg(scip, "minactivity is too small to explain propagation; was genvbound replaced?\n");
       return SCIP_OKAY;
    }
 
@@ -687,15 +765,14 @@ SCIP_RETCODE resolveGenVBoundPropagation(
 
    slack = MAX(minactivity - tmpboundval, 0.0);
 
-   SCIPdebugMessage("slack=%.15g\n", slack);
+   SCIPdebugMsg(scip, "slack=%.15g\n", slack);
 
    /* add variables on the right-hand side as reasons for propagation */
    for( i = 0; i < nvars; i++ )
    {
       assert(vars[i] != NULL);
-      assert(!SCIPisZero(scip, genvbound->coefs[i]));
-      assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE), SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE)));
-      assert(SCIPisEQ(scip, SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE), SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)));
+      assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE)));
+      assert(SCIPisEQ(scip, SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE)));
 
       /* coefficient is positive */
       if( genvbound->coefs[i] > 0.0 )
@@ -704,13 +781,13 @@ SCIP_RETCODE resolveGenVBoundPropagation(
          SCIP_Real conflictlb;
 
          /* get bound at current bound change */
-         lbatindex = SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE);
+         lbatindex = SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE);
 
          /* get bound already enforced by conflict set */
          conflictlb = SCIPgetConflictVarLb(scip, genvbound->vars[i]);
          assert(SCIPisGE(scip, conflictlb, SCIPvarGetLbGlobal(genvbound->vars[i])));
 
-         SCIPdebugMessage("lower bound of variable <%s> (genvbound->vars[%d]) in conflict set / at index is %.15g / %.15g\n",
+         SCIPdebugMsg(scip, "lower bound of variable <%s> (genvbound->vars[%d]) in conflict set / at index is %.15g / %.15g\n",
             SCIPvarGetName(genvbound->vars[i]), i, conflictlb, lbatindex);
 
          /* if bound is already enforced by conflict set we do not need to add the bound change; since we used the
@@ -718,7 +795,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
           */
          if( SCIPisLE(scip, lbatindex, conflictlb) )
          {
-            SCIPdebugMessage("skipping lower bound of variable <%s> (genvbound->vars[%d]) already enforced in conflict set\n",
+            SCIPdebugMsg(scip, "skipping lower bound of variable <%s> (genvbound->vars[%d]) already enforced in conflict set\n",
                SCIPvarGetName(genvbound->vars[i]), i);
          }
          else
@@ -743,7 +820,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
             slack -= genvbound->coefs[i] * (lbatindex - relaxedlb);
             slack = MAX(slack, 0.0);
 
-            SCIPdebugMessage("added lower bound of variable <%s> (genvbound->vars[%d]); new slack=%.15g\n",
+            SCIPdebugMsg(scip, "added lower bound of variable <%s> (genvbound->vars[%d]); new slack=%.15g\n",
                SCIPvarGetName(genvbound->vars[i]), i, slack);
          }
       }
@@ -754,13 +831,13 @@ SCIP_RETCODE resolveGenVBoundPropagation(
          SCIP_Real conflictub;
 
          /* get bound at current bound change */
-         ubatindex = SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE);
+         ubatindex = SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE);
 
          /* get bound already enforced by conflict set */
          conflictub = SCIPgetConflictVarUb(scip, genvbound->vars[i]);
          assert(SCIPisLE(scip, conflictub, SCIPvarGetUbGlobal(genvbound->vars[i])));
 
-         SCIPdebugMessage("upper bound of variable <%s> (genvbound->vars[%d]) in conflict set / at index is %.15g / %.15g\n",
+         SCIPdebugMsg(scip, "upper bound of variable <%s> (genvbound->vars[%d]) in conflict set / at index is %.15g / %.15g\n",
             SCIPvarGetName(genvbound->vars[i]), i, conflictub, ubatindex);
 
          /* if bound is already enforced by conflict set we do not need to add the bound change; since we used the
@@ -768,7 +845,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
           */
          if( SCIPisGE(scip, ubatindex, conflictub) )
          {
-            SCIPdebugMessage("skipping upper bound of variable <%s> (genvbound->vars[%d]) already enforced in conflict set\n",
+            SCIPdebugMsg(scip, "skipping upper bound of variable <%s> (genvbound->vars[%d]) already enforced in conflict set\n",
                SCIPvarGetName(genvbound->vars[i]), i);
          }
          else
@@ -793,7 +870,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
             slack -= genvbound->coefs[i] * (ubatindex - relaxedub);
             slack = MAX(slack, 0.0);
 
-            SCIPdebugMessage("added upper bound of variable <%s> (genvbound->vars[%d]); new slack=%.15g\n",
+            SCIPdebugMsg(scip, "added upper bound of variable <%s> (genvbound->vars[%d]); new slack=%.15g\n",
                SCIPvarGetName(genvbound->vars[i]), i, slack);
          }
       }
@@ -812,7 +889,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
     */
    if( SCIPisLT(scip, tmpboundval, *boundval) )
    {
-      SCIPdebugMessage("boundval was reduced from %.15g to %.15g; propagation not resolved\n", *boundval, tmpboundval);
+      SCIPdebugMsg(scip, "boundval was reduced from %.15g to %.15g; propagation not resolved\n", *boundval, tmpboundval);
       return SCIP_OKAY;
    }
 
@@ -840,7 +917,7 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       return SCIP_OKAY;
 
    /* initialize conflict analysis */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, !SCIPisInfinity(scip, REALABS(SCIPgetCutoffbound(scip)))) );
 
    /* left-hand side variable >= ... */
    if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -877,19 +954,19 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       /* initial reason could not be constructed, maybe due to numerics; do not apply conflict analysis */
       if( !success )
       {
-         SCIPdebugMessage("strange: could not create initial reason to start conflict analysis\n");
+         SCIPdebugMsg(scip, "strange: could not create initial reason to start conflict analysis\n");
          return SCIP_OKAY;
       }
 
       /* if bound is already enforced by conflict set we do not have to add it */
       if( SCIPisGE(scip, bound, SCIPgetConflictVarUb(scip, genvbound->var)) )
       {
-         SCIPdebugMessage("skipping upper bound of left-hand side variable <%s> already enforced in conflict set\n",
+         SCIPdebugMsg(scip, "skipping upper bound of left-hand side variable <%s> already enforced in conflict set\n",
             SCIPvarGetName(genvbound->var));
       }
       else
       {
-         SCIPdebugMessage("adding upper bound of left-hand side variable <%s>\n", SCIPvarGetName(genvbound->var));
+         SCIPdebugMsg(scip, "adding upper bound of left-hand side variable <%s>\n", SCIPvarGetName(genvbound->var));
 
          SCIP_CALL( SCIPaddConflictRelaxedUb(scip, genvbound->var, NULL, bound) );
       }
@@ -929,19 +1006,19 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       /* initial reason could not be constructed, maybe due to numerics; do not apply conflict analysis */
       if( !success )
       {
-         SCIPdebugMessage("strange: could not create initial reason to start conflict analysis\n");
+         SCIPdebugMsg(scip, "strange: could not create initial reason to start conflict analysis\n");
          return SCIP_OKAY;
       }
 
       /* if bound is already enforced by conflict set we do not have to add it */
       if( SCIPisLE(scip, bound, SCIPgetConflictVarLb(scip, genvbound->var)) )
       {
-         SCIPdebugMessage("skipping lower bound of left-hand side variable <%s> already enforced in conflict set\n",
+         SCIPdebugMsg(scip, "skipping lower bound of left-hand side variable <%s> already enforced in conflict set\n",
             SCIPvarGetName(genvbound->var));
       }
       else
       {
-         SCIPdebugMessage("adding lower bound of left-hand side variable <%s>\n", SCIPvarGetName(genvbound->var));
+         SCIPdebugMsg(scip, "adding lower bound of left-hand side variable <%s>\n", SCIPvarGetName(genvbound->var));
 
          SCIP_CALL( SCIPaddConflictRelaxedLb(scip, genvbound->var, NULL, bound) );
       }
@@ -980,6 +1057,9 @@ SCIP_RETCODE applyGenVBound(
    /* get bound value provided by genvbound */
    boundval = getGenVBoundsBound(scip, genvbound, global);
 
+   if( SCIPisInfinity(scip, REALABS(boundval)) )
+      return SCIP_OKAY;
+
 #ifdef SCIP_DEBUG
    {
       SCIP_Real lb;
@@ -992,11 +1072,11 @@ SCIP_RETCODE applyGenVBound(
       new_lb = genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ? boundval : lb;
       new_ub = genvbound->boundtype == SCIP_BOUNDTYPE_UPPER ? boundval : ub;
 
-      SCIPdebugMessage("  %s genvbound propagation for <%s>\n", global ?
+      SCIPdebugMsg(scip, "  %s genvbound propagation for <%s>\n", global ?
          "global" : "local", SCIPvarGetName(genvbound->var));
-      SCIPdebugMessage("  genvbound: ");
+      SCIPdebugMsg(scip, "  genvbound: ");
       printGenVBound(scip, genvbound);
-      SCIPdebugMessage("    [%.15g,%.15g] -> [%.15g,%.15g]\n", lb, ub, new_lb, new_ub);
+      SCIPdebugMsg(scip, "    [%.15g,%.15g] -> [%.15g,%.15g]\n", lb, ub, new_lb, new_ub);
    }
 #endif
 
@@ -1024,7 +1104,7 @@ SCIP_RETCODE applyGenVBound(
          /* initialize conflict analysis if infeasible */
          if( infeas )
          {
-            SCIPdebugMessage(" -> lower bound tightening on variable <%s> led to infeasibility\n",
+            SCIPdebugMsg(scip, " -> lower bound tightening on variable <%s> led to infeasibility\n",
                   SCIPvarGetName(genvbound->var));
 
             SCIP_CALL( analyzeGenVBoundConflict(scip, genvbound) );
@@ -1037,7 +1117,7 @@ SCIP_RETCODE applyGenVBound(
          /* initialize conflict analysis if infeasible */
          if( infeas )
          {
-            SCIPdebugMessage(" -> upper bound tightening on variable <%s> led to infeasibility\n",
+            SCIPdebugMsg(scip, " -> upper bound tightening on variable <%s> led to infeasibility\n",
                   SCIPvarGetName(genvbound->var));
 
             SCIP_CALL( analyzeGenVBoundConflict(scip, genvbound) );
@@ -1049,14 +1129,14 @@ SCIP_RETCODE applyGenVBound(
    if( infeas )
    {
       *result = SCIP_CUTOFF;
-      SCIPdebugMessage("    cutoff!\n");
+      SCIPdebugMsg(scip, "    cutoff!\n");
    }
    else if( tightened )
    {
       *result = SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING ? SCIP_SUCCESS : SCIP_REDUCEDDOM;
       if( nchgbds != NULL )
          ++(*nchgbds);
-      SCIPdebugMessage("    tightened!\n");
+      SCIPdebugMsg(scip, "    tightened!\n");
    }
 
    return SCIP_OKAY;
@@ -1071,6 +1151,7 @@ void printEventData(
    )
 {
    int i;
+
    SCIPdebugMessage("event data: %s bound of <%s> tightened ==> start propagating at ",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(eventdata->var));
 
@@ -1081,7 +1162,6 @@ void printEventData(
    {
       SCIPdebugPrintf("(component %d, index %d) ", eventdata->startcomponents[i], eventdata->startindices[i]);
    }
-
    SCIPdebugPrintf("\n");
 }
 #endif
@@ -1097,14 +1177,15 @@ SCIP_RETCODE freeEventData(
    assert(eventdata != NULL);
    assert(*eventdata != NULL);
 
-   SCIPfreeMemoryArray(scip, &((*eventdata)->startcomponents));
-   SCIPfreeMemoryArray(scip, &((*eventdata)->startindices));
+   SCIPfreeBlockMemoryArray(scip, &((*eventdata)->startcomponents), (*eventdata)->startindicessize);
+   SCIPfreeBlockMemoryArray(scip, &((*eventdata)->startindices), (*eventdata)->startindicessize);
 
+   (*eventdata)->startindicessize = 0;
    (*eventdata)->nstarts = -1;
    (*eventdata)->var = NULL;
    (*eventdata)->prop = NULL;
 
-   SCIPfreeMemory(scip, eventdata);
+   SCIPfreeBlockMemory(scip, eventdata);
 
    return SCIP_OKAY;
 }
@@ -1140,8 +1221,8 @@ SCIP_RETCODE freeAllEventData(
          SCIP_CALL( freeEventData(scip, &(propdata->ubevents[i])) );
       }
 
-      SCIPfreeMemoryArray(scip, &(propdata->ubevents));
-      SCIPfreeMemoryArray(scip, &(propdata->lbevents));
+      SCIPfreeBlockMemoryArray(scip, &(propdata->ubevents), propdata->nubevents);
+      SCIPfreeBlockMemoryArray(scip, &(propdata->lbevents), propdata->nlbevents);
       propdata->nlbevents = -1;
       propdata->nubevents = -1;
    }
@@ -1165,7 +1246,7 @@ SCIP_RETCODE dropAndFreeEvents(
 {
    int i;
 
-   SCIPdebugMessage("drop and free events\n");
+   SCIPdebugMsg(scip, "drop and free events\n");
 
    assert(scip != NULL);
    assert(propdata != NULL);
@@ -1228,9 +1309,10 @@ SCIP_RETCODE getEventData(
    else
    {
       /* set up new eventdata entry */
-      SCIP_CALL( SCIPallocMemory(scip, eventdata) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*eventdata)->startcomponents), propdata->ncomponents) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*eventdata)->startindices), propdata->ncomponents) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, eventdata) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*eventdata)->startcomponents), propdata->ncomponents) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*eventdata)->startindices), propdata->ncomponents) );
+      (*eventdata)->startindicessize = propdata->ncomponents;
       (*eventdata)->nstarts = 0;
       (*eventdata)->var = var;
       (*eventdata)->prop = propdata->prop;
@@ -1318,14 +1400,14 @@ SCIP_RETCODE setUpEvents(
    assert(propdata->nlbevents == -1);
    assert(propdata->nubevents == -1);
 
-   SCIPdebugMessage("set up events\n");
+   SCIPdebugMsg(scip, "set up events\n");
 
    /* allocate lbevents, ubevents, and their hashmaps */
    nprobvars = SCIPgetNVars(scip) + SCIPgetNFixedVars(scip);
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->lbevents), nprobvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->ubevents), nprobvars) );
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->lbeventsmap), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->ubeventsmap), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->lbevents), nprobvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->ubevents), nprobvars) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->lbeventsmap), SCIPblkmem(scip), nprobvars) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->ubeventsmap), SCIPblkmem(scip), nprobvars) );
    propdata->nlbevents = 0;
    propdata->nubevents = 0;
 
@@ -1363,8 +1445,14 @@ SCIP_RETCODE setUpEvents(
    /* resize lbevents and ubevents array */
    assert(propdata->nlbevents <= nprobvars);
    assert(propdata->nubevents <= nprobvars);
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &(propdata->lbevents), propdata->nlbevents) );
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &(propdata->ubevents), propdata->nubevents) );
+   if( propdata->nlbevents < nprobvars )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->lbevents), nprobvars, propdata->nlbevents) );
+   }
+   if( propdata->nubevents < nprobvars )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->ubevents), nprobvars, propdata->nubevents) );
+   }
 
    /* resize and register lower bound events */
    for( i = 0; i < propdata->nlbevents; i++ )
@@ -1377,11 +1465,17 @@ SCIP_RETCODE setUpEvents(
       assert(eventdata->startindices != NULL);
 
       /* resize arrays stored in eventdata */
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(eventdata->startcomponents), eventdata->nstarts) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(eventdata->startindices), eventdata->nstarts) );
+      if( eventdata->startindicessize != eventdata->nstarts )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize, \
+               eventdata->nstarts) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize, \
+               eventdata->nstarts) );
+         eventdata->startindicessize = eventdata->nstarts;
+      }
 
       /* register event */
-      SCIP_CALL( SCIPcatchVarEvent(scip, eventdata->var, SCIP_EVENTTYPE_LBTIGHTENED, propdata->eventhdlr, eventdata,
+      SCIP_CALL( SCIPcatchVarEvent(scip, eventdata->var, SCIP_EVENTTYPE_LBTIGHTENED, propdata->eventhdlr, eventdata, \
             NULL) );
    }
 
@@ -1396,9 +1490,14 @@ SCIP_RETCODE setUpEvents(
       assert(eventdata->startindices != NULL);
 
       /* resize arrays stored in eventdata */
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(eventdata->startcomponents), eventdata->nstarts) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(eventdata->startindices), eventdata->nstarts) );
-
+      if( eventdata->startindicessize != eventdata->nstarts )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize, \
+               eventdata->nstarts) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize, \
+               eventdata->nstarts) );
+         eventdata->startindicessize = eventdata->nstarts;
+      }
       /* register event */
       SCIP_CALL( SCIPcatchVarEvent(scip, eventdata->var, SCIP_EVENTTYPE_UBTIGHTENED, propdata->eventhdlr, eventdata,
             NULL) );
@@ -1441,10 +1540,10 @@ SCIP_RETCODE sortGenVBounds(
    assert(propdata != NULL);
    assert(propdata->componentsstart == NULL);
 
-   SCIPdebugMessage("(re-)sort genvbounds topologically\n");
+   SCIPdebugMsg(scip, "(re-)sort genvbounds topologically\n");
 
    /* create digraph */
-   SCIP_CALL( SCIPdigraphCreate(&graph, propdata->ngenvbounds) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &graph, propdata->ngenvbounds) );
 
    /* add outgoing arcs for each genvbound */
    for( i = 0; i < propdata->ngenvbounds; i++ )
@@ -1479,12 +1578,13 @@ SCIP_RETCODE sortGenVBounds(
    assert(SCIPdigraphGetNComponents(graph) == propdata->ncomponents);
 
    /* allocate memory for genvboundssorted and componentsstart array */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &genvboundssorted, propdata->ngenvbounds) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->componentsstart), propdata->ncomponents + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &genvboundssorted, propdata->ngenvbounds) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->componentsstart), propdata->ncomponents + 1) );
+   propdata->componentsstartsize = propdata->ncomponents + 1;
 
    /* allocate memory for strong component arrays */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph) + 1) ); /*lint !e666*/
 
    /* compute sorted genvbounds array, fill componentsstart array */
    sortedindex = 0;
@@ -1502,7 +1602,8 @@ SCIP_RETCODE sortGenVBounds(
       /* compute the strong components of the i-th undirected component */
       if( nnodes > 2 )
       {
-         SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx, &nstrongcomponents);
+         SCIP_CALL( SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx,
+               &nstrongcomponents) );
 
          for( j = 0; j < nnodes; ++j )
          {
@@ -1530,13 +1631,6 @@ SCIP_RETCODE sortGenVBounds(
    }
    assert(sortedindex == propdata->ngenvbounds);
 
-   /* free strong component arrays */
-   SCIPfreeMemoryArray(scip, &strongcompstartidx);
-   SCIPfreeMemoryArray(scip, &strongcomponents);
-
-   /* free digraph */
-   SCIPdigraphFree(&graph);
-
    /* copy sorted genvbounds into genvboundstore */
    for( i = 0; i < propdata->ngenvbounds; i++ )
    {
@@ -1545,26 +1639,33 @@ SCIP_RETCODE sortGenVBounds(
       propdata->genvboundstore[i] = genvboundssorted[i];
       propdata->genvboundstore[i]->index = i;
    }
-   SCIPfreeMemoryArray(scip, &(genvboundssorted));
+   SCIPfreeBufferArray(scip, &(genvboundssorted));
+
+   /* free strong component arrays */
+   SCIPfreeBufferArray(scip, &strongcompstartidx);
+   SCIPfreeBufferArray(scip, &strongcomponents);
+
+   /* free digraph */
+   SCIPdigraphFree(&graph);
 
    /* remember genvboundstore as sorted */
    propdata->issorted = TRUE;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("genvbounds got: %d\n", propdata->ngenvbounds);
+   SCIPdebugMsg(scip, "genvbounds got: %d\n", propdata->ngenvbounds);
    for( i = 0; i < propdata->ncomponents; i++ )
    {
       int j;
 
-      SCIPdebugMessage("{\n");
+      SCIPdebugMsg(scip, "{\n");
 
       for( j = propdata->componentsstart[i]; j < propdata->componentsstart[i+1]; j++ )
       {
-         SCIPdebugMessage("  [%d] ", j);
+         SCIPdebugMsg(scip, "  [%d] ", j);
          printGenVBound(scip, propdata->genvboundstore[j]);
       }
 
-      SCIPdebugMessage("}\n");
+      SCIPdebugMsg(scip, "}\n");
    }
 #endif
 
@@ -1587,7 +1688,7 @@ SCIP_RETCODE applyGenVBounds(
    int nindices;
    int i;
 
-   SCIPdebugMessage("applying %s genvbound propagation in depth %d\n", global ?
+   SCIPdebugMsg(scip, "applying %s genvbound propagation in depth %d\n", global ?
       "global" : "local", SCIPgetDepth(scip));
 
    assert(scip != NULL);
@@ -1612,13 +1713,13 @@ SCIP_RETCODE applyGenVBounds(
 
       for( j = 0; j < propdata->ngenvbounds && *result != SCIP_CUTOFF; j++ )
       {
-         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         if( ! SCIPvarIsActive(propdata->genvboundstore[j]->var) )
          {
             /**@todo resolve multiaggregation in exitpre */
          }
          else
          {
-            SCIPdebugMessage("applying genvbound with index %d (unsorted mode)\n", j);
+            SCIPdebugMsg(scip, "applying genvbound with index %d (unsorted mode)\n", j);
             SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result, nchgbds) );
          }
       }
@@ -1635,19 +1736,19 @@ SCIP_RETCODE applyGenVBounds(
    {
       int j;
 
-      SCIPdebugMessage("starting in component %d at index %d\n", startingcomponents[i], startingindices[i]);
+      SCIPdebugMsg(scip, "starting in component %d at index %d\n", startingcomponents[i], startingindices[i]);
       for( j = startingindices[i]; j < propdata->componentsstart[startingcomponents[i] + 1] &&
          *result != SCIP_CUTOFF; j++ ) /*lint !e679*/
       {
          assert(j < propdata->ngenvbounds);
 
-         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         if( ! SCIPvarIsActive(propdata->genvboundstore[j]->var) )
          {
             /**@todo resolve multiaggregation in exitpre */
          }
          else
          {
-            SCIPdebugMessage("applying genvbound with index %d, component %d\n", j, startingcomponents[i]);
+            SCIPdebugMsg(scip, "applying genvbound with index %d, component %d\n", j, startingcomponents[i]);
             SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result, nchgbds) );
          }
       }
@@ -1675,18 +1776,19 @@ SCIP_RETCODE initPropdata(
    assert(propdata != NULL);
    assert(propdata->eventhdlr != NULL);
 
-   SCIPdebugMessage("init propdata\n");
+   SCIPdebugMsg(scip, "init propdata\n");
 
    nprobvars = SCIPgetNVars(scip);
 
    /* init genvboundstore */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->genvboundstore), 2 * nprobvars) );
-   BMSclearMemoryArray(propdata->genvboundstore, 2 * nprobvars);
+   propdata->genvboundstoresize = 2 * nprobvars;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->genvboundstore), propdata->genvboundstoresize) );
+   BMSclearMemoryArray(propdata->genvboundstore, propdata->genvboundstoresize);
    propdata->ngenvbounds = 0;
 
    /* init genvboundstore hashmaps */
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->lbgenvbounds), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->ubgenvbounds), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->lbgenvbounds), SCIPblkmem(scip), nprobvars) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->ubgenvbounds), SCIPblkmem(scip), nprobvars) );
 
    return SCIP_OKAY;
 }
@@ -1715,8 +1817,9 @@ SCIP_RETCODE addNewGenVBound(
    assert(propdata->ngenvbounds <= propdata->genvboundstoresize);
    if( propdata->ngenvbounds == propdata->genvboundstoresize )
    {
+      int oldsize = propdata->genvboundstoresize;
       propdata->genvboundstoresize = 2*propdata->genvboundstoresize + 1;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(propdata->genvboundstore), propdata->genvboundstoresize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->genvboundstore), oldsize, propdata->genvboundstoresize) );
    }
 
    /* new index is propdata->ngenvbounds */
@@ -1748,32 +1851,38 @@ SCIP_RETCODE execGenVBounds(
    /* we only sort after the root node is finished; this avoids having to sort again after adding more genvbounds; if
     * the genvbounds are not sorted, we will simply propagate all of them in the order given
     */
-   if( propdata->sort && !propdata->issorted && !SCIPinProbing(scip) && SCIPgetDepth(scip) > 0 )
+   if( propdata->sort && !SCIPinProbing(scip) && SCIPgetDepth(scip) > 0 )
    {
-      *result = SCIP_DIDNOTFIND;
+      if( !propdata->issorted )
+      {
+         *result = SCIP_DIDNOTFIND;
 
-      SCIPdebugMessage("genvbounds are not sorted\n");
+         SCIPdebugMsg(scip, "genvbounds are not sorted\n");
 
-      /* drop and free old events */
-      SCIP_CALL( dropAndFreeEvents(scip, propdata) );
+         /* drop and free old events */
+         SCIP_CALL( dropAndFreeEvents(scip, propdata) );
 
-      /* free old starting data */
-      SCIP_CALL( freeStartingData(scip, propdata) );
+         /* free old starting data */
+         SCIP_CALL( freeStartingData(scip, propdata) );
 
-      /* free sorted components data */
-      SCIP_CALL( freeComponentsData(scip, propdata) );
+         /* free sorted components data */
+         SCIP_CALL( freeComponentsData(scip, propdata) );
 
-      /* sort genvbounds */
-      SCIP_CALL( sortGenVBounds(scip, propdata) );
+         /* sort genvbounds */
+         SCIP_CALL( sortGenVBounds(scip, propdata) );
 
-      /* create starting data */
-      SCIP_CALL( createStartingData(scip, propdata) );
+         /* create starting data */
+         SCIP_CALL( createStartingData(scip, propdata) );
 
-      /* fill global starting data */
-      SCIP_CALL( fillGlobalStartingData(scip, propdata) );
+         /* fill global starting data */
+         SCIP_CALL( fillGlobalStartingData(scip, propdata) );
+      }
 
-      /* set up new events to catch */
-      SCIP_CALL( setUpEvents(scip, propdata) );
+      /* set up new events to catch (if not done so far) */
+      if( propdata->lbevents == NULL )
+      {
+         SCIP_CALL( setUpEvents(scip, propdata) );
+      }
    }
 
    /* apply global propagation if primal bound has improved */
@@ -1831,7 +1940,7 @@ SCIP_RETCODE createConstraints(
       /* set the upper bound to the best primal value in the original problem */
       ub = getCutoffboundGenVBound(scip);
 
-      SCIPdebugMessage("initialize cutoffboundvar with UB = %e\n", ub);
+      SCIPdebugMsg(scip, "initialize cutoffboundvar with UB = %e\n", ub);
 
       (void) SCIPsnprintf(name, 16, "cutoffboundvar");
       SCIP_CALL( SCIPcreateVarBasic(scip, &propdata->cutoffboundvar, name, -SCIPinfinity(scip), ub, 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -1866,27 +1975,27 @@ SCIP_RETCODE createConstraints(
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
-      SCIPdebugPrintf("add cons: ");
+      SCIPdebugMsgPrint(scip, "add cons: ");
 
       /* copy the coefs/vars array */
       for( j = 0; j < genvbound->ncoefs; j++ )
       {
          vars[j] = genvbound->vars[j];
          vals[j] = genvbound->coefs[j];
-         SCIPdebugPrintf("%e%s + ", vals[j], SCIPvarGetName(vars[j]));
+         SCIPdebugMsgPrint(scip, "%e%s + ", vals[j], SCIPvarGetName(vars[j]));
       }
 
       /* add the variable and the coefficient of the genvbound */
       vars[genvbound->ncoefs] = genvbound->var;
       vals[genvbound->ncoefs] = (genvbound->boundtype == SCIP_BOUNDTYPE_LOWER) ? -1.0 : 1.0;
 
-      SCIPdebugPrintf("%e%s + ", vals[genvbound->ncoefs], SCIPvarGetName(vars[genvbound->ncoefs]));
+      SCIPdebugMsgPrint(scip, "%e%s + ", vals[genvbound->ncoefs], SCIPvarGetName(vars[genvbound->ncoefs]));
 
       /* add cutoffcoef * cutoffboundvar */
       vars[genvbound->ncoefs + 1] = propdata->cutoffboundvar;
       vals[genvbound->ncoefs + 1] = genvbound->cutoffcoef;
 
-      SCIPdebugPrintf("%e%s <= %e\n", vals[genvbound->ncoefs + 1], SCIPvarGetName(vars[genvbound->ncoefs + 1]), -1.0*genvbound->constant);
+      SCIPdebugMsgPrint(scip, "%e%s <= %e\n", vals[genvbound->ncoefs + 1], SCIPvarGetName(vars[genvbound->ncoefs + 1]), -1.0*genvbound->constant);
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "genvbound_cons%d", genvbound->index);
 
@@ -1925,8 +2034,9 @@ SCIP_RETCODE createConstraints(
       /* free starting indices data */
       SCIP_CALL( freeStartingData(scip, propdata) );
 
-      SCIPfreeMemoryArray(scip, &(propdata->genvboundstore));
+      SCIPfreeBlockMemoryArray(scip, &(propdata->genvboundstore), propdata->genvboundstoresize);
       propdata->genvboundstore = NULL;
+      propdata->genvboundstoresize = 0;
       propdata->ngenvbounds = 0;
    }
 
@@ -1958,8 +2068,8 @@ SCIP_RETCODE SCIPgenVBoundAdd(
 
    SCIP_PROPDATA* propdata;
    GENVBOUND* genvbound;
-
    SCIP_Bool newgenvbound;
+   int i;
 
    assert(scip != NULL);
    assert(genvboundprop != NULL);
@@ -1989,21 +2099,30 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    genvbound = getGenVBound(scip, propdata, var, boundtype);
    newgenvbound = (genvbound == NULL);
 
+   /* release previous variables */
+   if( !newgenvbound )
+   {
+      for( i = 0; i < genvbound->ncoefs; ++i )
+      {
+         assert(genvbound->vars[i] != NULL);
+         SCIP_CALL( SCIPreleaseVar(scip, &(genvbound->vars[i])) );
+      }
+   }
+
    /* check if there already is a genvbound corresponding to this bound, freeing its data and overwriting it */
    if( !newgenvbound && genvbound->ncoefs < ncoefs )
    {
       /* do not realloc since we do not want to keep and possibly copy the old entries */
-      SCIPfreeMemoryArray(scip, &(genvbound->coefs));
-      SCIPfreeMemoryArray(scip, &(genvbound->vars));
+      SCIPfreeBlockMemoryArray(scip, &(genvbound->coefs), genvbound->coefssize);
+      SCIPfreeBlockMemoryArray(scip, &(genvbound->vars), genvbound->coefssize);
 
       /* allocate and copy arrays in genvbound */
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(genvbound->coefs), coefs, ncoefs) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(genvbound->vars), vars, ncoefs) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(genvbound->coefs), coefs, ncoefs) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(genvbound->vars), vars, ncoefs) );
+      genvbound->coefssize = ncoefs;
    }
    else if( !newgenvbound && genvbound->ncoefs == ncoefs )
    {
-      int i;
-
       /* just update entries */
       for( i = 0; i < ncoefs; i++ )
       {
@@ -2013,11 +2132,13 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    }
    else if( !newgenvbound && genvbound->ncoefs > ncoefs )
    {
-      int i;
-
       /* reallocate memory for arrays in genvbound to free unused memory */
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(genvbound->coefs), ncoefs) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(genvbound->vars), ncoefs) );
+      if( genvbound->coefssize < ncoefs )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(genvbound->coefs), genvbound->coefssize, ncoefs) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(genvbound->vars), genvbound->coefssize, ncoefs) );
+         genvbound->coefssize = ncoefs;
+      }
 
       /* update entries */
       for( i = 0; i < ncoefs; i++ )
@@ -2029,11 +2150,12 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    else if( newgenvbound )
    {
       /* allocate memory for genvbound data */
-      SCIP_CALL( SCIPallocMemory(scip, &genvbound) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &genvbound) );
 
       /* allocate and copy arrays in genvbound */
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(genvbound->coefs), coefs, ncoefs) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(genvbound->vars), vars, ncoefs) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(genvbound->coefs), coefs, ncoefs) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(genvbound->vars), vars, ncoefs) );
+      genvbound->coefssize = ncoefs;
    }
 
    /* set up data for genvbound */
@@ -2041,6 +2163,18 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    genvbound->var = var;
    genvbound->ncoefs = ncoefs;
    genvbound->constant = constant;
+
+   /* capture variables */
+   for( i = 0; i < genvbound->ncoefs; ++i )
+   {
+      assert(genvbound->vars[i] != NULL);
+      SCIP_CALL( SCIPcaptureVar(scip, genvbound->vars[i]) );
+   }
+   if( newgenvbound )
+   {
+      assert(genvbound->var != NULL);
+      SCIP_CALL( SCIPcaptureVar(scip, genvbound->var) );
+   }
 
    /* the cutoff bound is valid w.r.t. the current objective function in the transformed problem; during presolving,
     * however, the objective function can change (e.g., when a variable is fixed, its contribution in the objective
@@ -2076,9 +2210,9 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    propdata->issorted = FALSE;
 
    /* debug message */
-   SCIPdebugMessage("added genvbound ");
+   SCIPdebugMsg(scip, "added genvbound ");
    SCIPdebug( printGenVBound(scip, genvbound) );
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    SCIP_CALL( checkDebugSolutionGenVBound(scip, genvbound) );
 #endif
 
@@ -2090,6 +2224,22 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  * Callback methods of propagator
  */
 
+/** copy method for propagator plugins (called when SCIP copies plugins)
+ *
+ *  @note The UG framework assumes that all default plug-ins of SCIP implement a copy callback.
+ */
+static
+SCIP_DECL_PROPCOPY(propCopyGenvbounds)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludePropGenvbounds(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** initialization method of propagator (called after problem was transformed) */
 static
@@ -2148,16 +2298,19 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPdebugMessage("proppresol in problem <%s>\n", SCIPgetProbName(scip));
+   SCIPdebugMsg(scip, "proppresol in problem <%s>\n", SCIPgetProbName(scip));
 
    /* do not run if no genvbounds were added yet */
    if( propdata->ngenvbounds < 1 )
    {
-      SCIPdebugMessage("no bounds were added yet\n");
+      SCIPdebugMsg(scip, "no bounds were added yet\n");
       return SCIP_OKAY;
    }
 
@@ -2185,7 +2338,7 @@ SCIP_DECL_PROPINITPRE(propInitpreGenvbounds)
    /* lock the variable because it should not be deleted after a restart */
    if( propdata->cutoffboundvar != NULL )
    {
-      SCIPdebugMessage("propinitpre in problem <%s>: locking cutoffboundvar (current downlocks=%d, uplocks=%d)\n",
+      SCIPdebugMsg(scip, "propinitpre in problem <%s>: locking cutoffboundvar (current downlocks=%d, uplocks=%d)\n",
          SCIPgetProbName(scip), SCIPvarGetNLocksDown(propdata->cutoffboundvar),
          SCIPvarGetNLocksUp(propdata->cutoffboundvar));
 
@@ -2200,6 +2353,7 @@ SCIP_DECL_PROPINITPRE(propInitpreGenvbounds)
 static
 SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
 {  /*lint --e{715}*/
+   SCIP_VAR** vars;
    SCIP_PROPDATA* propdata;
    int i;
 
@@ -2207,7 +2361,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
    assert(prop != NULL);
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
-   SCIPdebugMessage("propexitpre in problem <%s>: removing fixed, aggregated, negated, and multi-aggregated variables from right-hand side\n",
+   SCIPdebugMsg(scip, "propexitpre in problem <%s>: removing fixed, aggregated, negated, and multi-aggregated variables from right-hand side\n",
       SCIPgetProbName(scip));
 
    /* get propagator data */
@@ -2218,13 +2372,23 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
    assert(propdata->lbevents == NULL);
    assert(propdata->ubevents == NULL);
 
+   /* allocate memory to store new variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetNTotalVars(scip)) );
+
    for( i = 0; i < propdata->ngenvbounds; )
    {
       GENVBOUND* genvbound;
       int requiredsize;
+      int nvars;
+      int j;
 
       genvbound = propdata->genvboundstore[i];
       assert(genvbound != NULL);
+
+      /* store variables of the genvbound to release them properly */
+      assert(genvbound->ncoefs <= SCIPgetNTotalVars(scip));
+      BMScopyMemoryArray(vars, genvbound->vars, genvbound->ncoefs);
+      nvars = genvbound->ncoefs;
 
       /* replace non-active by active variables and update constant; note that this may result in coefficients where
        * SCIPisZero() is true; this should not create any problems
@@ -2235,15 +2399,38 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
       if( requiredsize > genvbound->ncoefs )
       {
          /* reallocate memory for arrays in genvbound to free unused memory */
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &(genvbound->coefs), requiredsize) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &(genvbound->vars), requiredsize) );
+         if( genvbound->coefssize < requiredsize )
+         {
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(genvbound->coefs), genvbound->coefssize, requiredsize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(genvbound->vars), genvbound->coefssize, requiredsize) );
+            genvbound->coefssize = requiredsize;
+         }
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, requiredsize, &genvbound->constant, &requiredsize, TRUE) );
          assert(requiredsize <= genvbound->ncoefs);
       }
 
+      /* capture new and release old variables */
+      for( j = 0; j < genvbound->ncoefs; ++j )
+      {
+         assert(genvbound->vars[j] != NULL);
+         SCIP_CALL( SCIPcaptureVar(scip, genvbound->vars[j]) );
+      }
+      for( j = 0; j < nvars; ++j )
+      {
+         assert(vars[j] != NULL);
+         SCIP_CALL( SCIPreleaseVar(scip, &vars[j]) );
+      }
+
       /* if the resulting genvbound is trivial, remove it */
-      if( genvbound->ncoefs == 0 && SCIPisZero(scip, genvbound->cutoffcoef) )
+      /* we remove all genvbounds with an aggregated or multi-aggregated genvbound->var; tightening aggregated variables
+       * might lead to some asserts in tree.c if the active variable has been already tightened (see !398);
+       *
+       * @todo replace aggregated variable by their active part
+       */
+      if( (genvbound->ncoefs == 0 && SCIPisZero(scip, genvbound->cutoffcoef))
+         || SCIPvarGetStatus(genvbound->var) == SCIP_VARSTATUS_MULTAGGR
+         || SCIPvarGetStatus(genvbound->var) == SCIP_VARSTATUS_AGGREGATED )
       {
          SCIP_HASHMAP* hashmap;
 
@@ -2256,19 +2443,45 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
          /* free genvbound and fill gap */
          SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
          --(propdata->ngenvbounds);
-         propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
-         propdata->genvboundstore[i]->index = i;
 
-         /* mark genvbounds array to be resorted */
-         propdata->issorted = FALSE;
+         /* move the last genvbound to the i-th position */
+         if( i < propdata->ngenvbounds )
+         {
+            propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
+            propdata->genvboundstore[i]->index = i;
+
+            /* mark genvbounds array to be resorted */
+            propdata->issorted = FALSE;
+         }
       }
       else
          ++i;
    }
 
+   SCIPfreeBufferArray(scip, &vars);
+
    return SCIP_OKAY;
 }
 
+/** deinitialization method of propagator (called before transformed problem is freed) */
+static
+SCIP_DECL_PROPEXIT(propExitGenvbounds)
+{
+   SCIP_PROPDATA* propdata;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   /* free remaining genvbounds */
+   SCIP_CALL( freeGenVBounds(scip, propdata) );
+
+   return SCIP_OKAY;
+}
 
 /** execution method of propagator */
 static
@@ -2281,6 +2494,10 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
    *result = SCIP_DIDNOTRUN;
+
+   /* do not run if propagation w.r.t. current objective is not allowed */
+   if( !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
@@ -2306,7 +2523,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
 
          if( tightened )
          {
-            SCIPdebugMessage("tightened UB of cutoffboundvar to %e (old: %e, infeas: %d, tightened: %d)\n",
+            SCIPdebugMsg(scip, "tightened UB of cutoffboundvar to %e (old: %e, infeas: %u, tightened: %u)\n",
                newub, oldub, infeasible, tightened);
          }
 
@@ -2314,14 +2531,14 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
       }
    }
 
-   SCIPdebugMessage("propexec in problem <%s> at depth %d%s\n", SCIPgetProbName(scip), SCIPgetDepth(scip),
+   SCIPdebugMsg(scip, "propexec in problem <%s> at depth %d%s\n", SCIPgetProbName(scip), SCIPgetDepth(scip),
       SCIPinProbing(scip) ? " in probing" : "");
 
    /* do not run if no genvbounds were added yet */
    if( propdata->ngenvbounds < 1 )
    {
       /**@todo is it really no performance issue to be called each time when there are no genvbounds, e.g., for MIPs? */
-      SCIPdebugMessage("no bounds were added yet\n");
+      SCIPdebugMsg(scip, "no bounds were added yet\n");
       return SCIP_OKAY;
    }
 
@@ -2333,7 +2550,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    }
 
    /* propagate locally and globally */
-   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE, NULL) );
+   SCIP_CALL( execGenVBounds(scip, propdata, result, !SCIPinProbing(scip), NULL) );
 
    /* when called in presolving stage the result is set to SCIP_SUCCESS instead of SCIP_REDUCEDDOM, this is corrected
     * here
@@ -2341,7 +2558,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    if( *result == SCIP_SUCCESS )
       *result = SCIP_REDUCEDDOM;
 
-   SCIPdebugMessage("end of exec\n");
+   SCIPdebugMsg(scip, "end of exec\n");
 
    return SCIP_OKAY;
 }
@@ -2355,7 +2572,7 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    SCIP_Real boundval;
    SCIP_Bool success;
 
-   SCIPdebugMessage("explain %s bound change of variable <%s>\n",
+   SCIPdebugMsg(scip, "explain %s bound change of variable <%s>\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar));
 
    /* get propagator data */
@@ -2392,8 +2609,8 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
 
    /* get value of bound change on left-hand side */
    boundval = genvbound->boundtype == SCIP_BOUNDTYPE_LOWER
-      ? SCIPvarGetLbAtIndex(genvbound->var, bdchgidx, TRUE)
-      : -SCIPvarGetUbAtIndex(genvbound->var, bdchgidx, TRUE);
+      ? SCIPgetVarLbAtIndex(scip, genvbound->var, bdchgidx, TRUE)
+      : -SCIPgetVarUbAtIndex(scip, genvbound->var, bdchgidx, TRUE);
 
    /* if left-hand side variable is integral, it suffices to explain a bound change greater than boundval - 1 */
    if( SCIPvarIsIntegral(genvbound->var) )
@@ -2420,54 +2637,25 @@ static
 SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
-   int i;
 
    assert(scip != NULL);
    assert(prop != NULL);
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
-   SCIPdebugMessage("propexitsol in problem <%s>\n", SCIPgetProbName(scip));
+   SCIPdebugMsg(scip, "propexitsol in problem <%s>\n", SCIPgetProbName(scip));
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   if( !SCIPisInRestart(scip) && propdata->genvboundstore != NULL )
+   /* free all genvbounds if we are not in a restart */
+   if( !SCIPisInRestart(scip) )
    {
-      /* free genvbounds */
-      for( i = propdata->ngenvbounds - 1; i >= 0; i-- )
-      {
-         SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
-      }
-
-      /* free genvboundstore hashmaps */
-      SCIPhashmapFree(&(propdata->lbgenvbounds));
-      SCIPhashmapFree(&(propdata->ubgenvbounds));
-
-      /* free genvboundstore array */
-      SCIPfreeMemoryArray(scip, &(propdata->genvboundstore));
-
-      /* set the number of genvbounds to zero */
-      propdata->ngenvbounds = 0;
-
-      /* drop and free all events */
-      SCIP_CALL( dropAndFreeEvents(scip, propdata) );
-
-      /* free componentsstart array */
-      SCIP_CALL( freeComponentsData(scip, propdata) );
-
-      /* free starting indices data */
-      SCIP_CALL( freeStartingData(scip, propdata) );
+      SCIP_CALL( freeGenVBounds(scip, propdata) );
    }
 
-   /* release the cutoffboundvar and undo the locks */
-   if( propdata->cutoffboundvar != NULL && SCIPisInRestart(scip) == FALSE )
-   {
-      SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1);
-      SCIPreleaseVar(scip, &(propdata->cutoffboundvar));
-      propdata->cutoffboundvar = NULL;
-      SCIPdebugMessage("release cutoffboundvar!\n");
-   }
+   /* drop and free all events */
+   SCIP_CALL( dropAndFreeEvents(scip, propdata) );
 
    return SCIP_OKAY;
 }
@@ -2484,7 +2672,7 @@ SCIP_DECL_PROPFREE(propFreeGenvbounds)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
 
    SCIPpropSetData(prop, NULL);
 
@@ -2520,7 +2708,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
    assert(propdata->startmap != NULL);
    assert(propdata->startindices != NULL);
 
-   SCIPdebugMessage("catching eventdata:\n");
+   SCIPdebugMsg(scip, "catching eventdata:\n");
    SCIPdebug( printEventData(eventdata, SCIPeventGetType(event) == SCIP_EVENTTYPE_LBTIGHTENED ?
          SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER) );
 
@@ -2588,35 +2776,36 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_PROP* prop;
 
    /* create genvbounds propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecGenvbounds, propdata) );
 
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyGenvbounds) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeGenvbounds) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreGenvbounds) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreGenvbounds) );
+   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitGenvbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
-         PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
+         PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropGenvbounds) );
 
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/global",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/global",
          "apply global propagation?",
          &propdata->global, TRUE, DEFAULT_GLOBAL_PROPAGATION, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/propinrootnode",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/propinrootnode",
          "apply genvbounds in root node if no new incumbent was found?",
          &propdata->propinrootnode, TRUE, DEFAULT_PROPAGATE_IN_ROOT_NODE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/sort",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/sort",
          "sort genvbounds and wait for bound change events?",
          &propdata->sort, TRUE, DEFAULT_SORT, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/propasconss",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/propasconss",
          "should genvbounds be transformed to (linear) constraints?",
          &propdata->propasconss, TRUE, DEFAULT_PROPASCONSS, NULL, NULL) );
 

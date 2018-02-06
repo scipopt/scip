@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,6 @@
 #include "scip/pub_misc.h"
 
 #include "scip/struct_sepa.h"
-
 
 
 /** compares two separators w. r. to their priority */
@@ -78,7 +77,7 @@ SCIP_RETCODE SCIPsepaCopyInclude(
 
    if( sepa->sepacopy != NULL )
    {
-      SCIPdebugMessage("including separator %s in subscip %p\n", SCIPsepaGetName(sepa), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including separator %s in subscip %p\n", SCIPsepaGetName(sepa), (void*)set->scip);
       SCIP_CALL( sepa->sepacopy(set->scip, sepa) );
    }
    return SCIP_OKAY;
@@ -160,7 +159,7 @@ SCIP_RETCODE SCIPsepaCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*sepa)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+         &(*sepa)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxbounddist", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
@@ -172,6 +171,11 @@ SCIP_RETCODE SCIPsepaCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should separator be delayed, if other separators found cuts?",
          &(*sepa)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/expbackoff", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "base for exponential increase of frequency at which separator <%s> is called (1: call at each multiple of frequency)", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*sepa)->expbackoff, TRUE, 4, 1, 100, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -339,6 +343,7 @@ SCIP_RETCODE SCIPsepaExecLP(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    int                   depth,              /**< depth of current node */
    SCIP_Real             bounddist,          /**< current relative distance of local dual bound to global dual bound */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -353,9 +358,12 @@ SCIP_RETCODE SCIPsepaExecLP(
    assert(depth >= 0);
    assert(result != NULL);
 
-   if( sepa->sepaexeclp != NULL
-      && SCIPsetIsLE(set, bounddist, sepa->maxbounddist)
-      && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->lpwasdelayed) )
+   if( sepa->sepaexeclp != NULL && SCIPsetIsLE(set, bounddist, sepa->maxbounddist) &&
+       ( (depth == 0 && sepa->freq != -1) ||
+         (sepa->freq > 0 && depth % sepa->freq == 0 &&
+            (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq)) / LOG2((SCIP_Real)sepa->expbackoff)))) ||
+         sepa->lpwasdelayed )
+     )
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
       {
@@ -365,7 +373,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          int oldnactiveconss;
          int ncutsfound;
 
-         SCIPdebugMessage("executing separator <%s> on LP solution\n", sepa->name);
+         SCIPsetDebugMsg(set, "executing separator <%s> on LP solution\n", sepa->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -383,7 +391,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result) );
+         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);
@@ -424,7 +432,7 @@ SCIP_RETCODE SCIPsepaExecLP(
       }
       else
       {
-         SCIPdebugMessage("separator <%s> was delayed\n", sepa->name);
+         SCIPsetDebugMsg(set, "separator <%s> was delayed\n", sepa->name);
          *result = SCIP_DELAYED;
       }
 
@@ -445,6 +453,7 @@ SCIP_RETCODE SCIPsepaExecSol(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_SOL*             sol,                /**< primal solution that should be separated */
    int                   depth,              /**< depth of current node */
+   SCIP_Bool             allowlocal,         /**< should the separator allow local cuts */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -457,8 +466,12 @@ SCIP_RETCODE SCIPsepaExecSol(
    assert(depth >= 0);
    assert(result != NULL);
 
-   if( sepa->sepaexecsol != NULL
-      && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->solwasdelayed) )
+   if( sepa->sepaexecsol != NULL &&
+       ( (depth == 0 && sepa->freq != -1) ||
+         (sepa->freq > 0 && depth % sepa->freq == 0 &&
+            (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq) / LOG2((SCIP_Real)sepa->expbackoff))))) ||
+         sepa->solwasdelayed )
+     )
    {
       if( (!sepa->delay && !sepa->solwasdelayed) || execdelayed )
       {
@@ -468,7 +481,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          int oldnactiveconss;
          int ncutsfound;
 
-         SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, (void*)sol);
+         SCIPsetDebugMsg(set, "executing separator <%s> on solution %p\n", sepa->name, (void*)sol);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -486,7 +499,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result) );
+         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result, allowlocal) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);
@@ -527,7 +540,7 @@ SCIP_RETCODE SCIPsepaExecSol(
       }
       else
       {
-         SCIPdebugMessage("separator <%s> was delayed\n", sepa->name);
+         SCIPsetDebugMsg(set, "separator <%s> was delayed\n", sepa->name);
          *result = SCIP_DELAYED;
       }
 

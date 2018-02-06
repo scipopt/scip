@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,6 +20,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#define _USE_MATH_DEFINES   /* to get M_PI and M_E on Windows */  /*lint !750 */
 
 #include <assert.h>
 #include <string.h>
@@ -39,15 +41,6 @@
 #define READER_NAME             "osilreader"
 #define READER_DESC             "file reader for OS instance language (OSiL) format"
 #define READER_EXTENSION        "osil"
-
-#ifndef M_PI
-#define M_PI           3.141592653589793238462643
-#endif
-
-#ifndef M_E
-#define M_E            2.7182818284590452354
-#endif
-
 
 /*
  * Data structures
@@ -142,6 +135,15 @@ SCIP_RETCODE readVariables(
 
       /* find variable name */
       varname = xmlGetAttrval(varnode, "name");
+
+      /* check for mult attribute */
+      attrval = xmlGetAttrval(varnode, "mult");
+      if( attrval != NULL && strcmp(attrval, "1") != 0 )
+      {
+         SCIPerrorMessage("Variable attribute 'mult' not supported (while parsing variable <%s>)\n", varname);
+         *doingfine = FALSE;
+         return SCIP_OKAY;
+      }
 
       /* find variable lower bound (default is 0.0 !) */
       attrval = xmlGetAttrval(varnode, "lb");
@@ -297,6 +299,15 @@ SCIP_RETCODE readObjective(
    /* if no objective, then nothing to do here */
    if( objective == NULL )
       return SCIP_OKAY;
+
+   /* check for mult attribute */
+   attrval = xmlGetAttrval(objective, "mult");
+   if( attrval != NULL && strcmp(attrval, "1") != 0 )
+   {
+      SCIPerrorMessage("Objective attribute 'mult' not supported.\n");
+      *doingfine = FALSE;
+      return SCIP_OKAY;
+   }
 
    /* objective sense */
    attrval = xmlGetAttrval(objective, "maxOrMin");
@@ -486,6 +497,15 @@ SCIP_RETCODE readConstraints(
       {
          (void) SCIPsnprintf(name, 20, "cons%d", *nconss);
          consname = name;
+      }
+
+      /* check for mult attribute */
+      attrval = xmlGetAttrval(consnode, "mult");
+      if( attrval != NULL && strcmp(attrval, "1") != 0 )
+      {
+         SCIPerrorMessage("Constraint attribute 'mult' not supported (while parsing constraint <%s>).\n", consname);
+         *doingfine = FALSE;
+         return SCIP_OKAY;
       }
 
       /* find constraint lower bound (=lhs) (default is -infinity) */
@@ -968,9 +988,9 @@ SCIP_RETCODE readLinearCoefs(
    }
 
  CLEANUP:
-   SCIPfreeBufferArrayNull(scip, &start);
-   SCIPfreeBufferArrayNull(scip, &idx);
    SCIPfreeBufferArrayNull(scip, &val);
+   SCIPfreeBufferArrayNull(scip, &idx);
+   SCIPfreeBufferArrayNull(scip, &start);
 
    return SCIP_OKAY;
 }
@@ -1447,10 +1467,12 @@ SCIP_RETCODE readExpression(
          if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg2, SCIPexprGetOpReal(arg1)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
          }
          else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg1, SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else
          {
@@ -1463,6 +1485,7 @@ SCIP_RETCODE readExpression(
          {
             assert(SCIPexprGetOpReal(arg2) != 0.0);
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg1, 1.0/SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else
          {
@@ -1482,6 +1505,7 @@ SCIP_RETCODE readExpression(
             {
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_REALPOWER, arg1, SCIPexprGetOpReal(arg2)) );
             }
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
          {
@@ -1501,6 +1525,7 @@ SCIP_RETCODE readExpression(
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, log(SCIPexprGetOpReal(arg1))) );
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_MUL, tmp, arg2) );
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_EXP, tmp) );
+               SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
             }
          }
          else
@@ -2133,6 +2158,7 @@ SCIP_RETCODE readNonlinearExprs(
 
          *constype = NONLINEAR;
       }
+
    TERMINATE:
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -2191,19 +2217,17 @@ SCIP_RETCODE readSOScons(
    SCIP_Bool check;
    SCIP_Bool propagate;
    SCIP_Bool local;
-   SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
    char name[SCIP_MAXSTRLEN];
 
    /* standard settings for SOS constraints: */
    initial = initialconss;
-   separate = FALSE;
+   separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
-   modifiable = FALSE;
    dynamic = dynamicconss;
    removable = dynamicrows;
 
@@ -2296,11 +2320,11 @@ SCIP_RETCODE readSOScons(
       {
       case 1:
          SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable) );
+            local, dynamic, removable, FALSE) );
          break;
       case 2:
          SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable) );
+            local, dynamic, removable, FALSE) );
          break;
       default:
          SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
@@ -2347,6 +2371,7 @@ SCIP_RETCODE readSOScons(
 
       /* add the SOS constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    return SCIP_OKAY;
@@ -2529,6 +2554,10 @@ SCIP_DECL_READERREAD(readerReadOsil)
    {
       SCIP_CALL( SCIPreleaseCons(scip, &objcons) );
    }
+
+   /* return read error retcode if something went wrong */
+   if( !doingfine )
+      return SCIP_READERROR;
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;

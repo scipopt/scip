@@ -1,12 +1,12 @@
-/* $Id: cond_exp.hpp 2992 2013-10-22 16:45:13Z bradbell $ */
-# ifndef CPPAD_COND_EXP_INCLUDED
-# define CPPAD_COND_EXP_INCLUDED
+// $Id$
+# ifndef CPPAD_COND_EXP_HPP
+# define CPPAD_COND_EXP_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -35,28 +35,26 @@ $spell
 	Gt
 $$
 
-$index conditional, expression$$
-$index expression, conditional$$
-$index assign, conditional$$
 
 $section AD Conditional Expressions$$
+$mindex assign$$
 
 $head Syntax$$
 $icode%result% = CondExp%Rel%(%left%, %right%, %if_true%, %if_false%)%$$
 
 
 $head Purpose$$
-Record, 
+Record,
 as part of an AD of $icode Base$$
 $cref/operation sequence/glossary/Operation/Sequence/$$,
-the conditional result 
+the conditional result
 $codei%
 	if( %left% %Cop% %right% )
 		%result% = %if_true%
 	else	%result% = %if_false%
 %$$
-The relational $icode Rel$$ and comparison operator $icode Cop$$ 
-above have the following correspondence: 
+The relational $icode Rel$$ and comparison operator $icode Cop$$
+above have the following correspondence:
 $codei%
 	%Rel%   Lt   Le   Eq   Ge   Gt
 	%Cop%    <   <=   ==   >=   >
@@ -66,14 +64,14 @@ AD operation sequence,
 the assignment choice for $icode result$$
 in an AD conditional expression is made each time
 $cref/f.Forward/Forward/$$ is used to evaluate the zero order Taylor
-coefficients with new values for the 
+coefficients with new values for the
 $cref/independent variables/glossary/Tape/Independent Variable/$$.
 This is in contrast to the $cref/AD comparison operators/Compare/$$
-which are boolean valued and not included in the AD operation sequence. 
+which are boolean valued and not included in the AD operation sequence.
 
 $head Rel$$
 In the syntax above, the relation $icode Rel$$ represents one of the following
-two characters: $code Lt$$, $code Le$$, $code Eq$$, $code Ge$$, $code Gt$$. 
+two characters: $code Lt$$, $code Le$$, $code Eq$$, $code Ge$$, $code Gt$$.
 As in the table above,
 $icode Rel$$ determines which comparison operator $icode Cop$$ is used
 when comparing $icode left$$ and $icode right$$.
@@ -83,14 +81,14 @@ These functions are defined in the CppAD namespace for arguments of
 $icode Type$$ is $code float$$ , $code double$$, or any type of the form
 $codei%AD<%Base%>%$$.
 (Note that all four arguments must have the same type.)
- 
+
 $head left$$
 The argument $icode left$$ has prototype
 $codei%
 	const %Type%& %left%
 %$$
 It specifies the value for the left side of the comparison operator.
- 
+
 $head right$$
 The argument $icode right$$ has prototype
 $codei%
@@ -121,22 +119,25 @@ $codei%
 $head Optimize$$
 The $cref optimize$$ method will optimize conditional expressions
 in the following way:
-During $cref/zero order forward mode/ForwardZero/$$,
-once the value of the $icode left$$ and $icode right$$ have been determined, 
+During $cref/zero order forward mode/forward_zero/$$,
+once the value of the $icode left$$ and $icode right$$ have been determined,
 it is known if the true or false case is required.
 From this point on, values corresponding to the case that is not required
-are not computed. 
+are not computed.
 This optimization is done for the rest of zero order forward mode
 as well as forward and reverse derivatives calculations.
 There is one exception to this optimization; see
-$cref/wish list/WishList/Conditional Expressions/$$.
+$cref/optimizing nested conditional expressions
+	/wish_list
+	/Optimizing Nested Conditional Expressions
+/$$.
 
-$head Deprecated$$
-Previous versions of CppAD used 
+$head Deprecate 2005-08-07$$
+Previous versions of CppAD used
 $codei%
 	CondExp(%flag%, %if_true%, %if_false%)
 %$$
-for the same meaning as 
+for the same meaning as
 $codei%
 	CondExpGt(%flag%, %Type%(0), %if_true%, %if_false%)
 %$$
@@ -158,7 +159,7 @@ $children%
 %$$
 The file
 $cref cond_exp.cpp$$
-contains an example and test of this function.   
+contains an example and test of this function.
 It returns true if it succeeds and false otherwise.
 
 $head Atan2$$
@@ -180,9 +181,9 @@ template <class Base>
 CPPAD_INLINE_FRIEND_TEMPLATE_FUNCTION
 AD<Base> CondExpOp(
 	enum  CompareOp cop       ,
-	const AD<Base> &left      , 
-	const AD<Base> &right     , 
-	const AD<Base> &if_true   , 
+	const AD<Base> &left      ,
+	const AD<Base> &right     ,
+	const AD<Base> &if_true   ,
 	const AD<Base> &if_false  )
 {
 	AD<Base> returnValue;
@@ -230,7 +231,7 @@ AD<Base> CondExpOp(
 	}
 
 	// must use CondExp incase Base is an AD type and recording
-	returnValue.value_ = CondExpOp(cop, 
+	returnValue.value_ = CondExpOp(cop,
 		left.value_, right.value_, if_true.value_, if_false.value_);
 
 	ADTape<Base> *tape = CPPAD_NULL;
@@ -244,8 +245,8 @@ AD<Base> CondExpOp(
 		tape = if_false.tape_this();
 
 	// add this operation to the tape
-	if( tape != CPPAD_NULL ) 
-		tape->RecordCondExp(cop, 
+	if( tape != CPPAD_NULL )
+		tape->RecordCondExp(cop,
 			returnValue, left, right, if_true, if_false);
 
 	return returnValue;
@@ -287,7 +288,7 @@ void ADTape<Base>::RecordCondExp(
 		ind2 = Rec_.PutPar(left.value_);
 	else
 	{	ind1 += 1;
-		ind2 = left.taddr_;	
+		ind2 = left.taddr_;
 	}
 
 	// ind[3] = right address
@@ -295,7 +296,7 @@ void ADTape<Base>::RecordCondExp(
 		ind3 = Rec_.PutPar(right.value_);
 	else
 	{	ind1 += 2;
-		ind3 = right.taddr_;	
+		ind3 = right.taddr_;
 	}
 
 	// ind[4] = if_true address
@@ -303,7 +304,7 @@ void ADTape<Base>::RecordCondExp(
 		ind4 = Rec_.PutPar(if_true.value_);
 	else
 	{	ind1 += 4;
-		ind4 = if_true.taddr_;	
+		ind4 = if_true.taddr_;
 	}
 
 	// ind[5] =  if_false address
@@ -311,7 +312,7 @@ void ADTape<Base>::RecordCondExp(
 		ind5 = Rec_.PutPar(if_false.value_);
 	else
 	{	ind1 += 8;
-		ind5 = if_false.taddr_;	
+		ind5 = if_false.taddr_;
 	}
 
 	CPPAD_ASSERT_UNKNOWN( NumArg(CExpOp) == 6 );
@@ -346,14 +347,14 @@ CPPAD_COND_EXP(Gt)
 template <class Base>
 CPPAD_INLINE_FRIEND_TEMPLATE_FUNCTION
 AD<Base> CondExp(
-	const AD<Base> &flag      , 
+	const AD<Base> &flag      ,
 	const AD<Base> &if_true   ,
 	const AD<Base> &if_false  )
-{	
+{
 	return CondExpOp(CompareGt, flag, AD<Base>(0), if_true, if_false);
 }
 
 # undef CPPAD_COND_EXP
 } // END CppAD namespace
 
-# endif 
+# endif

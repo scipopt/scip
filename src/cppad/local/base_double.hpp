@@ -1,8 +1,8 @@
-/* $Id: base_double.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_BASE_DOUBLE_INCLUDED
-# define CPPAD_BASE_DOUBLE_INCLUDED
+// $Id$
+# ifndef CPPAD_BASE_DOUBLE_HPP
+# define CPPAD_BASE_DOUBLE_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the
@@ -11,11 +11,21 @@ the terms of the
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
+# include <cppad/configure.hpp>
 # include <limits>
 
 /*
 $begin base_double.hpp$$
 $spell
+	cppad
+	hpp
+	azmul
+	expm1
+	atanh
+	acosh
+	asinh
+	erf
+	endif
 	abs_geq
 	acos
 	asin
@@ -38,9 +48,6 @@ $spell
 	const
 $$
 
-$index double, Base$$
-$index Base, double$$
-$index double, Base$$
 
 $section Enable use of AD<Base> where Base is double$$
 
@@ -51,11 +58,11 @@ $cref/ordered type/base_cond_exp/CondExpTemplate/Ordered Type/$$.
 Hence its $code CondExpOp$$ function is defined by
 $codep */
 namespace CppAD {
-	inline double CondExpOp( 
+	inline double CondExpOp(
 		enum CompareOp     cop          ,
 		const double&       left         ,
-		const double&       right        , 
-		const double&       exp_if_true  , 
+		const double&       right        ,
+		const double&       exp_if_true  ,
 		const double&       exp_if_false )
 	{	return CondExpTemplate(cop, left, right, exp_if_true, exp_if_false);
 	}
@@ -106,6 +113,13 @@ namespace CppAD {
 }
 /* $$
 
+$head azmul$$
+$codep */
+namespace CppAD {
+	CPPAD_AZMUL( double )
+}
+/* $$
+
 $head Ordered$$
 The $code double$$ type supports ordered comparisons
 $codep */
@@ -142,9 +156,17 @@ namespace CppAD {
 	CPPAD_STANDARD_MATH_UNARY(double, sqrt)
 	CPPAD_STANDARD_MATH_UNARY(double, tan)
 	CPPAD_STANDARD_MATH_UNARY(double, tanh)
+# if CPPAD_USE_CPLUSPLUS_2011
+	CPPAD_STANDARD_MATH_UNARY(double, erf)
+	CPPAD_STANDARD_MATH_UNARY(double, asinh)
+	CPPAD_STANDARD_MATH_UNARY(double, acosh)
+	CPPAD_STANDARD_MATH_UNARY(double, atanh)
+	CPPAD_STANDARD_MATH_UNARY(double, expm1)
+	CPPAD_STANDARD_MATH_UNARY(double, log1p)
+# endif
 }
 /* $$
-The absolute value function is special because its $code std$$ name is 
+The absolute value function is special because its $code std$$ name is
 $code fabs$$
 $codep */
 namespace CppAD {
@@ -178,32 +200,22 @@ namespace CppAD {
 }
 /*$$
 
-$head limits$$
-The following defines the numeric limits functions
-$code epsilon$$, $code min$$, and $code max$$ for the type
-$code double$$.
-It also defines the deprecated $code epsilon$$ function:
+$head numeric_limits$$
+The following defines the CppAD $cref numeric_limits$$
+for the type $code double$$:
 $codep */
 namespace CppAD {
-	template <>
-	class numeric_limits<double> {
-	public:
-		// machine epsilon
-		static double epsilon(void)
-		{	return std::numeric_limits<double>::epsilon(); }
-		// minimum positive normalized value
-		static double min(void)
-		{	return std::numeric_limits<double>::min(); }
-		// maximum finite value
-		static double max(void)
-		{	return std::numeric_limits<double>::max(); }
-	};
-	// deprecated machine epsilon
-	template <> 
-	inline double epsilon<double>(void)
-	{	return numeric_limits<double>::epsilon(); }
+	CPPAD_NUMERIC_LIMITS(double, double)
 }
-/* $$
+/*$$
+
+$head to_string$$
+There is no need to define $code to_string$$ for $code double$$
+because it is defined by including $code cppad/utility/to_string.hpp$$;
+see $cref to_string$$.
+See $cref/base_complex.hpp/base_complex.hpp/to_string/$$ for an example where
+it is necessary to define $code to_string$$ for a $icode Base$$ type.
+
 $end
 */
 

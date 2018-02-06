@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -135,6 +135,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
  *  - nrounds         : number of presolving rounds already done
+ *  - presoltiming    : current presolving timing
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolving method
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolving method
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolving method
@@ -148,6 +149,9 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *
  *  @note the counters state the changes since the last call including the changes of this presolving method during its
  *        last call
+ *
+ *  @note if the propagator uses dual information for presolving it is nesassary to check via calling SCIPallowDualReds
+ *        if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
@@ -172,7 +176,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_DIDNOTRUN  : the presolving method was skipped
  *  - SCIP_DELAYED    : the presolving method was skipped, but should be called again
  */
-#define SCIP_DECL_PROPPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, int nrounds, \
+#define SCIP_DECL_PROPPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, int nrounds, SCIP_PRESOLTIMING presoltiming,  \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
       int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
@@ -194,6 +198,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_DIDNOTFIND : the propagator searched, but did not find a domain reduction
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
+ *  - SCIP_DELAYNODE  : the current node should be postponed (return value only valid for BEFORELP propagation)
  */
 #define SCIP_DECL_PROPEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop,  SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
@@ -214,6 +219,9 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  resolving method.
  *
  *  See the description of the propagation conflict resolving method of constraint handlers for further details.
+ *
+ *  @note if the propagtor uses dual information it is nesassary to check via calling SCIPallowDualReds and
+ *        SCIPallowObjProp if dual reductions and propgation with the current cutoff bound, resp., are allowed.
  *
  *  input:
  *  - scip            : SCIP main data structure

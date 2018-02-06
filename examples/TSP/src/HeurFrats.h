@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,14 +42,16 @@ public:
       SCIP* scip
       )
       : ObjHeur(scip, "frats", "fractional travelling salesman: TSP rounding heuristic", 'T',-50000, 5, 0, -1,
-         SCIP_HEURTIMING_AFTERLPNODE, FALSE)
+         SCIP_HEURTIMING_AFTERLPNODE, FALSE),
+      graph(NULL),
+      sol(NULL)
    {
    }
 
    /** destructor */
    virtual ~HeurFrats()
    {
-   }
+   } /*lint !e1540*/
 
    /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
    virtual SCIP_DECL_HEURFREE(scip_free);
@@ -89,14 +91,14 @@ public:
    virtual SCIP_DECL_HEUREXEC(scip_exec);
 
    /** clone method which will be used to copy a objective plugin */
-   virtual SCIP_DECL_HEURCLONE(ObjCloneable* clone);
+   virtual SCIP_DECL_HEURCLONE(ObjCloneable* clone); /*lint !e665*/
 
    /** returns whether the objective plugin is copyable */
    virtual SCIP_DECL_HEURISCLONEABLE(iscloneable)
    {
       return true;
    }
-};
+}; /*lint !e1712*/
 
 }
 #endif

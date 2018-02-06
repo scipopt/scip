@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflict.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for conflict analysis
  * @author Tobias Achterberg
  */
@@ -35,6 +36,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_conflict.h"
 #include "scip/pub_conflict.h"
+#include "scip/conflictstore.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +118,8 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    SCIP_BDCHGINFO**      bdchginfos,         /**< bound change resembling the conflict set */
    SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos,        /**< number of bound changes in the conflict set */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
+   SCIP_Bool             usescutoffbound,    /**< depends the conflict on the cutoff bound? */
    SCIP_Bool             resolved,           /**< was the conflict set already used to create a constraint? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -210,7 +214,9 @@ SCIP_RETCODE SCIPconflictInit(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
+   SCIP_Bool             usescutoffbound     /**< depends the conflict on a cutoff bound? */
    );
 
 /** adds variable's bound to conflict candidate queue */
@@ -298,10 +304,11 @@ SCIP_RETCODE SCIPconflictFlushConss(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
-
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** returns the current number of conflict sets in the conflict set storage */
@@ -422,15 +429,18 @@ SCIP_Longint SCIPconflictGetNPropReconvergenceLiterals(
 extern
 SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
@@ -541,15 +551,18 @@ SCIP_Longint SCIPconflictGetNBoundexceedingLPIterations(
 extern
 SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_COL*             col,                /**< LP column with at least one infeasible strong branching subproblem */
    SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible downwards branch, or NULL */
@@ -560,6 +573,42 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 /** gets time in seconds used for analyzing infeasible strong branching conflicts */
 extern
 SCIP_Real SCIPconflictGetStrongbranchTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of successful calls to infeasible dualray analysis */
+extern
+SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of globally valid dualray constraints */
+extern
+SCIP_Longint SCIPconflictGetNDualrayInfGlobal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets average length of infeasible dualrays */
+extern
+SCIP_Longint SCIPconflictGetNDualrayInfNonzeros(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of successfully analyzed dual proofs of boundexceeding LPs */
+extern
+SCIP_Longint SCIPconflictGetNDualrayBndSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of globally applied dual proofs of boundexceeding LPs */
+extern
+SCIP_Longint SCIPconflictGetNDualrayBndGlobal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets average length of dual proofs of boundexceeding LPs */
+extern
+SCIP_Longint SCIPconflictGetNDualrayBndNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -627,9 +676,11 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
@@ -678,7 +729,7 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
 /** enables or disables all clocks of \p conflict, depending on the value of the flag */
 extern
 void SCIPconflictEnableOrDisableClocks(
-   SCIP_CONFLICT*        conflict,            /**< the conflict analysis data for which all clocks should be enabled or disabled */
+   SCIP_CONFLICT*        conflict,           /**< the conflict analysis data for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the conflict analysis data be enabled? */
    );
 

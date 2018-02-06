@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_var.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for problem variables
  * @author Tobias Achterberg
  */
@@ -31,6 +32,7 @@
 #include "scip/type_implics.h"
 #include "scip/type_cons.h"
 #include "scip/type_prop.h"
+#include "scip/type_lp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -198,7 +200,8 @@ struct SCIP_Var
 #ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
 #endif
-   SCIP_Real             obj;                /**< objective function value of variable */
+   SCIP_Real             obj;                /**< objective function value of variable (might be changed temporarily in probing mode)*/
+   SCIP_Real             unchangedobj;       /**< unchanged objective function value of variable (ignoring temporary changes in probing mode) */
    SCIP_Real             branchfactor;       /**< factor to weigh variable's branching score with */
    SCIP_Real             rootsol;            /**< last primal solution of variable in root node, or zero */
    SCIP_Real             bestrootsol;        /**< best primal solution of variable in root node, or zero, w.r.t. root LP value and root reduced cost */
@@ -272,6 +275,7 @@ struct SCIP_Var
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
    unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */
    unsigned int          eventqueueimpl:1;   /**< is an IMPLADDED event on this variable currently in the event queue? */
+   unsigned int          delglobalstructs:1; /**< is variable marked to be removed from global structures (cliques etc.)? */
 };
 
 #ifdef __cplusplus

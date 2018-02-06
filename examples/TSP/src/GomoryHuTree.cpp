@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -164,7 +164,7 @@ void global_relabel (GRAPH *gr, GRAPHNODE *tptr)
          assert(eptr->cap > EPS);
          assert(eptr->back->cap > EPS);
          nptr->unmarked = FALSE;
-         nptr->dist = level;
+         nptr->dist = (int) level;
          ++count;
          ++number[level];
          if ( nptr->excess > EPS )
@@ -194,7 +194,7 @@ void global_relabel (GRAPH *gr, GRAPHNODE *tptr)
       {
          if ( nptr->unmarked && nptr->alive )
          {
-            nptr->dist = n;
+            nptr->dist = (int) n;
             nptr->alive = FALSE;
          }
       }
@@ -269,12 +269,12 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
    eptr = q_rear->first_edge;
    while ( eptr != NULL )
    {
-      assert(eptr->back->cap == eptr->back->rcap);
+      assert(eptr->back->cap == eptr->back->rcap); /*lint !e777*/
       if ( eptr->adjac->unmarked && eptr->back->rcap > EPS )
       {
          nptr = eptr->adjac;
          nptr->unmarked = FALSE;
-         nptr->dist = level;
+         nptr->dist = (int) level;
          ++number[level];
          q_front->bfs_link = nptr;
          q_front = nptr;
@@ -298,7 +298,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
       }
    }
 
-   s_ptr->dist = n; /* number[0] and number[n] not required */
+   s_ptr->dist = (int) n; /* number[0] and number[n] not required */
    t_ptr->dist = 0L;
    t_ptr->excess = 1.0L;  /* to be subtracted again */
 
@@ -425,14 +425,14 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
                      --number[nptr->dist];
                      active[nptr->dist] = NULL; 
                      nptr->alive = FALSE; 
-                     nptr->dist = n;
+                     nptr->dist = (int) n;
                      --bound;
                   }
                }
                --number[aptr->dist];
                active[aptr->dist] = NULL;
                aptr->alive = FALSE;
-               aptr->dist = n;
+               aptr->dist = (int) n;
                --bound;
                goto node_ready;
             }
@@ -459,7 +459,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
                { 
                   /* ordinary relabel operation */
                   --number[aptr->dist];
-                  aptr->dist = dmin;
+                  aptr->dist = (int) dmin;
                   ++number[dmin];
                   max_dist = dmin;
                   eptr = aptr->scan_ptr;
@@ -471,7 +471,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
                { 
                   aptr->alive = FALSE;
                   --number[aptr->dist];
-                  aptr->dist = n;
+                  aptr->dist = (int) n;
                   --bound;
                   goto node_ready;
                }
@@ -494,7 +494,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
    } 
    while ( max_dist > 0L );  
 
-   return (t_ptr->excess - 1.0L);
+   return (int) (t_ptr->excess - 1.0L);
 }
 
 SCIP_Bool nodeOnRootPath(GRAPH* gr, int i, int j)
@@ -517,6 +517,7 @@ void constructCutList(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
    {
       if( gr->nodes[i].mincap < 2.0 - minviol )
       {
+         cuts[k][0] = FALSE;
          for( int j = 1 ; j < gr->nnodes; j++ )
             cuts[k][j] = nodeOnRootPath(gr, i, j);
          k++;
@@ -529,6 +530,7 @@ void constructCutList(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
 // an according cut is generated, using information from BFS in method maxflow
 void constructSingleCut(GRAPH *gr, SCIP_Bool** cuts)
 {
+   cuts[0][0] = FALSE;
    for( int i = 1; i < gr->nnodes; i++ )
       cuts[0][i]=gr->nodes[i].unmarked;
 }

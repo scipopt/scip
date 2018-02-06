@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/heur_pscostdiving.h"
-#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "pscostdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the pseudo cost values"
@@ -35,6 +34,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
 
 
 /*
@@ -52,6 +52,12 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS TRUE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
+#define DEFAULT_RANDSEED            103 /**< initial random seed */
+
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -94,7 +100,7 @@ SCIP_DECL_HEURFREE(heurFreePscostdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -134,12 +140,12 @@ SCIP_DECL_HEUREXIT(heurExitPscostdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    return SCIP_OKAY;
 }
-
 
 /** execution method of primal heuristic */
 static
@@ -154,6 +160,12 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
    assert(SCIPheurGetDivesets(heur) != NULL);
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* terminate if there are no integer variables (note that, e.g., SOS1 variables may be present) */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
@@ -186,20 +198,31 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    /*  determine the candidate direction. if the variable may be trivially rounded in one direction, take the other direction;
     *  otherwise, consider first the direction from the root solution, second the candidate fractionality, and
     *  last the direction of smaller pseudo costs
+    *
+    *  to avoid performance variability caused by numerics we use random numbers to decide whether we want to roundup or
+    *  round down if the values to compare are equal within tolerances.
     */
    assert(pscostdown >= 0.0 && pscostup >= 0.0);
    if( mayrounddown != mayroundup )
       *roundup = mayrounddown;
-   else if( candsol < SCIPvarGetRootSol(cand) - 0.4 )
+   else if( SCIPisLT(scip, candsol, SCIPvarGetRootSol(cand) - 0.4)
+         || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) - 0.4) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = FALSE;
-   else if( candsol > SCIPvarGetRootSol(cand) + 0.4 )
+   else if( SCIPisGT(scip, candsol, SCIPvarGetRootSol(cand) + 0.4)
+         || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) + 0.4) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = TRUE;
-   else if( candsfrac < 0.3 )
+   else if( SCIPisLT(scip, candsfrac, 0.3)
+         || (SCIPisEQ(scip, candsfrac, 0.3) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = FALSE;
-   else if( candsfrac > 0.7 )
+   else if( SCIPisGT(scip, candsfrac, 0.7)
+         || (SCIPisEQ(scip, candsfrac, 0.7) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
+      *roundup = TRUE;
+   else if( SCIPisEQ(scip, pscostdown, pscostup) )
+      *roundup = (SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0);
+   else if( pscostdown > pscostup )
       *roundup = TRUE;
    else
-      *roundup = (pscostdown >= pscostup);
+      *roundup = FALSE;
 
    if( *roundup )
       pscostquot = sqrt(candsfrac) * (1.0 + pscostdown) / (1.0 + pscostup);
@@ -229,7 +252,7 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
    SCIP_HEUR* heur;
 
    /* create Pscostdiving primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -246,8 +269,8 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
 
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScorePscostdiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScorePscostdiving) );
 
    return SCIP_OKAY;
 }

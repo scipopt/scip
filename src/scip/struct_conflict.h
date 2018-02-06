@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_conflict.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for conflict analysis
  * @author Tobias Achterberg
  */
@@ -71,6 +72,19 @@ struct SCIP_ConflictSet
    unsigned int          repropagate:1;      /**< should the conflict constraint trigger a repropagation? */
    unsigned int          depthcalced:1;      /**< are the conflict and repropagation depth calculated? */
    unsigned int          sorted:1;           /**< is the conflict set sorted */
+   unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
+};
+
+/** set of conflicting bound changes */
+struct SCIP_ProofSet
+{
+   SCIP_Real*            vals;
+   int*                  inds;
+   SCIP_Real             rhs;
+   int                   nnz;
+   int                   size;
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
 };
 
 /** set of LP bound change */
@@ -134,6 +148,12 @@ struct SCIP_Conflict
    SCIP_Longint          npseudoconfliterals;/**< total number of literals in valid pseudo solution conflict constraints */
    SCIP_Longint          npseudoreconvconss; /**< number of reconvergence constraints detected in pseudo sol conflict analysis */
    SCIP_Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence constraints */
+   SCIP_Longint          ndualrayinfglobal;  /**< number of dual ray constraints added globally */
+   SCIP_Longint          ndualrayinfsuccess; /**< number of successfully dual ray analysis calls for infeasible LPs */
+   SCIP_Longint          dualrayinfnnonzeros;/**< number of non-zeros over all accepted dual rays */
+   SCIP_Longint          ndualraybndglobal;  /**< number of dual proof constraints of boundexceeding added globally */
+   SCIP_Longint          ndualraybndsuccess; /**< number of successfully dual proof analysis calls for boundexceeding LPs */
+   SCIP_Longint          dualraybndnnonzeros;/**< number of non-zeros over all accepted dual proof of boundexceeding LPs */
 
    SCIP_CLOCK*           dIBclock;           /**< time used for detect implied bounds */
 
@@ -144,12 +164,16 @@ struct SCIP_Conflict
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
+   SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
+   SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
    SCIP_Real*            conflictsetscores;  /**< score values of the conflict sets found at the current node */
    SCIP_BDCHGINFO**      tmpbdchginfos;      /**< temporarily created bound change information data */
    int                   conflictsetssize;   /**< size of conflictsets array */
    int                   nconflictsets;      /**< number of available conflict sets (used slots in conflictsets array) */
+   int                   proofsetssize;      /**< size of proofsets array */
+   int                   nproofsets;         /**< number of available proof sets (used slots in proofsets array) */
    int                   tmpbdchginfossize;  /**< size of tmpbdchginfos array */
    int                   ntmpbdchginfos;     /**< number of temporary created bound change information data */
    int                   count;              /**< conflict set counter to label binary conflict variables with */

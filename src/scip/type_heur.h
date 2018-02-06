@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,9 +40,18 @@
 extern "C" {
 #endif
 
+/** represents different methods for a dive set to explore the next children */
+#define SCIP_DIVETYPE_NONE                0x000u  /**< no method specified */
+#define SCIP_DIVETYPE_INTEGRALITY         0x001u  /**< use branching on a variable by shrinking the domain in the child nodes */
+#define SCIP_DIVETYPE_SOS1VARIABLE        0x002u  /**< branch on a variable solution value by exploiting special-ordered set conflict structure */
+
+typedef unsigned int SCIP_DIVETYPE;
+
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */
+typedef struct SCIP_VGraph SCIP_VGRAPH;           /**< variable graph data structure to determine breadth-first
+                                                    *  distances between variables */
 
 /** copy method for heuristic plugins (called when SCIP copies plugins)
  *
@@ -127,6 +136,8 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *
  *  input:
  *  - scip            : SCIP main data structure
+ *  - diveset         : diving settings for scoring
+ *  - divetype        : represents different methods for a dive set to explore the next children
  *  - cand            : Candidate variable for which the score should be determined
  *  - candsol         : solution value of variable in LP relaxation solution
  *  - candsfrac       : fractional part of solution value of variable
@@ -135,8 +146,8 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
-#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, \
-   SCIP_Real* score, SCIP_Bool* roundup)
+#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, \
+   SCIP_DIVETYPE divetype, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, SCIP_Real* score, SCIP_Bool* roundup)
 
 #ifdef __cplusplus
 }

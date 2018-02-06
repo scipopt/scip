@@ -5,7 +5,7 @@
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -35,6 +35,11 @@ function min(x,y)
 function max(x,y)
 {
    return (x) > (y) ? (x) : (y);
+}
+
+function max3(x,y,z)
+{
+   return (x) >= (y) ? max(x,z) : max(y,z);
 }
 
 function ceil(x)
@@ -67,11 +72,11 @@ function mod(x,m)
    return (x - m*floor(x/m));
 }
 
-function printhline(nsolver,short, printsoltimes)
+function printhline(nsolver,short, printsoltimes, printconfs)
 {
    for( s = 0; s < nsolver; ++s )
    {
-      
+
       if( s == 0 )
          printf("--------------------+-+---------+--------+");
       else
@@ -87,6 +92,13 @@ function printhline(nsolver,short, printsoltimes)
             printf("---------+--------+");
          else
             printf("------+------+");
+      }
+      if( printconfs )
+      {
+         if( s == 0 )
+            printf("--------+-------+");
+         else
+            printf("--------+-------+");
       }
    }
    printf("-------------\n");
@@ -192,9 +204,9 @@ function mcnemar(ref_array, solver_array, problistlen)
    for( i = 0; i < problistlen; ++i )
    {
       if( ref_array[i] && !solver_array[i] )
-	 b++;
+         b++;
       else if( !ref_array[i] && solver_array[i] )
-	 c++;
+         c++;
    }
 
    # textbook McNemar formula, the square of the differences of both counters divided by their sum is supposed to be
@@ -205,57 +217,21 @@ function mcnemar(ref_array, solver_array, problistlen)
    return chi_squared;
 }
 
-# a brute-force table lookup for determining in which range the p-value of a given chi-square value will be (in
-# particular whether it will be below 0.05)
+# check significance of chi-square distribution with degree 1 using quantiles
 function chi_to_p(chi)
 {
-   if(chi> 1e+20)
-      chi = 1e+20;
-
-   p_val[0]=1;
-   p_val[1]=0.25;
-   p_val[2]=0.20;
-   p_val[3]=0.15;
-   p_val[4]=0.10;
-   p_val[5]=0.05;
-   p_val[6]=0.025;
-   p_val[7]=0.02;
-   p_val[8]=0.01;
-   p_val[9]=0.005;
-   p_val[10]=0.0025;
-   p_val[11]=0.001;
-   p_val[12]=0.0005;
-   p_val[13]=0.0000;
-
-   chi2[0]=0.0;
-   chi2[1]=1.32;
-   chi2[2]=1.64;
-   chi2[3]=2.07;
-   chi2[4]=2.71;
-   chi2[5]=3.84;
-   chi2[6]=5.02;
-   chi2[7]=5.41;
-   chi2[8]=6.63;
-   chi2[9]=7.88;
-   chi2[10]=9.14;
-   chi2[11]=10.83;
-   chi2[12]=12.12;
-   chi2[13]=2e+20;
-
-   i = 1;
-
-   while( chi > chi2[i] )
-      i++;
-  printf(" -> p < %6.4f", p_val[i]);
-
-   if( p_val[i-1] > 0.05 )
-      printf("    X   ");
-   else if( p_val[i-1] > 0.005 )
-      printf("    !   ");
-   else if( p_val[i-1] > 0.0005 )
-      printf("   !!   ");
-   else
-      printf("  !!!   ");
+   if ( chi < 3.841 )
+      printf(", 0.05 < p           X");
+   else if ( 3.841 <= chi && chi < 5.024 )  # quantile for 1 - 0.05 = 0.95
+      printf(", p ~ (0.025, 0.05]  !");
+   else if ( 5.024 <= chi && chi < 6.635 )  # quantile for 1 - 0.025 = 0.975
+      printf(", p ~ (0.01, 0.025] !!");
+   else if ( 6.635 <= chi && chi < 7.879 )  # quantile for 1 - 0.01 = 0.99
+      printf(", p ~ (0.005, 0.01]!!!");
+   else if ( 7.879 <= chi && chi < 12.116 ) # quantile for 1 - 0.005 = 0.995
+      printf(", p ~(0.0005,0.005]!!!");
+   else # quantile for 1 - 0.0005 = 0.9995
+      printf(", p <= 0.0005      !!!");
 }
 
 # swaps position i and j of array a
@@ -265,7 +241,7 @@ function swap(a, i, j) {
 
 
 # quicksort algorithm that sorts by the absolute values in non-increasing order
-function qsort(a, left, right) 
+function qsort(a, left, right)
 {
    # stop recursion
    if (left >= right)
@@ -278,7 +254,7 @@ function qsort(a, left, right)
    for( i = left+1; i <= right; i++ )
    {
       if( abs(a[i]) < abs(a[left]) )
-	 swap(a, ++last, i);
+         swap(a, ++last, i);
    }
 
    # swap back pivot, recursive calls
@@ -299,16 +275,18 @@ function parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen
       p = problist[i];
       if(probidx[p,p0] != "" && probidx[p,s] != "")
       {
-	 ref_array[n] = time[p0,probidx[p,p0]];
-	 solver_array[n] = time[s,probidx[p,s]];
-	 n++;
+         ref_array[n] = time[p0,probidx[p,p0]];
+         solver_array[n] = time[s,probidx[p,s]];
+         n++;
       }
    }
 }
 
 # copy node array
-function parse_nodes(ref_array,solver_array,nodes,s,p0,probidx,problistlen,status,infinity)
+function parse_nodes(ref_array,solver_array,nodes,o,probidx,problistlen,status,infinity)
 {
+   s = printorder[o];
+   p0 = printorder[0];
    n = 0;
 
    for( i = 0; i < problistlen; i++ )
@@ -316,13 +294,17 @@ function parse_nodes(ref_array,solver_array,nodes,s,p0,probidx,problistlen,statu
       p = problist[i];
       if(probidx[p,p0] != "" && probidx[p,s] != "")
       {
-	 ref_array[n] = nodes[p0,probidx[p,p0]];
-	 solver_array[n] = nodes[s,probidx[p,s]];
-	 if( status[p0,probidx[p,p0]] == "timeout" || status[p0,probidx[p,p0]] == "memlimit" )
-	    ref_array[n] = infinity;
-	 if( status[p0,probidx[p,s]] == "timeout" || status[p0,probidx[p,s]] == "memlimit" )
-	    solver_array[n] = infinity;
-	 n++;
+         if( status[p0,probidx[p,p0]] == "timeout" || status[p0,probidx[p,p0]] == "memlimit" )
+            ref_array[n] = infinity;
+         else
+            ref_array[n] = nodes[p0,probidx[p,p0]];
+
+         if( status[s,probidx[p,s]] == "timeout" || status[s,probidx[p,s]] == "memlimit" )
+            solver_array[n] = infinity;
+         else
+            solver_array[n] = nodes[s,probidx[p,s]];
+
+         n++;
       }
    }
 }
@@ -333,14 +315,14 @@ function filter(ref_array, solver_array, problistlen, rel_epsilon, abs_delta)
 {
    n = 0;
 
-   for( i = 0; i <= problistlen; i++ )
+   for( i = 0; i < problistlen; i++ )
    {
-      if( abs(solver_array[i]-ref_array[i]) > abs_delta &&
-	  (ref_array[i] == 0.0 || solver_array[i]/ref_array[i] > 1.0+rel_epsilon || solver_array[i]/ref_array[i] < 1.0/(1.0+rel_epsilon) ) )
+      diff = abs(solver_array[i] - ref_array[i]);
+      if( diff > abs_delta && diff / max3(abs(solver_array[i]), abs(ref_array[i]), 1.0) > rel_epsilon )
       {
-	 ref_array[n] = ref_array[i];
-	 solver_array[n] = solver_array[i];
-	 n++;
+         ref_array[n] = ref_array[i];
+         solver_array[n] = solver_array[i];
+         n++;
       }
    }
 
@@ -348,25 +330,25 @@ function filter(ref_array, solver_array, problistlen, rel_epsilon, abs_delta)
 }
 
 # computes the improvement/degradation factors (always >= 1) and marks them by opposite signs
+# (negative sign if solver_array[i] is faster than ref_array[i])
 function factorize(ref_array, solver_array, n, maxval)
 {
    for( i = 0; i < n; ++i )
    {
-      if( ref_array[i] >= maxval &&  solver_array[i] < maxval )
-	 ref_array[i] = -1.0*maxval;
-      else if( ref_array[i] < maxval &&  solver_array[i] >= maxval )
-	 ref_array[i] = maxval;
+      if( ref_array[i] >= maxval && solver_array[i] < maxval )
+         ref_array[i] = -1.0 * maxval;
+      else if( ref_array[i] < maxval && solver_array[i] >= maxval )
+         ref_array[i] = 1.0 * maxval;
+      else if( ref_array[i] == 0.0 && solver_array[i] == 0.0 )
+         ref_array[i] = 0.0;
       else if( ref_array[i] == 0.0 )
-	 ref_array[i] = -1.0*maxval;
-      else if( solver_array[i]/ref_array[i]  < 1.0 )
-      {
-	 if( solver_array[i] == 0.0 )
-	    ref_array[i] = -1.0*maxval;
-	 else
-	    ref_array[i] = -1.0*ref_array[i]/solver_array[i];
-      }
-      else
-	 ref_array[i] = solver_array[i]/ref_array[i];
+         ref_array[i] = 1.0 * maxval;
+      else if( solver_array[i] == 0.0 )
+         ref_array[i] = -1.0 * maxval;
+      else if( solver_array[i] / ref_array[i]  < 1.0 )
+         ref_array[i] = -1.0 * ref_array[i] / solver_array[i];
+       else
+         ref_array[i] = solver_array[i] / ref_array[i];
 
       solver_array[i] = 0.0;
    }
@@ -381,22 +363,26 @@ function factorize(ref_array, solver_array, n, maxval)
 # output: the z value, (which needs to be transformed to the desired p-value, see also function z_to_p
 #
 # note: to get meaningful results, some form of filtering should be applied to remove nearly-identical results from the
-#       test set, see also the filter() function 
+#       test set, see also the filter() function
 function wilcoxon(ref_array, solver_array, problistlen, timelimit)
 {
    w_minus = 0;
    w_plus = 0;
 
+   # avoid degenerate case
+   if ( problistlen == 0 )
+      return 0.0;
+
    # calculate difference
    for( i = 0; i < problistlen; i++ )
    {
-      differences[i] = ref_array[i]-solver_array[i];
+      differences[i] = ref_array[i] - solver_array[i];
       if( (ref_array[i] >= timelimit) != (solver_array[i] >= timelimit) )
-	 differences[i] = sign(differences[i]) * timelimit;
+         differences[i] = sign(differences[i]) * timelimit;
    }
 
    # sort differences by their absolute values
-   qsort(differences, 0, problistlen);
+   qsort(differences, 0, problistlen-1);
 
    i = 0;
 
@@ -407,198 +393,66 @@ function wilcoxon(ref_array, solver_array, problistlen, timelimit)
       i_end = i;
       i_sum = 0;
 
-      # use average in case of tied samples (identical differences)
-      while(abs((abs(differences[i_start]) - abs(differences[i_end]))) < 1e-06 && i_end <= problistlen)
+      # use average in case of tied samples (identical differences) - always executed once
+      while ( i_end < problistlen && abs((abs(differences[i_start]) - abs(differences[i_end]))) < 1e-06 )
       {
-	 i_sum += i_end;
-	 i_end++;
+         i_sum += i_end;
+         i_end++;
       }
 
-      i_sum = i_sum/(i_end-i_start);
+      i_sum = i_sum/(i_end - i_start);
 
       # add (average) rank values to rank sums
       #
       # in the default case that the value is unique, this loop and the previous loop are traversed exactly once, s.t.
       # the value is simply added to one of the sums
-      for( i = i_start; i < i_end; i++ )
+      while ( i < i_end )
       {
-	 if( differences[i] < 0 )
-	    w_minus += (i_sum+1);
-	 else if( differences[i] > 0 )
-	    w_plus += (i_sum+1);
+         if( differences[i] < 0 )
+            w_minus += (i_sum+1);
+         else if( differences[i] > 0 )
+            w_plus += (i_sum+1);
+         i++;
       }
    }
 
-   ++problistlen;
-
    # apply Wilcoxon formula
-   w = 1.0*min(w_minus, w_plus);
-   z = (w - 0.25 * problistlen*(problistlen+1)) / sqrt(problistlen*(problistlen+1)*(2*problistlen+1)/24.0);
+   w = 1.0 * min(w_minus, w_plus);
+
+   # apply correction for small number of instances
+   if ( problistlen <= 60 )
+      z = (abs(w - 0.25 * problistlen * (problistlen + 1.0)) - 0.5) / sqrt(problistlen * (problistlen+1) * (2*problistlen + 1.0)/24.0);
+   else
+      z = (w - 0.25 * problistlen * (problistlen + 1.0)) / sqrt(problistlen * (problistlen + 1.0) * (2*problistlen + 1.0)/24.0);
 
    return z;
 }
 
-
-# a brute-force table lookup for determining in which range the p-value of a given z-value will be (in
-# particular whether it will be below 0.05)
+# check significance of z-value with respect to the normal distribution with mean 0 and variance 1
 function z_to_p(z)
 {
-   if( z > 1e+20)
-      z = 1e+20;
-   else if( z < -1e+20 )
-      z = -1e+20;
-
-z_val[0]  = -2e+20;
-z_val[1]  = -2.9;
-z_val[2]  = -2.8;
-z_val[3]  = -2.7;
-z_val[4]  = -2.6;
-z_val[5]  = -2.5;
-z_val[6]  = -2.4;
-z_val[7]  = -2.3;
-z_val[8]  = -2.2;
-z_val[9]  = -2.1;
-z_val[10] = -2.0;
-z_val[11] = -1.9;
-z_val[12] = -1.8;
-z_val[13] = -1.7;
-z_val[14] = -1.6;
-z_val[15] = -1.5;
-z_val[16] = -1.4;
-z_val[17] = -1.3;
-z_val[18] = -1.2;
-z_val[19] = -1.1;
-z_val[20] = -1.0;
-z_val[21] = -0.9;
-z_val[22] = -0.8;
-z_val[23] = -0.7;
-z_val[24] = -0.6;
-z_val[25] = -0.5;
-z_val[26] = -0.4;
-z_val[27] = -0.3;
-z_val[28] = -0.2;
-z_val[29] = -0.1;
-z_val[30] = -0.0;
-z_val[31] = 0.0;
-z_val[32] = 0.1;
-z_val[33] = 0.2;
-z_val[34] = 0.3;
-z_val[35] = 0.4;
-z_val[36] = 0.5;
-z_val[37] = 0.6;
-z_val[38] = 0.7;
-z_val[39] = 0.8;
-z_val[40] = 0.9;
-z_val[41] = 1.0;
-z_val[42] = 1.1;
-z_val[43] = 1.2;
-z_val[44] = 1.3;
-z_val[45] = 1.4;
-z_val[46] = 1.5;
-z_val[47] = 1.6;
-z_val[48] = 1.7;
-z_val[49] = 1.8;
-z_val[50] = 1.9;
-z_val[51] = 2.0;
-z_val[52] = 2.1;
-z_val[53] = 2.2;
-z_val[54] = 2.3;
-z_val[55] = 2.4;
-z_val[56] = 2.5;
-z_val[57] = 2.6;
-z_val[58] = 2.7;
-z_val[59] = 2.8;
-z_val[60] = 2.9;
-z_val[61] = 2e+20;
-
-p_val[0]  = 0.0000;
-p_val[1]  = 0.0019;
-p_val[2]  = 0.0026;
-p_val[3]  = 0.0035;
-p_val[4]  = 0.0047;
-p_val[5]  = 0.0062;
-p_val[6]  = 0.0082;
-p_val[7]  = 0.0107;
-p_val[8]  = 0.0139;
-p_val[9]  = 0.0179;
-p_val[10] = 0.0228;
-p_val[11] = 0.0287;
-p_val[12] = 0.0359;
-p_val[13] = 0.0446;
-p_val[14] = 0.0548;
-p_val[15] = 0.0668;
-p_val[16] = 0.0808;
-p_val[17] = 0.0968;
-p_val[18] = 0.1151;
-p_val[19] = 0.1357;
-p_val[20] = 0.1587;
-p_val[21] = 0.1841;
-p_val[22] = 0.2119;
-p_val[23] = 0.2420;
-p_val[24] = 0.2743;
-p_val[25] = 0.3085;
-p_val[26] = 0.3446;
-p_val[27] = 0.3821;
-p_val[28] = 0.4207;
-p_val[29] = 0.4602;
-p_val[30] = 0.5000;
-p_val[31] = 0.5000;
-p_val[32] = 0.5398;
-p_val[33] = 0.5793;
-p_val[34] = 0.6179;
-p_val[35] = 0.6554;
-p_val[36] = 0.6915;
-p_val[37] = 0.7257;
-p_val[38] = 0.7580;
-p_val[39] = 0.7881;
-p_val[40] = 0.8159;
-p_val[41] = 0.8413;
-p_val[42] = 0.8643;
-p_val[43] = 0.8849;
-p_val[44] = 0.9032;
-p_val[45] = 0.9192;
-p_val[46] = 0.9332;
-p_val[47] = 0.9452;
-p_val[48] = 0.9554;
-p_val[49] = 0.9641;
-p_val[50] = 0.9713;
-p_val[51] = 0.9772;
-p_val[52] = 0.9821;
-p_val[53] = 0.9861;
-p_val[54] = 0.9893;
-p_val[55] = 0.9918;
-p_val[56] = 0.9938;
-p_val[57] = 0.9953;
-p_val[58] = 0.9965;
-p_val[59] = 0.9974;
-p_val[60] = 0.9981;
-p_val[61] = 1.0000;
-
-   i = 1;
-
-   while( z > z_val[i] )
-      i++;
-#  printf(" -> %6.4f < p < %6.4f", p_val[i-1], p_val[i]);
-  printf(" -> p < %6.4f", p_val[i]);
-
-   if( p_val[i-1] < 0.95 &&  p_val[i-1] > 0.05)
-      printf("    X   ");
-   else if( p_val[i-1] < 0.995 &&  p_val[i-1] > 0.005)
-      printf("    !   ");
-   else if( p_val[i-1] < 0.9995 &&  p_val[i-1] > 0.0005)
-      printf("   !!   ");
-   else
-      printf("  !!!   ");
-
+   # check whether z lies in (1 - 0.05) quantile -> null hypothesis is accepted
+   if ( -1.960 <= z && z <= 1.960 )       # quantile for 1 - 0.05
+      printf(", 0.05 <= p          X");
+   else if ( -2.241 <= z && z <= 2.241 ) # quantile for 1 - 0.025
+      printf(", p ~ [0.025, 0.05)  !");
+   else if ( - 2.576 <= z && z <= 2.576 ) # quantile for 1 - 0.01
+      printf(", p ~ [0.01, 0.025) !!");
+   else if ( - 2.807 <= z && z <= 2.807 ) # quantile for 1 - 0.005
+      printf(", p ~ [0.005, 0.01)!!!");
+   else if ( - 3.481 <= z && z <= 3.481 ) # quantile for 1 - 0.0005
+      printf(", p ~[0.0005,0.005)!!!");
+   else # quantile for 1 - 0.0005 = 0.9995
+      printf(", p < 0.0005       !!!");
 }
-
 
 BEGIN {
 
-   short = 0;  #for each non reference solver, only absolute time and number of nodes are printed 
+   short = 0;  #for each non reference solver, only absolute time and number of nodes are printed
    printsoltimes = 0; # for reference solver, absolute time to first and best solution are printed, for other solvers the corresponding ratios
                       #! please NOTE that this additional output is currently only available for SCIP .res-files created with the evalcheck.sh script and
                       #  the flag printsoltimes = 1 set in check.awk. If other solvers are involved, leave this flag set to 0.
+   printconfs = 0;
    printgap = 0; # if timeout, then print absolute gap at termination in time column, if gap is finite
    printsoltimes = !short && printsoltimes; # short deactivates the detailed solution times output
    infinity = 1e+20;
@@ -681,7 +535,7 @@ BEGIN {
    statuses["gaplimit"];
    statuses["memlimit"];
    statuses["nodelimit"];
-   
+
    name[nsolver,nprobs[nsolver]] = $1;
    validline = 0;
    # check if this is a useable line
@@ -704,7 +558,7 @@ BEGIN {
    if( $11 in statuses ) # from NLP-trace-files
    {
       # collect data (line with problem type, problem size and simplex iterations)
-       type[nsolver,nprobs[nsolver]] = $2;
+      type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $3;
       vars[nsolver,nprobs[nsolver]] = $4;
       dualbound[nsolver,nprobs[nsolver]] = max(min($5, +infinity), -infinity);
@@ -720,7 +574,7 @@ BEGIN {
    if( $12 in statuses ) # GUROBI, CBC
    {
       # collect data (line with original and presolved problem size and simplex iterations)
-        type[nsolver,nprobs[nsolver]] = "?";
+      type[nsolver,nprobs[nsolver]] = "?";
       conss[nsolver,nprobs[nsolver]] = $4;
       vars[nsolver,nprobs[nsolver]] = $5;
       dualbound[nsolver,nprobs[nsolver]] = max(min($6, +infinity), -infinity);
@@ -749,7 +603,6 @@ BEGIN {
       printsoltimes = 0; # additional output is only available for SCIP-.res files
       validline = 1;
    }
-
    if( $15 in statuses ) # SCIP with solution times to first/last
    {
       # collect data (line with problem type, original and presolved problem size and simplex iterations)
@@ -767,26 +620,44 @@ BEGIN {
       status[nsolver,nprobs[nsolver]] = $15;
       validline = 1;
    }
+   if( $19 in statuses ) # SCIP with conflict analysis
+   {
+      # collect data (line with problem type, original and presolved problem size and simplex iterations)
+      type[nsolver,nprobs[nsolver]] = $2;
+      conss[nsolver,nprobs[nsolver]] = $5;
+      vars[nsolver,nprobs[nsolver]] = $6;
+      dualbound[nsolver,nprobs[nsolver]] = max(min($7, +infinity), -infinity);
+      primalbound[nsolver,nprobs[nsolver]] = max(min($8, +infinity), -infinity);
+      gap[nsolver,nprobs[nsolver]] = $9;
+      iters[nsolver,nprobs[nsolver]] = $10;
+      nodes[nsolver,nprobs[nsolver]] = max($11,1);
+      time[nsolver,nprobs[nsolver]] = fracceil(max($12,mintime),0.1);
+      confs[nsolver,nprobs[nsolver]] = $13+$14+$15+$16+$17;
+      conftime[nsolver,nprobs[nsolver]] = max($18, 0.1);
+      status[nsolver,nprobs[nsolver]] = $19;
+      printconfs = 1;
+      validline = 1;
+   }
 
    if( validline )
    {
       # postprocessing of information
       if( status[nsolver,nprobs[nsolver]] == "better" )
-	 status[nsolver,nprobs[nsolver]] = "timeout";
+         status[nsolver,nprobs[nsolver]] = "timeout";
       if( status[nsolver,nprobs[nsolver]] == "sollimit" || status[nsolver,nprobs[nsolver]] == "gaplimit" || status[nsolver,nprobs[nsolver]] == "solved" )
-	 status[nsolver,nprobs[nsolver]] = "ok";
-   
-      if( status[nsolver,nprobs[nsolver]] == "timeout" || status[nsolver,nprobs[nsolver]] == "nodelimit" ||  status[nsolver,nprobs[nsolver]] == "memlimit") 
-	 hitlimit[nsolver,nprobs[nsolver]] = 1;
+         status[nsolver,nprobs[nsolver]] = "ok";
+
+      if( status[nsolver,nprobs[nsolver]] == "timeout" || status[nsolver,nprobs[nsolver]] == "nodelimit" ||  status[nsolver,nprobs[nsolver]] == "memlimit")
+         hitlimit[nsolver,nprobs[nsolver]] = 1;
       else
-	 hitlimit[nsolver,nprobs[nsolver]] = 0;
+         hitlimit[nsolver,nprobs[nsolver]] = 0;
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
       nprobs[nsolver]++;
       if( probcnt[$1] == 1 )
       {
-	 problist[problistlen] = $1;
-	 problistlen++;
+         problist[problistlen] = $1;
+         problistlen++;
       }
    }
 }
@@ -828,6 +699,8 @@ END {
          timetofirstshiftedgeom[s,cat] = timegeomshift;
          timetobestgeom[s,cat] = 1.0;
          timetobestshiftedgeom[s,cat] = timegeomshift;
+         confsgeom[s,cat] = 1.0;
+         conftimegeom[s,cat] = 1.0;
          nodeshiftedgeom[s,cat] = nodegeomshift;
          reftimetotal[s,cat] = 0.0;
          refnodetotal[s,cat] = 0.0;
@@ -839,7 +712,7 @@ END {
          refnodeshiftedgeom[s,cat] = nodegeomshift;
          reftimetofirstshiftedgeom[s,cat] = timegeomshift;
          reftimetobestshiftedgeom[s,cat] = timegeomshift;
-         
+
          wins[s,cat] = 0;
          nsolved[s,cat] = 0;
          ntimeouts[s,cat] = 0;
@@ -907,13 +780,20 @@ END {
        sname = solvername[s];
        if( o == 0 )
        {
-	   if( printsoltimes )
+	   if( printsoltimes && printconfs == 0 )
 	   {
 	       if ( length(sname) <= 58 )
 		   printf(" %58s |", sname);
 	       else
 		   printf(" *%57s |", substr(sname, length(sname)-58));
 	   }
+	   else if( printsoltimes == 0 && printconfs )
+           {
+               if ( length(sname) <= 55 )
+                   printf(" %55s |", sname);
+               else
+                   printf(" *%54s |", substr(sname, length(sname)-54));
+           }
 	   else
 	   {
 	       if ( length(sname) <= 39 )
@@ -929,17 +809,24 @@ END {
 	       if( length(sname) <= 19 )
 		   printf("%19s |", sname);
 	       else
-		   printf("*%18s |", substr(sname, length(sname)-19));
+		   printf("*%16s |", substr(sname, length(sname)-17));
 	   }
-	   else if( printsoltimes )
+	   else if( printsoltimes && printconfs == 0 )
 	   {
 	       if( length(sname) <= 47 )
 		   printf("%47s |", sname);
 	       else
 		   printf("*%46s |", substr(sname, length(sname)-47));
 	   }
+           else if( printsoltimes == 0 && printconfs )
+           {
+               if( length(sname) <= 48 )
+                   printf("%48s |", sname);
+               else
+                   printf("*%47s |", substr(sname, length(sname)-48));
+           }
 	   else
-	   {            
+	   {
 	       if( length(sname) <= 33 )
 		   printf("%31s |", sname);
 	       else
@@ -948,7 +835,7 @@ END {
        }
    }
    printf("\n");
-   printhline(nsolver,short, printsoltimes);
+   printhline(nsolver,short, printsoltimes, printconfs);
    printf("  Name              |");
    for( s = 0; s < nsolver; ++s )
    {
@@ -960,12 +847,19 @@ END {
       {
         if( s == 0 )
           printf(" ToFirst | ToLast |");
-        else 
+        else
           printf(" FirQ | LasQ |");
+      }
+      if( printconfs )
+      {
+        if( s == 0 )
+          printf(" NConfs | ConfT |");
+        else
+          printf(" NConfQ | ConTQ |");
       }
    }
    printf(" bounds check\n");
-   printhline(nsolver,short, printsoltimes);
+   printhline(nsolver,short, printsoltimes, printconfs);
 
    # tex comparison headers
    if( texcmpfile != "" )
@@ -1035,6 +929,10 @@ END {
       worstiters = -infinity;
       worsttimetofirst = -infinity;
       worsttimetobest = -infinity;
+      minconfs = +infinity;
+      maxconfs = -infinity;
+      minconftime = +infinity;
+      maxconftime = -infinity;
       nthisunprocessed = 0;
       nthissolved = 0;
       nthistimeouts = 0;
@@ -1043,15 +941,11 @@ END {
       ismaxi = 0;
       mark = " ";
       marker = " ";
-      countprob = 1;
       notimeout = 1;
 
       # check for exclusion
       if( excluded[p] )
-      {
          unprocessed = 1;
-         countprob = 0;
-      }
 
       # find best and worst run and check whether this instance should be counted in overall statistics
       for( s = 0; s < nsolver; ++s )
@@ -1099,9 +993,11 @@ END {
             worstiters = max(worstiters, iters[s,pidx]);
             worsttimetofirst = max(worsttimetofirst, timetofirst[s, pidx]);
             worsttimetobest = max(worsttimetobest, timetobest[s, pidx]);
+            minconfs = min(minconfs, confs[s, pidx]);
+            maxconfs = max(maxconfs, confs[s, pidx]);
+            minconftime = min(minconftime, conftime[s, pidx]);
+            maxconftime = max(maxconftime, conftime[s, pidx]);
          }
-         else
-            countprob = 0;
       }
       worsttime = max(worsttime, mintime);
       worsttimetofirst = max(worsttimetofirst, mintime);
@@ -1146,6 +1042,8 @@ END {
             timeoutcomp = hitlimit[s,pidx];
             timetofirstcomp = max(mintime, timetofirst[s,pidx]);
             timetobestcomp = max(mintime, timetobest[s,pidx]);
+            confsoffirst = confs[s,pidx];
+            conftimeoffirst = conftime[s,pidx];
          }
          iseqpath = (iters[s,pidx] == itercomp && nodes[s,pidx] == nodecomp);
          hastimeout = timeoutcomp || hitlimit[s,pidx];
@@ -1167,9 +1065,9 @@ END {
          pidx = probidx[p,s];
          processed = (pidx != "");
 
-	 # arrays for applying McNemar tests
-	 solfound[s,pidx] = 0;
-	 optproven[s,pidx] = 0;
+         # arrays for applying McNemar tests
+         solfound[s,pidx] = 0;
+         optproven[s,pidx] = 0;
 
          if( processed && name[s,pidx] != p )
             printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
@@ -1187,8 +1085,8 @@ END {
                   nsolved[s,0]++;
                   nsolved[s,category[s]]++;
                   nthissolved++;
-		  # fill array for  McNemar test "optimality proven?"
-		  optproven[s,pidx] = 1;
+                  # fill array for  McNemar test "optimality proven?"
+                  optproven[s,pidx] = 1;
                }
             }
             else if( hitlimit[s,pidx] )
@@ -1197,12 +1095,9 @@ END {
                notimeout = 0;
                if( !unprocessed )
                {
-                  if( countprob )
-                  {
-                     ntimeouts[s,0]++;
-                     ntimeouts[s,category[s]]++;
-                     nthistimeouts++;
-                  }
+                  ntimeouts[s,0]++;
+                  ntimeouts[s,category[s]]++;
+                  nthistimeouts++;
                }
             }
             else
@@ -1222,11 +1117,11 @@ END {
          }
 
          if( primalbound[s,pidx] < infinity )
-  	 {
+           {
             feasmark = " ";
-	    # fill the array for McNemar test "solution found?"
-	    solfound[s,pidx] = 1;
-	 }
+            # fill the array for McNemar test "solution found?"
+            solfound[s,pidx] = 1;
+         }
          else
             feasmark = "#";
 
@@ -1251,6 +1146,8 @@ END {
               line = sprintf("%s %s%10d %s%7.1f", line, feasmark, nodes[s,pidx], marker, time[s,pidx]);
             if( printsoltimes && o == 0 )
                line = sprintf("%s  %8.1f %8.1f", line, timetofirst[s,pidx], timetobest[s, pidx] );
+            if( printconfs && o == 0 )
+               line = sprintf("%s %8d %7.1f", line, confs[s,pidx], conftime[s, pidx] );
          }
          if( o > 0 && !short )
          {
@@ -1267,7 +1164,7 @@ END {
             else
                line = sprintf("%s %6.2f", line, time[s,pidx]/timecomp);
             if( processed &&
-		(timeoutcomp != hitlimit[s,pidx] ||
+                (timeoutcomp != hitlimit[s,pidx] ||
                  nodes[s,pidx] > markworsenodes * nodecomp ||
                  nodes[s,pidx] < 1.0/markbetternodes * nodecomp ||
                  isfaster(time[s,pidx], timecomp, markbettertime) ||
@@ -1288,6 +1185,30 @@ END {
                line = sprintf("%s  Large", line);
             else
                line = sprintf("%s %6.2f", line, timetobest[s,pidx]/timetobestcomp);
+         }
+         if( o > 0 && printconfs )
+         {
+            if( !processed )
+               line = sprintf("%s        -", line);
+            else if( confs[s,pidx] == confsoffirst )
+               line = sprintf("%s %8.2f", line, 1.0);
+            else if( confsoffirst == 0 )
+               line = sprintf("%s        -", line);
+            else if( confs[s,pidx]/confsoffirst > 999.99 )
+               line = sprintf("%s  Large", line);
+            else
+               line = sprintf("%s %8.2f", line, confs[s,pidx]/confsoffirst);
+
+            if( !processed )
+               line = sprintf("%s        -", line);
+            else if( conftime[s,pidx] == conftimeoffirst )
+               line = sprintf("%s %7.2f", line, 1.0);
+            else if( conftimeoffirst == 0 )
+               line = sprintf("%s        -", line);
+            else if( conftime[s,pidx]/conftimeoffirst> 999.99 )
+               line = sprintf("%s  Large", line);
+            else
+               line = sprintf("%s %7.2f", line, conftime[s,pidx]/conftimeoffirst);
          }
       }
 
@@ -1316,7 +1237,7 @@ END {
             (ismaxi && maxpb - mindb > 1e-5 * max(max(abs(maxpb), abs(mindb)), 1.0)) ||
             (!ismini && !ismaxi && abs(maxpb - minpb) > 1e-5 * max(abs(maxpb), 1.0))) )
       {
-         line = sprintf("%s  inconsistent", line);
+         line = sprintf("%s  inconsistent (maxdb=%g, minpb=%g)", line, maxdb, minpb);
          fail = 1;
          mark = " ";
       }
@@ -1344,7 +1265,7 @@ END {
             nprocessedprobs[s,0]++;
             nprocessedprobs[s,category[s]]++;
             pidx = probidx[p,s];
-            if( primalbound[s,pidx] < infinity ) 
+            if( primalbound[s,pidx] < infinity )
             {
                if ( notimeout )
                   feasibles[s,-1]++;
@@ -1436,14 +1357,18 @@ END {
                timegeom[s,cat] = timegeom[s,cat]^((nep-1)/nep) * time[s,pidx]^(1.0/nep);
                timetofirstgeom[s,cat] = timetofirstgeom[s,cat]^((nep-1)/nep) * max(timetofirst[s,pidx], mintime)^(1.0/nep);
                timetobestgeom[s,cat] = timetobestgeom[s,cat]^((nep-1)/nep) * max(timetobest[s,pidx])^(1.0/nep);
+               confsgeom[s,cat] = confsgeom[s,cat]^((nep-1)/nep) * max(confs[s,pidx], 1.0)^(1.0/nep);
+               conftimegeom[s,cat] = conftimegeom[s,cat]^((nep-1)/nep) * max(conftime[s,pidx],1.0)^(1.0/nep);
                nodegeom[s,cat] = nodegeom[s,cat]^((nep-1)/nep) * nodes[s,pidx]^(1.0/nep);
                timeshiftedgeom[s,cat] = timeshiftedgeom[s,cat]^((nep-1)/nep) * (time[s,pidx]+timegeomshift)^(1.0/nep);
                timetofirstshiftedgeom[s,cat] = timetofirstshiftedgeom[s,cat]^((nep-1)/nep) * max(timetofirst[s,pidx]+timegeomshift, 1.0)^(1.0/nep);
                timetobestshiftedgeom[s,cat] = timetobestshiftedgeom[s,cat]^((nep-1)/nep) * max(timetobest[s,pidx]+timegeomshift, 1.0)^(1.0/nep);
+               confsshiftedgeomean[s,cat] = confsshiftedgeomean[s,cat]^((nep-1)/nep) * max(confs[s,pidx]+nodegeomshift, 1.0)^(1.0/nep);
+               conftimeshiftedgeomean[s,cat] = conftimeshiftedgeomean[s,cat]^((nep-1)/nep) * max(conftime[s,pidx]+timegeomshift,1.0)^(1.0/nep);
                nodeshiftedgeom[s,cat] = nodeshiftedgeom[s,cat]^((nep-1)/nep) * (nodes[s,pidx]+nodegeomshift)^(1.0/nep);
                reftimetotal[s,cat] += reftime;
                reftimetofirsttotal[s,cat] += reftimetofirst;
-               reftimetobesttotal[s,cat] += reftimetobest; 
+               reftimetobesttotal[s,cat] += reftimetobest;
                refnodetotal[s,cat] += refnodes;
                reftimegeom[s,cat] = reftimegeom[s,cat]^((nep-1)/nep) * reftime^(1.0/nep);
                reftimetofirstgeom[s,cat] = reftimetofirstgeom[s,cat]^((nep-1)/nep) * reftimetofirst^(1.0/nep);
@@ -1530,7 +1455,7 @@ END {
          }
       }
    }
-   printhline(nsolver,short, printsoltimes);
+   printhline(nsolver,short, printsoltimes, printconfs);
 
    # make sure total time and nodes is not zero
    for( s = 0; s < nsolver; ++s )
@@ -1555,6 +1480,9 @@ END {
           printf(" %11d %8d", nodetotal[s,0], timetotal[s,0]);
           if( o == 0 && printsoltimes )
              printf(" %9d %8d" , timetofirsttotal[s,0], timetobesttotal[s,0]);
+          if( o == 0 && printconfs )
+             printf(" %8d %7d" , 0, 0);
+             #printf(" %9d %8d" , timetofirsttotal[s,0], timetobesttotal[s,0]);
       }
       else
       {
@@ -1565,6 +1493,10 @@ END {
              comptimetofirst = timetofirsttotal[s,0]/(max(timetofirsttotal[referencesolvername,0], 1));
              comptimetobest = timetobesttotal[s,0]/(max(timetobesttotal[referencesolvername,0], 1));
              printf("%7.2f %6.2f", comptimetofirst, comptimetobest);
+          }
+          if( printconfs )
+          {
+             printf("%17s", "");
           }
       }
    }
@@ -1578,6 +1510,8 @@ END {
    timetobestcomp = -1;
    timetofirstgeomcomp = -1;
    timetobestgeomcomp = -1;
+   confsgeomcomp = -1;
+   conftimegeomcomp = -1;
 
    for( o = 0; o < nsolver; ++o )
    {
@@ -1587,6 +1521,8 @@ END {
           printf(" %11d %8.1f", nodegeom[s,0], timegeom[s,0]);
           if( o == 0 && printsoltimes )
              printf(" %9.1f %8.1f", timetofirstgeom[s,0], timetobestgeom[s,0]);
+          if( o == 0 && printconfs )
+             printf(" %8.1f %7.1f", confsgeom[s,0], conftimegeom[s,0]);
 
          if( nodegeomcomp < 0 )
             nodegeomcomp = nodegeom[s,0];
@@ -1604,6 +1540,10 @@ END {
              timetofirstgeomcomp = timetofirstgeom[s,0];
          if( timetobestgeomcomp < 0 )
              timetobestgeomcomp = timetobestgeom[s,0];
+         if( confsgeomcomp < 0 )
+             confsgeomcomp = max(1.0,confsgeom[s,0]);
+         if( conftimegeomcomp < 0 )
+             conftimegeomcomp = max(1.0,conftimegeom[s,0]);
       }
       else
       {
@@ -1611,6 +1551,8 @@ END {
 
           if( printsoltimes )
              printf(" %6.2f %6.2f", timetofirstgeom[s,0]/timetofirstgeomcomp, timetobestgeom[s,0]/timetobestgeomcomp);
+          if( printconfs )
+             printf(" %8.2f %7.2f", confsgeom[s,0]/confsgeomcomp, conftimegeom[s,0]/conftimegeomcomp);
       }
    }
    printf("\n");
@@ -1619,6 +1561,8 @@ END {
    timeshiftedgeomcomp = -1;
    timetofirstshiftedgeomcomp = -1;
    timetobestshiftedgeomcomp = -1;
+   confsshiftedgeomeancomp = -1;
+   conftimeshiftedgeomeancomp = -1;
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
@@ -1628,10 +1572,14 @@ END {
          timeshiftedgeom[s,cat] -= timegeomshift;
          timetofirstshiftedgeom[s,cat] -= timegeomshift;
          timetobestshiftedgeom[s,cat] -= timegeomshift;
+         confsshiftedgeomean[s,cat] -= nodegeomshift
+         conftimeshiftedgeomean[s,cat] -= timegeomshift;
          nodeshiftedgeom[s,cat] = max(nodeshiftedgeom[s,cat], 1);
          timeshiftedgeom[s,cat] = max(timeshiftedgeom[s,cat], mintime);
          timetofirstshiftedgeom[s,cat] = max(timetofirstshiftedgeom[s,cat], mintime);
          timetobestshiftedgeom[s,cat] = max(timetobestshiftedgeom[s,cat], mintime);
+         confsshiftedgeomean[s,cat] = max(confsshiftedgeomean[s,cat], 1.0);
+         conftimeshiftedgeomean[s,cat] = max(conftimeshiftedgeomean[s,cat], 1.0);
          refnodeshiftedgeom[s,cat] -= nodegeomshift;
          reftimeshiftedgeom[s,cat] -= timegeomshift;
          refnodeshiftedgeom[s,cat] = max(refnodeshiftedgeom[s,cat], mintime);
@@ -1643,6 +1591,8 @@ END {
 
           if( o == 0 && printsoltimes )
              printf(" %9.1f %8.1f", timetofirstshiftedgeom[s,0], timetobestshiftedgeom[s,0]);
+          if( o == 0 && printconfs )
+             printf(" %8.1f %7.1f", confsshiftedgeomean[s,0], conftimeshiftedgeomean[s,0]);
 
          if( nodeshiftedgeomcomp < 0 )
             nodeshiftedgeomcomp = nodeshiftedgeom[s,0];
@@ -1652,6 +1602,10 @@ END {
              timetofirstshiftedgeomcomp = timetofirstshiftedgeom[s,0];
          if( timetobestshiftedgeomcomp < 0 )
              timetobestshiftedgeomcomp = timetobestshiftedgeom[s,0];
+         if( confsshiftedgeomeancomp < 0 )
+             confsshiftedgeomeancomp = confsshiftedgeomean[s,0];
+         if( conftimeshiftedgeomeancomp < 0 )
+             conftimeshiftedgeomeancomp = conftimeshiftedgeomean[s,0];
       }
       else
       {
@@ -1660,70 +1614,93 @@ END {
 
          if( printsoltimes )
             printf(" %6.2f %6.2f", timetofirstshiftedgeom[s,0]/timetofirstshiftedgeomcomp, timetobestshiftedgeom[s,0]/timetobestshiftedgeomcomp);
+         if( printconfs )
+            printf(" %8.2f %7.2f", confsshiftedgeomean[s,0]/confsshiftedgeomeancomp, conftimeshiftedgeomean[s,0]/conftimeshiftedgeomeancomp);
       }
    }
    bestnodeshiftedgeom -= nodegeomshift;
    besttimeshiftedgeom -= timegeomshift;
    bestnodeshiftedgeom = max(bestnodeshiftedgeom, 1.0);
    besttimeshiftedgeom = max(besttimeshiftedgeom, 1.0);
-   
+
    printf("\n");
-   printhline(nsolver,short, printsoltimes);
+   printhline(nsolver,short, printsoltimes, printconfs);
 
    # compute and print result for McNemar test to "solution found?"  w.r.t. reference setting
    printf("%-20s ","McNemar (feas)");
-   printf("%-19s  ","               ");
-   for( o = 1; o < nsolver; ++o )
+   printf("%-18s  ","               ");
+
+   if( printconfs )
+     printf("%17s", "");
+
+     for( o = 1; o < nsolver; ++o )
    {
       # copy two-indexed arrays to one-indexed arrays
       for( i = 0; i < problistlen; ++i )
       {
-	 s = printorder[o];
-	 ref_array[i] = solfound[printorder[0],i];
-	 solver_array[i] = solfound[s,i];
+         s = printorder[o];
+         ref_array[i] = solfound[printorder[0],i];
+         solver_array[i] = solfound[s,i];
       }
 
       # compute chi-squared value and convert to p-value
       chi_squared = mcnemar(ref_array, solver_array, problistlen);
-      printf("   x2 %7.5f",chi_squared);
+      printf("   x2 %7.4f",chi_squared);
       chi_to_p(chi_squared);
+
+      if( printconfs )
+        printf("%18s", "");
    }
    printf("\n");
 
    # compute and print result for McNemar test to "optimality proven?" w.r.t. reference setting
    printf("%-20s ","McNemar (opt)");
-   printf("%-19s  ","               ");
+   printf("%-18s  ","               ");
+
+   if( printconfs )
+     printf("%17s", "");
+
    for( o = 1; o < nsolver; ++o )
    {
       # copy two-indexed arrays to one-indexed arrays
       for( i = 0; i < problistlen; ++i )
       {
-	 s = printorder[o];
-	 ref_array[i] = optproven[printorder[0],i];
-	 solver_array[i] = optproven[s,i];
+         s = printorder[o];
+         ref_array[i] = optproven[printorder[0],i];
+         solver_array[i] = optproven[s,i];
       }
 
       # compute chi-squared value and convert to p-value
       chi_squared = mcnemar(ref_array, solver_array, problistlen);
-      printf("   x2 %7.5f",chi_squared);
+      printf("   x2 %7.4f",chi_squared);
       chi_to_p(chi_squared);
+
+      if( printconfs )
+        printf("%18s", "");
    }
    printf("\n");
 
    # compute and print result for Wilcoxon signed rank test for time to optimality w.r.t. reference setting
    printf("%-20s ","Wilcoxon (time)");
-   printf("%-19s  ","               ");
+   printf("%-18s  ","               ");
+
+   if( printconfs )
+     printf("%17s", "");
+
    for( o = 1; o < nsolver; ++o )
    {
       s = printorder[o];
 
       parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen);
-      n = filter(ref_array, solver_array, problistlen, 0.01, .99);
+      n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
       factorize(ref_array, solver_array, n, timelimit[s])
 
       z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
-      printf("   z %8.5f",z);
+      printf("   z %8.4f",z);
       z_to_p(z);
+
+      if( printconfs )
+        printf("%18s", "");
    }
    printf("\n");
 
@@ -1732,41 +1709,72 @@ END {
    if( printsoltimes )
    {
       printf("%-20s ","Wilcoxon (first)");
-      printf("%-19s  ","               ");
+      printf("%-18s  ","               ");
+
+      if( printconfs )
+        printf("%17s", "");
+
       for( o = 1; o < nsolver; ++o )
       {
-	 s = printorder[o];
+         s = printorder[o];
 
-	 parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
-	 n = filter(ref_array, solver_array, problistlen, 0.01, .99);
-	 factorize(ref_array, solver_array, n, timelimit[s])
+         parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
+         n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
+         factorize(ref_array, solver_array, n, timelimit[s])
 
 	 z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
-	 printf("   z %8.5f",z);
+	 printf("   z %8.4f",z);
 	 z_to_p(z);
+
+         if( printconfs )
+            printf("%18s", "");
       }
       printf("\n");
    }
 
    # compute and print result for Wilcoxon signed rank test for number of nodes w.r.t. reference setting
    printf("%-20s ","Wilcoxon (nodes)");
-   printf("%-19s  ","               ");
+   printf("%-18s  ","               ");
+
+   if( printconfs )
+     printf("%17s", "");
+
    for( o = 1; o < nsolver; ++o )
    {
-      s = printorder[o];
-      p0 = printorder[0];
-
-      parse_nodes(ref_array,solver_array,nodes,s,p0,probidx,problistlen,status,infinity);
-      n = filter(ref_array, solver_array, problistlen, 0.01, .99);
+      parse_nodes(ref_array,solver_array,nodes,o,probidx,problistlen,status,infinity);
+      n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
       factorize(ref_array, solver_array, n, infinity)
 
       z = wilcoxon(ref_array, solver_array, n, infinity);
-      printf("   z %8.5f",z);
+      printf("   z %8.4f",z);
       z_to_p(z);
+
+      if( printconfs )
+        printf("%18s", "");
    }
    printf("\n");
 
+   if( printconfs )
+   {
+      printf("%-20s ","Wilcoxon (confs)");
+      printf("%-35s  ","               ");
+      for( o = 1; o < nsolver; ++o )
+      {
+         s = printorder[o];
 
+         parse_time(ref_array,solver_array,confs,o,printorder,probidx,problistlen);
+         n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
+         factorize(ref_array, solver_array, n, timelimit[s])
+
+         z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+         printf("   z %8.4f", z );
+         z_to_p(z);
+
+         if( printconfs )
+           printf("%18s", "");
+      }
+      printf("\n");
+   }
 
    #since the rows of the quotients are not printed, print the quotients of the geometric means
    if( short )
@@ -1800,8 +1808,8 @@ END {
       }
       printf("\n");
    }
-   printhline(nsolver,short, printsoltimes);
-   
+   printhline(nsolver,short, printsoltimes, printconfs);
+
    # tex comparison footer
    if( texcmpfile != "" )
    {
@@ -1828,7 +1836,7 @@ END {
          printf("& %8s & %8.1f", texint(nodetotal[s,0]/max(1,nevalprobs[s,0])), timetotal[s,0]/max(1,nevalprobs[s,0])) > texcmpfile;
       }
       printf("\\\\\n") > texcmpfile;
-      
+
       # add statistics for problems solved to optimality
       printf("\\midrule\n") > texcmpfile;
       printf("\\multicolumn{%d}{@{}l}{all optimal}\\\\\n", 1 + 2 * nsolver) > texcmpfile;
@@ -1861,19 +1869,19 @@ END {
    if( !short )
    {
       for( cat = 0; cat <= 3; cat++ )
-      {   
+      {
 #         if( nprocessedprobs[cat] == 0 )
 #            continue;
-      
+
          header = (cat == -1 ? "optimal" : (cat == 0 ? "all" : (cat == 1 ? "diff" : (cat == 2 ? "equal" : "timeout"))));
          printf("\n");
          printf("%-7s                                            proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n",
             header);
-   
+
          for( o = 0; o < nsolver; ++o )
          {
             s = printorder[o];
-	    sname = solvername[s];
+            sname = solvername[s];
             if( o == 0 )
             {
                nodegeomcomp = nodegeom[s,cat];
@@ -1883,15 +1891,15 @@ END {
             }
             if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
             {
-	       if ( length(sname) <= 50 )
-		  printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-			 ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
-	       else
-		  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-			 ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
- 
+               if ( length(sname) <= 50 )
+                  printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                         ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+               else
+                  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                         ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+
                printf(" %4d %4d", better[s,cat], worse[s,cat]);
-               printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
+               printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n",
                   betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],
                   nodegeom[s,cat], nodeshiftedgeom[s,cat], nodegeom[s,cat]/refnodegeom[s,cat],
                   nodeshiftedgeom[s,cat]/refnodeshiftedgeom[s,cat],
@@ -1919,7 +1927,7 @@ END {
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
-	 sname = solvername[s];
+         sname = solvername[s];
          if( o == 0 )
          {
             nodegeomcomp = nodegeom[s,cat];
@@ -1929,14 +1937,14 @@ END {
          }
          if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
          {
-	    if ( length(sname) <= 50 )
-	       printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-		      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
-	    else
-	       printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-		      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+            if ( length(sname) <= 50 )
+               printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+            else
+               printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
             printf(" %4d %4d", better[s,cat], worse[s,cat]);
-            printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
+            printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n",
                    betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],
                    nodegeom[s,cat], nodeshiftedgeom[s,cat], nodegeom[s,cat]/refnodegeom[s,cat],
                    nodeshiftedgeom[s,cat]/refnodeshiftedgeom[s,cat],
@@ -2151,11 +2159,11 @@ END {
          s = printorder[o];
          weight = (texsummaryweight == 0 ? nevalprobs[s,0] : texsummaryweight);
          if( texsummaryshifted )
-            printf("%% =mean=  %s %.4f %.4f %g\n", solvername[s], 
+            printf("%% =mean=  %s %.4f %.4f %g\n", solvername[s],
                timeshiftedgeom[s,0]/reftimeshiftedgeom[s,0], nodeshiftedgeom[s,0]/refnodeshiftedgeom[s,0],
                weight) >> texsummaryfile;
          else
-            printf("%% =mean=  %s %.4f %.4f %g\n", solvername[s], 
+            printf("%% =mean=  %s %.4f %.4f %g\n", solvername[s],
                timegeom[s,0]/reftimegeom[s,0], nodegeom[s,0]/refnodegeom[s,0], weight) >> texsummaryfile;
       }
    }

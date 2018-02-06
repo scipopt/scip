@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_sepastore.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for storing separated cuts
  * @author Tobias Achterberg
  */
@@ -37,10 +38,7 @@ extern "C" {
 struct SCIP_SepaStore
 {
    SCIP_ROW**            cuts;               /**< array with separated cuts sorted by score */
-   SCIP_Real*            efficacies;         /**< efficacy for each separated cut: distance of hyperplane to LP solution */
-   SCIP_Real*            objparallelisms;    /**< parallelism of cut to the objective function */
-   SCIP_Real*            orthogonalities;    /**< minimal orthogonality of cut with all other cuts of larger score */
-   SCIP_Real*            scores;             /**< score for each separated cut: weighted sum of efficacy and orthogonality */
+   SCIP_Real*            scores;             /**< score for each separated cut: weighted sum of efficacy and objective parallelism and integral support */
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
    int                   nforcedcuts;        /**< number of forced separated cuts (first positions in cuts array) */

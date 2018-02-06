@@ -3,7 +3,7 @@
 /*                  This1 file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -129,7 +129,12 @@ static
 SCIP_DECL_ERRORPRINTING(errorPrintingDefault)
 {  /*lint --e{715}*/
    if ( msg != NULL )
-      fputs(msg, stderr);
+   {
+      if ( file != NULL )
+         fputs(msg, file);
+      else
+         fputs(msg, stderr);
+   }
    fflush(stderr);
 }
 
@@ -139,14 +144,15 @@ static SCIP_DECL_ERRORPRINTING((*staticErrorPrinting)) = errorPrintingDefault;
 /** static variable which holds a data pointer for the error prinint callback */
 static void* staticErrorPrintingData = NULL;
 
-/** prints error message with the current message handler, or buffers the message if no newline exists */
+/** prints error message with the current static message handler */
 static
 void messagePrintError(
+   FILE*                 file,               /**< file stream to print error, or NULL for stderr */
    const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
 {
    if( staticErrorPrinting != NULL )
-      staticErrorPrinting(msg, staticErrorPrintingData);
+      staticErrorPrinting(staticErrorPrintingData, file, msg);
 }
 
 /** prints warning message with the current message handler, or buffers the message if no newline exists */
@@ -416,7 +422,7 @@ void SCIPmessagePrintWarning(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintWarning(messagehdlr, formatstr, ap);
    va_end(ap);
 }
@@ -440,7 +446,7 @@ void SCIPmessageFPrintWarning(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintWarning(messagehdlr, formatstr, ap);
    va_end(ap);
 }
@@ -456,7 +462,7 @@ void SCIPmessageVFPrintWarning(
    int n;
    va_list aq;
 
-   va_copy(aq, ap);
+   va_copy(aq, ap); /*lint !e838*/
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )
@@ -499,7 +505,7 @@ void SCIPmessagePrintDialog(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintDialog(messagehdlr, NULL, formatstr, ap);
    va_end(ap);
 }
@@ -524,7 +530,7 @@ void SCIPmessageFPrintDialog(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintDialog(messagehdlr, file, formatstr, ap);
    va_end(ap);
 }
@@ -541,7 +547,7 @@ void SCIPmessageVFPrintDialog(
    int n;
    va_list aq;
 
-   va_copy(aq, ap);
+   va_copy(aq, ap); /*lint !e838*/
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )
@@ -583,7 +589,7 @@ void SCIPmessagePrintInfo(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(messagehdlr, NULL, formatstr, ap);
    va_end(ap);
 }
@@ -608,7 +614,7 @@ void SCIPmessageFPrintInfo(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(messagehdlr, file, formatstr, ap);
    va_end(ap);
 }
@@ -625,7 +631,7 @@ void SCIPmessageVFPrintInfo(
    int n;
    va_list aq;
 
-   va_copy(aq, ap);
+   va_copy(aq, ap); /*lint !e838*/
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )
@@ -669,7 +675,7 @@ void SCIPmessagePrintVerbInfo(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintVerbInfo(messagehdlr, verblevel, msgverblevel, NULL, formatstr, ap);
    va_end(ap);
 }
@@ -698,7 +704,7 @@ void SCIPmessageFPrintVerbInfo(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintVerbInfo(messagehdlr, verblevel, msgverblevel, file, formatstr, ap);
    va_end(ap);
 }
@@ -723,7 +729,7 @@ void SCIPmessageVFPrintVerbInfo(
       int n;
       va_list aq;
 
-      va_copy(aq, ap);
+      va_copy(aq, ap); /*lint !e838*/
 
       n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
       if( n < 0 )
@@ -768,7 +774,7 @@ void SCIPmessagePrintErrorHeader(
    /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
    (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
    msg[SCIP_MAXSTRLEN-1] = '\0';
-   messagePrintError(msg);
+   messagePrintError(NULL, msg);
 }
 
 /** prints a error message, acting like the printf() command */
@@ -779,7 +785,7 @@ void SCIPmessagePrintError(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVPrintError(formatstr, ap);
    va_end(ap);
 }
@@ -794,7 +800,7 @@ void SCIPmessageVPrintError(
    int n;
    va_list aq;
 
-   va_copy(aq, ap);
+   va_copy(aq, ap); /*lint !e838*/
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )
@@ -819,12 +825,12 @@ void SCIPmessageVPrintError(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintError(bigmsg);
+      messagePrintError(NULL, bigmsg);
       BMSfreeMemory(&bigmsg);
       return;
    }
 
-   messagePrintError(msg);
+   messagePrintError(NULL, msg);
    va_end(aq);
 }
 

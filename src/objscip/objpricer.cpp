@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -196,7 +196,7 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasObj)
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   SCIP_CALL( pricerdata->objpricer->scip_farkas(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_farkas(scip, pricer, result) );
 
    return SCIP_OKAY;
 }

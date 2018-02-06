@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -123,7 +123,7 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *
  *  possible return values for *result:
  *  - SCIP_SUCCESS    : at least one improving variable was found, or it is ensured that no such variable exists
- *  - SCIP_DIDNOTRUN  : the pricing process was aborted by the pricer, there is no guarantee that the current LP solution is 
+ *  - SCIP_DIDNOTRUN  : the pricing process was aborted by the pricer, there is no guarantee that the current LP solution is
  *                      optimal
  *
  */
@@ -155,8 +155,14 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *  input:
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
+ *  - result          : pointer to store the result of the pricer call
+ *
+ *  possible return values for *result:
+ *  - SCIP_SUCCESS    : at least one variable was found, which can contribute to the feasibility of the current LP,
+ *                      or it is ensured that no such variable exists
+ *  - SCIP_DIDNOTRUN  : the pricing process was aborted by the pricer, there is no guarantee that the current LP is indeed infeasible
  */
-#define SCIP_DECL_PRICERFARKAS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
+#define SCIP_DECL_PRICERFARKAS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

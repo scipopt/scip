@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,19 +66,19 @@ public:
    SCIP_RETCODE pricing(
       SCIP*              scip,               /**< SCIP data structure */
       bool               isfarkas            /**< whether we perform Farkas pricing */
-      );
+      ) const;
 
    /** add tour variable to problem */
    SCIP_RETCODE add_tour_variable(
       SCIP*              scip,               /**< SCIP data structure */
       const list<int>&   tour                /**< list of nodes in tour */
-      );
+      ) const;
 
    /** return negative reduced cost tour (uses restricted shortest path dynamic programming algorithm) */
    double find_shortest_tour(
       const vector< vector<double> >& length,     /**< matrix of lengths */
       list<int>&         tour                /**< list of nodes in tour */
-      );
+      ) const;
 
 
 protected:
@@ -100,7 +100,7 @@ protected:
       const int          i                   /**< node */
       ) const
    {
-      return _demand[i];
+      return _demand[i]; /*lint !e747 !e732*/
    }
 
    /** return distance between nodes i and j */
@@ -109,7 +109,7 @@ protected:
       const int          j                   /**< second node */
       ) const
    {
-      return ( i > j ? _distance[i][j] : _distance[j][i] );
+      return ( i > j ? _distance[i][j] : _distance[j][i] ); /*lint !e747 !e732*/
    }
 
    /** return variable corresponding to arc between i and j */
@@ -118,7 +118,7 @@ protected:
       const int          j                   /**< second node */
       ) const
    {
-      return ( i > j ? _arc_var[i][j] : _arc_var[j][i] );
+      return ( i > j ? _arc_var[i][j] : _arc_var[j][i] ); /*lint !e747 !e732*/
    }
 
    /** return constraint corresponding to arc between i and j */
@@ -127,7 +127,7 @@ protected:
       const int          j                   /**< second node */
       ) const
    {
-      return ( i > j ? _arc_con[i][j] : _arc_con[j][i] );
+      return ( i > j ? _arc_con[i][j] : _arc_con[j][i] ); /*lint !e747 !e732*/
    }
 
    /** return partitioning constraint for node i */
@@ -135,7 +135,7 @@ protected:
       const int          i                   /**< node */
       ) const
    {
-      return _part_con[i];
+      return _part_con[i]; /*lint !e747 !e732*/
    }
 
    /** whether edge between node i and j exists */

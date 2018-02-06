@@ -1,12 +1,12 @@
-/* $Id: rev_hes_sweep.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
-# ifndef CPPAD_REV_HES_SWEEP_INCLUDED
-# define CPPAD_REV_HES_SWEEP_INCLUDED
+// $Id$
+# ifndef CPPAD_REV_HES_SWEEP_HPP
+# define CPPAD_REV_HES_SWEEP_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -15,15 +15,13 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\defgroup rev_hes_sweep_hpp rev_hes_sweep.hpp
-\{
 \file rev_hes_sweep.hpp
 Compute Reverse mode Hessian sparsity patterns.
 */
 
 /*!
 \def CPPAD_REV_HES_SWEEP_TRACE
-This value is either zero or one. 
+This value is either zero or one.
 Zero is the normal operational value.
 If it is one, a trace of every rev_hes_sweep computation is printed.
 */
@@ -32,12 +30,12 @@ If it is one, a trace of every rev_hes_sweep computation is printed.
 /*!
 Given the forward Jacobian sparsity pattern for all the variables,
 and the reverse Jacobian sparsity pattern for the dependent variables,
-RevHesSweep computes the Hessian sparsity pattern for all the independent 
+RevHesSweep computes the Hessian sparsity pattern for all the independent
 variables.
 
 \tparam Base
 base type for the operator; i.e., this operation sequence was recorded
-using AD< \a Base > and computations by this routine are done using type 
+using AD< \a Base > and computations by this routine are done using type
 \a Base.
 
 \tparam Vector_set
@@ -49,8 +47,8 @@ is the number of independent variables on the tape.
 
 \param numvar
 is the total number of variables on the tape; i.e.,
-\a play->num_rec_var().
-This is also the number of rows in the entire sparsity pattern 
+\a play->num_var_rec().
+This is also the number of rows in the entire sparsity pattern
 \a rev_hes_sparse.
 
 \param play
@@ -67,17 +65,17 @@ the object \a play holds information about the currentl location
 with in the tape and this changes during playback.
 
 \param for_jac_sparse
-For i = 0 , ... , \a numvar - 1, 
+For i = 0 , ... , \a numvar - 1,
 (for all the variables on the tape),
 the forward Jacobian sparsity pattern for the variable with index i
 corresponds to the set with index i in \a for_jac_sparse.
 
 \param RevJac
 \b Input:
-For i = 0, ... , \a numvar - 1 
+For i = 0, ... , \a numvar - 1
 the if the variable with index i on the tape is an dependent variable and
 included in the Hessian, \a RevJac[ i ] is equal to true,
-otherwise it is equal to false. 
+otherwise it is equal to false.
 \n
 \n
 \b Output: The values in \a RevJac upon return are not specified; i.e.,
@@ -88,14 +86,14 @@ The reverse Hessian sparsity pattern for the variable with index i
 corresponds to the set with index i in \a rev_hes_sparse.
 \n
 \n
-\b Input: For i = 0 , ... , \a numvar - 1  
+\b Input: For i = 0 , ... , \a numvar - 1
 the reverse Hessian sparsity pattern for the variable with index i is empty.
 \n
 \n
 \b Output: For j = 1 , ... , \a n,
-the reverse Hessian sparsity pattern for the independent dependent variable 
+the reverse Hessian sparsity pattern for the independent dependent variable
 with index (j-1) is given by the set with index j
-in \a rev_hes_sparse. 
+in \a rev_hes_sparse.
 The values in the rest of \a rev_hes_sparse are not specified; i.e.,
 they are used for temporary work space.
 */
@@ -117,12 +115,12 @@ void RevHesSweep(
 	const addr_t*   arg = CPPAD_NULL;
 
 	// length of the parameter vector (used by CppAD assert macros)
-	const size_t num_par = play->num_rec_par();
+	const size_t num_par = play->num_par_rec();
 
 	size_t             i, j, k;
 
 	// check numvar argument
-	CPPAD_ASSERT_UNKNOWN( play->num_rec_var()     == numvar );
+	CPPAD_ASSERT_UNKNOWN( play->num_var_rec()     == numvar );
 	CPPAD_ASSERT_UNKNOWN( for_jac_sparse.n_set() == numvar );
 	CPPAD_ASSERT_UNKNOWN( rev_hes_sparse.n_set() == numvar );
 	CPPAD_ASSERT_UNKNOWN( numvar > 0 );
@@ -132,15 +130,15 @@ void RevHesSweep(
 	CPPAD_ASSERT_UNKNOWN( for_jac_sparse.end() == limit );
 
 	// check number of sets match
-	CPPAD_ASSERT_UNKNOWN( 
+	CPPAD_ASSERT_UNKNOWN(
 		for_jac_sparse.n_set() == rev_hes_sparse.n_set()
 	);
 
 	// vecad_sparsity contains a sparsity pattern for each VecAD object.
-	// vecad_ind maps a VecAD index (beginning of the VecAD object) 
+	// vecad_ind maps a VecAD index (beginning of the VecAD object)
 	// to the index for the corresponding set in vecad_sparsity.
-	size_t num_vecad_ind   = play->num_rec_vecad_ind();
-	size_t num_vecad_vec   = play->num_rec_vecad_vec();
+	size_t num_vecad_ind   = play->num_vec_ind_rec();
+	size_t num_vecad_vec   = play->num_vecad_vec_rec();
 	Vector_set vecad_sparse;
 	vecad_sparse.resize(num_vecad_vec, limit);
 	pod_vector<size_t> vecad_ind;
@@ -154,16 +152,16 @@ void RevHesSweep(
 		{	// length of this VecAD
 			length   = play->GetVecInd(j);
 			// set vecad_ind to proper index for this VecAD
-			vecad_ind[j] = i; 
+			vecad_ind[j] = i;
 			// make all other values for this vector invalid
 			for(k = 1; k <= length; k++)
 				vecad_ind[j+k] = num_vecad_vec;
 			// start of next VecAD
 			j       += length + 1;
-			// initialize this vector's reverse jacobian value 
+			// initialize this vector's reverse jacobian value
 			vecad_jac[i] = false;
 		}
-		CPPAD_ASSERT_UNKNOWN( j == play->num_rec_vecad_ind() );
+		CPPAD_ASSERT_UNKNOWN( j == play->num_vec_ind_rec() );
 	}
 
 	// work space used by UserOp.
@@ -179,6 +177,10 @@ void RevHesSweep(
 	vector<bool>       bool_u;   // bool reverse Hessian sparsity for y
 	vector<bool>       bool_v;   // bool reverse Hessian sparsity for x
 	//
+	vectorBool         pack_r;   // pack forward Jacobian sparsity for x
+	vectorBool         pack_u;   // pack reverse Hessian sparsity for y
+	vectorBool         pack_v;   // pack reverse Hessian sparsity for x
+	//
 	vector<bool>       user_vx;  // which components of x are variables
 	vector<bool>       user_s;   // reverse Jacobian sparsity for y
 	vector<bool>       user_t;   // reverse Jacobian sparsity for x
@@ -191,7 +193,9 @@ void RevHesSweep(
 	size_t user_n     = 0;       // size of arugment vector
 	//
 	atomic_base<Base>* user_atom = CPPAD_NULL; // user's atomic op calculator
-	bool               user_bool = false;      // use bool or set sparsity ?
+	bool               user_pack = false;      // sparsity pattern type is pack
+	bool               user_bool = false;      // sparsity pattern type is bool
+	bool               user_set  = false;      // sparsity pattern type is set
 # ifndef NDEBUG
 	bool               user_ok   = false;      // atomic op return value
 # endif
@@ -200,7 +204,7 @@ void RevHesSweep(
 
 
 	// Initialize
-	play->start_reverse(op, arg, i_op, i_var);
+	play->reverse_start(op, arg, i_op, i_var);
 	CPPAD_ASSERT_UNKNOWN( op == EndOp );
 # if CPPAD_REV_HES_SWEEP_TRACE
 	std::cout << std::endl;
@@ -211,7 +215,7 @@ void RevHesSweep(
 	while(more_operators)
 	{
 		// next op
-		play->next_reverse(op, arg, i_op, i_var);
+		play->reverse_next(op, arg, i_op, i_var);
 # ifndef NDEBUG
 		if( i_op <= n )
 		{	CPPAD_ASSERT_UNKNOWN((op == InvOp) | (op == BeginOp));
@@ -255,6 +259,17 @@ void RevHesSweep(
 			break;
 			// -------------------------------------------------
 
+# if CPPAD_USE_CPLUSPLUS_2011
+			case AcoshOp:
+			// sqrt(x * x - 1), acosh(x)
+			CPPAD_ASSERT_NARG_NRES(op, 1, 2)
+			reverse_sparse_hessian_nonlinear_unary_op(
+			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
+			);
+			break;
+# endif
+			// -------------------------------------------------
+
 			case AsinOp:
 			// sqrt(1 - x * x), asin(x)
 			CPPAD_ASSERT_NARG_NRES(op, 1, 2)
@@ -262,6 +277,17 @@ void RevHesSweep(
 			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
 			);
 			break;
+			// -------------------------------------------------
+
+# if CPPAD_USE_CPLUSPLUS_2011
+			case AsinhOp:
+			// sqrt(1 + x * x), asinh(x)
+			CPPAD_ASSERT_NARG_NRES(op, 1, 2)
+			reverse_sparse_hessian_nonlinear_unary_op(
+			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
+			);
+			break;
+# endif
 			// -------------------------------------------------
 
 			case AtanOp:
@@ -273,6 +299,17 @@ void RevHesSweep(
 			break;
 			// -------------------------------------------------
 
+# if CPPAD_USE_CPLUSPLUS_2011
+			case AtanhOp:
+			// 1 - x * x, atanh(x)
+			CPPAD_ASSERT_NARG_NRES(op, 1, 2)
+			reverse_sparse_hessian_nonlinear_unary_op(
+			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
+			);
+			break;
+# endif
+			// -------------------------------------------------
+
 			case BeginOp:
 			CPPAD_ASSERT_NARG_NRES(op, 1, 1)
 			more_operators = false;
@@ -281,16 +318,16 @@ void RevHesSweep(
 
 			case CSkipOp:
 			// CSkipOp has a variable number of arguments and
-			// next_reverse thinks it one has one argument.
-			// We must inform next_reverse of this special case.
+			// reverse_next thinks it one has one argument.
+			// We must inform reverse_next of this special case.
 			play->reverse_cskip(op, arg, i_op, i_var);
 			break;
 			// -------------------------------------------------
 
 			case CSumOp:
 			// CSumOp has a variable number of arguments and
-			// next_reverse thinks it one has one argument.
-			// We must inform next_reverse of this special case.
+			// reverse_next thinks it one has one argument.
+			// We must inform reverse_next of this special case.
 			play->reverse_csum(op, arg, i_op, i_var);
 			reverse_sparse_hessian_csum_op(
 				i_var, arg, RevJac, rev_hes_sparse
@@ -304,12 +341,6 @@ void RevHesSweep(
 			);
 			break;
 			// ---------------------------------------------------
-
-			case ComOp:
-			CPPAD_ASSERT_NARG_NRES(op, 4, 0)
-			CPPAD_ASSERT_UNKNOWN( arg[1] > 1 );
-			break;
-			// --------------------------------------------------
 
 			case CosOp:
 			// sin(x), cos(x)
@@ -359,12 +390,32 @@ void RevHesSweep(
 			break;
 			// -------------------------------------------------
 
+			case ErfOp:
+			// arg[1] is always the parameter 0
+			// arg[0] is always the parameter 2 / sqrt(pi)
+			CPPAD_ASSERT_NARG_NRES(op, 3, 5);
+			reverse_sparse_hessian_nonlinear_unary_op(
+			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
+			);
+			break;
+			// -------------------------------------------------
+
 			case ExpOp:
 			CPPAD_ASSERT_NARG_NRES(op, 1, 1)
 			reverse_sparse_hessian_nonlinear_unary_op(
 			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
 			);
 			break;
+			// -------------------------------------------------
+
+# if CPPAD_USE_CPLUSPLUS_2011
+			case Expm1Op:
+			CPPAD_ASSERT_NARG_NRES(op, 1, 1)
+			reverse_sparse_hessian_nonlinear_unary_op(
+			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
+			);
+			break;
+# endif
 			// -------------------------------------------------
 
 			case InvOp:
@@ -403,6 +454,20 @@ void RevHesSweep(
 			break;
 			// -------------------------------------------------
 
+			case EqpvOp:
+			case EqvvOp:
+			case LtpvOp:
+			case LtvpOp:
+			case LtvvOp:
+			case LepvOp:
+			case LevpOp:
+			case LevvOp:
+			case NepvOp:
+			case NevvOp:
+			CPPAD_ASSERT_NARG_NRES(op, 2, 0);
+			break;
+			// -------------------------------------------------
+
 			case LogOp:
 			CPPAD_ASSERT_NARG_NRES(op, 1, 1)
 			reverse_sparse_hessian_nonlinear_unary_op(
@@ -411,18 +476,28 @@ void RevHesSweep(
 			break;
 			// -------------------------------------------------
 
-			case MulvvOp:
-			CPPAD_ASSERT_NARG_NRES(op, 2, 1)
-			reverse_sparse_hessian_mul_op(
-			i_var, arg, RevJac, for_jac_sparse, rev_hes_sparse
+# if CPPAD_USE_CPLUSPLUS_2011
+			case Log1pOp:
+			CPPAD_ASSERT_NARG_NRES(op, 1, 1)
+			reverse_sparse_hessian_nonlinear_unary_op(
+			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
 			);
 			break;
+# endif
 			// -------------------------------------------------
 
 			case MulpvOp:
 			CPPAD_ASSERT_NARG_NRES(op, 2, 1)
 			reverse_sparse_hessian_linear_unary_op(
 			i_var, arg[1], RevJac, for_jac_sparse, rev_hes_sparse
+			);
+			break;
+			// -------------------------------------------------
+
+			case MulvvOp:
+			CPPAD_ASSERT_NARG_NRES(op, 2, 1)
+			reverse_sparse_hessian_mul_op(
+			i_var, arg, RevJac, for_jac_sparse, rev_hes_sparse
 			);
 			break;
 			// -------------------------------------------------
@@ -588,14 +663,19 @@ void RevHesSweep(
 				user_atom  = atomic_base<Base>::class_object(user_index);
 # ifndef NDEBUG
 				if( user_atom == CPPAD_NULL )
-				{	std::string msg = 
+				{	std::string msg =
 						atomic_base<Base>::class_name(user_index)
 						+ ": atomic_base function has been deleted";
 					CPPAD_ASSERT_KNOWN(false, msg.c_str() );
 				}
 # endif
+				user_pack  = user_atom->sparsity() ==
+							atomic_base<Base>::pack_sparsity_enum;
 				user_bool  = user_atom->sparsity() ==
 							atomic_base<Base>::bool_sparsity_enum;
+				user_set   = user_atom->sparsity() ==
+							atomic_base<Base>::set_sparsity_enum;
+				CPPAD_ASSERT_UNKNOWN( user_pack || user_bool || user_set );
 				user_ix.resize(user_n);
 				user_vx.resize(user_n);
 				user_s.resize(user_m);
@@ -606,6 +686,24 @@ void RevHesSweep(
 					user_s[i] = false;
 				for(i = 0; i < user_n; i++)
 					user_t[i] = false;
+				if( user_pack )
+				{	pack_r.resize(user_n * user_q);
+					pack_u.resize(user_m * user_q);
+					pack_v.resize(user_n * user_q);
+					// simpler to initialize all patterns as empty
+					for(i = 0; i < user_m; i++)
+					{
+						for(j = 0; j < user_q; j++)
+							pack_u[ i * user_q + j] = false;
+					}
+					for(i = 0; i < user_n; i++)
+					{
+						for(j = 0; j < user_q; j++)
+						{	pack_r[ i * user_q + j] = false;
+							pack_v[ i * user_q + j] = false;
+						}
+					}
+				}
 				if( user_bool )
 				{	bool_r.resize(user_n * user_q);
 					bool_u.resize(user_m * user_q);
@@ -624,7 +722,7 @@ void RevHesSweep(
 						}
 					}
 				}
-				else
+				if( user_set )
 				{	set_r.resize(user_n);
 					set_u.resize(user_m);
 					set_v.resize(user_n);
@@ -650,27 +748,41 @@ void RevHesSweep(
 				// call users function for this operation
 				user_atom->set_id(user_id);
 # ifdef NDEBUG
-			 	if( user_bool )
+				if( user_pack )
+					user_atom->rev_sparse_hes(user_vx,
+						user_s, user_t, user_q, pack_r, pack_u, pack_v
+				);
+				if( user_bool )
 					user_atom->rev_sparse_hes(user_vx,
 						user_s, user_t, user_q, bool_r, bool_u, bool_v
 				);
-				else
+				if( user_set )
 					user_atom->rev_sparse_hes(user_vx,
 						user_s, user_t, user_q, set_r, set_u, set_v
 				);
 # else
-			 	if( user_bool )
+				if( user_pack )
+					user_ok = user_atom->rev_sparse_hes(user_vx,
+						user_s, user_t, user_q, pack_r, pack_u, pack_v
+				);
+				if( user_bool )
 					user_ok = user_atom->rev_sparse_hes(user_vx,
 						user_s, user_t, user_q, bool_r, bool_u, bool_v
 				);
-				else
+				if( user_set )
 					user_ok = user_atom->rev_sparse_hes(user_vx,
 						user_s, user_t, user_q, set_r, set_u, set_v
 				);
 				if( ! user_ok )
-				{	std::string msg = 
+				{	std::string msg =
 						atomic_base<Base>::class_name(user_index)
-						+ ": atomic_base.rev_sparse_hes: returned false";
+						+ ": atomic_base.rev_sparse_hes: returned false\n";
+					if( user_pack )
+						msg += "sparsity = pack_sparsity_enum";
+					if( user_bool )
+						msg += "sparsity = bool_sparsity_enum";
+					if( user_set )
+						msg += "sparsity = set_sparsity_enum";
 					CPPAD_ASSERT_KNOWN(false, msg.c_str() );
 				}
 # endif
@@ -679,13 +791,19 @@ void RevHesSweep(
 					size_t  i_x = user_ix[i];
 					if( user_t[i] )
 						RevJac[i_x] = true;
+					if( user_pack )
+					{
+						for(j = 0; j < user_q; j++)
+							if( pack_v[ i * user_q + j ] )
+								rev_hes_sparse.add_element(i_x, j);
+					}
 					if( user_bool )
 					{
 						for(j = 0; j < user_q; j++)
 							if( bool_v[ i * user_q + j ] )
 								rev_hes_sparse.add_element(i_x, j);
 					}
-					else
+					if( user_set )
 					{
 						set_itr = set_v[i].begin();
 						set_end = set_v[i].end();
@@ -722,9 +840,11 @@ void RevHesSweep(
 			for_jac_sparse.begin(arg[0]);
 			i = for_jac_sparse.next_element();
 			while( i < user_q )
-			{	if( user_bool )
+			{	if( user_pack )
+					pack_r[ user_j * user_q + i ] = true;
+				if( user_bool )
 					bool_r[ user_j * user_q + i ] = true;
-				else
+				if( user_set )
 					set_r[user_j].insert(i);
 				i = for_jac_sparse.next_element();
 			}
@@ -755,14 +875,40 @@ void RevHesSweep(
 			rev_hes_sparse.begin(i_var);
 			j = rev_hes_sparse.next_element();
 			while( j < user_q )
-			{	if( user_bool )
+			{	if( user_pack )
+					pack_u[user_i * user_q + j] = true;
+				if( user_bool )
 					bool_u[user_i * user_q + j] = true;
-				else
+				if( user_set )
 					set_u[user_i].insert(j);
 				j = rev_hes_sparse.next_element();
 			}
 			if( user_i == 0 )
 				user_state = user_arg;
+			break;
+			// -------------------------------------------------
+
+			case ZmulpvOp:
+			CPPAD_ASSERT_NARG_NRES(op, 2, 1)
+			reverse_sparse_hessian_linear_unary_op(
+			i_var, arg[1], RevJac, for_jac_sparse, rev_hes_sparse
+			);
+			break;
+			// -------------------------------------------------
+
+			case ZmulvpOp:
+			CPPAD_ASSERT_NARG_NRES(op, 2, 1)
+			reverse_sparse_hessian_linear_unary_op(
+			i_var, arg[0], RevJac, for_jac_sparse, rev_hes_sparse
+			);
+			break;
+			// -------------------------------------------------
+
+			case ZmulvvOp:
+			CPPAD_ASSERT_NARG_NRES(op, 2, 1)
+			reverse_sparse_hessian_mul_op(
+			i_var, arg, RevJac, for_jac_sparse, rev_hes_sparse
+			);
 			break;
 
 			// -------------------------------------------------
@@ -787,29 +933,35 @@ void RevHesSweep(
 		{	zh_value[j] = true;
 			j = rev_hes_sparse.next_element();
 		}
-		// should also print RevJac[i_var], but printOp does not
-		// yet allow for this.
 		printOp(
-			std::cout, 
+			std::cout,
 			play,
 			i_op,
 			i_var,
-			op, 
-			arg,
-			1, 
-			&zf_value, 
-			1, 
+			op,
+			arg
+		);
+		// should also print RevJac[i_var], but printOpResult does not
+		// yet allow for this
+		if( NumRes(op) > 0 && op != BeginOp ) printOpResult(
+			std::cout,
+			1,
+			&zf_value,
+			1,
 			&zh_value
 		);
-# endif
+		std::cout << std::endl;
 	}
+	std::cout << std::endl;
+# else
+	}
+# endif
 	// values corresponding to BeginOp
 	CPPAD_ASSERT_UNKNOWN( i_op == 0 );
 	CPPAD_ASSERT_UNKNOWN( i_var == 0 );
 
 	return;
 }
-/*! \} */
 } // END_CPPAD_NAMESPACE
 
 // preprocessor symbols that are local to this file

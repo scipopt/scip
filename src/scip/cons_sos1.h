@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,12 +16,9 @@
 /**@file   cons_sos1.h
  * @ingroup CONSHDLRS
  * @brief  constraint handler for SOS type 1 constraints
+ * @author Tobias Fischer
  * @author Marc Pfetsch
  *
- * A specially ordered set of type 1 (SOS1) is a sequence of variables such that at most one
- * variable is nonzero. The special case of two variables arises, for instance, from equilibrium or
- * complementary conditions like \f$x \cdot y = 0\f$. Note that it is in principle allowed that a
- * variable appears twice, but it then can be fixed to 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,11 +33,28 @@
 extern "C" {
 #endif
 
-/** creates the handler for SOS1 constraints and includes it in SCIP */
+/** creates the handler for SOS1 constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Specially Ordered Set (SOS) Type 1 Constraints
+ *
+ * @{
+ *
+ * A specially ordered set of type 1 (SOS1) is a sequence of variables such that at most one
+ * variable is nonzero. The special case of two variables arises, for instance, from equilibrium or
+ * complementary conditions like \f$x \cdot y = 0\f$. Note that it is in principle allowed that a
+ * variable appears twice, but it then can be fixed to 0.
+ */
 
 /** creates and captures an SOS1 constraint
  *
@@ -48,7 +62,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
  *  NULL, the variables are ordered according to these weights (in
  *  ascending order).
  *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *  @note The constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons().
  */
 EXTERN
 SCIP_RETCODE SCIPcreateConsSOS1(
@@ -138,6 +152,57 @@ SCIP_Real* SCIPgetWeightsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/** gets conflict graph of SOS1 constraints (or NULL if not existent)
+ *
+ *  @note The conflict graph is globally valid; local changes are not taken into account.
+ */
+EXTERN
+SCIP_DIGRAPH* SCIPgetConflictgraphSOS1(
+   SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
+   );
+
+/** gets number of problem variables that are part of the SOS1 conflict graph */
+EXTERN
+int SCIPgetNSOS1Vars(
+   SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
+   );
+
+/** returns whether variable is part of the SOS1 conflict graph */
+EXTERN
+SCIP_Bool SCIPvarIsSOS1(
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
+/** returns node of variable in the conflict graph or -1 if variable is not part of the SOS1 conflict graph */
+EXTERN
+int SCIPvarGetNodeSOS1(
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
+/** returns variable that belongs to a given node from the conflict graph */
+EXTERN
+SCIP_VAR* SCIPnodeGetVarSOS1(
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   node                /**< node from the conflict graph */
+   );
+
+/** based on solution values of the variables, fixes variables to zero to turn all SOS1 constraints feasible  */
+EXTERN
+SCIP_RETCODE SCIPmakeSOS1sFeasible(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed,            /**< pointer to store whether the solution has been changed */
+   SCIP_Bool*            success             /**< pointer to store whether SOS1 constraints have been turned feasible and
+                                              *   solution was good enough */
+   );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -50,28 +50,28 @@ GRAPHEDGE* findEdge(
       edge = edge->next;
    }
    return edge;   
-}
+} /*lint !e715*/
 
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 SCIP_DECL_HEURFREE(Heur2opt::scip_free)
 {
    return SCIP_OKAY;
-}
-   
+} /*lint !e715*/
+
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 SCIP_DECL_HEURINIT(Heur2opt::scip_init)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 SCIP_DECL_HEUREXIT(Heur2opt::scip_exit)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
@@ -83,15 +83,15 @@ SCIP_DECL_HEUREXIT(Heur2opt::scip_exit)
 SCIP_DECL_HEURINITSOL(Heur2opt::scip_initsol)
 {
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
-   graph_ = probdata->getGraph();
+   graph_ = probdata->getGraph(); /*lint !e613*/
    capture_graph(graph_);
 
    ncalls_ = 0;
    sol_ = NULL;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &tour_, graph_->nnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &tour_, graph_->nnodes) );
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
    
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
@@ -101,11 +101,14 @@ SCIP_DECL_HEURINITSOL(Heur2opt::scip_initsol)
  */
 SCIP_DECL_HEUREXITSOL(Heur2opt::scip_exitsol)
 {
+   assert( graph_ != 0 );
+   assert( tour_ != 0 );
+
+   SCIPfreeBlockMemoryArray(scip, &tour_, graph_->nnodes);
    release_graph(&graph_);
-   SCIPfreeMemoryArray(scip, &tour_);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** execution method of primal heuristic 2-Opt */
@@ -127,7 +130,7 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
 
    ncalls_++;
 
-   int nnodes = graph_->nnodes;
+   int nnodes = graph_->nnodes; /*lint !e613*/
 
    // some cases need not to be handled
    if( nnodes < 4 || sol == NULL || ncalls_ >= nnodes )
@@ -138,7 +141,7 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
 
    *result= SCIP_DIDNOTFIND;
 
-   GRAPHNODE* nodes = graph_->nodes; 
+   GRAPHNODE* nodes = graph_->nodes; /*lint !e613*/
 
    // get tour from sol and sort edges by length, if new solution was found
    if( newsol )
@@ -161,11 +164,11 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
 
                int j;
                // shift edge through the (sorted) array 
-               for(j = i; j > 0 && tour_[j-1]->length < edge->length; j-- )
-                  tour_[j] = tour_[j-1];
+               for(j = i; j > 0 && tour_[j-1]->length < edge->length; j-- ) /*lint !e613*/
+                  tour_[j] = tour_[j-1]; /*lint !e613*/
                                
                // and insert the edge at the right position
-               tour_[j] = edge; 
+               tour_[j] = edge; /*lint !e613*/
 
                i++;
                break;
@@ -178,15 +181,15 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
 
    }
 
-   GRAPHEDGE** edges2test;
+   GRAPHEDGE** edges2test = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &edges2test, 4) ); 
 
    // test current edge with all 'longer' edges for improvement 
    // if swapping with crossing edges (though do 2Opt for one edge)
    for( int i = 0; i < ncalls_ && *result != SCIP_FOUNDSOL; i++ )
    {
-      edges2test[0] = tour_[ncalls_];
-      edges2test[1] = tour_[i];
+      edges2test[0] = tour_[ncalls_]; /*lint !e613*/
+      edges2test[1] = tour_[i]; /*lint !e613*/
       edges2test[2] = findEdge( nodes, edges2test[0]->back->adjac, edges2test[1]->back->adjac );  
       edges2test[3] = findEdge( nodes, edges2test[0]->adjac, edges2test[1]->adjac );
       assert( edges2test[2] != NULL );
@@ -208,7 +211,7 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
          // copy the old solution
          for( int j = 0; j < nnodes; j++)
          {
-            SCIP_CALL( SCIPsetSolVal(scip, swapsol, tour_[j]->var, 1.0) );
+            SCIP_CALL( SCIPsetSolVal(scip, swapsol, tour_[j]->var, 1.0) ); /*lint !e613*/
          }
 
          // and replace two edges
@@ -227,10 +230,10 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
    SCIPfreeBufferArray(scip, &edges2test);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** clone method which will be used to copy a objective plugin */
-SCIP_DECL_HEURCLONE(scip::ObjCloneable* Heur2opt::clone)
+SCIP_DECL_HEURCLONE(scip::ObjCloneable* Heur2opt::clone) /*lint !e665*/
 {
    return new Heur2opt(scip);
 }

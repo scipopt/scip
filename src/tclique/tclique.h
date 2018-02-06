@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -30,20 +30,22 @@
 extern "C" {
 #endif
 
+#include "tclique/tclique_def.h"
+
 /*
  * Data Types and Structures
  */
 
-typedef int  TCLIQUE_WEIGHT;                    /**< type used for node weights in the graph */
-typedef struct TCLIQUE_Graph TCLIQUE_GRAPH; /**< user defined structure for storing the graph, passed to graph callbacks */
-typedef struct TCLIQUE_Data TCLIQUE_DATA; /**< user defined data to pass to new solution callback method */
+typedef int  TCLIQUE_WEIGHT;                 /**< type used for node weights in the graph */
+typedef struct TCLIQUE_Graph TCLIQUE_GRAPH;  /**< user defined structure for storing the graph, passed to graph callbacks */
+typedef struct TCLIQUE_Data TCLIQUE_DATA;    /**< user defined data to pass to new solution callback method */
 
 #ifndef TCLIQUE_Bool
-#define TCLIQUE_Bool unsigned int               /**< type used for boolean values */
+#define TCLIQUE_Bool unsigned int            /**< type used for boolean values */
 #endif
 #ifndef TRUE
-#define TRUE  1                         /**< boolean value TRUE */
-#define FALSE 0                         /**< boolean value FALSE */
+#define TRUE  1                              /**< boolean value TRUE */
+#define FALSE 0                              /**< boolean value FALSE */
 #endif
 
 /** return status of the TCLIQUE algorithm */
@@ -126,21 +128,20 @@ typedef enum TCLIQUE_Status TCLIQUE_STATUS;
  */
 
 /** gets number of nodes in the graph */
-extern
+EXTERN
 TCLIQUE_GETNNODES(tcliqueGetNNodes);
 
 /** gets weight of nodes in the graph */
-extern
+EXTERN
 TCLIQUE_GETWEIGHTS(tcliqueGetWeights);
 
 /** returns, whether the edge (node1, node2) is in the graph */
-extern
+EXTERN
 TCLIQUE_ISEDGE(tcliqueIsEdge);
 
-/* selects all nodes from a given set of nodes which are adjacent to a given node
- * and returns the number of selected nodes
- */
-extern
+/** selects all nodes from a given set of nodes which are adjacent to a given node
+ *  and returns the number of selected nodes */
+EXTERN
 TCLIQUE_SELECTADJNODES(tcliqueSelectAdjnodes);
 
 
@@ -151,106 +152,107 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectAdjnodes);
  */
 
 /** creates graph data structure */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueCreate(
-   TCLIQUE_GRAPH**  tcliquegraph        /**< pointer to store graph data structure */
+   TCLIQUE_GRAPH**       tcliquegraph        /**< pointer to store graph data structure */
    );
 
 /** frees graph data structure */
-extern
+EXTERN
 void tcliqueFree(
-   TCLIQUE_GRAPH**  tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH**       tcliquegraph        /**< pointer to graph data structure */
    );
 
 /** adds nodes up to the given node number to graph data structure (intermediate nodes have weight 0) */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueAddNode(
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
-   int              node,               /**< node number to add */
-   TCLIQUE_WEIGHT   weight              /**< weight of node to add */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< graph data structure */
+   int                   node,               /**< node number to add */
+   TCLIQUE_WEIGHT        weight              /**< weight of node to add */
    );
 
 /** changes weight of node in graph data structure */
-extern
+EXTERN
 void tcliqueChangeWeight(
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
-   int              node,               /**< node to set new weight */
-   TCLIQUE_WEIGHT   weight              /**< new weight of node (allready scaled) */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< graph data structure */
+   int                   node,               /**< node to set new weight */
+   TCLIQUE_WEIGHT        weight              /**< new weight of node (allready scaled) */
    );
 
 /** adds edge (node1, node2) to graph data structure (node1 and node2 have to be contained in
- *  graph data structure);
- *  new edges are cached, s.t. the graph data structures are not correct until a call to tcliqueFlush();
- *  you have to make sure, that no double edges are inserted
+ *  graph data structure)
+ *
+ *  New edges are cached, s.t. the graph data structures are not correct until a call to tcliqueFlush();
+ *  you have to make sure, that no double edges are inserted.
  */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueAddEdge(
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
-   int              node1,              /**< start node of edge to add */
-   int              node2               /**< end node of edge to add */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< graph data structure */
+   int                   node1,              /**< start node of edge to add */
+   int                   node2               /**< end node of edge to add */
    );
 
 /** inserts all cached edges into the data structures */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueFlush(
-   TCLIQUE_GRAPH*   tcliquegraph        /**< graph data structure */
+   TCLIQUE_GRAPH*        tcliquegraph        /**< graph data structure */
    );
 
 /** loads graph data structure from file */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueLoadFile(
-   TCLIQUE_GRAPH**  tcliquegraph,       /**< pointer to store graph data structure */
-   const char*      filename,           /**< name of file with graph data */
-   double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
-   char*            probname,           /**< buffer to store the name of the problem */
-   int              sizeofprobname      /**< size of buffer to store the name of the problem */
+   TCLIQUE_GRAPH**       tcliquegraph,       /**< pointer to store graph data structure */
+   const char*           filename,           /**< name of file with graph data */
+   double                scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
+   char*                 probname,           /**< buffer to store the name of the problem */
+   int                   sizeofprobname      /**< size of buffer to store the name of the problem */
    );
 
 /** saves graph data structure to file */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueSaveFile(
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
-   const char*      filename,           /**< name of file to create */
-   double           scaleval,           /**< value to unscale weights with */
-   const char*      probname            /**< name of the problem */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< graph data structure */
+   const char*           filename,           /**< name of file to create */
+   double                scaleval,           /**< value to unscale weights with */
+   const char*           probname            /**< name of the problem */
    );
 
 /** gets number of edges in the graph */
-extern
+EXTERN
 int tcliqueGetNEdges(
-   TCLIQUE_GRAPH*   tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*        tcliquegraph        /**< pointer to graph data structure */
    );
 
 /** gets degree of nodes in graph */
-extern
+EXTERN
 int* tcliqueGetDegrees(
-   TCLIQUE_GRAPH*   tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*        tcliquegraph        /**< pointer to graph data structure */
    );
 
 /** gets adjacent nodes of edges in graph */
-extern
+EXTERN
 int* tcliqueGetAdjnodes(
-   TCLIQUE_GRAPH*   tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*        tcliquegraph        /**< pointer to graph data structure */
    );
 
 /** gets pointer to first adjacent edge of given node in graph */
-extern
+EXTERN
 int* tcliqueGetFirstAdjedge(
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
-   int              node                /**< given node */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< pointer to graph data structure */
+   int                   node                /**< given node */
    );
 
 /** gets pointer to last adjacent edge of given node in graph */
-extern
+EXTERN
 int* tcliqueGetLastAdjedge(
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
-   int              node                /**< given node */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< pointer to graph data structure */
+   int                   node                /**< given node */
    );
 
-/* prints graph data structure */
-extern
+/** prints graph data structure */
+EXTERN
 void tcliquePrintGraph(
-   TCLIQUE_GRAPH*   tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*        tcliquegraph        /**< pointer to graph data structure */
    );
 
 
@@ -261,27 +263,27 @@ void tcliquePrintGraph(
  */
 
 /** finds maximum weight clique */
-extern
+EXTERN
 void tcliqueMaxClique(
-   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
-   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
-   TCLIQUE_ISEDGE   ((*isedge)),        /**< user function to check for existence of an edge */
+   TCLIQUE_GETNNODES((*getnnodes)),          /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),        /**< user function to get the node weights */
+   TCLIQUE_ISEDGE((*isedge)),                /**< user function to check for existence of an edge */
    TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
-   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure that is passed to graph callbacks */
-   TCLIQUE_NEWSOL   ((*newsol)),        /**< user function to call on every new solution */
-   TCLIQUE_DATA*    tcliquedata,        /**< user data to pass to new solution callback function */
-   int*             maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
-   int*             nmaxcliquenodes,    /**< pointer to store number of nodes in the maximum weight clique */
-   TCLIQUE_WEIGHT*  maxcliqueweight,    /**< pointer to store weight of the maximum weight clique */
-   TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
-                                         *   for cliques with at least one fractional node) */
-   TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
-   int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
-   int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
-   int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
-   int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
-   int*             ntreenodes,         /**< pointer to store the number of used tree nodes (or NULL) */
-   TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< pointer to graph data structure that is passed to graph callbacks */
+   TCLIQUE_NEWSOL((*newsol)),                /**< user function to call on every new solution */
+   TCLIQUE_DATA*         tcliquedata,        /**< user data to pass to new solution callback function */
+   int*                  maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
+   int*                  nmaxcliquenodes,    /**< pointer to store number of nodes in the maximum weight clique */
+   TCLIQUE_WEIGHT*       maxcliqueweight,    /**< pointer to store weight of the maximum weight clique */
+   TCLIQUE_WEIGHT        maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
+                                              *   for cliques with at least one fractional node) */
+   TCLIQUE_WEIGHT        minweight,          /**< lower bound for weight of generated cliques */
+   int                   maxntreenodes,	     /**< maximal number of nodes of b&b tree */
+   int                   backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
+   int                   maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
+   int                   fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
+   int*                  ntreenodes,         /**< pointer to store the number of used tree nodes (or NULL) */
+   TCLIQUE_STATUS*       status              /**< pointer to store the status of the solving call */
    );
 
 #ifdef __cplusplus

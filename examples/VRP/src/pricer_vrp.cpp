@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,17 +77,17 @@ SCIP_DECL_PRICERINIT(ObjPricerVRP::scip_init)
    {
       for (int j = 0; j < i; ++j)
       {
-         SCIP_CALL( SCIPgetTransformedVar(scip, _arc_var[i][j], &_arc_var[i][j]) );
-         SCIP_CALL( SCIPgetTransformedCons(scip, _arc_con[i][j], &_arc_con[i][j]) );
+         SCIP_CALL( SCIPgetTransformedVar(scip, _arc_var[i][j], &_arc_var[i][j]) ); /*lint !e732 !e747*/
+         SCIP_CALL( SCIPgetTransformedCons(scip, _arc_con[i][j], &_arc_con[i][j]) ); /*lint !e732 !e747*/
       }
    }
    for (int i = 1; i < num_nodes(); ++i)
    {
-      SCIP_CALL( SCIPgetTransformedCons(scip, _part_con[i], &_part_con[i]) );
+      SCIP_CALL( SCIPgetTransformedCons(scip, _part_con[i], &_part_con[i]) ); /*lint !e732 !e747*/
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** perform pricing
@@ -97,12 +97,12 @@ SCIP_DECL_PRICERINIT(ObjPricerVRP::scip_init)
 SCIP_RETCODE ObjPricerVRP::pricing(
    SCIP*                 scip,               /**< SCIP data structure */
    bool                  isfarkas            /**< whether we perform Farkas pricing */
-   )
+   ) const
 {
    /* allocate array for reduced costs */
-   vector< vector<SCIP_Real> > red_length(num_nodes());
+   vector< vector<SCIP_Real> > red_length(num_nodes());  /*lint !e732 !e747*/
    for (int i = 0; i < num_nodes(); ++i)
-      red_length[i].resize(i, 0.0);
+      red_length[i].resize(i, 0.0); /*lint !e732 !e747*/
 
    /* compute reduced-cost arc lengths store only lower triangualar matrix, i.e., red_length[i][j] only for i > j */
    if ( isfarkas )
@@ -120,7 +120,7 @@ SCIP_RETCODE ObjPricerVRP::pricing(
                r -= 0.5 * SCIPgetDualfarkasLinear(scip, part_con(j));
             if ( i != 0 )
                r -= 0.5 * SCIPgetDualfarkasLinear(scip, part_con(i));
-            red_length[i][j] = r;
+            red_length[i][j] = r;  /*lint !e732 !e747*/
          }
       }
    }
@@ -139,7 +139,7 @@ SCIP_RETCODE ObjPricerVRP::pricing(
                r -= 0.5 * SCIPgetDualsolLinear(scip, part_con(j));
             if ( i != 0 )
                r -= 0.5 * SCIPgetDualsolLinear(scip, part_con(i));
-            red_length[i][j] = r;
+            red_length[i][j] = r; /*lint !e732 !e747*/
          }
       }
    }
@@ -215,7 +215,7 @@ SCIP_RETCODE ObjPricerVRP::pricing(
  */
 SCIP_DECL_PRICERREDCOST(ObjPricerVRP::scip_redcost)
 {
-   SCIPdebugMessage("call scip_redcost ...\n");
+   SCIPdebugMsg(scip, "call scip_redcost ...\n");
 
    /* set result pointer, see above */
    *result = SCIP_SUCCESS;
@@ -224,7 +224,7 @@ SCIP_DECL_PRICERREDCOST(ObjPricerVRP::scip_redcost)
    SCIP_CALL( pricing(scip, false) );
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** Pricing of additional variables if LP is infeasible.
@@ -236,31 +236,31 @@ SCIP_DECL_PRICERREDCOST(ObjPricerVRP::scip_redcost)
  */
 SCIP_DECL_PRICERFARKAS(ObjPricerVRP::scip_farkas)
 {
-   SCIPdebugMessage("call scip_farkas ...\n");
+   SCIPdebugMsg(scip, "call scip_farkas ...\n");
 
    /* call pricing routine */
    SCIP_CALL( pricing(scip, true) );
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** add tour variable to problem */
 SCIP_RETCODE ObjPricerVRP::add_tour_variable(
    SCIP*                 scip,               /**< SCIP data structure */
    const list<int>&      tour                /**< list of nodes in tour */
-   )
+   ) const
 {
    /* create meaningful variable name */
    char tmp_name[255];
    char var_name[255];
-   SCIPsnprintf(var_name, 255, "T");
-   for (list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it)
+   (void) SCIPsnprintf(var_name, 255, "T");
+   for (list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it)  /*lint !e1702*/
    {
       strncpy(tmp_name, var_name, 255);
-      SCIPsnprintf(var_name, 255, "%s_%d", tmp_name, *it);
+      (void) SCIPsnprintf(var_name, 255, "%s_%d", tmp_name, *it);
    }
-   SCIPdebugMessage("new variable <%s>\n", var_name);
+   SCIPdebugMsg(scip, "new variable <%s>\n", var_name);
 
    /* create the new variable: Use upper bound of infinity such that we do not have to care about
     * the reduced costs of the variable in the pricing. The upper bound of 1 is implicitly satisfied
@@ -270,15 +270,15 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
    SCIP_CALL( SCIPcreateVar(scip, &var, var_name,
                             0.0,                     // lower bound
                             SCIPinfinity(scip),      // upper bound
-                            0,                       // objective
+                            0.0,                     // objective
                             SCIP_VARTYPE_CONTINUOUS, // variable type
-                            false, false, 0, 0, 0, 0, 0) );
+                            false, false, NULL, NULL, NULL, NULL, NULL) );
 
    /* add new variable to the list of variables to price into LP (score: leave 1 here) */
    SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
 
    /* add coefficient into the set partition constraints */
-   for (list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it)
+   for (list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it) /*lint !e1702*/
    {
       assert( 0 <= *it && *it < num_nodes() );
       SCIP_CALL( SCIPaddCoefLinear(scip, part_con(*it), var, 1.0) );
@@ -286,7 +286,7 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
 
    /* add coefficient into arc routing constraints */
    int last = 0;
-   for (list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it)
+   for (list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it) /*lint !e1702*/
    {
       assert( 0 <= *it && *it < num_nodes() );
       SCIP_CALL( SCIPaddCoefLinear(scip, arc_con(last, *it), var, 1.0) );
@@ -364,7 +364,7 @@ typedef std::map< NODE_TABLE_KEY, NODE_TABLE_DATA > NODE_TABLE;
 SCIP_Real ObjPricerVRP::find_shortest_tour(
    const vector< vector<SCIP_Real> >& length,   /**< matrix of lengths */
    list<int>&            tour                /**< list of nodes in tour */
-   )
+   ) const
 {
    tour.clear();
 
@@ -372,7 +372,7 @@ SCIP_Real ObjPricerVRP::find_shortest_tour(
 
    /* begin algorithm */
    PQUEUE               PQ;
-   vector< NODE_TABLE > table(num_nodes());
+   vector< NODE_TABLE > table(num_nodes()); /*lint !e732 !e747*/
 
    /* insert root node (start at node 0) */
    PQUEUE_KEY       queue_key;
@@ -417,17 +417,17 @@ SCIP_Real ObjPricerVRP::find_shortest_tour(
          if ( next_demand > capacity() )
             continue;
 
-         const SCIP_Real next_length = curr_length + ( curr_node > next_node ?
-                                                    length[curr_node][next_node] :
-                                                    length[next_node][curr_node] );
+         const SCIP_Real next_length = curr_length + ( curr_node > next_node ?      /*lint !e732 !e747*/
+                                                    length[curr_node][next_node] :  /*lint !e732 !e747*/
+                                                    length[next_node][curr_node] ); /*lint !e732 !e747*/
 
-         NODE_TABLE& next_table = table[next_node];
+         NODE_TABLE& next_table = table[next_node]; /*lint !e732 !e747*/
 
          /* check if new table entry would be dominated */
          bool skip = false;
          list<NODE_TABLE::iterator> dominated;
 
-         for (NODE_TABLE::iterator it = next_table.begin(); it != next_table.end() && ! skip; ++it)
+         for (NODE_TABLE::iterator it = next_table.begin(); it != next_table.end() && ! skip; ++it) /*lint !e1702*/
          {
             if ( next_demand >= it->first && next_length >= it->second.length - eps )
                skip = true;
@@ -439,7 +439,7 @@ SCIP_Real ObjPricerVRP::find_shortest_tour(
             continue;
 
          /* remove dominated table and queue entries */
-         for (list<NODE_TABLE::iterator>::iterator it = dominated.begin(); it != dominated.end(); ++it)
+         for (list<NODE_TABLE::iterator>::iterator it = dominated.begin(); it != dominated.end(); ++it) /*lint !e1702*/
          {
             PQ.remove( (*it)->second.queue_item );
             next_table.erase( *it );
@@ -472,7 +472,7 @@ SCIP_Real ObjPricerVRP::find_shortest_tour(
    int curr_node = 0;
 
    /* find most negative tour */
-   for (NODE_TABLE::iterator it = table[0].begin(); it != table[0].end(); ++it)
+   for (NODE_TABLE::iterator it = table[0].begin(); it != table[0].end(); ++it) /*lint !e1702 !e732 !e747*/
    {
       if ( it->second.length < table_entry.length )
       {
@@ -487,7 +487,7 @@ SCIP_Real ObjPricerVRP::find_shortest_tour(
       table_key -= demand(curr_node);
       curr_node  = table_entry.predecessor;
       tour.push_front(curr_node);
-      table_entry = table[curr_node][table_key];
+      table_entry = table[curr_node][table_key]; /*lint !e732 !e747*/
    }
 
    SCIPdebugMessage("Leave RSP  tour length = %g\n", tour_length);

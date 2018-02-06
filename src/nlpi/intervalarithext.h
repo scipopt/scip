@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@ public:
    /** default constructor -> gives entire interval */
    SCIPInterval()
    {
-      SCIPintervalSetBounds(this, -infinity, infinity);
+      SCIPintervalSetBounds(this, -SCIPInterval::infinity,SCIPInterval::infinity);
    }
 
    /** constructor for an SCIP_INTERVAL struct */
@@ -93,11 +93,11 @@ public:
       const SCIP_INTERVAL& y                 /**< interval to compare with */
       ) const
    {
-      if( SCIPintervalIsEmpty(*this) && !SCIPintervalIsEmpty(y) )
+      if( SCIPintervalIsEmpty(SCIPInterval::infinity, *this) && !SCIPintervalIsEmpty(SCIPInterval::infinity, y) )
          return false;
-      if( this->inf <= -infinity && y.inf > -infinity )
+      if( this->inf <= -SCIPInterval::infinity && y.inf > -SCIPInterval::infinity )
          return false;
-      if( this->sup >=  infinity && y.sup <  infinity )
+      if( this->sup >= SCIPInterval::infinity && y.sup < SCIPInterval::infinity )
          return false;
       return (this->inf == y.inf) && (this->sup == y.sup);
    }
@@ -116,8 +116,8 @@ public:
       ) const
    {
       return ( (inf == y) && (sup == y) ) ||
-             ( sup <= -infinity && y <= -infinity ) ||
-             ( inf >=  infinity && y >=  infinity );
+             ( sup <= -SCIPInterval::infinity && y <= -SCIPInterval::infinity ) ||
+             ( inf >= SCIPInterval::infinity && y >= SCIPInterval::infinity );
    }
 
    /** adds another interval to this one */
@@ -251,10 +251,11 @@ SCIPInterval cos(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement cosine for intervals */
-   SCIPerrorMessage("Cosine of interval not implemented. Returning trivial interval [-1,1].\n");
+   SCIPInterval resultant;
 
-   return SCIPInterval(-1.0, 1.0);
+   SCIPintervalCos(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
 }
 
 /** exponential of an interval */
@@ -331,10 +332,11 @@ SCIPInterval sin(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement sine for intervals */
-   SCIPerrorMessage("Sine of interval not implemented. Returning trivial interval [-1,1].\n");
+   SCIPInterval resultant;
 
-   return SCIPInterval(-1.0, 1.0);
+   SCIPintervalSin(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
 }
 
 /** square an interval */
@@ -371,7 +373,7 @@ SCIPInterval abs(
 {
    SCIPInterval resultant;
 
-   SCIPintervalAbs(&resultant, x);
+   SCIPintervalAbs(SCIPInterval::infinity, &resultant, x);
 
    return resultant;
 }
@@ -384,7 +386,7 @@ SCIPInterval sign(
 {
    SCIPInterval resultant;
 
-   SCIPintervalSign(&resultant, x);
+   SCIPintervalSign(SCIPInterval::infinity, &resultant, x);
 
    return resultant;
 }
@@ -402,12 +404,17 @@ SCIPInterval function(                                                          
 
 SCIP_INTERVALARITH_UNDEFFUNC(tan)
 SCIP_INTERVALARITH_UNDEFFUNC(acos)
+SCIP_INTERVALARITH_UNDEFFUNC(acosh)
 SCIP_INTERVALARITH_UNDEFFUNC(asin)
+SCIP_INTERVALARITH_UNDEFFUNC(asinh)
 SCIP_INTERVALARITH_UNDEFFUNC(atan)
+SCIP_INTERVALARITH_UNDEFFUNC(atanh)
 SCIP_INTERVALARITH_UNDEFFUNC(cosh)
 SCIP_INTERVALARITH_UNDEFFUNC(sinh)
 SCIP_INTERVALARITH_UNDEFFUNC(tanh)
 SCIP_INTERVALARITH_UNDEFFUNC(erf)
+SCIP_INTERVALARITH_UNDEFFUNC(expm1)
+SCIP_INTERVALARITH_UNDEFFUNC(log1p)
 #undef SCIP_INTERVALARITH_UNDEFFUNC
 
 #ifdef SCIPInterval_NAMESPACE

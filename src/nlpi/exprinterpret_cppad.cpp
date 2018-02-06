@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,7 +60,10 @@ using std::vector;
 #define SCIPInterval_NAMESPACE CppAD
 #include "nlpi/intervalarithext.h"
 
-SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+namespace CppAD
+{
+   SCIP_Real SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+}
 using CppAD::SCIPInterval;
 
 /* CppAD needs to know a fixed upper bound on the number of threads at compile time.
@@ -75,7 +78,7 @@ using CppAD::SCIPInterval;
 #endif
 
 #include <cppad/cppad.hpp>
-#include <cppad/error_handler.hpp>
+#include <cppad/utility/error_handler.hpp>
 
 /* CppAD is not thread-safe by itself, but uses some static datastructures
  * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
@@ -84,25 +87,6 @@ using CppAD::SCIPInterval;
  */
 #ifndef NPARASCIP
 #include <pthread.h>
-
-/* workaround error message regarding missing implementation of tanh during initialization of static variables (see cppad/local/erf.hpp) */
-namespace CppAD
-{
-template <> SCIPInterval erf_template(
-   const SCIPInterval    &x
-   )
-{
-   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-   return SCIPInterval();
-}
-template <> AD<SCIPInterval> erf_template(
-   const AD<SCIPInterval> &x
-   )
-{
-   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-   return AD<SCIPInterval>();
-}
-}
 
 /** mutex for locking in pthread case */
 static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
@@ -178,10 +162,13 @@ char init_parallel(void)
    return 0;
 }
 
-/** a dummy variable that can is initialized to the result of init_parallel
+/** a dummy variable that is initialized to the result of init_parallel
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
+#if !defined(_MSC_VER)
+__attribute__ ((unused))
+#endif
 static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
@@ -201,16 +188,6 @@ SCIPInterval CondExpOp(
       );
 
    return SCIPInterval();
-}
-
-/** another function that returns whether two intervals are the same (required by CppAD) */
-inline
-bool EqualOpSeq(
-   const SCIPInterval&   x,                  /**< first operand */
-   const SCIPInterval&   y                   /**< second operand */
-   )
-{
-   return x == y;
 }
 
 /** another function required by CppAD */
@@ -320,6 +297,21 @@ int Integer(
    return 0;
 }
 
+/** absolute zero multiplication
+ *
+ * @return [0,0] if first argument is [0,0] independent of whether the second argument is an empty interval or not
+ */
+inline
+SCIPInterval azmul(
+   const SCIPInterval&   x,                  /**< first operand */
+   const SCIPInterval&   y                   /**< second operand */
+   )
+{
+   if( x.inf == 0.0 && x.sup == 0.0 )
+      return SCIPInterval(0.0, 0.0);
+   return x * y;
+}
+
 /** printing of an interval (required by CppAD) */
 inline
 std::ostream& operator<<(std::ostream& out, const SCIP_INTERVAL& x)
@@ -342,7 +334,7 @@ struct SCIP_ExprIntData
 public:
    /** constructor */
    SCIP_ExprIntData()
-      : val(0.0), need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
+      : val(0.0), need_retape(true), int_need_retape(true), need_retape_always(false), userevalcapability(SCIP_EXPRINTCAPABILITY_ALL), blkmem(NULL), root(NULL)
    { }
 
    /** destructor */
@@ -366,6 +358,7 @@ public:
    bool                  int_need_retape;    /**< will retaping be required for the next interval evaluation? */
 
    bool                  need_retape_always; /**< will retaping be always required? */
+   SCIP_EXPRINTCAPABILITY userevalcapability; /**< (intersection of) capabilities of evaluation rountines of user expressions */
 
    BMS_BLKMEM*           blkmem;             /**< block memory used to allocate expresstion tree */
    SCIP_EXPR*            root;               /**< copy of expression tree; @todo we should not need to make a copy */
@@ -1215,7 +1208,7 @@ SCIP_RETCODE exprEvalUser(
    Type* hessian
    )
 {
-   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian);
+   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian); /*lint !e429*/
 }
 
 template<>
@@ -1295,7 +1288,7 @@ private:
       assert(q <= p);
 
       size_t n = tx.size() / (p+1);
-      assert(n == (size_t)SCIPexprGetNChildren(expr));
+      assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
 
       if( vx.size() > 0 )
@@ -1318,13 +1311,13 @@ private:
       Type* gradient = NULL;
       Type* hessian = NULL;
 
-      if( q <= 1 && 1 <= p )
+      if( q <= 2 && 1 <= p )
          gradient = new Type[n];
       if( q <= 2 && 2 <= p )
          hessian = new Type[n*n];
 
       for( size_t i = 0; i < n; ++i )
-         x[i] = tx[i * (p+1) + 0];
+         x[i] = tx[i * (p+1) + 0];  /*lint !e835*/
 
       if( exprEvalUser(expr, x, ty[0], gradient, hessian) != SCIP_OKAY )
       {
@@ -1343,6 +1336,8 @@ private:
 
       if( hessian != NULL )
       {
+         assert(gradient != NULL);
+
          ty[2] = 0.0;
          for( size_t i = 0; i < n; ++i )
          {
@@ -1399,17 +1394,18 @@ private:
     *       = py[0] * f'(x^0)
     * \f$
     *
-    * For p = 1, this means
-    * \f$
-    * %l=0:
-    *  px^0 = py[0] * \partial F^0    / \partial x^0) + py[1] * \partial F^1 / \partial x^0)
-    *       = py[0] * \partial f(x^0) / \partial x^0) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    * For p = 1, this means (for l = 0):
+    * \f[
+    *  px^0 = py[0] * \partial F^0    / \partial x^0 + py[1] * \partial F^1 / \partial x^0
+    *       = py[0] * \partial f(x^0) / \partial x^0 + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
     *       = py[0] * f'(x^0)                         + py[1] * f''(x^0) * x^1
-    * %l=1:
-    *  px^1 = py[0] * \partial F^0    / \partial x^1) + py[1] * \partial F^1 / \partial x^1)
-    *       = py[0] * \partial f(x^0) / \partial x^1) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    * \f]
+    * and (for l=1):
+    * \[
+    *  px^1 = py[0] * \partial F^0    / \partial x^1 + py[1] * \partial F^1 / \partial x^1
+    *       = py[0] * \partial f(x^0) / \partial x^1 + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
     *       = py[0] * 0                               + py[1] * f'(x^0)
-    * \f$
+    * \f]
     *
     * As x^k = (tx[k], tx[(p+1)+k], tx[2*(p+1)+k], ..., tx[n*(p+1)+k] and
     *   px^k = (px[k], px[(p+1)+k], px[2*(p+1)+k], ..., px[n*(p+1)+k], we get
@@ -1432,7 +1428,7 @@ private:
       assert(py.size() == p+1);
 
       size_t n = tx.size() / (p+1);
-      assert(n == (size_t)SCIPexprGetNChildren(expr));
+      assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
 
       Type* x = new Type[n];
@@ -1444,7 +1440,7 @@ private:
          hessian = new Type[n*n];
 
       for( size_t i = 0; i < n; ++i )
-         x[i] = tx[i * (p+1) + 0];
+         x[i] = tx[i * (p+1) + 0]; /*lint !e835*/
 
       if( exprEvalUser(expr, x, funcval, gradient, hessian) != SCIP_OKAY )
       {
@@ -1465,11 +1461,12 @@ private:
       case 1:
          //  px[i*2+0] = (px^0)_i = py[0] * grad[i] + py[1] * sum(j, hessian[j,i] * tx[j*2+1])
          //  px[i*2+1] = (px^1)_i = py[1] * grad[i]
+         assert(hessian != NULL);
          for( size_t i = 0; i < n; ++i )
          {
-            px[i*2+0] = py[0] * gradient[i];
+            px[i*2+0] = py[0] * gradient[i]; /*lint !e835*/
             for( size_t j = 0; j < n; ++j )
-               px[i*2+0] += py[1] * hessian[i+n*j] * tx[j*2+1];
+               px[i*2+0] += py[1] * hessian[i+n*j] * tx[j*2+1]; /*lint !e835*/
 
             px[i*2+1] = py[1] * gradient[i];
          }
@@ -1480,7 +1477,7 @@ private:
       }
 
       return true;
-   }
+   } /*lint !e715*/
 
    using CppAD::atomic_base<Type>::for_sparse_jac;
 
@@ -1498,14 +1495,14 @@ private:
       assert(s.size() == q);
 
       size_t n = r.size() / q;
-      assert(n == (size_t)SCIPexprGetNChildren(expr));
+      assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
 
       // sparsity for S(x) = f'(x) * R
       for( size_t j = 0; j < q; j++ )
       {
          s[j] = false;
          for( size_t i = 0; i < n; i++ )
-            s[j] |= r[i * q + j];
+            s[j] |= (bool)r[i * q + j]; /*lint !e1786*/
       }
 
       return true;
@@ -1583,7 +1580,7 @@ private:
          for( j = 0; j < q; j++ )
             for( i = 0; i < n; i++ )
                for( k = 0; k < n; ++k )
-                  v[ i * q + j] |= r[ k * q + j];
+                  v[ i * q + j] |= (bool) r[ k * q + j];
 
       return true;
    }
@@ -1598,6 +1595,7 @@ void evalUser(
    SCIP_EXPR*            expr                /**< expression that holds the user expression */
    )
 {
+   assert( args != 0 );
    vector<Type> in(args, args + SCIPexprGetNChildren(expr));
    vector<Type> out(1);
 
@@ -1698,19 +1696,6 @@ void evalSqrt(
    )
 {
    resultant = sqrt(arg);
-}
-
-/** specialization of square-root operator for numbers
- *
- *  We perturb the function a little bit so that it's derivatives are defined in 0.0.
- */
-template<>
-void evalSqrt(
-   CppAD::AD<double>&    resultant,          /**< resultant */
-   const CppAD::AD<double>& arg              /**< operand */
-   )
-{
-   resultant = sqrt(arg + 1e-20) - 1e-10;
 }
 
 /** template for evaluation for absolute value operator */
@@ -2092,6 +2077,8 @@ SCIP_RETCODE eval(
       break;
 
    case SCIP_EXPR_LAST:
+   default:
+      BMSfreeMemoryArrayNull(&buf);
       return SCIP_ERROR;
    }
 
@@ -2105,16 +2092,16 @@ SCIP_RETCODE eval(
  *  This may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...).
  */
 static
-bool needAlwaysRetape(SCIP_EXPR* expr)
+void analyzeTree(
+   SCIP_EXPRINTDATA* data,
+   SCIP_EXPR*        expr
+   )
 {
    assert(expr != NULL);
    assert(SCIPexprGetChildren(expr) != NULL || SCIPexprGetNChildren(expr) == 0);
 
    for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
-   {
-      if( needAlwaysRetape(SCIPexprGetChildren(expr)[i]) )
-         return true;
-   }
+      analyzeTree(data, SCIPexprGetChildren(expr)[i]);
 
    switch( SCIPexprGetOperator(expr) )
    {
@@ -2124,12 +2111,16 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
 #ifdef NO_CPPAD_USER_ATOMIC
    case SCIP_EXPR_SIGNPOWER:
 #endif
-      return true;
+      data->need_retape_always = true;
+      break;
+
+   case SCIP_EXPR_USER:
+      data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
+      break;
 
    default: ;
    } /*lint !e788*/
 
-   return false;
 }
 
 /** replacement for CppAD's default error handler
@@ -2247,12 +2238,33 @@ SCIP_RETCODE SCIPexprintCompile(
 
    SCIP_CALL( SCIPexprCopyDeep(exprint->blkmem, &data->root, root) );
 
-   data->need_retape_always = needAlwaysRetape(SCIPexprtreeGetRoot(tree));
-
    data->blkmem = exprint->blkmem;
+
+   analyzeTree(data, data->root);
 
    return SCIP_OKAY;
 }
+
+
+/** gives the capability to evaluate an expression by the expression interpreter
+ *
+ * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
+ * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * Hessian for an expression is not available because it contains a user expression that does not provide
+ * Hessians.
+ */
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   assert(tree != NULL);
+
+   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
+   assert(data != NULL);
+
+   return data->userevalcapability;
+}/*lint !e715*/
 
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(

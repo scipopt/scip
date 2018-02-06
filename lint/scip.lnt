@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,9 @@
 
 -fdc       // do not distinguish plain char as a unique type.
            // i.e. char is either signed char or unsigned char
+
++fzl       // make size_t long unsined int
++fzu
 
 +libh(cplex.h) // declare CPLEX file as library
 +fll           // permit long lont int
@@ -33,11 +36,17 @@
 -esym(534,vprintf,snprintf)
 -esym(534,free_history_entry)
 -esym(534,SCIPfclose,SCIPfflush,SCIPfprintf,SCIPfputc,SCIPfputs,SCIPfseek,SCIPfwrite)
+-esym(754,Chunk::_rbtreenode)
 
 -function(exit,__assertfail)
 
 // turn off all errors for va_* functions:
 -emacro((*),va_*)
+
+// Avoid warnings with UINT64_MAX macro:
+// It seems that lint does not work with the definition
+// "# define UINT64_MAX (__UINT64_C(18446744073709551615))" in stdint.h
+++dUINT64_MAX=18446744073709551615UL
 
 // ---------------------------------------------------------
 // treat particular messages:
@@ -49,6 +58,26 @@
 -emacro(681,SCIPdebugMessage)     // Loop is not entered
 -emacro(506,SCIPdebugPrintf)      // Constant value Boolean
 -emacro(681,SCIPdebugPrintf)      // Loop is not entered
+-emacro(506,SCIPdebugMsg)         // Constant value Boolean
+-emacro(681,SCIPdebugMsg)         // Loop is not entered
+-emacro(530,SCIPdebugMsg)         // Symbol not initialized
+-emacro(644,SCIPdebugMsg)         // Symbol may not have been initialized
+-emacro(506,SCIPdebugMsgPrint)    // Constant value Boolean
+-emacro(681,SCIPdebugMsgPrint)    // Loop is not entered
+-emacro(530,SCIPdebugMsgPrint)    // Symbol not initialized
+-emacro(644,SCIPdebugMsgPrint)    // Symbol may not have been initialized
+-emacro(506,SCIPsetDebugMsg)      // Constant value Boolean
+-emacro(681,SCIPsetDebugMsg)      // Loop is not entered
+-emacro(530,SCIPsetDebugMsg)      // Symbol not initialized
+-emacro(644,SCIPsetDebugMsg)      // Symbol may not have been initialized
+-emacro(506,SCIPstatDebugMsg)     // Constant value Boolean
+-emacro(681,SCIPstatDebugMsg)     // Loop is not entered
+-emacro(530,SCIPstatDebugMsg)     // Symbol not initialized
+-emacro(644,SCIPstatDebugMsg)     // Symbol may not have been initialized
+-emacro(506,SCIPsetDebugMsgPrint) // Constant value Boolean
+-emacro(681,SCIPsetDebugMsgPrint) // Loop is not entered
+-emacro(530,SCIPsetDebugMsgPrint) // Symbol not initialized
+-emacro(644,SCIPsetDebugMsgPrint) // Symbol may not have been initialized
 -emacro(506,SCIPstatisticMessage) // Constant value Boolean
 -emacro(681,SCIPstatisticMessage) // Loop is not entered
 -emacro(506,SCIPstatisticPrintf)  // Constant value Boolean
@@ -67,7 +96,10 @@
 -esym(578,scip)           // Declaration of symbol hides symbol
 -esym(715,scip)           // Symbol not referenced
 -esym(528,consdataPrint)  // Symbol not referenced
+-esym(528,errorhandler)   // Symbol not referenced
 -esym(1712,Obj*)          // Default constructor not defined for class
+
+-esym(1740,"*::scip_")
 
 -e537  // Repeated include file
 -e631  // Tag defined differently
@@ -122,42 +154,17 @@
 // ------------------------------------------------------------------
 // turn off several warnings for memory functions, since they usually are false positive and clutter the output
 
-// Relational operator always evaluates to 'false':
--emacro(685,BMSallocMemoryArray)
--emacro(685,BMSreallocMemoryArray)
--emacro(685,BMSallocMemoryArrayCPP)
--emacro(685,BMSallocClearMemoryArray)
--emacro(685,BMSallocBlockMemoryArray)
--emacro(685,BMSreallocBlockMemoryArray)
-
-// Suspicious cast:
--emacro(571,SCIPallocMemoryArray)
--emacro(571,SCIPreallocMemoryArray)
--emacro(571,SCIPallocBlockMemoryArray)
--emacro(571,SCIPreallocBlockMemoryArray)
--emacro(571,BMSallocClearMemoryArray)
--emacro(571,BMSallocMemoryArray)
--emacro(571,BMSallocMemorySize)
--emacro(571,BMScopyMemorySize)
--emacro(571,BMSreallocMemorySize)
--emacro(571,BMSreallocMemoryArray)
--emacro(571,BMSallocBlockMemoryArray)
--emacro(571,BMSreallocMemoryArray)
--emacro(571,BMSreallocBlockMemoryArray)
-
-// Loss of precision:
--emacro(712,SCIPduplicateBufferArray)
-
-// Significant prototype coercion:
--emacro(747,SCIPduplicateBufferArray)
-
 // Suspicious truncation:
 -emacro(647,BMSclearMemoryArray)
 -emacro(647,BMSallocMemorySize)
 -emacro(647,BMSallocClearMemoryArray)
 -emacro(647,SCIPallocMemoryArray)
 -emacro(647,SCIPallocBlockMemoryArray)
--emacro(647,SCIPfreeBlockMemoryArray)
+-emacro(647,SCIPallocBufferArray)
+-emacro(647,SCIPreallocBufferArray)
+-emacro(647,SCIPfreeBlockMemoryArrayNull)
+-emacro(647,SCIPduplicateBlockMemoryArray)
+-emacro(647,SCIPallocCleanBufferArray)
 
 // Avoid "Possible truncation of addition" - this might give interesting information, but clutters the output
 -emacro(776,BMSmoveMemoryArray)
@@ -166,22 +173,43 @@
 -emacro(776,BMSallocMemoryArray)
 -emacro(776,BMSfreeBlockMemoryArray)
 -emacro(776,BMSallocBlockMemoryArray)
+-emacro(776,BMSallocBufferMemoryArray)
 -emacro(776,BMSreallocBlockMemoryArray)
+-emacro(776,BMSreallocBufferMemoryArray)
 -emacro(776,BMSduplicateBlockMemoryArray)
+-emacro(776,BMSduplicateBufferMemoryArray)
 -emacro(776,SCIPallocMemoryArray)
 -emacro(776,SCIPallocBlockMemoryArray)
 -emacro(776,SCIPreallocBlockMemoryArray)
 -emacro(776,SCIPfreeBlockMemoryArrayNull)
 -emacro(776,SCIPduplicateMemoryArray)
+-emacro(776,SCIPallocClearBufferArray)
 
 -ecall(776,SCIPhashmapInsert)
 -ecall(776,SCIPhashmapExists)
+
+// turn off unusual use of 'SYM'
+-emacro(866,BMSallocBlockMemoryArray)
+-emacro(866,BMSduplicateMemoryArray)
+-emacro(866,BMSfreeBlockMemoryArray)
+-emacro(866,BMSfreeBlockMemoryArrayNull)
 
 // turn off "Suspicious cast" messages involving size_t in SCIPhashmap*
 -ecall(571,SCIPhashmapInsert)
 -ecall(571,SCIPhashmapGetImage)
 -ecall(571,SCIPhashmapSetImage)
 -ecall(571,SCIPhashmapExists)
+-emacro(571,SCIPhashTwo)
+-emacro(571,SCIPcombineTwoInt)
+-emacro(571,SCIPcombineThreeInt)
+-emacro(571,SCIPcombineFourInt)
+-emacro(571,SCIPrealHashCode)
+-emacro(571,SCIPpositiveRealHashCode)
+
+// turn off messages for quad precision
+-emacro(647,QUAD_ARRAY_SIZE)
+-emacro(666,SCIPquadprecProdQD)
+-emacro(666,SCIPquadprecSumQD)
 
 // ------------------------------------------------------------------
 // turn off some warnings about C++ classes:
@@ -190,3 +218,7 @@
 
 -ecall(747, std::vector::operator[])  // Significant prototype coercion
 
+--esym(750,_USE_MATH_DEFINES)
+
+// do not break or truncate lines
+-width(0,4)

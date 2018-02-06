@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -213,7 +213,7 @@ SCIP_DECL_PROPPRESOL(propPresolObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_presol(scip, prop, nrounds,
+   SCIP_CALL( propdata->objprop->scip_presol(scip, prop, nrounds, presoltiming,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
          nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
@@ -283,9 +283,8 @@ SCIP_RETCODE SCIPincludeObjProp(
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_,
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
-         objprop->scip_timingmask_, objprop->scip_presol_priority_, objprop->scip_presol_maxrounds_, objprop->scip_presol_delay_,
-         propCopyObj,
-         propFreeObj, propInitObj, propExitObj, propInitpreObj, propExitpreObj, propInitsolObj, propExitsolObj,
+         objprop->scip_timingmask_, objprop->scip_presol_priority_, objprop->scip_presol_maxrounds_, objprop->scip_presol_timing_,
+         propCopyObj, propFreeObj, propInitObj, propExitObj, propInitpreObj, propExitpreObj, propInitsolObj, propExitsolObj,
          propPresolObj, propExecObj, propRespropObj,
          propdata) ); /*lint !e429*/
 

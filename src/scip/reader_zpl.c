@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,10 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
 #include "zimpl/bool.h"
@@ -50,6 +54,10 @@
 
 #include "zimpl/xlpglue.h"
 #include "zimpl/zimpllib.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #define READER_NAME             "zplreader"
 #define READER_DESC             "file reader for ZIMPL model files"
@@ -931,14 +939,14 @@ SCIP_RETCODE addVar(
       /* if the number is unknown we have no valid primal solution candidate */
       if( numb_equal(startval, numb_unknown()) )
       {
-         SCIPdebugMessage("primal solution candidate contains an unknown value for variable <%s>(%g)\n",
+         SCIPdebugMsg(scip, "primal solution candidate contains an unknown value for variable <%s>(%g)\n",
             SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
          readerdata->valid = FALSE;
       }
       else
       {
          assert(readerdata->sol != NULL);
-         SCIPdebugMessage("change solution solution <%p>: <%s> = <%g>\n", 
+         SCIPdebugMsg(scip, "change solution solution <%p>: <%s> = <%g>\n",
             (void*)readerdata->sol, SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
 
          /* set value within the primal solution candidate */
@@ -1359,7 +1367,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       else
          *compextension = '\0';
       (void) SCIPsnprintf(namewithoutpath, SCIP_MAXSTRLEN, "%s.%s%s", name, extension, compextension);
-      if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
+      if( (char*)getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
          return SCIP_READERROR;
@@ -1379,7 +1387,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
    {
       char currentpath[SCIP_MAXSTRLEN];
-      if( getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
+      if( (char*)getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
          return SCIP_READERROR;
@@ -1612,7 +1620,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
          NULL, FALSE, "-", NULL, NULL) );
 
-   (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
+   (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10); /*lint !e778*/
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)"));
 #else
    SCIPwarningMessage(scip, "SCIP does only support ZIMPL 3.2.0 and higher. Please update your ZIMPL version %d.%d.%d\n",

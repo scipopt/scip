@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_presol.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for presolvers
  * @author Tobias Achterberg
  */
@@ -32,6 +32,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicPresolverMethods
+ *
+ * @{
+ */
 
 /** compares two presolvers w. r. to their priority */
 EXTERN
@@ -72,16 +77,23 @@ int SCIPpresolGetPriority(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
-/** should presolver be delayed, if other presolvers found reductions? */
+/** gets round limit of presolver */
 EXTERN
-SCIP_Bool SCIPpresolIsDelayed(
+int SCIPpresolGetMaxrounds(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
-/** was presolver delayed at the last call? */
+/** gets the timing mask of the presolver */
 EXTERN
-SCIP_Bool SCIPpresolWasDelayed(
+SCIP_PRESOLTIMING SCIPpresolGetTiming(
    SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** sets the timing mask of the presolver */
+EXTERN
+void SCIPpresolSetTiming(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_PRESOLTIMING     timing              /**< timing mask of the presolver */
    );
 
 /** is presolver initialized? */
@@ -167,6 +179,8 @@ EXTERN
 int SCIPpresolGetNCalls(
    SCIP_PRESOL*          presol              /**< presolver */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

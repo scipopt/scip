@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,8 @@
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/sol.h"
+#include "scip/var.h"
 #include "scip/relax.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -77,7 +79,7 @@ SCIP_RETCODE SCIPrelaxCopyInclude(
 
    if( relax->relaxcopy != NULL )
    {
-      SCIPdebugMessage("including relaxation handler %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including relaxation handler %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
       SCIP_CALL( relax->relaxcopy(set->scip, relax) );
    }
    return SCIP_OKAY;
@@ -140,7 +142,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling relaxation handler <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*relax)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+         &(*relax)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -308,14 +310,14 @@ SCIP_RETCODE SCIPrelaxExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check, if the relaxation is already solved */
-   if( relax->lastsolvednode == stat->ntotalnodes )
+   if( relax->lastsolvednode == stat->ntotalnodes && ! SCIPinProbing(set->scip) )
       return SCIP_OKAY;
 
    relax->lastsolvednode = stat->ntotalnodes;
 
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {
-      SCIPdebugMessage("executing relaxation handler <%s>\n", relax->name);
+      SCIPsetDebugMsg(set, "executing relaxation handler <%s>\n", relax->name);
 
       /* start timing */
       SCIPclockStart(relax->relaxclock, set);
@@ -342,6 +344,7 @@ SCIP_RETCODE SCIPrelaxExec(
       if( *result != SCIP_DIDNOTRUN )
       {
          relax->ncalls++;
+         stat->relaxcount++;
          if( *result == SCIP_SUSPENDED )
             SCIPrelaxMarkUnsolved(relax);
       }
@@ -571,13 +574,26 @@ void SCIPrelaxMarkUnsolved(
 
 /** creates global relaxation data */
 SCIP_RETCODE SCIPrelaxationCreate(
-   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   SCIP_RELAXATION**     relaxation,         /**< global relaxation data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(relaxation != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(primal != NULL);
+   assert(tree != NULL);
+
    SCIP_ALLOC( BMSallocMemory(relaxation) );
+
    (*relaxation)->relaxsolobjval = 0.0;
    (*relaxation)->relaxsolvalid = FALSE;
+   (*relaxation)->relaxsolincludeslp = FALSE;
    (*relaxation)->relaxsolzero = TRUE;
 
    return SCIP_OKAY;
@@ -616,15 +632,17 @@ SCIP_Bool SCIPrelaxationIsSolZero(
    return relaxation->relaxsolzero;
 }
 
-/** sets the relaxsolvalid flag in the relaxation data to the given value */
+/** sets the relaxsolvalid and includeslp flags in the relaxation data to the given values */
 void SCIPrelaxationSetSolValid(
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
-   SCIP_Bool             isvalid             /**< is the stored solution valid? */
+   SCIP_Bool             isvalid,            /**< is the stored solution valid? */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    )
 {
    assert(relaxation != NULL);
 
    relaxation->relaxsolvalid = isvalid;
+   relaxation->relaxsolincludeslp = includeslp;
 }
 
 /** returns whether the global relaxation solution is valid */
@@ -635,6 +653,16 @@ SCIP_Bool SCIPrelaxationIsSolValid(
    assert(relaxation != NULL);
 
    return relaxation->relaxsolvalid;
+}
+
+/** returns whether the global relaxation solution was computed by a relaxator which included all LP cuts */
+SCIP_Bool SCIPrelaxationIsLpIncludedForSol(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+
+   return relaxation->relaxsolincludeslp;
 }
 
 /** sets the objective value of the global relaxation solution */
@@ -667,4 +695,24 @@ void SCIPrelaxationSolObjAdd(
    assert(relaxation != NULL);
 
    relaxation->relaxsolobjval += val;
+}
+
+/** updates objective value of current relaxation solution after change of objective coefficient */
+void SCIPrelaxationUpdateVarObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed objective coefficient */
+   SCIP_Real             oldobj,             /**< old objective coefficient */
+   SCIP_Real             newobj              /**< new objective coefficient */
+   )
+{
+   SCIP_Real relaxsolval;
+
+   assert(relaxation != NULL);
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   relaxsolval = SCIPvarGetRelaxSol(var, set);
+   relaxation->relaxsolobjval += (newobj - oldobj) * relaxsolval;
 }

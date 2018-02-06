@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   set.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -27,7 +28,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/buffer.h"
+#include "scip/type_bandit.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
@@ -39,12 +40,14 @@
 #include "scip/type_cons.h"
 #include "scip/type_disp.h"
 #include "scip/type_heur.h"
+#include "scip/type_compr.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
 #include "scip/type_pricer.h"
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "scip/struct_set.h"
 
@@ -79,6 +82,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
@@ -446,13 +450,17 @@ SCIP_RETCODE SCIPsetResetParams(
    );
 
 /** sets parameters to
- *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPsetResetParams())
- *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
- *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
- *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
- *  - SCIP_PARAMSETTING_FEASIBILITY to detect feasibility fast
- *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
- *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
+ *
+ *  - \ref SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPsetResetParams())
+ *  - \ref SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
+ *  - \ref SCIP_PARAMEMPHASIS_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - \ref SCIP_PARAMEMPHASIS_EASYCIP to solve easy problems fast
+ *  - \ref SCIP_PARAMEMPHASIS_FEASIBILITY to detect feasibility fast
+ *  - \ref SCIP_PARAMEMPHASIS_HARDLP to be capable to handle hard LPs
+ *  - \ref SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEFEAS to find feasible solutions during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
  */
 extern
 SCIP_RETCODE SCIPsetSetEmphasis(
@@ -462,11 +470,18 @@ SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
+/** set parameters for reoptimization */
+extern
+SCIP_RETCODE SCIPsetSetReoptimizationParams(
+   SCIP_SET*             set,                /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 extern
 void SCIPsetEnableOrDisablePluginClocks(
-   SCIP_SET*            set,                /**< SCIP settings */
-   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool             enabled             /**< should plugin clocks be enabled? */
    );
 
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
@@ -731,6 +746,33 @@ void SCIPsetSortPropsName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** inserts concurrent solver type into the concurrent solver type list */
+extern
+SCIP_RETCODE SCIPsetIncludeConcsolverType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVERTYPE*  concsolvertype      /**< concurrent solver type */
+   );
+
+/** returns the concurrent solver type with the given name, or NULL if not existing */
+extern
+SCIP_CONCSOLVERTYPE* SCIPsetFindConcsolverType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of concurrent solver type */
+   );
+
+/** inserts concurrent solver into the concurrent solver list */
+extern
+SCIP_RETCODE SCIPsetIncludeConcsolver(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
+   );
+
+/** frees all concurrent solvers in the concurrent solver list */
+extern
+SCIP_RETCODE SCIPsetFreeConcsolvers(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts primal heuristic in primal heuristic list */
 extern
 SCIP_RETCODE SCIPsetIncludeHeur(
@@ -754,6 +796,32 @@ void SCIPsetSortHeurs(
 /** sorts heuristics by name */
 extern
 void SCIPsetSortHeursName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts tree compression in tree compression list */
+extern
+SCIP_RETCODE SCIPsetIncludeCompr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_COMPR*           compr               /**< tree compression */
+   );
+
+/** returns the tree compression of the given name, or NULL if not existing */
+extern
+SCIP_COMPR* SCIPsetFindCompr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of tree compression */
+   );
+
+/** sorts compressions by priorities */
+extern
+void SCIPsetSortComprs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts heuristics by names */
+extern
+void SCIPsetSortComprsName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -829,7 +897,21 @@ SCIP_RETCODE SCIPsetIncludeDisp(
 extern
 SCIP_DISP* SCIPsetFindDisp(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           name                /**< name of event handler */
+   const char*           name                /**< name of display */
+   );
+
+/** inserts statistics table in statistics table list */
+extern
+SCIP_RETCODE SCIPsetIncludeTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TABLE*           table               /**< statistics table */
+   );
+
+/** returns the statistics table of the given name, or NULL if not existing */
+extern
+SCIP_TABLE* SCIPsetFindTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of statistics table */
    );
 
 /** inserts dialog in dialog list */
@@ -882,6 +964,20 @@ SCIP_RETCODE SCIPsetIncludeExternalCode(
    const char*           description         /**< description of external code, can be NULL */
    );
 
+/** inserts bandit virtual function table into set */
+extern
+SCIP_RETCODE SCIPsetIncludeBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BANDITVTABLE*    banditvtable        /**< bandit algorithm virtual function table */
+   );
+
+/** returns the bandit virtual function table of the given name, or NULL if not existing */
+extern
+SCIP_BANDITVTABLE* SCIPsetFindBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of bandit algorithm virtual function table */
+   );
+
 /** calls init methods of all plugins */
 extern
 SCIP_RETCODE SCIPsetInitPlugins(
@@ -929,12 +1025,6 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
-   );
-
-/** returns the estimated number of bytes used by external software, e.g., the LP solver */
-extern
-SCIP_Longint SCIPsetGetMemExternEstim(
-   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calculate memory size for dynamically allocated arrays */
@@ -994,6 +1084,18 @@ SCIP_RETCODE SCIPsetSetBarrierconvtol(
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
    );
 
+/** sets primal feasibility tolerance for relaxations (relaxfeastol)
+ *
+ * @note Set to SCIP_INVALID to apply relaxation-specific feasibility tolerance only.
+ *
+ * @return Previous value of relaxfeastol.
+ */
+extern
+SCIP_Real SCIPsetSetRelaxfeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             relaxfeastol        /**< new primal feasibility tolerance for relaxations, or SCIP_INVALID */
+   );
+
 /** marks that some limit parameter was changed */
 extern
 void SCIPsetSetLimitChanged(
@@ -1014,6 +1116,18 @@ int SCIPsetGetSepaMaxcuts(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
+/** returns user defined objective value (in original space) for reference purposes */
+extern
+SCIP_Real SCIPsetGetReferencevalue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns debug solution data */
+extern
+SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
@@ -1030,6 +1144,13 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newvalue,           /**< new value after update */
    SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   );
+
+/** modifies an initial seed value with the global shift of random seeds */
+extern
+int SCIPsetInitializeRandomSeed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   initialseedvalue    /**< initial seed value to be modified */
    );
 
 /** returns value treated as infinity */
@@ -1064,15 +1185,9 @@ SCIP_Real SCIPsetFeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and tolerance specified by separation storage */
+/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and relaxfeastol */
 extern
 SCIP_Real SCIPsetLpfeastol(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
-/** returns primal feasibility tolerance as specified by separation storage, or SCIP_INVALID */
-extern
-SCIP_Real SCIPsetSepaprimfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1103,6 +1218,12 @@ SCIP_Real SCIPsetPseudocostdelta(
 /** return the delta to use for computing the cutoff bound for integral objectives */
 extern
 SCIP_Real SCIPsetCutoffbounddelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** return the primal feasibility tolerance for relaxations */
+extern
+SCIP_Real SCIPsetRelaxfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1533,7 +1654,10 @@ SCIP_Real SCIPsetDualfeasFrac(
    SCIP_Real             val                 /**< value to return fractional part for */
    );
 
-/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
+ *  strengthening epsilon better than the old one or the change in the lower bound would fix the
+ *  sign of the variable
+ */
 extern
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1542,7 +1666,10 @@ SCIP_Bool SCIPsetIsLbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    );
 
-/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
+ *  strengthening epsilon better than the old one or the change in the upper bound would fix the
+ *  sign of the variable
+ */
 extern
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1651,12 +1778,12 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetEpsilon(set)                ( (set)->num_epsilon )
 #define SCIPsetSumepsilon(set)             ( (set)->num_sumepsilon )
 #define SCIPsetFeastol(set)                ( (set)->num_feastol )
-#define SCIPsetLpfeastol(set)              ( (set)->sepa_primfeastol == SCIP_INVALID ? (set)->num_lpfeastol : MIN((set)->num_lpfeastol, (set)->sepa_primfeastol) )
-#define SCIPsetSepaprimfeastol(set)        ( (set)->sepa_primfeastol )
+#define SCIPsetLpfeastol(set)              ( (set)->num_relaxfeastol == SCIP_INVALID ? (set)->num_lpfeastol : MIN((set)->num_lpfeastol, (set)->num_relaxfeastol) )
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
+#define SCIPsetRelaxfeastol(set)           ( (set)->num_relaxfeastol )
 #define SCIPsetCutoffbounddelta(set)       ( MIN(100.0 * SCIPsetFeastol(set), 0.0001) )
 #define SCIPsetRecompfac(set)              ( (set)->num_recompfac )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
@@ -1741,31 +1868,73 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
    ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
+#define SCIPsetInitializeRandomSeed(set, val) ( (val + (set)->random_randomseedshift) )
 
 #endif
 
-#ifdef NDEBUG
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-                                                                     (int)((num)*sizeof(**(ptr))))      )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num)                 \
-   ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source,  \
-                            (int)((num)*sizeof(**(ptr)))) )
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-                                                                       (int)((num)*sizeof(**(ptr)))) )
+#define SCIPsetAllocBuffer(set,ptr)             ( (BMSallocBufferMemory((set)->buffer, (ptr)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocBufferSize(set,ptr,size)    ( (BMSallocBufferMemorySize((set)->buffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocBufferArray(set,ptr,num)    ( (BMSallocBufferMemoryArray((set)->buffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetDuplicateBufferSize(set,ptr,source,size) ( (BMSduplicateBufferMemory((set)->buffer, (ptr), (source), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( (BMSduplicateBufferMemoryArray((set)->buffer, (ptr), (source), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetReallocBufferSize(set,ptr,size)  ( (BMSreallocBufferMemorySize((set)->buffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetReallocBufferArray(set,ptr,num)  ( (BMSreallocBufferMemoryArray((set)->buffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetFreeBuffer(set,ptr)              BMSfreeBufferMemory((set)->buffer, (ptr))
+#define SCIPsetFreeBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->buffer, (ptr))
+#define SCIPsetFreeBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->buffer, (ptr))
+
+#define SCIPsetAllocCleanBuffer(set,ptr)             ( (BMSallocBufferMemory((set)->cleanbuffer, (ptr)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocCleanBufferSize(set,ptr,size)    ( (BMSallocBufferMemorySize((set)->cleanbuffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocCleanBufferArray(set,ptr,num)    ( (BMSallocBufferMemoryArray((set)->cleanbuffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetFreeCleanBuffer(set,ptr)              BMSfreeBufferMemory((set)->cleanbuffer, (ptr))
+#define SCIPsetFreeCleanBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->cleanbuffer, (ptr))
+#define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
+
+/* if we have a C99 compiler */
+#ifdef SCIP_HAVE_VARIADIC_MACROS
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPsetDebugMsg(set, ...)       SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(set, ...)  SCIPsetDebugMessagePrint(set, __VA_ARGS__)
 #else
-/* Check for integer overflow in allocation size */
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( SCIPbufferDuplicateMemSave(set, (void**)(ptr), source, num, sizeof(**(ptr))) )
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
+#define SCIPsetDebugMsg(set, ...)       while ( FALSE ) SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(set, ...)  while ( FALSE ) SCIPsetDebugMessagePrint(set, __VA_ARGS__)
 #endif
-#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
-#define SCIPsetAllocBuffer(set,ptr)             ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), (int) sizeof(**(ptr))) )
-#define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
-#define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
-   ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
-#define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
-#define SCIPsetFreeBuffer(set,ptr)             ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
-#define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPsetDebugMsg                 printf("debug: "), SCIPsetDebugMessagePrint
+#define SCIPsetDebugMsgPrint            printf("debug: "), SCIPsetDebugMessagePrint
+#else
+#define SCIPsetDebugMsg                 while ( FALSE ) SCIPsetDebugMsgPrint
+#define SCIPsetDebugMsgPrint            while ( FALSE ) SCIPsetDebugMessagePrint
+#endif
+
+#endif
+
+
+/** prints a debug message */
+EXTERN
+void SCIPsetPrintDebugMessage(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPsetDebugMessagePrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
 
 #ifdef __cplusplus
 }

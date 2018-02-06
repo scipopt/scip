@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_prop.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for propagators
  * @author Tobias Achterberg
  */
@@ -61,6 +62,7 @@ struct SCIP_Prop
    int                   priority;           /**< priority of the propagator for propagation */
    int                   freq;               /**< frequency for calling propagator */
    SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagator should be executed */
+   SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the presolving method of the propagator */
    int                   presolpriority;     /**< priority of the presolving of the propagator */
    int                   maxprerounds;       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    int                   lastnfixedvars;     /**< number of variables fixed before the last call to the propagator */
@@ -84,8 +86,6 @@ struct SCIP_Prop
    int                   nchgcoefs;          /**< total number of changed coefficients by this propagator in presolving */
    int                   nchgsides;          /**< total number of changed left or right hand sides by this propagator in presolving */
    int                   npresolcalls;       /**< number of times the propagator was called in presolving and tried to find reductions */
-   SCIP_Bool             presoldelay;        /**< should presolving method of propagator be delayed, if other presolvers found reductions? */
-   SCIP_Bool             presolwasdelayed;   /**< was the presolving method of the propagator delayed at the last call? */
    SCIP_Bool             delay;              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_Bool             wasdelayed;         /**< was the propagator delayed at the last call? */
    SCIP_Bool             initialized;        /**< is propagator initialized? */

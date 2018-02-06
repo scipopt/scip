@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +33,7 @@
 #include "scip/disp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-
+#include "scip/syncstore.h"
 #include "scip/struct_disp.h"
 
 
@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPdispCopyInclude(
 
    if( disp->dispcopy != NULL )
    {
-      SCIPdebugMessage("including display column %s in subscip %p\n", SCIPdispGetName(disp), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including display column %s in subscip %p\n", SCIPdispGetName(disp), (void*)set->scip);
       SCIP_CALL( disp->dispcopy(set->scip, disp) );
    }
    return SCIP_OKAY;
@@ -122,6 +122,7 @@ SCIP_RETCODE SCIPdispCreate(
    (*disp)->stripline = stripline;
    (*disp)->initialized = FALSE;
    (*disp)->active = (dispstatus == SCIP_DISPSTATUS_ON);
+   (*disp)->mode = SCIP_DISPMODE_DEFAULT;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "display/%s/active", name);
@@ -450,11 +451,16 @@ SCIP_RETCODE SCIPdispAutoActivate(
    )
 {
    SCIP_DISP** disps;
+   SCIP_SYNCSTORE* syncstore;
+   SCIP_DISPMODE mode;
    int totalwidth;
    int width;
    int i;
 
    assert(set != NULL);
+
+   syncstore = SCIPgetSyncstore(set->scip);
+   assert(syncstore != NULL);
 
    /* sort display columns w.r. to their priority */
    SCIP_ALLOC( BMSduplicateMemoryArray(&disps, set->disps, set->ndisps) );
@@ -462,13 +468,18 @@ SCIP_RETCODE SCIPdispAutoActivate(
 
    totalwidth = 0;
 
+   if( SCIPsyncstoreIsInitialized(syncstore) )
+      mode = SCIP_DISPMODE_CONCURRENT;
+   else
+      mode = SCIP_DISPMODE_DEFAULT;
+
    /* first activate all columns with display status ON */
    for( i = 0; i < set->ndisps; ++i )
    {
       width = disps[i]->width;
       if( disps[i]->stripline )
          width++;
-      if( disps[i]->dispstatus == SCIP_DISPSTATUS_ON )
+      if( disps[i]->dispstatus == SCIP_DISPSTATUS_ON && (disps[i]->mode & mode) )
       {
          disps[i]->active = TRUE;
          totalwidth += width;
@@ -487,7 +498,7 @@ SCIP_RETCODE SCIPdispAutoActivate(
          width = disps[i]->width;
          if( disps[i]->stripline )
             width++;
-         if( totalwidth + width <= set->disp_width )
+         if( totalwidth + width <= set->disp_width && (disps[i]->mode & mode) )
          {
             disps[i]->active = TRUE;
             totalwidth += width;
@@ -499,6 +510,15 @@ SCIP_RETCODE SCIPdispAutoActivate(
    BMSfreeMemoryArray(&disps);
 
    return SCIP_OKAY;
+}
+
+/** changes the display column mode */
+void SCIPdispChgMode(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_DISPMODE         mode                /**< the display column mode */
+   )
+{
+   disp->mode = mode;
 }
 
 static
@@ -520,7 +540,7 @@ void SCIPdispLongint(
       if( val < 0 )
          SCIPmessageFPrintInfo(messagehdlr, file, "-");
       else if( val < 10 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "%"SCIP_LONGINT_FORMAT, val);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%" SCIP_LONGINT_FORMAT, val);
       else
          SCIPmessageFPrintInfo(messagehdlr, file, "+");
    }
@@ -542,7 +562,7 @@ void SCIPdispLongint(
          decpower++;
          val /= 1000;
       }
-      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d" SCIP_LONGINT_FORMAT "%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
          SCIPmessageFPrintInfo(messagehdlr, file, "-%c", decpowerchar[decpower]);
@@ -605,7 +625,7 @@ void SCIPdispTime(
          timepower++;
          val /= timepowerval[timepower];
       }
-      if( REALABS(val) + 0.05 < maxval/100 ) /*lint !e653*/
+      if( REALABS(val) + 0.05 < maxval/100.0 )
          (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.1f%c", width-1, timepowerchar[timepower]);
       else
          (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.0f%c", width-1, timepowerchar[timepower]);

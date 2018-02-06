@@ -42,7 +42,7 @@ namespace scipexamples
       SCIP * _scip;
 
       /** @brief number of queens  */
-      int _n;
+      size_t _n;
 
       /** @brief one binary variable for each field (i,j) on the chess bord
        *
@@ -68,7 +68,7 @@ namespace scipexamples
        * the constructor builds a BP model in scip for the n-queens problem
        * @param[in] n the number of queens
        */
-      QueensSolver(int n=8);
+      QueensSolver(size_t n = 8);
 
       /** @brief destructor this is the place to release the SCIP_VAR
        * and SCIP_CONS pointers and to free the SCIP pointer

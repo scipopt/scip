@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prob.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing and manipulating the main problem
  * @author Tobias Achterberg
  */
@@ -36,8 +37,10 @@
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
+#include "scip/type_reopt.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
+#include "scip/type_conflictstore.h"
 
 #include "scip/struct_prob.h"
 
@@ -133,6 +136,7 @@ void SCIPprobSetCopy(
 extern
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -149,10 +153,12 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    );
 
@@ -234,6 +240,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
@@ -245,6 +252,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_VARTYPE          vartype             /**< new type of variable */
    );
@@ -256,6 +264,7 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -351,6 +360,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -365,6 +375,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -374,6 +385,7 @@ extern
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    );
@@ -446,6 +458,30 @@ int SCIPprobGetNObjVars(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** returns the minimal absolute non-zero objective coefficient
+ *
+ *  @note currently, this is only used for statistics and printed after the solving process. if this information is
+ *        needed during the (pre)solving process this should be implemented more efficiently, e.g., updating the minimal
+ *        absolute non-zero coefficient every time an objective coefficient has changed.
+ */
+extern
+SCIP_Real SCIPprobGetAbsMinObjCoef(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns the maximal absolute non-zero objective coefficient
+ *
+ *  @note currently, this is only used for statistics and printed after the solving process. if this information is
+ *        needed during the (pre)solving process this should be implemented more efficiently, e.g., updating the maximal
+ *        absolute non-zero coefficient every time an objective coefficient has changed.
+ */
+extern
+SCIP_Real SCIPprobGetAbsMaxObjCoef(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** update the number of variables with non-zero objective coefficient */
 extern
 void SCIPprobUpdateNObjVars(
@@ -460,6 +496,12 @@ extern
 void SCIPprobUpdateDualbound(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   );
+
+/** invalidates the dual bound */
+extern
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** returns the external value of the given internal objective value */
@@ -506,6 +548,7 @@ void SCIPprobPrintPseudoSol(
 extern
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
@@ -516,6 +559,18 @@ void SCIPprobPrintStatistics(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
+
+/** is the problem permuted */
+extern
+SCIP_Bool SCIPprobIsPermuted(
+   SCIP_PROB*            prob
+   );
+
+/** mark the problem as permuted */
+extern
+void SCIPprobMarkPermuted(
+   SCIP_PROB*            prob
+   );
 
 /** is the problem data transformed */
 extern
@@ -594,6 +649,12 @@ SCIP_VAR** SCIPprobGetVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets number of problem constraints */
+extern
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** gets the objective offset */
 extern
 SCIP_Real SCIPprobGetObjoffset(
@@ -606,12 +667,26 @@ SCIP_Real SCIPprobGetObjscale(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** is constraint compression enabled for this problem? */
+extern
+SCIP_Bool SCIPprobIsConsCompressionEnabled(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** enable problem compression, i.e., constraints can reduce memory size by removing fixed variables during creation */
+extern
+void SCIPprobEnableConsCompression(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
+#define SCIPprobIsPermuted(prob)        ((prob)->permuted)
+#define SCIPprobMarkPermuted(prob)      ((prob)->permuted = TRUE)
 #define SCIPprobIsTransformed(prob)     ((prob)->transformed)
 #define SCIPprobIsObjIntegral(prob)     ((prob)->objisintegral)
 #define SCIPprobAllColsInLP(prob,set,lp) (SCIPlpGetNCols(lp) == (prob)->ncolvars && (set)->nactivepricers == 0)
@@ -626,8 +701,11 @@ SCIP_Real SCIPprobGetObjscale(
 #define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
+#define SCIPprobGetNConss(prob)         ((prob)->nconss)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
+#define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)
+#define SCIPprobEnableConsCompression(prob)  ((prob)->conscompression = TRUE)
 #endif
 
 

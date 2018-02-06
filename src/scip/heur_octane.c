@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -233,6 +233,9 @@ SCIP_RETCODE generateAverageRay(
    SCIP_CALL( SCIPallocBufferArray(scip, &rownorm, nrows) );
    BMSclearMemoryArray(rownorm, nrows);
 
+   /* clear ray */
+   BMSclearMemoryArray(raydirection, nsubspacevars);
+
    /* get the relevant columns of the simplex tableau */
    for( j = nsubspacevars - 1; j >= 0; --j )
    {
@@ -286,7 +289,6 @@ SCIP_RETCODE generateAverageRay(
          else
             rownorm[i] = SQRT(rownorm[i]);
 
-         rowweight = 0.0;
          if( weighted )
          {
             rowweight = SCIProwGetDualsol(rows[i]);
@@ -299,7 +301,7 @@ SCIP_RETCODE generateAverageRay(
          for( j = nsubspacevars - 1; j >= 0; --j )
          {
             raydirection[j] += tableaurows[j][i] / (rownorm[i] * rowweight);
-            assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+            assert( ! SCIPisInfinity(scip, REALABS(raydirection[j])) );
          }
       }
    }
@@ -359,7 +361,7 @@ SCIP_RETCODE generateAverageRay(
                if( usedrowids[tableaurowind] )
                {
                   raydirection[j] += tableaurows[j][tableaurowind] / (rownorm[tableaurowind] * rowweights[tableaurowind]);
-                  assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+                  assert( ! SCIPisInfinity(scip, REALABS(raydirection[j])) );
                }
             }
          }
@@ -477,7 +479,7 @@ SCIP_RETCODE generateAverageNBRay(
          if( f >= 0 )
          {
             raydirection[f] += factor * coeffs[j] / rownorm;
-            assert(SCIP_REAL_MIN <= raydirection[f] && raydirection[f]  <= SCIP_REAL_MAX);
+            assert( ! SCIPisInfinity(scip, REALABS(raydirection[f])) );
          }
       }
    }
@@ -647,6 +649,8 @@ SCIP_Bool isZero(
    iszero = TRUE; 
    for( v = nsubspacevars - 1; v >= 0; --v )
    {
+      assert(!SCIPisInfinity(scip, raydirection[v]));
+
       if( !SCIPisFeasZero(scip, raydirection[v]/100) )
          iszero = FALSE;
       else
@@ -687,7 +691,7 @@ SCIP_DECL_HEURFREE(heurFreeOctane)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -898,8 +902,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max + 1) );
 
-   /* clear raydirection array first for not accidentally using it uninitialized */
-   BMSclearMemoryArray(raydirection, nsubspacevars);
 
    for( i = f_max; i >= 0; --i )
    {
@@ -911,7 +913,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    *result = SCIP_DIDNOTFIND;
 
    /* starting OCTANE */
-   SCIPdebugMessage("run Octane heuristic on %s variables, which are %d vars, generate at most %d facets, using rule number %d\n",
+   SCIPdebugMsg(scip, "run Octane heuristic on %s variables, which are %d vars, generate at most %d facets, using rule number %d\n",
       usefracspace ? "fractional" : "all", nsubspacevars, f_max, (heurdata->lastrule+1)%5);
 
    /* generate starting point in original coordinates */
@@ -921,7 +923,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    firstrule = heurdata->lastrule;
    ++firstrule;
-   for( r = firstrule; r <= firstrule + 10 && !SCIPisStopped(scip); r++ )
+   for( r = firstrule; r <= firstrule + 5 && !SCIPisStopped(scip); r++ )
    {
       SCIP_ROW** rows;
       int nrows;
@@ -930,34 +932,34 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       switch(r % 5)
       {
       case 1:
-         if( heurdata->useavgnbray )
-         {
-            SCIP_CALL( generateAverageNBRay(scip, raydirection, fracspace, subspacevars, nsubspacevars) );
-         }
+         if( !heurdata->useavgnbray )
+            continue;
+
+         SCIP_CALL( generateAverageNBRay(scip, raydirection, fracspace, subspacevars, nsubspacevars) );
          break;
       case 2:
-         if( heurdata->useobjray )
-         {
-            SCIP_CALL( generateObjectiveRay(scip, raydirection, subspacevars, nsubspacevars) );
-         }
+         if( !heurdata->useobjray )
+            continue;
+
+         SCIP_CALL( generateObjectiveRay(scip, raydirection, subspacevars, nsubspacevars) );
          break;
       case 3:
-         if( heurdata->usediffray )
-         {
-            SCIP_CALL( generateDifferenceRay(scip, raydirection, subspacevars, nsubspacevars) );
-         }
+         if( !heurdata->usediffray )
+            continue;
+
+         SCIP_CALL( generateDifferenceRay(scip, raydirection, subspacevars, nsubspacevars) );
          break;
       case 4:
-         if( heurdata->useavgwgtray && SCIPisLPSolBasic(scip) )
-         {
-            SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, TRUE) );
-         }
+         if( !heurdata->useavgwgtray || !SCIPisLPSolBasic(scip) )
+            continue;
+
+         SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, TRUE) );
          break;
       case 0:
-         if( heurdata->useavgray && SCIPisLPSolBasic(scip) )
-         {
-            SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, FALSE) );
-         }
+         if( !heurdata->useavgray || !SCIPisLPSolBasic(scip) )
+            continue;
+
+         SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, FALSE) );
          break;
       default:
          SCIPerrorMessage("invalid ray rule identifier\n");
@@ -1001,11 +1003,14 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       assert(SCIPisPositive(scip, q));
 
       /* resort the coordinates in nonincreasing order of negquotient */
-      SCIPsortDownRealRealRealBoolPtr( negquotient, raydirection, rayorigin, sign, (void**) subspacevars, nsubspacevars);
+      SCIPsortDownRealRealRealBoolPtr(negquotient, raydirection, rayorigin, sign, (void**) subspacevars, nsubspacevars);
 
 #ifndef NDEBUG
       for( i = 0; i < nsubspacevars; i++ )
+      {
          assert( raydirection[i] >= 0 );
+         assert(!SCIPisInfinity(scip, REALABS(raydirection[i])));
+      }
       for( i = 1; i < nsubspacevars; i++ )
          assert( negquotient[i - 1] >= negquotient[i] );
 #endif
@@ -1116,7 +1121,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          for( i = MIN(f_first, nfacets) - 1; i >= 0; --i )
          {
             assert(first_sols[i] != NULL);
-            SCIP_CALL( SCIPtrySol(scip, first_sols[i], FALSE, TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, first_sols[i], FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL;
          }
@@ -1127,7 +1132,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                break;
             generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
             SCIP_CALL( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL;
          }
@@ -1146,7 +1151,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &first_sols);
-   for( i = f_max; i >= 0; --i )
+   for( i = 0; i <= f_max; ++i )
       SCIPfreeBufferArray(scip, &facets[i]);
    SCIPfreeBufferArray(scip, &facets);
    SCIPfreeBufferArray(scip, &lambda);
@@ -1175,7 +1180,7 @@ SCIP_RETCODE SCIPincludeHeurOctane(
    SCIP_HEUR* heur;
 
    /* create Octane primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

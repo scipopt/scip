@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -796,6 +796,7 @@ SCIP_RETCODE evalFunctionValue(
       for( i = 0; i < nvars; ++i )
       {
          assert(cons->exprvaridxs[i] >= 0);
+         assert(cons->exprvaridxs[i] < oracle->nvars);
          xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613 !e644*/
       }
 
@@ -811,15 +812,18 @@ SCIP_RETCODE evalFunctionValue(
    return SCIP_OKAY;
 }
 
-/** computes the value and gradient of a function */
+/** computes the value and gradient of a function
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 static
 SCIP_RETCODE evalFunctionGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_NLPIORACLECONS*  cons,               /**< oracle constraint */
    const SCIP_Real*      x,                  /**< the point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
-   SCIP_Real*            val,                /**< pointer to store function value */
-   SCIP_Real*            grad                /**< pointer to store function gradient */
+   SCIP_Real* RESTRICT   val,                /**< pointer to store function value */
+   SCIP_Real* RESTRICT   grad                /**< pointer to store function gradient */
    )
 {  /*lint --e{715}*/
    assert(oracle != NULL);
@@ -892,6 +896,7 @@ SCIP_RETCODE evalFunctionGradient(
          for( i = 0; i < nvars; ++i )
          {
             assert(cons->exprvaridxs[i] >= 0);
+            assert(cons->exprvaridxs[i] < oracle->nvars);
             xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613*/
          }
       }
@@ -914,7 +919,7 @@ SCIP_RETCODE evalFunctionGradient(
       {
          *val += nlval;
          for( i = 0; i < nvars; ++i )
-            if( g[i] != g[i] )  /*lint !e777*/
+            if( !SCIPisFinite(g[i]) )  /*lint !e777*/
             {
                SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", g[i]);
                BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
@@ -977,14 +982,14 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForQuad(
  * adds the indices to a given set of indices, avoiding duplicates */
 static
 SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
-   SCIP_NLPIORACLE*      oracle,     /**< NLPI oracle */
-   int**                 colnz,      /**< indices of nonzero entries for each column */
-   int*                  collen,     /**< space allocated to store indices of nonzeros for each column */
-   int*                  colnnz,     /**< number of nonzero entries for each column */
-   int*                  nzcount,    /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
-   int*                  exprvaridx, /**< indices of variables from expression tree in NLP */
-   SCIP_EXPRTREE*        exprtree,   /**< expression tree */
-   int                   dim         /**< dimension of matrix */
+   SCIP_NLPIORACLE*      oracle,             /**< NLPI oracle */
+   int**                 colnz,              /**< indices of nonzero entries for each column */
+   int*                  collen,             /**< space allocated to store indices of nonzeros for each column */
+   int*                  colnnz,             /**< number of nonzero entries for each column */
+   int*                  nzcount,            /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
+   int*                  exprvaridx,         /**< indices of variables from expression tree in NLP */
+   SCIP_EXPRTREE*        exprtree,           /**< expression tree */
+   int                   dim                 /**< dimension of matrix */
    )
 {
    SCIP_Real*  x;
@@ -1083,15 +1088,15 @@ SCIP_RETCODE hessLagAddQuad(
 /** adds hessian of an expression into hessian structure */
 static
 SCIP_RETCODE hessLagAddExprtree(
-   SCIP_NLPIORACLE*      oracle,     /**< oracle */
-   SCIP_Real             weight,     /**< weight of quadratic part */
-   const SCIP_Real*      x,          /**< point for which hessian should be returned */
-   SCIP_Bool             new_x,      /**< whether point has been evaluated before */
-   int*                  exprvaridx, /**< NLP indices for variables in expression tree */
-   SCIP_EXPRTREE*        exprtree,   /**< expression tree */
-   int*                  hesoffset,  /**< row offsets in sparse matrix that is to be filled */ 
-   int*                  hescol,     /**< column indices in sparse matrix that is to be filled */
-   SCIP_Real*            values      /**< buffer for values of sparse matrix that is to be filled */
+   SCIP_NLPIORACLE*      oracle,             /**< oracle */
+   SCIP_Real             weight,             /**< weight of quadratic part */
+   const SCIP_Real*      x,                  /**< point for which hessian should be returned */
+   SCIP_Bool             new_x,              /**< whether point has been evaluated before */
+   int*                  exprvaridx,         /**< NLP indices for variables in expression tree */
+   SCIP_EXPRTREE*        exprtree,           /**< expression tree */
+   int*                  hesoffset,          /**< row offsets in sparse matrix that is to be filled */
+   int*                  hescol,             /**< column indices in sparse matrix that is to be filled */
+   SCIP_Real*            values              /**< buffer for values of sparse matrix that is to be filled */
    )
 {
    SCIP_Real* xx;
@@ -1153,7 +1158,7 @@ SCIP_RETCODE hessLagAddExprtree(
          if( !*hh )
             continue;
 
-         if( *hh != *hh )  /*lint !e777*/
+         if( !SCIPisFinite(*hh) )  /*lint !e777*/
          {
             SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *hh);
             BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
@@ -1194,6 +1199,8 @@ void printName(
    SCIP_Bool             longnames           /**< whether prefixes for long names should be added */
    )
 {
+   assert(idx >= 0 && idx < 100000); /* to ensure that we do not exceed the size of the buffer */
+
    if( longnames )
    {
       if( name != NULL )
@@ -1225,7 +1232,6 @@ SCIP_RETCODE printFunction(
    )
 {  /*lint --e{715}*/
    int i;
-   int j;
    char namebuf[70];
 
    SCIPdebugMessage("%p print function\n", (void*)oracle);
@@ -1242,11 +1248,10 @@ SCIP_RETCODE printFunction(
          SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 
-   j = 0;
    for( i = 0; i < cons->nquadelems; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx1] : NULL, cons->quadelems[i].idx1, 'x', NULL, longvarnames);
-      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->quadelems[j].coef, namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->quadelems[i].coef, namebuf);
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx2] : NULL, cons->quadelems[i].idx2, 'x', NULL, longvarnames);
       SCIPmessageFPrintInfo(messagehdlr, file, "*%s", namebuf);
       if( i % 10 == 9 )
@@ -1425,7 +1430,7 @@ SCIP_RETCODE SCIPnlpiOracleSetProblemName(
 
 /** gets the problem name, or NULL if none set */
 const char* SCIPnlpiOracleGetProblemName(
-   SCIP_NLPIORACLE*     oracle               /**< pointer to NLPIORACLE data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    )
 {
    assert(oracle != NULL);
@@ -2366,6 +2371,28 @@ int SCIPnlpiOracleGetMaxDegree(
    return maxdegree;
 }
 
+/** Gives the evaluation capabilities that are shared among all expression trees in the problem. */
+SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   int c;
+   SCIP_EXPRINTCAPABILITY evalcapability;
+
+   assert(oracle != NULL);
+
+   if( oracle->objective->exprtree != NULL )
+      evalcapability = SCIPexprintGetExprtreeCapability(oracle->exprinterpreter, oracle->objective->exprtree);
+   else
+      evalcapability = SCIP_EXPRINTCAPABILITY_ALL;
+
+   for( c = 0; c < oracle->nconss; ++c )
+      if( oracle->conss[c]->exprtree != NULL )
+         evalcapability &= SCIPexprintGetExprtreeCapability(oracle->exprinterpreter, oracle->conss[c]->exprtree);
+
+   return evalcapability;
+}
+
 /** evaluates the objective function in a given point */
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -2427,7 +2454,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    return SCIP_OKAY;
 }
 
-/** computes the objective gradient in a given point */
+/** computes the objective gradient in a given point
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -2448,7 +2478,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    return SCIP_OKAY;
 }
 
-/** computes a constraints gradient in a given point */
+/** computes a constraints gradient in a given point
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int             considx,            /**< index of constraint to compute gradient for */
@@ -2612,6 +2645,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
  * 
  *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
  *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
+ *
+ * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -2708,7 +2743,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
                for( l = 0; l < nvars; ++l )
                {
                   assert(oracle->jaccols[j+l] == cons->exprvaridxs[l]);
-                  if( grad[l] != grad[l] )  /*lint !e777*/
+                  if( !SCIPisFinite(grad[l]) )  /*lint !e777*/
                   {
                      SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", grad[l]);
                      retcode = SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
@@ -2758,9 +2793,9 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, offset[nconss] gives length of col, can be NULL */
    )
 {
-   int** colnz;   /** nonzeros in Hessian corresponding to one column */
-   int*  collen;  /** collen[i] is length of array colnz[i] */
-   int*  colnnz;  /** colnnz[i] is number of entries in colnz[i] (<= collen[i]) */ 
+   int** colnz;   /* nonzeros in Hessian corresponding to one column */
+   int*  collen;  /* collen[i] is length of array colnz[i] */
+   int*  colnnz;  /* colnnz[i] is number of entries in colnz[i] (<= collen[i]) */
    int   nnz;
    int   i;
    int   j;
@@ -2848,6 +2883,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
  *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
  *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
  *  Only elements of the lower left triangle and the diagonal are computed.
+ *
+ * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
  */
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -2862,7 +2899,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    assert(oracle != NULL);
    assert(x != NULL);
-   assert(lambda != NULL);
+   assert(lambda != NULL || oracle->nconss == 0);
    assert(hessian != NULL);
 
    assert(oracle->heslagoffsets != NULL);
@@ -2881,6 +2918,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    for( i = 0; i < oracle->nconss; ++i )
    {
+      assert( lambda != NULL ); /* for lint */
       if( lambda[i] == 0.0 )
          continue;
       SCIP_CALL( hessLagAddQuad(lambda[i], oracle->conss[i]->nquadelems, oracle->conss[i]->quadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );
@@ -2970,7 +3008,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    int i;
    int nllevel; /* level of nonlinearity of problem: linear = 0, quadratic, smooth nonlinear, nonsmooth */
    static const char* nllevelname[4] = { "LP", "QCP", "NLP", "DNLP" };
-   const char* problemname;
+   char problemname[SCIP_MAXSTRLEN];
    char namebuf[70];
    SCIP_Bool havelongvarnames;
    SCIP_Bool havelongequnames;
@@ -3107,7 +3145,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          nllevel = 3;
    }
 
-   problemname = oracle->name ? oracle->name : "m";
+   (void) SCIPsnprintf(problemname, SCIP_MAXSTRLEN, "%s", oracle->name ? oracle->name : "m");
 
    SCIPmessageFPrintInfo(messagehdlr, file, "Model %s / all /;\n", problemname);
    SCIPmessageFPrintInfo(messagehdlr, file, "option limrow = 0;\n");

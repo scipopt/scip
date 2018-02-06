@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,9 +44,9 @@ public:
       : scip::ObjReader(scip, "tspreader", "file reader for TSP files", "tsp")
    {
       /* add TSP reader parameters */
-      SCIPaddBoolParam(scip,
+      (void) SCIPaddBoolParam(scip,
          "reading/tspreader/round_lengths", "should lenghts of edges be rounded to nearest integer?",
-         &round_lengths_, FALSE, TRUE, NULL, NULL);
+            &round_lengths_, FALSE, TRUE, NULL, NULL);
    }
 
    /** destructor */
@@ -106,7 +106,7 @@ private:
       SCIP_VAR*             var                 /**< variable corresponding to that edge */
       );
 
-};
+};/*lint !e1712*/
 
 } /* namespace tsp */
 

@@ -1,12 +1,12 @@
-/* $Id: unary_plus.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_UNARY_PLUS_INCLUDED
-# define CPPAD_UNARY_PLUS_INCLUDED
+// $Id$
+# ifndef CPPAD_UNARY_PLUS_HPP
+# define CPPAD_UNARY_PLUS_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -21,12 +21,9 @@ $spell
 	inline
 $$
 
-$index unary, AD plus operator$$
-$index AD, unary plus operator$$
-$index plus, AD unary operator$$
-$index +, AD unary operator$$
 
 $section AD Unary Plus Operator$$
+$mindex +$$
 
 $head Syntax$$
 
@@ -60,7 +57,7 @@ AD of $icode Base$$
 $cref/operation sequence/glossary/Operation/Sequence/$$.
 
 $head Derivative$$
-If $latex f$$ is a 
+If $latex f$$ is a
 $cref/Base function/glossary/Base Function/$$,
 $latex \[
 	\D{[ + f(x) ]}{x} = \D{f(x)}{x}
@@ -84,7 +81,7 @@ $end
 namespace CppAD {
 
 template <class Base>
-inline AD<Base> AD<Base>::operator + (void) const 
+inline AD<Base> AD<Base>::operator + (void) const
 {	AD<Base> result(*this);
 
 	return result;
@@ -92,7 +89,7 @@ inline AD<Base> AD<Base>::operator + (void) const
 
 
 template <class Base>
-inline AD<Base> operator + (const VecAD_reference<Base> &right) 
+inline AD<Base> operator + (const VecAD_reference<Base> &right)
 {	return right.ADBase(); }
 
 }

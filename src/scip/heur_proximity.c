@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,9 +16,7 @@
 /**@file   heur_proximity.c
  * @brief  improvement heuristic which uses an auxiliary objective instead of the original objective function which
  *         is itself added as a constraint to a sub-SCIP instance. The heuristic was presented by Matteo Fischetti
- *         and Michele Monaci
- *
- *
+ *         and Michele Monaci.
  * @author Gregor Hendel
  */
 
@@ -41,25 +39,26 @@
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* event handler properties */
-#define EVENTHDLR_NAME         "Proximity"
-#define EVENTHDLR_DESC         "LP event handler for "HEUR_NAME" heuristic"
+#define EVENTHDLR_NAME        "Proximity"
+#define EVENTHDLR_DESC        "LP event handler for " HEUR_NAME " heuristic"
 
 /* default values for proximity-specific parameters */
 /* todo refine these values */
-#define DEFAULT_MAXNODES      10000LL    /* maximum number of nodes to regard in the subproblem                        */
-#define DEFAULT_MINIMPROVE    0.02       /* factor by which proximity should at least improve the incumbent            */
-#define DEFAULT_MINGAP        0.01       /* minimum primal-dual gap for which the heuristic is executed                */
-#define DEFAULT_MINNODES      1LL        /* minimum number of nodes to regard in the subproblem                        */
-#define DEFAULT_MINLPITERS    200LL      /* minimum number of LP iterations to perform in one sub-mip                  */
-#define DEFAULT_MAXLPITERS    100000LL   /* maximum number of LP iterations to be performed in the subproblem          */
-#define DEFAULT_NODESOFS      50LL       /* number of nodes added to the contingent of the total nodes                 */
-#define DEFAULT_WAITINGNODES  100LL      /* default waiting nodes since last incumbent before heuristic is executed    */
-#define DEFAULT_NODESQUOT     0.1        /* default quotient of sub-MIP nodes with respect to number of processed nodes*/
-#define DEFAULT_USELPROWS     FALSE      /* should subproblem be constructed based on LP row information? */
-#define DEFAULT_BINVARQUOT    0.1        /* default threshold for percentage of binary variables required to start     */
-#define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
-#define DEFAULT_USEFINALLP    FALSE      /* should the heuristic solve a final LP in case of continuous objective variables? */
-#define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
+#define DEFAULT_MAXNODES      10000LL    /**< maximum number of nodes to regard in the subproblem                        */
+#define DEFAULT_MINIMPROVE    0.02       /**< factor by which proximity should at least improve the incumbent            */
+#define DEFAULT_MINGAP        0.01       /**< minimum primal-dual gap for which the heuristic is executed                */
+#define DEFAULT_MINNODES      1LL        /**< minimum number of nodes to regard in the subproblem                        */
+#define DEFAULT_MINLPITERS    200LL      /**< minimum number of LP iterations to perform in one sub-mip                  */
+#define DEFAULT_MAXLPITERS    100000LL   /**< maximum number of LP iterations to be performed in the subproblem          */
+#define DEFAULT_NODESOFS      50LL       /**< number of nodes added to the contingent of the total nodes                 */
+#define DEFAULT_WAITINGNODES  100LL      /**< default waiting nodes since last incumbent before heuristic is executed    */
+#define DEFAULT_NODESQUOT     0.1        /**< default quotient of sub-MIP nodes with respect to number of processed nodes*/
+#define DEFAULT_USELPROWS     FALSE      /**< should subproblem be constructed based on LP row information? */
+#define DEFAULT_BINVARQUOT    0.1        /**< default threshold for percentage of binary variables required to start     */
+#define DEFAULT_RESTART       TRUE       /**< should the heuristic immediately run again on its newly found solution? */
+#define DEFAULT_USEFINALLP    FALSE      /**< should the heuristic solve a final LP in case of continuous objective variables? */
+#define DEFAULT_LPITERSQUOT   0.2        /**< default quotient of sub-MIP LP iterations with respect to LP iterations so far */
+#define DEFAULT_USEUCT        FALSE      /**< should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -92,8 +91,9 @@ struct SCIP_HeurData
    int                   subprobidx;         /**< counter for the subproblem index to be solved by proximity */
 
    SCIP_Bool             uselprows;          /**< should subproblem be constructed based on LP row information? */
-   SCIP_Bool             restart;            /* should the heuristic immediately run again on its newly found solution? */
-   SCIP_Bool             usefinallp;         /* should the heuristic solve a final LP in case of continuous objective variables? */
+   SCIP_Bool             restart;            /**< should the heuristic immediately run again on its newly found solution? */
+   SCIP_Bool             usefinallp;         /**< should the heuristic solve a final LP in case of continuous objective variables? */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -104,10 +104,10 @@ struct SCIP_HeurData
 /** optimizes the continuous variables in an LP diving by fixing all integer variables to the given solution values */
 static
 SCIP_RETCODE solveLp(
-   SCIP*                 scip,               /* SCIP data structure */
-   SCIP_SOL*             sol,                /* candidate solution for which continuous variables should be optimized */
-   SCIP_Bool*            success             /* was the dive successful? */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< candidate solution for which continuous variables should be optimized */
+   SCIP_Bool*            success             /**< was the dive successful? */
+   )
 {
    SCIP_VAR** vars;
    SCIP_RETCODE retstat;
@@ -143,6 +143,7 @@ SCIP_RETCODE solveLp(
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[v], SCIPvarGetUbGlobal(vars[v])) );
       }
    }
+
    /* apply this after global bounds to not cause an error with intermediate empty domains */
    for( v = 0; v < nintvars; ++v )
    {
@@ -157,7 +158,7 @@ SCIP_RETCODE solveLp(
    }
 
    /* solve LP */
-   SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+   SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
     * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -172,12 +173,12 @@ SCIP_RETCODE solveLp(
 #endif
    }
 
-   SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
-   SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+   SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+   SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
    /* terminate diving mode */
@@ -213,9 +214,8 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
+   /* The sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
+    * since constraint copying may have required the copy of variables that are fixed in the main SCIP. */
    assert(nvars <= SCIPgetNOrigVars(subscip));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
@@ -228,16 +228,15 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    *success = FALSE;
+
    /* solve an LP with all integer variables fixed to improve solution quality */
    if( ncontvars > 0 && usefinallp && SCIPisLPConstructed(scip) )
    {
       int v;
-      int ncontobjvars; /* does the problem instance have continuous variables with nonzero objective coefficients? */
-      SCIP_Real sumofobjsquares;
+      int ncontobjvars = 0;    /* does the problem instance have continuous variables with nonzero objective coefficients? */
+      SCIP_Real sumofobjsquares = 0.0;
 
       /* check if continuous variables with nonzero objective coefficient are present */
-      ncontobjvars = 0;
-      sumofobjsquares = 0.0;
       for( v = nvars - 1; v >= nvars - ncontvars; --v )
       {
          SCIP_VAR* var;
@@ -254,6 +253,7 @@ SCIP_RETCODE createNewSol(
       }
 
       SCIPstatisticMessage(" Continuous Objective variables: %d, Euclidean OBJ: %g total, %g continuous\n", ncontobjvars, SCIPgetObjNorm(scip), sumofobjsquares);
+
       /* solve a final LP to optimize solution values of continuous problem variables */
       SCIPstatisticMessage("Solution Value before LP resolve: %g\n", SCIPgetSolOrigObj(scip, newsol));
       SCIP_CALL( solveLp(scip, newsol, success) );
@@ -272,7 +272,7 @@ SCIP_RETCODE createNewSol(
    /* try to add new solution to SCIP and free it immediately */
    if( !*success )
    {
-      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
 
@@ -284,6 +284,7 @@ SCIP_RETCODE createNewSol(
 /** sets solving parameters for the subproblem created by the heuristic */
 static
 SCIP_RETCODE setupSubproblem(
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP*                 subscip             /**< copied SCIP data structure */
    )
 {
@@ -292,16 +293,29 @@ SCIP_RETCODE setupSubproblem(
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable output to console */
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* use best dfs node selection */
-   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   /* use restart dfs node selection */
+   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
 
    /* disable expensive presolving
@@ -318,11 +332,10 @@ SCIP_RETCODE setupSubproblem(
    /* disable cutting plane separation */
    SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
 
-
    /* todo: check branching rule in sub-SCIP */
-   if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
-	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* disable feasibility pump and fractional diving */
@@ -350,73 +363,6 @@ SCIP_RETCODE setupSubproblem(
     * SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
     * improves performance */
 
-#ifdef SCIP_DEBUG
-   /* for debugging proximity, enable MIP output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#endif
-
-   return SCIP_OKAY;
-}
-
-/** creates the rows of the subproblem */
-static
-SCIP_RETCODE createRows(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars             /**< the variables of the subproblem */
-   )
-{
-   SCIP_ROW** rows;                          /* original scip rows                       */
-   SCIP_CONS* cons;                          /* new constraint                           */
-   SCIP_VAR** consvars;                      /* new constraint's variables               */
-   SCIP_COL** cols;                          /* original row's columns                   */
-
-   SCIP_Real constant;                       /* constant added to the row                */
-   SCIP_Real lhs;                            /* left hand side of the row                */
-   SCIP_Real rhs;                            /* left right side of the row               */
-   SCIP_Real* vals;                          /* variables' coefficient values of the row */
-
-   int nrows;
-   int nnonz;
-   int i;
-   int j;
-
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-   /* copy all rows to linear constraints */
-   for( i = 0; i < nrows; i++ )
-   {
-      /* ignore rows that are only locally valid */
-      if( SCIProwIsLocal(rows[i]) )
-         continue;
-
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-
-      assert(lhs <= rhs);
-
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-      for( j = 0; j < nnonz; j++ )
-         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-      /* create a new linear constraint and add it to the subproblem */
-      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &consvars);
-   }
-
    return SCIP_OKAY;
 }
 
@@ -430,12 +376,11 @@ SCIP_RETCODE deleteSubproblem(
    /* free remaining memory from heuristic execution */
    if( heurdata->subscip != NULL )
    {
-
       assert(heurdata->varmapfw != NULL);
       assert(heurdata->subvars != NULL);
       assert(heurdata->objcons != NULL);
 
-      SCIPdebugMessage("Freeing subproblem of proximity heuristic\n");
+      SCIPdebugMsg(scip, "Freeing subproblem of proximity heuristic\n");
       SCIPfreeBlockMemoryArray(scip, &heurdata->subvars, heurdata->nsubvars);
       SCIPhashmapFree(&heurdata->varmapfw);
       SCIP_CALL( SCIPreleaseCons(heurdata->subscip, &heurdata->objcons) );
@@ -451,9 +396,9 @@ SCIP_RETCODE deleteSubproblem(
 
 /* ---------------- Callback methods of event handler ---------------- */
 
-/* exec the event handler
+/** exec the event handler
  *
- * we interrupt the solution process
+ *  We interrupt the solution process.
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecProximity)
@@ -478,6 +423,8 @@ SCIP_DECL_EVENTEXEC(eventExecProximity)
 
    return SCIP_OKAY;
 }
+
+
 /* ---------------- Callback methods of primal heuristic ---------------- */
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
@@ -508,7 +455,7 @@ SCIP_DECL_HEURFREE(heurFreeProximity)
    assert( heurdata != NULL );
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -544,7 +491,7 @@ SCIP_DECL_HEURINIT(heurInitProximity)
    return SCIP_OKAY;
 }
 
-/* solution process exiting method of proximity heuristic */
+/** solution process exiting method of proximity heuristic */
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolProximity)
 {
@@ -559,8 +506,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolProximity)
 
    SCIP_CALL( deleteSubproblem(scip, heurdata) );
 
-   assert(heurdata->subscip == NULL && heurdata->varmapfw == NULL
-         && heurdata->subvars == NULL && heurdata->objcons == NULL);
+   assert(heurdata->subscip == NULL && heurdata->varmapfw == NULL && heurdata->subvars == NULL && heurdata->objcons == NULL);
 
    return SCIP_OKAY;
 }
@@ -569,11 +515,10 @@ SCIP_DECL_HEUREXITSOL(heurExitsolProximity)
 static
 SCIP_DECL_HEUREXEC(heurExecProximity)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata; /* heuristic's data                            */
    SCIP_Longint nnodes;     /* number of stalling nodes for the subproblem */
    SCIP_Longint nlpiters;   /* lp iteration limit for the subproblem       */
-   SCIP_Bool foundsol;
+   SCIP_Bool foundsol = FALSE;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -598,24 +543,22 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    nnodes -= heurdata->usednodes;
    nnodes = MIN(nnodes, heurdata->maxnodes);
 
-   nlpiters = (SCIP_Longint) heurdata->lpitersquot * SCIPgetNRootFirstLPIterations(scip);
+   nlpiters = (SCIP_Longint) (heurdata->lpitersquot * SCIPgetNRootFirstLPIterations(scip));
    nlpiters = MIN(nlpiters, heurdata->maxlpiters);
 
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping proximity: nnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping proximity: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
    /* do not run proximity, if the problem does not have an objective function anyway */
    if( SCIPgetNObjVars(scip) == 0 )
    {
-      SCIPdebugMessage("skipping proximity: pure feasibility problem anyway\n");
+      SCIPdebugMsg(scip, "skipping proximity: pure feasibility problem anyway\n");
       return SCIP_OKAY;
    }
-
-   foundsol = FALSE;
 
    do
    {
@@ -623,11 +566,8 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
        * is found or one of the heuristic limits on nodes or LP iterations is hit
        * heuristic performs only one iteration if restart parameter is set to FALSE
        */
-      SCIP_Longint nusednodes;
-      SCIP_Longint nusedlpiters;
-
-      nusednodes = 0LL;
-      nusedlpiters = 0LL;
+      SCIP_Longint nusednodes = 0LL;
+      SCIP_Longint nusedlpiters = 0LL;
 
       nlpiters = MAX(nlpiters, heurdata->minlpiters);
 
@@ -655,7 +595,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    /* free the occupied memory */
    if( heurdata->subscip != NULL )
    {
-/* just for testing the library method, in debug mode, we call the wrapper method for the actual delete method */
+      /* just for testing the library method, in debug mode, we call the wrapper method for the actual delete method */
 #ifndef NDEBUG
       SCIP_CALL( SCIPdeleteSubproblemProximity(scip) );
 #else
@@ -694,9 +634,9 @@ SCIP_RETCODE SCIPdeleteSubproblemProximity(
 
 /** main procedure of the proximity heuristic, creates and solves a sub-SCIP
  *
- *  @note the method can be applied in an iterative way, keeping the same subscip in between. If the @p freesubscip
+ *  @note The method can be applied in an iterative way, keeping the same subscip in between. If the @p freesubscip
  *        parameter is set to FALSE, the heuristic will keep the subscip data structures. Always set this parameter
- *        to TRUE, or call SCIPdeleteSubproblemProximity() afterwards
+ *        to TRUE, or call SCIPdeleteSubproblemProximity() afterwards.
  */
 SCIP_RETCODE SCIPapplyProximity(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
@@ -719,11 +659,7 @@ SCIP_RETCODE SCIPapplyProximity(
 
    SCIP_SOL* incumbent;
    SCIP_CONS* objcons;
-   SCIP_RETCODE retcode;
    SCIP_Longint iterlim;
-
-   SCIP_Real timelimit;                      /* time limit for proximity subproblem              */
-   SCIP_Real memorylimit;                    /* memory limit for proximity subproblem            */
 
    SCIP_Real large;
    SCIP_Real inf;
@@ -739,6 +675,7 @@ SCIP_RETCODE SCIPapplyProximity(
    int i;
 
    SCIP_Bool valid;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -787,7 +724,7 @@ SCIP_RETCODE SCIPapplyProximity(
    /* use knowledge about integrality of objective to round up lower bound */
    if( SCIPisObjIntegral(scip) )
    {
-      SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
+      SCIPdebugMsg(scip, " Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
       lowerbound = SCIPfeasCeil(scip, lowerbound);
    }
 
@@ -796,13 +733,20 @@ SCIP_RETCODE SCIPapplyProximity(
       return SCIP_OKAY;
 
    /* calculate the minimum improvement for a heuristic solution in terms of the distance between incumbent objective
-    * and the lower bound
-    */
-   objcutoff = lowerbound + (1 - minimprove) * (bestobj - lowerbound);
+    * and the lower bound */
+   if( SCIPisInfinity(scip, REALABS(lowerbound)) )
+   {
+      if( SCIPisZero(scip, bestobj) )
+         objcutoff = bestobj - 1;
+      else
+         objcutoff = (1 - minimprove) * bestobj;
+   }
+   else
+      objcutoff = minimprove * lowerbound + (1 - minimprove) * (bestobj);
 
    /* use integrality of the objective function to round down (and thus strengthen) the objective cutoff */
    if( SCIPisObjIntegral(scip) )
-	   objcutoff = SCIPfeasFloor(scip, objcutoff);
+      objcutoff = SCIPfeasFloor(scip, objcutoff);
 
    if( SCIPisFeasLT(scip, objcutoff, lowerbound) )
       objcutoff = lowerbound;
@@ -813,22 +757,9 @@ SCIP_RETCODE SCIPapplyProximity(
       return SCIP_OKAY;
 
    /* check whether there is enough time and memory left */
-   timelimit = 0.0;
-   memorylimit = 0.0;
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &valid) );
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0 )
+   if( ! valid )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -848,42 +779,29 @@ SCIP_RETCODE SCIPapplyProximity(
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &subvars, nvars) );
 
       /* copy complete SCIP instance */
       valid = FALSE;
-      if( !heurdata->uselprows )
-      {
-         SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "proximity", TRUE, FALSE, TRUE, &valid) );
-      }
-      else
-      {
-         /* create the subproblem step by step, adding plugins and variables first, and finally creating
-          * linear constraints based on current LP rows */
-         SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
-         SCIP_CALL( SCIPcreateProbBasic(subscip, "proximitysub") );
 
-         SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
-         for( i = 0; i < nvars; i++ )
-            subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      /* create a problem copy as sub SCIP */
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "proximity", NULL, NULL, 0, heurdata->uselprows, TRUE,
+            &success, &valid) );
 
-         SCIP_CALL( createRows(scip, subscip, subvars) );
-      }
-      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+      SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
       /* create event handler for LP events */
       eventhdlr = NULL;
       SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecProximity, NULL) );
       if( eventhdlr == NULL )
       {
-         SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+         SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
          return SCIP_PLUGINNOTFOUND;
       }
 
       /* set up parameters for the copied instance */
-      SCIP_CALL( setupSubproblem(subscip) );
+      SCIP_CALL( setupSubproblem(heurdata, subscip) );
 
       /* create the objective constraint in the sub scip, first without variables and values which will be added later */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );
@@ -911,15 +829,15 @@ SCIP_RETCODE SCIPapplyProximity(
          /* adjust infinite bounds in order to avoid that variables with non-zero objective
           * get fixed to infinite value in proximity subproblem
           */
-         if( SCIPisInfinity(subscip, ub ) )
+         if( SCIPisInfinity(subscip, ub) )
          {
-            adjustedbound = MAX(large, lb+large);
+            adjustedbound = MAX(large, lb + large);
             adjustedbound = MIN(adjustedbound, inf);
             SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], adjustedbound) );
          }
-         if( SCIPisInfinity(subscip, -lb ) )
+         if( SCIPisInfinity(subscip, -lb) )
          {
-            adjustedbound = MIN(-large, ub-large);
+            adjustedbound = MIN(-large, ub - large);
             adjustedbound = MAX(adjustedbound, -inf);
             SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], adjustedbound) );
          }
@@ -962,7 +880,9 @@ SCIP_RETCODE SCIPapplyProximity(
       assert(SCIPvarIsBinary(subvars[i]));
 
       solval = SCIPgetSolVal(scip, incumbent, vars[i]);
-      assert(SCIPisFeasEQ(scip, solval, 1.0) || SCIPisFeasEQ(scip, solval, 0.0));
+      assert(SCIPisFeasGE(scip, solval, 0.0));
+      assert(SCIPisFeasLE(scip, solval, 1.0));
+      assert(SCIPisFeasIntegral(scip, solval));
 
       if( solval < 0.5 )
       {
@@ -974,17 +894,13 @@ SCIP_RETCODE SCIPapplyProximity(
       }
    }
 
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", 1) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* restrict LP iterations */
-   /*todo set iterations limit depending on the number of iterations of the original problem root */
+   /* todo set iterations limit depending on the number of iterations of the original problem root */
    iterlim = nlpiters;
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/iterlim", MAX(1, iterlim / MIN(10, nnodes))) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/rootiterlim", iterlim) );
@@ -993,9 +909,9 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
-   SCIPstatisticMessage("solving subproblem at Node: %"SCIP_LONGINT_FORMAT" "
-         "nnodes: %"SCIP_LONGINT_FORMAT" "
-         "iterlim: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNNodes(scip), nnodes, iterlim);
+   SCIPstatisticMessage("solving subproblem at Node: %" SCIP_LONGINT_FORMAT " "
+         "nnodes: %" SCIP_LONGINT_FORMAT " "
+         "iterlim: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNNodes(scip), nnodes, iterlim);
 
    /* solve the subproblem with all previously adjusted parameters */
    nfixedvars = SCIPgetNFixedVars(subscip);
@@ -1005,32 +921,25 @@ SCIP_RETCODE SCIPapplyProximity(
    nfixedvars = SCIPgetNFixedVars(subscip) - nfixedvars;
    assert(nfixedvars >= 0);
    SCIPstatisticMessage("presolve fixings %d: %d\n", ++(heurdata->subprobidx), nfixedvars);
-   retcode = SCIPsolve(subscip);
-
-   SCIPstatisticMessage("solve of subscip %d:"
-         "usednodes: %"SCIP_LONGINT_FORMAT" "
-         "lp iters: %"SCIP_LONGINT_FORMAT" "
-         "root iters: %"SCIP_LONGINT_FORMAT" "
-         "Presolving Time: %.2f\n", heurdata->subprobidx,
-         SCIPgetNNodes(subscip), SCIPgetNLPIterations(subscip), SCIPgetNRootLPIterations(subscip), SCIPgetPresolvingTime(subscip));
-
-   SCIPstatisticMessage("Solving Time %d: %.2f\n", heurdata->subprobidx, SCIPgetSolvingTime(subscip) );
-   /* drop LP events of sub-SCIP */
-   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* errors in solving the subproblem should not kill the overall solving process;
     * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in proximity heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-   }
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+   SCIPstatisticMessage("solve of subscip %d:"
+         "usednodes: %" SCIP_LONGINT_FORMAT " "
+         "lp iters: %" SCIP_LONGINT_FORMAT " "
+         "root iters: %" SCIP_LONGINT_FORMAT " "
+         "Presolving Time: %.2f\n", heurdata->subprobidx,
+         SCIPgetNNodes(subscip), SCIPgetNLPIterations(subscip), SCIPgetNRootLPIterations(subscip), SCIPgetPresolvingTime(subscip));
+
+   SCIPstatisticMessage("Solving Time %d: %.2f\n", heurdata->subprobidx, SCIPgetSolvingTime(subscip) );
+
+   /* drop LP events of sub-SCIP */
+   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* keep track of relevant information for future runs of heuristic */
    if( nusednodes != NULL )
@@ -1047,8 +956,6 @@ SCIP_RETCODE SCIPapplyProximity(
    if( nsubsols > 0 )
    {
       /* try to translate the sub problem solution to the original scip instance */
-      SCIP_Bool success;
-
       success = FALSE;
       SCIP_CALL( createNewSol(scip, subscip, subvars, heur, incumbent, heurdata->usefinallp, &success) );
 
@@ -1083,13 +990,12 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_HEUR* heur;
+   SCIP_HEUR* heur = NULL;
 
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   heur = NULL;
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecProximity, heurdata) );
@@ -1102,56 +1008,65 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolProximity) );
 
    /* add proximity primal heuristic parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows", "should subproblem be constructed based on LP row information?",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselprows",
+         "should subproblem be constructed based on LP row information?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/restart", "should the heuristic immediately run again on its newly found solution?",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/restart",
+         "should the heuristic immediately run again on its newly found solution?",
          &heurdata->restart, TRUE, DEFAULT_RESTART, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usefinallp", "should the heuristic solve a final LP in case of continuous objective variables?",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usefinallp",
+         "should the heuristic solve a final LP in case of continuous objective variables?",
          &heurdata->usefinallp, TRUE, DEFAULT_USEFINALLP, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/nodesofs",
          "number of nodes added to the contingent of the total nodes",
          &heurdata->nodesofs, TRUE, DEFAULT_NODESOFS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/minnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/minnodes",
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxlpiters",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxlpiters",
          "maximum number of LP iterations to be performed in the subproblem",
          &heurdata->maxlpiters, TRUE, DEFAULT_MAXLPITERS, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/minlpiters", "minimum number of LP iterations performed in "
-         "subproblem", &heurdata->minlpiters, TRUE, DEFAULT_MINLPITERS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/minlpiters",
+         "minimum number of LP iterations performed in subproblem",
+         &heurdata->minlpiters, TRUE, DEFAULT_MINLPITERS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/waitingnodes",
-          "waiting nodes since last incumbent before heuristic is executed", &heurdata->waitingnodes, TRUE, DEFAULT_WAITINGNODES,
-          0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/waitingnodes",
+          "waiting nodes since last incumbent before heuristic is executed",
+         &heurdata->waitingnodes, TRUE, DEFAULT_WAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which proximity should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot", "sub-MIP node limit w.r.t number of original nodes",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
+         "sub-MIP node limit w.r.t number of original nodes",
          &heurdata->nodesquot, TRUE, DEFAULT_NODESQUOT, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/binvarquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/binvarquot",
          "threshold for percentage of binary variables required to start",
          &heurdata->binvarquot, TRUE, DEFAULT_BINVARQUOT, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lpitersquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/lpitersquot",
             "quotient of sub-MIP LP iterations with respect to LP iterations so far",
             &heurdata->lpitersquot, TRUE, DEFAULT_LPITERSQUOT, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/mingap",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mingap",
          "minimum primal-dual gap for which the heuristic is executed",
          &heurdata->mingap, TRUE, DEFAULT_MINGAP, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
 
    return SCIP_OKAY;
 }

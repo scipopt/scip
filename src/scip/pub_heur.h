@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_heur.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for primal heuristics
  * @author Tobias Achterberg
  */
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicHeuristicMethods
+ *
+ * @{
+ */
+
+
 
 /** compares two heuristics w. r. to their priority */
 EXTERN
@@ -170,6 +177,8 @@ int SCIPheurGetNDivesets(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
+/* @} */
+
 /** get the heuristic to which this diving setting belongs */
 EXTERN
 SCIP_HEUR* SCIPdivesetGetHeur(
@@ -179,20 +188,25 @@ SCIP_HEUR* SCIPdivesetGetHeur(
 /** get the working solution of this dive set */
 EXTERN
 SCIP_SOL* SCIPdivesetGetWorkSolution(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** set the working solution for this dive set */
 EXTERN
 void SCIPdivesetSetWorkSolution(
-   SCIP_DIVESET*         diveset,            /** diving settings */
-   SCIP_SOL*             sol                 /** new working solution for this dive set, or NULL */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    );
+
+/**@addtogroup PublicDivesetMethods
+ *
+ * @{
+ */
 
 /** get the name of the dive set */
 EXTERN
 const char* SCIPdivesetGetName(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the minimum relative depth of the diving settings */
@@ -209,7 +223,7 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 
 /** get the number of successful runs of the diving settings */
 EXTERN
-int SCIPdivesetGetSolSuccess(
+SCIP_Longint SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
@@ -279,6 +293,18 @@ SCIP_Longint SCIPdivesetGetNBacktracks(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
+/** get the total number of conflicts found by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNConflicts(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of solutions (leaf and rounded solutions) found by the dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNSols(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
 /** get the maximum LP iterations quotient of the diving settings */
 EXTERN
 SCIP_Real SCIPdivesetGetMaxLPIterQuot(
@@ -321,11 +347,101 @@ SCIP_Bool SCIPdivesetUseBacktrack(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/** frees memory of a diveset */
+/** returns the LP solve frequency for diving LPs (0: dynamically based on number of intermediate domain reductions) */
 EXTERN
-SCIP_RETCODE SCIPdivesetFree(
-   SCIP_DIVESET**        diveset             /**< general diving settings */
+int SCIPdivesetGetLPSolveFreq(
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
+
+/** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
+EXTERN
+SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** should only LP branching candidates be considered instead of the slower but
+ *  more general constraint handler diving variable selection?
+ */
+EXTERN
+SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** returns TRUE if dive set supports diving of the specified type */
+EXTERN
+SCIP_Bool SCIPdivesetSupportsType(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
+   );
+
+/** returns the random number generator of this \p diveset for tie-breaking */
+EXTERN
+SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/* @} */
+
+/**@defgroup PublicVariableGraphMethods Public Variable Graph Methods
+ * @ingroup MiscellaneousMethods
+ *
+ * @brief  methods to create a variable graph and perform breadth-first search
+ *
+ * @{
+ */
+
+/** Perform breadth-first (BFS) search on the variable constraint graph.
+ *
+ *  The result of the algorithm is that the \p distances array contains the correct distances for
+ *  every variable from the start variables. The distance of a variable can then be accessed through its
+ *  problem index (calling SCIPvarGetProbindex()).
+ *  Hence, The method assumes that the length of \p distances is at least
+ *  SCIPgetNVars().
+ *  Variables that are not connected through constraints to the start variables have a distance of -1.
+ *
+ *  Limits can be provided to further restrict the breadth-first search. If a distance limit is given,
+ *  the search will be performed until the first variable at this distance is popped from the queue, i.e.,
+ *  all variables with a distance < maxdistance have been labeled by the search.
+ *  If a variable limit is given, the search stops after it completes the distance level at which
+ *  the limit was reached. Hence, more variables may be actually labeled.
+ *  The start variables are accounted for those variable limits.
+ *
+ *  If no variable variable constraint graph is provided, the method will create one and free it at the end
+ *  This is useful for a single use of the variable constraint graph. For several consecutive uses,
+ *  it is advised to create a variable constraint graph via SCIPvariableGraphCreate().
+ */
+EXTERN
+SCIP_RETCODE SCIPvariablegraphBreadthFirst(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH*          vargraph,           /**< pointer to the variable graph, or NULL to let the function create a local graph */
+   SCIP_VAR**            startvars,          /**< array of start variables to calculate distance from */
+   int                   nstartvars,         /**< number of starting variables, at least 1 */
+   int*                  distances,          /**< array to keep distance in vargraph from start variables for every variable */
+   int                   maxdistance,        /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS) */
+   int                   maxvars,            /**< maximum number of variables to compute distance for */
+   int                   maxbinintvars       /**< maximum number of binary or integer variables to compute distance for */
+   );
+
+/** initialization method of variable graph data structure */
+EXTERN
+SCIP_RETCODE SCIPvariableGraphCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH**         vargraph,           /**< pointer to the variable graph */
+   SCIP_Bool             relaxdenseconss,    /**< should dense constraints (at least as dense as \p density) be
+                                              *   ignored by connectivity graph? */
+   SCIP_Real             relaxdensity,       /**< density (with respect to number of variables) to relax constraint from graph */
+   int*                  nrelaxedconstraints  /**< pointer to store the number of constraints that were relaxed, or NULL if not needed */
+   );
+
+/** deinitialization method of variable graph data structure */
+EXTERN
+void SCIPvariableGraphFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH**         vargraph            /**< pointer to the variable graph */
+   );
+
+/* @} */
+
 
 #ifdef __cplusplus
 }

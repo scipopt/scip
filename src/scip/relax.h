@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   relax.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for relaxators
  * @author Tobias Achterberg
  */
@@ -26,10 +27,13 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/type_primal.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_set.h"
+#include "scip/type_sol.h"
 #include "scip/type_stat.h"
+#include "scip/type_tree.h"
 #include "scip/type_relax.h"
 #include "scip/pub_relax.h"
 
@@ -182,7 +186,12 @@ void SCIPrelaxEnableOrDisableClocks(
 /** creates global relaxation data */
 extern
 SCIP_RETCODE SCIPrelaxationCreate(
-   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   SCIP_RELAXATION**     relaxation,         /**< global relaxation data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
 /** frees global relaxation data */
@@ -204,16 +213,23 @@ SCIP_Bool SCIPrelaxationIsSolZero(
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
-/** sets the relaxsolvalid flag in the relaxation data to the given value */
+/** sets the relaxsolvalid and includeslp flags in the relaxation data to the given values */
 extern
 void SCIPrelaxationSetSolValid(
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
-   SCIP_Bool             isvalid             /**< is the stored solution valid? */
+   SCIP_Bool             isvalid,            /**< is the stored solution valid? */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
 /** returns whether the global relaxation solution is valid */
 extern
 SCIP_Bool SCIPrelaxationIsSolValid(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   );
+
+/** returns whether the global relaxation solution was computed by a relaxator which included all LP cuts */
+extern
+SCIP_Bool SCIPrelaxationIsLpIncludedForSol(
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
@@ -235,6 +251,16 @@ extern
 void SCIPrelaxationSolObjAdd(
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_Real             val                 /**< value to add to the objective value */
+   );
+
+/** updates objective value of current relaxation solution after change of objective coefficient */
+extern
+void SCIPrelaxationUpdateVarObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed objective coefficient */
+   SCIP_Real             oldobj,             /**< old objective coefficient */
+   SCIP_Real             newobj              /**< new objective coefficient */
    );
 
 #ifdef __cplusplus

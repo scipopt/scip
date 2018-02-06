@@ -1,0 +1,8 @@
+solvers/
+check/locks/
+check/results/
+check/evalcheck.sh
+check/check.awk
+check/getlastprob.awk
+check/instances/*/*.sol
+lint

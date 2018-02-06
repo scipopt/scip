@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -247,7 +247,7 @@ SCIP_DECL_CONSINITLP(consInitlpObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_initlp(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_initlp(scip, conshdlr, conss, nconss, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -304,6 +304,23 @@ SCIP_DECL_CONSENFOLP(consEnfolpObj)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_enforelax(scip, sol, conshdlr, conss, nconss, nusefulconss, solinfeasible, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsObj)
@@ -334,7 +351,7 @@ SCIP_DECL_CONSCHECK(consCheckObj)
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol,
-         checkintegrality, checklprows, printreason, result) );
+         checkintegrality, checklprows, printreason, completely, result) );
 
    return SCIP_OKAY;
 }
@@ -368,7 +385,7 @@ SCIP_DECL_CONSPRESOL(consPresolObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_presol(scip, conshdlr, conss, nconss, nrounds,
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_presol(scip, conshdlr, conss, nconss, nrounds, presoltiming,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
          nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
@@ -577,6 +594,22 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsObj)
 
    return SCIP_OKAY;
 }
+
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
+static
+SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_getdivebdchgs(scip, conshdlr, diveset, sol, success, infeasible) );
+
+   return SCIP_OKAY;
+}
 }
 
 
@@ -607,18 +640,18 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
          objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
          objconshdlr->scip_maxprerounds_,
-         objconshdlr->scip_delaysepa_, objconshdlr->scip_delayprop_, objconshdlr->scip_delaypresol_,
-         objconshdlr->scip_needscons_, objconshdlr->scip_timingmask_,
+         objconshdlr->scip_delaysepa_, objconshdlr->scip_delayprop_,
+         objconshdlr->scip_needscons_, objconshdlr->scip_proptiming_, objconshdlr->scip_presoltiming_,
          conshdlrCopyObj,
          consFreeObj, consInitObj, consExitObj,
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
          consDeleteObj, consTransObj, consInitlpObj,
-         consSepalpObj, consSepasolObj, consEnfolpObj, consEnfopsObj, consCheckObj,
+         consSepalpObj, consSepasolObj, consEnfolpObj, consEnforelaxObj, consEnfopsObj, consCheckObj,
          consPropObj, consPresolObj, consRespropObj, consLockObj,
          consActiveObj, consDeactiveObj,
          consEnableObj, consDisableObj, consDelVarsObj,
          consPrintObj, consCopyObj, consParseObj,
-         consGetVarsObj, consGetNVarsObj, conshdlrdata) ); /*lint !e429*/
+         consGetVarsObj, consGetNVarsObj, consGetDiveBdChgsObj, conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

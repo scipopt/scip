@@ -1,12 +1,12 @@
-/* $Id: ad_io.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
-# ifndef CPPAD_AD_IO_INCLUDED
-# define CPPAD_AD_IO_INCLUDED
+// $Id$
+# ifndef CPPAD_AD_IO_HPP
+# define CPPAD_AD_IO_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -22,13 +22,9 @@ $spell
 	const
 $$
 
-$index >>, AD input$$
-$index AD, stream input$$
-$index input, AD$$
-$index stream, AD input$$
-$index write, AD$$
 
-$section AD Output Stream Operator$$ 
+$section AD Output Stream Operator$$
+$mindex >> input write$$
 
 $head Syntax$$
 $icode%is% >> %x%$$
@@ -67,7 +63,7 @@ $codei%
 	%is% >> %x% >> %y%
 %$$
 will first read the $icode Base$$ value of $icode x$$ from $icode is$$,
-and then read the $icode Base$$ value to $icode y$$. 
+and then read the $icode Base$$ value to $icode y$$.
 
 $head Operation Sequence$$
 The result of this operation is not an
@@ -95,13 +91,9 @@ $spell
 	const
 $$
 
-$index <<, AD output$$
-$index AD, stream output$$
-$index output, AD$$
-$index stream, AD output$$
-$index write, AD$$
 
-$section AD Output Stream Operator$$ 
+$section AD Output Stream Operator$$
+$mindex <<$$
 
 $head Syntax$$
 $icode%os% << %x%$$
@@ -142,7 +134,7 @@ $codei%
 	%os% << %x% << %y%
 %$$
 will output the value corresponding to $icode x$$
-followed by the value corresponding to $icode y$$. 
+followed by the value corresponding to $icode y$$.
 
 $head Operation Sequence$$
 The result of this operation is not an
@@ -165,8 +157,6 @@ $end
 */
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\defgroup ad_io_hpp ad_io.hpp
-\{
 \file ad_io.hpp
 AD<Base> input and ouput stream operators.
 */
@@ -181,7 +171,7 @@ Base type for the AD object.
 Is the input stream from which that value is read.
 
 \param x [out]
-is the object that is being set to a value. 
+is the object that is being set to a value.
 Upone return, x.value_ is read from the input stream
 and x.tape_is_ is zero; i.e., x is a parameter.
 */
@@ -191,7 +181,7 @@ std::istream& operator >> (std::istream& is, AD<Base>& x)
 {	// like assignment to a base type value
 	x.tape_id_ = 0;
 	CPPAD_ASSERT_UNKNOWN( Parameter(x) );
- 	return (is >> x.value_); 
+	return (is >> x.value_);
 }
 // ---------------------------------------------------------------------------
 /*!
@@ -205,12 +195,12 @@ Is the output stream to which that value is written.
 
 \param x
 is the object that is being written to the output stream.
-This is equivalent to writing x.value_ to the output stream. 
+This is equivalent to writing x.value_ to the output stream.
 */
 template <class Base>
 CPPAD_INLINE_FRIEND_TEMPLATE_FUNCTION
 std::ostream& operator << (std::ostream &os, const AD<Base> &x)
-{ 	return (os << x.value_); }
+{	return (os << x.value_); }
 // ---------------------------------------------------------------------------
 /*!
 Write a VecAD_reference<Base> object to an output stream.
@@ -223,13 +213,12 @@ Is the output stream to which that value is written.
 
 \param x
 is the element of the VecAD object that is being written to the output stream.
-This is equivalent to writing the corresponing Base value to the stream. 
+This is equivalent to writing the corresponing Base value to the stream.
 */
 template <class Base>
 CPPAD_INLINE_FRIEND_TEMPLATE_FUNCTION
 std::ostream& operator << (std::ostream &os, const VecAD_reference<Base> &x)
-{ 	return (os << x.ADBase()); }
+{	return (os << x.ADBase()); }
 
-/*! \} */
 } // END_CPPAD_NAMESPACE
 # endif

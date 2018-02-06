@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,7 +43,7 @@ using namespace std;
 SCIP_DECL_EVENTFREE(EventhdlrNewSol::scip_free)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** initialization method of event handler (called after problem was transformed) */
@@ -54,7 +54,7 @@ SCIP_DECL_EVENTINIT(EventhdlrNewSol::scip_init)
    while( SCIPfileExists("temp.tour.lock") && lockwaits < 10 )
    {
       /* wait one second and try again */
-      sleep(1);
+      (void) sleep(1);
       lockwaits++;
    }
    if( SCIPfileExists("temp.tour.lock") )
@@ -75,17 +75,17 @@ SCIP_DECL_EVENTINIT(EventhdlrNewSol::scip_init)
 
    /* delete lock file */
    unlink("temp.tour.lock");
-   sleep(1); /* wait for the Java TSPViewer */
+   (void) sleep(1); /* wait for the Java TSPViewer */
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 SCIP_DECL_EVENTEXIT(EventhdlrNewSol::scip_exit)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin)
@@ -117,7 +117,7 @@ SCIP_DECL_EVENTEXITSOL(EventhdlrNewSol::scip_exitsol)
 SCIP_DECL_EVENTDELETE(EventhdlrNewSol::scip_delete)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** execution method of event handler
@@ -132,7 +132,7 @@ SCIP_DECL_EVENTEXEC(EventhdlrNewSol::scip_exec)
    SCIP_SOL* sol;
    sol = SCIPgetBestSol(scip);
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
-   GRAPH* graph = probdata->getGraph();
+   GRAPH* graph = probdata->getGraph(); /*lint !e613*/
    GRAPHNODE* node = &graph->nodes[0];
    GRAPHEDGE* lastedge = NULL;
    int lockwaits = 0;
@@ -141,7 +141,7 @@ SCIP_DECL_EVENTEXEC(EventhdlrNewSol::scip_exec)
    while( SCIPfileExists("temp.tour.lock") && lockwaits < 10 )
    {
       /* wait one second and try again */
-      sleep(1);
+      (void) sleep(1);
       lockwaits++;
    }
 
@@ -192,7 +192,7 @@ SCIP_DECL_EVENTEXEC(EventhdlrNewSol::scip_exec)
 
    /* delete lock file */
    unlink("temp.tour.lock");
-   sleep(1); /* wait for the Java TSPViewer */
+   (void) sleep(1); /* wait for the Java TSPViewer */
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/

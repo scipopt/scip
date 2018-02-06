@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_implics.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
@@ -81,7 +81,13 @@ SCIP_Bool* SCIPcliqueGetValues(
 
 /** gets unique identifier of the clique */
 EXTERN
-int SCIPcliqueGetId(
+unsigned int SCIPcliqueGetId(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
+   );
+
+/** gets index of the clique in the clique table */
+EXTERN
+int SCIPcliqueGetIndex(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
@@ -108,6 +114,7 @@ SCIP_Bool SCIPcliqueIsEquation(
 #define SCIPcliqueGetVars(clique)                    ((clique)->vars)
 #define SCIPcliqueGetValues(clique)                  ((clique)->values)
 #define SCIPcliqueGetId(clique)                      ((clique)->id)
+#define SCIPcliqueGetIndex(clique)                      ((clique)->index)
 #define SCIPcliqueIsCleanedUp(clique)                ((clique)->startcleanup == -1)
 #define SCIPcliqueIsEquation(clique)                 ((SCIP_Bool)(clique)->equation)
 

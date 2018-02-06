@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -196,7 +196,7 @@ SCIP_Real nodeGetUctScore(
    score = nodeseldata->useestimate ? SCIPnodeGetEstimate(node) : SCIPnodeGetLowerbound(node);
 
    /* if the root lower bound is infinite due to LP errors, we ignore the gap part of the UCT score */
-   if( !SCIPisInfinity(scip, -rootlowerbound) && !SCIPisEQ(scip, score, rootlowerbound) )
+   if( !SCIPisInfinity(scip, REALABS(rootlowerbound)) && !SCIPisEQ(scip, score, rootlowerbound) )
    {
       SCIP_Real absscore;
       SCIP_Real absrootlowerbound;
@@ -335,7 +335,7 @@ SCIP_RETCODE ensureMemorySize(
       int newcapacity;
       newcapacity = MIN(2 * nodeseldata->sizenodevisits, 2 * nodeseldata->nodelimit);
 
-      SCIPdebugMessage("Resizing node visits array, old capacity: %d new capacity : %d\n", nodeseldata->sizenodevisits, newcapacity);
+      SCIPdebugMsg(scip, "Resizing node visits array, old capacity: %d new capacity : %d\n", nodeseldata->sizenodevisits, newcapacity);
       assert(newcapacity > nodeseldata->sizenodevisits);
 
       SCIP_CALL( SCIPreallocMemoryArray(scip, &nodeseldata->nodevisits, newcapacity) );
@@ -468,7 +468,12 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    selectBestNode(scip, selnode, nodeseldata, children, nchildren);
    selectBestNode(scip, selnode, nodeseldata, siblings, nsiblings);
    selectBestNode(scip, selnode, nodeseldata, leaves, nleaves);
-   assert(*selnode != NULL);
+
+   if( *selnode == NULL )
+   {
+      SCIPerrorMessage("Node selection rule UCT could not select a node.\n");
+      return SCIP_INVALIDCALL;
+   }
 
    /* increase the number of selections */
    ++nodeseldata->nselections;
@@ -481,7 +486,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    else
    {
       /* trigger update of visits along the path from the selected node to the root node */
-      SCIPdebugMessage("updating node visits from node number %"SCIP_LONGINT_FORMAT"\n", SCIPnodeGetNumber(*selnode));
+      SCIPdebugMsg(scip, "updating node visits from node number %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(*selnode));
       updateVisits(nodeseldata, *selnode);
    }
 
@@ -542,13 +547,13 @@ SCIP_RETCODE SCIPincludeNodeselUct(
    SCIP_CALL( SCIPsetNodeselExitsol(scip, nodesel, nodeselExitsolUct) );
 
    /* add uct node selector parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "nodeselection/"NODESEL_NAME"/nodelimit",
+   SCIP_CALL( SCIPaddIntParam(scip, "nodeselection/" NODESEL_NAME "/nodelimit",
          "maximum number of nodes before switching to default rule",
          &nodeseldata->nodelimit, TRUE, DEFAULT_NODELIMIT, 0, MAXNODELIMIT, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "nodeselection/"NODESEL_NAME"/weight",
+   SCIP_CALL( SCIPaddRealParam(scip, "nodeselection/" NODESEL_NAME "/weight",
          "weight for visit quotient of node selection rule",
          &nodeseldata->weight, TRUE, DEFAULT_WEIGHT, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "nodeselection/"NODESEL_NAME"/useestimate",
+   SCIP_CALL( SCIPaddBoolParam(scip, "nodeselection/" NODESEL_NAME "/useestimate",
          "should the estimate (TRUE) or lower bound of a node be used for UCT score?",
          &nodeseldata->useestimate, TRUE, DEFAULT_USEESTIMATE, NULL, NULL) );
 

@@ -45,7 +45,7 @@ SCIP_DECL_MESSAGEWARNING(GamsScipPrintLogStat)
    assert(file != NULL);
 
    if( file != stderr )
-      fprintf(file, msg);
+      fputs(msg, file);
    else
    {
       void* gev = (void*)SCIPmessagehdlrGetData(messagehdlr);
@@ -60,7 +60,7 @@ SCIP_DECL_MESSAGEINFO(GamsScipPrintLog)
    assert(file != NULL);
 
    if( file != stdout )
-      fprintf(file, msg);
+      fputs(msg, file);
    else
    {
       void* gev = (void*)SCIPmessagehdlrGetData(messagehdlr);
@@ -109,7 +109,11 @@ GamsScip::~GamsScip()
 #ifdef GAMS_BUILD
    if( pal != NULL )
       palFree(&pal);
+
+   if( calledxprslicense )
+      gevxpressliceFreeTS();
 #endif
+
 }
 
 int GamsScip::readyAPI(
@@ -144,16 +148,21 @@ int GamsScip::readyAPI(
 
 #ifdef COIN_HAS_OSIXPR
    /* Xpress license setup - don't say anything if failing, since Xpress is not used by default */
-   XPlicenseInit_t initType;
-   gevxpresslice(gev, pal, gmoM(gmo), gmoN(gmo), gmoNZ(gmo), gmoNLNZ(gmo), gmoNDisc(gmo), 0, &initType, buffer, sizeof(buffer));
+   if( !calledxprslicense )
+   {
+      XPlicenseInit_t initType;
+      int initRC;
+      gevxpressliceInitTS(gev, pal, gmoM(gmo), gmoN(gmo), gmoNZ(gmo), gmoNLNZ(gmo), gmoNDisc(gmo), 0, &initType, &initRC, buffer, sizeof(buffer));
+      calledxprslicense = true;
+   }
 #endif
 #endif
 
    // check for academic license, or if we run in demo mode
    if( !checkScipLicense(gmo, pal) )
    {
-      gevLogStat(gev, "*** Use of SCIP is limited to academic users.");
-      gevLogStat(gev, "*** Please contact koch@zib.de to arrange for a license.");
+      gevLogStat(gev, "*** No SCIP license available.");
+      gevLogStat(gev, "*** Please contact sales@gams.com to arrange for a license.");
       gmoSolveStatSet(gmo, gmoSolveStat_License);
       gmoModelStatSet(gmo, gmoModelStat_LicenseError);
       return 1;
@@ -237,7 +246,7 @@ int GamsScip::callSolver()
    SCIP_CALL_ABORT( SCIPgetStringParam(scip, "gams/interactive", &interactive) );
    assert(interactive != NULL);
 #ifdef GAMS_BUILD
-   if( interactive[0] != '\0' && !palLicenseIsAcademic(pal) )
+   if( interactive[0] != '\0' && !palLicenseIsAcademic(pal) && palLicenseCheckSubSys(pal, const_cast<char*>("SC")) )
    {
       gevLogStat(gev, "SCIP interactive shell not available in demo mode.\n");
       interactive[0] = '\0';
@@ -418,11 +427,29 @@ SCIP_RETCODE GamsScip::setupSCIP()
    return SCIP_OKAY;
 }
 
+static
+void interruptDuringFree(void)
+{
+   printf("SCIP is freeing its memory. Please be patient...\n");
+}
+
 SCIP_RETCODE GamsScip::freeSCIP()
 {
    if( scip != NULL )
    {
+      /* catch Ctrl+C while freeing SCIP
+       * This can take several seconds after a longer run and the SCIP
+       * signal handler is not in place at this point anymore.
+       * Without it, the run will be aborted here, thereby not returning
+       * results back to GAMS.
+       */
+      if( gev != NULL )
+         gevTerminateSet(gev, NULL, (void*)&interruptDuringFree);
+
       SCIP_CALL( SCIPfree(&scip) );
+
+      if( gev != NULL )
+         gevTerminateUninstall(gev);
    }
 
    return SCIP_OKAY;

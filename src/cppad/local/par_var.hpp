@@ -1,12 +1,12 @@
-/* $Id: par_var.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_PAR_VAR_INCLUDED
-# define CPPAD_PAR_VAR_INCLUDED
+// $Id$
+# ifndef CPPAD_PAR_VAR_HPP
+# define CPPAD_PAR_VAR_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -22,8 +22,6 @@ $spell
 	bool
 $$
 
-$index Parameter$$
-$index Variable$$
 $section Is an AD Object a Parameter or Variable$$
 
 $head Syntax$$
@@ -34,9 +32,9 @@ $icode%b% = Variable(%x%)%$$
 
 
 $head Purpose$$
-Determine if $icode x$$ is a 
-$cref/parameter/glossary/Parameter/$$ or 
-$cref/variable/glossary/Variable/$$. 
+Determine if $icode x$$ is a
+$cref/parameter/glossary/Parameter/$$ or
+$cref/variable/glossary/Variable/$$.
 
 $head x$$
 The argument $icode x$$ has prototype
@@ -84,7 +82,7 @@ namespace CppAD {
 	{	if( x.tape_id_ == 0 )
 			return true;
 		size_t thread = size_t(x.tape_id_ % CPPAD_MAX_NUM_THREADS);
-		return x.tape_id_ != *AD<Base>::tape_id_ptr(thread); 
+		return x.tape_id_ != *AD<Base>::tape_id_ptr(thread);
 	}
 
 	template <class Base>
@@ -93,7 +91,7 @@ namespace CppAD {
 	{	if( x.tape_id_ == 0 )
 			return true;
 		size_t thread = size_t(x.tape_id_ % CPPAD_MAX_NUM_THREADS);
-		return x.tape_id_ != *AD<Base>::tape_id_ptr(thread); 
+		return x.tape_id_ != *AD<Base>::tape_id_ptr(thread);
 	}
 
 	// Variable
@@ -103,7 +101,7 @@ namespace CppAD {
 	{	if( x.tape_id_ == 0 )
 			return false;
 		size_t thread = size_t(x.tape_id_ % CPPAD_MAX_NUM_THREADS);
-		return x.tape_id_ == *AD<Base>::tape_id_ptr(thread); 
+		return x.tape_id_ == *AD<Base>::tape_id_ptr(thread);
 	}
 
 	template <class Base>
@@ -112,9 +110,9 @@ namespace CppAD {
 	{	if( x.tape_id_ == 0 )
 			return false;
 		size_t thread = size_t(x.tape_id_ % CPPAD_MAX_NUM_THREADS);
-		return x.tape_id_ == *AD<Base>::tape_id_ptr(thread); 
+		return x.tape_id_ == *AD<Base>::tape_id_ptr(thread);
 	}
-} 
+}
 // END CppAD namespace
 
 

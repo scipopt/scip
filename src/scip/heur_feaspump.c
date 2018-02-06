@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,6 +26,7 @@
 
 #include "scip/heur_feaspump.h"
 #include "scip/cons_linear.h"
+#include "scip/pub_misc.h"
 #include "scip/scipdefplugins.h"
 
 #define HEUR_NAME             "feaspump"
@@ -62,6 +63,7 @@
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
+#define DEFAULT_RANDSEED          13    /**< initial random seed */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -86,7 +88,7 @@ struct SCIP_HeurData
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    int                   neighborhoodsize;   /**< radius of the neighborhood to be searched in stage 3 */
 
-   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             beforecuts;         /**< should the feasibility pump be called at root node before cut separation? */
    SCIP_Bool             usefp20;            /**< should an iterative round-and-propagate scheme be used to find the integral points? */
    SCIP_Bool             pertsolfound;       /**< should a random perturbation be performed if a feasible solution was found? */
@@ -106,6 +108,13 @@ SCIP_RETCODE setupProbingSCIP(
    SCIP_Bool*            success             /**< was copying successful? */
    )
 {
+   /* check if we are already at the maximal tree depth */
+   if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreate(probingscip) );
 
@@ -114,7 +123,7 @@ SCIP_RETCODE setupProbingSCIP(
    *success = FALSE;
 
    /* copy SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, *probingscip, *varmapfw, NULL, "feaspump", FALSE, FALSE, TRUE, success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE, TRUE, success) );
 
    if( copycuts )
    {
@@ -132,12 +141,12 @@ SCIP_RETCODE setupSCIPparamsFP2(
    SCIP*                 probingscip         /**< sub-SCIP data structure  */
    )
 {
-   if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
+   if( SCIPisParamFixed(probingscip, "heuristics/" HEUR_NAME "/freq") )
    {
-      SCIPwarningMessage(scip, "unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
-      SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
+      SCIPwarningMessage(scip, "unfixing parameter heuristics/" HEUR_NAME "/freq in probingscip of " HEUR_NAME " heuristic to avoid recursive calls\n");
+      SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/" HEUR_NAME "/freq") );
    }
-   SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/"HEUR_NAME"/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/" HEUR_NAME "/freq", -1) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
@@ -147,11 +156,16 @@ SCIP_RETCODE setupSCIPparamsFP2(
    SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
 #endif
 
-   /* disable expensive and useless stuff */
+   /* do not multiaggregate variables, because otherwise they have to be skipped in the fix-and-propagate loop */
+   SCIP_CALL( SCIPsetBoolParam(probingscip, "presolving/donotmultaggr", TRUE) );
+
+   /* limit to root node solving */
    SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) );
+
+   /* disable LP solving and expensive techniques */
    if( SCIPisParamFixed(probingscip, "lp/solvefreq") )
    {
-      SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in probingscip of "HEUR_NAME" heuristic to speed up propagation\n");
+      SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in probingscip of " HEUR_NAME " heuristic to speed up propagation\n");
       SCIP_CALL( SCIPunfixParam(probingscip, "lp/solvefreq") );
    }
    SCIP_CALL( SCIPsetIntParam(probingscip, "lp/solvefreq", -1) );
@@ -160,6 +174,7 @@ SCIP_RETCODE setupSCIPparamsFP2(
    SCIP_CALL( SCIPsetBoolParam(probingscip, "constraints/knapsack/negatedclique", FALSE) );
    SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(probingscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
    return SCIP_OKAY;
 }
 
@@ -167,9 +182,7 @@ SCIP_RETCODE setupSCIPparamsFP2(
 static
 SCIP_RETCODE setupSCIPparamsStage3(
    SCIP*                 scip,               /**< SCIP data structure  */
-   SCIP*                 probingscip,        /**< sub-SCIP data structure  */
-   SCIP_Real             timelimit,          /**< time limit for Stage3 */
-   SCIP_Real             memorylimit         /**< memory limit for Stage3 */
+   SCIP*                 probingscip         /**< sub-SCIP data structure  */
    )
 {
    SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
@@ -181,17 +194,16 @@ SCIP_RETCODE setupSCIPparamsStage3(
    SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
 #endif
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, probingscip) );
    SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1000LL) );
    SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/stallnodes", 100LL) );
-   SCIP_CALL( SCIPsetRealParam(probingscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(probingscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(probingscip, TRUE) );
-   if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
+   if( SCIPisParamFixed(probingscip, "heuristics/" HEUR_NAME "/freq") )
    {
-      SCIPwarningMessage(scip,"unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
-      SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
+      SCIPwarningMessage(scip,"unfixing parameter heuristics/" HEUR_NAME "/freq in probingscip of " HEUR_NAME " heuristic to avoid recursive calls\n");
+      SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/" HEUR_NAME "/freq") );
    }
    SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
 
@@ -228,25 +240,9 @@ SCIP_RETCODE setupSCIPparamsStage3(
    }
 
    /* disable conflict analysis */
-   if( !SCIPisParamFixed(probingscip, "conflict/useprop") )
+   if( !SCIPisParamFixed(probingscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/enable", FALSE) );
    }
 
    return SCIP_OKAY;
@@ -298,6 +294,48 @@ void insertFlipCand(
    (*nflipcands)++;
 }
 
+/** set solution value in rounded solution and update objective coefficient accordingly */
+static
+SCIP_RETCODE updateVariableRounding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             solval,             /**< solution value for this variable */
+   SCIP_Real             alpha,              /**< weight of original objective function */
+   SCIP_Real             scalingfactor       /**< factor to scale the original objective function with */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real newobjcoeff;
+   SCIP_Real orgobjcoeff;
+
+   assert(heurdata != NULL);
+   assert(var != NULL);
+
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+
+   /* update rounded solution */
+   assert(SCIPisFeasLE(scip, lb, solval) && SCIPisFeasLE(scip, solval, ub));
+   assert(SCIPisIntegral(scip,solval));
+   SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
+
+   /* modify objective towards rounded solution value if it is at one of the variable bounds */
+   orgobjcoeff = SCIPvarGetObj(var);
+   if( SCIPisEQ(scip, solval, lb) )
+      newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
+   else if( SCIPisEQ(scip, solval, ub) )
+      newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
+   else
+      newobjcoeff = alpha * orgobjcoeff;
+
+   SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
+
+   return SCIP_OKAY;
+}
+
+
 /** flips the roundings of the most fractional variables, if a 1-cycle was found */
 static
 SCIP_RETCODE handle1Cycle(
@@ -305,37 +343,39 @@ SCIP_RETCODE handle1Cycle(
    SCIP_HEURDATA*        heurdata,           /**< data of this special heuristic */
    SCIP_VAR**            mostfracvars,       /**< sorted array of the currently most fractional variables */
    int                   nflipcands,         /**< number of variables to flip */
-   SCIP_Real             alpha               /**< factor how much the original objective is regarded */
+   SCIP_Real             alpha,              /**< factor how much the original objective is regarded */
+   SCIP_Real             scalingfactor       /**< factor to scale the original objective function with */
    )
 {
-   SCIP_VAR* var;
-   SCIP_Real solval;
-   SCIP_Real frac;
-   SCIP_Real newobjcoeff;
-   SCIP_Real orgobjcoeff;
    int       i;
 
-   /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
+   /* flip rounding to the opposite side */
    for( i = 0; i < nflipcands; i++ )
    {
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Real roundedsolval;
+
       var = mostfracvars[i];
       solval = SCIPvarGetLPSol(var);
-      orgobjcoeff = SCIPvarGetObj(var);
-      frac = SCIPfeasFrac(scip, solval);
+      roundedsolval = SCIPgetSolVal(scip, heurdata->roundedsol, var);
 
-      if( frac > 0.5 )
-      {
-         newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
+      assert(! SCIPisFeasIntegral(scip, solval));
+      assert(SCIPisFeasIntegral(scip, roundedsolval));
+
+      /* flip to the opposite rounded solution value */
+      if( roundedsolval > solval )
          solval = SCIPfeasFloor(scip, solval);
-      }
       else
       {
-         newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
          solval = SCIPfeasCeil(scip, solval);
       }
-      /* updating the rounded solution and the objective */
-      SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
-      SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
+
+      SCIPdebugMsg(scip, "1-cycle flip: variable <%s> [%g,%g] LP sol %.15g sol %.15g -> %.15g\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            SCIPvarGetLPSol(var), SCIPgetSolVal(scip, heurdata->roundedsol, var), solval);
+
+      SCIP_CALL( updateVariableRounding(scip, heurdata, var, solval, alpha, scalingfactor) );
    }
    return SCIP_OKAY;
 }
@@ -349,42 +389,45 @@ SCIP_RETCODE handleCycle(
    SCIP_HEURDATA*        heurdata,           /**< data of this special heuristic */
    SCIP_VAR**            vars,               /**< array of all variables */
    int                   nbinandintvars,     /**< number of general integer and 0-1 variables */
-   SCIP_Real             alpha               /**< factor how much the original objective is regarded */
+   SCIP_Real             alpha,              /**< factor how much the original objective is regarded */
+   SCIP_Real             scalingfactor       /**< factor to scale the original objective function with */
    )
 {
-   SCIP_VAR* var;
-   SCIP_Real solval;
-   SCIP_Real frac;
-   SCIP_Real newobjcoeff;
-   SCIP_Real orgobjcoeff;
-   SCIP_Real flipprob;
    int i;
 
-   /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
+   /* flip variables randomized biased on their fractionality */
    for( i = 0; i < nbinandintvars; i++ )
    {
-      /* decide arbitrarily whether the variable will be flipped or not */
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Real frac;
+      SCIP_Real flipprob;
+      SCIP_Real roundedsolval;
+
       var = vars[i];
       solval = SCIPvarGetLPSol(var);
-      orgobjcoeff = SCIPvarGetObj(var);
+
+      /* skip variables with integral solution values */
+      if( SCIPisFeasIntegral(scip, solval) )
+         continue;
+
       frac = SCIPfeasFrac(scip, solval);
-      flipprob = -0.3 + SCIPgetRandomReal(0.0, 1.0, &heurdata->randseed);
+      flipprob = SCIPrandomGetReal(heurdata->randnumgen, -0.3, 0.7);
 
       /* flip, iff the sum of the randomized number and the fractionality is big enough */
-      if( MIN(frac, 1.0-frac) + MAX(flipprob, 0.0) > 0.5 )
+      if( MIN(frac, 1.0 - frac) + MAX(flipprob, 0.0) > 0.5 )
       {
-         if( frac > 0.5 )
-         {
-            newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
-            solval = SCIPfeasFloor(scip, solval);
-         }
+         roundedsolval = SCIPgetSolVal(scip, heurdata->roundedsol, var);
+         assert(SCIPisFeasIntegral(scip, roundedsolval));
+
+         /* flip the solution to the opposite side */
+         if( roundedsolval > solval )
+            solval = SCIPfloor(scip, solval);
          else
-         {
-            newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
-            solval = SCIPfeasCeil(scip, solval);
-         }
-         SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
-         SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
+            solval = SCIPceil(scip, solval);
+
+         /* update rounded solution value and objective coefficient */
+         SCIP_CALL( updateVariableRounding(scip, heurdata, var, solval, alpha, scalingfactor) );
       }
    }
 
@@ -510,7 +553,7 @@ SCIP_RETCODE createNewSols(
       SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
       /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
    SCIPfreeBufferArray(scip, &subvars);
@@ -546,7 +589,7 @@ SCIP_DECL_HEURFREE(heurFreeFeaspump)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -573,7 +616,10 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    /* initialize data */
    heurdata->nlpiterations = 0;
    heurdata->nsuccess = 0;
-   heurdata->randseed = 0;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -594,6 +640,9 @@ SCIP_DECL_HEUREXIT(heurExitFeaspump)
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->roundedsol) );
+
+   /* free random number generator */
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -666,8 +715,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP_VAR* var;
 
    SCIP_Real* mostfracvals;   /* the values of the variables above */
-   SCIP_Real newobjcoeff;     /* used for changing the objective */
-   SCIP_Real orgobjcoeff;     /* used for regarding the original objective */
    SCIP_Real oldsolval;       /* one value of the last solution */
    SCIP_Real solval;          /* one value of the actual solution */
    SCIP_Real frac;            /* the fractional part of the value above */
@@ -786,7 +833,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    maxloops = (heurdata->maxloops == -1 ? INT_MAX : heurdata->maxloops);
    maxstallloops = (heurdata->maxstallloops == -1 ? INT_MAX : heurdata->maxstallloops);
 
-   SCIPdebugMessage("executing feasibility pump heuristic, nlpiters=%"SCIP_LONGINT_FORMAT", maxnlpit:%"SCIP_LONGINT_FORMAT", maxflips:%d \n",
+   SCIPdebugMsg(scip, "executing feasibility pump heuristic, nlpiters=%" SCIP_LONGINT_FORMAT ", maxnlpit:%" SCIP_LONGINT_FORMAT ", maxflips:%d \n",
       nlpiterations, maxnlpiterations, maxflips);
 
    *result = SCIP_DIDNOTFIND;
@@ -796,9 +843,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    if( heurdata->usefp20 )
    {
-      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &success) );
+      SCIP_Bool valid;
 
-      if( success )
+      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &valid) );
+
+      if( probingscip != NULL )
       {
          SCIP_CALL( setupSCIPparamsFP2(scip, probingscip) );
 
@@ -840,9 +889,20 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* set SCIP into probing mode and create root node of the probing tree */
          SCIP_CALL( SCIPstartProbing(probingscip) );
+
+         /* this should always be fulfilled */
+         assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(probingscip));
+
          SCIP_CALL( SCIPnewProbingNode(probingscip) );
 
-         SCIPdebugMessage("successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
+         SCIPdebugMsg(scip, "successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
+      }
+      else
+      {
+         assert(varmapfw == NULL);
+
+         SCIPdebugMsg(scip, "SCIP reached the depth limit -> skip heuristic\n");
+         return SCIP_OKAY;
       }
    }
 
@@ -906,28 +966,15 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       nloops++;
       alpha *= objfactor;
 
-      SCIPdebugMessage("feasibility pump loop %d: %d fractional variables (alpha: %.4f, stall: %d/%d)\n",
+      SCIPdebugMsg(scip, "feasibility pump loop %d: %d fractional variables (alpha: %.4f, stall: %d/%d)\n",
          nloops, nfracs, alpha, nstallloops, maxstallloops);
 
       success = FALSE;
 
-      /* create solution from diving LP and try to round it */
-      SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
-
-      /* if the rounded solution is feasible and better, add it to SCIP */
-      /*if( success )
-      {
-         SCIPdebugMessage("feasibility pump trying rounded solution\n");
-         SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
-         if( success )
-            *result = SCIP_FOUNDSOL;
-      }*/
-
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->roundedsol) );
 
       /* randomly choose maximum number of variables to flip in current pumping round in case of a 1-cycle */
-      maxnflipcands = SCIPgetRandomInt(MIN(nfracs/2+1, heurdata->minflips), MIN(nfracs, maxflips), &heurdata->randseed);
+      maxnflipcands = SCIPrandomGetInt(heurdata->randnumgen, MIN(nfracs/2+1, heurdata->minflips), MIN(nfracs, maxflips));
       nflipcands = 0;
 
       /* get all unfixed integer variables */
@@ -949,7 +996,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIPsortRealPtr(pseudocandsfrac, (void**)pseudocands, npseudocands);
          SCIPfreeBufferArray(scip, &pseudocandsfrac);
 
-         SCIPdebugMessage("iteratively fix and propagate variables\n");
+         SCIPdebugMsg(scip, "iteratively fix and propagate variables\n");
       }
 
       for( i = 0; i < npseudocands; i++ )
@@ -959,83 +1006,62 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_Longint ndomreds;
 
          var = pseudocands[i];
-         orgobjcoeff = SCIPvarGetObj(var);
 
          /* round the LP solution */
          solval = SCIPvarGetLPSol(var);
          frac = SCIPfeasFrac(scip, solval);
 
-         solval = SCIPfloor(scip, solval+0.5);
+         /* round randomly if the value is close to 0.5 */
+         if( SCIPisEQ(scip, frac, 0.5) )
+         {
+            if( SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0) <= 0.5 )
+               solval = SCIPfloor(scip, solval);
+            else
+               solval = SCIPceil(scip, solval);
+         }
+         else
+            solval = SCIPfloor(scip, solval + 0.5);
 
          /* ensure, that the fixing value is inside the local domains */
          if( heurdata->usefp20 )
          {
-            SCIP_Real lb;
-            SCIP_Real ub;
+            SCIP_Real lbprobing;
+            SCIP_Real ubprobing;
 
             probingvar = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, var);
-            lb = SCIPvarGetLbLocal(probingvar);
-            ub = SCIPvarGetUbLocal(probingvar);
+            lbprobing = SCIPvarGetLbLocal(probingvar);
+            ubprobing = SCIPvarGetUbLocal(probingvar);
 
-            solval = MAX(solval, lb);
-            solval = MIN(solval, ub);
+            solval = MAX(solval, lbprobing);
+            solval = MIN(solval, ubprobing);
 
             /* fix the variable and propagate the domain change */
-            if( !SCIPisFeasEQ(probingscip, lb, ub) )
+            if( !SCIPisFeasEQ(probingscip, lbprobing, ubprobing) && SCIPvarIsActive(SCIPvarGetTransVar(probingvar)) )
             {
-               assert(SCIPisFeasLE(probingscip, lb, ub));
-               /* SCIP_CALL( SCIPnewProbingNode(probingscip) ); */
-               SCIPdebugMessage("try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
+               assert(SCIPisFeasLE(probingscip, lbprobing, ubprobing));
+               SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n", SCIPvarGetName(probingvar), lbprobing, ubprobing,
                   solval);
                SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
                SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
-               SCIPdebugMessage("  -> reduced %"SCIP_LONGINT_FORMAT" domains\n", ndomreds);
+               SCIPdebugMsg(scip, "  -> reduced %" SCIP_LONGINT_FORMAT " domains\n", ndomreds);
 
                if( infeasible )
                {
-                  SCIPdebugMessage("  -> infeasible!\n");
-                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0/*SCIPgetProbingDepth(probingscip)-1*/) );
+                  SCIPdebugMsg(scip, "  -> infeasible!\n");
+                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0) );
                }
             }
             else
             {
-               SCIPdebugMessage("variable <%s> is already fixed to %f\n",SCIPvarGetName(probingvar), solval);
+               SCIPdebugMsg(scip, "variable <%s> is already fixed to %f\n", SCIPvarGetName(probingvar), solval);
             }
          }
 
-         assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), solval) && SCIPisFeasLE(scip, solval, SCIPvarGetUbLocal(var)));
-         assert(SCIPisIntegral(scip,solval));
-         SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
+         SCIP_CALL( updateVariableRounding(scip, heurdata, var, solval, alpha, scalingfactor) );
 
-         /* variables which are already integral, are treated separately */
-         if( SCIPisFeasZero(scip, frac) )
-         {
-            SCIP_Real lb;
-            SCIP_Real ub;
-
-            /* variables at their bounds should be kept there */
-            lb = SCIPvarGetLbLocal(var);
-            ub = SCIPvarGetUbLocal(var);
-            if( SCIPisFeasEQ(scip, solval, lb) )
-               newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-            else if( SCIPisFeasEQ(scip, solval, ub) )
-               newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-            else
-               newobjcoeff = alpha * orgobjcoeff;
-         }
-         else
-         {
-            /* check whether the variable is one of the most fractionals and label if so */
+         /* check whether the variable is one of the most fractionals and label if so */
+         if( SCIPisFeasPositive(scip, frac) )
             insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
-
-            if( frac > 0.5 )
-               newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-            else
-               newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-         }
-
-         /* change one coefficient of the objective */
-         SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
 
       }
 
@@ -1076,8 +1102,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       assert(heurdata->perturbfreq > 0);
       if( nloops % heurdata->perturbfreq == 0 || (heurdata->pertsolfound && SCIPgetNBestSolsFound(scip) > nbestsolsfound) )
       {
-         SCIPdebugMessage(" -> random perturbation\n");
-         SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
+         SCIPdebugMsg(scip, " -> random perturbation\n");
+         SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha, scalingfactor) );
          nbestsolsfound = SCIPgetNBestSolsFound(scip);
       }
       else
@@ -1092,13 +1118,13 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                /* 1-cycles have a special flipping rule (flip most fractional variables) */
                if( j == 0 )
                {
-                  SCIPdebugMessage(" -> avoiding 1-cycle: flipping %d candidates\n", nflipcands);
-                  SCIP_CALL( handle1Cycle(scip, heurdata, mostfracvars, nflipcands, alpha) );
+                  SCIPdebugMsg(scip, " -> avoiding 1-cycle: flipping %d candidates\n", nflipcands);
+                  SCIP_CALL( handle1Cycle(scip, heurdata, mostfracvars, nflipcands, alpha, scalingfactor) );
                }
                else
                {
-                  SCIPdebugMessage(" -> avoiding %d-cycle by random flip\n", j+1);
-                  SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
+                  SCIPdebugMsg(scip, " -> avoiding %d-cycle by random flip\n", j+1);
+                  SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha, scalingfactor) );
                }
                break;
             }
@@ -1109,7 +1135,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       nlpiterations = SCIPgetNLPIterations(scip);
       nlpiterationsleft = adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops) - heurdata->nlpiterations;
       iterlimit = MAX((int)nlpiterationsleft, MINLPITER);
-      SCIPdebugMessage(" -> solve LP with iteration limit %d\n", iterlimit);
+      SCIPdebugMsg(scip, " -> solve LP with iteration limit %d\n", iterlimit);
 
       if( heurdata->stage3 )
       {
@@ -1136,7 +1162,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", lperror=%u, lpsolstat=%d\n",
+      SCIPdebugMsg(scip, " -> number of iterations: %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", lperror=%u, lpsolstat=%d\n",
          heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops), lperror, lpsolstat);
 
       /* check whether LP was solved optimal */
@@ -1174,6 +1200,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
 
       /* swap the last solutions */
+      SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
       tmpsol = lastroundedsols[heurdata->cyclelength-1];
       for( j = heurdata->cyclelength-1; j > 0; j-- )
       {
@@ -1194,7 +1221,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       else
          nstallloops++;
 
-      SCIPdebugMessage(" -> loop finished: %d fractional variables (stall: %d/%d, iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n",
+      SCIPdebugMsg(scip, " -> loop finished: %d fractional variables (stall: %d/%d, iterations: %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          nfracs, nstallloops, maxstallloops, heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops));
    }
 
@@ -1204,8 +1231,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       success = FALSE;
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIPdebugMessage("feasibility pump found solution (%d fractional variables)\n", nfracs);
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+      SCIPdebugMsg(scip, "feasibility pump found solution (%d fractional variables)\n", nfracs);
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;
    }
@@ -1219,19 +1246,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPendProbing(probingscip) );
    }
 
-   /*if( heurdata->usefp20 )
-   {
-         SCIP_CALL( SCIPprintStatistics(probingscip, NULL) );
-   }*/
-
    /* only do stage 3 if we have not found a solution yet */
    /* only do stage 3 if the distance of the closest infeasible solution to the polyhedron is below a certain threshold */
    if( heurdata->stage3 && (*result != SCIP_FOUNDSOL) && SCIPisLE(scip, mindistance, (SCIP_Real) heurdata->neighborhoodsize) )
    {
-      /* setup some parameters for the sub-SCIP */
-      SCIP_Real timelimit;
-      SCIP_Real memorylimit;
-
+      SCIP_Bool cancopy;
       assert(closestsol != NULL);
       assert(!SCIPisInfinity(scip, mindistance) || nloops == 0);
 
@@ -1248,22 +1267,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
 
       /* check whether there is enough time and memory left */
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-      if( !SCIPisInfinity(scip, timelimit) )
-         timelimit -= SCIPgetSolvingTime(scip);
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+      SCIP_CALL( SCIPcheckCopyLimits(scip, &cancopy) );
 
-      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-      if( !SCIPisInfinity(scip, memorylimit) )
+      if( cancopy )
       {
-         memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-      }
-
-      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-      if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      {
-         SCIP_CALL( setupSCIPparamsStage3(scip, probingscip, timelimit, memorylimit) );
+         SCIP_CALL( setupSCIPparamsStage3(scip, probingscip) );
 
          /* the neighborhood size is double the distance plus another ten percent */
          mindistance = SCIPceil(scip, 2.2*mindistance);
@@ -1273,16 +1281,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
           * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
-#ifdef NDEBUG
-         retcode = SCIPsolve(probingscip);
-         if( retcode != SCIP_OKAY )
-         {
-            SCIPwarningMessage(scip, "Error while solving sub-SCIP in stage 3 of feasibility pump heuristic; sub-SCIP terminated with code <%d>\n",
-               retcode);
-         }
-#else
-         SCIP_CALL( SCIPsolve(probingscip) );
-#endif
+         SCIP_CALL_ABORT( SCIPsolve(probingscip) );
+
          /* check, whether a solution was found */
          if( SCIPgetNSols(probingscip) > 0 )
          {
@@ -1323,7 +1323,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIPfreeBufferArray(scip, &mostfracvals);
    SCIPfreeBufferArray(scip, &mostfracvars);
 
-   SCIPdebugMessage("feasibility pump finished [%d iterations done].\n", nloops);
+   SCIPdebugMsg(scip, "feasibility pump finished [%d iterations done].\n", nloops);
 
 #ifdef SCIP_STATISTIC
    if( nfracs == 0 )
@@ -1344,6 +1344,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    }
 
 #endif /* SCIP_STATISTIC */
+
    return SCIP_OKAY;
 }
 
@@ -1361,7 +1362,7 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
    SCIP_HEUR* heur;
 
    /* create Feaspump primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -1380,71 +1381,71 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
 
    /* add feaspump primal heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/maxlpiterquot",
+         "heuristics/" HEUR_NAME "/maxlpiterquot",
          "maximal fraction of diving LP iterations compared to node LP iterations",
          &heurdata->maxlpiterquot, FALSE, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/objfactor",
+         "heuristics/" HEUR_NAME "/objfactor",
          "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",
          &heurdata->objfactor, FALSE, DEFAULT_OBJFACTOR, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/alpha",
+         "heuristics/" HEUR_NAME "/alpha",
          "initial weight of the objective function in the convex combination",
          &heurdata->alpha, FALSE, DEFAULT_ALPHA, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/alphadiff",
+         "heuristics/" HEUR_NAME "/alphadiff",
          "threshold difference for the convex parameter to perform perturbation",
          &heurdata->alphadiff, FALSE, DEFAULT_ALPHADIFF, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxlpiterofs",
+         "heuristics/" HEUR_NAME "/maxlpiterofs",
          "additional number of allowed LP iterations",
          &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxsols",
+         "heuristics/" HEUR_NAME "/maxsols",
          "total number of feasible solutions found up to which heuristic is called (-1: no limit)",
          &heurdata->maxsols, TRUE, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxloops",
+         "heuristics/" HEUR_NAME "/maxloops",
          "maximal number of pumping loops (-1: no limit)",
          &heurdata->maxloops, TRUE, DEFAULT_MAXLOOPS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxstallloops",
+         "heuristics/" HEUR_NAME "/maxstallloops",
          "maximal number of pumping rounds without fractionality improvement (-1: no limit)",
          &heurdata->maxstallloops, TRUE, DEFAULT_MAXSTALLLOOPS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/minflips",
+         "heuristics/" HEUR_NAME "/minflips",
          "minimum number of random variables to flip, if a 1-cycle is encountered",
          &heurdata->minflips, TRUE, DEFAULT_MINFLIPS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/cyclelength",
+         "heuristics/" HEUR_NAME "/cyclelength",
          "maximum length of cycles to be checked explicitly in each round",
          &heurdata->cyclelength, TRUE, DEFAULT_CYCLELENGTH, 1, 100, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/perturbfreq",
+         "heuristics/" HEUR_NAME "/perturbfreq",
          "number of iterations until a random perturbation is forced",
          &heurdata->perturbfreq, TRUE, DEFAULT_PERTURBFREQ, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/neighborhoodsize",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/neighborhoodsize",
          "radius (using Manhattan metric) of the neighborhood to be searched in stage 3",
          &heurdata->neighborhoodsize, FALSE, DEFAULT_NEIGHBORHOODSIZE, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/beforecuts",
+         "heuristics/" HEUR_NAME "/beforecuts",
          "should the feasibility pump be called at root node before cut separation?",
          &heurdata->beforecuts, FALSE, DEFAULT_BEFORECUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/usefp20",
+         "heuristics/" HEUR_NAME "/usefp20",
          "should an iterative round-and-propagate scheme be used to find the integral points?",
          &heurdata->usefp20, FALSE, DEFAULT_USEFP20, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/pertsolfound",
+         "heuristics/" HEUR_NAME "/pertsolfound",
          "should a random perturbation be performed if a feasible solution was found?",
          &heurdata->pertsolfound, FALSE, DEFAULT_PERTSOLFOUND, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/stage3",
+         "heuristics/" HEUR_NAME "/stage3",
          "should we solve a local branching sub-MIP if no solution could be found?",
          &heurdata->stage3, FALSE, DEFAULT_STAGE3, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 

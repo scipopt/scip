@@ -1,0 +1,25 @@
+1) Install SCIP
+(see INSTALL file in SCIP directory)
+
+2) Install PolySCIP
+PolySCIP is equipped with a Makefile located in the PolySCIP
+directory. Change on the command line into the PolySCIP directory and
+execute 'make'
+
+In case of compilation problems, try torun 'make' with the same command
+line options that were used for the compilation of  SCIP.
+For instance, if you have successfully built SCIP via 'make COMP=gnu
+OPT=opt ZLIB=false', then also run 'make COMP=gnu OPT=opt ZLIB=false'
+in the PolySCIP directory
+
+After a successful build, the executable will be located in the
+directory 'bin/'
+
+3)
+a) Execute 'make doc' to build the doxygen documentation in 'doc/html'
+b) Execute 'cd doc; pdflatex userguide.tex' to compile the user guide
+
+
+
+
+

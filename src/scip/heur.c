@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,7 @@
 #include "scip/heur.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #include "scip/struct_heur.h"
 
@@ -82,12 +83,13 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 }
 
 /* resets diving settings counters */
-void SCIPdivesetReset(
+SCIP_RETCODE SCIPdivesetReset(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(diveset != NULL);
+   assert(diveset->randnumgen != NULL);
 
    diveset->nlpiterations = 0L;
    diveset->totaldepth = 0L;
@@ -99,8 +101,16 @@ void SCIPdivesetReset(
    diveset->mindepth = INT_MAX;
    diveset->maxdepth = -1;
    diveset->nlps = 0;
-   diveset->nsolcalls = 0;
+   diveset->nsolsfound = 0;
+   diveset->nbestsolsfound = 0;
+   diveset->nconflictsfound = 0;
    diveset->ncalls = 0;
+   diveset->nsolcalls = 0;
+
+   /* reset the random number generator */
+   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, (int)(diveset->initialseed % INT_MAX)));
+
+   return SCIP_OKAY;
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -110,7 +120,10 @@ void SCIPdivesetUpdateStats(
    int                   depth,              /**< the depth reached this time */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
+   SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
+   SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
+   SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    )
 {
    assert(diveset != NULL);
@@ -123,13 +136,17 @@ void SCIPdivesetUpdateStats(
    diveset->ncalls++;
 
    /* update solution statistics only if a solution was found */
-   if( solfound )
+   if( leavesol )
    {
       diveset->totalsoldepth += depth;
       diveset->minsoldepth = MIN(diveset->minsoldepth, depth);
       diveset->maxsoldepth = MAX(diveset->maxsoldepth, depth);
       diveset->nsolcalls++;
    }
+
+   diveset->nsolsfound += nsolsfound;
+   diveset->nbestsolsfound += nbestsolsfound;
+   diveset->nconflictsfound += nconflictsfound;
 
    stat->totaldivesetdepth += depth;
    stat->ndivesetcalls++;
@@ -156,7 +173,7 @@ SCIP_RETCODE heurAddDiveset(
    else
    {
       assert(heur->ndivesets > 0);
-      SCIP_ALLOC( BMSreallocMemoryArray(&heur->divesets, heur->ndivesets + 1) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&heur->divesets, heur->ndivesets + 1) ); /*lint !e776 I expect no overflow here */
    }
 
    /* append diveset to the end of the array */
@@ -168,7 +185,7 @@ SCIP_RETCODE heurAddDiveset(
 
 /** create a set of diving heuristic settings */
 SCIP_RETCODE SCIPdivesetCreate(
-   SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
+   SCIP_DIVESET**        divesetptr,         /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
    const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -183,86 +200,130 @@ SCIP_RETCODE SCIPdivesetCreate(
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
+   int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   unsigned int          initialseed,        /**< initial seed for random number generation */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
+   SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
    const char* divesetname;
-   assert(diveset != NULL);
+   SCIP_DIVESET* diveset;
+
+   assert(divesetptr != NULL);
    assert(set != NULL);
    assert(divesetgetscore != NULL);
    assert(heur != NULL);
+   assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(diveset) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, divesetptr) );
+   diveset = *divesetptr;
 
-   /* as a convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
+   /* allocate random number generator. Note that we must make explicit use of random seed initialization because
+    * we create the random number generator directly, not through the public SCIP API
+    */
+   diveset->initialseed = initialseed;
+
+   /* simply use 0 as initial seed, the seed is reset in SCIPdivesetReset, anyway */
+   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, blkmem, 0) );
+
+   /* for convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
    divesetname = (name == NULL ? SCIPheurGetName(heur) : name);
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*diveset)->name, divesetname, strlen(divesetname)+1) );
-   (*diveset)->heur = NULL;
+   SCIP_ALLOC( BMSduplicateMemoryArray(&diveset->name, divesetname, strlen(divesetname)+1) );
+   diveset->heur = NULL;
 
    /* copy callbacks */
-   (*diveset)->divesetgetscore = divesetgetscore;
+   diveset->divesetgetscore = divesetgetscore;
 
-   SCIP_CALL( heurAddDiveset(heur, *diveset) );
-   (*diveset)->sol = NULL;
+   SCIP_CALL( heurAddDiveset(heur, diveset) );
+   diveset->sol = NULL;
+   diveset->divetypemask = divetypemask;
+
+   SCIP_CALL( SCIPdivesetReset(diveset, set) );
 
    /* add collection of diving heuristic specific parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname, "minimal relative depth to start diving",
-         &(*diveset)->minreldepth, TRUE, minreldepth, 0.0, 1.0, NULL, NULL) );
+         &diveset->minreldepth, TRUE, minreldepth, 0.0, 1.0, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxreldepth", (*diveset)->name);
-   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
-         paramname,
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxreldepth", diveset->name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
          "maximal relative depth to start diving",
-         &(*diveset)->maxreldepth, TRUE, maxreldepth, 0.0, 1.0, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", (*diveset)->name);
+         &diveset->maxreldepth, TRUE, maxreldepth, 0.0, 1.0, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal fraction of diving LP iterations compared to node LP iterations",
-         &(*diveset)->maxlpiterquot, FALSE, maxlpiterquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", (*diveset)->name);
+         &diveset->maxlpiterquot, FALSE, maxlpiterquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", diveset->name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem,
          paramname,
          "additional number of allowed LP iterations",
-         &(*diveset)->maxlpiterofs, FALSE, maxlpiterofs, 0, INT_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquot", (*diveset)->name);
+         &diveset->maxlpiterofs, FALSE, maxlpiterofs, 0, INT_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquot", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
-         &(*diveset)->maxdiveubquot, TRUE, maxdiveubquot, 0.0, 1.0, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquot", (*diveset)->name);
+         &diveset->maxdiveubquot, TRUE, maxdiveubquot, 0.0, 1.0, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquot", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)",
-         &(*diveset)->maxdiveavgquot, TRUE, maxdiveavgquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquotnosol", (*diveset)->name);
+         &diveset->maxdiveavgquot, TRUE, maxdiveavgquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquotnosol", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal UBQUOT when no solution was found yet (0.0: no limit)",
-         &(*diveset)->maxdiveubquotnosol, TRUE, maxdiveubquotnosol, 0.0, 1.0, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquotnosol", (*diveset)->name);
+         &diveset->maxdiveubquotnosol, TRUE, maxdiveubquotnosol, 0.0, 1.0, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquotnosol", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
-         &(*diveset)->maxdiveavgquotnosol, TRUE, maxdiveavgquotnosol, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/backtrack", (*diveset)->name);
+         &diveset->maxdiveavgquotnosol, TRUE, maxdiveavgquotnosol, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/backtrack", diveset->name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
          paramname,
          "use one level of backtracking if infeasibility is encountered?",
-         &(*diveset)->backtrack, FALSE, backtrack, NULL, NULL) );
+         &diveset->backtrack, FALSE, backtrack, NULL, NULL) );
 
-   SCIPdivesetReset(*diveset, set);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/lpresolvedomchgquot", diveset->name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+         "percentage of immediate domain changes during probing to trigger LP resolve",
+         &diveset->lpresolvedomchgquot, FALSE, lpresolvedomchgquot,  0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/lpsolvefreq", diveset->name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem,
+         paramname,
+         "LP solve frequency for diving heuristics (0: only after enough domain changes have been found)",
+         &diveset->lpsolvefreq, FALSE, lpsolvefreq, 0, INT_MAX,
+         NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/onlylpbranchcands", diveset->name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
+            paramname,
+            "should only LP branching candidates be considered instead of the slower but "
+            "more general constraint handler diving variable selection?",
+            &diveset->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
    return SCIP_OKAY;
 }
 
 /** get the heuristic to which this diving setting belongs */
 SCIP_HEUR* SCIPdivesetGetHeur(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    return diveset->heur;
@@ -270,7 +331,7 @@ SCIP_HEUR* SCIPdivesetGetHeur(
 
 /** get the working solution of this dive set */
 SCIP_SOL* SCIPdivesetGetWorkSolution(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    assert(diveset != NULL);
@@ -280,8 +341,8 @@ SCIP_SOL* SCIPdivesetGetWorkSolution(
 
 /** set the working solution for this dive set */
 void SCIPdivesetSetWorkSolution(
-   SCIP_DIVESET*         diveset,            /** diving settings */
-   SCIP_SOL*             sol                 /** new working solution for this dive set, or NULL */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    )
 {
    assert(diveset != NULL);
@@ -291,7 +352,7 @@ void SCIPdivesetSetWorkSolution(
 
 /** get the name of the dive set */
 const char* SCIPdivesetGetName(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    assert(diveset != NULL);
@@ -316,11 +377,11 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 }
 
 /** get the number of successful runs of the diving settings */
-int SCIPdivesetGetSolSuccess(
+SCIP_Longint SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
-   return 10 * diveset->nsolcalls;
+   return 10 * diveset->nbestsolsfound + diveset->nsolsfound;
 }
 
 /** get the number of calls to this dive set */
@@ -433,6 +494,27 @@ SCIP_Longint SCIPdivesetGetNBacktracks(
    return diveset->totalnbacktracks;
 }
 
+/** get the total number of conflicts found by this dive set */
+SCIP_Longint SCIPdivesetGetNConflicts(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->nconflictsfound;
+}
+
+/** get the total number of solutions (leaf and rounded solutions) found by the dive set */
+SCIP_Longint SCIPdivesetGetNSols(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->nsolsfound;
+}
+
+
 /** get the maximum LP iterations quotient of the diving settings */
 SCIP_Real SCIPdivesetGetMaxLPIterQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
@@ -488,6 +570,60 @@ SCIP_Bool SCIPdivesetUseBacktrack(
    return diveset->backtrack;
 }
 
+/** returns the LP solve frequency for diving LPs (0: dynamically based on number of intermediate domain reductions) */
+int SCIPdivesetGetLPSolveFreq(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->lpsolvefreq;
+}
+
+/** returns the random number generator of this \p diveset for tie-breaking */
+SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+   assert(diveset->randnumgen != NULL);
+
+   return diveset->randnumgen;
+}
+
+/** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
+SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->lpresolvedomchgquot;
+}
+
+/** should only LP branching candidates be considered instead of the slower but
+ *  more general constraint handler diving variable selection?
+ */
+SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->onlylpbranchcands;
+}
+
+/** returns TRUE if dive set supports diving of the specified type */
+SCIP_Bool SCIPdivesetSupportsType(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
+   )
+{
+   assert(diveset != NULL);
+
+   return (divetype & diveset->divetypemask);
+}
+
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
 void SCIPdivesetUpdateLPStats(
    SCIP_DIVESET*         diveset,            /**< diving settings */
@@ -502,23 +638,29 @@ void SCIPdivesetUpdateLPStats(
 }
 
 /** frees memory of a diveset */
-SCIP_RETCODE SCIPdivesetFree(
-   SCIP_DIVESET**        diveset             /**< general diving settings */
+static
+void divesetFree(
+   SCIP_DIVESET**        divesetptr,         /**< general diving settings */
+   BMS_BLKMEM*           blkmem              /**< block memory for parameter settings */
    )
 {
-   assert(*diveset != NULL);
-   assert((*diveset)->name != NULL);
+   SCIP_DIVESET* diveset = *divesetptr;
 
-   BMSfreeMemoryArray(&(*diveset)->name);
-   BMSfreeMemory(diveset);
+   assert(diveset != NULL);
+   assert(diveset->name != NULL);
+   assert(diveset->randnumgen != NULL);
 
-   return SCIP_OKAY;
+   SCIPrandomFree(&diveset->randnumgen, blkmem);
+
+   BMSfreeMemoryArray(&diveset->name);
+   BMSfreeBlockMemory(blkmem, divesetptr);
 }
 
-/** stores the candidate score and preferred rounding direction for a candidate variable */
+/** get the candidate score and preferred rounding direction for a candidate variable */
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_DIVETYPE         divetype,           /**< the type of diving that should be applied */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
    SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
@@ -530,8 +672,10 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(candscore != NULL);
    assert(roundup != NULL);
    assert(divecand != NULL);
+   assert(divetype & diveset->divetypemask);
 
-   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divecand,  divecandsol, divecandfrac, candscore, roundup) );
+   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac,
+         candscore, roundup) );
 
    return SCIP_OKAY;
 }
@@ -550,7 +694,7 @@ SCIP_RETCODE SCIPheurCopyInclude(
 
    if( heur->heurcopy != NULL )
    {
-      SCIPdebugMessage("including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
       SCIP_CALL( heur->heurcopy(set->scip, heur) );
    }
 
@@ -570,7 +714,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
@@ -629,15 +773,15 @@ SCIP_RETCODE SCIPheurCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+                  &(*heur)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freqofs", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency offset for calling primal heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->freqofs, FALSE, freqofs, 0, INT_MAX, NULL, NULL) );
+                  &(*heur)->freqofs, FALSE, freqofs, 0, SCIP_MAXTREEDEPTH, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->maxdepth, TRUE, maxdepth, -1, INT_MAX, NULL, NULL) );
+                  &(*heur)->maxdepth, TRUE, maxdepth, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -645,7 +789,8 @@ SCIP_RETCODE SCIPheurCreate(
 /** calls destructor and frees memory of primal heuristic */
 SCIP_RETCODE SCIPheurFree(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int d;
@@ -664,7 +809,7 @@ SCIP_RETCODE SCIPheurFree(
    for( d = 0; d < (*heur)->ndivesets; ++d )
    {
       assert((*heur)->divesets[d] != NULL);
-      SCIPdivesetFree(&((*heur)->divesets[d]));
+      divesetFree(&((*heur)->divesets[d]), blkmem);
    }
    BMSfreeMemoryArrayNull(&(*heur)->divesets);
    SCIPclockFree(&(*heur)->heurclock);
@@ -718,7 +863,7 @@ SCIP_RETCODE SCIPheurInit(
    for( d = 0; d < heur->ndivesets; ++d )
    {
       assert(heur->divesets[d] != NULL);
-      SCIPdivesetReset(heur->divesets[d], set);
+      SCIP_CALL( SCIPdivesetReset(heur->divesets[d], set) );
    }
 
    heur->initialized = TRUE;
@@ -916,7 +1061,7 @@ SCIP_RETCODE SCIPheurExec(
       SCIP_Longint oldnsolsfound;
       SCIP_Longint oldnbestsolsfound;
 
-      SCIPdebugMessage("executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
+      SCIPsetDebugMsg(set, "executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
 
       oldnsolsfound = primal->nsolsfound;
       oldnbestsolsfound = primal->nbestsolsfound;
@@ -934,7 +1079,8 @@ SCIP_RETCODE SCIPheurExec(
       if( *result != SCIP_FOUNDSOL
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN
-         && *result != SCIP_DELAYED )
+         && *result != SCIP_DELAYED
+         && *result != SCIP_UNBOUNDED )
       {
          SCIPerrorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
             heur->name, *result);
@@ -952,12 +1098,12 @@ SCIP_RETCODE SCIPheurExec(
          set->heurssorted = FALSE;
       }
    }
-   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || heur->delaypos == -1);
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || *result == SCIP_UNBOUNDED || heur->delaypos == -1);
 
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was%s delayed before, had delaypos %d\n",
+      SCIPsetDebugMsg(set, "delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was%s delayed before, had delaypos %d\n",
          heur->name, depth, *ndelayedheurs, heur->delaypos >= 0 ? "" : " not", heur->delaypos);
 
       /* mark the heuristic delayed */
@@ -1277,4 +1423,392 @@ int SCIPheurGetNDivesets(
    assert(heur != NULL);
 
    return heur->ndivesets;
+}
+
+/** Perform breadth-first (BFS) search on the variable constraint graph.
+ *
+ *  The result of the algorithm is that the \p distances array contains the correct distances for
+ *  every variable from the start variables. The distance of a variable can then be accessed through its
+ *  problem index (calling SCIPvarGetProbindex()).
+ *  Hence, The method assumes that the length of \p distances is at least
+ *  SCIPgetNVars().
+ *  Variables that are not connected through constraints to the start variables have a distance of -1.
+ *
+ *  Limits can be provided to further restrict the breadth-first search. If a distance limit is given,
+ *  the search will be performed until the first variable at this distance is popped from the queue, i.e.,
+ *  all variables with a distance < maxdistance have been labeled by the search.
+ *  If a variable limit is given, the search stops after it completes the distance level at which
+ *  the limit was reached. Hence, more variables may be actually labeled.
+ *  The start variables are accounted for those variable limits.
+ *
+ *  If no variable variable constraint graph is provided, the method will create one and free it at the end
+ *  This is useful for a single use of the variable constraint graph. For several consecutive uses,
+ *  it is advised to create a variable constraint graph via SCIPvariableGraphCreate().
+ */
+SCIP_RETCODE SCIPvariablegraphBreadthFirst(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH*          vargraph,           /**< pointer to the variable graph, or NULL to let the function create a local graph */
+   SCIP_VAR**            startvars,          /**< array of start variables to calculate distance from */
+   int                   nstartvars,         /**< number of starting variables, at least 1 */
+   int*                  distances,          /**< array to keep distance in vargraph from start variables for every variable */
+   int                   maxdistance,        /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS) */
+   int                   maxvars,            /**< maximum number of variables to compute distance for */
+   int                   maxbinintvars       /**< maximum number of binary or integer variables to compute distance for */
+   )
+{
+   SCIP_VAR** vars;
+
+   int* queue;
+   int  nvars;
+   int i;
+   int currlvlidx;
+   int nextlvlidx;
+   int increment = 1;
+   int currentdistance;
+   int nbinintvarshit;
+   int nvarshit;
+   int nbinvars;
+   int nintvars;
+   int nbinintvars;
+   SCIP_VAR** varbuffer;
+   SCIP_Bool localvargraph;
+
+   assert(scip != NULL);
+   assert(startvars != NULL);
+   assert(nstartvars >= 1);
+   assert(distances != NULL);
+   assert(maxdistance >= 0);
+
+
+   /* get variable data */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   nbinintvars = nbinvars + nintvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &varbuffer, nvars) );
+
+   /* create a variable graph locally for this method, if none is provided */
+   if( vargraph == NULL )
+   {
+      SCIP_CALL( SCIPvariableGraphCreate(scip, &vargraph, FALSE, 1.0, NULL) );
+      localvargraph = TRUE;
+   }
+   else
+      localvargraph = FALSE;
+
+   SCIPhashtableRemoveAll(vargraph->visitedconss);
+
+   /* initialize distances to -1 */
+   for( i = 0; i < nvars; ++i )
+   {
+      queue[i] = -1;
+      distances[i] = -1;
+   }
+
+   nvarshit = 0;
+   nbinintvarshit = 0;
+   /* initialize distances for starting variables and add them to the queue */
+   for( i = 0; i < nstartvars; ++i )
+   {
+      int probindex = SCIPvarGetProbindex(startvars[i]);
+      assert(probindex >= 0);
+      /* start variables have a distance of 0 */
+      distances[probindex] = 0;
+      queue[i] = probindex;
+      nvarshit++;
+
+      if( probindex < nbinintvars )
+         nbinintvarshit++;
+   }
+   currlvlidx = 0;
+   nextlvlidx = nvars - 1;
+
+   /* loop over the queue and pop the next variable, starting with start variables */
+   do
+   {
+      SCIP_VAR* currvar;
+      int c;
+      int varpos;
+
+      currvar = vars[queue[currlvlidx]];
+      varpos = SCIPvarGetProbindex(currvar);
+      currentdistance = distances[varpos];
+      assert(currentdistance >= 0);
+
+      /* distances must only be computed up to maxdistance  */
+      assert(currentdistance <= maxdistance);
+
+      /* check for termination because maximum distance has been reached */
+      if( currentdistance == maxdistance )
+         break;
+
+      assert(varpos >= 0);
+
+      /* loop over variable constraints and enqueue variables that were not visited yet */
+      for( c = 0; c < vargraph->nvarconss[varpos]; ++c )
+      {
+         int nconsvars;
+         int v;
+         SCIP_Bool success;
+         SCIP_CONS* cons = vargraph->varconss[varpos][c];
+
+         /* check first if this constraint has already been visited */
+         if( SCIPhashtableExists(vargraph->visitedconss, (void *)cons) )
+            continue;
+
+         /* request number of constraint variables */
+         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
+
+         if( !success )
+            continue;
+
+         /* collect constraint variables in buffer */
+         SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
+
+         if( !success )
+            continue;
+
+         /* collect previously unvisited variables of the constraint and enqueue them for breadth-first search */
+         for( v = 0; v < nconsvars; ++v )
+         {
+            SCIP_VAR* nextvar = varbuffer[v];
+            int nextvarpos;
+            assert(nextvar != NULL);
+            if( !SCIPvarIsActive(nextvar) )
+               continue;
+
+            nextvarpos = SCIPvarGetProbindex(nextvar);
+            assert(nextvarpos >= 0);
+
+            /* insert variables that were not considered yet into the next level queue */
+            if( distances[nextvarpos] == -1 )
+            {
+               distances[nextvarpos] = currentdistance + 1;
+               queue[nextlvlidx] = nextvarpos;
+               nextlvlidx -= increment;
+
+               nvarshit++;
+               if( nextvarpos < nbinintvars )
+                  ++nbinintvarshit;
+            }
+         } /* end constraint variables loop */
+
+         /* mark the constraint as visited */
+         SCIP_CALL( SCIPhashtableInsert(vargraph->visitedconss, (void *)cons) );
+
+      } /* end constraint loop */
+
+      queue[currlvlidx] = -1;
+      currlvlidx += increment;
+
+      /* check if we need to swap current and next level index and reverse the increment */
+      if( currlvlidx == nvars || currlvlidx == 0 || queue[currlvlidx] == -1 || currlvlidx == nextlvlidx )
+      {
+         /* break early if the distance has been determined for enough variables */
+         if( nvarshit >= maxvars || nbinintvarshit >= maxbinintvars )
+            break;
+
+         /* increment knows whether we are currently looping upwards (all variables with odd distance) or downwards the
+          * queue
+          */
+         if( increment == +1 )
+         {
+            currlvlidx = nvars - 1;
+            nextlvlidx = 0;
+            increment = -1;
+         }
+         else
+         {
+            currlvlidx = 0;
+            nextlvlidx = nvars - 1;
+            increment = +1;
+         }
+      }
+   }
+   while( queue[currlvlidx] != -1 && distances[queue[currlvlidx]] >= currentdistance );
+
+   SCIPfreeBufferArray(scip, &varbuffer);
+   SCIPfreeBufferArray(scip, &queue);
+
+   /* free also the variable graph, if it wasn't provided by the caller */
+   if( localvargraph )
+   {
+      SCIPvariableGraphFree(scip, &vargraph);
+   }
+
+   return SCIP_OKAY;
+}
+
+/* fills variable graph data structure
+ *
+ * loops over global problem constraints and creates a mapping from the variables to their respective constraints
+ */
+static
+SCIP_RETCODE fillVariableGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH*          vargraph,           /**< variable graph data structure for breadth-first-search neighborhoods */
+   SCIP_Bool             relaxdenseconss,    /**< should dense constraints (at least as dense as \p density) be
+                                              *   ignored by connectivity graph? */
+   SCIP_Real             relaxdensity,       /**< density (with respect to number of variables) to relax constraint from graph */
+   int*                  nrelaxedconstraints  /**< pointer to store the number of constraints that were relaxed, or NULL if not needed */
+   )
+{
+   SCIP_CONS** conss;
+   int nconss;
+   int nvars;
+   int c;
+   int relaxlimit;
+   SCIP_VAR** varbuffer;
+
+   assert(scip != NULL);
+   assert(vargraph != NULL);
+
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &varbuffer, nvars) );
+
+   if( nrelaxedconstraints != NULL )
+      *nrelaxedconstraints = 0;
+
+   relaxlimit = (int)(relaxdensity * nvars);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      int nconsvars;
+      int v;
+      SCIP_Bool success;
+      SCIP_CONS* cons = conss[c];
+
+      /* we only consider constraints that are checkable */
+      if( !SCIPconsIsChecked(cons) )
+         continue;
+
+      /* request number of variables */
+      SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
+
+      if( !success )
+         continue;
+
+      /* relax constraints with density above the allowed number of free variables */
+      if( relaxdenseconss && nconsvars >= relaxlimit )
+      {
+         if( nrelaxedconstraints != NULL )
+            ++(*nrelaxedconstraints);
+
+         continue;
+      }
+
+      /* collect constraint variables in buffer */
+      SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
+
+      if( !success )
+         continue;
+
+      /* loop over constraint variables and add this constraint to them if they are active */
+      for( v = 0; v < nconsvars; ++v )
+      {
+         int varpos = SCIPvarGetProbindex(varbuffer[v]);
+
+         /* skip inactive variables */
+         if( varpos == -1 )
+            continue;
+
+         /* ensure array size */
+         if( vargraph->varconssize[varpos] == vargraph->nvarconss[varpos]  )
+         {
+            int newmem = SCIPcalcMemGrowSize(scip, vargraph->nvarconss[varpos] + 1);
+
+            assert(newmem > vargraph->varconssize[varpos]);
+
+            if( vargraph->varconss[varpos] == NULL )
+            {
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vargraph->varconss[varpos], newmem) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vargraph->varconss[varpos], vargraph->varconssize[varpos], newmem) ); /*lint !e866*/
+            }
+            vargraph->varconssize[varpos] = newmem;
+         }
+
+         assert(vargraph->nvarconss[varpos] < vargraph->varconssize[varpos]);
+
+         /* add constraint to constraint array for this variable */
+         vargraph->varconss[varpos][vargraph->nvarconss[varpos]] = cons;
+         vargraph->nvarconss[varpos] += 1;
+      }
+   }
+
+   /* free the buffer */
+   SCIPfreeBufferArray(scip, &varbuffer);
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of variable graph data structure */
+SCIP_RETCODE SCIPvariableGraphCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH**         vargraph,           /**< pointer to the variable graph */
+   SCIP_Bool             relaxdenseconss,    /**< should dense constraints (at least as dense as \p density) be
+                                              *   ignored by connectivity graph? */
+   SCIP_Real             relaxdensity,       /**< density (with respect to number of variables) to relax constraint from graph */
+   int*                  nrelaxedconstraints  /**< pointer to store the number of constraints that were relaxed, or NULL if not needed */
+   )
+{
+   int nvars;
+   int nconss;
+
+   assert(scip != NULL);
+   assert(vargraph != NULL);
+
+   nvars = SCIPgetNVars(scip);
+   nconss = SCIPgetNConss(scip);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, vargraph) );
+
+   SCIP_CALL( SCIPhashtableCreate(&(*vargraph)->visitedconss, SCIPblkmem(scip), 2 * nconss, SCIPhashGetKeyStandard,
+         SCIPhashKeyEqPtr, SCIPhashKeyValPtr, NULL) );
+
+   /* allocate and clear memory */
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->varconss, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->nvarconss, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->varconssize, nvars) );
+
+   /* fill the variable graph with variable-constraint mapping for breadth-first search*/
+   SCIP_CALL( fillVariableGraph(scip, *vargraph, relaxdenseconss, relaxdensity, nrelaxedconstraints) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of variable graph data structure */
+void SCIPvariableGraphFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH**         vargraph            /**< pointer to the variable graph */
+   )
+{
+   int nvars;
+   int v;
+   assert(scip != NULL);
+   assert(vargraph != NULL);
+
+   nvars = SCIPgetNVars(scip);
+
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &(*vargraph)->varconss[v], (*vargraph)->varconssize[v]); /*lint !e866*/
+   }
+
+   /* allocate and clear memory */
+   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->varconssize, nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->nvarconss, nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->varconss, nvars);
+
+   SCIPhashtableFree(&(*vargraph)->visitedconss);
+
+   SCIPfreeBlockMemory(scip, vargraph);
 }

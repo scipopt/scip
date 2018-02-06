@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,8 +37,8 @@
 #define PRESOL_DESC            "converts integer variables to binaries"
 #define PRESOL_PRIORITY        +6000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              0 /**< maximal number of presolving rounds the presolver participates in (-1: no
-                                          *   limit) */
-#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+					 *   limit) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_MAXDOMAINSIZE  SCIP_LONGINT_MAX   /**< absolute value of maximum domain size which will be converted */
 #define DEFAULT_ONLYPOWERSOFTWO           FALSE   /**< should only integer variables with a domain size of 2^p - 1 be
@@ -81,7 +81,7 @@ SCIP_DECL_PRESOLFREE(presolFreeConvertinttobin)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
@@ -190,7 +190,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
       nnewbinvars = (int)SCIPfloor(scip, (log((SCIP_Real) domainsize)/log(2.0))) + 1;
 
-      SCIPdebugMessage("integer variable <%s> [%g,%g], domainsize %"SCIP_LONGINT_FORMAT"\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ",
+      SCIPdebugMsg(scip, "integer variable <%s> [%g,%g], domainsize %" SCIP_LONGINT_FORMAT "\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ",
          SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUp(vars[v]), SCIPvarGetNLocksDown(vars[v]), nnewbinvars);
 
       assert(nnewbinvars > 0);
@@ -213,7 +213,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
       for( v2 = nnewbinvars - 1; v2 >= 0; --v2 )
       {
-         SCIPdebugMessage("creating for <%s>[%g,%g] %d. binary variable\n", SCIPvarGetName(vars[v]), lb, ub, v2);
+         SCIPdebugMsg(scip, "creating for <%s>[%g,%g] %d. binary variable\n", SCIPvarGetName(vars[v]), lb, ub, v2);
 
          /* create binary variable */
          (void) SCIPsnprintf(newbinvarname, SCIP_MAXSTRLEN, "%s_bin_%d", SCIPvarGetName(vars[v]), v2);
@@ -300,13 +300,13 @@ SCIP_RETCODE SCIPincludePresolConvertinttobin(
    SCIP_PRESOL* presolptr;
 
    /* create convertinttobin presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    presoldata->maxdomainsize = DEFAULT_MAXDOMAINSIZE;
    presoldata->onlypoweroftwo = DEFAULT_ONLYPOWERSOFTWO;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecConvertinttobin,
          presoldata) );
    assert(presolptr != NULL);
@@ -316,19 +316,19 @@ SCIP_RETCODE SCIPincludePresolConvertinttobin(
 
    /* add convertinttobin presolver parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "presolving/"PRESOL_NAME"/maxdomainsize",
+         "presolving/" PRESOL_NAME "/maxdomainsize",
          "absolute value of maximum domain size for converting an integer variable to binaries variables",
          &presoldata->maxdomainsize, TRUE, DEFAULT_MAXDOMAINSIZE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    /* add convertinttobin presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/"PRESOL_NAME"/onlypoweroftwo",
+         "presolving/" PRESOL_NAME "/onlypoweroftwo",
          "should only integer variables with a domain size of 2^p - 1 be converted(, there we don't need an knapsack-constraint for restricting the sum of the binaries)",
          &presoldata->onlypoweroftwo, TRUE, DEFAULT_ONLYPOWERSOFTWO, NULL, NULL) );
 
    /* add convertinttobin presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/"PRESOL_NAME"/samelocksinbothdirections",
+         "presolving/" PRESOL_NAME "/samelocksinbothdirections",
          "should only integer variables with uplocks equals downlocks be converted",
          &presoldata->samelocksinbothdirections, TRUE, DEFAULT_SAMELOCKSINBOTHDIRECTIONS, NULL, NULL) );
 

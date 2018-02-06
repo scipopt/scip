@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,6 +48,8 @@ public:
    /** destructor */
    virtual ~ProbDataTSP()
    {
+      if( graph_ != NULL )
+         release_graph(&graph_); /*lint !e1551*/
    }
 
    /** Copies user data if you want to copy it to a subscip */
@@ -111,7 +113,7 @@ public:
       return graph_;
    }
 
-};
+};/*lint !e1712*/
 
 
 } /* namespace tsp */

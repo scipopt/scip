@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -87,7 +87,7 @@ SCIP_RETCODE SCIPpricerCopyInclude(
 
    if( pricer->pricercopy != NULL )
    {
-      SCIPdebugMessage("including pricer %s in subscip %p\n", SCIPpricerGetName(pricer), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including pricer %s in subscip %p\n", SCIPpricerGetName(pricer), (void*)set->scip);
       SCIP_CALL( pricer->pricercopy(set->scip, pricer, valid) );
    }
    return SCIP_OKAY;
@@ -361,7 +361,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(lowerbound != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
+   SCIPsetDebugMsg(set, "executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
 
    oldnvars = prob->nvars;
 
@@ -385,7 +385,8 @@ SCIP_RETCODE SCIPpricerRedcost(
 SCIP_RETCODE SCIPpricerFarkas(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_RESULT*          result              /**< result of the pricing process */
    )
 {
    int oldnvars;
@@ -399,7 +400,7 @@ SCIP_RETCODE SCIPpricerFarkas(
    if( pricer->pricerfarkas == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("executing Farkas pricing of variable pricer <%s>\n", pricer->name);
+   SCIPsetDebugMsg(set, "executing Farkas pricing of variable pricer <%s>\n", pricer->name);
 
    oldnvars = prob->nvars;
 
@@ -407,7 +408,7 @@ SCIP_RETCODE SCIPpricerFarkas(
    SCIPclockStart(pricer->pricerclock, set);
 
    /* call external method */
-   SCIP_CALL( pricer->pricerfarkas(set->scip, pricer) );
+   SCIP_CALL( pricer->pricerfarkas(set->scip, pricer, result) );
 
    /* stop timing */
    SCIPclockStop(pricer->pricerclock, set);
@@ -447,7 +448,7 @@ SCIP_RETCODE SCIPpricerExec(
 
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      SCIP_CALL( SCIPpricerFarkas(pricer, set, prob) );
+      SCIP_CALL( SCIPpricerFarkas(pricer, set, prob, result) );
    }
    else
    {

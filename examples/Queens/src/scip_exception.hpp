@@ -33,7 +33,8 @@
  * @brief translates a SCIP_RETCODE into an error string
  *
  * @param[in] retcode SCIP_RETCODE you want to translate
- * @param[out] buffer_str buffer to character array to store translated message, this must be at least of size \ref SCIP_MSG_MAX
+ * @param[in] buffersize size of buffer
+ * @param[out] buffer_str buffer to character array to store translated message, this must be at least of size SCIP_MSG_MAX
  * @return buffer_str or NULL, if retcode could not be translated
  */
 inline char* SCIPgetErrorString(SCIP_RETCODE retcode, char* buffer_str, int buffersize)
@@ -42,62 +43,64 @@ inline char* SCIPgetErrorString(SCIP_RETCODE retcode, char* buffer_str, int buff
    switch(retcode)
    {
    case SCIP_OKAY:
-      SCIPsnprintf(buffer_str, buffersize, "normal termination");
+      (void) SCIPsnprintf(buffer_str, buffersize, "normal termination");
       return buffer_str;
    case SCIP_ERROR:
-      SCIPsnprintf(buffer_str, buffersize, "unspecified error");
+      (void) SCIPsnprintf(buffer_str, buffersize, "unspecified error");
       return buffer_str;
    case SCIP_NOMEMORY:
-      SCIPsnprintf(buffer_str, buffersize, "insufficient memory error");
+      (void) SCIPsnprintf(buffer_str, buffersize, "insufficient memory error");
       return buffer_str;
    case SCIP_READERROR:
-      SCIPsnprintf(buffer_str, buffersize, "file read error");
+      (void) SCIPsnprintf(buffer_str, buffersize, "file read error");
       return buffer_str;
    case SCIP_WRITEERROR:
-      SCIPsnprintf(buffer_str, buffersize, "file write error");
+      (void) SCIPsnprintf(buffer_str, buffersize, "file write error");
+      return buffer_str;
+   case SCIP_BRANCHERROR:
+      (void) SCIPsnprintf(buffer_str, buffersize, "branch error");
       return buffer_str;
    case SCIP_NOFILE:
-      SCIPsnprintf(buffer_str, buffersize, "file not found error");
+      (void) SCIPsnprintf(buffer_str, buffersize, "file not found error");
       return buffer_str;
    case SCIP_FILECREATEERROR:
-      SCIPsnprintf(buffer_str, buffersize, "cannot create file");
+      (void) SCIPsnprintf(buffer_str, buffersize, "cannot create file");
       return buffer_str;
    case SCIP_LPERROR:
-      SCIPsnprintf(buffer_str, buffersize, "error in LP solver");
+      (void) SCIPsnprintf(buffer_str, buffersize, "error in LP solver");
       return buffer_str;
    case SCIP_NOPROBLEM:
-      SCIPsnprintf(buffer_str, buffersize, "no problem exists");
+      (void) SCIPsnprintf(buffer_str, buffersize, "no problem exists");
       return buffer_str;
    case SCIP_INVALIDCALL:
-      SCIPsnprintf(buffer_str, buffersize, "method cannot be called at this time in solution process");
+      (void) SCIPsnprintf(buffer_str, buffersize, "method cannot be called at this time in solution process");
       return buffer_str;
    case SCIP_INVALIDDATA:
-      SCIPsnprintf(buffer_str, buffersize, "method cannot be called with this type of data");
+      (void) SCIPsnprintf(buffer_str, buffersize, "method cannot be called with this type of data");
       return buffer_str;
    case SCIP_INVALIDRESULT:
-      SCIPsnprintf(buffer_str, buffersize, "method returned an invalid result code");
+      (void) SCIPsnprintf(buffer_str, buffersize, "method returned an invalid result code");
       return buffer_str;
    case SCIP_PLUGINNOTFOUND:
-      SCIPsnprintf(buffer_str, buffersize, "a required plugin was not found");
+      (void) SCIPsnprintf(buffer_str, buffersize, "a required plugin was not found");
       return buffer_str;
    case SCIP_PARAMETERUNKNOWN:
-      SCIPsnprintf(buffer_str, buffersize, "the parameter with the given name was not found");
+      (void) SCIPsnprintf(buffer_str, buffersize, "the parameter with the given name was not found");
       return buffer_str;
    case SCIP_PARAMETERWRONGTYPE:
-      SCIPsnprintf(buffer_str, buffersize, "the parameter is not of the expected type");
+      (void) SCIPsnprintf(buffer_str, buffersize, "the parameter is not of the expected type");
       return buffer_str;
    case SCIP_PARAMETERWRONGVAL:
-      SCIPsnprintf(buffer_str, buffersize, "the value is invalid for the given parameter");
+      (void) SCIPsnprintf(buffer_str, buffersize, "the value is invalid for the given parameter");
       return buffer_str;
    case SCIP_KEYALREADYEXISTING:
-      SCIPsnprintf(buffer_str, buffersize, "the given key is already existing in table");
+      (void) SCIPsnprintf(buffer_str, buffersize, "the given key is already existing in table");
       return buffer_str;
    case SCIP_MAXDEPTHLEVEL:
-      SCIPsnprintf(buffer_str, buffersize, "maximal branching depth level exceeded");
+      (void) SCIPsnprintf(buffer_str, buffersize, "maximal branching depth level exceeded");
       return buffer_str;
-   default:
-      return NULL;
    }
+   return NULL;
 }
 
 
@@ -118,10 +121,10 @@ public:
     * this constructs a new SCIPException from given error code
     * @param[in] retcode SCIP error code
     */
-   SCIPException(SCIP_RETCODE retcode)
+   SCIPException(SCIP_RETCODE retcode) : _retcode(retcode)
    {
-      if(SCIPgetErrorString(retcode, _msg, SCIP_MSG_MAX)==NULL)
-	 SCIPsnprintf(_msg, SCIP_MSG_MAX, "unknown SCIP retcode %d",retcode);
+      if( SCIPgetErrorString(retcode, _msg, SCIP_MSG_MAX) == NULL )
+         (void) SCIPsnprintf(_msg, SCIP_MSG_MAX, "unknown SCIP retcode %d",retcode);
    }
 
 
@@ -134,7 +137,7 @@ public:
    const char * what(void)const throw() {return _msg;}
 
 
-   /** @brief get method for @ref _retcode
+   /** @brief get method for @p _retcode
     *
     * @return stored SCIP_RETCODE
     */
@@ -142,7 +145,7 @@ public:
 
    /** destructor */
    ~SCIPException(void) throw(){}
-};
+}; /*lint !e1712*/
 
 
 /** @brief macro to call scip function with exception handling

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lp.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for LP management
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -327,6 +328,7 @@ SCIP_RETCODE SCIProwCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
    const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COL**            cols,               /**< array with columns of row entries */
@@ -646,13 +648,22 @@ SCIP_Real SCIProwGetMinval(
    );
 
 /** gets maximal column index of row entries */
+extern
 int SCIProwGetMaxidx(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** gets minimal column index of row entries */
+extern
 int SCIProwGetMinidx(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets number of integral columns in row */
+extern
+int SCIProwGetNumIntCols(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -1022,7 +1033,9 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
    SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
-   SCIP_Bool             wasdualfeas         /**< dual feasibility when LP state information was stored */
+   SCIP_Bool             wasprimchecked,     /**< true if the LP solution has passed the primal feasibility check */
+   SCIP_Bool             wasdualfeas,        /**< dual feasibility when LP state information was stored */
+   SCIP_Bool             wasdualchecked      /**< true if the LP solution has passed the dual feasibility check */
    );
 
 /** frees LP state information */
@@ -1055,6 +1068,12 @@ SCIP_RETCODE SCIPlpFreeNorms(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
+   );
+
+/** return the current cutoff bound of the lp */
+extern
+SCIP_Real SCIPlpGetCutoffbound(
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** sets the upper objective limit of the LP solver */
@@ -1166,6 +1185,14 @@ void SCIPlpInvalidateRootObjval(
  */
 extern
 SCIP_Real SCIPlpGetGlobalPseudoObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** recomputes local and global pseudo objective values */
+extern
+void SCIPlpRecomputeLocalAndGlobalPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
@@ -1498,7 +1525,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Real             objscale,           /**< objective scaling factor */
    SCIP_Real             objoffset,          /**< objective offset, e.g., caused by variable fixings in presolving */
    SCIP_Bool             lazyconss           /**< output removable rows as lazy constraints? */
-);
+   );
 
 /** recalculates Euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */
 extern
@@ -1626,6 +1653,18 @@ SCIP_Bool SCIPlpIsSolved(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** return whether the current LP solution passed the primal feasibility check */
+extern
+SCIP_Bool SCIPlpIsPrimalReliable(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** return whether the current LP solution passed the dual feasibility check */
+extern
+SCIP_Bool SCIPlpIsDualReliable(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** returns whether the current LP solution is a basic solution */
 extern
 SCIP_Bool SCIPlpIsSolBasic(
@@ -1649,6 +1688,19 @@ extern
 void SCIPlpMarkDivingObjChanged(
    SCIP_LP*              lp                  /**< current LP data */
    );
+
+/** marks the diving LP to not have a changed objective function anymore */
+extern
+void SCIPlpUnmarkDivingObjChanged(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/* returns TRUE if at least one left/right hand side of an LP row was changed during diving mode */
+extern
+SCIP_Bool SCIPlpDivingRowsChanged(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 
 #ifdef NDEBUG
 
@@ -1676,6 +1728,8 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpDiving(lp)                (lp)->diving
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
+#define SCIPlpUnmarkDivingObjChanged(lp) ((lp)->divingobjchg = FALSE)
+#define SCIPlpDivingRowsChanged(lp)     ((lp)->ndivechgsides > 0)
 
 #endif
 

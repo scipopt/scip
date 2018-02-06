@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_heur.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for primal heuristics
  * @author Tobias Achterberg
  */
@@ -38,6 +39,7 @@ struct SCIP_Diveset
    SCIP_HEUR*            heur;               /**< the heuristic to which this dive set belongs */
    char*                 name;               /**< name of dive controller, in case that a heuristic has several */
    SCIP_SOL*             sol;                /**< working solution of this dive set */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
@@ -47,20 +49,29 @@ struct SCIP_Diveset
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot;/**< percentage of immediate domain changes during probing to trigger LP resolve */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this dive set */
    SCIP_Longint          nlps;               /**< the number of LPs solved by this dive set */
    SCIP_Longint          totaldepth;         /**< the total depth used in this dive set */
    SCIP_Longint          totalsoldepth;      /**< the sum of depths at which this dive set found solutions */
    SCIP_Longint          totalnnodes;        /**< the total number of probing nodes explored by this dive set */
    SCIP_Longint          totalnbacktracks;   /**< the total number of backtracks during the execution of this dive set */
+   SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
+   SCIP_Longint          nbestsolsfound;     /**< the total number of best solutions found */
+   SCIP_Longint          nconflictsfound;    /**< the total number of added conflicts during the execution of this dive set */
+   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   mindepth;           /**< the minimum depth reached by all executions of the dive set */
    int                   maxdepth;           /**< the maximum depth reached by an execution of the dive set */
    int                   minsoldepth;        /**< the minimum depth at which this dive set found a solution */
    int                   maxsoldepth;        /**< the maximum depth at which this dive set found a solution */
    int                   ncalls;             /**< the total number of calls of this dive set */
-   int                   nsolcalls;          /**< the total number of successful calls with a solution */
-   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
+   int                   nsolcalls;          /**< number of calls with a leaf solution */
+   int                   lpsolvefreq;        /**< LP solve frequency for diving heuristics */
+   unsigned int          initialseed;        /**< initial seed for the random number generator */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands;  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
+   SCIP_DIVETYPE         divetypemask;       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore));  /**< method for candidate score and rounding direction */
 };
 
@@ -89,10 +100,24 @@ struct SCIP_Heur
    int                   maxdepth;           /**< maximal depth level to call heuristic at (-1: no limit) */
    int                   delaypos;           /**< position in the delayed heuristics queue, or -1 if not delayed */
    int                   ndivesets;          /**< number of diving controllers of this heuristic */
-   unsigned int          timingmask;         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_HEURTIMING       timingmask;         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_Bool             usessubscip;        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_Bool             initialized;        /**< is primal heuristic initialized? */
    char                  dispchar;           /**< display character of primal heuristic */
+};
+
+/** variable graph data structure to determine breadth-first distances between variables
+ *
+ *  the variable graph internally stores a mapping from the variables to the constraints in which they appear.
+ *
+ *  @see PublicVariableGraphMethods for available methods
+ */
+struct SCIP_VGraph
+{
+   SCIP_CONS***          varconss;           /**< constraints of each variable */
+   SCIP_HASHTABLE*       visitedconss;       /**< hash table that keeps a record of visited constraints during breadth-first search */
+   int*                  nvarconss;          /**< number of constraints for each variable */
+   int*                  varconssize;        /**< size array for every varconss entry */
 };
 
 #ifdef __cplusplus

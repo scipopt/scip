@@ -1,12 +1,12 @@
-/* $Id: integer.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_INTEGER_INCLUDED
-# define CPPAD_INTEGER_INCLUDED
+// $Id$
+# ifndef CPPAD_INTEGER_HPP
+# define CPPAD_INTEGER_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -25,10 +25,7 @@ $spell
 	bool
 $$
 
-$index Integer$$
 
-$index AD, convert to integer$$
-$index convert, AD to integer$$
 
 $section Convert From AD to Integer$$
 
@@ -55,9 +52,9 @@ $codei%
 %$$
 the fractional part is dropped to form the integer value.
 For example, if $icode x$$ is 1.5, $icode i$$ is 1.
-In general, if $latex x \geq 0$$, $icode i$$ is the 
+In general, if $latex x \geq 0$$, $icode i$$ is the
 greatest integer less than or equal $icode x$$.
-If $latex x \leq 0$$, $icode i$$ is the 
+If $latex x \leq 0$$, $icode i$$ is the
 smallest integer greater than or equal $icode x$$.
 
 $subhead Complex Types$$
@@ -95,7 +92,7 @@ The file
 $cref integer.cpp$$
 contains an example and test of this operation.
 
-$end 
+$end
 ------------------------------------------------------------------------------
 */
 

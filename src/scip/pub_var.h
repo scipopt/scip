@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_var.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for problem variables
  * @author Tobias Achterberg
  */
@@ -45,6 +45,11 @@ extern "C" {
 
 /*
  * methods for variables 
+ */
+
+/**@addtogroup PublicVariableMethods
+ *
+ * @{
  */
 
 /** gets number of locks for rounding down */
@@ -400,8 +405,8 @@ SCIP_VARTYPE SCIPvarGetType(
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
- *      (i)  the lazy lower bound or the global lower bound is greater or equal to zero
- *      (ii) the lazy upper bound or the global upper bound is less tor equal to one 
+ *      (i)  the lazy lower bound or the global lower bound is greater than or equal to zero
+ *      (ii) the lazy upper bound or the global upper bound is less than or equal to one
  */
 EXTERN
 SCIP_Bool SCIPvarIsBinary(
@@ -437,7 +442,7 @@ SCIP_Bool SCIPvarIsDeleted(
  */
 EXTERN
 void SCIPvarMarkDeletable(
-   SCIP_VAR*             var
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** marks the variable to be not deletable from the problem */
@@ -450,6 +455,15 @@ void SCIPvarMarkNotDeletable(
 EXTERN
 SCIP_Bool SCIPvarIsDeletable(
    SCIP_VAR*             var
+   );
+
+/** marks variable to be deleted from global structures (cliques etc.) when cleaning up
+ *
+ *  @note: this is not equivalent to marking the variable itself for deletion, this is done by using SCIPvarMarkDeletable()
+ */
+EXTERN
+void SCIPvarMarkDeleteGlobalStructures(
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether variable is an active (neither fixed nor aggregated) variable */
@@ -551,6 +565,12 @@ SCIP_Real SCIPvarGetNegationConstant(
 /** gets objective function value of variable */
 EXTERN
 SCIP_Real SCIPvarGetObj(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets the unchanged objective function value of variable (ignoring temproray changes performed in probing mode) */
+EXTERN
+SCIP_Real SCIPvarGetUnchangedObj(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -934,6 +954,7 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
 #define SCIPvarGetBdchgInfoUb(var, pos)   (&((var)->ubchginfos[pos]))
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
+#define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
 
 #endif
 
@@ -1047,6 +1068,8 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
 
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarLbAtIndex()
  */
 EXTERN
 SCIP_Real SCIPvarGetLbAtIndex(
@@ -1057,6 +1080,8 @@ SCIP_Real SCIPvarGetLbAtIndex(
 
 /** returns upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarUbAtIndex()
  */
 EXTERN
 SCIP_Real SCIPvarGetUbAtIndex(
@@ -1067,6 +1092,8 @@ SCIP_Real SCIPvarGetUbAtIndex(
 
 /** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarBdAtIndex()
  */
 EXTERN
 SCIP_Real SCIPvarGetBdAtIndex(
@@ -1076,7 +1103,10 @@ SCIP_Real SCIPvarGetBdAtIndex(
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    );
 
-/** returns whether the binary variable was fixed at the time given by the bound change index */
+/** returns whether the binary variable was fixed at the time given by the bound change index
+ *
+ *  @deprecated Please use SCIPgetVarWasFixedAtIndex()
+ */
 EXTERN
 SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -1109,6 +1139,12 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    SCIP_VAR*             var2                /**< second binary variable */
    );
 
+/**
+ * @name Public SCIP_BDCHGIDX Methods
+ *
+ * @{
+ */
+
 /** returns whether first bound change index belongs to an earlier applied bound change than second one;
  *  if a bound change index is NULL, the bound change index represents the current time, i.e. the time after the
  *  last bound change was applied to the current node
@@ -1125,6 +1161,14 @@ SCIP_Bool SCIPbdchgidxIsEarlierNonNull(
    SCIP_BDCHGIDX*        bdchgidx1,          /**< first bound change index */
    SCIP_BDCHGIDX*        bdchgidx2           /**< second bound change index */
    );
+
+/**@} */
+
+/**
+ * @name Public SCIP_BDCHGINFO Methods
+ *
+ * @{
+ */
 
 /** returns old bound that was overwritten for given bound change information */
 EXTERN
@@ -1225,6 +1269,14 @@ SCIP_Bool SCIPbdchginfoIsTighter(
    SCIP_BDCHGINFO*       bdchginfo2          /**< second bound change information */
    );
 
+/**@} */
+
+/**
+ * @name Public SCIP_BOUNDCHG Methods
+ *
+ * @{
+ */
+
 /** returns the new value of the bound in the bound change data */
 EXTERN
 SCIP_Real SCIPboundchgGetNewbound(
@@ -1255,6 +1307,14 @@ SCIP_Bool SCIPboundchgIsRedundant(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
+/** @} */
+
+/**
+ * @name Public SCIP_DOMCHG Methods
+ *
+ * @{
+ */
+
 /** returns the number of bound changes in the domain change data */
 EXTERN
 int SCIPdomchgGetNBoundchgs(
@@ -1267,6 +1327,14 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
    SCIP_DOMCHG*          domchg,             /**< domain change data */
    int                   pos                 /**< position of the bound change in the domain change data */
    );
+
+/**@} */
+
+/**
+ * @name Public SCIP_HOLELIST Methods
+ *
+ * @{
+ */
 
 /** returns left bound of open interval in hole */
 EXTERN
@@ -1285,6 +1353,8 @@ EXTERN
 SCIP_HOLELIST* SCIPholelistGetNext(
    SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
    );
+
+/**@} */
 
 #ifdef NDEBUG
 
@@ -1327,6 +1397,8 @@ SCIP_HOLELIST* SCIPholelistGetNext(
 #define SCIPholelistGetNext(holelist)          ((holelist)->next)
 
 #endif
+
+/**@} */
 
 #ifdef __cplusplus
 }

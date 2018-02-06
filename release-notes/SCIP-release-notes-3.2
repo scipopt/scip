@@ -1,0 +1,73 @@
+Notes for SCIP Release 3.2
+
+
+Features
+========
+
+- added reoptimization feature for optimization problems with changed objective function or tighter feasible region
+
+- new primal heuristics distribution diving, indicator, bound
+
+- improved clique and variable bound heuristics
+
+- new branching rules distribution, multaggr and a new rule for SOS1 constraints
+
+- new separator eccuts
+
+- new presolvers tworowbnd, dualagg, implfree, redvub, stuffing
+
+- added presolving levels (FAST, MEDIUM, and EXHAUSTIVE) to allow better balancing of presolvers
+
+- generalized upgrade from (SOC-representable) quadratic constraints to SOC constraints
+
+- extended probing mode to allow separation and objective coefficient changes
+
+- transfer of history information from and to sub-SCIPs
+
+- new reliability notions in hybrid reliability pseudo cost branching
+
+- started support for user-defined operators in expression trees/graphs
+
+- added matrix module for getting access to the internal mixed inter linear problem matrix
+
+- two new applications for multi-objective optimization (PolySCIP) and the Steiner Tree Problem in Graphs
+
+- added output information for BAK: Branch-and-bound Analysis Kit
+
+
+Performance Improvements and Bug Fixes
+======================================
+
+- decreasing total memory usage of SCIP by using more buffer data structures
+
+- adjust diving heuristics to solve fewer LPs
+
+- improved vartype upgradability from continuous to implicit variables
+
+- using sparsity information of the SoPlex LP
+
+- new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
+
+- improved treatment of nonlinearities in hybrid reliability pseudo cost branching
+
+- improved propagation of SOS1 constraint handler using the information from a conflict graph
+
+- improved separation procedure of SOS1 constraint handler
+
+- improved separation procedure for convex quadratic constraints
+
+- better presolving coordination by presolving levels
+
+- and many bug fixes, see CHANGELOG
+
+
+Additional Notes
+================
+
+- moved some examples to an application directory
+
+- original problem can now be permuted directly after reading
+
+- better handling of large values returned by the LP solver
+
+- extended statistic output of interactive shell

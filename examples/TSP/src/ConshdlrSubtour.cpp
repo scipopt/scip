@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -151,13 +151,13 @@ SCIP_RETCODE sepaSubtour(
          graph->edges[i].back->cap = cap;   
       }
            
-      SCIP_Bool** cuts;
+      SCIP_Bool** cuts = NULL;
       int ncuts;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &cuts, graph->nnodes) );
       for(int i = 0; i < graph->nnodes; i++)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &cuts[i], graph->nnodes) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &cuts[i], graph->nnodes) ); /*lint !e866*/
       }
 
       // try to find cuts
@@ -196,7 +196,7 @@ SCIP_RETCODE sepaSubtour(
             if( SCIPisCutEfficacious(scip, sol, row) )
             {
                SCIP_Bool infeasible;
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
                if ( infeasible )
                   *result = SCIP_CUTOFF;
                else
@@ -212,7 +212,7 @@ SCIP_RETCODE sepaSubtour(
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** frees specific constraint data
@@ -225,22 +225,23 @@ SCIP_DECL_CONSDELETE(ConshdlrSubtour::scip_delete)
    assert(consdata != NULL);
 
    release_graph(&(*consdata)->graph);
-   SCIPfreeMemory(scip, consdata);
+   SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** transforms constraint data into data belonging to the transformed problem */
 SCIP_DECL_CONSTRANS(ConshdlrSubtour::scip_trans)
 {
-   SCIP_CONSDATA* sourcedata = NULL;
-   SCIP_CONSDATA* targetdata = NULL;
+   SCIP_CONSDATA* sourcedata;
+   SCIP_CONSDATA* targetdata;
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL );
+   targetdata = NULL;
 
-   SCIP_CALL( SCIPallocMemory(scip, &targetdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &targetdata) );
    targetdata->graph = sourcedata->graph;
    capture_graph(targetdata->graph);
 
@@ -360,7 +361,7 @@ SCIP_DECL_CONSENFOLP(ConshdlrSubtour::scip_enfolp)
    }
    
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
@@ -414,7 +415,7 @@ SCIP_DECL_CONSENFOPS(ConshdlrSubtour::scip_enfops)
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** feasibility check method of constraint handler for primal solutions
  *
@@ -467,7 +468,7 @@ SCIP_DECL_CONSCHECK(ConshdlrSubtour::scip_check)
 
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** domain propagation method of constraint handler
  *
@@ -487,7 +488,7 @@ SCIP_DECL_CONSPROP(ConshdlrSubtour::scip_prop)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** variable rounding lock method of constraint handler
  *
@@ -555,7 +556,7 @@ SCIP_DECL_CONSLOCK(ConshdlrSubtour::scip_lock)
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** variable deletion method of constraint handler
  *
@@ -571,7 +572,7 @@ SCIP_DECL_CONSLOCK(ConshdlrSubtour::scip_lock)
 SCIP_DECL_CONSDELVARS(ConshdlrSubtour::scip_delvars)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** constraint display method of constraint handler
@@ -592,10 +593,10 @@ SCIP_DECL_CONSPRINT(ConshdlrSubtour::scip_print)
    SCIPinfoMessage(scip, file, "subtour of Graph G with %d nodes and %d edges\n", g->nnodes, g->nedges);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** clone method which will be used to copy a objective plugin */
-SCIP_DECL_CONSHDLRCLONE(ObjProbCloneable* ConshdlrSubtour::clone)
+SCIP_DECL_CONSHDLRCLONE(ObjProbCloneable* ConshdlrSubtour::clone) /*lint !e665*/
 {
    *valid = true;
    return new ConshdlrSubtour(scip);
@@ -608,8 +609,8 @@ SCIP_DECL_CONSHDLRCLONE(ObjProbCloneable* ConshdlrSubtour::clone)
  */
 SCIP_DECL_CONSCOPY(ConshdlrSubtour::scip_copy)
 {
-   SCIP_CONSHDLR* conshdlr = NULL;
-   SCIP_CONSDATA* consdata = NULL;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
 
    /* find the subtour constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "subtour");
@@ -620,8 +621,9 @@ SCIP_DECL_CONSCOPY(ConshdlrSubtour::scip_copy)
    }
 
    /* create constraint data */
-   SCIP_CALL( SCIPallocMemory( scip, &consdata) );
-   ProbDataTSP * probdatatsp = NULL;
+   consdata = NULL;
+   SCIP_CALL( SCIPallocBlockMemory( scip, &consdata) );
+   ProbDataTSP * probdatatsp;
    probdatatsp = dynamic_cast<ProbDataTSP *>(SCIPgetObjProbData(scip));
    assert( probdatatsp != NULL );
    GRAPH * graph = probdatatsp->getGraph();
@@ -635,7 +637,7 @@ SCIP_DECL_CONSCOPY(ConshdlrSubtour::scip_copy)
 
    *valid = true;
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** creates and captures a TSP subtour constraint */
 SCIP_RETCODE tsp::SCIPcreateConsSubtour(
@@ -654,8 +656,8 @@ SCIP_RETCODE tsp::SCIPcreateConsSubtour(
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
-   SCIP_CONSHDLR* conshdlr = NULL;
-   SCIP_CONSDATA* consdata = NULL;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
 
    /* find the subtour constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "subtour");
@@ -666,7 +668,7 @@ SCIP_RETCODE tsp::SCIPcreateConsSubtour(
    }
 
    /* create constraint data */
-   SCIP_CALL( SCIPallocMemory( scip, &consdata) );
+   SCIP_CALL( SCIPallocBlockMemory( scip, &consdata) ); /*lint !e530*/
    consdata->graph = graph;
    capture_graph( consdata->graph );
 

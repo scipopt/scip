@@ -1,0 +1,8 @@
+# For CrayXC systems, tested on 5.2UP04-5.2.82 with craype module 2.5.6.1 and PrgEnv-cray/5.2.82
+# but should be usable on other systems
+# contributed to SCIP 2016 Utz-Uwe Haus <uhaus@cray.com>
+
+include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP)
+include $(SCIPDIR)/make/make.$(OSTYPE).$(COMP).$(OPT)
+include $(SCIPDIR)/make/make.$(OSTYPE).$(ARCH).$(COMP)
+

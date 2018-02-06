@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/heur_linesearchdiving.h"
-#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "linesearchdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings following the line from root solution to current solution"
@@ -35,6 +34,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
 
 
 /*
@@ -52,7 +52,11 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
+#define DEFAULT_RANDSEED            137 /**< default initialization for random seed number generation */
 /*
  * Data structures
  */
@@ -99,7 +103,7 @@ SCIP_DECL_HEURFREE(heurFreeLinesearchdiving)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -157,6 +161,8 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
    return SCIP_OKAY;
@@ -167,7 +173,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
 /** returns a score for the given candidate -- the best candidate maximizes the diving score */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
-{
+{  /*lint --e{715}*/
    SCIP_Real rootsolval;
    SCIP_Real distquot;
 
@@ -178,7 +184,23 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
    {
       /* round down*/
       *roundup = FALSE;
-      distquot = (candsfrac + SCIPsumepsilon(scip)) / (rootsolval - candsol);
+
+      switch( divetype )
+      {
+         case SCIP_DIVETYPE_INTEGRALITY:
+            distquot = (candsfrac + SCIPsumepsilon(scip)) / (rootsolval - candsol);
+            break;
+         case SCIP_DIVETYPE_SOS1VARIABLE:
+            if ( SCIPisFeasPositive(scip, candsol) )
+               distquot = (candsfrac + SCIPsumepsilon(scip)) / (rootsolval - candsol);
+            else
+               distquot = (1.0 - candsfrac + SCIPsumepsilon(scip)) / (candsol - rootsolval);
+            break;
+         default:
+            SCIPerrorMessage("Error: Unsupported diving type\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
+      } /*lint !e788*/
 
       /* avoid roundable candidates */
       if( SCIPvarMayRoundDown(cand) )
@@ -187,7 +209,22 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
    else if( SCIPisGT(scip, candsol, rootsolval) )
    {
       /* round up */
-      distquot = (1.0 - candsfrac) / (candsol - rootsolval);
+      switch( divetype )
+      {
+         case SCIP_DIVETYPE_INTEGRALITY:
+            distquot = (1.0 - candsfrac + SCIPsumepsilon(scip)) / (candsol - rootsolval);
+            break;
+         case SCIP_DIVETYPE_SOS1VARIABLE:
+            if ( SCIPisFeasPositive(scip, candsol) )
+               distquot = (1.0 - candsfrac + SCIPsumepsilon(scip)) / (candsol - rootsolval);
+            else
+               distquot = (candsfrac + SCIPsumepsilon(scip)) / (rootsolval - candsol);
+            break;
+         default:
+            SCIPerrorMessage("Error: Unsupported diving type\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
+      } /*lint !e788*/
 
       /* avoid roundable candidates */
       if( SCIPvarMayRoundUp(cand) )
@@ -221,7 +258,7 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    SCIP_HEUR* heur;
 
    /* create Linesearchdiving primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -238,7 +275,9 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
 
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreLinesearchdiving) );
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreLinesearchdiving) );
+
    return SCIP_OKAY;
 }

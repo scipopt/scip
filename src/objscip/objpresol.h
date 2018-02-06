@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,8 +60,8 @@ public:
    /** default maximal number of presolving rounds the presolver participates in (-1: no limit) */
    const int scip_maxrounds_;
 
-   /** should presolver be delayed, if other presolvers found reductions? */
-   const SCIP_Bool scip_delay_;
+   /**< timing mask of the presolver */
+   const SCIP_PRESOLTIMING scip_timing_;
 
    /** default constructor */
    ObjPresol(
@@ -70,14 +70,14 @@ public:
       const char*        desc,               /**< description of presolver */
       int                priority,           /**< priority of the presolver */
       int                maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-      SCIP_Bool          delay               /**< should presolver be delayed, if other presolvers found reductions? */
+      SCIP_PRESOLTIMING  timing              /**< timing mask of the presolver */
       )
       : scip_(scip),
         scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
         scip_maxrounds_(maxrounds),
-        scip_delay_(delay)
+        scip_timing_(timing)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,19 +28,18 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
-#include "scip/pub_matrix.h"
 
+#include "scip/pub_matrix.h"
 #include "presol_implfree.h"
 
 #define PRESOL_NAME            "implfree"
 #define PRESOL_DESC            "exploit implied free variables for multi-aggregation"
-#define PRESOL_PRIORITY          1000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_PRIORITY            -1000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define MAXABSRATIO     ((double)1000.0)     /**< max abs coefficients ratio */
-#define SIDECHANGERATIO   ((double)10.0)     /**< max side change ratio */
+#define MAXABSRATIO     ((SCIP_Real)1000.0)     /**< max abs coefficients ratio */
+#define SIDECHANGERATIO   ((SCIP_Real)10.0)     /**< max side change ratio */
 
 
 /*
@@ -51,7 +50,7 @@
 static
 SCIP_Real getMaxActSingleRowWithoutCol(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< row index */
    int                   col                 /**< column index */
    )
@@ -103,7 +102,7 @@ SCIP_Real getMaxActSingleRowWithoutCol(
 static
 SCIP_Real getMinActSingleRowWithoutCol(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< row index */
    int                   col                 /**< column index */
    )
@@ -155,7 +154,7 @@ SCIP_Real getMinActSingleRowWithoutCol(
 static
 void getActivityResiduals(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             val,                /**< coefficient of this variable in this row */
@@ -296,7 +295,7 @@ void getActivityResiduals(
 static
 void getVarBoundsOfRow(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index of variable */
    int                   row,                /**< row index */
    SCIP_Real             val,                /**< coefficient of this column in this row */
@@ -363,7 +362,7 @@ void getVarBoundsOfRow(
 static
 SCIP_Bool isVarImpliedFree(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index for implied free test */
    int                   row,                /**< constraint planned for multi-aggregation */
    SCIP_Bool*            lockedcons,         /**< constraint not suitable for bound implication */
@@ -445,7 +444,7 @@ SCIP_Bool isVarImpliedFree(
 /** calculate the amount of fill-in getting from multi-aggregation */
 static
 SCIP_Real getFillIn(
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
    int                   row                 /**< row index */
    )
@@ -483,7 +482,7 @@ SCIP_Real sideChangeNumericalStable(
    SCIP_Real denominator;
 
    enumerator = REALABS( -(val * aggrconst) - oldside );
-   denominator = MAX(1.0,REALABS(oldside));
+   denominator = MAX(1.0,REALABS(oldside)); /*lint !e666*/
 
    return enumerator/denominator <= SIDECHANGERATIO;
 }
@@ -491,12 +490,12 @@ SCIP_Real sideChangeNumericalStable(
 /** calculate the huge contribution counters */
 static
 void getNumHugeActivities(
-    SCIP*                 scip,              /**< current scip instance */
-    SCIPMILPMATRIX*       matrix,            /**< constraint matrix */
-    int*                  maxactposhuge,     /**< max activity positive contribution counter */
-    int*                  maxactneghuge,     /**< max activity negative contribution counter */
-    int*                  minactposhuge,     /**< min activity positive contribution counter */
-    int*                  minactneghuge      /**< min activity negative contribution counter */
+   SCIP*                 scip,               /**< current scip instance */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
+   int*                  maxactposhuge,      /**< max activity positive contribution counter */
+   int*                  maxactneghuge,      /**< max activity negative contribution counter */
+   int*                  minactposhuge,      /**< min activity positive contribution counter */
+   int*                  minactneghuge       /**< min activity negative contribution counter */
    )
 {
    SCIP_Real val;
@@ -577,7 +576,7 @@ void getNumHugeActivities(
 static
 void getActivityRelax(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   row,                /**< row index */
    int                   col,                /**< column index */
    SCIP_Real             val,                /**< coefficient value of variable in linear constraint */
@@ -728,7 +727,7 @@ void getActivityRelax(
 static
 SCIP_Bool numericalStable(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             aggrconst,          /**< aggregation constant */
@@ -838,7 +837,7 @@ SCIP_Bool numericalStable(
 static
 void calcNewSidesAfterAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             coef,               /**< coefficient of aggregated variable */
@@ -894,7 +893,7 @@ void calcNewSidesAfterAggregation(
 static
 SCIP_Bool isConsRedundant(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             coef                /**< coefficient of aggregated variable */
@@ -923,12 +922,13 @@ SCIP_Bool isConsRedundant(
 static
 void getMultiaggVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    SCIP_Bool*            multiaggvars,       /**< array indicating multi-aggregatable variables */
    int*                  nummultiaggvars,    /**< number of multi-aggregatable variables */
    int*                  multiaggequalities, /**< array holding aggregation equality row indices */
    SCIP_Bool*            consredundant,      /**< array indicating which constraint became redundant */
    SCIP_Bool*            lockedcons,         /**< constraints which could not be used for bound implication */
+   SCIP_Bool*            skipvars,           /**< array holding which variables should be investigated */
    int*                  maxactposhuge,      /**< max activity positive contribution counter */
    int*                  maxactneghuge,      /**< max activity negative contribution counter */
    int*                  minactposhuge,      /**< min activity positive contribution counter */
@@ -951,6 +951,8 @@ void getMultiaggVars(
    assert(nummultiaggvars != NULL);
    assert(multiaggequalities != NULL);
    assert(consredundant != NULL);
+   assert(lockedcons != NULL);
+   assert(skipvars != NULL);
 
    nrows = SCIPmatrixGetNRows(matrix);
 
@@ -970,6 +972,8 @@ void getMultiaggVars(
 
          bestfillin = 1.0;
          bestvaridx = -1;
+         bestimpllbrowidx = -1; /* only for lint */
+         bestimplubrowidx = -1; /* only for lint */
          bestconsredundant = FALSE;
 
          for( ; rowpnt < rowend; rowpnt++, valpnt++ )
@@ -985,7 +989,7 @@ void getMultiaggVars(
 
             /* search for a continuous variable for aggregation which is implied free,
                produces less fill-in and leads to numerical stability */
-            if( isVarImpliedFree(scip, matrix, *rowpnt, r, lockedcons, &tmpimpllbrowidx, &tmpimplubrowidx) )
+            if( !skipvars[*rowpnt] && isVarImpliedFree(scip, matrix, *rowpnt, r, lockedcons, &tmpimpllbrowidx, &tmpimplubrowidx) )
             {
                assert(tmpimpllbrowidx >= 0 && tmpimplubrowidx >= 0);
                aggrconst = SCIPmatrixGetRowRhs(matrix, r) / (*valpnt);
@@ -1020,6 +1024,10 @@ void getMultiaggVars(
                      }
                   }
                }
+            }
+            else
+            {
+               skipvars[*rowpnt] = TRUE;
             }
          }
 
@@ -1065,7 +1073,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplfree)
 static
 SCIP_DECL_PRESOLEXEC(presolExecImplfree)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 
@@ -1078,7 +1086,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
    if( SCIPgetNVars(scip) == 0 || SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
-   if( SCIPgetNContVars(scip)==0 )
+   if( SCIPgetNContVars(scip) == 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -1093,6 +1101,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
       int nummultiaggvars;
       SCIP_Bool* consredundant;
       SCIP_Bool* lockedcons;
+      SCIP_Bool* skipvars;
       int nrows;
       int ncols;
       int* maxactposhuge;
@@ -1116,6 +1125,9 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
       SCIP_CALL( SCIPallocBufferArray(scip, &lockedcons, nrows) );
       BMSclearMemoryArray(lockedcons, nrows);
 
+      SCIP_CALL( SCIPallocBufferArray(scip, &skipvars, ncols) );
+      BMSclearMemoryArray(skipvars, ncols);
+
       SCIP_CALL( SCIPallocBufferArray(scip, &maxactposhuge, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &maxactneghuge, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &minactposhuge, nrows) );
@@ -1125,7 +1137,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
 
       nummultiaggvars = 0;
       getMultiaggVars(scip, matrix, isvartomultiagg,&nummultiaggvars, multiaggequalities,
-         consredundant, lockedcons, maxactposhuge, maxactneghuge, minactposhuge, minactneghuge);
+         consredundant, lockedcons, skipvars, maxactposhuge, maxactneghuge, minactposhuge, minactneghuge);
 
       if( nummultiaggvars > 0 )
       {
@@ -1189,31 +1201,32 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                assert(SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, row)) ||
                   SCIPisInfinity(scip, rhs) ||
                   SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, row), rhs));
+               assert(multiaggcoef != 0.0);
 
                /* we have to distinguished two cases */
                if( !SCIPisInfinity(scip, rhs) )
                   aggrconst = rhs / multiaggcoef;
                else
-                  aggrconst = rhs / multiaggcoef;
+                  aggrconst = SCIPmatrixGetRowLhs(matrix, row) / multiaggcoef;
 
                /* calculate scalars */
                rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);
                rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
                valpnt = SCIPmatrixGetRowValPtr(matrix, row);
                cnt = 0;
-               SCIPdebugMessage("constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(multiaggcons), SCIPvarGetName(multiaggvar));
+               SCIPdebugMsg(scip, "constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(multiaggcons), SCIPvarGetName(multiaggvar));
                for( ; rowpnt < rowend; rowpnt++, valpnt++ )
                {
                   if( *rowpnt == v )
                      continue;
 
-                  scalars[cnt] = -(*valpnt) / multiaggcoef;
-                  SCIPdebugPrintf(" %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
+                  scalars[cnt] = -(*valpnt) / multiaggcoef; /*lint !e414*/
+                  SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
 
                   cnt++;
                }
 
-               SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g]\n",
+               SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g]\n",
                   aggrconst, SCIPvarGetName(multiaggvar), SCIPvarGetLbGlobal(multiaggvar), SCIPvarGetUbGlobal(multiaggvar));
 
                /* perform multi-aggregation */
@@ -1226,7 +1239,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                /* check for infeasible aggregation */
                if( infeasible )
                {
-                  SCIPdebugMessage("constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(multiaggcons));
+                  SCIPdebugMsg(scip, "constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(multiaggcons));
                   return SCIP_OKAY;
                }
 
@@ -1246,6 +1259,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
       SCIPfreeBufferArray(scip, &minactposhuge);
       SCIPfreeBufferArray(scip, &maxactneghuge);
       SCIPfreeBufferArray(scip, &maxactposhuge);
+      SCIPfreeBufferArray(scip, &skipvars);
       SCIPfreeBufferArray(scip, &lockedcons);
       SCIPfreeBufferArray(scip, &consredundant);
       SCIPfreeBufferArray(scip, &multiaggequalities);
@@ -1270,7 +1284,7 @@ SCIP_RETCODE SCIPincludePresolImplfree(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecImplfree, NULL) );
+         PRESOL_TIMING, presolExecImplfree, NULL) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyImplfree) );
 
    return SCIP_OKAY;

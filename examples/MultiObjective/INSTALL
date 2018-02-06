@@ -1,3 +1,0 @@
-1. install the lemon graph library (http://lemon.cs.elte.hu/pub/doc/1.2.3/index.html)
-2. in lib/, create softlinks by the names of lemon-src and lemon-lib pointing to the directories containing lemon header files and library files respectively
-3. compile using make

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_cons.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for managing constraints
  * @author Tobias Achterberg
  */
@@ -39,6 +39,11 @@ extern "C" {
 
 /*
  * Constraint handler methods
+ */
+
+/**@addtogroup PublicConshdlrMethods
+ *
+ * @{
  */
 
 /** compares two constraint handlers w. r. to their separation priority */
@@ -97,7 +102,14 @@ void SCIPconshdlrSetProp(
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
-         );
+   );
+
+/** sets the relaxation enforcement method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetEnforelax(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)) /**< constraint copying method */
+   );
 
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
  *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
@@ -186,6 +198,12 @@ SCIP_Real SCIPconshdlrGetEnfoPSTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for relaxation enforcement in this constraint handler */
+EXTERN
+SCIP_Real SCIPconshdlrGetEnfoRelaxTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets time in seconds used for propagation in this constraint handler */
 EXTERN
 SCIP_Real SCIPconshdlrGetPropTime(
@@ -225,6 +243,12 @@ SCIP_Longint SCIPconshdlrGetNEnfoLPCalls(
 /** gets number of calls to the constraint handler's pseudo enforcing method */
 EXTERN
 SCIP_Longint SCIPconshdlrGetNEnfoPSCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's relaxation enforcing method */
+EXTERN
+SCIP_Longint SCIPconshdlrGetNEnfoRelaxCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -420,12 +444,6 @@ SCIP_Bool SCIPconshdlrIsPropagationDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** should presolving method be delayed, if other presolvers found reductions? */
-EXTERN
-SCIP_Bool SCIPconshdlrIsPresolvingDelayed(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 /** was LP separation method delayed at the last call? */
 EXTERN
 SCIP_Bool SCIPconshdlrWasLPSeparationDelayed(
@@ -444,12 +462,6 @@ SCIP_Bool SCIPconshdlrWasPropagationDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** was presolving method delayed at the last call? */
-EXTERN
-SCIP_Bool SCIPconshdlrWasPresolvingDelayed(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 /** is constraint handler initialized? */
 EXTERN
 SCIP_Bool SCIPconshdlrIsInitialized(
@@ -464,15 +476,53 @@ SCIP_Bool SCIPconshdlrIsClonable(
 
 /** returns the timing mask of the propagation method of the constraint handler */
 EXTERN
-SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
+SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/*
+ * Methods for constraint change sets
+ */
+/** gets added constraints data for a constraint set change */
+EXTERN
+void SCIPconssetchgGetAddedConsData(
+   SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to get data from */
+   SCIP_CONS***          conss,              /**< reference to constraints array added in the conssetchg, or NULL */
+   int*                  nconss              /**< reference to store the size of the constraints array, or NULL */
+   );
 
+/** sets the timing mask of the propagation method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetPropTiming(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PROPTIMING       proptiming          /**< timing mask to be set */
+   );
+
+
+/** returns the timing mask of the presolving method of the constraint handler */
+EXTERN
+SCIP_PRESOLTIMING SCIPconshdlrGetPresolTiming(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** sets the timing mask of the presolving method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetPresolTiming(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
+   );
+
+/* @} */
 
 /*
  * Constraint methods
  */
+
+/**@addtogroup PublicConstraintMethods
+ *
+ * @{
+ */
+
 
 /** returns the name of the constraint 
  *
@@ -527,6 +577,12 @@ SCIP_Bool SCIPconsIsActive(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint has to be deactivated in update phase */
+EXTERN
+SCIP_Bool SCIPconsIsUpdatedeactivate(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is enabled in the current node */
 EXTERN
 SCIP_Bool SCIPconsIsEnabled(
@@ -554,6 +610,12 @@ SCIP_Bool SCIPconsIsDeleted(
 /** returns TRUE iff constraint is marked obsolete */
 EXTERN
 SCIP_Bool SCIPconsIsObsolete(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint is marked as a conflict */
+EXTERN
+SCIP_Bool SCIPconsIsConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 
@@ -726,12 +788,13 @@ int SCIPconsGetNUpgradeLocks(
    (SCIPconsIsEnabled(cons) && ((cons)->updatepropenable || ((cons)->propenabled && !(cons)->updatepropdisable)))
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
+#define SCIPconsIsConflict(cons)        ((cons)->conflict)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
-#define SCIPconsIsMarkedPropagate(cons) (cons)->markpropagate
+#define SCIPconsIsMarkedPropagate(cons) ((cons)->updatemarkpropagate || ((cons)->markpropagate && !(cons)->updateunmarkpropagate))
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
 #define SCIPconsIsGlobal(cons)          !(cons)->local
 #define SCIPconsIsLocal(cons)           (cons)->local
@@ -751,6 +814,66 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsGetNUpgradeLocks(cons)  ((cons)->nupgradelocks)
 
 #endif
+
+/* @} */
+
+/**@addtogroup PublicProblemMethods
+ *
+ * public methods to query linear constraint classification statistics
+ *
+ * @{
+ */
+
+/** create linear constraint statistics */
+EXTERN
+SCIP_RETCODE SCIPlinConsStatsCreate(
+   SCIP*                scip,                /**< scip data structure */
+   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   );
+
+/** free linear constraint statistics */
+EXTERN
+void SCIPlinConsStatsFree(
+   SCIP*                scip,                /**< scip data structure */
+   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   );
+
+/** resets linear constraint statistics */
+EXTERN
+void SCIPlinConsStatsReset(
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
+/** returns the number of occurrences of a specific type of linear constraint */
+EXTERN
+int SCIPlinConsStatsGetTypeCount(
+   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE     linconstype          /**< linear constraint type */
+   );
+
+/** returns the total number of classified constraints */
+EXTERN
+int SCIPlinConsStatsGetSum(
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
+/** increases the number of occurrences of a specific type of linear constraint */
+EXTERN
+void SCIPlinConsStatsIncTypeCount(
+   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE     linconstype,         /**< linear constraint type */
+   int                  increment            /**< positive increment */
+   );
+
+/** print linear constraint classification statistics */
+EXTERN
+void SCIPprintLinConsStats(
+   SCIP*                scip,                /**< scip data structure */
+   FILE*                file,                /**< file handle or NULL to print to standard out */
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
+/* @} */
 
 #ifdef __cplusplus
 }

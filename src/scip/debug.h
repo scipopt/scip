@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   debug.h
+ * @ingroup INTERNALAPI
  * @brief  methods for debugging
  * @author Tobias Achterberg
  */
@@ -23,11 +24,9 @@
 #ifndef __SCIP_DEBUG_H__
 #define __SCIP_DEBUG_H__
 
-/** uncomment this define to activate debugging on given solution */
-/* #define SCIP_DEBUG_SOLUTION "debug.sol" */
-
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */
+
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -35,12 +34,32 @@
 #include "scip/type_lp.h"
 #include "scip/type_prob.h"
 #include "scip/type_tree.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifdef SCIP_DEBUG_SOLUTION
+/** solution data for debugging purposes */
+typedef struct SCIP_DebugSolData SCIP_DEBUGSOLDATA;
+
+#ifdef WITH_DEBUG_SOLUTION
+
+/** creates debug solution data */
+SCIP_RETCODE SCIPdebugSolDataCreate(
+   SCIP_DEBUGSOLDATA**   debugsoldata        /**< pointer to debug solution data */
+   );
+
+/** frees the debug solution */
+SCIP_RETCODE SCIPdebugFreeSol(
+   SCIP_SET*             set
+   );
+
+/** resets the data structure after restart */
+extern
+SCIP_RETCODE SCIPdebugReset(
+   SCIP_SET*             set
+   );
 
 /** frees debugging data */
 extern
@@ -197,12 +216,6 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
                                               */
    );
 
-/** set the main SCIP settings pointer */
-extern
-void SCIPdebugSetMainscipset(
-   SCIP_SET*             set                 /**< settings of SCIP instance */
-   );
-
 /** checks whether SCIP data structure is the main SCIP (the one for which debugging is enabled) */
 extern
 SCIP_Bool SCIPdebugIsMainscip(
@@ -229,6 +242,9 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 
 #else
 
+#define SCIPdebugSolDataCreate(debugsoldata) SCIP_OKAY
+#define SCIPdebugFreeSol(set) SCIP_OKAY
+#define SCIPdebugReset(set) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
@@ -245,7 +261,6 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugSolIsValidInSubtree(scip,isvalidinsubtree) SCIP_OKAY
-#define SCIPdebugSetMainscipset(set) /**/
 #define SCIPdebugSolEnable(scip) /**/
 #define SCIPdebugSolDisable(scip) /**/
 #define SCIPdebugSolIsEnabled(scip) FALSE

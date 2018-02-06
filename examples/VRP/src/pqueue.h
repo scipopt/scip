@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,6 +43,7 @@ namespace std
       {
          friend class pqueue;
 
+      public:
          //
          node(
             const Key& k,
@@ -60,6 +61,7 @@ namespace std
          ~node()
          {}
 
+      private:
          //
          void delete_children_recursive()
          {
@@ -100,13 +102,13 @@ namespace std
       /** Default constructor, creates empty priority queue. */
       pqueue():
          root( NULL )
-      {}
+      {} /*lint !e1401*/
 
       /** Destructs queue */
       ~pqueue()
       {
-         clear();
-      }
+         clear(); /*lint !e1551*/
+      } /*lint !e1579*/
 
       /** Empties queue */
       void clear()
@@ -150,7 +152,7 @@ namespace std
       }
 
       /** Returns queue item at top (with lowers key). */
-      pqueue_item top() const
+      pqueue_item top()
       {
          return root;
       }
@@ -165,7 +167,7 @@ namespace std
          if ( root == NULL )
          {
             nn = new node(key,data);
-            if ( nn == NULL )
+            if ( nn == NULL ) /*lint !e774*/
                throw std::bad_alloc();
             root = nn;
          }
@@ -374,7 +376,7 @@ namespace std
             }
          }
       }
-   };
+   }; /*lint !e1712*/
 
 } // namespace std
 

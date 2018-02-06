@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,11 +23,6 @@
 
 #include "scip/pub_message.h"
 #include "nlpi/exprinterpret.h"
-
-struct SCIP_ExprInt
-{
-   char dummy;  /*lint !e830*/
-};
 
 /** gets name and version of expression interpreter */
 const char* SCIPexprintGetName(
@@ -62,7 +57,7 @@ SCIP_RETCODE SCIPexprintCreate(
    SCIPdebugMessage("SCIPexprintCreate()\n");
    SCIPdebugMessage("Note that there is no expression interpreter linked to the binary.\n");
 
-   SCIP_ALLOC( BMSallocMemory(exprint) );
+   *exprint = (SCIP_EXPRINT*)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -72,7 +67,7 @@ SCIP_RETCODE SCIPexprintFree(
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
    )
 {
-   BMSfreeMemory(exprint);
+   *exprint = NULL;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -85,6 +80,22 @@ SCIP_RETCODE SCIPexprintCompile(
 {
    return SCIP_OKAY;
 }  /*lint !e715*/
+
+
+/** gives the capability to evaluate an expression by the expression interpreter
+ *
+ * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
+ * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * Hessian for an expression is not available because it contains a user expression that does not provide
+ * Hessians.
+ */
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   return SCIP_EXPRINTCAPABILITY_NONE;
+} /*lint !e715*/
 
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(

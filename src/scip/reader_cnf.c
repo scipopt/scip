@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -156,8 +156,6 @@ SCIP_RETCODE readCnf(
    assert(scip != NULL);
    assert(file != NULL);
 
-   retcode = SCIP_OKAY;
-
    linecount = 0;
 
    /* read header */
@@ -167,6 +165,7 @@ SCIP_RETCODE readCnf(
       readError(scip, linecount, "problem declaration line expected");
       return SCIP_READERROR;
    }
+   /* cppcheck-suppress invalidScanfFormatWidth_smaller */
    if( sscanf(line, "p %8s %d %d", format, &nvars, &nclauses) != 3 )
    {
       readError(scip, linecount, "invalid problem declaration (must be 'p cnf <nvars> <nclauses>')");
@@ -416,14 +415,10 @@ SCIP_RETCODE SCIPincludeReaderCnf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create reader data */
-   readerdata = NULL;
-
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCnf) );

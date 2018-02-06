@@ -1,0 +1,38 @@
+SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
+Copyright (C) 2002-2018 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+
+user parameter file <scip.set> not found - using default parameters
+
+SCIP> read check/IP/miplib/p0033.mps
+original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
+SCIP> optimize
+...
+ 0.1s|     1 |     0 |   132 | 257k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.347000e+03 |  10.59%
+[src/scip/heur_oneopt.c:332] debug: Row <R122> has activity 110
+[src/scip/heur_oneopt.c:332] debug: Row <R123> has activity 216
+...
+[src/scip/heur_oneopt.c:101] debug: Try to shift down variable <t_C157> with
+[src/scip/heur_oneopt.c:102] debug:     lb:<-0> <= val:<1> <= ub:<1> and obj:<171> by at most: <1>
+[src/scip/heur_oneopt.c:135] debug:  -> The shift value had to be reduced to <0>, because of row <R122>.
+[src/scip/heur_oneopt.c:137] debug:     lhs:<-1e+20> <= act:<110> <= rhs:<148>, colval:<-60>
+...
+[src/scip/heur_oneopt.c:383] debug:  Only one shiftcand found, var <t_C167>, which is now shifted by<-1.0>
+k 0.1s|     1 |     0 |   132 | 258k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.164000e+03 |   4.54%
+[src/scip/heur_oneopt.c:436] debug: found feasible shifted solution:
+objective value:                     3164.00000000012
+C157                                                1   (obj:171)
+C163                                                1   (obj:163)
+C164                                                1   (obj:69)
+C170                                                1   (obj:49)
+C172                                                1   (obj:258)
+C174                                                1   (obj:250)
+C175                                                1   (obj:500)
+C179                                                1   (obj:318)
+C181                                                1   (obj:318)
+C182                                                1   (obj:159)
+C183                                 1.00000000000038   (obj:318)
+C184                                                1   (obj:159)
+C185                                                1   (obj:318)
+C186                                                1   (obj:114)
+[src/scip/heur_oneopt.c:498] debug: Finished 1-opt heuristic
+...

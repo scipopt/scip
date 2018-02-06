@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_lp.h
- * @brief  datastructures for LP management
+ * @ingroup INTERNALAPI
+ * @brief  data structures for LP management
  * @author Tobias Achterberg
  *
  *  In SCIP, the LP is defined as follows:
@@ -108,7 +109,9 @@ struct SCIP_LpSolVals
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
 };
@@ -122,9 +125,10 @@ struct SCIP_LpSolVals
  */
 struct SCIP_Col
 {
-   SCIP_Real             obj;                /**< current objective value of column in LP */
+   SCIP_Real             obj;                /**< current objective value of column in LP (might be changed in diving or probing) */
    SCIP_Real             lb;                 /**< current lower bound of column in LP */
    SCIP_Real             ub;                 /**< current upper bound of column in LP */
+   SCIP_Real             unchangedobj;       /**< unchanged objective value of column (ignoring diving or probing changes) */
    SCIP_Real             lazylb;             /**< lazy lower bound of the column; if the current lower bound is not greater than 
                                               *   the lazy lower bound, then the lower bound has not to be added to the LP */
    SCIP_Real             lazyub;             /**< lazy upper bound of the column; if the current upper bound is not smaller than 
@@ -228,6 +232,7 @@ struct SCIP_Row
    int                   lpdepth;            /**< depth level at which row entered the LP, or -1 if not in current LP */
    int                   minidx;             /**< minimal column index of row entries */
    int                   maxidx;             /**< maximal column index of row entries */
+   int                   numintcols;         /**< number of integral columns */
    int                   nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
@@ -245,7 +250,8 @@ struct SCIP_Row
    unsigned int          modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int          removable:1;        /**< is row removable from the LP (due to aging or cleanup)? */
    unsigned int          inglobalcutpool:1;  /**< is row contained in the global cut pool? */
-   unsigned int          nlocks:16;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int          normunreliable:1;   /**< is the objective product of the row unreliable? */
+   unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
    unsigned int          origintype:2;       /**< origin of row (0: unkown, 1: constraint handler, 2: separator) */
 };
 
@@ -266,7 +272,7 @@ struct SCIP_Lp
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
-   SCIP_Real             lpiuobjlim;         /**< current upper objective limit in LPI */
+   SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
@@ -288,6 +294,7 @@ struct SCIP_Lp
    SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
    SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
+   SCIP_Longint          divenolddomchgs;    /**< number of domain changes before diving has started */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
@@ -320,11 +327,15 @@ struct SCIP_Lp
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */
    int                   lpitiming;          /**< current timing type in LPI */
+   int                   lpirandomseed;      /**< current initial random seed in LPI */
+   int                   lpiscaling;         /**< current SCALING setting in LPI */
+   int                   lpirefactorinterval;/**< current refactorization interval */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
    SCIP_Bool             objsqrnormunreliable;/**< is squared Euclidean norm of objective function vector of problem
                                                *   variables unreliable and need recalculation? */
+   SCIP_Bool             lpisolutionpolishing;/**< LP solution polishing method (0: disabled, 1: enabled) */
    SCIP_Bool             looseobjvalid;      /**< is the loose objective value valid or should it be recomputed from scratch? */
    SCIP_Bool             glbpseudoobjvalid;  /**< is the global pseudo solution value valid or should it be recomputed from scratch? */
    SCIP_Bool             pseudoobjvalid;     /**< is the pseudo solution value valid or should it be recomputed from scratch? */
@@ -332,10 +343,13 @@ struct SCIP_Lp
    SCIP_Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
    SCIP_Bool             flushdeletedrows;   /**< have LPI-rows been deleted in the last lpFlush() call? */
    SCIP_Bool             flushaddedrows;     /**< have LPI-rows been added in the last lpFlush() call? */
+   SCIP_Bool             updateintegrality;  /**< does integrality information need to be updated? */
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
    SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
@@ -345,11 +359,11 @@ struct SCIP_Lp
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
    SCIP_Bool             strongbranchprobing;/**< are we currently in probing mode for strong branching? */
    SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't correspond to variables */
-   SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
+   SCIP_Bool             divingobjchg;       /**< objective values were changed in diving or probing: LP objective is invalid */
    SCIP_Bool             divinglazyapplied;  /**< lazy bounds were applied to the LP during diving */
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
+   SCIP_Bool             adjustlpval;        /**< does an infinite LP objective value has been adjusted so far? */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
-   SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */
    SCIP_Bool             lpilpinfo;          /**< current LPINFO setting in LPI */
    SCIP_Bool             lpihasfeastol;      /**< does the LPI support the FEASTOL parameter? */
@@ -359,10 +373,14 @@ struct SCIP_Lp
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
+   SCIP_Bool             lpihaspolishing;    /**< does the LPI support solution polishing? */
+   SCIP_Bool             lpihasrefactor;     /**< does the LPI support changing the refactorization interval? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
+   SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
+   SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
 };
 
 #ifdef __cplusplus

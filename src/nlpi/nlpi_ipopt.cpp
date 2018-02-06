@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,7 @@
  * @ingroup NLPIS
  * @brief   Ipopt NLP interface
  * @author  Stefan Vigerske
+ * @author  Benjamin Müller
  *
  * @todo warm starts
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
@@ -35,6 +36,7 @@
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #include <new>      /* for std::bad_alloc */
 #include <sstream>
@@ -50,15 +52,20 @@
 #include "IpIpoptData.hpp"
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
+#include "IpLapack.hpp"
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
+#endif
+
+#if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12))
+#error "The Ipopt interface requires at least 3.12."
 #endif
 
 using namespace Ipopt;
 
 #define NLPI_NAME          "ipopt"           /**< short concise name of solver */
 #define NLPI_DESC          "Ipopt interface" /**< description of solver */
-#define NLPI_PRIORITY      0                 /**< priority */
+#define NLPI_PRIORITY      1000              /**< priority */
 
 #ifdef SCIP_DEBUG
 #define DEFAULT_PRINTLEVEL J_WARNING         /**< default print level of Ipopt */
@@ -69,6 +76,8 @@ using namespace Ipopt;
 
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
 #define FEASTOLFACTOR      0.05              /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
+
+#define DEFAULT_RANDSEED   71                /**< initial random seed */
 
 /* Convergence check (see ScipNLP::intermediate_callback)
  *
@@ -111,7 +120,7 @@ public:
    std::string                 defoptions;   /**< modified default options for Ipopt */
 
    /** constructor */
-   SCIP_NlpiData(
+   explicit SCIP_NlpiData(
       BMS_BLKMEM* blkmem_                    /**< block memory */
       )
      : blkmem(blkmem_),
@@ -160,6 +169,8 @@ class ScipNLP : public TNLP
 {
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
    SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
@@ -169,15 +180,24 @@ private:
 public:
    bool                  approxhessian;      /**< do we tell Ipopt to approximate the hessian? (may also be false if user set to approx. hessian via option file) */
 
+   // cppcheck-suppress uninitMemberVar
    /** constructor */
    ScipNLP(
-      SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL /**< NLPI problem data */
+      SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
+      BMS_BLKMEM*        blkmem_ = NULL       /**< block memory */
       )
-      : nlpiproblem(nlpiproblem_), approxhessian(false)
-   { }
+      : nlpiproblem(nlpiproblem_), randnumgen(NULL), blkmem(blkmem_), conv_lastrestoiter(-1), approxhessian(false)
+   {
+      assert(blkmem != NULL);
+      SCIP_CALL_ABORT_QUIET( SCIPrandomCreate(&randnumgen, blkmem, DEFAULT_RANDSEED) );
+   }
 
    /** destructor */
-   ~ScipNLP() { }
+   ~ScipNLP()
+   {
+      assert(randnumgen != NULL);
+      SCIPrandomFree(&randnumgen, blkmem);
+   }
 
    /** sets NLPI data structure */
    void setNLPIPROBLEM(SCIP_NLPIPROBLEM* nlpiproblem_)
@@ -436,6 +456,8 @@ void setFeastol(
    SCIP_Real         feastol
    )
 {
+   assert(nlpiproblem != NULL);
+
    nlpiproblem->ipopt->Options()->SetNumericValue("tol", FEASTOLFACTOR * feastol);
    nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
 
@@ -448,6 +470,27 @@ void setFeastol(
     * Thus, we turn off the bound_relax_factor completely if it would be below its default value of 1e-8.
     */
    nlpiproblem->ipopt->Options()->SetNumericValue("bound_relax_factor", feastol < 1e-8/FEASTOLFACTOR ? 0.0 : FEASTOLFACTOR * feastol);
+}
+
+/** sets optimality tolerance parameters in Ipopt
+ *
+ * Sets dual_inf_tol and compl_inf_tol to opttol.
+ * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched, which means that if Ipopt has convergence problems, then
+ * it can stop with a solution that is still feasible (see setFeastol), but essentially without a proof of local optimality.
+ * Note, that we report the solution as feasible only if Ipopt stopped on an "acceptable point" (see ScipNLP::finalize_solution).
+ *
+ * Note, that parameters tol and acceptable_tol (set in setFeastol) also apply.
+ */
+static
+void setOpttol(
+   SCIP_NLPIPROBLEM* nlpiproblem,
+   SCIP_Real         opttol
+   )
+{
+   assert(nlpiproblem != NULL);
+
+   nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", opttol);
+   nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", opttol);
 }
 
 /** copy method of NLP interface (called when SCIP copies plugins)
@@ -562,7 +605,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       }
 
       /* initialize Ipopt/SCIP NLP interface */
-      (*problem)->nlp = new ScipNLP(*problem);
+      (*problem)->nlp = new ScipNLP(*problem, data->blkmem);
       if( IsNull((*problem)->nlp) )
          throw std::bad_alloc();
    }
@@ -588,13 +631,18 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
 #endif
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
+   setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
 
    /* apply user's given modifications to Ipopt's default settings */
    if( data->defoptions.length() > 0 )
    {
       std::istringstream is(data->defoptions);
 
+#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE >= 5)
+      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
+#else
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
+#endif
       {
          SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
@@ -650,6 +698,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
  *
  *  return: void pointer to problem instance
  */
+static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
 {
    assert(nlpi    != NULL);
@@ -760,12 +809,18 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   /* We pass the objective gradient in dense form to Ipopt, so if the sparsity of that gradient changes, we do not need to reset Ipopt (firstrun=TRUE).
+    * However, if the sparsity of the Hessian matrix of the objective changes, then the sparsity pattern of the Hessian of the Lagrangian may change.
+    * Thus, reset Ipopt if the objective was and/or becomes nonlinear, but leave firstrun untouched if it was and stays linear.
+    */
+   if( nquadelems > 0 || exprtree != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+      problem->firstrun = TRUE;
+
    SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
          constant, nlins, lininds, linvals,
          nquadelems, quadelems,
          exprvaridxs, exprtree) );
 
-   problem->firstrun = TRUE;
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -784,9 +839,19 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 static
 SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 {
+   int i;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   /* If some variable is fixed or unfixed, then better don't reoptimize the NLP in the next solve.
+    * Calling Optimize instead of ReOptimize should remove fixed variables from the problem that is solved by Ipopt.
+    * This way, the variable fixing is satisfied exactly in a solution, see also #1254.
+    */
+   for( i = 0; i < nvars && !problem->firstrun; ++i )
+      if( (SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]] == SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]]) != (lbs[i] == ubs[i]) )
+         problem->firstrun = TRUE;
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
 
@@ -1053,13 +1118,17 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
       if( problem->firstrun )
       {
-         /* if the expression interpreter does not support function values and gradients and hessians, and the problem is not at most quadratic,
+         SCIP_EXPRINTCAPABILITY cap;
+
+         cap = SCIPexprintGetCapability() & SCIPnlpiOracleGetEvalCapability(problem->oracle);
+
+         /* if the expression interpreter or some user expression do not support function values and gradients and Hessians, and the problem is not at most quadratic,
           * change NLP parameters or give an error
           */
-         if( (SCIPexprintGetCapability() & (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)) != (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)
+         if( (cap & (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)) != (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)
             && SCIPnlpiOracleGetMaxDegree(problem->oracle) > 2 )
          {
-            /* @todo could enable jacobian approximation in Ipopt */
+            /* @todo could enable Jacobian approximation in Ipopt */
             if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_FUNCVALUE) ||
                ! (SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
             {
@@ -1069,8 +1138,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
                return SCIP_OKAY;
             }
 
-            /* enable hessian approximation if we are nonquadratic and the expression interpreter does not support hessians */
-            if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_HESSIAN) )
+            /* enable Hessian approximation if we are nonquadratic and the expression interpreter or user expression do not support Hessians */
+            if( !(cap & SCIP_EXPRINTCAPABILITY_HESSIAN) )
             {
                problem->ipopt->Options()->SetStringValue("hessian_approximation", "limited-memory");
                problem->nlp->approxhessian = true;
@@ -1083,12 +1152,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
-         /* ReOptimizeNLP with Ipopt <= 3.10.3 could return a solution not within bounds if all variables are fixed (see Ipopt ticket #179) */
-#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 10) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 10 && IPOPT_VERSION_RELEASE > 3)
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
-#else
-         status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
-#endif
       }
 
       // catch the very bad status codes
@@ -1117,8 +1181,14 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lastniter = stats->IterationCount();
          problem->lasttime  = stats->TotalCPUTime();
       }
+      else
+      {
+         /* Ipopt does not provide access to the statistics when all variables have been fixed */
+         problem->lastniter = 0;
+         problem->lasttime  = 0.0;
+      }
    }
-   catch( IpoptException except )
+   catch( IpoptException& except )
    {
       SCIPerrorMessage("Ipopt returned with exception: %s\n", except.Message().c_str());
       return SCIP_ERROR;
@@ -1172,6 +1242,7 @@ SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
  *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
  *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval buffer store the objective value, or NULL if not needed
  */
 static
 SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
@@ -1190,6 +1261,17 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
 
    if( varubdualvalues != NULL )
       *varubdualvalues = problem->lastsoldualvarub;
+
+   if( objval != NULL )
+   {
+      if( problem->lastsolprimals != NULL )
+      {
+         /* TODO store last solution value instead of reevaluating the objective function */
+         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->lastsolprimals, objval) );
+      }
+      else
+         *objval = SCIP_INVALID;
+   }
 
    return SCIP_OKAY;
 }
@@ -1654,7 +1736,7 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
    {
       if( dval >= 0 )
       {
-         problem->ipopt->Options()->SetNumericValue("dual_inf_tol", dval);
+         setOpttol(problem, dval);
       }
       else
       {
@@ -1984,7 +2066,7 @@ const char* SCIPgetSolverNameIpopt(void)
    return "Ipopt " IPOPT_VERSION;
 }
 
-/** gets string that describes Ipopt (version number) */
+/** gets string that describes Ipopt */
 const char* SCIPgetSolverDescIpopt(void)
 {
    return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
@@ -2141,21 +2223,19 @@ bool ScipNLP::get_starting_point(
       else
       {
          SCIP_Real lb, ub;
-         unsigned int perturbseed;
 
          SCIPdebugMessage("Ipopt started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
-         perturbseed = 1;
          for( int i = 0; i < n; ++i )
          {
             lb = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle)[i];
             ub = SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle)[i];
             if( lb > 0.0 )
-               x[i] = SCIPgetRandomReal(lb, lb + MAXPERTURB*MIN(1.0, ub-lb), &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
             else if( ub < 0.0 )
-               x[i] = SCIPgetRandomReal(ub - MAXPERTURB*MIN(1.0, ub-lb), ub, &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
             else
-               x[i] = SCIPgetRandomReal(MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)), &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
          }
       }
    }
@@ -2646,13 +2726,13 @@ void ScipNLP::finalize_solution(
 
    case MAXITER_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
       break;
 
    case CPUTIME_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
       break;
 
@@ -2660,7 +2740,7 @@ void ScipNLP::finalize_solution(
    case RESTORATION_FAILURE:
    case ERROR_IN_STEP_COMPUTATION:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
 
@@ -2673,7 +2753,7 @@ void ScipNLP::finalize_solution(
 
    case DIVERGING_ITERATES:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_UOBJLIM;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
    case INVALID_NUMBER_DETECTED:
@@ -2721,7 +2801,7 @@ void ScipNLP::finalize_solution(
       if( nlpiproblem->lastsolinfeas <= constrvioltol )
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       else
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
 
       SCIPdebugMessage("drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
          nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas, constrvioltol);
@@ -2768,18 +2848,10 @@ void ScipNLP::finalize_solution(
          if( constrviol <= constrvioltol )
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
          else
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       }
    }
 }
-
-/* Ipopt >= 3.10 do not reveal defines like F77_FUNC.
- * However, they install IpLapack.hpp, so Ipopt's Lapack interface is available.
- * Thus, we use IpLapack if F77_FUNC is not defined and access Lapack's Dsyev directly if F77_FUNC is defined.
- */
-#ifndef F77_FUNC
-
-#include "IpLapack.hpp"
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  *
@@ -2805,71 +2877,113 @@ SCIP_RETCODE LapackDsyev(
    return SCIP_OKAY;
 }
 
-#else
-
-extern "C" {
-   /** LAPACK Fortran subroutine DSYEV */
-   void F77_FUNC(dsyev,DSYEV)(
-      char*                 jobz,               /**< 'N' to compute eigenvalues only, 'V' to compute eigenvalues and eigenvectors */
-      char*                 uplo,               /**< 'U' if upper triangle of A is stored, 'L' if lower triangle of A is stored */
-      int*                  n,                  /**< dimension */
-      double*               A,                  /**< matrix A on entry; orthonormal eigenvectors on exit, if jobz == 'V' and info == 0; if jobz == 'N', then the matrix data is destroyed */
-      int*                  ldA,                /**< leading dimension, probably equal to n */
-      double*               W,                  /**< buffer for the eigenvalues in ascending order */
-      double*               WORK,               /**< workspace array */
-      int*                  LWORK,              /**< length of WORK; if LWORK = -1, then the optimal workspace size is calculated and returned in WORK(1) */
-      int*                  info                /**< == 0: successful exit; < 0: illegal argument at given position; > 0: failed to converge */
-      );
-}
-
-/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
- *
- *  It's here, because Ipopt is linked against Lapack.
- */
-SCIP_RETCODE LapackDsyev(
-   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
-   int                   N,                  /**< dimension */
-   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
-   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
+/** solves a linear problem of the form Ax = b for a regular matrix 3*3 A */
+static
+SCIP_RETCODE SCIPsolveLinearProb3(
+   SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size 3) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   int     INFO;
-   char    JOBZ = computeeigenvectors ? 'V' : 'N';
-   char    UPLO = 'L';
-   int     LDA  = N;
-   double* WORK = NULL;
-   int     LWORK;
-   double  WORK_PROBE;
-   int     i;
+   SCIP_Real Acopy[9];
+   SCIP_Real bcopy[3];
+   int pivotcopy[3];
+   const int N = 3;
+   int info;
 
-   /* First we find out how large LWORK should be */
-   LWORK = -1;
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, &WORK_PROBE, &LWORK, &INFO);
-   if( INFO != 0 )
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   BMScopyMemoryArray(Acopy, A, N*N);
+   BMScopyMemoryArray(bcopy, b, N);
+
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+
+   if( info != 0 )
    {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
    }
-
-   LWORK = (int) WORK_PROBE;
-   assert(LWORK > 0);
-
-   SCIP_ALLOC( BMSallocMemoryArray(&WORK, LWORK) );
-
-   for( i = 0; i < LWORK; ++i )
-      WORK[i] = i;
-
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, WORK, &LWORK, &INFO);
-
-   BMSfreeMemoryArray(&WORK);
-
-   if( INFO != 0 )
+   else
    {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, bcopy, N);
    }
 
    return SCIP_OKAY;
 }
 
-#endif
+/** solves a linear problem of the form Ax = b for a regular matrix A
+ *
+ *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
+ *  the linear problem Ax = b.
+ *  It's here, because Ipopt is linked against Lapack.
+ */
+SCIP_RETCODE SCIPsolveLinearProb(
+   int                   N,                  /**< dimension */
+   SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size N) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size N) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   SCIP_Real* Acopy;
+   SCIP_Real* bcopy;
+   int* pivotcopy;
+   int info;
+
+   assert(N > 0);
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   /* call SCIPsolveLinearProb3() for performance reasons */
+   if( N == 3 )
+   {
+      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
+      return SCIP_OKAY;
+   }
+
+   Acopy = NULL;
+   bcopy = NULL;
+   pivotcopy = NULL;
+
+   SCIP_ALLOC( BMSduplicateMemoryArray(&Acopy, A, N*N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&bcopy, b, N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&pivotcopy, N) );
+
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, bcopy, N);
+   }
+
+   BMSfreeMemoryArray(&pivotcopy);
+   BMSfreeMemoryArray(&bcopy);
+   BMSfreeMemoryArray(&Acopy);
+
+   return SCIP_OKAY;
+}

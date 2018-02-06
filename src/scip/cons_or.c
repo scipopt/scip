@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,10 +52,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define EVENTHDLR_NAME         "or"
 #define EVENTHDLR_DESC         "event handler for or constraints"
@@ -150,7 +150,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* set event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -168,7 +168,7 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -658,9 +658,9 @@ SCIP_RETCODE applyFixings(
       }
    }
 
-   SCIPdebugMessage("after fixings: ");
+   SCIPdebugMsg(scip, "after fixings: ");
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    return SCIP_OKAY;
 }
@@ -715,7 +715,8 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to check */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -733,13 +734,11 @@ SCIP_RETCODE addRelaxation(
 
    nrows = consdataGetNRows(consdata);
 
-   for( r = 0; r < nrows; ++r )
+   for( r = 0; r < nrows && !(*infeasible); ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIP_Bool infeasible;
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, &infeasible) );
-         assert( ! infeasible );  /* this function is only called from initlp -> the cut should be feasible */
+         SCIP_CALL( SCIPaddRow(scip, consdata->rows[r], FALSE, infeasible) );
       }
    }
 
@@ -752,8 +751,8 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows,        /**< should LP rows be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -823,6 +822,9 @@ SCIP_RETCODE checkCons(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
+         /* update constraint violation in solution */
+         else
+            SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
          if( printreason )
          {
@@ -885,7 +887,7 @@ SCIP_RETCODE separateCons(
          {
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, consdata->rows[r], FALSE, &infeasible) );
             assert( ! infeasible );
             *separated = TRUE;
          }
@@ -916,7 +918,8 @@ SCIP_RETCODE analyzeConflictZero(
    assert(SCIPvarGetLbLocal(consdata->vars[truepos]) > 0.5);
 
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[truepos]) );
 
@@ -947,7 +950,8 @@ SCIP_RETCODE analyzeConflictOne(
    assert(SCIPvarGetLbLocal(consdata->resvar) > 0.5);
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    for( v = 0; v < consdata->nvars; ++v )
    {
@@ -1019,7 +1023,7 @@ SCIP_RETCODE propagateCons(
       {}
       if( i < nvars )
       {
-         SCIPdebugMessage("constraint <%s>: operator var <%s> fixed to 1.0 -> fix resultant <%s> to 1.0\n",
+         SCIPdebugMsg(scip, "constraint <%s>: operator var <%s> fixed to 1.0 -> fix resultant <%s> to 1.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
          SCIP_CALL( SCIPinferBinvarCons(scip, resvar, TRUE, cons, (int)PROPRULE_1, &infeasible, &tightened) );
          if( infeasible )
@@ -1051,7 +1055,7 @@ SCIP_RETCODE propagateCons(
    {
       for( i = 0; i < nvars && !(*cutoff); ++i )
       {
-         SCIPdebugMessage("constraint <%s>: resultant var <%s> fixed to 0.0 -> fix operator var <%s> to 0.0\n",
+         SCIPdebugMsg(scip, "constraint <%s>: resultant var <%s> fixed to 0.0 -> fix operator var <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[i]));
          SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], FALSE, cons, (int)PROPRULE_2, &infeasible, &tightened) );
          if( infeasible )
@@ -1137,7 +1141,7 @@ SCIP_RETCODE propagateCons(
    {
       assert(watchedvar2 == -1);
 
-      SCIPdebugMessage("constraint <%s>: all operator vars fixed to 0.0 -> fix resultant <%s> to 0.0\n",
+      SCIPdebugMsg(scip, "constraint <%s>: all operator vars fixed to 0.0 -> fix resultant <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
       SCIP_CALL( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
       if( infeasible )
@@ -1167,7 +1171,7 @@ SCIP_RETCODE propagateCons(
    {
       assert(watchedvar1 != -1);
 
-      SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 1.0, only one unfixed operand -> fix operand <%s> to 1.0\n",
+      SCIPdebugMsg(scip, "constraint <%s>: resultant <%s> fixed to 1.0, only one unfixed operand -> fix operand <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
       SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
       if( infeasible )
@@ -1232,11 +1236,11 @@ SCIP_RETCODE resolvePropagation(
    {
    case PROPRULE_1:
       /* the resultant was infered to TRUE, because one operand variable was TRUE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         if( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
             break;
@@ -1248,19 +1252,19 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_2:
       /* the operand variable was infered to FALSE, because the resultant was FALSE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      assert(SCIPvarGetUbAtIndex(consdata->resvar, bdchgidx, FALSE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_3:
       /* the resultant was infered to FALSE, because all operand variables were FALSE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         assert(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5);
+         assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       *result = SCIP_SUCCESS;
@@ -1268,14 +1272,14 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_4:
       /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
-      assert(SCIPvarGetLbAtIndex(consdata->resvar, bdchgidx, FALSE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
-            assert(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5);
+            assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -1311,7 +1315,7 @@ SCIP_RETCODE upgradeCons(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("upgrading or constraint <%s> into equivalent and constraint on negated variables\n",
+   SCIPdebugMsg(scip, "upgrading or constraint <%s> into equivalent and constraint on negated variables\n",
       SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
@@ -1451,10 +1455,12 @@ SCIP_DECL_CONSINITLP(consInitlpOr)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -1476,7 +1482,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOr)
       SCIP_CALL( separateCons(scip, conss[c], NULL, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
-   } 
+   }
 
    /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
@@ -1500,7 +1506,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolOr)
       SCIP_CALL( separateCons(scip, conss[c], sol, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
-   } 
+   }
 
    /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
@@ -1529,7 +1535,34 @@ SCIP_DECL_CONSENFOLP(consEnfolpOr)
          *result = SCIP_SEPARATED;
          return SCIP_OKAY;
       }
-   } 
+   }
+   *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxOr)
+{  /*lint --e{715}*/
+   SCIP_Bool violated;
+   int i;
+
+   /* method is called only for integral solutions, because the enforcing priority is negative */
+   for( i = 0; i < nconss; i++ )
+   {
+      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
+      if( violated )
+      {
+         SCIP_Bool separated;
+
+         SCIP_CALL( separateCons(scip, conss[i], sol, &separated) );
+         assert(separated); /* because the solution is integral, the separation always finds a cut */
+         *result = SCIP_SEPARATED;
+         return SCIP_OKAY;
+      }
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -1552,7 +1585,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOr)
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -1563,20 +1596,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsOr)
 static
 SCIP_DECL_CONSCHECK(consCheckOr)
 {  /*lint --e{715}*/
-   SCIP_Bool violated;
    int i;
 
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss; i++ )
-   {
-      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
-      if( violated )
-      {
-         *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
-      }
-   } 
    *result = SCIP_FEASIBLE;
+
+   /* method is called only for integral solutions, because the enforcing priority is negative */
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
+   {
+      SCIP_Bool violated = FALSE;
+
+      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
+
+      if( violated )
+         *result = SCIP_INFEASIBLE;
+   }
 
    return SCIP_OKAY;
 }
@@ -1671,7 +1704,7 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
          /* if only one variable is left, the resultant has to be equal to this single variable */
          if( consdata->nvars == 1 )
          {
-            SCIPdebugMessage("or constraint <%s> has only one variable not fixed to 0.0\n", SCIPconsGetName(cons));
+            SCIPdebugMsg(scip, "or constraint <%s> has only one variable not fixed to 0.0\n", SCIPconsGetName(cons));
 
             assert(consdata->vars != NULL);
             assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
@@ -1802,6 +1835,9 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    sourcevars = SCIPgetVarsOr(sourcescip, sourcecons);
    nvars = SCIPgetNVarsOr(sourcescip, sourcecons);
 
+   if( nvars == -1 )
+      return SCIP_INVALIDCALL;
+
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
@@ -1846,7 +1882,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    int varssize;
    int nvars;
 
-   SCIPdebugMessage("parse <%s> as or constraint\n", str);
+   SCIPdebugMsg(scip, "parse <%s> as or constraint\n", str);
 
    /* copy string for truncating it */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
@@ -1859,7 +1895,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
    if( resvar == NULL )
    {
-      SCIPdebugMessage("resultant variable %s does not exist \n", token);
+      SCIPdebugMsg(scip, "resultant variable %s does not exist \n", token);
       *success = FALSE;
    }
    else
@@ -2011,7 +2047,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOr) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOr) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOr) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOr, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOr, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOr) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOr, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -2019,7 +2055,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOr, consSepasolOr, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY,
          CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOr) );
-
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOr) );
 
    return SCIP_OKAY;
 }
@@ -2051,7 +2087,7 @@ SCIP_RETCODE SCIPcreateConsOr(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

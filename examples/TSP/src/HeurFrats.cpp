@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,7 +41,7 @@ using namespace std;
 SCIP_DECL_HEURFREE(HeurFrats::scip_free)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
    
 /** initialization method of primal heuristic (called after problem was transformed) */
 SCIP_DECL_HEURINIT(HeurFrats::scip_init)
@@ -71,7 +71,7 @@ SCIP_DECL_HEUREXIT(HeurFrats::scip_exit)
    release_graph(&graph);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
    
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
  *
@@ -82,7 +82,7 @@ SCIP_DECL_HEUREXIT(HeurFrats::scip_exit)
 SCIP_DECL_HEURINITSOL(HeurFrats::scip_initsol)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
    
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
  *
@@ -92,7 +92,7 @@ SCIP_DECL_HEURINITSOL(HeurFrats::scip_initsol)
 SCIP_DECL_HEUREXITSOL(HeurFrats::scip_exitsol)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
    
 /** execution method of primal heuristic */
 SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
@@ -124,13 +124,13 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
    *result = SCIP_DIDNOTFIND;
 
    /* choose the first node as starting point*/
-   currnode = &graph->nodes[0];   
-   nnodes = graph->nnodes;
+   currnode = &graph->nodes[0]; /*lint !e613*/
+   nnodes = graph->nnodes; /*lint !e613*/
    success = TRUE;
    
    /* allocate local memory */
    SCIP_CALL( SCIPcreateSol (scip, &newsol, heur) );      
-   SCIP_CALL( SCIPallocBufferArray(scip, &visited, nnodes) ); 
+   SCIP_CALL( SCIPallocBufferArray(scip, &visited, nnodes) ); /*lint !e530*/
    BMSclearMemoryArray(visited, nnodes);
    
    assert(currnode->id == 0);
@@ -168,7 +168,7 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
       else
       {
          GRAPHNODE* finalnode;
-         finalnode = &graph->nodes[0]; 
+         finalnode = &graph->nodes[0]; /*lint !e613*/
 
          /* find the last edge which closes the tour */
          while( edge != NULL )
@@ -195,7 +195,7 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
       /* assert that the data is not corrupted */
       assert(bestedge != NULL);
       assert(SCIPisFeasLE(scip, 0.0, bestval) && SCIPisFeasLE(scip, bestval, 1.0));
-      assert(bestval == SCIPgetSolVal(scip, sol, bestedge->var));
+      assert(bestval == SCIPgetSolVal(scip, sol, bestedge->var)); /*lint !e777*/
 
       /* fix the variable which represents the best edge to one in the new solution and proceed to next node */
       SCIP_CALL( SCIPsetSolVal(scip, newsol, bestedge->var, 1.0) );
@@ -210,11 +210,11 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
    if( success )
    {
       for( i = 0; i < nnodes; i++ )
-         assert(visited[graph->nodes[i].id]);
+         assert(visited[graph->nodes[i].id]); /*lint !e613*/
       
       success = FALSE;
       /* due to construction we already know, that the solution will be feasible */
-      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
    }
@@ -226,7 +226,7 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
 }
 
 /** clone method which will be used to copy a objective plugin */
-SCIP_DECL_HEURCLONE(scip::ObjCloneable* HeurFrats::clone)
+SCIP_DECL_HEURCLONE(scip::ObjCloneable* HeurFrats::clone) /*lint !e665*/
 {
    return new HeurFrats(scip);
 }

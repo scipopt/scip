@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_visual.h
- * @brief  datastructures for output for visualization tools (VBC, BAK)
+ * @ingroup INTERNALAPI
+ * @brief  data structures for output for visualization tools (VBC, BAK)
  * @author Tobias Achterberg
  * @author Marc Pfetsch
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -44,8 +46,8 @@ struct SCIP_Visual
    SCIP_Longint          timestep;           /**< time step counter for non real time output */
    SCIP_NODE*            lastnode;           /**< last node that was colored */
    SCIP_VBCCOLOR         lastcolor;          /**< last color that was used */
-   SCIP_Bool             firstnode;          /**< whether this is the first node */
    SCIP_Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
+   SCIP_Real             lastlowerbound;     /**< last lower bound that was output */
 };
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_distributiondiving.c
- * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
- * @author Tobias Achterberg
+ * @brief Diving heuristic that chooses fixings w.r.t. changes in the solution density after Pryor and Chinneck.
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -25,19 +25,20 @@
 
 #include "scip/heur_distributiondiving.h"
 #include "scip/branch_distribution.h"
-#include "pub_dive.h"
 
 #define HEUR_NAME             "distributiondiving"
-#define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR         'f'
-#define HEUR_PRIORITY         -1003000
+#define HEUR_DESC             "Diving heuristic that chooses fixings w.r.t. changes in the solution density"
+#define HEUR_DISPCHAR         'e'
+#define HEUR_PRIORITY         -1003300
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          3
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
-#define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event tyoe to be handled by this event handler */
-#define EVENTHDLR_NAME "eventhdlr_distributiondiving"
+#define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event type to be handled by this event handler */
+#define EVENTHDLR_NAME        "eventhdlr_distributiondiving"
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+
 #define SQUARED(x) ((x) * (x))
 /*
  * Default parameter settings
@@ -54,15 +55,21 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS  TRUE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
 
-#define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
+#define SCOREPARAM_VALUES "lhwvd"       /**< the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p.,
+                                         *   'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving */
+#define SCOREPARAM_VALUESLEN 5
+#define DEFAULT_SCOREPARAM 'r'          /**< default scoring parameter to guide the diving */
+#define DEFAULT_RANDSEED   117          /**< initial seed for random number generation */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler pointer */
    SCIP_VAR**            updatedvars;        /**< variables to process bound change events for */
    SCIP_Real*            rowmeans;           /**< row activity mean values for all rows */
@@ -79,8 +86,8 @@ struct SCIP_HeurData
    int                   memsize;            /**< memory size of current arrays, needed for dynamic reallocation */
    int                   varpossmemsize;     /**< memory size of updated vars and varposs array */
 
-   char                  scoreparam;         /**< score parameter to be used */
-   SCIP_Bool             usescipscore;       /**< should the SCIP branching score be used for weighing up and down score? */
+   char                  scoreparam;         /**< score user parameter */
+   char                  score;              /**< score to be used depending on user parameter to use fixed score or revolve */
 };
 
 struct SCIP_EventhdlrData
@@ -119,10 +126,10 @@ SCIP_RETCODE heurdataEnsureArraySize(
       int v;
       int nvars;
 
-      SCIPallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowmeans, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowvariances, newsize);
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowmeans, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowvariances, newsize) );
 
       assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
@@ -160,10 +167,10 @@ SCIP_RETCODE heurdataEnsureArraySize(
    }
    else
    {
-      SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowmeans, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowvariances, newsize);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowmeans, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowvariances, newsize) );
    }
 
    /* loop over extended arrays and invalidate data to trigger initialization of this row when necessary */
@@ -181,7 +188,7 @@ SCIP_RETCODE heurdataEnsureArraySize(
    return SCIP_OKAY;
 }
 
-/* update the variables current lower and upper bound */
+/** update the variables current lower and upper bound */
 static
 void heurdataUpdateCurrentBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -210,7 +217,7 @@ void heurdataUpdateCurrentBounds(
  *
  *  The mean value \f$ \mu \f$ is given by \f$ \mu = \sum_i=1^n c_i * (lb_i +ub_i) / 2 \f$ where
  *  \f$n \f$ is the number of variables, and \f$ c_i, lb_i, ub_i \f$ are the variable coefficient and
- *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \$ is given by
+ *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \f$ is given by
  *  \f$ \sigma^2 = \sum_i=1^n c_i^2 * \sigma^2_i \f$, with the variance being
  *  \f$ \sigma^2_i = ((ub_i - lb_i + 1)^2 - 1) / 12 \f$ for integer variables and
  *  \f$ \sigma^2_i = (ub_i - lb_i)^2 / 12 \f$ for continuous variables.
@@ -273,10 +280,11 @@ void rowCalculateGauss(
       varmean = 0.0;
       varvariance = 0.0;
       varindex = SCIPvarGetProbindex(colvar);
-      assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
+      assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+            == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
 
       /* variable bounds need to be watched from now on */
-      if( heurdata->currentlbs[varindex] == SCIP_INVALID )
+      if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
          heurdataUpdateCurrentBounds(scip, heurdata, colvar);
 
       assert(!SCIPisInfinity(scip, colvarlb));
@@ -323,7 +331,7 @@ void rowCalculateGauss(
    }
 
    SCIPdebug( SCIPprintRow(scip, row, NULL) );
-   SCIPdebugMessage("  Row %s has a mean value of %g at a sigma2 of %g \n", SCIProwGetName(row), *mu, *sigma2);
+   SCIPdebugMsg(scip, "  Row %s has a mean value of %g at a sigma2 of %g \n", SCIProwGetName(row), *mu, *sigma2);
 }
 
 /** calculate the branching score of a variable, depending on the chosen score parameter */
@@ -335,7 +343,7 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real             lpsolval,           /**< current fractional LP-relaxation solution value  */
    SCIP_Real*            upscore,            /**< pointer to store the variable score when branching on it in upward direction */
    SCIP_Real*            downscore,          /**< pointer to store the variable score when branching on it in downward direction */
-   char                  scoreparam          /**< the score parameter of this branching rule */
+   char                  scoreparam          /**< the score parameter of this heuristic */
    )
 {
    SCIP_COL* varcol;
@@ -361,7 +369,7 @@ SCIP_RETCODE calcBranchScore(
    assert(var != NULL);
    assert(upscore != NULL);
    assert(downscore != NULL);
-   assert(!SCIPisIntegral(scip, lpsolval));
+   assert(!SCIPisIntegral(scip, lpsolval) || SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    varcol = SCIPvarGetCol(var);
@@ -372,7 +380,7 @@ SCIP_RETCODE calcBranchScore(
    ncolrows = SCIPcolGetNNonz(varcol);
    varlb = SCIPvarGetLbLocal(var);
    varub = SCIPvarGetUbLocal(var);
-   assert(SCIPisFeasLT(scip, varlb, varub));
+   assert(varub - varlb > 0.5);
    vartype = SCIPvarGetType(var);
 
    /* calculate mean and variance of variable uniform distribution before and after branching */
@@ -380,8 +388,17 @@ SCIP_RETCODE calcBranchScore(
    squaredbounddiff = 0.0;
    SCIPvarCalcDistributionParameters(scip, varlb, varub, vartype, &currentmean, &squaredbounddiff);
 
-   newlb = SCIPfeasCeil(scip, lpsolval);
-   newub = SCIPfeasFloor(scip, lpsolval);
+   /* unfixed binary variables may have an integer solution value in the LP solution, eg, at the presence of indicator constraints */
+   if( !SCIPvarIsBinary(var) )
+   {
+      newlb = SCIPfeasCeil(scip, lpsolval);
+      newub = SCIPfeasFloor(scip, lpsolval);
+   }
+   else
+   {
+      newlb = 1.0;
+      newub = 0.0;
+   }
 
    /* calculate the variable's uniform distribution after branching up and down, respectively. */
    squaredbounddiffup = 0.0;
@@ -431,7 +448,7 @@ SCIP_RETCODE calcBranchScore(
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, rowpos) );
 
       /* calculate row activity distribution if this is the first candidate to appear in this row */
-      if( heurdata->rowmeans[rowpos] == SCIP_INVALID )
+      if( heurdata->rowmeans[rowpos] == SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
       {
          rowCalculateGauss(scip, heurdata, row, &heurdata->rowmeans[rowpos], &heurdata->rowvariances[rowpos],
                &heurdata->rowinfinitiesdown[rowpos], &heurdata->rowinfinitiesup[rowpos]);
@@ -441,7 +458,7 @@ SCIP_RETCODE calcBranchScore(
       rowmean = heurdata->rowmeans[rowpos];
       rowvariance = heurdata->rowvariances[rowpos];
       rowinfinitiesdown = heurdata->rowinfinitiesdown[rowpos];
-      rowinfinitiesup = heurdata->rowinfinitiesdown[rowpos];
+      rowinfinitiesup = heurdata->rowinfinitiesup[rowpos];
       assert(!SCIPisNegative(scip, rowvariance));
 
       currentrowprob = SCIProwCalcProbability(scip, row, rowmean, rowvariance,
@@ -510,34 +527,24 @@ SCIP_RETCODE calcBranchScore(
       /* update the up and down score depending on the chosen scoring parameter */
       SCIP_CALL( SCIPupdateDistributionScore(scip, currentrowprob, newrowprobup, newrowprobdown, upscore, downscore, scoreparam) );
 
-      SCIPdebugMessage("  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
+      SCIPdebugMsg(scip, "  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
          SCIPvarGetName(var), SCIProwGetName(row), currentrowprob, newrowprobup, newrowprobdown);
-      SCIPdebugMessage("  -->  new variable score: %g (for branching up), %g (for branching down)\n",
+      SCIPdebugMsg(scip, "  -->  new variable score: %g (for branching up), %g (for branching down)\n",
          *upscore, *downscore);
    }
 
    return SCIP_OKAY;
 }
 
-/** free branchrule data */
+/** free heuristic data */
 static
 SCIP_RETCODE heurdataFreeArrays(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< branching rule data */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    assert(heurdata->memsize == 0 || heurdata->rowmeans != NULL);
    assert(heurdata->memsize >= 0);
-
-   if( heurdata->memsize > 0 )
-   {
-      SCIPfreeBufferArray(scip, &heurdata->rowmeans);
-      SCIPfreeBufferArray(scip, &heurdata->rowvariances);
-      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesup);
-      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesdown);
-
-      heurdata->memsize = 0;
-   }
 
    if( heurdata->varpossmemsize > 0 )
    {
@@ -563,7 +570,16 @@ SCIP_RETCODE heurdataFreeArrays(
       SCIPfreeBufferArray(scip, &heurdata->varposs);
       SCIPfreeBufferArray(scip, &heurdata->varfilterposs);
    }
-   /* allocate variable update event processing array storage */
+
+   if( heurdata->memsize > 0 )
+   {
+      SCIPfreeBufferArray(scip, &heurdata->rowvariances);
+      SCIPfreeBufferArray(scip, &heurdata->rowmeans);
+      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesup);
+      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesdown);
+
+      heurdata->memsize = 0;
+   }
 
    heurdata->varpossmemsize = 0;
    heurdata->nupdatedvars = 0;
@@ -604,11 +620,14 @@ void heurdataAddBoundChangeVar(
    }
 
    /* if none of the variables rows was calculated yet, variable needs not to be watched */
-   assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
-   if( heurdata->currentlbs[varindex] == SCIP_INVALID )
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+      == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
+
+   /* we don't need to enqueue the variable if it hasn't been watched so far */
+   if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 see above */
       return;
 
-   /* add the variable to the branch rule data of variables to process updates for */
+   /* add the variable to the heuristic data of variables to process updates for */
    assert(heurdata->varpossmemsize > heurdata->nupdatedvars);
    varpos = heurdata->nupdatedvars;
    heurdata->updatedvars[varpos] = var;
@@ -620,7 +639,7 @@ void heurdataAddBoundChangeVar(
 static
 SCIP_VAR* heurdataPopBoundChangeVar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< branchrule data */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    SCIP_VAR* var;
@@ -686,8 +705,8 @@ SCIP_RETCODE varProcessBoundChanges(
    oldub = heurdata->currentubs[varindex];
 
    /* skip update if the variable has never been subject of previously calculated row activities */
-   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID));
-   if( oldlb == SCIP_INVALID )
+   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
+   if( oldlb == SCIP_INVALID ) /*lint !e777 */
       return SCIP_OKAY;
 
    newlb = SCIPvarGetLbLocal(var);
@@ -718,12 +737,12 @@ SCIP_RETCODE varProcessBoundChanges(
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, rowpos) );
 
       /* only consider rows for which activity distribution was already calculated */
-      if( heurdata->rowmeans[rowpos] != SCIP_INVALID )
+      if( heurdata->rowmeans[rowpos] != SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
       {
          SCIP_Real coeff;
          SCIP_Real coeffsquared;
          assert(heurdata->rowvariances[rowpos] != SCIP_INVALID
-               && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0));
+               && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0)); /*lint !e777 */
 
          coeff = colvals[r];
          coeffsquared = SQUARED(coeff);
@@ -779,7 +798,7 @@ SCIP_DECL_EVENTFREE(eventFreeDistributiondiving)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
@@ -816,7 +835,7 @@ SCIP_DECL_HEURFREE(heurFreeDistributiondiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -889,36 +908,45 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 
    varindex = SCIPvarGetProbindex(cand);
 
+   /* terminate with a penalty for inactive variables, which the plugin can currently not score
+    * this should never happen with default settings where only LP branching candidates are iterated, but might occur
+    * if other constraint handlers try to score an inactive variable that was (multi-)aggregated or negated
+    */
+   if( varindex == - 1 )
+   {
+      *score = -1.0;
+      *roundup = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+
    /* in debug mode, ensure that all bound process events which occurred in the mean time have been captured
-    * by the branching rule event system
+    * by the heuristic event system
     */
    assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand)));
    assert(0 <= varindex && varindex < heurdata->varpossmemsize);
 
-   assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
    assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
-         || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(cand), heurdata->currentlbs[varindex]));
+      == (heurdata->currentubs[varindex] == SCIP_INVALID));/*lint !e777 doesn't like comparing floats for equality */
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+      || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(cand), heurdata->currentlbs[varindex])); /*lint !e777 */
    assert((heurdata->currentubs[varindex] == SCIP_INVALID)
-         || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(cand), heurdata->currentubs[varindex]));
+      || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(cand), heurdata->currentubs[varindex])); /*lint !e777 */
 
-   /* if the branching rule has not captured the variable bounds yet, this can be done now */
-   if( heurdata->currentlbs[varindex] == SCIP_INVALID )
+   /* if the heuristic has not captured the variable bounds yet, this can be done now */
+   if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 */
       heurdataUpdateCurrentBounds(scip, heurdata, cand);
 
    upscore = 0.0;
    downscore = 0.0;
 
    /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
-   SCIP_CALL( calcBranchScore(scip, heurdata, cand, candsol,
-         &upscore, &downscore, heurdata->scoreparam) );
+   SCIP_CALL( calcBranchScore(scip, heurdata, cand, candsol, &upscore, &downscore, heurdata->score) );
 
+   /* score is simply the maximum of the two individual scores */
    *roundup = (upscore > downscore);
-
-   /* if weighted scoring is enabled, use the branching score method of SCIP to weigh up and down score */
-   if( heurdata->usescipscore )
-      *score = SCIPgetBranchScore(scip, cand, downscore, upscore);
-   else
-      *score = MAX(upscore, downscore);
+   *score = MAX(upscore, downscore);
 
    return SCIP_OKAY;
 }
@@ -926,7 +954,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecDistributiondiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
@@ -947,6 +975,16 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
    if( nlprows == 0 )
       return SCIP_OKAY;
 
+   /* terminate if there are no integer variables (note that, e.g., SOS1 variables may be present) */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* select and store the scoring parameter for this call of the heuristic */
+   if( heurdata->scoreparam == 'r' )
+      heurdata->score = SCOREPARAM_VALUES[SCIPheurGetNCalls(heur) % SCOREPARAM_VALUESLEN];
+   else
+      heurdata->score = heurdata->scoreparam;
+
    SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, nlprows) );
    assert(SCIPheurGetNDivesets(heur) > 0);
    assert(SCIPheurGetDivesets(heur) != NULL);
@@ -955,7 +993,7 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
-   heurdataFreeArrays(scip, heurdata);
+   SCIP_CALL( heurdataFreeArrays(scip, heurdata) );
 
    return SCIP_OKAY;
 }
@@ -994,9 +1032,9 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    SCIP_HEUR* heur;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   /* create distributiondivingdata */
+   /* create distributiondiving data */
    heurdata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    heurdata->memsize = 0;
    heurdata->rowmeans = NULL;
@@ -1007,12 +1045,9 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    heurdata->currentlbs = NULL;
    heurdata->currentubs = NULL;
 
-   heurdata->scoreparam = 'l';
-   heurdata->usescipscore = TRUE;
-
-   /* create event handler first to finish branch rule data */
+   /* create event handler first to finish heuristic data */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->heurdata = heurdata;
 
    heurdata->eventhdlr = NULL;
@@ -1035,11 +1070,17 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitDistributiondiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitDistributiondiving) );
 
+   /* add diveset with the defined scoring function */
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH,
          DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
-         DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK,
+         DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES,
          divesetGetScoreDistributiondiving) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoreparam",
+         "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving",
+         &heurdata->scoreparam, TRUE, DEFAULT_SCOREPARAM, "lvdhwr", NULL, NULL) );
 
    return SCIP_OKAY;
 }

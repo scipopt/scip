@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_sol.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for primal CIP solutions
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -38,6 +38,12 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicSolutionMethods
+ *
+ * @{
+ */
+
+
 /** gets origin of solution */
 EXTERN
 SCIP_SOLORIGIN SCIPsolGetOrigin(
@@ -47,6 +53,12 @@ SCIP_SOLORIGIN SCIPsolGetOrigin(
 /** returns whether the given solution is defined on original variables */
 EXTERN
 SCIP_Bool SCIPsolIsOriginal(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** returns whether the given solution is partial */
+EXTERN
+SCIP_Bool SCIPsolIsPartial(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
@@ -99,6 +111,47 @@ int SCIPsolGetIndex(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** get maximum absolute bound violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsBoundViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative bound violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelBoundViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute integrality violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsIntegralityViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute LP row violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsLPRowViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative LP row violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelLPRowViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute constraint violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsConsViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative constraint violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelConsViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
 
 #ifdef NDEBUG
 
@@ -107,7 +160,7 @@ int SCIPsolGetIndex(
  */
 
 #define SCIPsolGetOrigin(sol)           ((sol)->solorigin)
-#define SCIPsolIsOriginal(sol)          ((sol)->solorigin == SCIP_SOLORIGIN_ORIGINAL)
+#define SCIPsolIsOriginal(sol)          ((sol)->solorigin == SCIP_SOLORIGIN_ORIGINAL || (sol)->solorigin == SCIP_SOLORIGIN_PARTIAL)
 #define SCIPsolGetOrigObj(sol)          (sol)->obj
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum
@@ -117,6 +170,8 @@ int SCIPsolGetIndex(
 #define SCIPsolGetIndex(sol)            (sol)->index
 #define SCIPsolSetHeur(sol,newheur)     ((sol)->heur = (newheur))
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

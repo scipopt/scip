@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,11 +48,19 @@
 extern "C" {
 #endif
 
-/** creates the full strong LP branching rule and includes it in SCIP */
+/** creates the full strong LP branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup BRANCHINGRULES
+ *
+ * @{
+ */
 
 /**
  * Selects a variable from a set of candidates by strong branching
@@ -74,11 +82,11 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    int                   npriolpcands,       /**< number of priority branching candidates             */
    int                   ncomplete,          /**< number of branching candidates without skip         */
    int*                  start,              /**< starting index in lpcands                           */
-   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
    int                   maxproprounds,      /**< maximum number of propagation rounds to be performed during strong
                                               *   branching before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds,      /**< should valid bounds be identified in a probing-like fashion during
                                               *   strong branching (only with propagation)? */
+   SCIP_Bool             forcestrongbranch,  /**< should strong branching be applied even if there is just a single candidate? */
    int*                  bestcand,           /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
    SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
@@ -88,6 +96,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
    SCIP_RESULT*          result              /**< result pointer                                      */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -44,7 +44,8 @@ main(
    }
 
    // get the number of queens for commandline
-   int n = abs(atoi(argv[1]));
+   size_t n = abs(atoi(argv[1])); /*lint !e732*/
+
    try
    {
       // initialize the queens solver
@@ -56,10 +57,10 @@ main(
       // display the solution on stdout
       solver.disp();
 
-   } catch(SCIPException& exc)
+   } catch(const SCIPException& exc)
    {
       cerr << exc.what() << endl;
-      exit(exc.getRetcode());
+      exit((int) exc.getRetcode());
    }
    return EXIT_SUCCESS;
 }

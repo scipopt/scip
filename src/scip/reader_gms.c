@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,7 +53,11 @@
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "gmsreader"
+#ifdef WITH_GAMS
 #define READER_DESC             "file writer for MI(NL)(SOC)Ps in GAMS file format"
+#else
+#define READER_DESC             "file reader and writer for MI(NL)(SOC)Ps in GAMS file format"
+#endif
 #define READER_EXTENSION        "gms"
 
 
@@ -69,7 +73,7 @@
  * Local methods (for writing)
  */
 
-static const char badchars[] = "#*+/-@$";
+static const char badchars[] = "#*+/-@$[](){}";
 
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
@@ -176,7 +180,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)len);
+   SCIPdebugMsg(scip, "linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)len);
 
    if( (*linecnt) > GMS_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
@@ -201,7 +205,7 @@ void appendLineWithIndent(
    appendLine(scip, file, linebuffer, linecnt, extension);
 }
 
-/** checks string for occurences of '#', '*', '+', '/', and '-' and replaces those by '_' */
+/** checks string for occurences of bad symbols and replace those by '_' */
 static
 void conformName(
    char*                 name                /**< string to adjust */
@@ -1355,7 +1359,7 @@ SCIP_RETCODE printExpr(
    SCIP_Bool             transformed,        /**< expression belongs to transformed constraint? */
    SCIP_EXPR*            expr,               /**< expression to print */
    SCIP_VAR**            exprvars            /**< variables of expression */
-)
+   )
 {
    char buffer[GMS_MAX_PRINTLEN];
 
@@ -1564,8 +1568,9 @@ SCIP_RETCODE printExpr(
             default:
             {
                int i;
-               const char* opstr = SCIPexprGetOperator(expr) == SCIP_EXPR_SUM ? " + " : " * ";
+               char opstr[GMS_MAX_PRINTLEN];
 
+               (void) SCIPsnprintf(opstr, GMS_MAX_PRINTLEN, SCIPexprGetOperator(expr) == SCIP_EXPR_SUM ? " + " : " * ");
                appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
                for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
                {
@@ -1890,7 +1895,7 @@ SCIP_RETCODE checkVarnames(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/replaceforbiddenchars", &replaceforbiddenchars) );
 
-   /* check if the variable names contain the symbols '#', '*', '+', '/', '-', or '@' */
+   /* check if the variable names contain any of the bad symbols */
    for( badchar = badchars; *badchar; ++badchar )
    {
       for( v = 0; v < nvars; ++v )
@@ -1952,7 +1957,7 @@ SCIP_RETCODE checkConsnames(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/replaceforbiddenchars", &replaceforbiddenchars) );
 
-   /* check if the constraint names contain the symbol '#', '*', '+', '/', '-', or '@' */
+   /* check if the constraint names contain any of the bad symbols */
    for( badchar = badchars; *badchar; ++badchar )
    {
       for( c = 0; c < nconss; ++c )
@@ -2075,7 +2080,7 @@ SCIP_DECL_READERREAD(readerReadGms)
    /* call GAMS with convertd solver to get compiled model instance in temporary directory */
    SCIPsnprintf(gamscall, SCIP_MAXSTRLEN, WITH_GAMS "/gams %s LP=CONVERTD RMIP=CONVERTD QCP=CONVERTD RMIQCP=CONVERTD NLP=CONVERTD DNLP=CONVERTD RMINLP=CONVERTD CNS=CONVERTD MIP=CONVERTD MIQCP=CONVERTD MINLP=CONVERTD MCP=CONVERTD MPEC=CONVERTD RMPEC=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=%d",
       filename, SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL ? 3 : 0);
-   SCIPdebugMessage(gamscall);
+   SCIPdebugMsg(scip, gamscall);
    rc = system(gamscall);
    if( rc != 0 )
    {
@@ -2173,14 +2178,10 @@ SCIP_RETCODE SCIPincludeReaderGms(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create reader data */
-   readerdata = NULL;
-
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyGms) );

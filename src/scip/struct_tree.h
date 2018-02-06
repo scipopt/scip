@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_tree.h
- * @brief  datastructures for branch and bound tree
+ * @ingroup INTERNALAPI
+ * @brief  data structures for branch and bound tree
  * @author Tobias Achterberg
  */
 
@@ -43,12 +44,18 @@ extern "C" {
 struct SCIP_Probingnode
 {
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   SCIP_LPINORMS*        lpinorms;           /**< LP pricing norms information */
    int                   ninitialcols;       /**< number of LP columns before the node was processed */
    int                   ninitialrows;       /**< number of LP rows before the node was processed */
    int                   ncols;              /**< total number of columns of this node's LP */
    int                   nrows;              /**< total number of rows of this node's LP */
+   SCIP_VAR**            origobjvars;        /**< variables whose objective function coefficients have changed */
+   SCIP_Real*            origobjvals;        /**< original objective function coefficients */
+   int                   nchgdobjs;          /**< number of changed objective coefficients */
    SCIP_Bool             lpwasprimfeas;      /**< primal feasibility of saved LP state information */
+   SCIP_Bool             lpwasprimchecked;   /**< primal feasibility check state of saved LP state information  */
    SCIP_Bool             lpwasdualfeas;      /**< dual feasibility of saved LP state information */
+   SCIP_Bool             lpwasdualchecked;   /**< dual feasibility check state of saved LP state information  */
 };
 
 /** sibling information (should not exceed the size of a pointer) */
@@ -95,9 +102,11 @@ struct SCIP_Fork
    int                   naddedcols;         /**< number of columns added at this node */
    int                   naddedrows;         /**< number of rows added at this node */
    int                   nlpistateref;       /**< number of times, the LP state is needed */
-   unsigned int          nchildren:30;       /**< number of children of this parent node */
+   unsigned int          nchildren:28;       /**< number of children of this parent node */
    unsigned int          lpwasprimfeas:1;    /**< primal feasibility of saved LP state information */
+   unsigned int          lpwasprimchecked:1; /**< primal feasibility check state of saved LP state information */
    unsigned int          lpwasdualfeas:1;    /**< dual feasibility of saved LP state information */
+   unsigned int          lpwasdualchecked:1; /**< dual feasibility check state of saved LP state information */
 };
 
 /** fork with solved LP, where bounds and constraints have been changed, and rows and columns were removed and added */
@@ -112,7 +121,9 @@ struct SCIP_Subroot
    int                   nlpistateref;       /**< number of times, the LP state is needed */
    unsigned int          nchildren:30;       /**< number of children of this parent node */
    unsigned int          lpwasprimfeas:1;    /**< primal feasibility of saved LP state information */
+   unsigned int          lpwasprimchecked:1; /**< primal feasibility check state of saved LP state information */
    unsigned int          lpwasdualfeas:1;    /**< dual feasibility of saved LP state information */
+   unsigned int          lpwasdualchecked:1; /**< dual feasibility check state of saved LP state information */
 };
 
 /** node data structure */
@@ -141,6 +152,8 @@ struct SCIP_Node
    unsigned int          cutoff:1;           /**< should the node and all sub nodes be cut off from the tree? */
    unsigned int          reprop:1;           /**< should propagation be applied again, if the node is on the active path? */
    unsigned int          repropsubtreemark:9;/**< subtree repropagation marker for subtree repropagation */
+   unsigned int          reoptid:29;         /**< unique id to identify the node during reoptimization */
+   unsigned int          reopttype:3;        /**< node type during reoptimization */
 };
 
 /** bound change information for pending bound changes */
@@ -176,14 +189,21 @@ struct SCIP_Tree
    SCIP_NODE**           siblings;           /**< array with siblings of the focus node */
    SCIP_Real*            childrenprio;       /**< array with node selection priorities of children */
    SCIP_Real*            siblingsprio;       /**< array with node selection priorities of siblings */
+   SCIP_VAR**            divebdchgvars[2];   /**< two arrays to store variables for branching */
+   SCIP_BRANCHDIR*       divebdchgdirs[2];   /**< arrays to hold the directions for diving */
+   SCIP_Real*            divebdchgvals[2];   /**< arrays to store bound change values for diving */
    int*                  pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
                                               *   newly added columns of the focus node and the current probing node) */
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
+   SCIP_LPISTATE*        focuslpistate;      /**< LP state information of focus node */
    SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
+   SCIP_Real*            probdiverelaxsol;   /**< array with stored original relaxation solution during diving or probing */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
+   int                   divebdchgsize[2];   /**< holds the two sizes of the dive bound change information */
+   int                   ndivebdchanges[2];  /**< current number of stored dive bound changes for the next depth */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
    int                   npendingbdchgs;     /**< number of pending bound changes */
    int                   childrensize;       /**< available slots in children vector */
@@ -198,6 +218,7 @@ struct SCIP_Tree
    int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */
    int                   repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
+   int                   probingsumchgdobjs; /**< number of changed objective coefficients in all probing nodes */
    SCIP_Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
    SCIP_Bool             probingnodehaslp;   /**< was the LP solved (at least once) in the current probing node? */
    SCIP_Bool             focuslpconstructed; /**< was the LP of the focus node already constructed? */
@@ -208,9 +229,14 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
    SCIP_Bool             probingsolvedlp;    /**< was the LP solved during probing mode, i.e., was SCIPsolveProbingLP() called? */
    SCIP_Bool             forcinglpmessage;   /**< was forcing LP solving message be posted */
+   SCIP_Bool             probingobjchanged;  /**< was the objective function changed during probing? */
    SCIP_Bool             sbprobing;          /**< is the probing mode used for strong branching? */
    SCIP_Bool             probinglpwasprimfeas;/**< primal feasibility when probing started */
+   SCIP_Bool             probinglpwasprimchecked;/**< primal feasibility has been checked when probing started */
    SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */
+   SCIP_Bool             probinglpwasdualchecked;/**< dual feasibility has been check when probing started */
+   SCIP_Bool             probdiverelaxstored; /**< was a relax solution stored before diving or probing ? */
+   SCIP_Bool             probdiverelaxincludeslp; /**< did the stored relaxation solution include all lp cuts ? */
 };
 
 #ifdef __cplusplus

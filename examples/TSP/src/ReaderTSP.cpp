@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,7 +40,6 @@ using namespace scip;
 using namespace std;
 
 #define NINT(x) (floor(x+0.5))
-#define FRAC(x) (x-floor(x))
 
 /** parses the node list */ 
 void ReaderTSP::getNodesFromFile(
@@ -71,7 +70,7 @@ void ReaderTSP::getNodesFromFile(
       i++;
    }
    assert( i == graph->nnodes );
-}
+} /*lint !e1762*/
 
 /** adds a variable to both halfedges and captures it for usage in the graph */
 SCIP_RETCODE ReaderTSP::addVarToEdges(
@@ -131,14 +130,14 @@ bool ReaderTSP::checkValid(
       return false;
    }
    return true;
-}
+} /*lint !e1762*/
 
 
 /** destructor of file reader to free user data (called when SCIP is exiting) */
 SCIP_DECL_READERFREE(ReaderTSP::scip_free)
 {
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** problem reading method of reader
  *
@@ -241,7 +240,7 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
       }  
       else if( token == "COMMENT:" || token == "COMMENT" || 
          token == "DISPLAY_DATA_TYPE" || token == "DISPLAY_DATA_TYPE:" )
-         getline( filedata, token ); 
+         (void) getline( filedata, token );
       else if( token == "EOF" )
          break;
       else if( token == "" )
@@ -258,10 +257,12 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
    if( !checkValid(graph, name, type, edgeweighttype, nnodes) )
       retcode = SCIP_READERROR;
 
+   assert(graph != NULL);
+
    if( retcode == SCIP_OKAY )
    {
-      edgeforw = &( graph->edges[0] ); 
-      edgebackw= &( graph->edges[nedges/2] );
+      edgeforw = &( graph->edges[0] ); /*lint !e613*/
+      edgebackw= &( graph->edges[nedges/2] ); /*lint !e613*/
 
 #ifdef SCIP_DEBUG
       weights = new double* [nnodes];
@@ -272,10 +273,10 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
       // construct all edges in a complete digraph
       for( i = 0; i < nnodes; i++ )
       {
-         nodestart = &graph->nodes[i];
+         nodestart = &graph->nodes[i]; /*lint !e613*/
          for( j = i+1; j < nnodes; j++ )
          {
-            nodeend = &graph->nodes[j];
+            nodeend = &graph->nodes[j]; /*lint !e613*/
 
             // construct two 'parallel' halfedges
             edgeforw->adjac = nodeend;
@@ -284,12 +285,12 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
             edgebackw->back = edgeforw;
 
             // calculate the Euclidean / Manhattan / Maximum distance of the two nodes
-            x = x_coords[(*nodestart).id] -  x_coords[(*nodeend).id];
-            y = y_coords[(*nodestart).id] -  y_coords[(*nodeend).id];
+            x = x_coords[(*nodestart).id] -  x_coords[(*nodeend).id]; /*lint !e613*/
+            y = y_coords[(*nodestart).id] -  y_coords[(*nodeend).id]; /*lint !e613*/
             if( edgeweighttype == "EUC_2D")
                edgeforw->length = sqrt( x*x + y*y );
             else if( edgeweighttype == "MAX_2D")
-               edgeforw->length = max( ABS(x), ABS(y) );
+               edgeforw->length = MAX( ABS(x), ABS(y) );
             else if( edgeweighttype == "MAN_2D")
                edgeforw->length = ABS(x) + ABS(y);
             else if( edgeweighttype == "ATT")
@@ -304,10 +305,10 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
                double euler[3];
                int k;
 
-               coords[0] = x_coords[(*nodestart).id];
-               coords[1] = y_coords[(*nodestart).id];
-               coords[2] = x_coords[(*nodeend).id];
-               coords[3] = y_coords[(*nodeend).id];
+               coords[0] = x_coords[(*nodestart).id]; /*lint !e613*/
+               coords[1] = y_coords[(*nodestart).id]; /*lint !e613*/
+               coords[2] = x_coords[(*nodeend).id]; /*lint !e613*/
+               coords[3] = y_coords[(*nodeend).id]; /*lint !e613*/
 
                for( k = 0; k < 4; k++ )
                {
@@ -401,7 +402,7 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
       SCIP_VAR* var;
 
       stringstream varname;
-      edge = &graph->edges[i];
+      edge = &graph->edges[i]; /*lint !e613*/
 
       // the variable is named after the two nodes connected by the edge it represents
       varname << "x_e_" << edge->back->adjac->id+1 << "-" << edge->adjac->id+1;
@@ -420,7 +421,7 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
    /* add all n node degree constraints */
    if( nnodes >= 2 )
    {
-      for( i = 0, node = &(graph->nodes[0]); i < nnodes; i++, node++ )
+      for( i = 0, node = &(graph->nodes[0]); i < nnodes; i++, node++ ) /*lint !e613*/
       {
          SCIP_CONS* cons;
          stringstream consname;
@@ -455,7 +456,7 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** problem writing method of reader; NOTE: if the parameter "genericnames" is TRUE, then
  *  SCIP already set all variable and constraint names to generic names; therefore, this
@@ -473,4 +474,4 @@ SCIP_DECL_READERWRITE(ReaderTSP::scip_write)
    *result = SCIP_DIDNOTRUN;
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
