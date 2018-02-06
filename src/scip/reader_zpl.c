@@ -1294,7 +1294,7 @@ bool xlp_setobj(
    bool                  minimize            /**< True if the problem should be minimized, False if it should be maximized  */
    )
 {
-   assert(lp   != NULL);
+   assert(data != NULL);
    assert(name != NULL);
 
    xlp_objname(data, name);
