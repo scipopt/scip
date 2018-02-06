@@ -79,8 +79,8 @@ TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de
 # jobs running on sunday
 JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TESTSET=sapdev-solvable TIME=3600 SETTING=sap-501-pure PERFORMANCE=performance"
 
-# copy sap-500-pure settings
-cp ~/sap-500-pure.set settings/.
+# copy sap-501-pure settings
+cp ~/sap-501-pure.set settings/.
 
 
 #########################
