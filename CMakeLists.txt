@@ -72,7 +72,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
 
 set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
@@ -244,8 +244,6 @@ elseif(LPS STREQUAL "glop")
     find_package(GLOP REQUIRED)
 elseif(LPS STREQUAL "grb")
     find_package(GUROBI REQUIRED)
-elseif(LPS STREQUAL "qso")
-    find_package(QSO REQUIRED)
 elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
 elseif(LPS STREQUAL "xprs")
@@ -318,13 +316,6 @@ if(MOSEK_FOUND)
     include_directories(${MOSEK_INCLUDE_DIRS})
     set(lpi lpi/lpi_msk.c)
     set(LPS_LIBRARIES ${MOSEK_LIBRARIES})
-    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
-endif()
-
-if(QSO_FOUND)
-    include_directories(${QSO_INCLUDE_DIRS})
-    set(lpi lpi/lpi_qso.cpp)
-    set(LPS_LIBRARIES ${QSO_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
