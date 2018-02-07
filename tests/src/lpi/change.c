@@ -25,7 +25,7 @@
  * SCIPlpiChgObjsen, SCIPlpiGetObjsen,
  * SCIPlpiGetNCols, SCIPlpiGetNRows, SCIPlpiGetNNonz,
  * SCIPlpiGetCols, SCIPlpiGetRows,
- * SCIPlpiReadState, SCIPlpiWriteState, SCIPlpiClearState,
+ * SCIPlpiWriteState, SCIPlpiClearState,
  * SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear
  */
 
@@ -844,8 +844,8 @@ Test(change, testzerosinrows, .signal = SIGABRT)
 
 }
 
-/** test SCIPlpiReadState, SCIPlpiWriteState, SCIPlpiClearState */
-Test(change, testlpiwritereadstatemethods)
+/** test SCIPlpiWriteState, SCIPlpiClearState */
+Test(change, testlpiwritestatemethods)
 {
    int nrows, ncols, nnonz;
    int cstat[2];
@@ -862,18 +862,8 @@ Test(change, testlpiwritereadstatemethods)
    SCIP_CALL( SCIPlpiGetBase(lpi, cstat, rstat) );
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
-   SCIP_CALL( SCIPlpiReadState(lpi, "testlpiwriteandreadstate.bas") );
-   SCIP_CALL( SCIPlpiGetBase(lpi, cstat2, rstat2) );
-
-   cr_assert_arr_eq( cstat, cstat2, 2*sizeof(int) );
-   cr_assert_arr_eq( rstat, rstat2, 2*sizeof(int) );
-
-   SCIP_CALL( SCIPlpiWriteState(lpi, "testlpiwriteandreadstate2.bas") );
-
-   FILE *file = fopen("testlpiwriteandreadstate.bas", "r");
-   FILE *file2 = fopen("testlpiwriteandreadstate2.bas", "r");
-   cr_assert_file_contents_eq(file, file2);
-
+   /* Ideally we want to check in the same matter as in testlpiwritereadlpmethods, but this is
+    * not possible at the moment because we have no names for columns and rows. */
    SCIP_CALL( SCIPlpiClear(lpi) );
 }
 
