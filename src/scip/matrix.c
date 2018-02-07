@@ -485,10 +485,15 @@ SCIP_RETCODE SCIPmatrixCreate(
 
          if( (strcmp(conshdlrname, "linear") == 0) || (strcmp(conshdlrname, "setppc") == 0)
             || (strcmp(conshdlrname, "logicor") == 0) || (strcmp(conshdlrname, "knapsack") == 0)
-            || (strcmp(conshdlrname, "varbound") == 0) || (strcmp(conshdlrname, "linking") == 0) )
+            || (strcmp(conshdlrname, "varbound") == 0) )
          {
             /* increment number of supported constraints */
             nconss += nconshdlrconss;
+         }
+         else if (strcmp(conshdlrname, "linking") == 0 )
+         {
+            /* the linear representation of linking constraints involves two linear constraints */
+            nconss += 2* nconshdlrconss;
          }
 
          /* increment number of supported and unsupported constraints */
@@ -813,7 +818,8 @@ SCIP_RETCODE SCIPmatrixCreate(
                {
                   assert(cnt < nconss);
                   matrix->cons[cnt] = cons;
-                  cnt++;
+                  matrix->cons[cnt + 1] = cons;
+                  cnt += 2;
                }
             }
 

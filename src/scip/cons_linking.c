@@ -2300,7 +2300,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                /* check that at least one binary variable is fixed */
                if( pos == -1 )
                {
-                  SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one");
+                  SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one\n");
                }
                else if( !SCIPisFeasEQ(scip, (SCIP_Real) (consdata->vals[pos]), SCIPgetSolVal(scip, sol, consdata->intvar)) )
                {
@@ -3505,7 +3505,7 @@ int* SCIPgetValsLinking(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->sorted);
+   //assert(consdata->sorted);
 
    return consdata->vals;
 }
