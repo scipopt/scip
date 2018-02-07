@@ -29,8 +29,12 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
 #include <assert.h>
+#include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h> /*lint --e{766}*/
+#endif
 
 #include "xprs.h"
 #include "scip/bitencode.h"
@@ -1175,6 +1179,8 @@ SCIP_RETCODE SCIPlpiClear(
    assert(lpi->xprslp != NULL);
 
    SCIPdebugMessage("clearing Xpress LP\n");
+
+   invalidateSolution(lpi);
 
    /* create an empty LP in this */
    CHECK_ZERO( lpi->messagehdlr, XPRSloadlp(lpi->xprslp, lpi->name, 0, 0, NULL, NULL, NULL, NULL, &zero, NULL, NULL, NULL, NULL, NULL) );
