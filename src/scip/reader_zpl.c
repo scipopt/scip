@@ -1095,7 +1095,7 @@ int xlp_addsos_term(
    assert(scip != NULL);
 
    if( readerdata->retcode != SCIP_OKAY || readerdata->readerror )
-      return 1;
+      return TRUE;
 
    readerdata->retcode = addSOS(scip, readerdata, name, type, term);
 

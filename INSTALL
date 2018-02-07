@@ -13,13 +13,70 @@
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-In most cases (LINUX and MAC), it is quite easy to compile and install
-SCIP. Therefore, reading the section "Brief installation description"
+
+We provide two different systems to compile the code. It's recommended to use the
+new CMake system. The traditional Makefile system is still supported for backwards
+compatibility but might be discontinued in the future.
+Be aware that generated libraries and binaries of both systems might be different.
+For further information please refer to the online documentation of SCIP.
+
+Installation description using CMake
+====================================
+
+The easiest way to install SCIP is to use the SCIP Optimization Suite which
+contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
+the SCIP Optimization Suite (In case of the SCIP Optimization Suite, there is
+no need to specify any directories, the compiling process is fully
+automated).
+
+Compiling SCIP directly can be done as follows:
+
+1) unpack the tarball:        "tar xvzf scip-x.y.z.tgz"
+2) change into the directory: "cd scip-x.y.z"
+3) create a new directory:    "build"
+4) change directories:        "cd build"
+4) configure the build:       "cmake .."
+5) start compiling SCIP:      "make"
+6) (recommended) check build: "make check" or "ctest"
+7) (optional) install SCIP:   "make install"
+   custom installation dir:   "cmake .. -DCMAKE_INSTALL_PREFIX=<install/dir>"
+
+CMake checks for available third-party libraries like GMP or ZLIB and sets up
+the configuration accordingly.
+
+There are multiple options to customize the configuration. You can list them
+using "cmake .. -LH" and set them by running "cmake .. -D<option>=<value>".
+Options can be chained together or be specified in subsequent calls
+to cmake. The existing configuration will be updated or extended.
+
+To specify a custom path to a library you may specify "-D<name>_DIR=<path>",
+e.g., "cmake .. -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>".
+
+Refer to the online documentation and the FAQ section for further information.
+
+
+Windows instructions
+--------------------
+
+To build SCIP on Windows you may use the CMake GUI to specify the path to SCIP
+and the desired location for the build. Available options are listed and can
+be modified to suit your needs. After the configuration step is done, open
+the generated Visual Studio solution file and compile it.
+
+Alternatively you may use the command line to build SCIP in an already-generated
+configuration directory: "cmake --build <path>"
+
+
+Installation description with Makefile
+=======================================
+
+For Linux and Mac, reading the section "Brief installation description"
 should usually be enough. If this is not the case you find "Detailed
 installation description" below as well as some examples.
 
+
 Content
-*******
+-------
 
 I    Brief installation description:
 II   Detailed installation description:
@@ -27,7 +84,7 @@ III  Examples
 
 
 I Brief installation description
-********************************
+--------------------------------
 
 The easiest way to install SCIP is to use the SCIP Optimization Suite which
 contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
@@ -76,7 +133,7 @@ make ZLIB=false READLINE=false GMP=false.
 
 
 II Detailed installation description
-************************************
+------------------------------------
 
 In the following, some of the names depend on your machine and your
 compilation settings:
@@ -213,10 +270,10 @@ Here is what you have to do to get SCIP running:
    For un-installing SCIP there exist the target "uninstall" which can be used in the same way as "install".
 
 III Examples
-************
+------------
 
-   Example 1 (defaults: SoPlex, with ZIMPL support):
-   =================================================
+###  Example 1 (defaults: SoPlex, with ZIMPL support):
+
 
    Typing "make" uses SoPlex as LP solver and includes support for the modeling language ZIMPL.
    You will be asked the following questions on the first call to "make" (example answers are already given):
@@ -256,8 +313,8 @@ make[1]: Entering directory `/sw/scip'
 make[1]: Leaving directory `/sw/scip'
 ---
 
-   Example 2 (CPLEX, no ZIMPL):
-   ============================
+###  Example 2 (CPLEX, no ZIMPL):
+
 
    Typing "make LPS=cpx ZIMPL=false" uses CPLEX as LP solver. You will be
    asked the following questions on
@@ -283,8 +340,7 @@ make[1]: Entering directory `/sw/scip'
 make[1]: Leaving directory `/sw/scip'
 ---
 
-   Example 3 (CLP, IPOPT, no ZIMPL):
-   ========================================
+###   Example 3 (CLP, IPOPT, no ZIMPL):
 
    Typing "make LPS=clp ZIMPL=false IPOPT=true" uses CLP as LP solver, and activates
    the interface to IPOPT. You will be asked the following questions on
@@ -316,8 +372,7 @@ make[1]: Entering directory `/sw/scip'
 make[1]: Leaving directory `/sw/scip'
 ---
 
-   Example 4 (default: SoPlex, IPOPT, WORHP, FILTERSQP):
-   =====================================================
+###  Example 4 (default: SoPlex, IPOPT, WORHP, FILTERSQP):
 
    Typing "make IPOPT=true WORHP=true FILTERSQP=true" uses SoPlex as LP solver, and activates
    the interfaces to IPOPT, WORHP, and FilterSQP. You will be asked the following questions on
@@ -368,8 +423,7 @@ make[1]: Leaving directory `/sw/scip'
    After the soft-links have been created, the compilation of the source files should start.
 ---
 
-   Example 5 (default: SoPlex, SYM):
-   =====================================================
+###   Example 5 (default: SoPlex, SYM):
 
    Typing "make SYM=bliss" uses SoPlex as LP solver, and activates
    the symmetry handling routines of SCIP. Symmetry is computed by using the graph automorphism
@@ -412,7 +466,7 @@ make[1]: Leaving directory `/sw/scip'
 ---
 
    Compilation problems:
-   =====================
+   ---------------------
 
    If the soft-link query script does not work on your machine, read step 2 for instructions on manually
    creating the soft-links.
