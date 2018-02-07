@@ -26,11 +26,19 @@ fixed bugs:
 - improved numerics and fixed stop criterion in zirounding heuristic
 - fixed treatment of variable aggregations in knapsack constraint handler that led to wrong propagations
 - fixed LPI status after changing objective in lpi_cpx, lpi_grb, lpi_xprs, lpi_msk
+- fixed and unified asserts in LPIs
 - retrieve interior solution instead of (possibly non-existing) basic solution from mosek after using
   barrier without crossover in lpi_msk
 - copy parameter settings to sub-SCIPs in SCIPcopyLargeNeighborhoodSearch() also when copying only LP rows
 - fixed a check for fixed variables in Binpacking example
 - generate deprecation warnings when using SCIPaddCut
+- fix bug in sepa_gomory if cut is a bound change
+- fixed bug with NULL pointer handling in LPIs
+
+unit tests:
+- expanded unit tests of the lpis
+- added check to unit tests that problem is not solved after every change
+
 
 SCIP version 5.0.0
 ==================
