@@ -788,8 +788,9 @@ SCIP_RETCODE SCIPmatrixCreate(
                assert(SCIPconsIsTransformed(cons));
 
                /* get constraint variables and their amount */
-               curconsvals = SCIPgetValsLinking(scip, cons);
                SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
+               curconsvals = SCIPgetValsLinking(scip, cons);
+
                /* SCIPgetBinVarsLinking returns the number of binary variables, but we also need the integer variable */
                nconsvars++;
 
@@ -812,7 +813,7 @@ SCIP_RETCODE SCIPmatrixCreate(
                consvals[nconsvars - 1] = -1;
 
                SCIP_CALL( addConstraint(scip, matrix, consvars, consvals, nconsvars, 0.0, 0.0, nnonzstmp, &rowadded) );
-               SCIP_CALL( addConstraint(scip, matrix, consvars, consvals, nconsvars - 1, 1.0, 1.0, nnonzstmp, &rowadded) );
+               SCIP_CALL( addConstraint(scip, matrix, consvars, NULL, nconsvars - 1, 1.0, 1.0, nnonzstmp, &rowadded) );
 
                if(rowadded)
                {

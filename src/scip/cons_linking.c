@@ -430,6 +430,8 @@ SCIP_RETCODE consdataCreateBinvars(
 
    /* allocate block memory for the binary variables */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->binvars, nbinvars) );
+   /* allocate block memory for the binary variables */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals, nbinvars) );
    consdata->sizebinvars = nbinvars;
 
    /* check if the integer variable is fixed */
@@ -3329,6 +3331,12 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
+   /* create binary variables for the integer domain */
+   if( nbinvars == 0 )
+   {
+      SCIP_CALL( consdataCreateBinvars(scip, *cons, consdata, conshdlrdata->eventhdlr, conshdlrdata->linearize) );
+   }
+
    /* insert linking constraint into the hash map */
    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varmap, getHashmapKey(intvar), *cons) );
    assert(SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey(intvar)));
@@ -3505,7 +3513,7 @@ int* SCIPgetValsLinking(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   //assert(consdata->sorted);
+   assert(consdata->sorted);
 
    return consdata->vals;
 }
