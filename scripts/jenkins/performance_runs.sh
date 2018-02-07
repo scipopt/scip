@@ -139,7 +139,7 @@ done
 BUILD_DIR=scipoptspx
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
 make -j4
 cd ..
 

@@ -158,7 +158,7 @@ if [[ ${LPSVERSIONS} =~ "scipdbgspx" ]] ; then
   BUILD_DIR=scipdbgspx
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
-  cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=spx
+  cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
   make -j4
   cd ..
 fi
