@@ -52,12 +52,13 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.1 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_RANDSEED            151 /**< initial seed for random number generation */
 
+#define DEFAULT_DIFFOBJFAC         0.15
 #define DEFAULT_CHECKOBJ          FALSE
 #define DEFAULT_CHECKOBJGLB        TRUE
 
@@ -65,6 +66,7 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_Real             diffobjfac;
    SCIP_Bool             disabled;           /**< remember if the heuristic should not run at all */
    SCIP_Bool             checkobj;
    SCIP_Bool             checkobjglb;
@@ -157,6 +159,24 @@ SCIP_DECL_HEUREXIT(heurExitFarkasdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolFarkasdiving)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   heurdata->disabled = FALSE;
+   heurdata->objchecked = FALSE;
+
+   return SCIP_OKAY;
+}
 
 /** execution method of primal heuristic */
 static
@@ -164,6 +184,8 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
+   SCIP_Real oldmaxvarsfac;
+   char olduseinf;
    int nnzobjvars;
 
    heurdata = SCIPheurGetData(heur);
@@ -186,7 +208,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
    nnzobjvars = SCIPgetNObjVars(scip);
 
    /* terminate if at most one variable has a non-zero objective coefficient */
-   if( nnzobjvars <= 1 )
+   if( nnzobjvars == 0 )
    {
       heurdata->disabled = TRUE;
       return SCIP_OKAY;
@@ -199,7 +221,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
       SCIP_Real* objcoefs;
       SCIP_Real lastobjcoef;
       int nnzobjcoefs;
-      int ndiffobjs;
+      int ndiffnnzobjs;
       int ndivecands;
       int i;
 
@@ -256,24 +278,24 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
       assert(!SCIPisZero(scip, objcoefs[0]));
 
       lastobjcoef = objcoefs[0];
-      ndiffobjs = 1;
+      ndiffnnzobjs = 1;
 
       for( i = 1; i < nnzobjcoefs; i++ )
       {
          if( SCIPisGT(scip, objcoefs[i], lastobjcoef) )
          {
             lastobjcoef = objcoefs[i];
-            ++ndiffobjs;
+            ++ndiffnnzobjs;
          }
       }
 
       SCIPfreeBufferArray(scip, &objcoefs);
 
-      SCIPdebugMsg(scip, "%d divecands; %d nzobjs; %d diffobjs", ndivecands, nnzobjvars, ndiffobjs);
+      SCIPdebugMsg(scip, "%d divecands; %d nnzobjs; %d diffnnzobjs", ndivecands, nnzobjcoefs, ndiffnnzobjs);
 
-      if( ndiffobjs <= 2 || ndiffobjs / (SCIP_Real)nnzobjvars < 0.15 )
+      if( nnzobjcoefs == 0 || ndiffnnzobjs / (SCIP_Real)ndivecands < heurdata->diffobjfac )
       {
-         printf(" ---> disable farkasdiving%s\n", heurdata->checkobjglb ? "" : " locally");
+         SCIPdebugMsg(scip, " ---> disable farkasdiving%s\n", heurdata->checkobjglb ? "" : " locally");
 
          /* disable the heuristic if we want to check the objective only once */
          if( heurdata->checkobjglb )
@@ -283,32 +305,71 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
       }
       else
       {
-         printf("\n");
+         SCIPdebugMsg(scip, "\n");
          heurdata->objchecked = TRUE;
       }
    }
 
+//   printf("> start    farkasdiving (nconflicts = %lld)\n", SCIPdivesetGetNConflicts(diveset));
+
+//   SCIP_CALL( SCIPgetRealParam(scip, "conflict/maxvarsfac", &oldmaxvarsfac) );
+//   SCIP_CALL( SCIPgetCharParam(scip, "conflict/useinflp", &olduseinf) );
+//
+//   SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", oldmaxvarsfac * 0.8) );
+//   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useinflp", 'd') );
+
   PERFORMDIVING:
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
+//   SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", oldmaxvarsfac) );
+//   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useinflp", olduseinf ) );
+
+//   printf("> finished farkasdiving (nconflicts = %lld)\n", SCIPdivesetGetNConflicts(diveset));
+
    return SCIP_OKAY;
 }
+
+#define MIN_RAND 1e-06
+#define MAX_RAND 1e-05
 
 /** calculate score and preferred rounding direction for the candidate variable */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
 {
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real obj;
+
+   randnumgen = SCIPdivesetGetRandnumgen(diveset);
+   assert(randnumgen != NULL);
 
    obj = SCIPvarGetObj(cand);
 
    /* for the reduced costs of a basic variable it holds c_i - y^TA_i = 0, so we approximate the reduced costs
     * within an infeasibility proof by r_i := -y^TA_i = -c_i.
     */
-   *roundup = (obj <= 0.0);
+   if( SCIPisNegative(scip, obj) )
+   {
+      *roundup = TRUE;
+   }
+   else if( SCIPisPositive(scip, obj) )
+   {
+      *roundup = FALSE;
+   }
+   else
+   {
+      if( SCIPisEQ(scip, candsfrac, 0.5) )
+         *roundup = !SCIPrandomGetInt(randnumgen, 0, 1);
+      else
+         *roundup = (candsfrac > 0.5);
+   }
 
    /* larger score is better */
-   *score = REALABS(obj);
+   *score = REALABS(obj) + SCIPrandomGetReal(randnumgen, MIN_RAND, MAX_RAND);
+
+   if( *roundup )
+      *score *= (1.0 - candsfrac);
+   else
+      *score *= candsfrac;
 
    /* prefer decisions on binary variables */
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
@@ -345,6 +406,7 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeFarkasdiving) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitFarkasdiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitFarkasdiving) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolFarkasdiving) );
 
    /* farkasdiving heuristic parameters */
    /* create a diveset (this will automatically install some additional parameters for the heuristic) */
@@ -359,6 +421,10 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkobjglb",
          "should objective function be check globally or locally?",
          &heurdata->checkobjglb, TRUE, DEFAULT_CHECKOBJGLB, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/diffobjfac",
+         " --- ",
+         &heurdata->diffobjfac, TRUE, DEFAULT_DIFFOBJFAC, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
