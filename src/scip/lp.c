@@ -6660,6 +6660,8 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
          lp->soldirection[k] = SCIPsolGetVal(sol, set, stat, lp->cols[k]->var) - lp->cols[k]->primsol;
          scale += SQR(lp->soldirection[k]);
       }
+
+      assert(scale > 0.0);
       scale = 1.0 / SQRT(scale);
 
       for( k = 0; k < lp->ncols; ++k )

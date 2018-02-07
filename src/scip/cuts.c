@@ -2489,11 +2489,11 @@ SCIP_RETCODE SCIPselectCuts(
          SCIP_Real intsupport;
          SCIP_Real efficacy;
 
-         intsupport = scip->set->sepa_intsupportfac > 0.0 ?
+         intsupport = scip->set->sepa_intsupportfac != 0.0 ?
          scip->set->sepa_intsupportfac * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) :
          0.0;
 
-         objparallelism = scip->set->sepa_objparalfac > 0.0 ? scip->set->sepa_objparalfac * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
+         objparallelism = scip->set->sepa_objparalfac != 0.0 ? scip->set->sepa_objparalfac * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
 
          efficacy = SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp);
 
@@ -2555,6 +2555,7 @@ SCIP_RETCODE SCIPselectCuts(
       SCIP_ROW** nonforcedcuts;
       SCIP_Real* nonforcedscores;
 
+      /* adjust pointers to the beginning of the non-forced cuts */
       nnonforcedcuts = ncuts - nforcedcuts;
       nonforcedcuts = cuts + nforcedcuts;
       nonforcedscores = scores + nforcedcuts;
