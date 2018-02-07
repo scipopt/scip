@@ -43,12 +43,14 @@ if [ "${GITBRANCH}" != "master" ]; then
 fi
 
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
-SOPLEX_DIR=/OPTI/adm_timo/soplex_${GITBRANCH}_Debug/
+# We have to export these variables to make them available to cmake.
+# Scripts will also use nonexported variables correctly.
+export SOPLEX_DIR=/OPTI/adm_timo/soplex_${GITBRANCH}_Debug/
 
-CRITERION_DIR=/optimi/usr/sw/criterion
-IPOPT_DIR=/optimi/usr/sw/ipopt
-CPLEX_DIR=/optimi/usr/sw/cplex
-BLISS_DIR=/optimi/usr/sw/bliss
+export CRITERION_DIR=/optimi/usr/sw/criterion
+export IPOPT_DIR=/optimi/usr/sw/ipopt
+export CPLEX_DIR=/optimi/usr/sw/cplex
+export BLISS_DIR=/optimi/usr/sw/bliss
 
 # Find out what day of week it is: mon-1 .. sun-7
 DAY_OF_WEEK=`date +%u`
@@ -156,7 +158,7 @@ if [[ ${LPSVERSIONS} =~ "scipdbgspx" ]] ; then
   BUILD_DIR=scipdbgspx
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
-  cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=spx
+  cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
   make -j4
   cd ..
 fi

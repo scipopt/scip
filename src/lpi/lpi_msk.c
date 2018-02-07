@@ -4504,7 +4504,7 @@ SCIP_RETCODE SCIPlpiWriteState(
 {
    int v;
    int nvars;
-   int c;
+   int c = 0;
    int nconss;
    SCIP_Bool emptyname = FALSE;
    char name[SCIP_MAXSTRLEN];
