@@ -9,6 +9,7 @@ performance improvements:
 features:
 - allow output of lower bounds for visualization
 - add number of conflict constraints found by diving heuristics to statistics
+- added symmetry detection for linking constraints
 
 new parameters:
 - new parameter "visual/displb" that enables output of lower bounds for visualization
