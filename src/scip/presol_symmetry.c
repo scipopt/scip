@@ -33,7 +33,15 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scipdefplugins.h"
+#include <scip/cons_linear.h>
+#include <scip/cons_knapsack.h>
+#include <scip/cons_varbound.h>
+#include <scip/cons_setppc.h>
+#include <scip/cons_and.h>
+#include <scip/cons_logicor.h>
+#include <scip/cons_or.h>
+#include <scip/cons_xor.h>
+#include <scip/cons_linking.h>
 
 #include <scip/presol_symmetry.h>
 #include <symmetry/compute_symmetry.h>
