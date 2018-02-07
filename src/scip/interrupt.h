@@ -63,6 +63,12 @@ SCIP_Bool SCIPinterrupted(
    void
    );
 
+/** returns whether the process has received a SIGTERM */
+extern
+SCIP_Bool SCIPterminated(
+   void
+   );
+
 /** resets the number of interrupts to 0 */
 extern
 void SCIPresetInterrupted(

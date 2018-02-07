@@ -32,6 +32,8 @@
 
 static volatile
 int                      ninterrupts = 0;    /**< static variable counting the number of CTRL-C interrupts */
+static volatile
+int                      nterms = 0;         /**< static variable counting the number of times that the process received a SIGTERM signal */
 
 
 #ifdef NO_SIGACTION
@@ -60,16 +62,28 @@ void interruptHandler(
    int                   signum              /**< interrupt signal number */
    )
 {  /*lint --e{715}*/
-   ninterrupts++;
-   if( ninterrupts >= 5 )
-   {
-      printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
-      exit(1);
+
+   switch (signum) {
+      case SIGINT:
+         ninterrupts++;
+         if( ninterrupts >= 5 )
+         {
+            printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
+            exit(1);
+         }
+         else
+         {
+            printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
+         }
+
+         break;
+      case SIGTERM:
+         nterms++;
+         break;
+      default:
+         break;
    }
-   else
-   {
-      printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
-   }
+
 }
 
 /** creates a CTRL-C interrupt data */
@@ -117,9 +131,12 @@ void SCIPinterruptCapture(
 
       /* set new signal action, and remember old one */
       (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
+
+      (void)sigaction(SIGTERM, &newaction, NULL);
 #endif
 
       ninterrupts = 0;
+      nterms = 0;
    }
    interrupt->nuses++;
 }
@@ -151,11 +168,20 @@ SCIP_Bool SCIPinterrupted(
    return (ninterrupts > 0);
 }
 
+/** returns whether the process has received a SIGTERM */
+SCIP_Bool SCIPterminated(
+   void
+   )
+{
+   return (nterms > 0);
+}
+
 /** resets the number of interrupts to 0 */
 void SCIPresetInterrupted(
    void
    )
 {
    ninterrupts = 0;
+   nterms = 0;
 }
 
