@@ -800,22 +800,20 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "linking") == 0 )
       {
          SCIP_VAR** curconsvars;
-         SCIP_Real* ones;
          int* curconsvals;
          int i;
 
          /* get constraint variables and their amount */
-         SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
          curconsvals = SCIPgetValsLinking(scip, cons);
+         SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
+         /* SCIPgetBinVarsLinking returns the number of binary variables, but we also need the integer variable */
+         nconsvars++;
 
-         SCIP_CALL( SCIPallocMemoryArray(scip, &ones, nconsvars - 1) );
-
-         /* copy vars and vals for binary variables and fill ones array */
+         /* copy vars and vals for binary variables */
          for( i = 0; i < nconsvars - 1; i++ )
          {
             consvars[i] = curconsvars[i];
             consvals[i] = (SCIP_Real) curconsvals[i];
-            ones[i] = 1;
          }
 
          /* set final entry of vars and vals to the linking variable and its coefficient, respectively */
@@ -824,7 +822,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
                         SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
-         SCIP_CALL( collectCoefficients(scip, consvars, ones, nconsvars - 1, 1.0, 1.0,
+         SCIP_CALL( collectCoefficients(scip, consvars, NULL, nconsvars - 1, 1.0, 1.0,
                         SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "setppc") == 0 )
