@@ -19,6 +19,6 @@ endif()
 #
 # add check subdirectory for tests
 #
-add_subdirectory(check)
+# add_subdirectory(check)
 
 enable_testing()
