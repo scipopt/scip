@@ -205,9 +205,11 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition structure
  *  - var             : the variable for which the corresponding variable in the master or subproblem is required
+ *  - mappedvar       : pointer to store the variable that is mapped to var
  *  - probnumber      : the number of the subproblem that the desired variable belongs to, -1 for the master problem
  */
-#define SCIP_DECL_BENDERSGETVAR(x) SCIP_VAR* x (SCIP* scip, SCIP_BENDERS* benders, SCIP_VAR* var, int probnumber)
+#define SCIP_DECL_BENDERSGETVAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_VAR* var,\
+   SCIP_VAR** mappedvar, int probnumber)
 
 #ifdef __cplusplus
 }

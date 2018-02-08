@@ -153,7 +153,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          consval = consvals[j];
 
          /* retreiving the master problem variable for the given subproblem variable. */
-         mastervar = SCIPgetBendersMasterVar(masterprob, benders, consvar);
+         SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, consvar, &mastervar) );
 
          /* TODO: Do we need the problem variable? */
          consvar = SCIPvarGetProbvar(consvar);
@@ -191,7 +191,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          var = fixedvars[i - nvars];
 
       /* retreiving the master problem variable for the given subproblem variable. */
-      mastervar = SCIPgetBendersMasterVar(masterprob, benders, var);
+      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
 
       var = SCIPvarGetProbvar(var);
 

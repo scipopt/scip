@@ -312,10 +312,11 @@ void SCIPbendersSetFreesub(
 /** returns the corresponding master or subproblem variable for the given variable.
  * This provides a call back for the variable mapping between the master and subproblems */
 extern
-SCIP_VAR* SCIPbendersGetVar(
+SCIP_RETCODE SCIPbendersGetVar(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< the variable for which the corresponding variable is desired */
+   SCIP_VAR**            mappedvar,          /**< the variable that is mapped to var */
    int                   probnumber          /**< the problem number for the desired variable, -1 for the master problem */
    );
 

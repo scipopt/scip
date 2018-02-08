@@ -36,7 +36,8 @@ extern "C" {
 /** creates the xyz Benders' decomposition cuts and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeBenderscutXyz(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 #ifdef __cplusplus

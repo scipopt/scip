@@ -290,10 +290,13 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    /* looping over all master problem variables to update the coefficients in the computed cut. */
    for( i = 0; i < nvars; i++ )
    {
+      SCIP_VAR* subprobvar;
       SCIP_Real coef;
 
+      SCIP_CALL( SCIPgetBendersSubproblemVar(masterprob, benders, vars[i], &subprobvar, probnumber) );
+
       /* if there is a corresponding subproblem variable, then the variable will not be NULL. */
-      if( SCIPgetBendersSubproblemVar(masterprob, benders, vars[i], probnumber) != NULL )
+      if( subprobvar != NULL )
       {
          /* if the variable is on its upper bound, then the subproblem objective value is added to the cut */
          if( SCIPisFeasEQ(masterprob, SCIPgetSolVal(masterprob, sol, vars[i]), 1.0) )

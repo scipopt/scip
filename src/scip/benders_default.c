@@ -337,7 +337,6 @@ static
 SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
 {  /*lint --e{715}*/
    SCIP_BENDERSDATA* bendersdata;
-   SCIP_VAR* mappedvar;
    SCIP_VAR* origvar;
    SCIP_Real scalar;
    SCIP_Real constant;
@@ -346,6 +345,7 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
    assert(scip != NULL);
    assert(benders != NULL);
    assert(var != NULL);
+   assert(mappedvar != NULL);
 
    bendersdata = SCIPbendersGetData(benders);
 
@@ -359,10 +359,10 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
          assert(FALSE);
 
       /* using the original variable, the master variable can be retrieved from the hash map */
-      mappedvar = (SCIP_VAR*) SCIPhashmapGetImage(bendersdata->subvartomastervar, origvar);
+      (*mappedvar) = (SCIP_VAR*) SCIPhashmapGetImage(bendersdata->subvartomastervar, origvar);
 
-      if( mappedvar == NULL )
-         mappedvar = (SCIP_VAR*) SCIPhashmapGetImage(bendersdata->subvartomastervar, var);
+      if( (*mappedvar) == NULL )
+         (*mappedvar) = (SCIP_VAR*) SCIPhashmapGetImage(bendersdata->subvartomastervar, var);
    }
    else
    {
@@ -377,10 +377,10 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
       /* The master problem variable is a transformed variable. The original variable is not required. */
       /* NOTE: Currently the original variable is being used. This may not be correct and should be the transformed variable. */
       masterindex = (int)(size_t) SCIPhashmapGetImage(bendersdata->mastervartosubindex, var);
-      mappedvar = bendersdata->subproblemvars[probnumber][masterindex];
+      (*mappedvar) = bendersdata->subproblemvars[probnumber][masterindex];
    }
 
-   return mappedvar;
+   return SCIP_OKAY;
 }
 
 /** the execution method for Benders' decomposition */

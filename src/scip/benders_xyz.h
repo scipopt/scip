@@ -37,8 +37,7 @@ extern "C" {
  */
 EXTERN
 SCIP_RETCODE SCIPincludeBendersXyz(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@addtogroup BENDERSS

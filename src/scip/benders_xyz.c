@@ -286,8 +286,7 @@ SCIP_DECL_BENDERSFREESUB(bendersFreesubXyz)
 
 /** creates the xyz Benders' decomposition and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBendersXyz(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_BENDERSDATA* bendersdata;
@@ -304,17 +303,16 @@ SCIP_RETCODE SCIPincludeBendersXyz(
    /* use SCIPincludeBenders() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
     * new callbacks are added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeBenders(scip, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, nsubproblems,
-         bendersCopyXyz, bendersFreeXyz, bendersInitXyz, bendersExitXyz, bendersInitpreXyz, bendersExitpreXyz,
-         bendersInitsolXyz, bendersExitsolXyz, bendersGetvarXyz, bendersExecXyz, bendersCreatesubXyz,
+   SCIP_CALL( SCIPincludeBenders(scip, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP, BENDERS_CUTPSEUDO,
+         BENDERS_CUTRELAX, bendersCopyXyz, bendersFreeXyz, bendersInitXyz, bendersExitXyz, bendersInitpreXyz,
+         bendersExitpreXyz, bendersInitsolXyz, bendersExitsolXyz, bendersGetvarXyz, bendersExecXyz, bendersCreatesubXyz,
          bendersSolvesubXyz, bendersPostsolveXyz, bendersFreesubXyz, bendersdata) );
 #else
    /* use SCIPincludeBendersBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeBendersBasic(scip, &benders, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, nsubproblems,
-         BENDERS_CUTLP, BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetvarXyz, bendersExecXyz, bendersCreatesubXyz,
-         bendersdata) );
+   SCIP_CALL( SCIPincludeBendersBasic(scip, &benders, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP,
+         BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetvarXyz, bendersExecXyz, bendersCreatesubXyz, bendersdata) );
    assert(benders != NULL);
 
    /* set non fundamental callbacks via setter functions */

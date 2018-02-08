@@ -3002,19 +3002,21 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
 /** returns the master problem variable for the given subproblem variable.
  *  This function is used as part of the cut generation process */
 EXTERN
-SCIP_VAR* SCIPgetBendersMasterVar(
+SCIP_RETCODE SCIPgetBendersMasterVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_VAR*             var                 /**< the subproblem variable */
+   SCIP_VAR*             var,                /**< the subproblem variable */
+   SCIP_VAR**            mappedvar           /**< pointer to store the master variable that var is mapped to */
    );
 
 /** returns the subproblem problem variable for the given master variable.
  *  This function is used as part of the cut generation process */
 EXTERN
-SCIP_VAR* SCIPgetBendersSubproblemVar(
+SCIP_RETCODE SCIPgetBendersSubproblemVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_VAR*             var,                /**< the master variable */
+   SCIP_VAR**            mappedvar,          /**< pointer to store the subproblem variable that var is mapped to */
    int                   probnumber          /**< the subproblem number */
    );
 

@@ -6300,34 +6300,44 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
 
 /** returns the master problem variable for the given subproblem variable.
  *  This function is used as part of the cut generation process */
-SCIP_VAR* SCIPgetBendersMasterVar(
+SCIP_RETCODE SCIPgetBendersMasterVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_VAR*             var                 /**< the subproblem variable */
+   SCIP_VAR*             var,                /**< the subproblem variable */
+   SCIP_VAR**            mappedvar           /**< pointer to store the master variable that var is mapped to */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(benders != NULL);
+   assert(var != NULL);
+   assert(mappedvar != NULL);
 
-   return SCIPbendersGetVar(benders, scip->set, var, -1);
+   SCIP_CALL( SCIPbendersGetVar(benders, scip->set, var, mappedvar, -1) );
+
+   return SCIP_OKAY;
 }
 
 /** returns the subproblem problem variable for the given master variable.
  *  This function is used as part of the cut generation process */
-SCIP_VAR* SCIPgetBendersSubproblemVar(
+SCIP_RETCODE SCIPgetBendersSubproblemVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_VAR*             var,                /**< the master variable */
+   SCIP_VAR**            mappedvar,          /**< pointer to store the subproblem variable that var is mapped to */
    int                   probnumber          /**< the subproblem number */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(benders != NULL);
+   assert(var != NULL);
+   assert(mappedvar != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   return SCIPbendersGetVar(benders, scip->set, var, probnumber);
+   SCIP_CALL( SCIPbendersGetVar(benders, scip->set, var, mappedvar, probnumber) );
+
+   return SCIP_OKAY;
 }
 
 /** returns the number of subproblems that are stored in the given Benders' decomposition */

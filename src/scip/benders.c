@@ -18,7 +18,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 //#define SCIP_MOREDEBUG
 #include <assert.h>
 #include <string.h>
@@ -1635,7 +1635,6 @@ SCIP_RETCODE SCIPbendersExec(
                 * the first iteration of the solve loop. */
                if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[j]))
                   || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[j])) )
-                  //|| (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[j]) && i == 0) )
                {
                   SCIP_CALL( SCIPbenderscutExec(benderscuts[j], set, benders, sol, i, type, &cutresult) );
 
@@ -1839,7 +1838,7 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    /* TODO: It should be possible to store the pointers to the master variables to speed up the subproblem setup */
    for( i = 0; i < nvars; i++ )
    {
-      mastervar = SCIPbendersGetVar(benders, set, vars[i], -1);
+      SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
 
       if( mastervar != NULL )
       {
@@ -2245,23 +2244,29 @@ SCIP_Real SCIPbendersGetAuxiliaryVarVal(
 
 /** returns the corresponding master or subproblem variable for the given variable.
  * This provides a call back for the variable mapping between the master and subproblems */
-SCIP_VAR* SCIPbendersGetVar(
+SCIP_RETCODE SCIPbendersGetVar(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< the variable for which the corresponding variable is desired */
+   SCIP_VAR**            mappedvar,          /**< the variable that is mapped to var */
    int                   probnumber          /**< the problem number for the desired variable, -1 for the master problem */
    )
 {
    assert(benders != NULL);
    assert(set != NULL);
    assert(var != NULL);
+   assert(mappedvar != NULL);
    assert(benders->bendersgetvar != NULL);
+
+   (*mappedvar) = NULL;
 
    /* if the variable name matches the auxiliary variable, then the master variable is returned as NULL */
    if( strstr(SCIPvarGetName(var), AUXILIARYVAR_NAME) != NULL )
-      return NULL;
+      return SCIP_OKAY;
 
-   return benders->bendersgetvar(set->scip, benders, var, probnumber);
+   return benders->bendersgetvar(set->scip, benders, var, mappedvar, probnumber);
+
+   return SCIP_OKAY;
 }
 
 /** gets user data of Benders' decomposition */
@@ -2863,8 +2868,11 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
       i = 0;
       while( i < nbinvars + nintvars + nimplvars )
       {
-         if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS
-            && SCIPbendersGetVar(benders, set, vars[i], -1) != NULL )
+         SCIP_VAR* mastervar;
+
+         SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
+
+         if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && mastervar != NULL )
          {
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
 

@@ -14,9 +14,8 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 #@file    Makefile
-#@brief   Makefile for SCIP project
-#@author  Timo Berthold
-#@author  Stefan Heinz
+#@brief   Makefile for the Capacitated Facility Location Example using Benders Decomposition
+#@author  Stephen J. Maher
 
 #-----------------------------------------------------------------------------
 # path
