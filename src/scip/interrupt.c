@@ -42,7 +42,8 @@ typedef void (*SigHdlr)(int);
 /** CTRL-C interrupt data */
 struct SCIP_Interrupt
 {
-   SigHdlr               oldsighdlr;         /**< old CTRL-C interrupt handler */
+   SigHdlr               oldsiginthdlr;      /**< old CTRL-C interrupt handler */
+   SigHdlr               oldsigtermhdlr;     /**< old SIGTERM handler */
    int                   nuses;              /**< number of times, the interrupt is captured */
 };
 
@@ -51,7 +52,8 @@ struct SCIP_Interrupt
 /** CTRL-C interrupt data */
 struct SCIP_Interrupt
 {
-   struct sigaction      oldsigaction;       /**< old CTRL-C interrupt handler */
+   struct sigaction      oldsigintaction;    /**< old CTRL-C interrupt handler */
+   struct sigaction      oldsigtermaction;   /**< old SIGTERM handler (of a parent process) */
    int                   nuses;              /**< number of times, the interrupt is captured */
 };
 #endif
@@ -61,9 +63,7 @@ static
 void interruptHandler(
    int                   signum              /**< interrupt signal number */
    )
-{  /*lint --e{715}*/
-
-   switch (signum) {
+{  switch (signum) {
       case SIGINT:
          ninterrupts++;
          if( ninterrupts >= 5 )
@@ -120,7 +120,8 @@ void SCIPinterruptCapture(
    if( interrupt->nuses == 0 )
    {
 #ifdef NO_SIGACTION
-      interrupt->oldsighdlr = signal(SIGINT, interruptHandler);
+      interrupt->oldsiginthdlr = signal(SIGINT, interruptHandler);
+      interrupt->oldsigtermhdlr = signal(SIGTERM, interruptHandler);
 #else
       struct sigaction newaction;
 
@@ -130,9 +131,9 @@ void SCIPinterruptCapture(
       (void)sigemptyset(&newaction.sa_mask);
 
       /* set new signal action, and remember old one */
-      (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
+      (void)sigaction(SIGINT, &newaction, &interrupt->oldsigintaction);
 
-      (void)sigaction(SIGTERM, &newaction, NULL);
+      (void)sigaction(SIGTERM, &newaction, &interrupt->oldsigtermaction);
 #endif
 
       ninterrupts = 0;
@@ -153,9 +154,11 @@ void SCIPinterruptRelease(
    if( interrupt->nuses == 0 )
    {
 #ifdef NO_SIGACTION
-      (void)signal(SIGINT, interrupt->oldsighdlr);
+      (void)signal(SIGINT, interrupt->oldsiginthdlr);
+      (void)signal(SIGTERM, interrupt->oldsigtermhdlr);
 #else
-      (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);
+      (void)sigaction(SIGINT, &interrupt->oldsigintaction, NULL);
+      (void)sigaction(SIGTERM, &interrupt->oldsigtermaction, NULL);
 #endif
    }
 }
