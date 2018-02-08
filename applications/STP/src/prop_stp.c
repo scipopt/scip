@@ -346,7 +346,6 @@ SCIP_RETCODE redbasedVarfixing(
    IDX* curr;
    SCIP_Real offset;
    int* remain;
-   int* edgestate;
    const int nedges = g->edges;
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
 
@@ -359,7 +358,6 @@ SCIP_RETCODE redbasedVarfixing(
    offset = 0.0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &remain, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgestate, nedges) );
 
    propgraph = propdata->propgraph;
    assert(propgraph != NULL);
@@ -387,19 +385,11 @@ SCIP_RETCODE redbasedVarfixing(
          graph_knot_chg(propgraph, tail, 0);
          graph_knot_chg(propgraph, head, 0);
 
-         edgestate[e] = EDGE_BLOCKED;
-         edgestate[erev] = EDGE_BLOCKED;
-
          propgraph->cost[e] = 0.0;
          propgraph->cost[erev] = 0.0;
 
          remain[e] = PROP_STP_EDGE_FIXED;
          remain[erev] = PROP_STP_EDGE_FIXED;
-      }
-      else
-      {
-         edgestate[e] = EDGE_MODIFIABLE;
-         edgestate[erev] = EDGE_MODIFIABLE;
       }
 
       /* both e and its anti-parallel edge fixed to zero? */
@@ -434,9 +424,7 @@ SCIP_RETCODE redbasedVarfixing(
    /* reduce graph */
 
    SCIP_CALL( level0(scip, propgraph) );
- //  SCIP_CALL( reduceStp(scip, &propgraph, &offset, 5, FALSE, FALSE, edgestate, FALSE) );
    SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, NULL, FALSE) );
-
 
    assert(graph_valid(propgraph));
 
@@ -507,14 +495,6 @@ SCIP_RETCODE redbasedVarfixing(
          SCIP_CALL( fixedgevar(scip, vars[e], nfixed) );
          SCIP_CALL( fixedgevar(scip, vars[erev], nfixed) );
       }
-      else if( remain[e] == PROP_STP_EDGE_FIXED )
-      {
-         int todo;
-         assert(remain[erev] == PROP_STP_EDGE_FIXED);
-
-//         SCIP_CALL( fixedgevarTo1(scip, vars[e], nfixed) );
-  //       SCIP_CALL( fixedgevarTo1(scip, vars[erev], nfixed) );
-      }
    }
 
    printf("reduction based fixings: %d \n", *nfixed);
@@ -523,7 +503,6 @@ TERMINATE:
 
    graph_free_history(scip, propgraph);
    graph_free_historyDeep(scip, propgraph);
-   SCIPfreeBufferArray(scip, &edgestate);
    SCIPfreeBufferArray(scip, &remain);
 
    return SCIP_OKAY;
