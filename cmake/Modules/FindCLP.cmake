@@ -22,7 +22,7 @@ find_path(CLP_INCLUDE_DIR
           )
 
 find_library( CLP_LIBRARY
-              NAMES Clp libClp
+              NAMES Clp
               PATHS "${CLP_DIR}/lib"
                     "${CBC_DIR}/lib"
                     "/usr/lib"

@@ -14,12 +14,12 @@ endif()
 
 find_path(QSO_INCLUDE_DIR
           NAMES qsopt.h
-          PATHS "${QSO_DIR}/include/qsinc"
+          PATHS "${QSO_DIR}"
           )
 
 find_library( QSO_LIBRARY
               NAMES qsopt
-              PATHS "${QSO_DIR}/lib"
+              PATHS "${QSO_DIR}"
               )
 
 set(QSO_INCLUDE_DIRS "${QSO_INCLUDE_DIR}" )
