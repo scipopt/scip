@@ -15,7 +15,7 @@
 
 /**@file   heur_farkasdiving.c
  * @brief  LP diving heuristic that tries to construct a Farkas-proof
- * @author Tobias Achterberg
+ * @author Jakob Witzig
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -66,11 +66,11 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_Real             diffobjfac;
+   SCIP_Real             diffobjfac;         /**< fraction of absolute different objective coefficients */
    SCIP_Bool             disabled;           /**< remember if the heuristic should not run at all */
-   SCIP_Bool             checkobj;
-   SCIP_Bool             checkobjglb;
-   SCIP_Bool             objchecked;
+   SCIP_Bool             checkobj;           /**< should objective function be checked before running? */
+   SCIP_Bool             checkobjglb;        /**< check objective function only once w.r.t to the global problem */
+   SCIP_Bool             objchecked;         /**< remember whether objection function was already checked */
 };
 
 
@@ -184,8 +184,6 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
-   SCIP_Real oldmaxvarsfac;
-   char olduseinf;
    int nnzobjvars;
 
    heurdata = SCIPheurGetData(heur);
@@ -310,21 +308,8 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
       }
    }
 
-//   printf("> start    farkasdiving (nconflicts = %lld)\n", SCIPdivesetGetNConflicts(diveset));
-
-//   SCIP_CALL( SCIPgetRealParam(scip, "conflict/maxvarsfac", &oldmaxvarsfac) );
-//   SCIP_CALL( SCIPgetCharParam(scip, "conflict/useinflp", &olduseinf) );
-//
-//   SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", oldmaxvarsfac * 0.8) );
-//   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useinflp", 'd') );
-
   PERFORMDIVING:
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
-
-//   SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", oldmaxvarsfac) );
-//   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useinflp", olduseinf ) );
-
-//   printf("> finished farkasdiving (nconflicts = %lld)\n", SCIPdivesetGetNConflicts(diveset));
 
    return SCIP_OKAY;
 }
@@ -423,7 +408,7 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          &heurdata->checkobjglb, TRUE, DEFAULT_CHECKOBJGLB, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/diffobjfac",
-         " --- ",
+         "fraction of absolute different objective coefficients",
          &heurdata->diffobjfac, TRUE, DEFAULT_DIFFOBJFAC, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
