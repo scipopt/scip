@@ -451,7 +451,6 @@ SCIP_RETCODE applyCliqueFixings(
                            FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
                      SCIP_CALL( SCIPaddConflict(scip, SCIPgetFocusNode(scip), conflictcons, NULL, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                      SCIPdebugPrintCons(scip, conflictcons, NULL);
-                     SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
                   }
 #endif
                   break;
@@ -847,7 +846,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddConflict(scip, SCIPgetFocusNode(scip), conflictcons, NULL, SCIP_CONFTYPE_INFEASLP, FALSE) );
       SCIPdebugPrintCons(scip, conflictcons, NULL);
-      SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
 #endif
       goto TERMINATE;
    }
