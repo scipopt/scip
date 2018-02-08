@@ -2264,7 +2264,7 @@ SCIP_RETCODE SCIPbendersGetVar(
    if( strstr(SCIPvarGetName(var), AUXILIARYVAR_NAME) != NULL )
       return SCIP_OKAY;
 
-   return benders->bendersgetvar(set->scip, benders, var, mappedvar, probnumber);
+   SCIP_CALL( benders->bendersgetvar(set->scip, benders, var, mappedvar, probnumber) );
 
    return SCIP_OKAY;
 }
