@@ -1394,12 +1394,10 @@ SCIP_RETCODE SCIPbendersExec(
    int subprobssolved;
    int nbenderscuts;
    int nsolveloops;     /* the number of times the subproblems are solved. An additional loop is required when the subproblem in integer */
-   int ncutloops;
    int numnotopt;
    int numtocheck;
    int i;
    int j;
-   int k;
    int l;
    SCIP_Bool optimal;
    SCIP_Bool allchecked;      /* flag to indicate whether all subproblems have been checked */
@@ -1537,8 +1535,10 @@ SCIP_RETCODE SCIPbendersExec(
 
 #ifdef SCIP_DEBUG
                if( type == LP )
+               {
                   SCIPdebugMessage("LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
                      SCIPbendersGetSubprobObjval(benders, i));
+               }
 #endif
                (*infeasible) = (*infeasible) || subinfeas;
                subisinfeas[i] = subinfeas;
@@ -1562,11 +1562,15 @@ SCIP_RETCODE SCIPbendersExec(
                      if( lpsub || l > 0 )
                      {
                         if( subproboptimal )
+                        {
                            SCIPdebugMessage("Subproblem %d is Optimal (%f >= %f)\n", i,
                               SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
+                        }
                         else
+                        {
                            SCIPdebugMessage("Subproblem %d is NOT Optimal (%f < %f)\n", i,
                               SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
+                        }
                      }
 #endif
 
@@ -1608,7 +1612,7 @@ SCIP_RETCODE SCIPbendersExec(
       /* It is only possible to add cuts to the problem if it has not already been solved */
       if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED )
       {
-         int addedcuts = 0;
+         SCIP_Longint addedcuts = 0;
 
          /* This is done in two loops. The first is by subproblem and the second is by cut type. */
          //for( i = 0; i < nsubproblems; i++ )
@@ -1621,7 +1625,7 @@ SCIP_RETCODE SCIPbendersExec(
             for( j = 0; j < nbenderscuts; j++ )
             {
                SCIP_RESULT cutresult;
-               int prevaddedcuts;
+               SCIP_Longint prevaddedcuts;
 
                assert(benderscuts[j] != NULL);
 
@@ -1663,7 +1667,9 @@ SCIP_RETCODE SCIPbendersExec(
 
 #ifndef NDEBUG
    if( (*result) == SCIP_CONSADDED )
+   {
       SCIPdebugMessage("Benders decomposition: Cut added\n");
+   }
 #endif
 
    if( checkint && (type == CHECK || (*result) != SCIP_CONSADDED) )
