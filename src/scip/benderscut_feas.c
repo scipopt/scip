@@ -153,10 +153,10 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          consval = consvals[j];
 
          /* retreiving the master problem variable for the given subproblem variable. */
-         mastervar = SCIPgetBendersMasterVar(masterprob, benders, consvars[j]);
+         mastervar = SCIPgetBendersMasterVar(masterprob, benders, consvar);
 
          /* TODO: Do we need the problem variable? */
-         consvar = SCIPvarGetProbvar(consvars[j]);
+         consvar = SCIPvarGetProbvar(consvar);
 
          //assert(!BDoriginalVarIsLinking(consvar));
 
