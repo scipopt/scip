@@ -2084,9 +2084,11 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    }
    else
 #else
-   assert(!decomp);
+   {
+      assert(!decomp);
 #endif
       scenarioscip = scip;
+   }
 
    /* adding the scenarioscip to the scenario */
    setScenarioScip(scenario, scenarioscip);
