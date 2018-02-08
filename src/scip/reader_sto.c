@@ -1787,7 +1787,7 @@ void getScenarioEntityName(
    )
 {
    if( stagenum < 0 )
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", varname, scenarionum);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_00_%d", varname, scenarionum);
    else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", varname, stagenum, scenarionum);
 }

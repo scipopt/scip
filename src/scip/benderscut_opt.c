@@ -335,7 +335,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
       if( type == LP || type == RELAX )
       {
-         SCIP_CALL( SCIPaddCut(masterprob, sol, row, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(masterprob, row, FALSE, &infeasible) );
          assert(!infeasible);
       }
       else
