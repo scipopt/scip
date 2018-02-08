@@ -1193,6 +1193,27 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
    {
       /* start with interval that is stored in expression */
       interval = expr->interval;
+
+      /* intersect with the interval of the auxiliary variable, if available */
+      if( expr->auxvar != NULL )
+      {
+         SCIP_Real lb = SCIPvarGetLbLocal(expr->auxvar);
+         SCIP_Real ub = SCIPvarGetUbLocal(expr->auxvar);
+         SCIP_Real inf = SCIPisInfinity(scip, -lb) ? -SCIP_INTERVAL_INFINITY : lb - SCIPepsilon(scip);
+         SCIP_Real sup = SCIPisInfinity(scip, ub) ? SCIP_INTERVAL_INFINITY : ub + SCIPepsilon(scip);
+         SCIP_INTERVAL auxinterval;
+
+         SCIPintervalSetBounds(&auxinterval, inf, sup);
+         SCIPintervalIntersect(&interval, interval, auxinterval);
+
+         /* check whether resulting interval is already empty */
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
+         {
+            *result = SCIP_CONSEXPREXPRWALK_ABORT;
+            propdata->aborted = TRUE;
+            return SCIP_OKAY;
+         }
+      }
    }
    else
    {
