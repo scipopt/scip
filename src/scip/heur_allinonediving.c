@@ -15,7 +15,7 @@
 
 /**@file   heur_allinonediving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the active constraints the variable appear in
- * @author Tobias Achterberg
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,8 +32,8 @@
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the active constraints"
 #define HEUR_DISPCHAR         'a'
 #define HEUR_PRIORITY         -70000
-#define HEUR_FREQ             5
-#define HEUR_FREQOFS          5
+#define HEUR_FREQ             2
+#define HEUR_FREQOFS          3
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
@@ -94,10 +94,10 @@ struct SCIP_HeurData
    int                   memsize;            /**< memory size of current arrays, needed for dynamic reallocation */
    int                   varpossmemsize;     /**< memory size of updated vars and varposs array */
 
-   char                  scoreparam;         /**< score parameter to be used */
+   char                  scoreparam;         /**< score parameter for distribution branching */
+   char                  scoretype;          /**< score parameter to compare different divesets */
+   SCIP_Real             epsilon;            /**< parameter that increases probability of exploration among divesets */
    SCIP_Bool             usescipscore;       /**< should the SCIP branching score be used for weighing up and down score? */
-
-   unsigned int          randseed;           /**< random seed for random number generation */
 };
 
 enum AllInOneDiving_Method
@@ -804,6 +804,32 @@ SCIP_RETCODE varProcessBoundChanges(
    return SCIP_OKAY;
 }
 
+/** todo get the score for this dive set */
+static
+SCIP_Real divesetGetScore(
+   SCIP_DIVESET*         diveset,            /**< diving settings data structure */
+   char                  scoretype           /**< score parameter */
+   )
+{
+   switch (scoretype) {
+      case 'n': /* min average nodes */
+         return SCIPdivesetGetNProbingNodes(diveset) / (SCIPdivesetGetNCalls(diveset) + 10.0);
+
+      case 'i': /* min avg LP iterations */
+         return SCIPdivesetGetNLPIterations(diveset) / (SCIPdivesetGetNCalls(diveset) + 10.0);
+
+      case 'c': /* min backtrack / conflict ratio */
+         return SCIPdivesetGetNBacktracks(diveset) / (SCIPdivesetGetNConflicts(diveset) + 10.0);
+
+      case 'd': /* minimum average depth (the current default) */
+         return SCIPdivesetGetAvgDepth(diveset) * SCIPdivesetGetNCalls(diveset) / (SCIPdivesetGetNCalls(diveset) + 10.0);
+
+      default:
+         break;
+   }
+   return 0.0;
+}
+
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_EVENTFREE(eventFreeDistributiondiving)
@@ -818,115 +844,6 @@ SCIP_DECL_EVENTFREE(eventFreeDistributiondiving)
 
    return SCIP_OKAY;
 }
-
-
-
-/** returns a score value for the given variable based on the active constraints that the variable appears in */
-static
-SCIP_Real getNActiveConsScore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< working solution */
-   SCIP_VAR*             var,                /**< variable to get the score value for */
-   SCIP_Real*            downscore,          /**< pointer to store the score for branching downwards */
-   SCIP_Real*            upscore             /**< pointer to store the score for branching upwards */
-   )
-{
-   SCIP_COL* col;
-   SCIP_ROW** rows;
-   SCIP_Real* vals;
-   int nrows;
-   int r;
-   int nactrows;
-   SCIP_Real nlprows;
-   SCIP_Real downcoefsum;
-   SCIP_Real upcoefsum;
-   SCIP_Real score;
-
-   assert(downscore != NULL);
-   assert(upscore != NULL);
-
-   *downscore = 0.0;
-   *upscore = 0.0;
-   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-      return 0.0;
-
-   col = SCIPvarGetCol(var);
-   assert(col != NULL);
-
-   rows = SCIPcolGetRows(col);
-   vals = SCIPcolGetVals(col);
-   nrows = SCIPcolGetNLPNonz(col);
-   nactrows = 0;
-   downcoefsum = 0.0;
-   upcoefsum = 0.0;
-   for( r = 0; r < nrows; ++r )
-   {
-      SCIP_ROW* row;
-      SCIP_Real activity;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      SCIP_Real dualsol;
-
-      row = rows[r];
-      /* calculate number of active constraint sides, i.e., count equations as two */
-      lhs = SCIProwGetLhs(row);
-      rhs = SCIProwGetRhs(row);
-
-      /* @todo this is suboptimal because activity is calculated by looping over all nonzeros of this row, need to
-       * store LP activities instead (which cannot be retrieved if no LP was solved at this node)
-       */
-      activity = SCIPgetRowSolActivity(scip, row, sol);
-
-      dualsol = SCIProwGetDualsol(row);
-      if( SCIPisFeasEQ(scip, activity, lhs) )
-      {
-         SCIP_Real coef;
-
-         nactrows++;
-         coef = vals[r] / SCIProwGetNorm(row);
-         if( SCIPisFeasPositive(scip, dualsol) )
-         {
-            if( coef > 0.0 )
-               downcoefsum += coef;
-            else
-               upcoefsum -= coef;
-         }
-      }
-      else if( SCIPisFeasEQ(scip, activity, rhs) )
-      {
-         SCIP_Real coef;
-
-         nactrows++;
-         coef = vals[r] / SCIProwGetNorm(row);
-         if( SCIPisFeasNegative(scip, dualsol) )
-         {
-            if( coef > 0.0 )
-               upcoefsum += coef;
-            else
-               downcoefsum -= coef;
-         }
-      }
-   }
-
-   /* use the number of LP rows for normalization */
-   nlprows = (SCIP_Real)SCIPgetNLPRows(scip);
-   upcoefsum /= nlprows;
-   downcoefsum /= nlprows;
-
-   /* calculate the score using SCIP's branch score. Pass NULL as variable to not have the var branch factor influence
-    * the result
-    */
-   score = nactrows / nlprows + SCIPgetBranchScore(scip, NULL, downcoefsum, upcoefsum);
-
-   assert(score <= 3.0);
-   assert(score >= 0.0);
-
-   *downscore = downcoefsum;
-   *upscore = upcoefsum;
-
-   return score;
-}
-
 
 /*
  * Callback methods
@@ -1092,6 +1009,43 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
    return SCIP_OKAY;
 }
 
+/** get LP iteration limit for diving */
+static
+SCIP_Longint getLPIterlimit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< the heuristic */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   SCIP_Longint nsolsfound = SCIPheurGetNSolsFound(heur);
+   SCIP_Longint nbestsolsfound = SCIPheurGetNBestSolsFound(heur);
+   SCIP_Longint nlpiterations = SCIPgetNNodeLPIterations(scip);
+   SCIP_Longint ncalls = SCIPheurGetNCalls(heur);
+
+   SCIP_Longint nlpiterationsdive = 0;
+   SCIP_Longint lpiterlimit;
+
+   int i;
+
+   /* loop over the divesets and collect their individual iterations */
+   for( i = 0; i < SCIPheurGetNDivesets(heur); ++i )
+   {
+      nlpiterationsdive += SCIPdivesetGetNLPIterations(SCIPheurGetDivesets(heur)[i]);
+   }
+
+   /* author gregor
+    *
+    * TODO parameterize this sufficiently
+    */
+
+   lpiterlimit = (SCIP_Longint)(0.4 * (1.0 + 10*(nsolsfound+1.0)/(ncalls+1.0)) * nlpiterations);
+   lpiterlimit += 8000;
+
+   lpiterlimit -= nlpiterationsdive;
+
+   return lpiterlimit;
+}
+
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
@@ -1104,6 +1058,9 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
    int nlprows;
    int ndivesets;
    SCIP_Bool* methodunavailable;
+   SCIP_RANDNUMGEN* rng;
+   SCIP_Real epsilon_t;
+   SCIP_Longint lpiterlimit;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -1117,8 +1074,16 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
    assert(divesets != NULL);
    heurdata = SCIPheurGetData(heur);
 
+   *result = SCIP_DIDNOTRUN;
+
+   lpiterlimit = getLPIterlimit(scip, heur, heurdata);
+
+   if( lpiterlimit <= 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &methodunavailable, SCIPheurGetNDivesets(heur)) );
    BMSclearMemoryArray(methodunavailable, SCIPheurGetNDivesets(heur));
+
 
    /* check for certain methods if it is possible to execute them */
    nlprows = SCIPgetNLPRows(scip);
@@ -1132,16 +1097,23 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
    if( SCIPgetNSols(scip) == 0 || SCIPsolIsOriginal(SCIPgetBestSol(scip)))
       methodunavailable[(int)ALLINONEDIVING_GUIDEDDIVING] = TRUE;
 
-   *result = SCIP_DIDNOTRUN;
 
    diveset = NULL;
+   rng = SCIPdivesetGetRandnumgen(divesets[0]);
+   assert(rng != NULL);
+
    method = ALLINONEDIVING_VECLENDIVING;
+
+   epsilon_t = heurdata->epsilon * sqrt(ndivesets / (SCIPheurGetNCalls(heur) + 1.0));
+   epsilon_t = MAX(epsilon_t, 0.05);
+
+
    /* select one of the available methods at random */
-   if( SCIPgetRandomReal(0.0, 1.0, &heurdata->randseed) < 0.3 )
+   if( SCIPrandomGetReal(rng, 0.0, 1.0) < epsilon_t )
    {
       do
       {
-         d = SCIPgetRandomInt(0, ndivesets - 1, &heurdata->randseed);
+         d = SCIPrandomGetInt(rng, 0, ndivesets - 1);
       }
       while( methodunavailable[d] );
       diveset = divesets[d];
@@ -1155,7 +1127,7 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
          if( !methodunavailable[d] && SCIPdivesetGetAvgDepth(divesets[d]) < bestscore )
          {
             diveset = divesets[d];
-            bestscore = SCIPdivesetGetAvgDepth(divesets[d]);
+            bestscore = divesetGetScore(diveset, heurdata->scoretype);
             method = (ALLINONEDIVINGMETHOD)d;
          }
       }
@@ -1169,7 +1141,7 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
    assert((int)method >= 0 && (int)method < SCIPheurGetNDivesets(heur));
    diveset = SCIPheurGetDivesets(heur)[(int)method];
    assert(diveset != NULL);
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, lpiterlimit) );
 
    if( method == ALLINONEDIVING_DISTRIBUTIONDIVING )
    {
@@ -1284,6 +1256,17 @@ SCIP_RETCODE SCIPincludeHeurAllinonediving(
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
          DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 17, DEFAULT_BACKTRACK, TRUE, DIVETYPES_VECLEN,
          SCIPdivesetGetScoreVeclendiving) );
+
+   /* author gregor
+    *
+    * TODO put default values to the top of the file as preprocessor defines
+    */
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoretype",
+         "score parameter", &heurdata->scoretype, FALSE, 'd', "nicd", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/epsilon",
+         "parameter that increases probability of exploration among divesets",
+         &heurdata->epsilon, FALSE, 1.0, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

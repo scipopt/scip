@@ -76,7 +76,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_SOL*             worksol,            /**< non-NULL working solution */
    SCIP_HEUR*            heur,               /**< the calling primal heuristic */
    SCIP_RESULT*          result,             /**< SCIP result pointer */
-   SCIP_Bool             nodeinfeasible      /**< is the current node known to be infeasible? */
+   SCIP_Bool             nodeinfeasible,     /**< is the current node known to be infeasible? */
+   SCIP_Longint          iterlim             /**< nonnegative iteration limit for the LP solves, or -1 for dynamic setting */
    );
 
 /** get a sub-SCIP copy of the transformed problem */

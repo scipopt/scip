@@ -275,7 +275,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
    if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1) );
 
    return SCIP_OKAY;
 }
