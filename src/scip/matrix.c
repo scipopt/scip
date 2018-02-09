@@ -36,6 +36,8 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include <scip/cons_linking.h>
+
 
 /*
  * private functions
@@ -488,6 +490,11 @@ SCIP_RETCODE SCIPmatrixCreate(
             /* increment number of supported constraints */
             nconss += nconshdlrconss;
          }
+         else if (strcmp(conshdlrname, "linking") == 0 )
+         {
+            /* the linear representation of linking constraints involves two linear constraints */
+            nconss += 2* nconshdlrconss;
+         }
 
          /* increment number of supported and unsupported constraints */
          nconssall += nconshdlrconss;
@@ -751,6 +758,69 @@ SCIP_RETCODE SCIPmatrixCreate(
                   assert(cnt < nconss);
                   matrix->cons[cnt] = cons;
                   cnt++;
+               }
+            }
+
+            SCIPfreeBufferArray(scip, &consvals);
+            SCIPfreeBufferArray(scip, &consvars);
+         }
+      }
+      else if( strcmp(conshdlrname, "linking") == 0 )
+      {
+         if( nconshdlrconss > 0 )
+         {
+            SCIP_VAR** consvars;
+            SCIP_VAR** curconsvars;
+            SCIP_Real* consvals;
+            int* curconsvals;
+            int valssize;
+            int nconsvars;
+            int j;
+
+            valssize = 100;
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, valssize) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, valssize) );
+
+            for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
+            {
+
+               cons = conshdlrconss[c];
+               assert(SCIPconsIsTransformed(cons));
+
+               /* get constraint variables and their amount */
+               SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
+               curconsvals = SCIPgetValsLinking(scip, cons);
+
+               /* SCIPgetBinVarsLinking returns the number of binary variables, but we also need the integer variable */
+               nconsvars++;
+
+               if( nconsvars > valssize )
+               {
+                  valssize = (int) (1.5 * nconsvars);
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, valssize) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, valssize) );
+               }
+
+               /* copy vars and vals for binary variables */
+               for( j = 0; j < nconsvars - 1; j++ )
+               {
+                  consvars[j] = curconsvars[j];
+                  consvals[j] = (SCIP_Real) curconsvals[j];
+               }
+
+               /* set final entry of vars and vals to the linking variable and its coefficient, respectively */
+               consvars[nconsvars - 1] = SCIPgetIntvarLinking(scip, cons);
+               consvals[nconsvars - 1] = -1;
+
+               SCIP_CALL( addConstraint(scip, matrix, consvars, consvals, nconsvars, 0.0, 0.0, nnonzstmp, &rowadded) );
+               SCIP_CALL( addConstraint(scip, matrix, consvars, NULL, nconsvars - 1, 1.0, 1.0, nnonzstmp, &rowadded) );
+
+               if(rowadded)
+               {
+                  assert(cnt < nconss);
+                  matrix->cons[cnt] = cons;
+                  matrix->cons[cnt + 1] = cons;
+                  cnt += 2;
                }
             }
 

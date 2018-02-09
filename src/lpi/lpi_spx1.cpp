@@ -4080,19 +4080,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    )
 {
    int i;
-   int nCols;
-   int nRows;
+   int ncols;
+   int nrows;
 
    SCIPdebugMessage("calling SCIPlpiSetBase()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   nCols = lpi->spx->nCols();
-   nRows = lpi->spx->nRows();
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
 
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
@@ -4100,10 +4100,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    DataArray<SPxSolver::VarStatus>& m_colstat = lpi->spx->colStat();
    DataArray<SPxSolver::VarStatus>& m_rowstat = lpi->spx->rowStat();
 
-   m_colstat.reSize(nCols);
-   m_rowstat.reSize(nRows);
+   m_colstat.reSize(ncols);
+   m_rowstat.reSize(nrows);
 
-   for( i = 0; i < nRows; ++i )
+   for( i = 0; i < nrows; ++i )
    {
       assert( rstat != 0 ); /* for lint */
       switch( rstat[i] )
@@ -4127,7 +4127,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   for( i = 0; i < nCols; ++i )
+   for( i = 0; i < ncols; ++i )
    {
       assert( cstat != 0 ); /* for lint */
       switch( cstat[i] )

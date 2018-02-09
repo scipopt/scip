@@ -2,13 +2,13 @@
 #
 # This script uploads and checks for fails in a SCIP run.
 # Sends an email if errors are detected. Is not meant to be use directly,
-# but to be called by jenkins_check_results.sh.
+# but to be called by jenkins_check_results_cmake.sh.
 # Note: TESTSET, GITHASH, etc are read from the environment, see
-# jenkins_check_results.sh
-
-echo "This is jenkins_failcheck.sh running."
+# jenkins_check_results_cmake.sh
 
 sleep 5
+
+echo "This is jenkins_failcheck_cmake.sh running."
 
 #################################
 # AWK scripts for later         #
@@ -103,14 +103,14 @@ read -d '' awkscript_checkfixedinstances << 'EOF'
 # read fail instances for this configuration from resfile
 NR == FNR && /fail/ {
     failmsg=$13; for(i=14;i<=NF;i++){ failmsg=failmsg"_"$i; }
-    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS " " PERM;
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " SCIP_BUILDDIR " " PERM;
     bugs[errorstring]
     next;
 }
 
 # read from database
 NR != FNR {
-    if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == OPT && $7 == LPS ) {
+    if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == SCIP_BUILDDIR ) {
         if (!( $0 in bugs )) {
             # if current line from database matches our settings and
             # it is not in the set of failed instances from this run it was fixed
@@ -135,7 +135,7 @@ NR == FNR {known_bugs[$0]; next}
 /fail/ {
     # get the fail error and build string in database format
     failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS " " PERM;
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " SCIP_BUILDDIR " " PERM;
 
     if (!( errorstring in known_bugs )) {
         # if error is not known, add it and print it to ERRORINSTANCES for sending mail later
@@ -168,8 +168,10 @@ EOF
 # End of AWK Scripts            #
 #################################
 
+SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1`
+
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
-RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rbdb.txt"
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${TESTSET}_${SETTING}_${SCIP_BUILDDIR}_rbdb.txt"
 touch $RBDB
 OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
 NEWTIMESTAMP=`date '+%F-%H-%M'`
@@ -186,15 +188,15 @@ while [ $PERM -le $PERMUTE ]; do
   # we use a name that is unique per test sent to the cluster (a jenkins job
   # can have several tests sent to the cluster, that is why the jenkins job
   # name (i.e, the directory name) is not enough)
-  DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}${PERM_ENDING}txt"
+  DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${TESTSET}_${SETTING}_${SCIP_BUILDDIR}${PERM_ENDING}txt"
   TMPDATABASE="$DATABASE.tmp"
   STILLFAILING="${DATABASE}_SF.tmp"
   OUTPUT="${DATABASE}_output.tmp"
   touch ${STILLFAILING}
 
-  SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING: $SETTING] [OPT: $OPT] [LPS: $LPS] [GITHASH: $GITHASH] [PERM: $PERM]"
+  SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING: $SETTING] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM]"
 
-  AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v OPT=$OPT -v LPS=$LPS -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM"
+  AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM"
   echo $AWKARGS
 
   # the first time, the file might not exists so we create it
@@ -202,7 +204,7 @@ while [ $PERM -le $PERMUTE ]; do
   # the awk scripts below won't work (NR and FNR will not be different)
   echo "Preparing database."
   if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
-    echo "Instance Fail_reason Branch Testset Setting Opt_mode LPS" > $DATABASE
+    echo "Instance Fail_reason Branch Testset Setting Opt_mode SCIP_BUILDDIR" > $DATABASE
   fi
 
   EMAILFROM="adm_timo <timo-admin@zib.de>"
@@ -212,31 +214,9 @@ while [ $PERM -le $PERMUTE ]; do
   # FIND evalfile #
   #################
 
-  # SCIP check files are check.TESTSET.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
-  BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}"
+  # SCIP check files are in check/${OUTPUTDIR}
+  BASEFILE="check/${OUTPUTDIR}/check.${TESTSET}.*.${SETTING}${PERM_ENDING}"
   EVALFILE=`ls ${BASEFILE}*eval`
-  # if no evalfile was found --> check if this is fscip output
-  if [ "${EVALFILE}" == "" ]; then
-      echo "Ignore previous ls error; looking again for eval file"
-      BASEFILE="check/results/check.${TESTSET}.fscip.*.${SETTING}" # we do not use permutations with fiber scip
-      EVALFILE=`ls ${BASEFILE}*eval`
-  fi
-
-  # if still no evalfile was found --> send an email informing that something is wrong and exit
-  if [ "${EVALFILE}" == "" ]; then
-      echo "Couldn't find eval file, sending email"
-      SUBJECT="ERROR ${SUBJECTINFO}"
-      echo -e "Aborting because the .eval file cannot be found.\n\nTried:\n${BASEFILE}.eval\ncheck/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}*eval\n\nDirectory: `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-      exit 1
-  fi
-
-  # if more than one evalfile was found --> something is wrong, send an email
-  if [ `wc -w <<< ${EVALFILE}` -gt 1 ]; then
-      echo "More than one eval file found; sending email"
-      SUBJECT="ERROR ${SUBJECTINFO}"
-      echo -e "Aborting because there were more than one .eval files found:\n${EVALFILE}\n\nAfter fixing this run\ncd `pwd`\nPERFORMANCE=$PERFORMANCE SCIPVERSION=$SCIPVERSION SETTING=$SETTING LPS=$LPS GITHASH=$GITHASH OPT=$OPT TESTSET=$TESTSET GITBRANCH=$GITBRANCH PERM=$PERM ./check/jenkins_failcheck.sh\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-      exit 1
-  fi
 
   # at this point we have exactly one evalfile
   BASENAME=${EVALFILE%.*} # remove extension

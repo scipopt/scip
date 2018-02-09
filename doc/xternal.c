@@ -133,7 +133,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  5.0.0.2
+ * @version  5.0.1.3
  *
  * \image html scippy.png
  *
@@ -7562,6 +7562,12 @@
 
 
 /**@page RELEASENOTES Release notes
+ *
+ * Please consult the <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6629">release report</a> for version 5.0 that explains many of the new features in detail.
+ *
+ * \verbinclude SCIP-release-notes-5.0.1
+ *
+ * \verbinclude SCIP-release-notes-5.0
  *
  * A release report with an in-depth description of many of the new features in version 4.0 is available on <a href="http://www.optimization-online.org/DB_HTML/2017/03/5895.html">Optimization Online</a>.
  *

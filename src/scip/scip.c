@@ -26901,10 +26901,10 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    return scip->set->presol_donotmultaggr || SCIPvarDoNotMultaggr(var);
 }
 
-/** returns whether dual reduction are allowed during propagation and presolving
+/** returns whether dual reductions are allowed during propagation and presolving
  *
  *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
- *        intact. Often such reductions are based on analyzing the objective function, reduced costs and/or dual LPs.
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
  */
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -35659,6 +35659,7 @@ SCIP_Bool SCIPisCutApplicable(
  *
  *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut, add it only to the global cutpool.
  */
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
