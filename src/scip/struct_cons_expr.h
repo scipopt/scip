@@ -44,6 +44,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_Longint                  npropcalls; /**< number of times, the propagation callback was called */
    SCIP_Longint                  ncutsfound; /**< number of cuts found by this expression handler */
    SCIP_Longint                  ncutoffs;   /**< number of cutoffs found so far by this expression handler */
+   SCIP_Longint                  ndomreds;   /**< number of domain reductions found so far by this expression handler */
 
    SCIP_DECL_CONSEXPR_EXPRCOPYHDLR((*copyhdlr));  /**< handler copy callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRFREEHDLR((*freehdlr));  /**< handler free callback (can be NULL) */
@@ -137,6 +138,11 @@ struct SCIP_ConsExpr_Nlhdlr
    char*                         desc;       /**< nonlinearity handler description (can be NULL) */
    SCIP_CONSEXPR_NLHDLRDATA*     data;       /**< data of handler */
    unsigned int                  priority;   /**< priority of nonlinearity handler */
+   SCIP_Longint                  nsepacalls; /**< number of times, the separation callback was called */
+   SCIP_Longint                  npropcalls; /**< number of times, the propagation callback was called */
+   SCIP_Longint                  ncutsfound; /**< number of cuts found by this expression handler */
+   SCIP_Longint                  ncutoffs;   /**< number of cutoffs found so far by this expression handler */
+   SCIP_Longint                  ndomreds;   /**< number of domain reductions found so far by this expression handler */
 
    SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata));  /**< callback to free data of handler (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata));  /**< callback to free expression specific data (can be NULL) */

@@ -5211,7 +5211,7 @@ void printExprHdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s\n", "#SepaCalls", "#PropCalls", "Cuts", "Cutoffs", "DomReds");
+   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s\n", "#SepaCalls", "#PropCalls", "Cuts", "Cutoffs", "DomReds");
 
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -5223,6 +5223,41 @@ void printExprHdlrStatistics(
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutoffs);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ndomreds);
+      SCIPinfoMessage(scip, file, "\n");
+   }
+}
+
+/** print statistics for nonlinear handlers */
+static
+void printNlhdlrStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   FILE*                 file                /**< file handle, or NULL for standard out */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s\n", "#SepaCalls", "#PropCalls", "Cuts", "Cutoffs", "DomReds");
+
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr = conshdlrdata->nlhdlrs[i];
+      assert(nlhdlr != NULL);
+
+      SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nsepacalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutsfound);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutoffs);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndomreds);
       SCIPinfoMessage(scip, file, "\n");
    }
 }
@@ -6473,6 +6508,9 @@ SCIP_DECL_TABLEOUTPUT(tableOutputExpr)
 
    /* print statistics for expression handlers */
    printExprHdlrStatistics(scip, conshdlr, file);
+
+   /* print statistics for nonlinear handlers */
+   printNlhdlrStatistics(scip, conshdlr, file);
 
    return SCIP_OKAY;
 }
