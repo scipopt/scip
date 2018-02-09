@@ -72,6 +72,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBenderscutPriority)
 }
 
 SCIP_RETCODE SCIPbenderscutCopyInclude(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition that the cuts are copied to */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
@@ -83,7 +84,7 @@ SCIP_RETCODE SCIPbenderscutCopyInclude(
    if( benderscut->benderscutcopy != NULL )
    {
       SCIPsetDebugMsg(set, "including benderscut %s in subscip %p\n", SCIPbenderscutGetName(benderscut), (void*)set->scip);
-      SCIP_CALL( benderscut->benderscutcopy(set->scip, benderscut) );
+      SCIP_CALL( benderscut->benderscutcopy(set->scip, benders, benderscut) );
    }
 
    return SCIP_OKAY;

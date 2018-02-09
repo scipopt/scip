@@ -282,6 +282,8 @@ set(scipsources
 )
 
 set(objscipsources
+    objscip/objbenders.cpp
+    objscip/objbenderscut.cpp
     objscip/objbranchrule.cpp
     objscip/objconshdlr.cpp
     objscip/objdialog.cpp

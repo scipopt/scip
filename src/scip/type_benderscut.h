@@ -46,7 +46,7 @@ typedef struct SCIP_BenderscutData SCIP_BENDERSCUTDATA;      /**< locally define
  *  - scip            : SCIP main data structure
  *  - benderscut           : the compression technique itself
  */
-#define SCIP_DECL_BENDERSCUTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERSCUT* benderscut)
+#define SCIP_DECL_BENDERSCUTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_BENDERSCUT* benderscut)
 
 /** destructor of Benders' decomposition cuts to free user data (called when SCIP is exiting)
  *
@@ -75,7 +75,6 @@ typedef struct SCIP_BenderscutData SCIP_BENDERSCUTDATA;      /**< locally define
 /** solving process initialization method of Benders' decomposition cutsc (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
- *  The tree benderscutession may use this call to initialize its branch and bound specific data.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -96,17 +95,18 @@ typedef struct SCIP_BenderscutData SCIP_BENDERSCUTDATA;      /**< locally define
 
 /** execution method of Benders' decomposition cuts technique
  *
- *  Try to compress the current search tree. The method is called in the node processing loop.
- *
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition structure
  *  - benderscut      : the Benders' cut structure
+ *  - sol             : the solution that was used for setting up the subproblems
  *  - probnumber      : the number of the subproblem from which the cut is generated
+ *  - type            : the enforcement type that called the subproblem solve
  *  - result          : pointer to store the result of the cut algorithm
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define SCIP_DECL_BENDERSCUTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_BENDERSCUT* benderscut,\

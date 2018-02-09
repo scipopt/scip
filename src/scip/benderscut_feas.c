@@ -198,6 +198,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       //dualsol = farkascoefs[SCIPvarGetProbindex(var)];
       dualsol = SCIPgetVarFarkasCoef(subproblem, var);
 
+      printf("<%s> dualsol %g\n", SCIPvarGetName(var), dualsol);
+
       if( SCIPisZero(subproblem, dualsol) )
          continue;
 
@@ -206,6 +208,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
        * If the pricing variable is not a linking variable, then the farkas dual value is added to the lhs */
       if( mastervar != NULL )
       {
+         SCIPdebugMessage("Adding coeffs to feasibility cut: <%s> dualsol %g\n", SCIPvarGetName(mastervar), dualsol);
+
          SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, mastervar, dualsol) );
       }
       else
@@ -218,9 +222,9 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          lhs = SCIPgetLhsLinear(masterprob, cut);
 
          if( SCIPisPositive(subproblem, dualsol) )
-            addval = dualsol*SCIPvarGetUbLocal(var);
+            addval = dualsol*SCIPvarGetUbGlobal(var);
          else if( SCIPisNegative(subproblem, dualsol) )
-            addval = dualsol*SCIPvarGetLbLocal(var);
+            addval = dualsol*SCIPvarGetLbGlobal(var);
 
          lhs -= addval;
 
@@ -244,12 +248,17 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
    assert(cut != NULL);
 
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(masterprob, cut, NULL) );
+      SCIPinfoMessage(masterprob, NULL, ";\n");
+#endif
+
 
 #ifndef NDEBUG
    /* TODO: Not sure about how to generate the solution for the first assert. Need to check */
    //assert(SCIPgetActivityLinear(masterprob, cut, pricingsol) < SCIPgetLhsLinear(masterprob, cut));
    SCIPdebugMessage("Checking Farkas proof - activity = %g, lhs = %g\n", farkasact, farkaslhs);
-   //assert(farkasact < farkaslhs);
+   assert(farkasact < farkaslhs);
    SCIPfreeBufferArray(subproblem, &farkascoefs);
 #endif
 

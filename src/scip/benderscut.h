@@ -40,6 +40,7 @@ extern "C" {
 /** copies the given Benders' decomposition cuts to a new scip */
 extern
 SCIP_RETCODE SCIPbenderscutCopyInclude(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition that the cuts are copied to */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );

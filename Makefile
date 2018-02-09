@@ -792,7 +792,9 @@ SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
 
 OBJSCIPLIBSHORTNAME=	objscip
 OBJSCIPLIBNAME	=	$(OBJSCIPLIBSHORTNAME)-$(VERSION)
-OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
+OBJSCIPLIBOBJ	=	objscip/objbenders.o \
+			objscip/objbenderscut.o \
+			objscip/objbranchrule.o \
 			objscip/objconshdlr.o \
 			objscip/objdialog.o \
 			objscip/objdisp.o \
