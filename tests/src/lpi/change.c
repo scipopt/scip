@@ -850,8 +850,6 @@ Test(change, testlpiwritestatemethods)
    int nrows, ncols, nnonz;
    int cstat[2];
    int rstat[2];
-   int cstat2[2];
-   int rstat2[2];
    SCIP_OBJSEN sense;
    /* 2x2 problem */
    cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
