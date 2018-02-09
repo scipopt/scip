@@ -40,6 +40,10 @@ struct SCIP_ConsExpr_ExprHdlr
    char*                         desc;       /**< expression handler description (can be NULL) */
    SCIP_CONSEXPR_EXPRHDLRDATA*   data;       /**< data of handler */
    unsigned int                  precedence; /**< precedence of expression operation relative to other expression (used for printing) */
+   SCIP_Longint                  nsepacalls; /**< number of times, the separation callback was called */
+   SCIP_Longint                  npropcalls; /**< number of times, the propagation callback was called */
+   SCIP_Longint                  ncutsfound; /**< number of cuts found by this expression handler */
+   SCIP_Longint                  ncutoffs;   /**< number of cutoffs found so far by this expression handler */
 
    SCIP_DECL_CONSEXPR_EXPRCOPYHDLR((*copyhdlr));  /**< handler copy callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRFREEHDLR((*freehdlr));  /**< handler free callback (can be NULL) */

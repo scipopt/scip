@@ -67,6 +67,11 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
+/* properties of the expression constraint handler statistics table */
+#define TABLE_NAME_EXPR                          "expression"
+#define TABLE_DESC_EXPR                          "expression constraint handler statistics"
+#define TABLE_POSITION_EXPR                      12500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_EXPR                SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 
 /* enable nonlinear constraint upgrading */
@@ -5189,6 +5194,39 @@ SCIP_RETCODE enforceConstraint(
    return SCIP_OKAY;
 }
 
+/** print statistics for expression handlers */
+static
+void printExprHdlrStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   FILE*                 file                /**< file handle, or NULL for standard out */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s\n", "#SepaCalls", "#PropCalls", "Cuts", "Cutoffs", "DomReds");
+
+   for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
+   {
+      SCIP_CONSEXPR_EXPRHDLR* exprhdlr = conshdlrdata->exprhdlrs[i];
+      assert(exprhdlr != NULL);
+
+      SCIPinfoMessage(scip, file, "  %-17s:", exprhdlr->name);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsepacalls);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->npropcalls);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutsfound);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutoffs);
+      SCIPinfoMessage(scip, file, "\n");
+   }
+}
+
 /** @} */
 
 /*
@@ -6424,7 +6462,20 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsExpr)
 #define consGetDiveBdChgsExpr NULL
 #endif
 
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputExpr)
+{ /*lint --e{715}*/
+   SCIP_CONSHDLR* conshdlr;
 
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* print statistics for expression handlers */
+   printExprHdlrStatistics(scip, conshdlr, file);
+
+   return SCIP_OKAY;
+}
 
 /** creates the handler for an expression handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
@@ -8512,6 +8563,12 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
          "signals a bound change to an expression constraint", processVarEvent, NULL) );
    assert(conshdlrdata->eventhdlr != NULL);
+
+   /* include table for statistics */
+   assert(SCIPfindTable(scip, TABLE_NAME_EXPR) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_EXPR, TABLE_DESC_EXPR, TRUE,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputExpr,
+         NULL, TABLE_POSITION_EXPR, TABLE_EARLIEST_STAGE_EXPR) );
 
    return SCIP_OKAY;
 }
