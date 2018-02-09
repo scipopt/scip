@@ -69,7 +69,7 @@ DAY_OF_WEEK=`date +%u`
 #  - Don't add LPS=xxx and LPSOPT=xxx but instead use EXECUTABLE=[scipdbgspx|scipdbgcpx].
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 # FORMAT:
-#    JOBS[x,y]="EXECUTABLE=scipdbgspx MEM=100 QUEUE=opt TESTSET=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
+#    JOBS[x,y]="EXECUTABLE=scipdbgspx MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
 
 RANDOMSEED=`date +%Y%m%d`
 
@@ -78,30 +78,30 @@ RANDOMSEED=`date +%Y%m%d`
 declare -A JOBS
 
 # jobs running on monday
-JOBS[1,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=mipdebug TIME=60 SETTING=default"
-JOBS[1,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=MINLP TIME=60 SETTING=minlp_default"
+JOBS[1,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTING=default"
+JOBS[1,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTING=minlp_default"
 
 # jobs running on tuesday
-JOBS[2,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=mipdebug TIME=60 SETTING=default_${RANDOMSEED}"
-JOBS[2,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=MINLP TIME=60 SETTING=minlp_default_${RANDOMSEED}"
+JOBS[2,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTING=default_${RANDOMSEED}"
+JOBS[2,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTING=minlp_default_${RANDOMSEED}"
 
 # jobs running on wednesday
-JOBS[3,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=mipdebug TIME=60 SETTING=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
-JOBS[3,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=MINLP TIME=60 SETTING=minlp_presolaggr_sebaaggr_heuroff_${RANDOMSEED}"
+JOBS[3,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTING=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
+JOBS[3,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTING=minlp_presolaggr_sebaaggr_heuroff_${RANDOMSEED}"
 
 # jobs running on thursday
-JOBS[4,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=mipdebug TIME=60 SETTING=heuraggr_${RANDOMSEED}"
-JOBS[4,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=MINLP TIME=60 SETTING=minlp_heuraggr_${RANDOMSEED}"
+JOBS[4,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTING=heuraggr_${RANDOMSEED}"
+JOBS[4,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTING=minlp_heuraggr_${RANDOMSEED}"
 
 # jobs running on friday
-JOBS[5,1]="EXECUTABLE=scipdbgcpx MEM=6000 QUEUE=opt TESTSET=mipdebug TIME=60 SETTING=default"
-JOBS[5,2]="EXECUTABLE=scipdbgcpx MEM=6000 QUEUE=opt TESTSET=MINLP TIME=60 SETTING=minlp_default"
+JOBS[5,1]="EXECUTABLE=scipdbgcpx MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTING=default"
+JOBS[5,2]="EXECUTABLE=scipdbgcpx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTING=minlp_default"
 
 # jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=mipdev-solvable TIME=7200 SETTING=default"
+JOBS[6,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=mipdev-solvable TIME=7200 SETTING=default"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TESTSET=minlpdev-solvable TIME=7200 SETTING=default"
+JOBS[7,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=minlpdev-solvable TIME=7200 SETTING=default"
 
 #########################
 ### process variables ###
@@ -205,7 +205,7 @@ ln -fs /optimi/kombadon/MINLP check/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  for j in "EXECUTABLE MEM QUEUE TESTSET TIME PERMUTE PERFORMANCE EXCLUSIVE"; do
+  for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE"; do
     unset $j
   done
   export ${FLAGS}
