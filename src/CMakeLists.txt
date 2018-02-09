@@ -202,6 +202,7 @@ set(scipsources
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
     scip/table_default.c
+    scip/benders.c
     scip/boundstore.c
     scip/branch.c
     scip/clock.c

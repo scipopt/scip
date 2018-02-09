@@ -674,7 +674,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
-			scip/table_default.o \
+			scip/table_default.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
@@ -682,6 +682,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/bandit_epsgreedy.o \
 			scip/bandit_exp3.o \
 			scip/bandit_ucb.o \
+			scip/benders.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \

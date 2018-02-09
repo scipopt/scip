@@ -49,6 +49,7 @@
 #include "scip/type_sepa.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
+#include "scip/type_benders.h"
 #include "scip/struct_set.h"
 
 
@@ -84,6 +85,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
+   SCIP_Bool             copybenders,        /**< should the Benders' decomposition algorithms be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
 
@@ -585,6 +587,32 @@ void SCIPsetSortPricers(
 /** sorts pricers by name */
 extern
 void SCIPsetSortPricersName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts variable benders in variable benders list */
+extern
+SCIP_RETCODE SCIPsetIncludeBenders(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BENDERS*         benders             /**< variable benders */
+   );
+
+/** returns the variable benders of the given name, or NULL if not existing */
+extern
+SCIP_BENDERS* SCIPsetFindBenders(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of variable benders */
+   );
+
+/** sorts benders by priorities */
+extern
+void SCIPsetSortBenders(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts benders by name */
+extern
+void SCIPsetSortBendersName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

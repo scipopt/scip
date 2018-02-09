@@ -50,6 +50,7 @@
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
 #include "scip/type_concsolver.h"
+#include "scip/type_benders.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -88,6 +89,7 @@ struct SCIP_Set
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
+   SCIP_BENDERS**        benders;            /**< the data structures managing the Benders' decomposition algorithm */
    SCIP_DEBUGSOLDATA*    debugsoldata;       /**< data for debug solutions */
    SCIP_BANDITVTABLE**   banditvtables;      /**< virtual function tables for bandit algorithms */
    char**                extcodenames;       /**< names of externals codes */
@@ -131,6 +133,9 @@ struct SCIP_Set
    int                   concsolvertypessize;/**< size of concurrent solver types array */
    int                   nconcsolvers;       /**< number of concurrent solvers used for solving */
    int                   concsolverssize;    /**< size of concurrent solvers array */
+   int                   nbenders;           /**< number of Benders' decomposition algorithms */
+   int                   nactivebenders;     /**< number of Benders' decomposition algorithms that are used */
+   int                   benderssize;        /**< size of Benders' decomposition algorithms array */
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
    int                   nbanditvtables;     /**< number of bandit algorithm virtual function tables */
@@ -156,6 +161,8 @@ struct SCIP_Set
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
+   SCIP_Bool             benderssorted;      /**< are the Benders' algorithms sorted by activity and priority? */
+   SCIP_Bool             bendersnamesorted;  /**< are the Benders' algorithms sorted by name? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
 
    /* branching settings */
@@ -367,6 +374,8 @@ struct SCIP_Set
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
    int                   misc_usesymmetry;   /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
    char*                 misc_debugsol;      /**< path to a debug solution */
+   SCIP_Bool             misc_alwaysgetduals;/**< should the dual solution always be collected for LP solutions. */
+   SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
 
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
@@ -422,6 +431,10 @@ struct SCIP_Set
                                               *   in case they are not present in the LP anymore? */
    SCIP_Bool             price_delvarsroot;  /**< should variables created at the root node be deleted when the root is solved
                                               *   in case they are not present in the LP anymore? */
+   /* Benders' decomposition settings */
+   SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
+   SCIP_Bool             benders_cutlpsol;   /**< should cuts be generated from the solution to the LP relaxation? */
+   SCIP_Bool             benders_copybenders;/**< should Benders' decomposition be copied for sub-SCIPs? */
 
    /* propagation settings */
    int                   prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */
