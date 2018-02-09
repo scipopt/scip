@@ -488,7 +488,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
          SCIPbendersSortBenderscuts(benders);
          for( i = 0; i < benders->nbenderscuts; i++ )
          {
-            SCIP_CALL( SCIPbenderscutCopyInclude(benders->benderscuts[i], set) );
+            SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], set) );
          }
       }
    }
@@ -519,8 +519,8 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_DECL_BENDERSINITSOL((*bendersinitsol)),/**< solving process initialization method of Benders' decomposition */
    SCIP_DECL_BENDERSEXITSOL((*bendersexitsol)),/**< solving process deinitialization method of Benders' decomposition */
    SCIP_DECL_BENDERSGETVAR((*bendersgetvar)),/**< returns the master variable for a given subproblem variable */
-   SCIP_DECL_BENDERSEXEC ((*bendersexec)),   /**< the execution method of the Benders' decomposition algorithm */
    SCIP_DECL_BENDERSCREATESUB((*benderscreatesub)),/**< creates a Benders' decomposition subproblem */
+   SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve)),/**< called prior to the subproblem solving loop */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve)),/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub)),/**< the freeing method for the Benders' decomposition subproblems */
@@ -550,8 +550,8 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->bendersinitsol = bendersinitsol;
    (*benders)->bendersexitsol = bendersexitsol;
    (*benders)->bendersgetvar = bendersgetvar;
-   (*benders)->bendersexec = bendersexec;
    (*benders)->benderscreatesub = benderscreatesub;
+   (*benders)->benderspresubsolve = benderspresubsolve;
    (*benders)->benderssolvesub = benderssolvesub;
    (*benders)->benderspostsolve = benderspostsolve;
    (*benders)->bendersfreesub = bendersfreesub;
@@ -1420,7 +1420,6 @@ SCIP_RETCODE SCIPbendersExec(
 
    assert(benders != NULL);
    assert(result != NULL);
-   assert(benders->bendersexec != NULL);
 
    /* if the Benders' decomposition is called from a sub-scip, it is assumed that this is an LNS heuristic. As such, the
     * check is not performed and the solution is assumed to be feasible */
@@ -1480,7 +1479,8 @@ SCIP_RETCODE SCIPbendersExec(
 
    SCIPdebugMessage("Performing the subproblem solving process. Number of subproblems to check %d\n", numtocheck);
 
-   SCIP_CALL( benders->bendersexec(set->scip, benders) );
+   if( benders->benderspresubsolve != NULL )
+      SCIP_CALL( benders->benderspresubsolve(set->scip, benders) );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2376,6 +2376,17 @@ void SCIPbendersSetExitsol(
    assert(benders != NULL);
 
    benders->bendersexitsol = bendersexitsol;
+}
+
+/** sets the pre subproblem solve callback of benders */
+void SCIPbendersSetPresubsolve(
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve))/**< called prior to the subproblem solving loop */
+   )
+{
+   assert(benders != NULL);
+
+   benders->benderspresubsolve = benderspresubsolve;
 }
 
 /** sets solve callback of benders */

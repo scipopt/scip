@@ -48,7 +48,7 @@ struct SCIP_Benders
    SCIP_DECL_BENDERSINITSOL((*bendersinitsol));/**< solving process initialization method of variable benders */
    SCIP_DECL_BENDERSEXITSOL((*bendersexitsol));/**< solving process deinitialization method of variable benders */
    SCIP_DECL_BENDERSGETVAR((*bendersgetvar)); /**< returns the corresponding variable from the master or subproblem */
-   SCIP_DECL_BENDERSEXEC ((*bendersexec));   /**< executes the solve method for Benders' decomposition */
+   SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve));/**< called prior to the subproblem solving loop */
    SCIP_DECL_BENDERSCREATESUB((*benderscreatesub));/**< creates the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub));/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve));/**< called after the subproblems are solved. */

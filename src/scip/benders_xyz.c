@@ -201,17 +201,6 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarXyz)
    return SCIP_OKAY;
 }
 
-/** the execution method for Benders' decomposition */
-static
-SCIP_DECL_BENDERSEXEC(bendersExecXyz)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
-
 /** the method for creating the Benders' decomposition subproblem. This method is called during the initialisation stage
  *  (after the master problem was transformed)
  *
@@ -228,6 +217,20 @@ SCIP_DECL_BENDERSCREATESUB(bendersCreatesubXyz)
 
    return SCIP_OKAY;
 }
+
+/** called before the subproblem solve for Benders' decomposition */
+#if 0
+static
+SCIP_DECL_BENDERSPRESUBSOLVE(bendersPresubsolveXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz Benders' decomposition not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define bendersPresubsolveXyz NULL
+#endif
 
 /** the subproblem solving method for Benders' decomposition. In this method the subproblem is setup with the given
  *  solution and then solved.
@@ -305,14 +308,14 @@ SCIP_RETCODE SCIPincludeBendersXyz(
     */
    SCIP_CALL( SCIPincludeBenders(scip, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP, BENDERS_CUTPSEUDO,
          BENDERS_CUTRELAX, bendersCopyXyz, bendersFreeXyz, bendersInitXyz, bendersExitXyz, bendersInitpreXyz,
-         bendersExitpreXyz, bendersInitsolXyz, bendersExitsolXyz, bendersGetvarXyz, bendersExecXyz, bendersCreatesubXyz,
-         bendersSolvesubXyz, bendersPostsolveXyz, bendersFreesubXyz, bendersdata) );
+         bendersExitpreXyz, bendersInitsolXyz, bendersExitsolXyz, bendersGetvarXyz, bendersPresubsolveXyz,
+         bendersCreatesubXyz, bendersSolvesubXyz, bendersPostsolveXyz, bendersFreesubXyz, bendersdata) );
 #else
    /* use SCIPincludeBendersBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeBendersBasic(scip, &benders, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP,
-         BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetvarXyz, bendersExecXyz, bendersCreatesubXyz, bendersdata) );
+         BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetvarXyz, bendersCreatesubXyz, bendersdata) );
    assert(benders != NULL);
 
    /* set non fundamental callbacks via setter functions */
@@ -324,6 +327,7 @@ SCIP_RETCODE SCIPincludeBendersXyz(
    SCIP_CALL( SCIPsetBendersExitpre(scip, benders, bendersExitpreXyz) );
    SCIP_CALL( SCIPsetBendersInitsol(scip, benders, bendersInitsolXyz) );
    SCIP_CALL( SCIPsetBendersExitsol(scip, benders, bendersExitsolXyz) );
+   SCIP_CALL( SCIPsetBendersPresubsolve(scip, benders, bendersPresubsolveXyz) );
    SCIP_CALL( SCIPsetBendersSolvesub(scip, benders, bendersSolvesubXyz) );
    SCIP_CALL( SCIPsetBendersPostsolve(scip, benders, bendersPostsolveXyz) );
    SCIP_CALL( SCIPsetBendersFreesub(scip, benders, bendersFreesubXyz) );

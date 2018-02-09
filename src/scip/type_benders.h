@@ -119,19 +119,6 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  */
 #define SCIP_DECL_BENDERSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** the execution method for Benders' decomposition. The execution method is called by the constraint handler and then
- *  solves each of the subproblems.
- *
- *  This method is called to verify a given solution with the Benders' decomposition subproblems.
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - benders         : the Benders' decomposition data structure
- *  - sol             : the solution that will be checked in the subproblem. Can be NULL.
- *  TODO: Need to update the parameters for this callback
- */
-#define SCIP_DECL_BENDERSEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
-
 /** the method for creating the Benders' decomposition subproblem. This method is called during the initialisation stage
  *  (after the master problem was transformed)
  *
@@ -149,6 +136,15 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  *  - probnumber      : the subproblem problem number
  */
 #define SCIP_DECL_BENDERSCREATESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, int probnumber)
+
+/** called before the subproblem solving loop for Benders' decomposition. The pre subproblem solve function gives the
+ *  user an oppportunity to perform any global set up for the Benders' decomposition.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - benders         : the Benders' decomposition data structure
+ */
+#define SCIP_DECL_BENDERSPRESUBSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
 /** the solving method for a single Benders' decomposition subproblem. The solving methods are separated so that they
  *  can be called in parallel.
