@@ -116,7 +116,7 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results$i"
 
   # append /bin/scip to executable
-  TODAYS_JOBS[$i]=`echo ${TODAYS_JOBS[$i]}|sed "s@\(scip[cs]px\)@\1/bin/scip@"`
+  TODAYS_JOBS[$i]=`echo ${TODAYS_JOBS[$i]}|sed "s@\(scipopt[cs]px\)@\1/bin/scip@"`
 done
 
 # Print some information about what is happening

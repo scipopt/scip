@@ -70,6 +70,7 @@ DAY_OF_WEEK=`date +%u`
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 # FORMAT:
 #    JOBS[x,y]="EXECUTABLE=scipdbgspx MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
+#    JOBS[x,y]="EXECUTABLE=scipdbgcpx MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
 
 RANDOMSEED=`date +%Y%m%d`
 
@@ -133,7 +134,7 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   LPSVERSIONS="${LPSVERSIONS} ${LPSVERSION}"
 
   # append /bin/scip to executable
-  TODAYS_JOBS[$i]=`echo ${TODAYS_JOBS[$i]}|sed "s@\(scip[cs]px\)@\1/bin/scip@"`
+  TODAYS_JOBS[$i]=`echo ${TODAYS_JOBS[$i]}|sed "s@\(scipdbg[cs]px\)@\1/bin/scip@"`
 done
 
 # Print some information about what is happening
@@ -210,6 +211,6 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   done
   export ${FLAGS}
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
-  make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
+#  make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
 
