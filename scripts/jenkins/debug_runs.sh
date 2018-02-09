@@ -211,6 +211,6 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   done
   export ${FLAGS}
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
-#  make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
+  make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
 
