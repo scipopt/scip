@@ -103,14 +103,14 @@ read -d '' awkscript_checkfixedinstances << 'EOF'
 # read fail instances for this configuration from resfile
 NR == FNR && /fail/ {
     failmsg=$13; for(i=14;i<=NF;i++){ failmsg=failmsg"_"$i; }
-    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " SCIP_BUILDDIR " " PERM;
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTINGS " " SCIP_BUILDDIR " " PERM;
     bugs[errorstring]
     next;
 }
 
 # read from database
 NR != FNR {
-    if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == SCIP_BUILDDIR ) {
+    if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTINGS && $6 == SCIP_BUILDDIR ) {
         if (!( $0 in bugs )) {
             # if current line from database matches our settings and
             # it is not in the set of failed instances from this run it was fixed
@@ -135,7 +135,7 @@ NR == FNR {known_bugs[$0]; next}
 /fail/ {
     # get the fail error and build string in database format
     failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " SCIP_BUILDDIR " " PERM;
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTINGS " " SCIP_BUILDDIR " " PERM;
 
     if (!( errorstring in known_bugs )) {
         # if error is not known, add it and print it to ERRORINSTANCES for sending mail later
@@ -171,7 +171,7 @@ EOF
 SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1`
 
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
-RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${TESTSET}_${SETTING}_${SCIP_BUILDDIR}_rbdb.txt"
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
 touch $RBDB
 OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
 NEWTIMESTAMP=`date '+%F-%H-%M'`
@@ -188,15 +188,15 @@ while [ $PERM -le $PERMUTE ]; do
   # we use a name that is unique per test sent to the cluster (a jenkins job
   # can have several tests sent to the cluster, that is why the jenkins job
   # name (i.e, the directory name) is not enough)
-  DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${TESTSET}_${SETTING}_${SCIP_BUILDDIR}${PERM_ENDING}txt"
+  DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${PERM_ENDING}txt"
   TMPDATABASE="$DATABASE.tmp"
   STILLFAILING="${DATABASE}_SF.tmp"
   OUTPUT="${DATABASE}_output.tmp"
   touch ${STILLFAILING}
 
-  SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING: $SETTING] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM]"
+  SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM]"
 
-  AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM"
+  AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM"
   echo $AWKARGS
 
   # the first time, the file might not exists so we create it
@@ -204,7 +204,7 @@ while [ $PERM -le $PERMUTE ]; do
   # the awk scripts below won't work (NR and FNR will not be different)
   echo "Preparing database."
   if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
-    echo "Instance Fail_reason Branch Testset Setting Opt_mode SCIP_BUILDDIR" > $DATABASE
+    echo "Instance Fail_reason Branch Testset Settings Opt_mode SCIP_BUILDDIR" > $DATABASE
   fi
 
   EMAILFROM="adm_timo <timo-admin@zib.de>"
@@ -215,7 +215,7 @@ while [ $PERM -le $PERMUTE ]; do
   #################
 
   # SCIP check files are in check/${OUTPUTDIR}
-  BASEFILE="check/${OUTPUTDIR}/check.${TESTSET}.*.${SETTING}${PERM_ENDING}"
+  BASEFILE="check/${OUTPUTDIR}/check.${TESTSET}.*.${SETTINGS}${PERM_ENDING}"
   EVALFILE=`ls ${BASEFILE}*eval`
 
   # at this point we have exactly one evalfile
