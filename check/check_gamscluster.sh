@@ -249,7 +249,7 @@ then
     EXCLUSIVE=" --exclusive"
     if test $CLUSTERQUEUE = "opt"
     then
-        CLUSTERQUEUE="M610"
+        CLUSTERQUEUE="M640"
     fi
 else
     EXCLUSIVE=""
