@@ -15,6 +15,7 @@
 echo "This is jenkins_check_results_cmake.sh running."
 
 # set up environment for jenkins_failcheck_cmake.sh
+TESTSET=${TEST}
 if [ "${TESTSET}" == "" ]; then
   TESTSET=short
   echo "No testset provided, defaulting to '${TESTSET}'."
