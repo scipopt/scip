@@ -16824,7 +16824,10 @@ SCIP_RETCODE SCIPscaleupRowprep(
 
       if( !SCIPisHugeValue(scip, factor * maxval) )
       {
-         factor = SCIPscaleRowprep(rowprep, factor);
+#ifdef SCIP_DEBUG
+         factor =
+#endif
+            SCIPscaleRowprep(rowprep, factor);
 
 #ifdef SCIP_DEBUG
          maxval *= factor;
