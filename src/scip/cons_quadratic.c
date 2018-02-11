@@ -16795,14 +16795,14 @@ SCIP_RETCODE SCIPscaleupRowprep(
    int i;
 
    /* find the smallest fractionality in rowprep sides and coefficients and the largest absolute coefficient/side */
-   frac = REALABS(EPSROUND(rowprep->side, 0.0) - rowprep->side);
+   frac = REALABS(ceil(rowprep->side + 0.5) - rowprep->side);
    if( frac != 0.0 && frac > minfrac )
       minfrac = frac;
    maxval = REALABS(rowprep->side);
 
    for( i = 0; i < rowprep->nvars; ++i )
    {
-      frac = REALABS(EPSROUND(rowprep->coefs[i], 0.0) - rowprep->coefs[i]);
+      frac = REALABS(ceil(rowprep->coefs[i] + 0.5) - rowprep->coefs[i]);
       if( frac != 0.0 && frac > minfrac )
          minfrac = frac;
       if( REALABS(rowprep->coefs[i]) > maxval )
@@ -16825,9 +16825,9 @@ SCIP_RETCODE SCIPscaleupRowprep(
       if( !SCIPisHugeValue(scip, factor * maxval) )
       {
          factor = SCIPscaleRowprep(rowprep, factor);
-         maxval *= factor;
 
 #ifdef SCIP_DEBUG
+         maxval *= factor;
          SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g to move close-to-integral coefs/side away from integrality, maxval is now %g\n", maxval);
          SCIPprintRowprep(scip, rowprep, NULL);
 #endif
