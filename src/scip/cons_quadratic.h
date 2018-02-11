@@ -817,6 +817,24 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
 );
 
+/** Scales up a rowprep to increase coefficients/sides that are within epsilon to an integer value, if possible.
+ *
+ * Computes the minimal fractionality of all fractional coefficients and the side of the rowprep.
+ * If this fractionality is below epsilon, the rowprep is scaled up such that the fractionality exceeds epsilon,
+ * if this will not put any coefficient or side above SCIPhugeValue.
+ *
+ * This does not relax the rowprep.
+ * *success is set to TRUE if the resulting rowprep can be turned into a SCIP_ROW, that is,
+ * all coefs and the side is below SCIPinfinity and fractionalities are above epsilon.
+ * If *success is set to FALSE, then the rowprep will not have been modified.
+ */
+EXTERN
+SCIP_RETCODE SCIPscaleupRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
+   SCIP_Bool*            success             /**< buffer to store whether rowprep could be turned into SCIP_ROW without loss, or NULL if not of interest */
+);
+
 /** scales a rowprep
  *
  * @return Exponent of actually applied scaling factor, if written as 2^x.

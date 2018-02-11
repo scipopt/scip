@@ -16717,6 +16717,78 @@ SCIP_RETCODE SCIPcleanupRowprep(
    return SCIP_OKAY;
 }
 
+/** Scales up a rowprep to increase coefficients/sides that are within epsilon to an integer value, if possible.
+ *
+ * Computes the minimal fractionality of all fractional coefficients and the side of the rowprep.
+ * If this fractionality is below epsilon, the rowprep is scaled up such that the fractionality exceeds epsilon,
+ * if this will not put any coefficient or side above SCIPhugeValue.
+ *
+ * This does not relax the rowprep.
+ * *success is set to TRUE if the resulting rowprep can be turned into a SCIP_ROW, that is,
+ * all coefs and the side is below SCIPinfinity and fractionalities are above epsilon.
+ * If *success is set to FALSE, then the rowprep will not have been modified.
+ */
+SCIP_RETCODE SCIPscaleupRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
+   SCIP_Bool*            success             /**< buffer to store whether rowprep could be turned into SCIP_ROW without loss, or NULL if not of interest */
+)
+{
+   SCIP_Real minfrac = 1.0;
+   SCIP_Real frac;
+   SCIP_Real maxval;
+   int i;
+
+   /* find the smallest fractionality in rowprep sides and coefficients and the largest absolute coefficient/side */
+   frac = REALABS(EPSROUND(rowprep->side, 0.0) - rowprep->side);
+   if( frac != 0.0 && frac > minfrac )
+      minfrac = frac;
+   maxval = REALABS(rowprep->side);
+
+   for( i = 0; i < rowprep->nvars; ++i )
+   {
+      frac = REALABS(EPSROUND(rowprep->coefs[i], 0.0) - rowprep->coefs[i]);
+      if( frac != 0.0 && frac > minfrac )
+         minfrac = frac;
+      if( REALABS(rowprep->coefs[i]) > maxval )
+         maxval = REALABS(rowprep->coefs[i]);
+   }
+
+   SCIPdebugMsg(scip, "minimal fractional of rowprep coefs and side is %g, max coef/side is %g\n", minfrac, maxval);
+
+   /* in order for SCIP_ROW to not modify the coefs and side, they need to be more than epsilon way from an integer value
+    * that is, scaling up the rowprep by epsilon/minfrac will increase its minimal fractionality above epsilon (right?)
+    * but if that increases the maximal coef/value beyond SCIPinfinity, then the rowprep would be useless
+    * we even check that we don't increase beyond SCIPhugeValue here
+    */
+   if( minfrac <= SCIPepsilon(scip) )
+   {
+      SCIP_Real factor;
+
+      factor = 1.1 * SCIPepsilon(scip) / minfrac;
+
+      if( !SCIPisHugeValue(scip, factor * maxval) )
+      {
+         factor = SCIPscaleRowprep(rowprep, factor);
+         maxval *= factor;
+
+#ifdef SCIP_DEBUG
+         SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g to move close-to-integral coefs/side away from integrality, maxval is now %g\n", maxval);
+         SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+
+         if( success != NULL )
+            *success = TRUE;
+
+      } else if( success != NULL )
+         *success = FALSE;
+   }
+   else if( success != NULL )
+      *success = !SCIPisInfinity(scip, maxval);
+
+   return SCIP_OKAY;
+}
+
 /** scales a rowprep
  *
  * @return Exponent of actually applied scaling factor, if written as 2^x.
