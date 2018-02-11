@@ -16826,6 +16826,8 @@ SCIP_RETCODE SCIPscaleupRowprep(
       {
 #ifdef SCIP_DEBUG
          factor =
+#else
+         (void)
 #endif
             SCIPscaleRowprep(rowprep, factor);
 
