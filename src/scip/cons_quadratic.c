@@ -15845,6 +15845,7 @@ void SCIPfreeRowprep(
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*rowprep)->vars, (*rowprep)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*rowprep)->coefs, (*rowprep)->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*rowprep)->modifiedvars, (*rowprep)->modifiedvarssize);
    SCIPfreeBlockMemory(scip, rowprep);
 }
 
@@ -15868,6 +15869,12 @@ SCIP_RETCODE SCIPcopyRowprep(
    {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*target)->vars, source->vars, source->varssize) );
    }
+
+   (*target)->recordmodifications = FALSE;
+   (*target)->modifiedvars = NULL;
+   (*target)->modifiedvarssize = 0;
+   (*target)->nmodifiedvars = 0;
+   (*target)->modifiedside = FALSE;
 
    return SCIP_OKAY;
 }
@@ -16134,6 +16141,34 @@ void SCIPmergeRowprepTerms(
    rowprep->nvars = i+1;
 }
 
+/** adds a variable to the rowprep->modifiedvars array, if recording of modification has been enabled */
+static
+SCIP_RETCODE rowprepRecordModifiedVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_VAR*             var                 /**< variable to add */
+   )
+{
+   int oldsize;
+
+   if( !rowprep->recordmodifications )
+      return SCIP_OKAY;
+
+   /* increase modifiedvars array size */
+   if( rowprep->nmodifiedvars >= rowprep->modifiedvarssize )
+   {
+      oldsize = rowprep->modifiedvarssize;
+      rowprep->modifiedvarssize = SCIPcalcMemGrowSize(scip, rowprep->nmodifiedvars + 1);
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->modifiedvars, oldsize, rowprep->modifiedvarssize) );
+   }
+
+   rowprep->modifiedvars[rowprep->nmodifiedvars] = var;
+   ++rowprep->nmodifiedvars;
+
+   return SCIP_OKAY;
+}
+
 /** sort cut terms by absolute value of coefficients, from largest to smallest */
 static
 SCIP_RETCODE rowprepCleanupSortTerms(
@@ -16195,7 +16230,7 @@ SCIP_RETCODE rowprepCleanupSortTerms(
  * Assumes terms have been sorted by rowprepCleanupSortTerms().
  */
 static
-void rowprepCleanupImproveCoefrange(
+SCIP_RETCODE rowprepCleanupImproveCoefrange(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
@@ -16338,6 +16373,9 @@ void rowprepCleanupImproveCoefrange(
          /* update mincoef */
          mincoef = REALABS(rowprep->coefs[rowprep->nvars-1]);
       }
+
+      /* (potentially) remember the variable that has been removed here */
+      SCIP_CALL( rowprepRecordModifiedVar(scip, rowprep, var) );
    }
 
    /* if maximal coefs were removed, then there are now 0's in the beginning of the coefs array
@@ -16353,6 +16391,8 @@ void rowprepCleanupImproveCoefrange(
       }
       rowprep->nvars -= maxcoefidx;
    }
+
+   return SCIP_OKAY;
 }
 
 
@@ -16451,7 +16491,7 @@ void rowprepCleanupScaledown(
 
 /** rounds almost integral coefs to integrals, thereby trying to relax the cut */
 static
-void rowprepCleanupIntegralCoefs(
+SCIP_RETCODE rowprepCleanupIntegralCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
    SCIP_Real*            viol                /**< violation of cut in sol (input), set to SCIP_INVALID if some coef changed */
@@ -16515,12 +16555,17 @@ void rowprepCleanupIntegralCoefs(
          }
          rowprep->coefs[i] = roundcoef;
          *viol = SCIP_INVALID;
+
+         /* (potentially) remember the variable which coef has been modified here */
+         SCIP_CALL( rowprepRecordModifiedVar(scip, rowprep, var) );
       }
    }
 
    /* forget about coefs that became exactly zero by the above step */
    while( rowprep->nvars > 0 && rowprep->coefs[rowprep->nvars-1] == 0.0 )
       --rowprep->nvars;
+
+   return SCIP_OKAY;
 }
 
 /** relaxes almost zero side */
@@ -16543,6 +16588,9 @@ void rowprepCleanupSide(
       rowprep->side = -1.1*SCIPepsilon(scip);
    else
       rowprep->side = 0.0;
+
+   if( rowprep->recordmodifications )
+      rowprep->modifiedside = TRUE;
 
    *viol = SCIP_INVALID;
 }
@@ -16586,6 +16634,13 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
    assert(maxcoefrange > 1.0);   /* not much interesting otherwise */
 
+   if( rowprep->recordmodifications )
+   {
+      /* forget about possible previous modifications */
+      rowprep->nmodifiedvars = 0;
+      rowprep->modifiedside = FALSE;
+   }
+
    /* sort term by absolute value of coef. */
    SCIP_CALL( rowprepCleanupSortTerms(scip, rowprep) );
 
@@ -16601,7 +16656,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
 #endif
 
    /* improve coefficient range by aggregating out variables */
-   rowprepCleanupImproveCoefrange(scip, rowprep, sol, maxcoefrange);
+   SCIP_CALL( rowprepCleanupImproveCoefrange(scip, rowprep, sol, maxcoefrange) );
 
    /* get current violation in sol (reliability info only needed if success is not NULL) */
    myviol = SCIPgetRowprepViolation(scip, rowprep, sol, success != NULL ? &violreliable : NULL);  /*lint !e826*/
@@ -16638,7 +16693,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
 #endif
 
    /* turn almost-integral coefs to integral values, may set myviol to SCIP_INVALID */
-   rowprepCleanupIntegralCoefs(scip, rowprep, &myviol);
+   SCIP_CALL( rowprepCleanupIntegralCoefs(scip, rowprep, &myviol) );
 
    /* relax almost-zero side, may set myviol to SCIP_INVALID */
    rowprepCleanupSide(scip, rowprep, &myviol);

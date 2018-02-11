@@ -132,6 +132,12 @@ struct SCIP_RowPrep
    SCIP_SIDETYPE         sidetype;           /**< type of side */
    SCIP_Bool             local;              /**< whether the row is only locally valid (i.e., for the current node) */
    char                  name[SCIP_MAXSTRLEN]; /**< row name */
+
+   SCIP_Bool             recordmodifications;/**< whether to remember variables which coefficients were modified during cleanup */
+   SCIP_VAR**            modifiedvars;       /**< variables which coefficient were modified by cleanup */
+   int                   nmodifiedvars;      /**< number of variables which coefficient was modified */
+   int                   modifiedvarssize;   /**< length of modifiedvars array */
+   SCIP_Bool             modifiedside;       /**< whether the side was modified (relaxed) by cleanup */
 };
 typedef struct SCIP_RowPrep SCIP_ROWPREP;
 
