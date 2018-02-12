@@ -60,6 +60,9 @@ export BLISS_DIR=/optimi/usr/sw/bliss
 # Find out what day of week it is: mon-1 .. sun-7
 DAY_OF_WEEK=`date +%u`
 
+# create all required directories
+mkdir -p settings
+
 ####################################
 ### jobs configuration variables ###
 ####################################
@@ -105,7 +108,7 @@ JOBS[5,2]="EXECUTABLE=scipdbgcpx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=
 JOBS[6,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=mipdev-solvable TIME=7200 SETTINGS=default"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=minlpdev-solvable TIME=7200 SETTINGS=default"
+JOBS[7,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=minlpdev-solvable TIME=7200 SETTINGS=minlp_default"
 
 #########################
 ### process variables ###
@@ -146,13 +149,6 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   echo "- job configuration: '${TODAYS_JOBS[$i]}'"
 done
 
-#########################
-### Setup compilation ###
-#########################
-
-# create all required directories
-mkdir -p settings
-
 ###################
 ### Compilation ###
 ###################
@@ -189,13 +185,13 @@ SCIP_BINARY=${BUILD_DIR}/bin/scip
 #  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
 
 # MIP settings
-${SCIP_BINARY} -c "set rand rand ${RANDOMSEED} set diffsave settings/Default_${RANDOMSEED}.set q"
+${SCIP_BINARY} -c "set rand rand ${RANDOMSEED} set diffsave settings/default_${RANDOMSEED}.set q"
 ${SCIP_BINARY} -c "set heur emph aggr set rand rand ${RANDOMSEED} set diffsave settings/heuraggr_${RANDOMSEED}.set q"
 ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set rand rand ${RANDOMSEED} set diffsave settings/presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
 
 # MINLP settings
 ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
-${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_Default_${RANDOMSEED}.set q"
+${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_default_${RANDOMSEED}.set q"
 ${SCIP_BINARY} -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_heuraggr_${RANDOMSEED}.set q"
 ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
 

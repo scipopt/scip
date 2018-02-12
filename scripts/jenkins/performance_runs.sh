@@ -83,7 +83,7 @@ declare -A JOBS
 
 # jobs running on saturday
 JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
-JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=default PERFORMANCE=performance PERMUTE=4"
+JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
 TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GIT_BRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
@@ -151,6 +151,16 @@ cd ..
 ######################
 ### Setup testruns ###
 ######################
+
+SCIP_BINARY=${BUILD_DIR}/bin/scip
+
+# NOTES:
+#  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
+
+# MIP settings
+
+# MINLP settings
+${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
 
 # create more required symlinks
 ln -fs /optimi/kombadon/IP check/
