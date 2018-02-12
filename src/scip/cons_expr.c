@@ -6817,6 +6817,65 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    return SCIP_OKAY;
 }
 
+/** returns whether expression handler implements the initialization callback */
+SCIP_Bool SCIPhasConsExprExprHdlrInitSepa(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->initsepa != NULL;
+}
+/** returns whether expression handler implements the deinitialization callback */
+SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->exitsepa != NULL;
+}
+
+/** returns whether expression handler implements the separation callback */
+SCIP_Bool SCIPhasConsExprExprHdlrSepa(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->sepa != NULL;
+}
+
+/** returns whether expression handler implements the interval evaluation callback */
+SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->inteval != NULL;
+}
+
+/** returns whether expression handler implements the reverse propagation callback */
+SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->reverseprop != NULL;
+}
+
+/** returns whether expression handler implements the branching score callback */
+SCIP_Bool SCIPhasConsExprExprHdlrBranchingScore(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->brscore != NULL;
+}
+
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
@@ -6937,6 +6996,148 @@ SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    assert(exprhdlr != NULL);
 
    return exprhdlr->data;
+}
+
+/** calls the separation initialization method of an expression handler */
+SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Bool                  overestimate, /**< should the expression be overestimated? */
+   SCIP_Bool                  underestimate,/**< should the expression be underestimated? */
+   SCIP_Bool*                 infeasible    /**< pointer to store whether the problem is infeasible */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   if( SCIPhasConsExprExprHdlrInitSepa(expr->exprhdlr) )
+   {
+      SCIP_CALL( expr->exprhdlr->initsepa (scip, conshdlr, expr, overestimate, underestimate, infeasible) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the separation deinitialization method of an expression handler */
+SCIP_RETCODE SCIPexitsepaConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr          /**< expression */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   if( SCIPhasConsExprExprHdlrExitSepa(expr->exprhdlr) )
+   {
+      SCIP_CALL( expr->exprhdlr->exitsepa (scip, expr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls separator method of expression handler to separate a given solution */
+SCIP_RETCODE SCIPsepaConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_SOL*                  sol,          /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Bool                  overestimate, /**< should the expression be over- or underestimated? */
+   SCIP_Real                  minviol,      /**< minimal violation of a cut if it should be added to the LP */
+   SCIP_RESULT*               result,       /**< pointer to store the result */
+   int*                       ncuts         /**< pointer to store the number of added cuts */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(sol != NULL);
+   assert(minviol >= 0.0);
+   assert(result != NULL);
+   assert(ncuts != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+   *ncuts = 0;
+
+   if( SCIPhasConsExprExprHdlrSepa(expr->exprhdlr) )
+   {
+      SCIP_CALL( expr->exprhdlr->sepa(scip, conshdlr, expr, sol, overestimate, minviol, result, ncuts) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the expression interval evaluation callback */
+SCIP_RETCODE SCIPintevalConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_INTERVAL*             interval,     /**< buffer to store the interval */
+   SCIP_Real                  varboundrelax /**< a suggested amount by which to relax variable bounds */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(interval != NULL);
+   assert(varboundrelax >= 0.0);
+
+   if( SCIPhasConsExprExprHdlrIntEval(expr->exprhdlr) )
+   {
+      SCIP_CALL( expr->exprhdlr->inteval(scip, expr, interval, varboundrelax) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the expression callback for reverse propagation */
+SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_QUEUE*                reversepropqueue, /**< expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval */
+   SCIP_Bool*                 infeasible,   /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   int*                       nreductions,  /**< buffer to store the number of interval reductions of all children */
+   SCIP_Bool                  force         /**< force tightening even if it is below the bound strengthening tolerance */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(reversepropqueue != NULL);
+   assert(infeasible != NULL);
+   assert(nreductions != NULL);
+
+   *infeasible = FALSE;
+   *nreductions = 0;
+
+   if( SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr) )
+   {
+      SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, reversepropqueue, infeasible, nreductions, force) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the expression branching score callback */
+SCIP_RETCODE SCIPbranchscoreConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_SOL*                  sol,          /**< solution (NULL for the LP solution) */
+   unsigned int               brscoretag,   /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
+   SCIP_Bool*                 success       /**< buffer to store whether the branching score callback was successful */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   if( SCIPhasConsExprExprHdlrBranchingScore(expr->exprhdlr) )
+   {
+      SCIP_CALL( expr->exprhdlr->brscore(scip, expr, sol, brscoretag, success) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** creates and captures an expression with given expression data and children */
