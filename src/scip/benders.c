@@ -1632,7 +1632,9 @@ SCIP_RETCODE SCIPbendersExec(
                prevaddedcuts = SCIPbenderscutGetNFound(benderscuts[j]);
 
                /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
-                * the first iteration of the solve loop. */
+                * the first iteration of the solve loop.
+                * TODO: Need to work out how to handle the solve loops. Should I always run two solve loops? Or only one
+                * when the user defines a subproblem solving method */
                if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[j]))
                   || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[j])) )
                {
@@ -1674,7 +1676,7 @@ SCIP_RETCODE SCIPbendersExec(
    if( checkint && (type == CHECK || (*result) != SCIP_CONSADDED) )
    {
       /* if the subproblems are being solved as part of conscheck, then the results flag must be returned after the solving
-       * has completed. No cut is generated during conscheck. */
+       * has completed. */
       if( (*infeasible) || !allchecked )
          (*result) = SCIP_INFEASIBLE;
       else
