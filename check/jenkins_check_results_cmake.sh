@@ -40,6 +40,7 @@ export OUTPUTDIR
 export SETTINGS
 export EXECUTABLE
 export GITBRANCH
+export MODE
 
 # get some relevant information
 # process optional variables

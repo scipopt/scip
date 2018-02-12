@@ -171,7 +171,7 @@ EOF
 SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1`
 
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
-RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
 touch $RBDB
 OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
 NEWTIMESTAMP=`date '+%F-%H-%M'`
@@ -188,15 +188,15 @@ while [ $PERM -le $PERMUTE ]; do
   # we use a name that is unique per test sent to the cluster (a jenkins job
   # can have several tests sent to the cluster, that is why the jenkins job
   # name (i.e, the directory name) is not enough)
-  DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${PERM_ENDING}txt"
+  DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${PERM_ENDING}txt"
   TMPDATABASE="$DATABASE.tmp"
   STILLFAILING="${DATABASE}_SF.tmp"
   OUTPUT="${DATABASE}_output.tmp"
   touch ${STILLFAILING}
 
-  SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM]"
+  SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [MODE: $MODE]"
 
-  AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM"
+  AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM -v MODE=$MODE"
   echo $AWKARGS
 
   # the first time, the file might not exists so we create it
