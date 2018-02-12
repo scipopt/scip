@@ -69,6 +69,12 @@ SCIP_Bool SCIPterminated(
    void
    );
 
+/** send a termination signal to the process so that SCIP tries to terminate as soon as possible */
+extern
+void SCIPtryTerminate(
+   void
+   );
+
 /** resets the number of interrupts to 0 */
 extern
 void SCIPresetInterrupted(

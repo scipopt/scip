@@ -42,8 +42,7 @@ typedef void (*SigHdlr)(int);
 /** CTRL-C interrupt data */
 struct SCIP_Interrupt
 {
-   SigHdlr               oldsiginthdlr;      /**< old CTRL-C interrupt handler */
-   SigHdlr               oldsigtermhdlr;     /**< old SIGTERM handler */
+   SigHdlr               oldsighdlr;         /**< old CTRL-C interrupt handler */
    int                   nuses;              /**< number of times, the interrupt is captured */
 };
 
@@ -52,8 +51,7 @@ struct SCIP_Interrupt
 /** CTRL-C interrupt data */
 struct SCIP_Interrupt
 {
-   struct sigaction      oldsigintaction;    /**< old CTRL-C interrupt handler */
-   struct sigaction      oldsigtermaction;   /**< old SIGTERM handler (of a parent process) */
+   struct sigaction      oldsigaction;       /**< old CTRL-C interrupt handler */
    int                   nuses;              /**< number of times, the interrupt is captured */
 };
 #endif
@@ -63,27 +61,17 @@ static
 void interruptHandler(
    int                   signum              /**< interrupt signal number */
    )
-{  switch (signum) {
-      case SIGINT:
-         ninterrupts++;
-         if( ninterrupts >= 5 )
-         {
-            printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
-            exit(1);
-         }
-         else
-         {
-            printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
-         }
-
-         break;
-      case SIGTERM:
-         nterms++;
-         break;
-      default:
-         break;
+{
+   ninterrupts++;
+   if( ninterrupts >= 5 )
+   {
+      printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
+      exit(1);
    }
-
+   else
+   {
+      printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
+   }
 }
 
 /** creates a CTRL-C interrupt data */
@@ -120,8 +108,7 @@ void SCIPinterruptCapture(
    if( interrupt->nuses == 0 )
    {
 #ifdef NO_SIGACTION
-      interrupt->oldsiginthdlr = signal(SIGINT, interruptHandler);
-      interrupt->oldsigtermhdlr = signal(SIGTERM, interruptHandler);
+      interrupt->oldsighdlr = signal(SIGINT, interruptHandler);
 #else
       struct sigaction newaction;
 
@@ -131,9 +118,7 @@ void SCIPinterruptCapture(
       (void)sigemptyset(&newaction.sa_mask);
 
       /* set new signal action, and remember old one */
-      (void)sigaction(SIGINT, &newaction, &interrupt->oldsigintaction);
-
-      (void)sigaction(SIGTERM, &newaction, &interrupt->oldsigtermaction);
+      (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
 #endif
 
       ninterrupts = 0;
@@ -154,11 +139,9 @@ void SCIPinterruptRelease(
    if( interrupt->nuses == 0 )
    {
 #ifdef NO_SIGACTION
-      (void)signal(SIGINT, interrupt->oldsiginthdlr);
-      (void)signal(SIGTERM, interrupt->oldsigtermhdlr);
+      (void)signal(SIGINT, interrupt->oldsighdlr);
 #else
-      (void)sigaction(SIGINT, &interrupt->oldsigintaction, NULL);
-      (void)sigaction(SIGTERM, &interrupt->oldsigtermaction, NULL);
+      (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);
 #endif
    }
 }
@@ -171,12 +154,20 @@ SCIP_Bool SCIPinterrupted(
    return (ninterrupts > 0);
 }
 
-/** returns whether the process has received a SIGTERM */
+/** returns whether a process termination signal was received */
 SCIP_Bool SCIPterminated(
    void
    )
 {
    return (nterms > 0);
+}
+
+/** send a termination signal to the process so that SCIP tries to terminate as soon as possible */
+void SCIPtryTerminate(
+   void
+   )
+{
+   nterms++;
 }
 
 /** resets the number of interrupts to 0 */
