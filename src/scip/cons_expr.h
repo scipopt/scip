@@ -100,19 +100,19 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
 /** set the parse callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
-            SCIP*                      scip,          /**< SCIP data structure */
-            SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-            SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-            SCIP_DECL_CONSEXPR_EXPRPARSE((*parse))    /**< parse callback (can be NULL) */
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRPARSE((*parse))    /**< parse callback (can be NULL) */
 );
 
 /** set the derivative evaluation callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
-            SCIP*                      scip,          /**< SCIP data structure */
-            SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-            SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-            SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
 );
 
 /** set the interval evaluation callback of an expression handler */
@@ -204,6 +204,12 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
 );
+
+/** returns whether expression handler implements the simplification callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
 
 /** returns whether expression handler implements the initialization callback */
 EXTERN
@@ -313,6 +319,14 @@ EXTERN
 SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr      /**< expression handler */
 );
+
+/** calls the simplification method of an expression handler */
+extern
+SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_CONSEXPR_EXPR**       simplifiedexpr/**< pointer to store the simplified expression */
+   );
 
 /** calls the separation initialization method of an expression handler */
 extern

@@ -1825,9 +1825,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
       {
          SCIP_CONSEXPR_EXPR* simplifiedexpr;
 
-         if( *expr->exprhdlr->simplify != NULL )
+         if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
          {
-            SCIP_CALL( (*expr->exprhdlr->simplify)(scip, expr, &simplifiedexpr) );
+            SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &simplifiedexpr) );
          }
          else
          {
@@ -5211,7 +5211,8 @@ void printExprHdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s\n", "#SepaCalls", "#PropCalls", "Cuts", "Cutoffs", "DomReds");
+   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "SimplCalls", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "SepaTi", "PropTi", "IntEvalTi", "SimplifyTi");
 
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -5219,11 +5220,16 @@ void printExprHdlrStatistics(
       assert(exprhdlr != NULL);
 
       SCIPinfoMessage(scip, file, "  %-17s:", exprhdlr->name);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplifycalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsepacalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ndomreds);
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->sepatime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->proptime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->intevaltime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->simplifytime));
       SCIPinfoMessage(scip, file, "\n");
    }
 }
@@ -5245,7 +5251,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s\n", "#SepaCalls", "#PropCalls", "Cuts", "Cutoffs", "DomReds");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -5517,6 +5523,12 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       {
          SCIP_CALL( (*exprhdlr->freehdlr)(scip, conshdlr, exprhdlr, &exprhdlr->data) );
       }
+
+      /* free clocks */
+      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->simplifytime) );
+      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->intevaltime) );
+      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->proptime) );
+      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->sepatime) );
 
       SCIPfreeMemory(scip, &exprhdlr->name);
       SCIPfreeMemoryNull(scip, &exprhdlr->desc);
@@ -6550,6 +6562,12 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    (*exprhdlr)->eval = eval;
    (*exprhdlr)->data = data;
 
+   /* create clocks */
+   SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->sepatime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->proptime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->intevaltime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->simplifytime) );
+
    ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->exprhdlrs, conshdlrdata->exprhdlrssize, conshdlrdata->nexprhdlrs+1);
 
    conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs] = *exprhdlr;
@@ -6817,6 +6835,16 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    return SCIP_OKAY;
 }
 
+/** returns whether expression handler implements the simplification callback */
+SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->simplify != NULL;
+}
+
 /** returns whether expression handler implements the initialization callback */
 SCIP_Bool SCIPhasConsExprExprHdlrInitSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -6826,6 +6854,7 @@ SCIP_Bool SCIPhasConsExprExprHdlrInitSepa(
 
    return exprhdlr->initsepa != NULL;
 }
+
 /** returns whether expression handler implements the deinitialization callback */
 SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -6998,6 +7027,30 @@ SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    return exprhdlr->data;
 }
 
+/** calls the simplification method of an expression handler */
+SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_CONSEXPR_EXPR**       simplifiedexpr/**< pointer to store the simplified expression */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
+
+   if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
+   {
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->simplifytime) );
+      SCIP_CALL( expr->exprhdlr->simplify(scip, expr, simplifiedexpr) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->simplifytime) );
+
+      /* update statistics */
+      ++(expr->exprhdlr->nsimplifycalls);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls the separation initialization method of an expression handler */
 SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
    SCIP*                      scip,         /**< SCIP data structure */
@@ -7016,7 +7069,14 @@ SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
 
    if( SCIPhasConsExprExprHdlrInitSepa(expr->exprhdlr) )
    {
-      SCIP_CALL( expr->exprhdlr->initsepa (scip, conshdlr, expr, overestimate, underestimate, infeasible) );
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( expr->exprhdlr->initsepa(scip, conshdlr, expr, overestimate, underestimate, infeasible) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+
+      /* update statistics */
+      if( *infeasible )
+         ++(expr->exprhdlr->ncutoffs);
+      ++(expr->exprhdlr->nsepacalls);
    }
 
    return SCIP_OKAY;
@@ -7033,7 +7093,9 @@ SCIP_RETCODE SCIPexitsepaConsExprExprHdlr(
 
    if( SCIPhasConsExprExprHdlrExitSepa(expr->exprhdlr) )
    {
-      SCIP_CALL( expr->exprhdlr->exitsepa (scip, expr) );
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( expr->exprhdlr->exitsepa(scip, expr) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
    }
 
    return SCIP_OKAY;
@@ -7053,7 +7115,6 @@ SCIP_RETCODE SCIPsepaConsExprExprHdlr(
 {
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(sol != NULL);
    assert(minviol >= 0.0);
    assert(result != NULL);
    assert(ncuts != NULL);
@@ -7063,7 +7124,15 @@ SCIP_RETCODE SCIPsepaConsExprExprHdlr(
 
    if( SCIPhasConsExprExprHdlrSepa(expr->exprhdlr) )
    {
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
       SCIP_CALL( expr->exprhdlr->sepa(scip, conshdlr, expr, sol, overestimate, minviol, result, ncuts) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+
+      /* update statistics */
+      if( *result == SCIP_CUTOFF )
+         ++(expr->exprhdlr->ncutoffs);
+      expr->exprhdlr->ncutsfound += *ncuts;
+      ++(expr->exprhdlr->nsepacalls);
    }
 
    return SCIP_OKAY;
@@ -7084,7 +7153,9 @@ SCIP_RETCODE SCIPintevalConsExprExprHdlr(
 
    if( SCIPhasConsExprExprHdlrIntEval(expr->exprhdlr) )
    {
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->intevaltime) );
       SCIP_CALL( expr->exprhdlr->inteval(scip, expr, interval, varboundrelax) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->intevaltime) );
    }
 
    return SCIP_OKAY;
@@ -7111,7 +7182,15 @@ SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
 
    if( SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr) )
    {
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->proptime) );
       SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, reversepropqueue, infeasible, nreductions, force) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->proptime) );
+
+      /* update statistics */
+      expr->exprhdlr->ndomreds += *nreductions;
+      if( *infeasible )
+         ++(expr->exprhdlr->ncutoffs);
+      ++(expr->exprhdlr->npropcalls);
    }
 
    return SCIP_OKAY;
