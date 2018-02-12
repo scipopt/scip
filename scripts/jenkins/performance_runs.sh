@@ -116,7 +116,7 @@ fi
 declare -A TODAYS_JOBS
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
-  TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results$i"
+  TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results${RANDOMSEED}_${i}"
 
   # append /bin/scip to executable
   TODAYS_JOBS[$i]=`echo ${TODAYS_JOBS[$i]}|sed "s@\(scipopt[cs]px\)@\1/bin/scip@"`
@@ -162,7 +162,7 @@ ln -fs /optimi/kombadon/MINLP check/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS"; do
+  for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
     unset $j
   done
   export ${FLAGS}

@@ -130,7 +130,7 @@ declare -A TODAYS_JOBS
 
 LPSVERSIONS=""
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
-  TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results$i"
+  TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results${RANDOMSEED}_${i}"
 
   # Collect versions to know which lpsolvers to compile
   LPSVERSION=`echo ${TODAYS_JOBS[$i]} |grep -o 'scip[a-z]*'`
@@ -209,7 +209,7 @@ ln -fs /optimi/kombadon/MINLP check/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS"; do
+  for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
     unset $j
   done
   export ${FLAGS}
