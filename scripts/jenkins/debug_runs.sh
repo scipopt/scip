@@ -44,6 +44,8 @@ if [ "${GITBRANCH}" != "master" ]; then
   fi
 fi
 
+export GITBRANCH
+
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
 # We have to export these variables to make them available to cmake.
 # Scripts will also use nonexported variables correctly.
