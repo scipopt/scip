@@ -446,6 +446,24 @@ SCIP_RETCODE addExprToQuadexprterms(
    return SCIP_OKAY;
 }
 
+/** creates auxiliary variable when necessary */
+static
+SCIP_RETCODE createAuxVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expr conshdlr */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to add to quadratic terms */
+   SCIP_Bool*            originalvar         /**< set it to false when expression is not var */
+   )
+{
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+      return SCIP_OKAY;
+
+   *originalvar = FALSE;
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -516,6 +534,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
       return SCIP_OKAY;
 
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "Nlhdlr quadratic detecting expr %p aka", (void*)expr);
+   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
    SCIPdebugMsg(scip, "checking if expr %p is a proper quadratic\n", (void*)expr);
    /* check if expression is a proper quadratic expression */
    properquadratic = FALSE;
@@ -658,20 +681,27 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 
    {
       int i;
+      SCIP_Bool originalvars = TRUE;
 
       /* create auxiliary variables for all expressions stored in nlhdlrexprdata */
       for( i = 0; i < nlexprdata->nlinexprs; ++i ) /* expressions appearing linearly */
       {
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexprdata->linexprs[i], NULL) );
+         SCIP_CALL( createAuxVar(scip, conshdlr, nlexprdata->linexprs[i], &originalvars) );
       }
       for( i = 0; i < nlexprdata->nquadexprs; ++i ) /* quadratic terms */
       {
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexprdata->quadexprterms[i].expr, NULL) );
+         SCIP_CALL( createAuxVar(scip, conshdlr, nlexprdata->quadexprterms[i].expr, &originalvars) );
       }
       for( i = 0; i < nlexprdata->nbilinexprterms; ++i ) /* bilinear terms */
       {
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexprdata->bilinexprterms[i].expr1, NULL) );
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexprdata->bilinexprterms[i].expr2, NULL) );
+         SCIP_CALL( createAuxVar(scip, conshdlr, nlexprdata->bilinexprterms[i].expr1, &originalvars) );
+         SCIP_CALL( createAuxVar(scip, conshdlr, nlexprdata->bilinexprterms[i].expr2, &originalvars) );
+      }
+
+      if( originalvars )
+      {
+         SCIPsetConsExprExprCurvature(expr, nlexprdata->curvature);
+         SCIPdebugMsg(scip, "expr is %s in the original variables\n", nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE ? "concave" : "convex");
       }
    }
 
