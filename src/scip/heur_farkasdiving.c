@@ -61,6 +61,7 @@
 #define DEFAULT_DIFFOBJFAC         0.15
 #define DEFAULT_CHECKOBJ          FALSE
 #define DEFAULT_CHECKOBJGLB        TRUE
+#define DEFAULT_SCALESCORE         TRUE
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -71,6 +72,7 @@ struct SCIP_HeurData
    SCIP_Bool             checkobj;           /**< should objective function be checked before running? */
    SCIP_Bool             checkobjglb;        /**< check objective function only once w.r.t to the global problem */
    SCIP_Bool             objchecked;         /**< remember whether objection function was already checked */
+   SCIP_Bool             scalescore;
 };
 
 
@@ -321,8 +323,16 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
 {
+   SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata;
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real obj;
+
+   heur = SCIPdivesetGetHeur(diveset);
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
 
    randnumgen = SCIPdivesetGetRandnumgen(diveset);
    assert(randnumgen != NULL);
@@ -351,10 +361,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
    /* larger score is better */
    *score = REALABS(obj) + SCIPrandomGetReal(randnumgen, MIN_RAND, MAX_RAND);
 
-   if( *roundup )
-      *score *= (1.0 - candsfrac);
-   else
-      *score *= candsfrac;
+   if( heurdata->scalescore )
+   {
+      if( *roundup )
+         *score *= (1.0 - candsfrac);
+      else
+         *score *= candsfrac;
+   }
 
    /* prefer decisions on binary variables */
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
@@ -406,6 +419,10 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkobjglb",
          "should objective function be check globally or locally?",
          &heurdata->checkobjglb, TRUE, DEFAULT_CHECKOBJGLB, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scalescore",
+         "should score be scaled by fractionality?",
+         &heurdata->scalescore, TRUE, DEFAULT_SCALESCORE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/diffobjfac",
          "fraction of absolute different objective coefficients",
