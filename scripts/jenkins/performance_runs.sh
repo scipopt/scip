@@ -36,7 +36,9 @@ if [ "${GITBRANCH}" == "" ]; then
 fi
 
 if [ "${GITBRANCH}" != "master" ]; then
-  if ! [[ ${GITBRANCH} =~ "bugfix" ]]; then
+  if [[ ${GITBRANCH} =~ "bugfix" ]]; then
+    GITBRANCH=bugfix
+  else
     echo "Branch is neither 'master' nor 'bugfix'. Something is wrong. Exiting."
     exit 1
   fi
@@ -68,7 +70,7 @@ mkdir -p settings
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 # FORMAT:
-#    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx MEM=100 QUEUE=opt TESTSET=short TIME=10 PERMUTE=2 PERFORMANCE=performance"
+#    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 
 RANDOMSEED=`date +%Y%m%d`
 
@@ -77,12 +79,12 @@ RANDOMSEED=`date +%Y%m%d`
 declare -A JOBS
 
 # jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TESTSET=mipdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance"
-JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TESTSET=minlpdev-solvable TIME=7200 SETTING=default PERFORMANCE=performance PERMUTE=4"
+JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
+JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=default PERFORMANCE=performance PERMUTE=4"
 TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GIT_BRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TESTSET=sapdev-solvable TIME=3600 SETTING=sap-501-pure PERFORMANCE=performance"
+JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-501-pure PERFORMANCE=performance"
 
 # copy sap-501-pure settings
 cp ~/sap-501-pure.set settings/.
@@ -114,7 +116,7 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results$i"
 
   # append /bin/scip to executable
-  TODAYS_JOBS[$i]=`echo ${TODAYS_JOBS[$i]}|sed "s@\(scip[cs]px\)@\1/bin/scip@"`
+  TODAYS_JOBS[$i]=`echo ${TODAYS_JOBS[$i]}|sed "s@\(scipopt[cs]px\)@\1/bin/scip@"`
 done
 
 # Print some information about what is happening
@@ -139,7 +141,7 @@ done
 BUILD_DIR=scipoptspx
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
 make -j4
 cd ..
 
@@ -157,7 +159,7 @@ ln -fs /optimi/kombadon/MINLP check/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  for j in "EXECUTABLE MEM QUEUE TESTSET TIME PERMUTE PERFORMANCE EXCLUSIVE"; do
+  for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS"; do
     unset $j
   done
   export ${FLAGS}

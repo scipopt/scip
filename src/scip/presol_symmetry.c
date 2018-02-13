@@ -41,6 +41,7 @@
 #include <scip/cons_logicor.h>
 #include <scip/cons_or.h>
 #include <scip/cons_xor.h>
+#include <scip/cons_linking.h>
 
 #include <scip/presol_symmetry.h>
 #include <symmetry/compute_symmetry.h>
@@ -622,6 +623,8 @@ int getNSymhandableConss(
 
    conshdlr = SCIPfindConshdlr(scip, "linear");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "linking");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "setppc");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "xor");
@@ -801,6 +804,34 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_CALL( collectCoefficients(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
                SCIPgetNVarsLinear(scip, cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons),
                SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+      }
+      else if ( strcmp(conshdlrname, "linking") == 0 )
+      {
+         SCIP_VAR** curconsvars;
+         int* curconsvals;
+         int i;
+
+         /* get constraint variables and their amount */
+         curconsvals = SCIPgetValsLinking(scip, cons);
+         SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
+         /* SCIPgetBinVarsLinking returns the number of binary variables, but we also need the integer variable */
+         nconsvars++;
+
+         /* copy vars and vals for binary variables */
+         for( i = 0; i < nconsvars - 1; i++ )
+         {
+            consvars[i] = curconsvars[i];
+            consvals[i] = (SCIP_Real) curconsvals[i];
+         }
+
+         /* set final entry of vars and vals to the linking variable and its coefficient, respectively */
+         consvars[nconsvars - 1] = SCIPgetIntvarLinking(scip, cons);
+         consvals[nconsvars - 1] = -1;
+
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
+                        SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+         SCIP_CALL( collectCoefficients(scip, consvars, NULL, nconsvars - 1, 1.0, 1.0,
+                        SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "setppc") == 0 )
       {

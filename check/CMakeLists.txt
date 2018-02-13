@@ -651,5 +651,20 @@ foreach(instance ${instances_MIP})
 
 endforeach()
 
-
-
+#
+# add a test for handling of the SIGTERM signal. The test uses the timeout command that
+# is only available on unix (and possibly MAC, I did not check)
+#
+if (UNIX)
+    add_test(NAME signal-handling-sigterm-blend2
+            COMMAND timeout -sSIGTERM 1 $<TARGET_FILE:scip> -f ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/blend2.mps
+            )
+    set_tests_properties(signal-handling-sigterm-blend2
+                        PROPERTIES
+                            DEPENDS scip-build
+                            PASS_REGULAR_EXPRESSION "termination signal received"
+                            #
+                            # I assume that this test takes longer than 2 seconds
+                            #
+                            )
+endif (UNIX)

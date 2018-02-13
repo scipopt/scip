@@ -4223,7 +4223,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_Bool localbdsused;
    SCIP_Real contactivity;
    SCIP_Real contsqrnorm;
-
    assert(aggrrow != NULL);
    assert(aggrrow->nrows + aggrrow->nnz >= 1);
    assert(success != NULL);
@@ -4241,7 +4240,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &mksetinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvalues, nvars + aggrrow->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz + 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz + 6) );
    /* we only compute bound distance for integer variables; we allocate an array of length aggrrow->nnz to store this, since
     * this is the largest number of integer variables. (in contrast to the number of total variables which can be 2 *
     * aggrrow->nnz variables: if all are continuous and we use variable bounds to completement, we introduce aggrrow->nnz
@@ -4304,20 +4303,15 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       SCIP_Real lb = SCIPvarGetLbLocal(var);
       SCIP_Real ub = SCIPvarGetUbLocal(var);
       SCIP_Real QUAD(coef);
-      SCIP_Real absmksetcoef;
 
       QUAD_ARRAY_LOAD(coef, mksetcoefs, mksetinds[i]);
-
-      absmksetcoef = REALABS(QUAD_TO_DBL(coef));
-
-      maxabsmksetcoef = MAX(absmksetcoef, maxabsmksetcoef);
 
       if( SCIPisEQ(scip, primsol, lb) || SCIPisEQ(scip, primsol, ub) )
          continue;
 
       bounddist[nbounddist] = MIN(ub - primsol, primsol - lb);
       bounddistpos[nbounddist] = i;
-      deltacands[nbounddist] = absmksetcoef;
+      deltacands[nbounddist] = QUAD_TO_DBL(coef);
       ++nbounddist;
    }
 
@@ -4329,6 +4323,62 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    ndeltacands = nbounddist;
 
    SCIPsortDownRealRealInt(bounddist, deltacands, bounddistpos, nbounddist);
+
+   {
+      SCIP_Real intscale;
+      SCIP_Bool intscalesuccess;
+
+      SCIP_CALL( SCIPcalcIntegralScalar(deltacands, nbounddist, -QUAD_EPSILON, SCIPsumepsilon(scip), (SCIP_Longint)10000, 10000.0, &intscale, &intscalesuccess) );
+
+      if( intscalesuccess )
+      {
+         SCIP_Real intf0;
+         SCIP_Real intscalerhs;
+         SCIP_Real delta;
+
+         intscalerhs = QUAD_TO_DBL(mksetrhs) * intscale;
+         delta = 1.0 / intscale;
+         intf0 = intscalerhs - floor(intscalerhs);
+
+         if( ! SCIPisFeasIntegral(scip, intf0) )
+         {
+            if( intf0 < minfrac || intf0 > maxfrac )
+            {
+               intscale *= ceil(MAX(minfrac, (1.0 - maxfrac)) / MIN(intf0, (1.0 - intf0)));
+               intscalerhs = QUAD_TO_DBL(mksetrhs) * intscale;
+               delta = 1.0 / intscale;
+               intf0 = intscalerhs - floor(intscalerhs);
+            }
+
+            if( ! SCIPisEQ(scip, delta, 1.0) )
+            {
+               deltacands[ndeltacands++] = delta;
+            }
+
+            if( intf0 < maxfrac )
+            {
+               SCIP_Real delta2;
+
+               delta2 = 1.0 / (intscale * floor(maxfrac / intf0));
+
+               if( ! SCIPisEQ(scip, delta, delta2) && ! SCIPisEQ(scip, delta2, 1.0) )
+               {
+                  deltacands[ndeltacands++] = delta2;
+               }
+            }
+         }
+      }
+   }
+
+   for( i = 0; i < nbounddist; ++i )
+   {
+      SCIP_Real absmksetcoef;
+
+      absmksetcoef = REALABS(deltacands[i]);
+      maxabsmksetcoef = MAX(absmksetcoef, maxabsmksetcoef);
+
+      deltacands[i] = absmksetcoef;
+   }
 
    /* also test 1.0 and maxabsmksetcoef + 1.0 as last delta values */
    if( maxabsmksetcoef != -1.0 )
@@ -4566,19 +4616,22 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       goto TERMINATE;
 
    /* try bestdelta divided by 2, 4 and 8 */
-   for( i = 2; i <= 8 ; i *= 2 )
    {
-      SCIP_Real efficacy;
-      SCIP_Real delta;
-
-      delta = bestdelta / i;
-
-      efficacy = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_TO_DBL(mksetrhs), contactivity, contsqrnorm, delta, ntmpcoefs, minfrac, maxfrac);
-
-      if( efficacy >= bestefficacy )
+      SCIP_Real basedelta = bestdelta;
+      for( i = 2; i <= 8 ; i *= 2 )
       {
-         bestefficacy = efficacy;
-         bestdelta = delta;
+         SCIP_Real efficacy;
+         SCIP_Real delta;
+
+         delta = basedelta / i;
+
+         efficacy = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_TO_DBL(mksetrhs), contactivity, contsqrnorm, delta, ntmpcoefs, minfrac, maxfrac);
+
+         if( efficacy > bestefficacy )
+         {
+            bestefficacy = efficacy;
+            bestdelta = delta;
+         }
       }
    }
 

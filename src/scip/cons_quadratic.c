@@ -89,7 +89,7 @@
 /* scaling factor for gauge function */
 #define GAUGESCALE 0.99999
 
-#define ROWPREP_SCALEUP_VIOLNONZERO    (minviol / 10.0)            /**< minimal violation for considering up-scaling of rowprep (we want to avoid upscaling very small violations) */
+#define ROWPREP_SCALEUP_VIOLNONZERO    (10.0*SCIPepsilon(scip))    /**< minimal violation for considering up-scaling of rowprep (we want to avoid upscaling very small violations) */
 #define ROWPREP_SCALEUP_MINVIOLFACTOR  2.0                         /**< scale up will target a violation of ~MINVIOLFACTOR*minviol, where minviol is given by caller */
 #define ROWPREP_SCALEUP_MAXMINCOEF     (1.0 / SCIPfeastol(scip))   /**< scale up only if min. coef is below this number (before scaling) */
 #define ROWPREP_SCALEUP_MAXMAXCOEF     SCIPgetHugeValue(scip)      /**< scale up only if max. coef will not exceed this number by scaling */
@@ -15936,10 +15936,10 @@ void SCIPprintRowprep(
 
    for( i = 0; i < rowprep->nvars; ++i )
    {
-      SCIPinfoMessage(scip, file, "%+g*<%s> ", rowprep->coefs[i], SCIPvarGetName(rowprep->vars[i]));
+      SCIPinfoMessage(scip, file, "%+.15g*<%s> ", rowprep->coefs[i], SCIPvarGetName(rowprep->vars[i]));
    }
 
-   SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %g\n" : "<= %g\n", rowprep->side);
+   SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %.15g\n" : "<= %.15g\n", rowprep->side);
 }
 
 /** adds a term coef*var to a rowprep */
@@ -16035,7 +16035,7 @@ SCIP_Real SCIPgetRowprepViolation(
    SCIP_Real activity;
    int i;
 
-   activity = -rowprep->side;
+   activity = 0.0;
    for( i = 0; i < rowprep->nvars; ++i )
    {
       /* Loose variable have the best bound as LP solution value.
@@ -16048,11 +16048,11 @@ SCIP_Real SCIPgetRowprepViolation(
    }
 
    if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-      /* cut is activity <= 0.0 -> violation is activity, if positive */
-      return MAX(activity, 0.0);
+      /* cut is activity <= side -> violation is activity - side, if positive */
+      return MAX(activity - rowprep->side, 0.0);
    else
-      /* cut is activity >= 0.0 -> violation is -activity, if positive */
-      return MAX(-activity, 0.0);
+      /* cut is activity >= side -> violation is side - activity, if positive */
+      return MAX(rowprep->side - activity, 0.0);
 }
 
 /** Merge terms that use same variable and eliminate zero coefficients.

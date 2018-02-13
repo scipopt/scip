@@ -61,7 +61,7 @@
  * - \ref START       "How to start a new project"
  * - \ref EXAMPLES    "Examples"
  * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
- * - \ref LPI         "Available implementations of the LP solver interface"
+ * - \ref LPI         "Available LP solver interfaces"
  * - \ref NLPISOLVERS "Available implementations of the NLP solver interface"
  *
  * @section FURTHERINFORMATION References
@@ -119,6 +119,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG11        "Interface changes between version 5.0 and 5.1"
  * - \ref CHG10        "Interface changes between version 4.0 and 5.0"
  * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
@@ -133,7 +134,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  5.0.1
+ * @version  5.0.1.3
  *
  * \image html scippy.png
  *
@@ -310,9 +311,9 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** @page LPI Available implementations of the LP solver interface
+/** @page LPI Available LP solver interfaces
  *
- * SCIP comes with implementations of the LP solver interface @ref lpi.h for many LP solvers:
+ * SCIP provides a range of different interfaces to LP solvers:
  *
  * LPI name | LP solver
  * ---------|----------
@@ -326,16 +327,15 @@
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  *
- * There are two different implementations for SoPlex. The default one (`spx`) uses an updated interface that is provided
+ * There are two different interfaces for SoPlex. The default one (`spx`) uses an updated interface that is provided
  * by SoPlex itself (since version 2.0), resulting in a slimmer LPI that is similiar to those for CPLEX or XPRESS.
- * The other one - `spx1` - is the older LPI that directly uses the internal simplex solver of SoPlex and
+ * The other one - `spx1` - is the older LPI that directly interfaces the internal simplex solver of SoPlex and
  * therefore needs to duplicate some features in the LPI that are already available in SoPlex itself. It lacks some
- * features like persistent scaling which are only available in the modern implementation.
- * Upcoming features may not be
- * supported. Old compilers might have difficulties with the new implementation because some C++11 features are required
+ * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
+ * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
  * that may not be supported.
  *
- * To use the old implementation, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
+ * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
  */
 
@@ -7436,6 +7436,28 @@
   */
 
  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG11 Interface changes between SCIP 5.0 and SCIP 5.1
+  *
+  *
+  * @section CHGCALLBACKS11 New and changed callbacks
+  *
+  *
+  * <br>
+  * @section CHGINTERFUNC11 Changed interface methods
+  *
+  * <br>
+  *   <b>SCIP Status</b>
+  *   - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and
+  *     SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
+  *
+  * <br>
+  * @section CHGPARAMS11 Changed parameters
+  *
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -7552,6 +7574,15 @@
 /**@page FAQ Frequently Asked Questions (FAQ)
  * \htmlinclude faq.inc
  */
+
+/**@page INSTALL Installation information
+ * \verbinclude INSTALL
+ */
+
+/**@page INSTALL_CMAKE Installation information (CMake)
+ * \verbinclude INSTALL_CMAKE
+ */
+
 
 /**@page RELEASENOTES Release notes
  *
@@ -8225,7 +8256,7 @@
  * Find the concrete implementation for your LP solver
  * under "src/lpi/".
  *
- * @see \ref LPI for a list of available LP solvers
+ * @see \ref LPI for a list of available LP solver interfaces
  */
 
 /**@defgroup NODESELECTORS Node Selectors

@@ -659,6 +659,19 @@ SECTION: Using SCIP included in another source code
         For more examples, please have a look into heur_rens.c.
     </p>
 
+    QUESTION: Is it possible to avoid that the SCIP library overrides my signal handler for interruptions?
+    LABEL: interrupthandler
+    ANSWER:
+    <p>
+        By default, the SCIP library has an internal handler for the handling of the SIGINT signal,
+        which is usually emitted when a user presses CTRL-C during the solution process.
+        In cases where this overrides the signal handling of a surrounding application,
+        this may be undesirable.
+        As a remedy, the parameter misc/catchctrlc can be set to FALSE or the SCIP library can be
+        compiled with the special C compiler flag "-DNO_SIGACTION", both disabling SCIP's internal
+        signal handling.
+    </p>
+
 SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
 
     QUESTION: How do I start a project?

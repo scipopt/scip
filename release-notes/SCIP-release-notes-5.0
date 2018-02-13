@@ -46,13 +46,13 @@ Performance Improvements
 
 - improved cut selection and management
 
-- enabled MIP cutting plane separation in the tree
+- enabled cutting plane separation in the tree
 
 - disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
 
 - improved dual ray analysis
 
-- use disjoint set to reduce peak memory usage and time to compute clique table connectedness information
+- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 
 - revised disaggregation of quadratic constraints: the number of created constraints can now be controlled and the
   disaggregated constraints are scaled in order to increase numerical accuracy
