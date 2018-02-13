@@ -23,15 +23,6 @@
 #include "pattern.h"
 
 /*
- * data structures
- */
-
-struct SCIP_Pattern
-{
-   SCIP_PATTERNTYPE      type;               /**< pattern type */
-};
-
-/*
  * local methods
  */
 
@@ -52,6 +43,7 @@ SCIP_RETCODE SCIPpatternCreateCircularEmpty(
    BMSclearMemory(*pattern);
 
    (*pattern)->type = SCIP_PATTERNTYPE_CIRCULAR;
+   SCIPpatternCapture(*pattern);
 
    return SCIP_OKAY;
 }
@@ -66,12 +58,23 @@ SCIP_RETCODE SCIPpatternCreateRectangularEmpty(
    BMSclearMemory(*pattern);
 
    (*pattern)->type = SCIP_PATTERNTYPE_RECTANGULAR;
+   SCIPpatternCapture(*pattern);
 
    return SCIP_OKAY;
 }
 
+/** captures a pattern */
+void SCIPpatternCapture(
+   SCIP_PATTERN*         pattern             /**< pattern */
+   )
+{
+   assert(pattern != NULL);
+   assert(pattern->nlocks >= 0);
+   ++(pattern->nlocks);
+}
+
 /* frees a pattern */
-void SCIPpatternFree(
+void SCIPpatternRelease(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PATTERN**        pattern             /**< pointer to free pattern */
    )
@@ -79,8 +82,18 @@ void SCIPpatternFree(
    assert(scip != NULL);
    assert(pattern != NULL);
    assert(*pattern != NULL);
+   assert((*pattern)->nlocks > 0);
 
-   SCIPfreeBlockMemory(scip, pattern);
+   /* reduce locks */
+   --((*pattern)->nlocks);
+
+   /* free memory if the pattern is not used any more */
+   if( (*pattern)->nlocks == 0 )
+   {
+      SCIPfreeBlockMemory(scip, pattern);
+   }
+   else
+      *pattern = NULL;
 }
 
 /** returns the type of a pattern */
@@ -90,5 +103,25 @@ SCIP_PATTERNTYPE SCIPpatternGetType(
 {
    assert(pattern != NULL);
 
-   return pattern->type;
+   return pattern->type;}
+
+/** returns the packable status of a pattern */
+SCIP_PACKABLE SCIPpatternGetPackableStatus(
+   SCIP_PATTERN*         pattern             /**< pattern */
+   )
+{
+   assert(pattern != NULL);
+
+   return pattern->packable;
+}
+
+/** sets the packable status of a pattern */
+void SCIPpatternSetPackableStatus(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   SCIP_PACKABLE         packable            /**< packable status */
+   )
+{
+   assert(pattern != NULL);
+
+   pattern->packable = packable;
 }

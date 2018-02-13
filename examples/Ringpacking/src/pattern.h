@@ -24,9 +24,18 @@
 #define __SCIP_PATTERN__
 
 #include "scip/scip.h"
-#include "probdata_rpa.h"
 
-typedef struct SCIP_Pattern SCIP_PATTERN;
+/*
+ * data structures
+ */
+
+enum SCIP_Packable
+{
+   SCIP_PACKABLE_NO      = 0,
+   SCIP_PACKABLE_YES     = 1,
+   SCIP_PACKABLE_UNKNOWN = 2
+};
+typedef enum SCIP_Packable SCIP_PACKABLE;
 
 enum SCIP_Patterntype
 {
@@ -34,6 +43,14 @@ enum SCIP_Patterntype
    SCIP_PATTERNTYPE_RECTANGULAR = 1            /**< rectangular pattern */
 };
 typedef enum SCIP_Patterntype SCIP_PATTERNTYPE;
+
+struct SCIP_Pattern
+{
+   SCIP_PATTERNTYPE      type;               /**< pattern type */
+   SCIP_PACKABLE         packable;           /**< packable status */
+   int                   nlocks;             /**< number of locks */
+};
+typedef struct SCIP_Pattern SCIP_PATTERN;
 
 /** creates an empty circular pattern */
 extern
@@ -49,9 +66,15 @@ SCIP_RETCODE SCIPpatternCreateRectangularEmpty(
    SCIP_PATTERN**        pattern             /**< pointer to store pattern */
    );
 
+/** captures a pattern */
+extern
+void SCIPpatternCapture(
+   SCIP_PATTERN*         pattern             /**< pattern */
+   );
+
 /* frees a pattern */
 extern
-void SCIPpatternFree(
+void SCIPpatternRelease(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PATTERN**        pattern             /**< pointer to free pattern */
    );
@@ -60,6 +83,19 @@ void SCIPpatternFree(
 extern
 SCIP_PATTERNTYPE SCIPpatternGetType(
    SCIP_PATTERN*         pattern             /**< pattern */
+   );
+
+/** returns the packable status of a pattern */
+extern
+SCIP_PACKABLE SCIPpatternGetPackableStatus(
+   SCIP_PATTERN*         pattern             /**< pattern */
+   );
+
+/** sets the packable status of a pattern */
+extern
+void SCIPpatternSetPackableStatus(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   SCIP_PACKABLE         packable            /**< packable status */
    );
 
 #endif /* __SCIP_PATTERN__ */

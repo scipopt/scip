@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "reader_rpa.h"
+#include "probdata_rpa.h"
 
 /**@name Reader properties
  *
@@ -48,8 +49,8 @@ static
 SCIP_DECL_READERREAD(readerReadRpa)
 {  /*lint --e{715}*/
    SCIP_FILE* file;
-   SCIP_Real* r_ints;
-   SCIP_Real* r_exts;
+   SCIP_Real* rints;
+   SCIP_Real* rexts;
    int* demands;
    SCIP_Bool error;
    char name[SCIP_MAXSTRLEN];
@@ -114,10 +115,10 @@ SCIP_DECL_READERREAD(readerReadRpa)
    SCIPdebugMessage("instance name = %s\n", name);
    SCIPdebugMessage("width = %e height = %e\n", MAX(width,height), MIN(width,height));
 
-   /* allocate buffer memory for storing the demands, r_ints, r_exts */
+   /* allocate buffer memory for storing the demands, rints, rexts */
    SCIP_CALL( SCIPallocBufferArray(scip, &demands, ntypes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &r_ints, ntypes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &r_exts, ntypes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rints, ntypes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rexts, ntypes) );
 
    /* ring types */
    r_int = 0.0;
@@ -157,8 +158,8 @@ SCIP_DECL_READERREAD(readerReadRpa)
       }
 
       demands[i] = demand;
-      r_ints[i] = r_int;
-      r_exts[i] = r_ext;
+      rints[i] = r_int;
+      rexts[i] = r_ext;
       ++i;
 
       if( i == ntypes )
@@ -179,17 +180,23 @@ SCIP_DECL_READERREAD(readerReadRpa)
 
    if( !error )
    {
+      SCIP_PROBDATA* probdata;
+
       /* sort rings by their external radii */
-      SCIPsortDownRealRealInt(r_exts, r_ints, demands, ntypes);
+      SCIPsortDownRealRealInt(rexts, rints, demands, ntypes);
 
-      /* TODO create problem data */
+      /* create SCIP problem */
+      SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
 
-      /* TODO create SCIP problem */
+      /* create and set problem data */
+      SCIP_CALL( SCIPprobdataCreate(scip, &probdata, demands, rints, rexts, ntypes, MAX(width,height),
+               MIN(width,height)) );
+      SCIP_CALL( SCIPsetProbData(scip, probdata) );
    }
 
    (void)SCIPfclose(file);
-   SCIPfreeBufferArray(scip, &r_ints);
-   SCIPfreeBufferArray(scip, &r_exts);
+   SCIPfreeBufferArray(scip, &rints);
+   SCIPfreeBufferArray(scip, &rexts);
    SCIPfreeBufferArray(scip, &demands);
 
    if( error )
