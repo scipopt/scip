@@ -271,7 +271,6 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
          objcoefs[nnzobjcoefs] = REALABS(obj);
          ++nnzobjcoefs;
       }
-      assert(nnzobjcoefs >= 2);
 
       /* sort in increasing order */
       SCIPsortReal(objcoefs, nnzobjcoefs);
@@ -293,7 +292,8 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
 
       SCIPdebugMsg(scip, "%d divecands; %d nnzobjs; %d diffnnzobjs", ndivecands, nnzobjcoefs, ndiffnnzobjs);
 
-      if( nnzobjcoefs == 0 || ndiffnnzobjs / (SCIP_Real)ndivecands < heurdata->diffobjfac )
+//      if( nnzobjcoefs == 0 || ndiffnnzobjs / (SCIP_Real)ndivecands < heurdata->diffobjfac )
+      if( nnzobjcoefs == 0 || nnzobjcoefs / (SCIP_Real)ndivecands < heurdata->diffobjfac )
       {
          SCIPdebugMsg(scip, " ---> disable farkasdiving%s\n", heurdata->checkobjglb ? "" : " locally");
 
