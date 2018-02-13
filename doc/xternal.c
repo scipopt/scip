@@ -7446,9 +7446,14 @@
   * @section CHGINTERFUNC11 Changed interface methods
   *
   * <br>
-  *   <b>SCIP Status</b>
+  * - <b>SCIP Status</b>
   *   - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and
   *     SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
+  *
+  * <br>
+  * - <b>Misc</b>:
+  *   - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported
+  *     constraint types
   *
   * <br>
   * @section CHGPARAMS11 Changed parameters
