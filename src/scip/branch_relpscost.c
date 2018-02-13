@@ -1458,11 +1458,11 @@ SCIP_RETCODE execRelpscost(
       }
 
       /* free buffer for the lp gains and pseudocost scores */
-      SCIPfreeBufferArray(scip, &mingains);
-      SCIPfreeBufferArray(scip, &maxgains);
-      SCIPfreeBufferArray(scip, &scores);
-      SCIPfreeBufferArray(scip, &scoresfrompc);
       SCIPfreeBufferArray(scip, &scoresfromothers);
+      SCIPfreeBufferArray(scip, &scoresfrompc);
+      SCIPfreeBufferArray(scip, &scores);
+      SCIPfreeBufferArray(scip, &maxgains);
+      SCIPfreeBufferArray(scip, &mingains);
 
       /* free buffer for the unreliable candidates */
       SCIPfreeBufferArray(scip, &initcandscores);
@@ -1523,11 +1523,11 @@ SCIP_RETCODE execRelpscost(
    }
 
    /* free buffer for the strong branching lp gains */
-   SCIPfreeBufferArray(scip, &sbdown);
-   SCIPfreeBufferArray(scip, &sbup);
-   SCIPfreeBufferArray(scip, &sbdownvalid);
-   SCIPfreeBufferArray(scip, &sbupvalid);
    SCIPfreeBufferArray(scip, &sbvars);
+   SCIPfreeBufferArray(scip, &sbupvalid);
+   SCIPfreeBufferArray(scip, &sbdownvalid);
+   SCIPfreeBufferArray(scip, &sbup);
+   SCIPfreeBufferArray(scip, &sbdown);
 
    return SCIP_OKAY;
 }
