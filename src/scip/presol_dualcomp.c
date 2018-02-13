@@ -533,7 +533,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
    assert(presoldata != NULL);
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )
