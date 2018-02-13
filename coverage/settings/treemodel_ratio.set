@@ -1,0 +1,4 @@
+branching/treemodel/enable = TRUE
+branching/treemodel/height = 10
+branching/treemodel/highrule = r
+branching/treemodel/lowrule = r
