@@ -37,6 +37,7 @@
 #include "scip/scipshell.h"
 #include "scip/interrupt.h"
 
+static
 void handleSigterm(
    int                   signum              /**< signal code */
    )
