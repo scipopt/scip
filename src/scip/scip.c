@@ -1002,6 +1002,9 @@ SCIP_RETCODE SCIPprintStatus(
    case SCIP_STATUS_INFORUNBD:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "infeasible or unbounded");
       break;
+   case SCIP_STATUS_TERMINATE:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "termination signal received");
+      break;
    default:
       SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
       return SCIP_INVALIDDATA;

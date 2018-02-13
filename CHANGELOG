@@ -10,12 +10,18 @@ features:
 - allow output of lower bounds for visualization
 - add number of conflict constraints found by diving heuristics to statistics
 - added symmetry detection for linking constraints
+- SCIP executable handles the SIGTERM signal. If the process receives a SIGTERM, SCIP terminates the solution process with a new SCIP_STATUS code
+   "SCIP_STATUS_TERMINATE" and displays all relevant statistics before exiting.
 
 new parameters:
 - new parameter "visual/displb" that enables output of lower bounds for visualization
 
 deleted and modified parameters:
 - rename parameter: "constraints/orbisack/orbisack/coverseparation" to "constraints/orbisack/coverseparation"
+
+interface changes:
+- new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and SCIPterminated() in scip/interrupt.h for handling
+   of SIGTERM signals.
 
 new parameters:
 - new parameter: "presolving/symmetry/displaynorbitvars" (whether we display the number of affected variables in the statistics)
