@@ -267,6 +267,19 @@ int SCIPaggrRowGetNRows(
     SCIP_AGGRROW*          aggrrow              /**< aggregation row */
    );
 
+/** perform a cut selection algorithm for the given array of cuts; the array is partitioned
+ *  so that the selected cuts come first and the remaining ones are at the end of the array
+ */
+EXTERN
+SCIP_RETCODE SCIPselectCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   int                   ncuts,              /**< number of cuts in given array */
+   int                   nforcedcuts,        /**< number of forced cuts at start of given array */
+   int                   maxselectedcuts,    /**< maximal number of cuts to select */
+   int*                  nselectedcuts       /**< pointer to return number of selected cuts */
+   );
+
 /** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
  *  participate in an MIR cut.
