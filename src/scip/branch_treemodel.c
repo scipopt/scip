@@ -383,7 +383,6 @@ SCIP_RETCODE selectCandidateUsingRatio(
          if( !bestbranchratio.valid || hasBetterRatio(&bestbranchratio, mingains[c], maxgains[c]) )
          {
             computeVarRatio(scip, treemodel, branchcands[c], mingains[c], maxgains[c], &branchratio);
-
             if( branchratio.valid )
             {
                *bestcand = c;
@@ -403,13 +402,13 @@ SCIP_Real computeSVTS(
    SCIP_BRANCHTREEMODEL*    treemodel,          /**< Treemodel parameter data structure */
    SCIP_VAR*                var,                /**< the candidate branching variable */
    SCIP_Real                absgap,             /**< the absolute gap to close (typically the local gap at the current node) */
-   SCIP_Real                leftgain,           /**< prediction of objective gain for rounding downwards */
-   SCIP_Real                rightgain           /**< prediction of objective gain for rounding upwards */
+   SCIP_Real                mingain,            /**< prediction of smaller objective gain of downwards/upwards */
+   SCIP_Real                maxgain             /**< prediction of larger objective gain of downwards/upwards */
 )
 {
    SCIP_Real prediction = SCIP_REAL_MAX;
 
-   if( SCIPisGT(scip, leftgain, 0) && !SCIPisInfinity(scip, absgap) )
+   if( SCIPisGT(scip, mingain, 0) && !SCIPisInfinity(scip, absgap) )
    {
       SCIP_Real treesize;
       SCIP_Real gaptoreach;
@@ -421,8 +420,8 @@ SCIP_Real computeSVTS(
 
       /* We implicitly set the minimum gain to 1, and the maximum gain and gap accordingly,
       * as the treesize does not change if we scale the gains and gap by a scalar  */
-      scaledgain = leftgain / rightgain;
-      scaledgap = absgap / leftgain;
+      scaledgain = maxgain / mingain;
+      scaledgap = absgap / mingain;
 
       mindepth = ceil(scaledgap / scaledgain);
 
@@ -467,10 +466,10 @@ SCIP_Real computeSVTS(
          if( !SCIPisInfinity(scip,treesize) )
          {
             SCIP_BRANCHRATIO branchratio;
-            computeVarRatio(scip, treemodel, var, leftgain, rightgain, &branchratio);
+            computeVarRatio(scip, treemodel, var, mingain, maxgain, &branchratio);
 
             if( branchratio.valid )
-               prediction = treesize*pow(branchratio.upratio, (scaledgap - gaptoreach) * branchratio.invleft);
+               prediction = treesize * pow(branchratio.upratio, (scaledgap - gaptoreach) * branchratio.invleft);
          }
       }
       else
@@ -514,7 +513,6 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    if( !SCIPisInfinity(scip, localabsgap) )
    {
       referencetreesize = computeSVTS(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar], maxgains[referencevar]);
-
       if( referencetreesize != SCIP_REAL_MAX )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &treesizes, nbranchcands) );
@@ -538,7 +536,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
 
          for( c = 0; c < nbranchcands; ++c )
          {
-            score = (1.0 - 1.0/(1.0+avgtreesize/treesizes[c])) + 0.01 * scoresfromothers[c];
+            score = (1.0 - 1.0 / (1.0 + avgtreesize / treesizes[c])) + 0.01 * scoresfromothers[c];
             if(score > bestscore)
             {
                bestscore = score;
@@ -764,6 +762,8 @@ SCIP_RETCODE SCIPtreemodelFree(
 
    SCIPfreeBlockMemory(scip, treemodel);
 
+   assert(*treemodel == NULL);
+
    return SCIP_OKAY;
 }
 
@@ -861,6 +861,11 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &dominated, nbranchcands) );
          SCIP_CALL( findNonDominatedVars(scip, mingains, maxgains, nbranchcands, &ndominated, dominated) );
+      }
+      else
+      {
+         dominated = NULL;
+         ndominated = 0;
       }
 
       /* Invoke the selected scoring function */
