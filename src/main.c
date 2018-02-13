@@ -41,7 +41,7 @@ static
 void handleSigterm(
    int                   signum              /**< signal code */
    )
-{
+{ /*lint --e715*/
    SCIPtryTerminate();
 }
 
