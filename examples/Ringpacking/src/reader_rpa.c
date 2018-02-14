@@ -180,18 +180,11 @@ SCIP_DECL_READERREAD(readerReadRpa)
 
    if( !error )
    {
-      SCIP_PROBDATA* probdata;
-
       /* sort rings by their external radii */
       SCIPsortDownRealRealInt(rexts, rints, demands, ntypes);
 
-      /* create SCIP problem */
-      SCIP_CALL( SCIPcreateProbBasic(scip, filename) );
-
       /* create and set problem data */
-      SCIP_CALL( SCIPprobdataCreate(scip, &probdata, demands, rints, rexts, ntypes, MAX(width,height),
-               MIN(width,height)) );
-      SCIP_CALL( SCIPsetProbData(scip, probdata) );
+      SCIP_CALL( SCIPprobdataCreate(scip, filename, demands, rints, rexts, ntypes, MAX(width,height), MIN(width,height)) );
    }
 
    (void)SCIPfclose(file);

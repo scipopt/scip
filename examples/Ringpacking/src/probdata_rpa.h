@@ -32,7 +32,7 @@
 extern
 SCIP_RETCODE SCIPprobdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROBDATA**       probdata,           /**< pointer to store the problem data */
+   const char*           probname,           /**< problem name */
    int*                  demands,            /**< array containing the demands */
    SCIP_Real*            rints,              /**< internal radii of each ring */
    SCIP_Real*            rexts,              /**< external radii of each ring */
@@ -95,11 +95,9 @@ void SCIPprobdataGetRInfos(
    int*                  nrpatterns          /**< pointer to store the number of rectangular patterns (might be NULL) */
    );
 
-/** returns all information about rectangular patterns */
-
-/** returns array of set partitioning constrains */
+/** returns array of set pattern constraints */
 extern
-SCIP_CONS** SCIPprobdataGetConss(
+SCIP_CONS** SCIPprobdataGetPatternConss(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
@@ -113,7 +111,7 @@ SCIP_RETCODE SCIPprobdataAddVar(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_PATTERN*         pattern,            /**< pattern */
    SCIP_VAR*             var,                /**< variables to add */
-   SCIP_PATTERNTYPE      type                /**< type of the pattern */
+   SCIP_PATTERNTYPE      patterntype         /**< pattern type */
    );
 
 #endif /* __SCIP_PROBDATA_RINPACKING__ */

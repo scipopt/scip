@@ -46,24 +46,30 @@ typedef enum SCIP_Patterntype SCIP_PATTERNTYPE;
 
 struct SCIP_Pattern
 {
-   SCIP_PATTERNTYPE      type;               /**< pattern type */
+   SCIP_PATTERNTYPE      patterntype;        /**< pattern type */
    SCIP_PACKABLE         packable;           /**< packable status */
+   int*                  nelems;             /**< array to store the elements of each type */
+   int                   ntypes;             /**< total number of types */
    int                   nlocks;             /**< number of locks */
+   int                   type;               /**< type of the boundary circle */
 };
 typedef struct SCIP_Pattern SCIP_PATTERN;
 
 /** creates an empty circular pattern */
 extern
-SCIP_RETCODE SCIPpatternCreateCircularEmpty(
+SCIP_RETCODE SCIPpatternCreateCircular(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PATTERN**        pattern             /**< pointer to store pattern */
+   SCIP_PATTERN**        pattern,            /**< pointer to store pattern */
+   int                   ntypes,             /**< number of different circle types */
+   int                   type                /**< circle type (not needed for rectangular patterns) */
    );
 
-/** creates an empty rectangular pattern */
+/** creates an empty circular pattern */
 extern
-SCIP_RETCODE SCIPpatternCreateRectangularEmpty(
+SCIP_RETCODE SCIPpatternCreateRectangular(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PATTERN**        pattern             /**< pointer to store pattern */
+   SCIP_PATTERN**        pattern,            /**< pointer to store pattern */
+   int                   ntypes              /**< number of different circle types */
    );
 
 /** captures a pattern */
@@ -79,9 +85,39 @@ void SCIPpatternRelease(
    SCIP_PATTERN**        pattern             /**< pointer to free pattern */
    );
 
+/** adds an element of a given type to a pattern */
+extern
+void SCIPpatternAddElement(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< element of a given type */
+   );
+
+/** removes an element of a given type from a pattern */
+extern
+void SCIPpatternRemoveElement(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< element of a given type */
+   );
+
+/** returns the number of elements of a given type in the pattern */
+extern
+int SCIPpatternGetNElemens(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< element of a given type */
+   );
+
 /** returns the type of a pattern */
 extern
-SCIP_PATTERNTYPE SCIPpatternGetType(
+SCIP_PATTERNTYPE SCIPpatternGetPatternType(
+   SCIP_PATTERN*         pattern             /**< pattern */
+   );
+
+/** returns the type of the boundary circle
+ *
+ * @note this function can only be called for circular patterns
+ */
+extern
+int SCIPpatternGetType(
    SCIP_PATTERN*         pattern             /**< pattern */
    );
 

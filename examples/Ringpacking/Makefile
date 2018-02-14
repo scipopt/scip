@@ -37,6 +37,7 @@ MAINNAME	=	rinpacking
 CMAINOBJ	=	cmain.o \
 	reader_rpa.o \
 	probdata_rpa.o \
+	pricer_rpa.o \
 	pattern.o
 
 CXXMAINOBJ	=

@@ -21,19 +21,20 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "pattern.h"
+#include "probdata_rpa.h"
 
 /*
  * local methods
  */
 
-/*
- * interface methods
- */
-
-/** creates an empty circular pattern */
-SCIP_RETCODE SCIPpatternCreateCircularEmpty(
+/** auxiliary function to create a pattern */
+static
+SCIP_RETCODE createPattern(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PATTERN**        pattern             /**< pointer to store pattern */
+   SCIP_PATTERN**        pattern,            /**< pointer to store pattern */
+   SCIP_PATTERNTYPE      patterntype,        /**< pattern type */
+   int                   ntypes,             /**< number of different circle types */
+   int                   type                /**< circle type (not needed for rectangular patterns) */
    )
 {
    assert(scip != NULL);
@@ -42,25 +43,43 @@ SCIP_RETCODE SCIPpatternCreateCircularEmpty(
    SCIP_CALL( SCIPallocBlockMemory(scip, pattern) );
    BMSclearMemory(*pattern);
 
-   (*pattern)->type = SCIP_PATTERNTYPE_CIRCULAR;
+   (*pattern)->type = type;
    SCIPpatternCapture(*pattern);
+
+   (*pattern)->ntypes = ntypes;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*pattern)->nelems, ntypes) );
+   BMSclearMemoryArray((*pattern)->nelems, ntypes);
+
+   (*pattern)->packable = SCIP_PACKABLE_UNKNOWN;
+   (*pattern)->patterntype = patterntype;
+   (*pattern)->type = type;
 
    return SCIP_OKAY;
 }
 
-/** creates an empty rectangular pattern */
-SCIP_RETCODE SCIPpatternCreateRectangularEmpty(
+/*
+ * interface methods
+ */
+
+/** creates an empty circular pattern */
+SCIP_RETCODE SCIPpatternCreateCircular(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PATTERN**        pattern             /**< pointer to store pattern */
+   SCIP_PATTERN**        pattern,            /**< pointer to store pattern */
+   int                   ntypes,             /**< number of different circle types */
+   int                   type                /**< circle type (not needed for rectangular patterns) */
    )
 {
-   SCIP_CALL( SCIPallocBlockMemory(scip, pattern) );
-   BMSclearMemory(*pattern);
+   return createPattern(scip, pattern, SCIP_PATTERNTYPE_CIRCULAR, ntypes, type);
+}
 
-   (*pattern)->type = SCIP_PATTERNTYPE_RECTANGULAR;
-   SCIPpatternCapture(*pattern);
-
-   return SCIP_OKAY;
+/** creates an empty circular pattern */
+SCIP_RETCODE SCIPpatternCreateRectangular(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PATTERN**        pattern,            /**< pointer to store pattern */
+   int                   ntypes              /**< number of different circle types */
+   )
+{
+   return createPattern(scip, pattern, SCIP_PATTERNTYPE_RECTANGULAR, ntypes, -1);
 }
 
 /** captures a pattern */
@@ -90,20 +109,73 @@ void SCIPpatternRelease(
    /* free memory if the pattern is not used any more */
    if( (*pattern)->nlocks == 0 )
    {
+      SCIPfreeBlockMemoryArray(scip, &(*pattern)->nelems, (*pattern)->ntypes);
       SCIPfreeBlockMemory(scip, pattern);
    }
    else
       *pattern = NULL;
 }
 
+/** adds an element of a given type to a pattern */
+void SCIPpatternAddElement(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< element of a given type */
+   )
+{
+   assert(pattern != NULL);
+   assert(type >= 0);
+
+   ++(pattern->nelems[type]);
+}
+
+/** removes an element of a given type from a pattern */
+void SCIPpatternRemoveElement(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< element of a given type */
+   )
+{
+   assert(pattern != NULL);
+   assert(type >= 0);
+
+   --(pattern->nelems[type]);
+}
+
+/** returns the number of elements of a given type in the pattern */
+int SCIPpatternGetNElemens(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< element of a given type */
+   )
+{
+   assert(pattern != NULL);
+   assert(pattern->nelems != NULL);
+   assert(type >= 0 && type < pattern->ntypes);
+
+   return pattern->nelems[type];
+}
+
 /** returns the type of a pattern */
-SCIP_PATTERNTYPE SCIPpatternGetType(
+SCIP_PATTERNTYPE SCIPpatternGetPatternType(
    SCIP_PATTERN*         pattern             /**< pattern */
    )
 {
    assert(pattern != NULL);
 
-   return pattern->type;}
+   return pattern->patterntype;
+}
+
+/** returns the type of the boundary circle
+ *
+ * @note this function can only be called for circular patterns
+ */
+int SCIPpatternGetType(
+   SCIP_PATTERN*         pattern             /**< pattern */
+   )
+{
+   assert(pattern != NULL);
+   assert(pattern->patterntype == SCIP_PATTERNTYPE_CIRCULAR);
+
+   return pattern->type;
+}
 
 /** returns the packable status of a pattern */
 SCIP_PACKABLE SCIPpatternGetPackableStatus(

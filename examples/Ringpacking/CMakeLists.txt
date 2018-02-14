@@ -9,6 +9,7 @@ add_executable(rinpacking
    src/cmain.c
    src/reader_rpa.c
    src/probdata_rpa.c
+   src/pricer_rpa.c
    src/pattern.c)
 
 target_link_libraries(rinpacking ${SCIP_LIBRARIES})

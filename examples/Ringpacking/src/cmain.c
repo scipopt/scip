@@ -29,6 +29,7 @@
 #include "scip/scipdefplugins.h"
 
 #include "reader_rpa.h"
+#include "pricer_rpa.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
@@ -57,6 +58,9 @@ SCIP_RETCODE runShell(
 
    /* include reader for ringpacking instances */
    SCIP_CALL( SCIPincludeReaderRpa(scip) );
+
+   /* include ringpacking pricer  */
+   SCIP_CALL( SCIPincludePricerRingpacking(scip) );
 
    /* for column generation instances, disable restarts */
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
