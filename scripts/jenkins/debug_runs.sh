@@ -94,7 +94,7 @@ JOBS[2,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=
 
 # jobs running on wednesday
 JOBS[3,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
-JOBS[3,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_presolaggr_sebaaggr_heuroff_${RANDOMSEED}"
+JOBS[3,2]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
 
 # jobs running on thursday
 JOBS[4,1]="EXECUTABLE=scipdbgspx MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=heuraggr_${RANDOMSEED}"
