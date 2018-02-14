@@ -29,6 +29,13 @@
 
 #include <string.h>
 
+/* properties of the ringpacking statistics table */
+#define TABLE_NAME_RPA                       "ringpacking"
+#define TABLE_DESC_RPA                       "ringpacking statistics"
+#define TABLE_POSITION_RPA                   12500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_RPA             SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+
+
 #ifndef M_PI
 #define M_PI           3.141592653589793238462643
 #endif
@@ -61,6 +68,10 @@ struct SCIP_ProbData
    SCIP_VAR**            rvars;              /**< variables corresponding to rectangular patterns */
    int                   nrpatterns;         /**< total number of rectangular patterns */
    int                   rpatternsize;       /**< size of rpatterns and rvars array */
+
+   /* variables for statistics */
+   int                   ncppatternsunknownbeg;/**< number of unknown circular patterns after enumeration step */
+   SCIP_Real             enumtime;           /**< time spend for enumerating circular patterns */
 };
 
 
@@ -213,6 +224,28 @@ SCIP_RETCODE probdataFree(
    return SCIP_OKAY;
 }
 
+/** counts the number of circular patterns with a given packable status */
+static
+int getNCPatterns(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PACKABLE         status              /**< packable status */
+   )
+{
+   int count = 0;
+   int p;
+
+   assert(probdata != NULL);
+
+   for( p = 0; p < probdata->ncpatterns; ++p )
+   {
+      if( SCIPpatternGetPackableStatus(probdata->cpatterns[p]) == status )
+         ++count;
+   }
+
+   return count;
+}
+
 /** ensures a minimum size of the pattern and variable arrays */
 static
 SCIP_RETCODE ensureSize(
@@ -267,25 +300,7 @@ SCIP_RETCODE computeCircularPatterns(
    demands = SCIPprobdataGetDemands(probdata);
    assert(demands != NULL);
 
-   /* create an empty circular pattern for each type */
-   for( t = 0; t < ntypes; ++t )
-   {
-      SCIP_PATTERN* pattern;
-      SCIP_VAR* var;
-
-      SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, ntypes, t) );
-      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b%d", t);
-      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, (SCIP_Real)demands[t], 0.0, SCIP_VARTYPE_INTEGER) );
-      SCIP_CALL( SCIPaddVar(scip, var) );
-
-      /* add variable and pattern to the problem data */
-      SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var, SCIP_PATTERNTYPE_CIRCULAR) );
-
-      SCIP_CALL( SCIPreleaseVar(scip, &var) );
-      SCIPpatternRelease(scip, &pattern);
-   }
+   probdata->enumtime = -SCIPgetTotalTime(scip);
 
    /* create an empty circular pattern for each type */
    for( t = 0; t < ntypes; ++t )
@@ -307,27 +322,11 @@ SCIP_RETCODE computeCircularPatterns(
       SCIPpatternRelease(scip, &pattern);
    }
 
-   /* create an empty circular pattern for each type */
-   for( t = 0; t < ntypes; ++t )
-   {
-      SCIP_PATTERN* pattern;
-      SCIP_VAR* var;
-
-      SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, ntypes, t) );
-      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "d%d", t);
-      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, (SCIP_Real)demands[t], 0.0, SCIP_VARTYPE_INTEGER) );
-      SCIP_CALL( SCIPaddVar(scip, var) );
-
-      /* add variable and pattern to the problem data */
-      SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var, SCIP_PATTERNTYPE_CIRCULAR) );
-
-      SCIP_CALL( SCIPreleaseVar(scip, &var) );
-      SCIPpatternRelease(scip, &pattern);
-   }
-
    /* TODO compute all circular patterns */
+
+   /* update statistics */
+   probdata->enumtime += SCIPgetTotalTime(scip);
+   probdata->ncppatternsunknownbeg = getNCPatterns(scip, probdata, SCIP_PACKABLE_UNKNOWN);
 
    return SCIP_OKAY;
 }
@@ -481,6 +480,46 @@ SCIP_RETCODE setupProblem(
    return SCIP_OKAY;
 }
 
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
+{ /*lint --e{715}*/
+   SCIP_PROBDATA* probdata;
+   int* demands;
+   int ntypes;
+   int nrings;
+   int t;
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   ntypes = SCIPprobdataGetNTypes(probdata);
+   demands = SCIPprobdataGetDemands(probdata);
+   nrings = 0;
+
+   /* count the number of rings */
+   for( t = 0; t < ntypes; ++t )
+      nrings += demands[t];
+
+   SCIPinfoMessage(scip, file, "Ringpacking        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_no", "RP", "CP_time");
+
+   SCIPinfoMessage(scip, file, "  %-17s:", SCIPgetProbName(scip));
+   SCIPinfoMessage(scip, file, " %10d", ntypes);
+   SCIPinfoMessage(scip, file, " %10d", nrings);
+   SCIPinfoMessage(scip, file, " %10.2f", SCIPprobdataGetWidth(probdata));
+   SCIPinfoMessage(scip, file, " %10.2f", SCIPprobdataGetHeight(probdata));
+   SCIPinfoMessage(scip, file, " %10d", probdata->ncpatterns);
+   SCIPinfoMessage(scip, file, " %10d", probdata->ncppatternsunknownbeg);
+   SCIPinfoMessage(scip, file, " %10d", getNCPatterns(scip, probdata, SCIP_PACKABLE_UNKNOWN));
+   SCIPinfoMessage(scip, file, " %10d", getNCPatterns(scip, probdata, SCIP_PACKABLE_NO));
+   SCIPinfoMessage(scip, file, " %10d", probdata->nrpatterns);
+   SCIPinfoMessage(scip, file, " %10.2f", probdata->enumtime);
+   SCIPinfoMessage(scip, file, "\n");
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /**@name Callback methods of problem data
@@ -525,6 +564,10 @@ SCIP_DECL_PROBTRANS(probtransRingpacking)
    /* transform all variables */
    SCIP_CALL( SCIPtransformVars(scip, (*targetdata)->ncpatterns, (*targetdata)->cvars, (*targetdata)->cvars) );
    SCIP_CALL( SCIPtransformVars(scip, (*targetdata)->nrpatterns, (*targetdata)->rvars, (*targetdata)->rvars) );
+
+   /* copy statistics to transformed problem data */
+   (*targetdata)->ncppatternsunknownbeg = sourcedata->ncppatternsunknownbeg;
+   (*targetdata)->enumtime = sourcedata->enumtime;
 
    return SCIP_OKAY;
 }
@@ -583,6 +626,12 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* activate pricer */
    SCIP_CALL( SCIPpricerRingpackingActivate(scip) );
+
+   /* add table output */
+   assert(SCIPfindTable(scip, TABLE_NAME_RPA) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RPA, TABLE_DESC_RPA, TRUE,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputRpa,
+         NULL, TABLE_POSITION_RPA, TABLE_EARLIEST_STAGE_RPA) );
 
    return SCIP_OKAY;
 }
@@ -710,6 +759,7 @@ SCIP_RETCODE SCIPprobdataAddVar(
    assert(pattern != NULL);
    assert(var != NULL);
    assert(SCIPpatternGetPatternType(pattern) == patterntype);
+   assert(SCIPpatternGetPackableStatus(pattern) != SCIP_PACKABLE_NO);
 
    if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
    {
