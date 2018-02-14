@@ -659,8 +659,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
    assert(result != NULL);
 
    /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
-   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
-      return SCIP_OKAY;
+   //if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
+      //return SCIP_OKAY;
 
    /* the integer subproblem could terminate early if the auxiliary variable value is much greater than the optimal
     * solution. As such, it is only necessary to generate a cut if the subproblem is OPTIMAL */

@@ -208,9 +208,10 @@ set(scipsources
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
     scip/benders_default.c
-    scip/benderscut_opt.c
     scip/benderscut_feas.c
     scip/benderscut_int.c
+    scip/benderscut_nogood.c
+    scip/benderscut_opt.c
     scip/misc_benders.c
     scip/table_default.c
     scip/benders.c

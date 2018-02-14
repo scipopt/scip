@@ -681,9 +681,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/benders_default.o \
-			scip/benderscut_opt.o \
 			scip/benderscut_feas.o \
 			scip/benderscut_int.o \
+			scip/benderscut_nogood.o \
+			scip/benderscut_opt.o \
 			scip/misc_benders.o \
 			scip/table_default.o
 

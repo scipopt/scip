@@ -175,9 +175,11 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition data structure
  *  - infeasible      : indicates whether at least one subproblem is infeasible
+ *  - optimal         : indicates whether the current solution is optimal (i.e. no Benders cuts added)
  *  TODO: Need to update the parameters for this callback
  */
-#define SCIP_DECL_BENDERSPOSTSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol, SCIP_Bool infeasible)
+#define SCIP_DECL_BENDERSPOSTSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol,\
+   SCIP_Bool infeasible, SCIP_Bool optimal)
 
 /** frees the subproblem so that it can be resolved in the next iteration. In the SCIP case, this involves freeing the
  *  transformed problem using SCIPfreeTransform()

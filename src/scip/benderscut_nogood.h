@@ -13,36 +13,29 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bendersdefcuts.h
- * @ingroup PUBLICCOREAPI
- * @brief  default SCIP plugins
- * @author Tobias Achterberg
+/**@file   benderscut_nogood.h
+ * @ingroup BENDERS
+ * @brief  Generates a no-good cut for solutions that are integer infeasible
+ * @author Stephen J. Maher
  */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_BENDERSDEFCUTS_H__
-#define __SCIP_BENDERSDEFCUTS_H__
+#ifndef __SCIP_BENDERSCUT_NOGOOD_H__
+#define __SCIP_BENDERSCUT_NOGOOD_H__
+
 
 #include "scip/scip.h"
-
-/* include header files here, such that the user only has to include
- * bendersdefcuts.h
- */
-#include "scip/benderscut_feas.h"
-#include "scip/benderscut_int.h"
-#include "scip/benderscut_nogood.h"
-#include "scip/benderscut_opt.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** includes default SCIP plugins into SCIP */
+/** creates the no good Benders' decomposition cut and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludeBendersDefaultCuts(
+SCIP_RETCODE SCIPincludeBenderscutNogood(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders             /**< Benders' decomposition struture */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 #ifdef __cplusplus

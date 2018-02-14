@@ -18,7 +18,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 //#define SCIP_MOREDEBUG
 #include <assert.h>
 #include <string.h>
@@ -1497,6 +1497,7 @@ SCIP_RETCODE SCIPbendersExec(
 
    for( l = 0; l < nsolveloops; l++ )
    {
+      SCIPdebugMessage("Benders' decomposition - solve loop %d\n", l);
       numnotopt = 0;
       subproblemcount = 0;
 
@@ -1703,7 +1704,11 @@ SCIP_RETCODE SCIPbendersExec(
    /* calling the post-solve call back for the Benders' decomposition algorithm. This allows the user to work directly
     * with the solved subproblems and the master problem */
    if( benders->benderspostsolve != NULL )
-      SCIP_CALL( benders->benderspostsolve(set->scip, benders, sol, (*infeasible)) );
+   {
+      printf("checkint %d result %d\n", checkint, (*result));
+      SCIP_CALL( benders->benderspostsolve(set->scip, benders, sol, (*infeasible),
+            (checkint && (*result) != SCIP_CONSADDED && (*result) != SCIP_SEPARATED)) );
+   }
 
    /* freeing the subproblems after the cuts are generated */
    i = benders->firstchecked;
