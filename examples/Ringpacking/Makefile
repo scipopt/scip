@@ -35,6 +35,7 @@ include $(SCIPDIR)/make/make.project
 
 MAINNAME	=	rinpacking
 CMAINOBJ	=	cmain.o \
+	cons_rpa.o \
 	reader_rpa.o \
 	probdata_rpa.o \
 	pricer_rpa.o \

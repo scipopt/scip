@@ -28,6 +28,7 @@
 #include "scip/scipshell.h"
 #include "scip/scipdefplugins.h"
 
+#include "cons_rpa.h"
 #include "reader_rpa.h"
 #include "pricer_rpa.h"
 
@@ -58,6 +59,9 @@ SCIP_RETCODE runShell(
 
    /* include reader for ringpacking instances */
    SCIP_CALL( SCIPincludeReaderRpa(scip) );
+
+   /* include ringpacking constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrRpa(scip) );
 
    /* include ringpacking pricer  */
    SCIP_CALL( SCIPincludePricerRingpacking(scip) );

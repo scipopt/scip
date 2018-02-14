@@ -256,6 +256,7 @@ SCIP_RETCODE computeCircularPatterns(
    )
 {
    char name[SCIP_MAXSTRLEN];
+   int* demands;
    int ntypes;
    int t;
 
@@ -263,6 +264,29 @@ SCIP_RETCODE computeCircularPatterns(
 
    ntypes = SCIPprobdataGetNTypes(probdata);
    assert(ntypes > 0);
+
+   demands = SCIPprobdataGetDemands(probdata);
+   assert(demands != NULL);
+
+   /* create an empty circular pattern for each type */
+   for( t = 0; t < ntypes; ++t )
+   {
+      SCIP_PATTERN* pattern;
+      SCIP_VAR* var;
+
+      SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, ntypes, t) );
+      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b%d", t);
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, (SCIP_Real)demands[t], 0.0, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* add variable and pattern to the problem data */
+      SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var, SCIP_PATTERNTYPE_CIRCULAR) );
+
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );
+      SCIPpatternRelease(scip, &pattern);
+   }
 
    /* create an empty circular pattern for each type */
    for( t = 0; t < ntypes; ++t )
@@ -274,7 +298,27 @@ SCIP_RETCODE computeCircularPatterns(
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", t);
-      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, (SCIP_Real)demands[t], 0.0, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* add variable and pattern to the problem data */
+      SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var, SCIP_PATTERNTYPE_CIRCULAR) );
+
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );
+      SCIPpatternRelease(scip, &pattern);
+   }
+
+   /* create an empty circular pattern for each type */
+   for( t = 0; t < ntypes; ++t )
+   {
+      SCIP_PATTERN* pattern;
+      SCIP_VAR* var;
+
+      SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, ntypes, t) );
+      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "d%d", t);
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, (SCIP_Real)demands[t], 0.0, SCIP_VARTYPE_INTEGER) );
       SCIP_CALL( SCIPaddVar(scip, var) );
 
       /* add variable and pattern to the problem data */
