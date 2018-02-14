@@ -490,12 +490,14 @@ SCIP_RETCODE SCIPmatrixCreate(
             /* increment number of supported constraints */
             nconss += nconshdlrconss;
          }
-         else if (strcmp(conshdlrname, "linking") == 0 )
+/* disabled because some of the presolvers can currently only handle 1-1 row-cons relationships */
+#ifdef SCIP_DISABLED_CODE
+         else if( strcmp(conshdlrname, "linking") == 0 )
          {
             /* the linear representation of linking constraints involves two linear constraints */
             nconss += 2* nconshdlrconss;
          }
-
+#endif
          /* increment number of supported and unsupported constraints */
          nconssall += nconshdlrconss;
       }
@@ -765,6 +767,11 @@ SCIP_RETCODE SCIPmatrixCreate(
             SCIPfreeBufferArray(scip, &consvars);
          }
       }
+/* the code below is correct. However, it needs to be disabled
+ * because some of the presolvers can currently only handle 1-1 row-cons relationships,
+ * while the linking constraint handler requires a representation as 2 linear constraints.
+ */
+#ifdef SCIP_DISABLED_CODE
       else if( strcmp(conshdlrname, "linking") == 0 )
       {
          if( nconshdlrconss > 0 )
@@ -828,6 +835,7 @@ SCIP_RETCODE SCIPmatrixCreate(
             SCIPfreeBufferArray(scip, &consvars);
          }
       }
+#endif
    }
    assert(matrix->nrows == cnt);
    assert(matrix->nrows <= nconss);
