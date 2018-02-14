@@ -16,6 +16,8 @@
 /**@file   cons_rpa.c
  * @brief  constraint handler for recursive circle packing
  * @author Benjamin Mueller
+ *
+ * @todo Is it enough the lock the unverified circular pattern variables only in the positive direction?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
