@@ -120,7 +120,7 @@ void setNodeSolArray(
    }
 
    if( uborg != NULL)
-      *uborg += ub;
+      *uborg = ub;
 }
 
 /** computes new solution during execution of prune and updates best global one if possible */
@@ -496,7 +496,6 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    )
 {
-   IDX** ancestors;
    SCIP_Real objnew;
    int* const pmark = prunegraph->mark;
    const int nnodes = g->knots;
@@ -553,43 +552,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
     * retransform new solution and compare with best global one
     */
 
-   ancestors = prunegraph->ancestors;
-
-   for( int k = 0; k < nnodes; k++ )
-      nodearrchar[k] = FALSE;
-
-   for( int e = 0; e < nedges; e++ )
-      if( soledge[e] == CONNECT )
-         graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
-
-   /* retransform edges fixed during graph reduction */
-   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
-
-   if( pcmw )
-   {
-      for( int k = 0; k < nnodes; k++ )
-         if( nodearrchar[k] )
-         {
-            IDX* curr = prunegraph->pcancestors[k];
-            while( curr != NULL )
-            {
-               const int idx = curr->index;
-               nodearrchar[g->tail[idx]] = TRUE;
-               nodearrchar[g->head[idx]] = TRUE;
-
-               curr = curr->parent;
-            }
-         }
-   }
-
-   for( int e = 0; e < nedges; e++ )
-      edgearrint[e] = UNKNOWN;
-
-   /* prune solution (in original graph) */
-   if( pcmw )
-      SCIP_CALL(SCIPStpHeurTMPrunePc(scip, g, g->cost, edgearrint, nodearrchar));
-   else
-      SCIP_CALL(SCIPStpHeurTMPrune(scip, g, g->cost, 0, edgearrint, nodearrchar));
+   SCIP_CALL( graph_sol_getOrg(scip, prunegraph, g, soledge, edgearrint) );
 
    assert(graph_sol_valid(scip, g, edgearrint));
 

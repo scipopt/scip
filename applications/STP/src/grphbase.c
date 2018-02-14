@@ -39,6 +39,7 @@
 #include "misc_stp.h"
 #include "scip/misc.h"
 #include "grph.h"
+#include "heur_tm.h"
 
 
 /*
@@ -2011,6 +2012,17 @@ SCIP_RETCODE graph_pc_contractEdge(
    return SCIP_OKAY;
 }
 
+/** is this graph a prize-collecting or maximum-weight variant? */
+SCIP_Bool graph_pc_isPcMw(
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   const int type = g->stp_type;
+   assert(g != NULL);
+
+   return (type == STP_PCSPG || type == STP_RPCSPG || type == STP_MWCSP || type == STP_RMWCSP);
+}
+
 
 /** add a vertex */
 void graph_knot_add(
@@ -2844,6 +2856,90 @@ SCIP_Real graph_sol_getObj(
    return obj;
 }
 
+/** get original solution */
+SCIP_RETCODE graph_sol_getOrg(
+   SCIP*           scip,               /**< SCIP data structure */
+   const GRAPH*    transgraph,         /**< the transformed graph */
+   const GRAPH*    orggraph,           /**< the original graph */
+   const int*      transsoledge,       /**< solution for transformed problem */
+   int*            orgsoledge          /**< new retransformed solution */
+)
+{
+   STP_Bool* orgnodearr;
+   STP_Bool* transnodearr = NULL;
+
+   IDX** const ancestors = transgraph->ancestors;
+
+   const int transnedges = transgraph->edges;
+   const int transnnodes = transgraph->knots;
+   const int orgnnodes = orggraph->knots;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(transgraph);
+
+   assert(transgraph != NULL && orggraph != NULL && transsoledge != NULL && orgsoledge != NULL);
+   assert(transgraph->ancestors != NULL);
+   assert(transgraph->stp_type == orggraph->stp_type);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgnodearr, orgnnodes) );
+
+   if( pcmw )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &transnodearr, transnnodes) );
+
+      for( int k = 0; k < transnnodes; k++ )
+         transnodearr[k] = FALSE;
+
+      for( int e = 0; e < transnedges; e++ )
+         if( transsoledge[e] == CONNECT )
+         {
+            transnodearr[transgraph->tail[e]] = TRUE;
+            transnodearr[transgraph->head[e]] = TRUE;
+         }
+   }
+
+   for( int k = 0; k < orgnnodes; k++ )
+      orgnodearr[k] = FALSE;
+
+   for( int e = 0; e < transnedges; e++ )
+      if( transsoledge[e] == CONNECT )
+         graph_sol_setNodeList(orggraph, orgnodearr, ancestors[e]);
+
+   /* retransform edges fixed during graph reduction */
+   graph_sol_setNodeList(orggraph, orgnodearr, transgraph->fixedges);
+
+   if( pcmw )
+   {
+      for( int k = 0; k < transnnodes; k++ )
+         if( transnodearr[k] )
+         {
+            IDX* curr = transgraph->pcancestors[k];
+            while( curr != NULL )
+            {
+               const int idx = curr->index;
+               orgnodearr[orggraph->tail[idx]] = TRUE;
+               orgnodearr[orggraph->head[idx]] = TRUE;
+
+               curr = curr->parent;
+            }
+         }
+   }
+
+   for( int e = 0; e < orggraph->edges; e++ )
+      orgsoledge[e] = UNKNOWN;
+
+   /* prune solution (in original graph) */
+   if( pcmw )
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, orggraph, orggraph->cost, orgsoledge, orgnodearr) );
+   else
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, orggraph, orggraph->cost, 0, orgsoledge, orgnodearr) );
+
+   SCIPfreeBufferArray(scip, &orgnodearr);
+   SCIPfreeBufferArrayNull(scip, &transnodearr);
+
+   assert(graph_sol_valid(scip, orggraph, orgsoledge));
+
+   return SCIP_OKAY;
+}
+
 
 /** get (real) number of nodes , edges, terminals */
 void graph_get_NVET(
@@ -3009,7 +3105,7 @@ SCIP_RETCODE graph_init_history(
    assert(scip != NULL);
    assert(graph != NULL);
 
-   pcmw = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP);
+   pcmw = graph_pc_isPcMw(graph);
 
    nedges = graph->edges;
 

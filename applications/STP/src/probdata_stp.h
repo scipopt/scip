@@ -57,6 +57,12 @@ GRAPH* SCIPprobdataGetGraph(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
+/** returns the graph */
+EXTERN
+GRAPH* SCIPprobdataGetGraph2(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** sets the offset */
 EXTERN
 void SCIPprobdataSetOffset(

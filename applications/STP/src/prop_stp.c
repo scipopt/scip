@@ -362,12 +362,14 @@ SCIP_RETCODE redbasedVarfixing(
    propgraph = propdata->propgraph;
    assert(propgraph != NULL);
 
+   graph_free_history(scip, propgraph);
+   graph_free_historyDeep(scip, propgraph);
+
    /* copy the graph */
    SCIP_CALL( graph_copy_data(scip, g, propgraph) );
    propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
-   /* set ancestor data structures of the new graph */
-   SCIP_CALL( graph_init_history(scip, propgraph) );
+   SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
 
    for( int e = 0; e < nedges; e++ )
       remain[e] = PROP_STP_EDGE_UNSET;
@@ -501,8 +503,6 @@ SCIP_RETCODE redbasedVarfixing(
 
 TERMINATE:
 
-   graph_free_history(scip, propgraph);
-   graph_free_historyDeep(scip, propgraph);
    SCIPfreeBufferArray(scip, &remain);
 
    return SCIP_OKAY;
@@ -599,6 +599,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    {
       propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
       SCIP_CALL( graph_copy(scip, graph, &(propdata->propgraph)) );
+      SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
       assert(propdata->nfixededges == 0);
    }
 

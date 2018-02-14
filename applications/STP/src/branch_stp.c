@@ -136,75 +136,104 @@ SCIP_RETCODE selectBranchingVertexBySol(
    SCIP_Bool             addsol              /**< add new solution to pool? */
    )
 {
-   GRAPH* propgraph;
+   GRAPH* graph;
    SCIP_Real* cost;
    SCIP_Real* costrev;
    int* soledges;
-   SCIP_Longint graphnodenumber;
+   int* nodestatenew;
+   int* termorg;
+
    SCIP_Bool success;
    int nedges;
    int nnodes;
    int maxdeg;
 
+   assert(vertex != NULL);
    *vertex = UNKNOWN;
 
    /* check whether LP solution is available */
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   /* get local graph from propagator */
-   SCIPStpPropGetGraph(scip, &propgraph, &graphnodenumber);
+   graph = SCIPprobdataGetGraph2(scip);
+   assert(graph != NULL);
 
-   if( propgraph == NULL || graphnodenumber != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
-      return SCIP_OKAY;
-
-   if( !graph_valid(propgraph) )
-      return SCIP_OKAY;
-
-   nedges = propgraph->edges;
-   nnodes = propgraph->knots;
+   nedges = graph->edges;
+   nnodes = graph->knots;
 
    /*
     * compute locally feasible solution (SPH + local)
     */
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &cost, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &costrev, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &soledges, nedges));
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &soledges, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodestatenew, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termorg, nnodes) );
 
-   SCIP_CALL( graph_path_init(scip, propgraph) );
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(graph->term[k]) )
+         nodestatenew[k] = BRANCH_STP_VERTEX_TERM;
+      else
+         nodestatenew[k] = BRANCH_STP_VERTEX_NONTERM;
+   }
 
-   SCIP_CALL( SCIPStpHeurTMRunLP(scip, propgraph, NULL, soledges, BRANCHRULE_TMRUNS, cost, costrev, &success) );
+   BMScopyMemoryArray(termorg, graph->term, nnodes);
+
+   /* get vertex changes from branch-and-bound */
+   if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestatenew, NULL) );
+
+   /* currently not supported because of next loop */
+   assert(!graph_pc_isPcMw(graph));
+
+   for( int k = 0; k < nnodes; k++ )
+      if( !Is_term(graph->term[k]) && nodestatenew[k] == BRANCH_STP_VERTEX_TERM )
+      {
+         assert(graph->grad[k] > 0);
+         graph_knot_chg(graph, k, 0);
+      }
+
+   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, NULL, soledges, BRANCHRULE_TMRUNS, cost, costrev, &success) );
    assert(success);
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, soledges) );
 
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, propgraph, propgraph->cost, soledges) );
+   assert(graph_sol_valid(scip, graph, soledges));
 
-   assert(graph_sol_valid(scip, propgraph, soledges));
+   for( int k = 0; k < nnodes; k++ )
+      if( graph->term[k] != termorg[k] )
+         graph_knot_chg(graph, k, termorg[k]);
 
-   graph_path_exit(scip, propgraph);
+   assert(graph_sol_valid(scip, graph, soledges));
 
    if( addsol )
    {
       SCIP_SOL* sol = NULL;
 
+      const int nvars = SCIPprobdataGetNVars(scip);
+
+      assert(graph->edges == nvars);
+
       /* use cost array to store solution */
-      for( int e = 0; e < nedges; e++ )
+      for( int e = 0; e < nvars; e++ )
          if( soledges[e] == CONNECT )
             cost[e] = 1.0;
          else
             cost[e] = 0.0;
 
       SCIP_CALL( SCIPprobdataAddNewSol(scip, cost, sol, NULL, &success) );
+      SCIPdebugMessage("solution added? %d \n", success);
    }
 
    /* get vertex with highest degree in solution */
    maxdeg = -1;
    for( int i = 0; i < nnodes; i++ )
    {
-      if( !Is_term(propgraph->term[i]) && propgraph->grad[i] != 0 )
+      if( nodestatenew[i] == BRANCH_STP_VERTEX_NONTERM && graph->grad[i] != 0 )
       {
          int soldeg = 0;
-         for( int e = propgraph->outbeg[i]; e != EAT_LAST; e = propgraph->oeat[e] )
+         for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
             if( soledges[e] == CONNECT || soledges[flipedge(e)] == CONNECT )
                soldeg++;
          if( soldeg > maxdeg )
@@ -215,6 +244,8 @@ SCIP_RETCODE selectBranchingVertexBySol(
       }
    }
 
+   SCIPfreeBufferArray(scip, &termorg);
+   SCIPfreeBufferArray(scip, &nodestatenew);
    SCIPfreeBufferArray(scip, &soledges);
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
@@ -231,44 +262,36 @@ SCIP_RETCODE selectBranchingVertexByLp(
    )
 {
    SCIP_VAR** edgevars;
-   SCIP_Real maxflow;
-   SCIP_Real* inflow;
-   int a;
-   int k;
-   int branchvert;
+   SCIP_Real bestflow;
    const int nnodes = g->knots;
+
+   assert(g != NULL && vertex != NULL);
+
+   *vertex = UNKNOWN;
 
    /* LP has not been solved */
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-   {
-      *vertex = UNKNOWN;
       return SCIP_OKAY;
-   }
 
    edgevars = SCIPprobdataGetEdgeVars(scip);
    assert(edgevars != NULL);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &inflow, nnodes) );
-
-   branchvert = UNKNOWN;
-   maxflow = 1.0;
-   for( k = 0; k < nnodes; k++ )
+   bestflow = 1.0;
+   for( int k = 0; k < nnodes; k++ )
    {
-      inflow[k] = 0.0;
-      for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
-         inflow[k] += SCIPvarGetLPSol(edgevars[a]);
+      SCIP_Real inflow = 0.0;
+      for( int a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
+         inflow += SCIPvarGetLPSol(edgevars[a]);
 
-      if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow[k], 1.0) && SCIPisLT(scip, fabs(inflow[k] - 0.5), maxflow) )
+      if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow, 1.0) && fabs(inflow - 0.5) < bestflow )
       {
-         branchvert = k;
-         maxflow = fabs(inflow[k] - 0.5);
-         SCIPdebugMessage("new maxflow %f on vertex %d \n", inflow[k], branchvert );
+         *vertex = k;
+         bestflow = fabs(inflow - 0.5);
+         SCIPdebugMessage("new maxflow %f on vertex %d \n", inflow, k );
       }
    }
-   SCIPdebugMessage("maxflow %f on vertex %d, term? %d \n", maxflow, branchvert, Is_term(g->term[branchvert])  );
-   (*vertex) = branchvert;
 
-   SCIPfreeBufferArray(scip, &inflow);
+   SCIPdebugMessage("maxflow %f on vertex %d, term? %d \n", bestflow, *vertex, Is_term(g->term[*vertex])  );
 
    return SCIP_OKAY;
 }
@@ -608,9 +631,6 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
       char* consname;
 
       assert(SCIPnodeGetNAddedConss(node) == 1);
-
-      if( SCIPnodeGetNAddedConss(node) != 1 )
-         continue;
 
       /* get constraints */
       SCIPnodeGetAddedConss(node, &parentcons, &naddedconss, 1);

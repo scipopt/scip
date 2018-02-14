@@ -2375,6 +2375,20 @@ GRAPH* SCIPprobdataGetGraph(
    return probdata->graph;
 }
 
+/** returns the graph */
+GRAPH* SCIPprobdataGetGraph2(
+   SCIP*                 scip            /**< problem data */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->graph;
+}
 
 /** sets the offset */
 void SCIPprobdataSetOffset(
