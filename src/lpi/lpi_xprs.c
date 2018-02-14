@@ -2992,8 +2992,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* get (or calculate) the row in B^-1 */
    if( binvrow == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&binvrow, nrows) );
-
       SCIP_ALLOC( BMSallocMemoryArray(&buffer, nrows) );
       SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buffer, inds, ninds) );
       binv = buffer;

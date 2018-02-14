@@ -46,6 +46,7 @@ fixed bugs:
 - generate deprecation warnings when using SCIPaddCut
 - fix bug in sepa_gomory if cut is a bound change
 - fixed bug with NULL pointer handling in LPIs
+- fixed handling of infinite bounds in cons_sos1
 
 unit tests:
 - expanded unit tests of the lpis
