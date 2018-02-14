@@ -653,11 +653,18 @@ endforeach()
 
 #
 # add a test for handling of the SIGTERM signal. The test uses the timeout command that
-# is only available on unix (and possibly MAC, I did not check)
+# is only available on Linux, that is available on MAC OS as "gtimeout" after installing
+# the 'coreutils' package
 #
 if (UNIX)
+    if (APPLE)
+        set(timeoutcommand "gtimeout")
+    else ()
+        set(timeoutcommand "timeout")
+    endif (APPLE)
+
     add_test(NAME signal-handling-sigterm-blend2
-            COMMAND timeout -sSIGTERM 1 $<TARGET_FILE:scip> -f ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/blend2.mps
+            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -f ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/blend2.mps
             )
     set_tests_properties(signal-handling-sigterm-blend2
                         PROPERTIES
