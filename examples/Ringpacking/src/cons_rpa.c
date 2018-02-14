@@ -1,4 +1,3 @@
-#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -51,7 +50,6 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
 
-
 /*
  * Data structures
  */
@@ -60,7 +58,7 @@
 struct SCIP_ConshdlrData
 {
    SCIP_Bool*            locked;            /**< array to remember which (not verified) patterns have been locked */
-   int                   lockedzise;        /**< size of locked array */
+   int                   lockedsize;        /**< size of locked array */
 };
 
 
@@ -173,13 +171,15 @@ SCIP_RETCODE enforceCons(
 
       assert(SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN);
 
-      /* TODO verify pattern */
+      /*
+       * TODO verify pattern instead of just marking them as not packable
+       */
       SCIPpatternSetPackableStatus(cpatterns[p], SCIP_PACKABLE_NO);
 
       /* (2a.) fix corresponding variable to zero if pattern is not packable */
       if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_NO )
       {
-         SCIP_CALL( SCIPfixVar(scip, cvars[p], 0, &infeasible, &success) );
+         SCIP_CALL( SCIPfixVar(scip, cvars[p], 0.0, &infeasible, &success) );
          SCIPdebugMsg(scip, "fix pattern %d\n", p);
          assert(success);
          assert(!infeasible);
@@ -195,11 +195,12 @@ SCIP_RETCODE enforceCons(
    {
       if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN )
       {
-         SCIP_Bool success;
          SCIP_Bool infeasible;
+         SCIP_Bool success;
 
-         SCIP_CALL( SCIPfixVar(scip, cvars[p], 0, &infeasible, &success) );
-         SCIPdebugMsg(scip, "fix pattern %d (success=%u)\n", p, success);
+         SCIP_CALL( SCIPfixVar(scip, cvars[p], 0.0, &infeasible, &success) );
+         SCIPdebugMsg(scip, "fix pattern %d in [%g,%g] (success=%u)\n", p, SCIPvarGetLbLocal(cvars[p]),
+            SCIPvarGetUbLocal(cvars[p]), success);
          assert(!infeasible);
 
          if( success )
@@ -237,8 +238,8 @@ SCIP_DECL_CONSFREE(consFreeRpa)
 
    if( conshdlrdata->locked != NULL )
    {
-      SCIPfreeBlockMemoryArray(scip, &conshdlrdata->locked, conshdlrdata->lockedzise);
-      conshdlrdata->lockedzise = 0;
+      SCIPfreeBlockMemoryArray(scip, &conshdlrdata->locked, conshdlrdata->lockedsize);
+      conshdlrdata->lockedsize = 0;
    }
 
    SCIPfreeBlockMemory(scip, &conshdlrdata);
@@ -527,7 +528,7 @@ SCIP_DECL_CONSLOCK(consLockRpa)
       first = TRUE;
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->locked, ncpatterns) );
       BMSclearMemoryArray(conshdlrdata->locked, ncpatterns);
-      conshdlrdata->lockedzise = ncpatterns;
+      conshdlrdata->lockedsize = ncpatterns;
    }
    else
       first = FALSE;

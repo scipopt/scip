@@ -173,7 +173,6 @@ SCIP_RETCODE probdataFree(
    }
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->patternconss, (*probdata)->ntypes);
 
-
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->rexts, (*probdata)->ntypes);
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->rints, (*probdata)->ntypes);
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands, (*probdata)->ntypes);
@@ -513,7 +512,7 @@ SCIP_DECL_PROBDELTRANS(probdeltransRingpacking)
  *  (called after problem was transformed) */
 static
 SCIP_DECL_PROBTRANS(probtransRingpacking)
-{
+{  /*lint --e{715}*/
    /* create transformed problem data */
    SCIP_CALL( probdataCreate(scip, targetdata, sourcedata->patternconss, sourcedata->cpatterns, sourcedata->cvars,
             sourcedata->ncpatterns, sourcedata->rpatterns, sourcedata->rvars, sourcedata->nrpatterns,
@@ -533,14 +532,14 @@ SCIP_DECL_PROBTRANS(probtransRingpacking)
 /** solving process initialization method of transformed data (called before the branch and bound process begins) */
 static
 SCIP_DECL_PROBINITSOL(probinitsolRingpacking)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
 /** solving process deinitialization method of transformed data (called before the branch and bound data is freed) */
 static
 SCIP_DECL_PROBEXITSOL(probexitsolRingpacking)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
