@@ -1136,6 +1136,7 @@ SCIP_RETCODE solveComponent(
    case SCIP_STATUS_USERINTERRUPT:
       SCIP_CALL( SCIPinterruptSolve(scip) );
       break;
+   case SCIP_STATUS_TERMINATE:
    case SCIP_STATUS_UNKNOWN:
    case SCIP_STATUS_NODELIMIT:
    case SCIP_STATUS_TOTALNODELIMIT:

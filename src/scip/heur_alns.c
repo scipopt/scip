@@ -514,6 +514,7 @@ void updateFixingRate(
          break;
       case SCIP_STATUS_STALLNODELIMIT:
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
       case SCIP_STATUS_NODELIMIT:
          /* increase the fixing rate (make the subproblem easier) only if no solution was found */
          if( runstats->nbestsolsfound <= 0 )
