@@ -134,4 +134,12 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
    SCIP_Longint          nodelim             /**< node limit */
    );
 
+/** check whether a pattern for consistency */
+extern
+void SCIPcheckPattern(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PATTERN*         pattern             /**< pattern */
+   );
+
 #endif /* __SCIP_PROBDATA_RINPACKING__ */

@@ -70,7 +70,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool*            tried;             /**< array to mark circular patterns that have been tried to be verified */
 };
 
-
 /*
  * Local methods
  */
@@ -286,7 +285,6 @@ SCIP_RETCODE enforceSol(
    return SCIP_OKAY;
 }
 
-
 /*
  * Callback methods of event handler
  */
@@ -330,7 +328,15 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 
          /* pattern is either not used or packable */
          assert(SCIPisFeasZero(scip, val) || SCIPpatternGetPackableStatus(patterns[p]) == SCIP_PACKABLE_YES);
+         SCIPcheckPattern(scip, probdata, patterns[p]);
       }
+
+      /* check rectangular patterns */
+      SCIPprobdataGetRInfos(probdata, &patterns, &vars, &npatterns);
+      assert(npatterns > 0);
+
+      for( p = 0; p < npatterns; ++p )
+         SCIPcheckPattern(scip, probdata, patterns[p]);
    }
 #endif
 

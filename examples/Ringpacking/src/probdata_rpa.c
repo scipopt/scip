@@ -766,6 +766,9 @@ SCIP_RETCODE SCIPprobdataAddVar(
    assert(SCIPpatternGetPatternType(pattern) == patterntype);
    assert(SCIPpatternGetPackableStatus(pattern) != SCIP_PACKABLE_NO);
 
+   /* check pattern for consistency */
+   SCIPcheckPattern(scip, probdata, pattern);
+
    if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
    {
       SCIP_CALL( ensureSize(scip, probdata, patterntype, probdata->ncpatterns + 1) );
@@ -1037,6 +1040,80 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
    SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
+}
+
+/** check whether a pattern for consistency */
+extern
+void SCIPcheckPattern(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PATTERN*         pattern             /**< pattern */
+   )
+{  /*lint --e{715}*/
+#ifndef NDEBUG
+   SCIP_Real* rexts;
+   SCIP_Real* rints;
+   SCIP_Real width;
+   SCIP_Real height;
+   int i;
+
+   assert(probdata != NULL);
+   assert(pattern != NULL);
+
+   rexts = SCIPprobdataGetRexts(probdata);
+   rints = SCIPprobdataGetRints(probdata);
+   width = SCIPprobdataGetWidth(probdata);
+   height = SCIPprobdataGetHeight(probdata);
+
+   /* check types */
+   for( i = 0; i < SCIPpatternGetNElemens(pattern); ++i )
+   {
+      int type = SCIPpatternGetElementType(pattern, i);
+
+      assert(type >= 0);
+      assert(type < SCIPprobdataGetNTypes(probdata));
+   }
+
+   /* check positions iff packable */
+   if( SCIPpatternGetPackableStatus(pattern) != SCIP_PACKABLE_YES )
+      return;
+
+   for( i = 0; i < SCIPpatternGetNElemens(pattern); ++i )
+   {
+      SCIP_Real xi = SCIPpatternGetElementPosX(pattern, i);
+      SCIP_Real yi = SCIPpatternGetElementPosY(pattern, i);
+      int typei = SCIPpatternGetElementType(pattern, i);
+      int j;
+
+      /* check distance between circles */
+      for( j = i + 1; j < SCIPpatternGetNElemens(pattern); ++j )
+      {
+         SCIP_Real xj = SCIPpatternGetElementPosX(pattern, j);
+         SCIP_Real yj = SCIPpatternGetElementPosY(pattern, j);
+         int typej = SCIPpatternGetElementType(pattern, j);
+
+         assert(SCIPisFeasGE(scip, SQRT(SQR(xi - xj) + SQR(yi - yj)), rexts[typei] + rexts[typej]));
+      }
+
+      /* check distance to boundary */
+      if( SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR )
+      {
+         SCIP_Real distance = SQRT(SQR(xi) + SQR(yi));
+         int patterntype = SCIPpatternGetType(pattern);
+
+         assert(patterntype >= 0);
+         assert(patterntype < SCIPprobdataGetNTypes(probdata));
+         assert(SCIPisFeasLE(scip, distance, rints[patterntype] - rexts[typei]));
+      }
+      else
+      {
+         assert(SCIPisFeasGE(scip, xi, rexts[typei]));
+         assert(SCIPisFeasLE(scip, xi, width - rexts[typei]));
+         assert(SCIPisFeasGE(scip, yi, rexts[typei]));
+         assert(SCIPisFeasLE(scip, yi, height - rexts[typei]));
+      }
+   }
+#endif
 }
 
 /**@} */
