@@ -809,7 +809,7 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    rints = SCIPprobdataGetRints(probdata);
 
    /* pattern is empty -> set status to packable */
-   if( SCIPpatternGetNElemens(pattern) == 111 )
+   if( SCIPpatternGetNElemens(pattern) == 0 )
    {
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
       return SCIP_OKAY;
