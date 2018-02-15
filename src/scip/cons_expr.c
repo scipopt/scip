@@ -2413,7 +2413,7 @@ SCIP_RETCODE forwardPropCons(
    /* handle constant expressions separately; either the problem is infeasible or the constraint is redundant */
    if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
    {
-      SCIP_Real value = SCIPgetConsExprExprValue(consdata->expr);
+      SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
       if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasLT(scip, value - consdata->lhs, 0.0))
          || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasGT(scip, value - consdata->rhs, 0.0)) )
          *infeasible = TRUE;
