@@ -49,11 +49,14 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 #define BRANCHRULE_TMRUNS          20
 
-#define DEFAULT_USELOCALSOL      FALSE
-
 #define BRANCH_STP_VERTEX_KILLED      -1
 #define BRANCH_STP_VERTEX_NONTERM      0
 #define BRANCH_STP_VERTEX_TERM         1
+
+#define BRANCH_STP_ON_LP   0
+#define BRANCH_STP_ON_LP2  1
+#define BRANCH_STP_ON_SOL  2
+
 
 /*
  * Data structures
@@ -63,7 +66,7 @@
 struct SCIP_BranchruleData
 {
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
-   SCIP_Bool             uselocalsol;        /**< branch on vertex of highest degree in best local solution? */
+   int                   branchtype;         /**< type of branching */
 };
 
 
@@ -109,7 +112,6 @@ SCIP_RETCODE selectBranchingVertexByDegree(
 
    SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL) );
 
-   /* */
    for( int k = 0; k < nnodes; k++ )
    {
       if( nodestate[k] == BRANCH_STP_VERTEX_NONTERM && g->grad[k] > maxdegree )
@@ -121,7 +123,7 @@ SCIP_RETCODE selectBranchingVertexByDegree(
       }
    }
 
-   printf("vertex selected by degree branching rule: %d \n\n", *vertex);
+   SCIPdebugMessage("vertex selected by degree branching rule: %d \n\n", *vertex);
 
    SCIPfreeBufferArray(scip, &nodestate);
 
@@ -283,7 +285,7 @@ SCIP_RETCODE selectBranchingVertexByLp(
       for( int a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
          inflow += SCIPvarGetLPSol(edgevars[a]);
 
-      if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow, 1.0) && fabs(inflow - 0.5) < bestflow )
+      if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow, 1.0) && fabs(inflow - 0.5) < bestflow && SCIPisPositive(scip, inflow) )
       {
          *vertex = k;
          bestflow = fabs(inflow - 0.5);
@@ -295,6 +297,81 @@ SCIP_RETCODE selectBranchingVertexByLp(
 
    return SCIP_OKAY;
 }
+
+/** select vertices with flow on at least two incoming arcs */
+static
+SCIP_RETCODE selectBranchingVertexByLp2Flow(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   int*                  vertex,             /**< the vertex to branch on */
+   const GRAPH*          g                   /**< graph */
+   )
+{
+   SCIP_VAR** edgevars;
+   int* nodestate;
+   SCIP_Real bestflow;
+   const int nnodes = g->knots;
+
+   assert(g != NULL && vertex != NULL);
+
+   *vertex = UNKNOWN;
+
+   /* has LP not been solved? */
+   if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) )
+         nodestate[k] = BRANCH_STP_VERTEX_TERM;
+      else
+         nodestate[k] = BRANCH_STP_VERTEX_NONTERM;
+   }
+
+   /* get vertex changes from branch-and-bound */
+   if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL) );
+
+   edgevars = SCIPprobdataGetEdgeVars(scip);
+   assert(edgevars != NULL);
+
+   bestflow = 1.0;
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( nodestate[k] == BRANCH_STP_VERTEX_NONTERM )
+      {
+         int ninarcs = 0;
+         assert(g->grad[k] > 0);
+         assert(!Is_term(g->term[k]));
+
+         for( int a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
+            if( SCIPisPositive(scip, SCIPvarGetLPSol(edgevars[a])) )
+               ninarcs++;
+
+         if( ninarcs > 1 )
+         {
+            SCIP_Real inflow = 0.0;
+            for( int a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
+               inflow += SCIPvarGetLPSol(edgevars[a]);
+
+            if( fabs(inflow - 0.5) < bestflow )
+            {
+               *vertex = k;
+               bestflow = fabs(inflow - 0.5);
+               SCIPdebugMessage("new maxflow %f on vertex %d \n", inflow, k );
+            }
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &nodestate);
+
+   printf("LP2: branch on vertex %d with abs(flow - 0.5): %f \n", *vertex, bestflow);
+
+   return SCIP_OKAY;
+}
+
 
 /** branch on specified (Steiner) vertex */
 static
@@ -452,19 +529,21 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
       return SCIP_OKAY;
 
    /* get vertex to branch on */
-   if( branchruledata->uselocalsol )
-      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
-   else
+   if( branchruledata->branchtype == BRANCH_STP_ON_LP )
       SCIP_CALL( selectBranchingVertexByLp(scip, &branchvertex, g) );
+   else if( branchruledata->branchtype == BRANCH_STP_ON_LP2 )
+      SCIP_CALL( selectBranchingVertexByLp2Flow(scip, &branchvertex, g) );
+   else
+   {
+      assert(branchruledata->branchtype == BRANCH_STP_ON_SOL);
+      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
+   }
 
+   /* fall-back strategy */
    if( branchvertex == UNKNOWN )
       SCIP_CALL( selectBranchingVertexByDegree(scip, &branchvertex, g) );
 
-   if( branchvertex == UNKNOWN )
-   {
-      SCIPdebugMessage("Stp branching did not run \n");
-      return SCIP_OKAY;
-   }
+   assert(branchvertex != UNKNOWN);
 
    SCIP_CALL( branchOnVertex(scip, g, branchvertex) );
 
@@ -513,8 +592,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    SCIP_CALL( branchOnVertex(scip, g, branchvertex) );
 
    *result = SCIP_BRANCHED;
-
-   printf("branchExecpsStp %d \n", 0);
 
    return SCIP_OKAY;
 }
@@ -668,10 +745,9 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpStp) );
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsStp) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/stp/uselocalsol",
-         "branch on vertex of highest degree in best local solution?",
-         &branchruledata->uselocalsol, FALSE, DEFAULT_USELOCALSOL, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/stp/type",
+         "Branching: 0 based on LP, 1 based on LP and with indegree > 1, 2 based on best solution",
+         &(branchruledata->branchtype), FALSE, BRANCH_STP_ON_LP, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }
