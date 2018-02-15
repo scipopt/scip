@@ -148,8 +148,8 @@ SCIP_RETCODE SCIPpatternAddElement(
 /** removes the last added element */
 void SCIPpatternRemoveLastElement(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PATTERN*         pattern,            /**< pattern */
-   int                   type                /**< element of a given type */
+   SCIP_PATTERN*         pattern             /**< pattern */
+
    )
 {
    assert(pattern != NULL);

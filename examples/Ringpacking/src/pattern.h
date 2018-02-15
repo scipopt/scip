@@ -96,8 +96,7 @@ SCIP_RETCODE SCIPpatternAddElement(
 extern
 void SCIPpatternRemoveLastElement(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PATTERN*         pattern,            /**< pattern */
-   int                   type                /**< element of a given type */
+   SCIP_PATTERN*         pattern             /**< pattern */
    );
 
 /** returns the total number of elements of a given type in the pattern */
