@@ -49,8 +49,10 @@ struct SCIP_Pattern
    BMS_BLKMEM*           blkmem;             /**< block memory */
    SCIP_PATTERNTYPE      patterntype;        /**< pattern type */
    SCIP_PACKABLE         packable;           /**< packable status */
+   SCIP_Real*            xs;                 /**< array containing the x-coordinate of each element */
+   SCIP_Real*            ys;                 /**< array containing the y-coordinate of each element */
    int*                  types;              /**< array storing the type of each element */
-   int                   typessize;          /**< size of types array */
+   int                   size;               /**< size of types, xs, and ys arrays */
    int                   nelems;             /**< number of elements stored */
    int                   nlocks;             /**< number of locks */
    int                   type;               /**< type of the boundary circle */
@@ -89,7 +91,9 @@ void SCIPpatternRelease(
 extern
 SCIP_RETCODE SCIPpatternAddElement(
    SCIP_PATTERN*         pattern,            /**< pattern */
-   int                   type                /**< element of a given type */
+   int                   type,               /**< element of a given type */
+   SCIP_Real             x,                  /**< x-coordinate */
+   SCIP_Real             y                   /**< y-coordinate */
    );
 
 /** removes the last added element */
@@ -117,6 +121,27 @@ extern
 int SCIPpatternCountElements(
    SCIP_PATTERN*         pattern,            /**< pattern */
    int                   type                /**< type */
+   );
+
+/** returns the x-corrdinate of an element */
+SCIP_Real SCIPpatternGetElementPosX(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   elem                /**< index of the element */
+   );
+
+/** returns the y-corrdinate of an element */
+SCIP_Real SCIPpatternGetElementPosY(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   elem                /**< index of the element */
+   );
+
+/** sets the (x,y) position of an element */
+extern
+void SCIPpatternSetElementPos(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   elem,               /**< index of the element */
+   SCIP_Real             x,                  /**< x-coordinate */
+   SCIP_Real             y                   /**< y-coordinate */
    );
 
 /** returns the type of a pattern */

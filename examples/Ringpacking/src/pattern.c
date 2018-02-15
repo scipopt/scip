@@ -36,11 +36,13 @@ SCIP_RETCODE ensureElemSize(
 {
    assert(pattern != NULL);
 
-   if( size > pattern->typessize )
+   if( size > pattern->size )
    {
       int newsize = MAX(4, 2*size);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(pattern->blkmem, &pattern->types, pattern->typessize, newsize) );
-      pattern->typessize = newsize;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(pattern->blkmem, &pattern->types, pattern->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(pattern->blkmem, &pattern->xs, pattern->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(pattern->blkmem, &pattern->ys, pattern->size, newsize) );
+      pattern->size = newsize;
    }
 
    return SCIP_OKAY;
@@ -119,10 +121,12 @@ void SCIPpatternRelease(
    /* reduce locks */
    --((*pattern)->nlocks);
 
-   /* free memory if the pattern is not used any more */
+   /* free memory if the pattern is not used anymore */
    if( (*pattern)->nlocks == 0 )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*pattern)->types, (*pattern)->typessize);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*pattern)->ys, (*pattern)->size);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*pattern)->xs, (*pattern)->size);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*pattern)->types, (*pattern)->size);
       SCIPfreeBlockMemory(scip, pattern);
    }
    else
@@ -132,7 +136,9 @@ void SCIPpatternRelease(
 /** adds an element of a given type to a pattern */
 SCIP_RETCODE SCIPpatternAddElement(
    SCIP_PATTERN*         pattern,            /**< pattern */
-   int                   type                /**< element of a given type */
+   int                   type,               /**< element of a given type */
+   SCIP_Real             x,                  /**< x-coordinate */
+   SCIP_Real             y                   /**< y-coordinate */
    )
 {
    assert(pattern != NULL);
@@ -140,6 +146,9 @@ SCIP_RETCODE SCIPpatternAddElement(
 
    SCIP_CALL( ensureElemSize(pattern, pattern->nelems + 1) );
    pattern->types[pattern->nelems] = type;
+   pattern->xs[pattern->nelems] = x;
+   pattern->ys[pattern->nelems] = y;
+
    ++(pattern->nelems);
 
    return SCIP_OKAY;
@@ -198,6 +207,45 @@ int SCIPpatternCountElements(
    }
 
    return counter;
+}
+
+/** returns the x-corrdinate of an element */
+SCIP_Real SCIPpatternGetElementPosX(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   elem                /**< index of the element */
+   )
+{
+   assert(pattern != NULL);
+   assert(elem >= 0 && elem < pattern->nelems);
+
+   return pattern->xs[elem];
+}
+
+/** returns the y-corrdinate of an element */
+SCIP_Real SCIPpatternGetElementPosY(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   elem                /**< index of the element */
+   )
+{
+   assert(pattern != NULL);
+   assert(elem >= 0 && elem < pattern->nelems);
+
+   return pattern->ys[elem];
+}
+
+/** sets the (x,y) position of an element */
+void SCIPpatternSetElementPos(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   elem,               /**< index of the element */
+   SCIP_Real             x,                  /**< x-coordinate */
+   SCIP_Real             y                   /**< y-coordinate */
+   )
+{
+   assert(pattern != NULL);
+   assert(elem >= 0 && elem < pattern->nelems);
+
+   pattern->xs[elem] = x;
+   pattern->ys[elem] = y;
 }
 
 /** returns the type of a pattern */

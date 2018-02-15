@@ -342,6 +342,7 @@ SCIP_RETCODE setupProblem(
    )
 {
    char name[SCIP_MAXSTRLEN];
+   SCIP_Real* rexts;
    int* demands;
    int ntypes;
    int p;
@@ -356,6 +357,7 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPsetObjIntegral(scip) );
 
    ntypes = SCIPprobdataGetNTypes(probdata);
+   rexts = SCIPprobdataGetRexts(probdata);
    demands = SCIPprobdataGetDemands(probdata);
 
    /* compute all non-dominated circular patterns */
@@ -367,9 +369,9 @@ SCIP_RETCODE setupProblem(
       SCIP_VAR* var;
       SCIP_PATTERN* pattern;
 
-      /* create a pattern containing a single circle of type t */
+      /* create a pattern containing a single circle of type t; set position of the circle to the left-bottom */
       SCIP_CALL( SCIPpatternCreateRectangular(scip, &pattern) );
-      SCIP_CALL( SCIPpatternAddElement(pattern, t) );
+      SCIP_CALL( SCIPpatternAddElement(pattern, t, rexts[t], rexts[t]) );
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
       /* create variable */
