@@ -27,6 +27,16 @@
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_value.h"
 
+#ifndef M_PI
+#define M_PI           3.14159265358979323846
+#endif
+#ifndef M_PI_2
+#define M_PI_2         1.57079632679489661923
+#endif
+#ifndef M_PI_4
+#define M_PI_4         0.785398163397448309616
+#endif
+
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "sin"
 #define EXPRHDLR_DESC         "sine expression"
@@ -220,17 +230,17 @@ SCIP_Bool computeSolTangentSin(
    params[1] = SIN(solpoint) - params[0] * solpoint;
 
    /* choose starting points for newton procedure */
-   if( SCIPisGT(scip, solpointmodpi, 0.5*M_PI) )
+   if( SCIPisGT(scip, solpointmodpi, M_PI_2) )
    {
-      startingpoints[0] = solpoint + (M_PI - solpointmodpi) + 0.5*M_PI;
-      startingpoints[1] = startingpoints[0] + 0.5*M_PI;
-      startingpoints[2] = startingpoints[1] + 0.5*M_PI;
+      startingpoints[0] = solpoint + (M_PI - solpointmodpi) + M_PI_2;
+      startingpoints[1] = startingpoints[0] + M_PI_2;
+      startingpoints[2] = startingpoints[1] + M_PI_2;
    }
    else
    {
-      startingpoints[0] = solpoint - solpointmodpi - 0.5*M_PI;
-      startingpoints[1] = startingpoints[0] - 0.5*M_PI;
-      startingpoints[2] = startingpoints[1] - 0.5*M_PI;
+      startingpoints[0] = solpoint - solpointmodpi - M_PI_2;
+      startingpoints[1] = startingpoints[0] - M_PI_2;
+      startingpoints[2] = startingpoints[1] - M_PI_2;
    }
 
    /* use newton procedure to test if cut is valid */
@@ -376,7 +386,7 @@ SCIP_Bool computeRightMidTangentSin(
       if( SIN(ub) <= 0.0 )
          return FALSE;
       else
-         startingpoint = ub - 0.25*M_PI - ubmodpi;
+         startingpoint = ub - M_PI_4 - ubmodpi;
    }
    else
    {
@@ -384,7 +394,7 @@ SCIP_Bool computeRightMidTangentSin(
       if( SIN(ub) < 0.0 )
          startingpoint = ub - 1.25*M_PI - ubmodpi;
       else
-         startingpoint = ub - 0.25*M_PI - ubmodpi;
+         startingpoint = ub - M_PI_4 - ubmodpi;
    }
 
    /* use newton procedure to find the point where the tangent intersects sine at lower bound */
