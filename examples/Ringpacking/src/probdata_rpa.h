@@ -114,4 +114,24 @@ SCIP_RETCODE SCIPprobdataAddVar(
    SCIP_PATTERNTYPE      patterntype         /**< pattern type */
    );
 
+/** verifies a circular pattern heuristically */
+extern
+SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   SCIP_Real             timelim,            /**< time limit */
+   int                   iterlim             /**< iteration limit */
+   );
+
+/** verifies a circular pattern via solving a verification NLP */
+extern
+SCIP_RETCODE SCIPverifyCircularPatternNLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   SCIP_Real             timelim,            /**< time limit */
+   SCIP_Longint          nodelim             /**< node limit */
+   );
+
 #endif /* __SCIP_PROBDATA_RINPACKING__ */

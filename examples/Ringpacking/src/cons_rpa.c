@@ -62,6 +62,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_Bool*            locked;            /**< array to remember which (not verified) patterns have been locked */
    int                   lockedsize;        /**< size of locked array */
+   SCIP_Bool*            tried;             /**< array to mark circular patterns that have been tried to be verified */
 };
 
 
@@ -103,7 +104,7 @@ SCIP_Bool isSolFeasible(
 
          if( !SCIPisFeasZero(scip, solval) )
          {
-            SCIPdebugMsg(scip, "solution infeasible because of circular pattern %d = (%g,%d)\n", p,
+            SCIPdebugMsg(scip, "solution might be infeasible because of circular pattern %d = (%g,%d)\n", p,
                SCIPgetSolVal(scip, sol, cvars[p]), SCIPpatternGetPackableStatus(cpatterns[p]));
             return FALSE;
          }
@@ -111,6 +112,52 @@ SCIP_Bool isSolFeasible(
    }
 
    return TRUE;
+}
+
+/** tries to verify a circular pattern; it first tries to call heuristic(s) and afterwards uses a verification NLP */
+static
+SCIP_RETCODE verifyCircularPattern(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PATTERN*         pattern             /**< circular pattern */
+   )
+{
+   SCIP_Longint nlpnodelimit;
+   SCIP_Real timelimit;
+   SCIP_Real nlptimelimit;
+   SCIP_Real heurtimelimit;
+   int heuriterlimit;
+
+   assert(probdata != NULL);
+   assert(pattern != NULL);
+   assert(SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR);
+   assert(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+
+   /* get the total time limit */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   /* verify heuristically */
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/heurtimelimit", &heurtimelimit) );
+   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/heuriterlimit", &heuriterlimit) );
+   heurtimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), heurtimelimit); /*lint !e666*/
+
+   SCIPdebugMsg(scip, "call verification heuristic (%g,%d)\n", heurtimelimit, heuriterlimit);
+   SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, heurtimelimit, heuriterlimit) );
+
+   /* use verification NLP if pattern is still not verified */
+   if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
+   {
+      SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/nlptimelimit", &nlptimelimit) );
+      SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/nlpnodelimit", &nlpnodelimit) );
+      nlptimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), nlptimelimit); /*lint !e666*/
+
+      SCIPdebugMsg(scip, "call verification NLP (%g,%lld)\n", nlptimelimit, nlpnodelimit);
+      SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, nlptimelimit, nlpnodelimit) );
+   }
+
+   SCIPdebugMsg(scip, "packable status? %d\n", SCIPpatternGetPackableStatus(pattern));
+
+   return SCIP_OKAY;
 }
 
 /** auxiliary function for enforcing ringpacking constraint; the function checks whether
@@ -124,12 +171,14 @@ SCIP_Bool isSolFeasible(
  *  Note that after step 3. the dual bound is not valid anymore.
  */
 static
-SCIP_RETCODE enforceCons(
+SCIP_RETCODE enforceSol(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SOL*             sol,                /**< solution (NULL for LP solution) */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_PROBDATA* probdata;
    SCIP_PATTERN** cpatterns;
    SCIP_VAR** cvars;
@@ -147,6 +196,8 @@ SCIP_RETCODE enforceCons(
    if( isSolFeasible(scip, sol) )
       return SCIP_OKAY;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
@@ -168,46 +219,62 @@ SCIP_RETCODE enforceCons(
 
       solval = SCIPgetSolVal(scip, sol, cvars[p]);
 
-      /* skip packable and unused circular patterns */
-      if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_YES || SCIPisFeasZero(scip, solval) )
-         continue;
-
-      assert(SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN);
-
-      /*
-       * TODO verify pattern instead of just marking them as not packable
-       */
-      SCIPpatternSetPackableStatus(cpatterns[p], SCIP_PACKABLE_NO);
+      /* try to verify an unknown circular pattern */
+      if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN && !SCIPisFeasZero(scip, solval) && !conshdlrdata->tried[p] )
+      {
+         SCIP_CALL( verifyCircularPattern(scip, probdata, cpatterns[p]) );
+         conshdlrdata->tried[p] = TRUE;
+      }
 
       /* (2a.) fix corresponding variable to zero if pattern is not packable */
       if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_NO )
       {
          SCIP_CALL( SCIPfixVar(scip, cvars[p], 0.0, &infeasible, &success) );
-         SCIPdebugMsg(scip, "fix pattern %d\n", p);
-         assert(success);
-         assert(!infeasible);
-         *result = SCIP_REDUCEDDOM;
-         return SCIP_OKAY;
+         SCIPdebugMsg(scip, "fix unpackable pattern %d\n", p);
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         else if( success )
+         {
+            /* stop since we cutoff the LP solution */
+            *result = SCIP_REDUCEDDOM;
+            return SCIP_OKAY;
+         }
       }
    }
 
-   SCIPdebugMsg(scip, "fix all unverified circular patterns\n");
+   SCIPdebugMsg(scip, "fix all tested but still unverified circular patterns\n");
 
-   /* (3.) fix all unverified patterns */
+   /* (3.) fix an unverified patterns that is used */
    for( p = 0; p < ncpatterns; ++p )
    {
-      if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN )
+      SCIP_Real solval = SCIPgetSolVal(scip, sol, cvars[p]);
+
+      if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN && !SCIPisFeasZero(scip, solval) )
       {
          SCIP_Bool infeasible;
          SCIP_Bool success;
 
-         SCIP_CALL( SCIPfixVar(scip, cvars[p], 0.0, &infeasible, &success) );
-         SCIPdebugMsg(scip, "fix pattern %d in [%g,%g] (success=%u)\n", p, SCIPvarGetLbLocal(cvars[p]),
-            SCIPvarGetUbLocal(cvars[p]), success);
-         assert(!infeasible);
+         assert(conshdlrdata->tried[p]);
 
-         if( success )
+         SCIP_CALL( SCIPfixVar(scip, cvars[p], 0.0, &infeasible, &success) );
+         SCIPdebugMsg(scip, "fix unknown pattern %d in [%g,%g] (success=%u)\n", p, SCIPvarGetLbLocal(cvars[p]),
+            SCIPvarGetUbLocal(cvars[p]), success);
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         else if( success )
+         {
+            /* stop since we cutoff the LP solution */
             *result = SCIP_REDUCEDDOM;
+            return SCIP_OKAY;
+         }
       }
    }
 
@@ -312,33 +379,53 @@ SCIP_DECL_CONSEXITPRE(consExitpreRpa)
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 0
 static
 SCIP_DECL_CONSINITSOL(consInitsolRpa)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_PROBDATA* probdata;
+   int ncpatterns;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->tried == NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   SCIPprobdataGetCInfos(probdata, NULL, NULL, &ncpatterns);
+   assert(ncpatterns > 0);
+
+   /* allocate memory to remember which patterns have been tested to be packable */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->tried, ncpatterns) );
+   BMSclearMemoryArray(conshdlrdata->tried, ncpatterns);
 
    return SCIP_OKAY;
 }
-#else
-#define consInitsolRpa NULL
-#endif
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 0
 static
 SCIP_DECL_CONSEXITSOL(consExitsolRpa)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_PROBDATA* probdata;
+   int ncpatterns;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->tried != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   SCIPprobdataGetCInfos(probdata, NULL, NULL, &ncpatterns);
+   assert(ncpatterns > 0);
+
+   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->tried, ncpatterns);
 
    return SCIP_OKAY;
 }
-#else
-#define consExitsolRpa NULL
-#endif
 
 
 /** frees specific constraint data */
@@ -420,7 +507,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolRpa)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpRpa)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceCons(scip, NULL, result) );
+   SCIP_CALL( enforceSol(scip, conshdlr, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -430,7 +517,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpRpa)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxRpa)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceCons(scip, sol, result) );
+   SCIP_CALL( enforceSol(scip, conshdlr, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -440,7 +527,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxRpa)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsRpa)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceCons(scip, NULL, result) );
+   SCIP_CALL( enforceSol(scip, conshdlr, NULL, result) );
 
    return SCIP_OKAY;
 }

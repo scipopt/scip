@@ -35,7 +35,6 @@
 #define TABLE_POSITION_RPA                   12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_RPA             SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
-
 #ifndef M_PI
 #define M_PI           3.141592653589793238462643
 #endif
@@ -302,14 +301,19 @@ SCIP_RETCODE computeCircularPatterns(
 
    probdata->enumtime = -SCIPgetTotalTime(scip);
 
-   /* create an empty circular pattern for each type */
+   /* TODO compute all circular patterns (use soft working limits for the verification) */
+
+   /* create an empty circular pattern for each type
+    *
+    * TODO remove this
+    */
    for( t = 0; t < ntypes; ++t )
    {
       SCIP_PATTERN* pattern;
       SCIP_VAR* var;
 
-      SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, ntypes, t) );
-      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
+      SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, t) );
+      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", t);
       SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, (SCIP_Real)demands[t], 0.0, SCIP_VARTYPE_INTEGER) );
@@ -321,8 +325,6 @@ SCIP_RETCODE computeCircularPatterns(
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
       SCIPpatternRelease(scip, &pattern);
    }
-
-   /* TODO compute all circular patterns */
 
    /* update statistics */
    probdata->enumtime += SCIPgetTotalTime(scip);
@@ -366,7 +368,7 @@ SCIP_RETCODE setupProblem(
       SCIP_PATTERN* pattern;
 
       /* create a pattern containing a single circle of type t */
-      SCIP_CALL( SCIPpatternCreateRectangular(scip, &pattern, ntypes) );
+      SCIP_CALL( SCIPpatternCreateRectangular(scip, &pattern) );
       SCIPpatternAddElement(pattern, t);
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
@@ -445,7 +447,7 @@ SCIP_RETCODE setupProblem(
 
       for( t = 0; t < ntypes; ++t )
       {
-         int nelems = SCIPpatternGetNElemens(pattern, t);
+         int nelems = SCIPpatternCountElements(pattern, t);
 
          if( nelems > 0 )
          {
@@ -467,7 +469,7 @@ SCIP_RETCODE setupProblem(
 
       for( t = 0; t < ntypes; ++t )
       {
-         int nelems = SCIPpatternGetNElemens(pattern, t);
+         int nelems = SCIPpatternCountElements(pattern, t);
 
          if( nelems > 0 )
          {
@@ -779,6 +781,65 @@ SCIP_RETCODE SCIPprobdataAddVar(
    /* capture variable and pattern */
    SCIP_CALL( SCIPcaptureVar(scip, var) );
    SCIPpatternCapture(pattern);
+
+   return SCIP_OKAY;
+}
+
+/** verifies a circular pattern heuristically */
+SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   SCIP_Real             timelim,            /**< time limit */
+   int                   iterlim             /**< iteration limit */
+   )
+{
+   int* rexts;
+   int* rints;
+
+   assert(probdata != NULL);
+   assert(pattern != NULL);
+   assert(iterlim > 0);
+   assert(SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR);
+   assert(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+
+   rexts = SCIPprobdataGetRexts(probdata);
+   rints = SCIPprobdataGetRints(probdata);
+
+   /* pattern is empty -> packable */
+   if( SCIPpatternGetNElemens(pattern) == 0 )
+   {
+      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
+      return SCIP_OKAY;
+   }
+
+   /* pattern contains only one element -> compare radii */
+   if( SCIPpatternGetNElemens(pattern) == 1 )
+   {
+
+   }
+
+   /* TODO */
+
+   return SCIP_OKAY;
+}
+
+/** verifies a circular pattern via a verification NLP */
+extern
+SCIP_RETCODE SCIPverifyCircularPatternNLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   SCIP_Real             timelim,            /**< time limit */
+   SCIP_Longint          nodelim             /**< node limit */
+   )
+{
+   assert(probdata != NULL);
+   assert(pattern != NULL);
+   assert(SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR);
+   assert(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+
+   /* TODO */
 
    return SCIP_OKAY;
 }

@@ -27,13 +27,31 @@
  * local methods
  */
 
+/** ensures that there is enough memory to store elements */
+static
+SCIP_RETCODE ensureElemSize(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   size                /**< required size */
+   )
+{
+   assert(pattern != NULL);
+
+   if( size > pattern->typessize )
+   {
+      int newsize = MAX(4, 2*size);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(pattern->blkmem, &pattern->types, pattern->typessize, newsize) );
+      pattern->typessize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** auxiliary function to create a pattern */
 static
 SCIP_RETCODE createPattern(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PATTERN**        pattern,            /**< pointer to store pattern */
    SCIP_PATTERNTYPE      patterntype,        /**< pattern type */
-   int                   ntypes,             /**< number of different circle types */
    int                   type                /**< circle type (not needed for rectangular patterns) */
    )
 {
@@ -43,12 +61,9 @@ SCIP_RETCODE createPattern(
    SCIP_CALL( SCIPallocBlockMemory(scip, pattern) );
    BMSclearMemory(*pattern);
 
+   (*pattern)->blkmem = SCIPblkmem(scip);
    (*pattern)->type = type;
    SCIPpatternCapture(*pattern);
-
-   (*pattern)->ntypes = ntypes;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*pattern)->nelems, ntypes) );
-   BMSclearMemoryArray((*pattern)->nelems, ntypes);
 
    (*pattern)->packable = SCIP_PACKABLE_UNKNOWN;
    (*pattern)->patterntype = patterntype;
@@ -65,21 +80,19 @@ SCIP_RETCODE createPattern(
 SCIP_RETCODE SCIPpatternCreateCircular(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PATTERN**        pattern,            /**< pointer to store pattern */
-   int                   ntypes,             /**< number of different circle types */
    int                   type                /**< circle type (not needed for rectangular patterns) */
    )
 {
-   return createPattern(scip, pattern, SCIP_PATTERNTYPE_CIRCULAR, ntypes, type);
+   return createPattern(scip, pattern, SCIP_PATTERNTYPE_CIRCULAR, type);
 }
 
 /** creates an empty circular pattern */
 SCIP_RETCODE SCIPpatternCreateRectangular(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PATTERN**        pattern,            /**< pointer to store pattern */
-   int                   ntypes              /**< number of different circle types */
+   SCIP_PATTERN**        pattern             /**< pointer to store pattern */
    )
 {
-   return createPattern(scip, pattern, SCIP_PATTERNTYPE_RECTANGULAR, ntypes, -1);
+   return createPattern(scip, pattern, SCIP_PATTERNTYPE_RECTANGULAR, -1);
 }
 
 /** captures a pattern */
@@ -109,7 +122,7 @@ void SCIPpatternRelease(
    /* free memory if the pattern is not used any more */
    if( (*pattern)->nlocks == 0 )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*pattern)->nelems, (*pattern)->ntypes);
+      SCIPfreeBlockMemoryArray(scip, &(*pattern)->types, (*pattern)->typessize);
       SCIPfreeBlockMemory(scip, pattern);
    }
    else
@@ -117,7 +130,7 @@ void SCIPpatternRelease(
 }
 
 /** adds an element of a given type to a pattern */
-void SCIPpatternAddElement(
+SCIP_RETCODE SCIPpatternAddElement(
    SCIP_PATTERN*         pattern,            /**< pattern */
    int                   type                /**< element of a given type */
    )
@@ -125,32 +138,66 @@ void SCIPpatternAddElement(
    assert(pattern != NULL);
    assert(type >= 0);
 
-   ++(pattern->nelems[type]);
+   SCIP_CALL( ensureElemSize(pattern, pattern->nelems + 1) );
+   pattern->types[pattern->nelems] = type;
+   ++(pattern->nelems);
+
+   return SCIP_OKAY;
 }
 
-/** removes an element of a given type from a pattern */
-void SCIPpatternRemoveElement(
+/** removes the last added element */
+void SCIPpatternRemoveLastElement(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PATTERN*         pattern,            /**< pattern */
    int                   type                /**< element of a given type */
    )
 {
    assert(pattern != NULL);
-   assert(type >= 0);
+   assert(pattern->nelems > 0);
 
-   --(pattern->nelems[type]);
+   --(pattern->nelems);
 }
 
-/** returns the number of elements of a given type in the pattern */
+/** returns the total number of elements */
 int SCIPpatternGetNElemens(
-   SCIP_PATTERN*         pattern,            /**< pattern */
-   int                   type                /**< element of a given type */
+   SCIP_PATTERN*         pattern             /**< pattern */
    )
 {
    assert(pattern != NULL);
-   assert(pattern->nelems != NULL);
-   assert(type >= 0 && type < pattern->ntypes);
 
-   return pattern->nelems[type];
+   return pattern->nelems;
+}
+
+/** returns the type of the i-th element */
+int SCIPpatternGetElementType(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   i                   /**< index */
+   )
+{
+   assert(pattern != NULL);
+   assert(i >= 0 && i < pattern->nelems);
+
+   return pattern->types[i];
+}
+
+/** returns the total number of elements of a given type */
+int SCIPpatternCountElements(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< type */
+   )
+{
+   int counter = 0;
+   int i;
+
+   assert(pattern != NULL);
+
+   for( i = 0; i < pattern->nelems; ++i )
+   {
+      if( pattern->types[i] == type )
+         ++(counter);
+   }
+
+   return counter;
 }
 
 /** returns the type of a pattern */
