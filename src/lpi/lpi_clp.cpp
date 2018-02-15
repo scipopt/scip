@@ -2967,12 +2967,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    const int*            rstat               /**< array with row basis status */
    )
 {
+   int ncols;
+   int nrows;
+
    SCIPdebugMessage("calling SCIPlpiSetBase()\n");
 
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(rstat != NULL);
-   assert(cstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+
+   assert(rstat != NULL || lpi->clp->numberRows() == 0);
+   assert(cstat != NULL || lpi->clp->numberColumns() == 0);
 
    invalidateSolution(lpi);
 

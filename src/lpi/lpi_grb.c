@@ -4300,15 +4300,16 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    SCIPdebugMessage("loading basis %p/%p into Gurobi\n", (void*) cstat, (void*) rstat);
 
    invalidateSolution(lpi);
-
-   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
 
    SCIP_CALL( ensureCstatMem(lpi, ncols+lpi->nrngrows) );
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
@@ -4330,7 +4331,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
       else
       {
-         switch( rstat[i] )
+         switch( rstat[i] ) /*lint !e613*/
          {
          case SCIP_BASESTAT_BASIC:
             lpi->rstat[i] = GRB_BASIC;
@@ -4361,7 +4362,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 
          case SCIP_BASESTAT_ZERO:
          default:
-            SCIPerrorMessage("invalid basis status %d for row.\n", rstat[i]);
+            SCIPerrorMessage("invalid basis status %d for row.\n", rstat[i]); /*lint !e613*/
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
          }
@@ -4370,7 +4371,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    for( j = 0; j < ncols; ++j )
    {
-      switch( cstat[j] )
+      switch( cstat[j] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_BASIC:
          lpi->cstat[j] = GRB_BASIC;
@@ -4389,7 +4390,7 @@ SCIP_RETCODE SCIPlpiSetBase(
          break;
 
       default:
-         SCIPerrorMessage("invalid basis status %d\n", cstat[j]);
+         SCIPerrorMessage("invalid basis status %d\n", cstat[j]); /*lint !e613*/
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }

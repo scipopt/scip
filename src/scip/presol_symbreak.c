@@ -70,6 +70,7 @@ struct SCIP_PresolData
    int                   nperms;             /**< number of permutations in perms */
    int                   npermvars;          /**< number of variables affected by permutations */
    SCIP_Real             log10groupsize;     /**< log10 of group size */
+   SCIP_Bool             binvaraffected;     /**< whether binary variables are affected */
    SCIP_VAR**            permvars;           /**< array of variables on which permutations act */
    SCIP_Bool             addedconss;         /**< whether we already added symmetry breaking constraints */
    SCIP_Bool             computedsymmetry;   /**< whether symmetry has been computed already */
@@ -943,7 +944,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
    assert( presoldata != NULL );
 
    /* exit if no or only trivial symmetry group is available */
-   if ( presoldata->nperms < 1 )
+   if ( presoldata->nperms < 1 || ! presoldata->binvaraffected )
       return SCIP_OKAY;
 
    if ( presoldata->addsymresacks )
@@ -1080,6 +1081,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    presoldata->early = FALSE;
    presoldata->nperms = -1;
    presoldata->log10groupsize = -1.0;
+   presoldata->binvaraffected = FALSE;
    presoldata->norbitopes = 0;
    presoldata->nsymresacks = 0;
 
@@ -1174,7 +1176,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
       /* get symmetries */
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(presoldata->npermvars), &(presoldata->permvars),
-            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize)) );
+            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
 
       presoldata->computedsymmetry = TRUE;
 
@@ -1282,6 +1284,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->genconss = NULL;
    presoldata->nperms = -1;
    presoldata->log10groupsize = -1.0;
+   presoldata->binvaraffected = FALSE;
    presoldata->norbits = -1;
    presoldata->orbits = NULL;
    presoldata->orbitbegins = NULL;
