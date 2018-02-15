@@ -221,7 +221,10 @@ Test(solve_behavior, testbarriersolve, .signal = SIGABRT)
    /* Problem is optimal - optimal, should be solved */
    cr_assert( SCIPlpiWasSolved(lpi) );
 
+   /* Does it make sense not to have a primal solve as an lp solver? */
    cr_assert( SCIPlpiHasPrimalSolve() );
+   /* try calling all methods at least once */
+   SCIPlpiHasDualSolve();
 
    if( !SCIPlpiHasBarrierSolve() )
    {
