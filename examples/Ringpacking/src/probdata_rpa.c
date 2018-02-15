@@ -578,6 +578,7 @@ SCIP_DECL_PROBTRANS(probtransRingpacking)
 static
 SCIP_DECL_PROBINITSOL(probinitsolRingpacking)
 {  /*lint --e{715}*/
+
    return SCIP_OKAY;
 }
 

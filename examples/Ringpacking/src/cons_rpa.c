@@ -24,6 +24,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "cons_rpa.h"
 #include "probdata_rpa.h"
@@ -52,6 +53,8 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
+#define EVENTHDLR_NAME         "newsol"
+#define EVENTHDLR_DESC         "best solution event handler"
 
 /*
  * Data structures
@@ -60,6 +63,8 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   SCIP_EVENTHDLR*       eventhdlr;         /**< event handler */
+
    SCIP_Bool*            locked;            /**< array to remember which (not verified) patterns have been locked */
    int                   lockedsize;        /**< size of locked array */
    SCIP_Bool*            tried;             /**< array to mark circular patterns that have been tried to be verified */
@@ -281,6 +286,76 @@ SCIP_RETCODE enforceSol(
    return SCIP_OKAY;
 }
 
+
+/*
+ * Callback methods of event handler
+ */
+
+/** processes the event that a new primal solution has been found */
+static
+SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
+{  /*lint --e{715}*/
+   SCIP_PROBDATA* probdata;
+   SCIP_SOL* sol;
+   char* filename;
+
+   assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_SOLFOUND) != 0);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   sol = SCIPeventGetSol(event);
+   assert(sol != NULL);
+
+   /* check whether new solution is indeed feasible */
+#ifndef NDEBUG
+   {
+      SCIP_PATTERN** patterns;
+      SCIP_VAR** vars;
+      int npatterns;
+      int p;
+
+      /* check circular patterns */
+      SCIPprobdataGetCInfos(probdata, &patterns, &vars, &npatterns);
+      assert(npatterns > 0);
+
+      for( p = 0; p < npatterns; ++p )
+      {
+         SCIP_Real val;
+
+         assert(patterns[p] != NULL);
+         assert(vars[p] != NULL);
+
+         val = SCIPgetSolVal(scip, sol, vars[p]);
+
+         /* pattern is either not used or packable */
+         assert(SCIPisFeasZero(scip, val) || SCIPpatternGetPackableStatus(patterns[p]) == SCIP_PACKABLE_YES);
+      }
+   }
+#endif
+
+   /* write best solution information into a tex file */
+   SCIP_CALL( SCIPgetStringParam(scip, "ringpacking/texoutfilename", &filename) );
+
+   if( strcmp(filename, "") != 0 )
+   {
+      FILE* file;
+
+      SCIPdebugMsg(scip, "write best solution into %s\n", filename);
+
+      file = fopen(filename, "w");
+      assert(file != NULL);
+      SCIPinfoMessage(scip, file, "TEST\n");
+
+      /* TODO */
+
+      fclose(file);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of constraint handler
  */
@@ -400,6 +475,9 @@ SCIP_DECL_CONSINITSOL(consInitsolRpa)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->tried, ncpatterns) );
    BMSclearMemoryArray(conshdlrdata->tried, ncpatterns);
 
+   /* catch events for new solutions */
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, conshdlrdata->eventhdlr, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -423,6 +501,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolRpa)
    assert(ncpatterns > 0);
 
    SCIPfreeBlockMemoryArray(scip, &conshdlrdata->tried, ncpatterns);
+
+   /* free events for new solutions */
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, conshdlrdata->eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
@@ -861,7 +942,9 @@ SCIP_RETCODE SCIPincludeConshdlrRpa(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransRpa) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxRpa) );
 
-   /* add constraint handler parameters */
+   /* add event handler for new solutios */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         processNewSolutionEvent, NULL) );
 
    return SCIP_OKAY;
 }
