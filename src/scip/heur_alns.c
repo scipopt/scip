@@ -587,6 +587,7 @@ void updateTargetNodeLimit(
             increaseTargetNodeLimit(heurdata);
          break;
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
       case SCIP_STATUS_UNKNOWN:
       case SCIP_STATUS_TOTALNODELIMIT:
       case SCIP_STATUS_TIMELIMIT:
@@ -677,6 +678,7 @@ void updateMinimumImprovement(
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_UNBOUNDED:
+      case SCIP_STATUS_TERMINATE:
       default:
          break;
    }
