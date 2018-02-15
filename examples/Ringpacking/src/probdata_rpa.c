@@ -369,7 +369,7 @@ SCIP_RETCODE setupProblem(
 
       /* create a pattern containing a single circle of type t */
       SCIP_CALL( SCIPpatternCreateRectangular(scip, &pattern) );
-      SCIPpatternAddElement(pattern, t);
+      SCIP_CALL( SCIPpatternAddElement(pattern, t) );
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
       /* create variable */
@@ -794,8 +794,10 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    int                   iterlim             /**< iteration limit */
    )
 {
-   int* rexts;
-   int* rints;
+   SCIP_Real* rexts;
+   SCIP_Real* rints;
+   SCIP_Real timestart;
+   int niters;
 
    assert(probdata != NULL);
    assert(pattern != NULL);
@@ -806,8 +808,8 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    rexts = SCIPprobdataGetRexts(probdata);
    rints = SCIPprobdataGetRints(probdata);
 
-   /* pattern is empty -> packable */
-   if( SCIPpatternGetNElemens(pattern) == 0 )
+   /* pattern is empty -> set status to packable */
+   if( SCIPpatternGetNElemens(pattern) == 111 )
    {
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
       return SCIP_OKAY;
@@ -816,10 +818,36 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    /* pattern contains only one element -> compare radii */
    if( SCIPpatternGetNElemens(pattern) == 1 )
    {
+      int elemtype;
+      int type;
 
+      elemtype = SCIPpatternGetElementType(pattern, 0);
+      assert(elemtype >= 0 && elemtype < SCIPprobdataGetNTypes(probdata));
+
+      type = SCIPpatternGetType(pattern);
+      assert(type >= 0 && type < SCIPprobdataGetNTypes(probdata));
+
+      /* check whether element fits into the circular pattern */
+      if( SCIPisGE(scip, rints[type], rexts[elemtype]) )
+         SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
+      else
+         SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_NO);
+
+      return SCIP_OKAY;
    }
 
-   /* TODO */
+   timestart = SCIPgetTotalTime(scip);
+   niters = 0;
+
+   /* main loop for calling heuristic verification */
+   while( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN
+      && niters < iterlim
+      && SCIPgetTotalTime(scip) - timestart >= timelim )
+   {
+      /* TODO */
+
+      ++niters;
+   }
 
    return SCIP_OKAY;
 }
@@ -834,12 +862,176 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
    SCIP_Longint          nodelim             /**< node limit */
    )
 {
+   SCIP* subscip;
+   SCIP_CONS* cons;
+   SCIP_VAR** xvars;
+   SCIP_VAR** yvars;
+   SCIP_VAR* quadvars1[6];
+   SCIP_VAR* quadvars2[6];
+   SCIP_Real quadcoefs[6];
+   SCIP_Real* rexts;
+   SCIP_Real* rints;
+   char name[SCIP_MAXSTRLEN];
+   int nelems;
+   int type;
+   int k;
+
    assert(probdata != NULL);
    assert(pattern != NULL);
    assert(SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR);
    assert(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
-   /* TODO */
+   rexts = SCIPprobdataGetRexts(probdata);
+   rints = SCIPprobdataGetRints(probdata);
+   type = SCIPpatternGetType(pattern);
+   nelems = SCIPpatternGetNElemens(pattern);
+
+   /* set up the sub-SCIP */
+   SCIP_CALL( SCIPcreate(&subscip) );
+   SCIP_CALL( SCIPcreateProbBasic(subscip, "verify") );
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+   /* allocate memory for (x,y) variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &xvars, nelems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &yvars, nelems) );
+
+   /* set feasibility emphasis settings */
+   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
+
+   /* set working limit */
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", 1) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelim) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelim) );
+
+#ifndef SCIP_DEBUG
+   SCIPsetMessagehdlrQuiet(subscip, TRUE);
+#endif
+
+   /* create (x,y) variables */
+   for( k = 0; k < nelems; ++k )
+   {
+      int elemtype;
+
+      elemtype = SCIPpatternGetElementType(pattern, k);
+      assert(elemtype >= 0 && elemtype < nelems);
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x_%d", k);
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &xvars[k], name, rexts[elemtype] - rints[type], rints[type] - rexts[elemtype], 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(subscip, xvars[k]) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "y_%d", k);
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &yvars[k], name, rexts[elemtype] - rints[type], rints[type] - rexts[elemtype], 1.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(subscip, yvars[k]) );
+   }
+
+   /* create non-overlapping constraints */
+   for( k = 0; k < nelems; ++k )
+   {
+      int elemtype1;
+      int l;
+
+      elemtype1 = SCIPpatternGetElementType(pattern, k);
+      assert(elemtype1 >= 0 && elemtype1 < SCIPprobdataGetNTypes(probdata));
+
+      for( l = k + 1; l < nelems; ++l )
+      {
+         int elemtype2;
+
+         elemtype2 = SCIPpatternGetElementType(pattern, l);
+         assert(elemtype2 >= 0 && elemtype2 < SCIPprobdataGetNTypes(probdata));
+
+         quadvars1[0] = xvars[k]; quadvars2[0] = xvars[k]; quadcoefs[0] =  1.0;
+         quadvars1[1] = xvars[k]; quadvars2[1] = xvars[l]; quadcoefs[1] = -2.0;
+         quadvars1[2] = xvars[l]; quadvars2[2] = xvars[l]; quadcoefs[2] =  1.0;
+         quadvars1[3] = yvars[k]; quadvars2[3] = yvars[k]; quadcoefs[3] =  1.0;
+         quadvars1[4] = yvars[k]; quadvars2[4] = yvars[l]; quadcoefs[4] = -2.0;
+         quadvars1[5] = yvars[l]; quadvars2[5] = yvars[l]; quadcoefs[5] =  1.0;
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "over_%d_%d", k, l);
+         SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 0, NULL, NULL, 6, quadvars1, quadvars2,
+            quadcoefs, SQR(rexts[elemtype1] + rexts[elemtype2]), SCIPinfinity(subscip)) );
+
+         SCIP_CALL( SCIPaddCons(subscip, cons) );
+         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+      }
+   }
+
+   /* create non-overlapping constraints with outer ring */
+   for( k = 0; k < nelems; ++k )
+   {
+      int elemtype;
+
+      elemtype = SCIPpatternGetElementType(pattern, k);
+      assert(elemtype >= 0 && elemtype < SCIPprobdataGetNTypes(probdata));
+
+      quadvars1[0] = xvars[k]; quadvars2[0] = xvars[k]; quadcoefs[0] = 1.0;
+      quadvars1[1] = yvars[k]; quadvars2[1] = yvars[k]; quadcoefs[1] = 1.0;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "bound_%d", k);
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
+         0.0, SQR(rints[type] - rexts[elemtype])) );
+
+      SCIP_CALL( SCIPaddCons(subscip, cons) );
+      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+   }
+
+   /* sort circles in x direction if they have the same type */
+   for( k = 0; k < nelems - 1; ++k )
+   {
+      int elemtype1;
+      int l;
+
+      elemtype1 = SCIPpatternGetElementType(pattern, k);
+      assert(elemtype1 >= 0 && elemtype1 < SCIPprobdataGetNTypes(probdata));
+
+      for( l = k + 1; l < nelems; ++l )
+      {
+         int elemtype2;
+
+         elemtype2 = SCIPpatternGetElementType(pattern, k+1);
+         assert(elemtype2 >= 0 && elemtype2 < SCIPprobdataGetNTypes(probdata));
+
+         if( elemtype1 != elemtype2 )
+            continue;
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sortx_%d_%d", k, l);
+         SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &cons, name, 0, NULL, NULL, -SCIPinfinity(subscip), 0.0) );
+         SCIP_CALL( SCIPaddCoefLinear(subscip, cons, xvars[k], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(subscip, cons, xvars[l], -1.0) );
+
+         SCIP_CALL( SCIPaddCons(subscip, cons) );
+         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+      }
+   }
+
+   /* solve verification NLP */
+   SCIPdebugMsg(scip, "--------------------- SOLVE VERIFICATION NLP -------------------\n");
+   SCIP_CALL( SCIPsolve(subscip) );
+   SCIPdebugMsg(scip, "----------------------------------------------------------------\n");
+
+   SCIPdebugMsg(scip, "result of verification NLP: nsols=%d solstat=%d\n", SCIPgetNSols(subscip), SCIPgetStatus(subscip));
+
+   /* check whether
+    *
+    *   -(at least) one solution could be found or
+    *   - the problem is proven to be infeasible
+    */
+   if( SCIPgetNSols(subscip) > 0 )
+      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
+   else if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
+      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_NO);
+
+   /* free all variables */
+   for( k = 0; k < nelems; ++k )
+   {
+      SCIP_CALL( SCIPreleaseVar(subscip, &yvars[k]) );
+      SCIP_CALL( SCIPreleaseVar(subscip, &xvars[k]) );
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &yvars);
+   SCIPfreeBufferArray(scip, &xvars);
+   SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
 }
