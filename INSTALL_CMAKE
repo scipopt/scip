@@ -25,15 +25,15 @@ automated).
 
 Compiling SCIP directly can be done as follows:
 
-1) unpack the tarball "tar xvzf scip-x.y.z.tgz"
-2) change into the directory "cd scip-x.y.z"
-3) create a new directory "build"
-4) change directories "cd build"
-4) configure the build "cmake .."
-5) start compiling SCIP "make"
-6) (recommended) check your SCIP installation "make check" or "ctest -R -default"
-7) (optional) install the header, libraries, and binary, e.g.,
-   "DESTDIR=<custom/install/path> make install"
+1) unpack the tarball:        "tar xvzf scip-x.y.z.tgz"
+2) change into the directory: "cd scip-x.y.z"
+3) create a new directory:    "build"
+4) change directories:        "cd build"
+4) configure the build:       "cmake .."
+5) start compiling SCIP:      "make"
+6) (recommended) check build: "make check" or "ctest"
+7) (optional) install SCIP:   "make install"
+   custom installation dir:   "cmake .. -DCMAKE_INSTALL_PREFIX=<install/dir>"
 
 CMake checks for available third-party libraries like GMP or ZLIB and sets up
 the configuration accordingly.

@@ -34654,6 +34654,7 @@ SCIP_Bool SCIPisCutApplicable(
  *
  *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut, add it only to the global cutpool.
  */
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
