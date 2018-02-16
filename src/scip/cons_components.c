@@ -368,6 +368,7 @@ SCIP_RETCODE componentSetupWorkingSol(
 
    /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugSolIsEnabled(component->problem->scip) )
    {
       PROBLEM* problem;
       SCIP* scip;
@@ -2375,6 +2376,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
             /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
+         if( SCIPdebugSolIsEnabled(scip) )
          {
             SCIP_SOL* debugsol;
             SCIP_Real val;

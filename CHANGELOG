@@ -1,3 +1,9 @@
+SCIP version 5.0.2
+==================
+
+fixed bugs:
+- fixed check for activated debugging solution in components constraint handler
+
 SCIP version 5.0.1
 ==================
 
