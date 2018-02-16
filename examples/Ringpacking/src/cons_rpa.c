@@ -286,6 +286,19 @@ SCIP_RETCODE enforceSol(
    return SCIP_OKAY;
 }
 
+/** get shading of a given pattern type */
+static
+int getShadingVal(
+   int                   type,              /**< pattern type */
+   int                   ntypes             /**< total number of patterns */
+   )
+{
+   assert(type >= 0);
+   assert(type < ntypes);
+
+   return (int)MIN(100, MAX(ntypes, 100) / (type+1));
+}
+
 /*
  * Callback methods of event handler
  */
@@ -294,9 +307,13 @@ SCIP_RETCODE enforceSol(
 static
 SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 {  /*lint --e{715}*/
+   SCIP_PATTERN** patterns;
+   SCIP_VAR** vars;
    SCIP_PROBDATA* probdata;
    SCIP_SOL* sol;
    char* filename;
+   int npatterns;
+   int p;
 
    assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_SOLFOUND) != 0);
 
@@ -309,11 +326,6 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    /* check whether new solution is indeed feasible */
 #ifndef NDEBUG
    {
-      SCIP_PATTERN** patterns;
-      SCIP_VAR** vars;
-      int npatterns;
-      int p;
-
       /* check circular patterns */
       SCIPprobdataGetCInfos(probdata, &patterns, &vars, &npatterns);
       assert(npatterns > 0);
@@ -342,19 +354,108 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 #endif
 
    /* write best solution information into a tex file */
-   SCIP_CALL( SCIPgetStringParam(scip, "ringpacking/texoutfilename", &filename) );
+   SCIP_CALL( SCIPgetStringParam(scip, "ringpacking/texfilename", &filename) );
 
    if( strcmp(filename, "") != 0 )
    {
       FILE* file;
+      SCIP_Real* rexts;
+      SCIP_Real* rints;
+      int* demands;
+      SCIP_Real width;
+      SCIP_Real height;
+      int ntypes;
+
+      rexts = SCIPprobdataGetRexts(probdata);
+      rints = SCIPprobdataGetRints(probdata);
+      demands = SCIPprobdataGetDemands(probdata);
+      width = SCIPprobdataGetWidth(probdata);
+      height = SCIPprobdataGetHeight(probdata);
+      ntypes = SCIPprobdataGetNTypes(probdata);
 
       SCIPdebugMsg(scip, "write best solution into %s\n", filename);
 
       file = fopen(filename, "w");
       assert(file != NULL);
-      SCIPinfoMessage(scip, file, "TEST\n");
 
-      /* TODO */
+      /* latex header */
+      SCIPinfoMessage(scip, file, "\\documentclass[preview]{standalone}\n");
+      SCIPinfoMessage(scip, file, "\\usepackage{tikz}\n");
+      SCIPinfoMessage(scip, file, "\\usepackage{xstring}\n\n");
+      SCIPinfoMessage(scip, file, "\\begin{document}\n\n");
+
+      /* circular patterns */
+      SCIPinfoMessage(scip, file, "\\section*{circular patterns}\n\n");
+      SCIPprobdataGetCInfos(probdata, &patterns, &vars, &npatterns);
+      for( p = 0; p < npatterns; ++p )
+      {
+         if( SCIPpatternGetPackableStatus(patterns[p]) == SCIP_PACKABLE_YES )
+         {
+            int type = SCIPpatternGetType(patterns[p]);
+            int i;
+
+            SCIPinfoMessage(scip, file, "\\StrSubstitute{%s}{_}{-}[\\pname]\n", SCIPvarGetName(vars[p]));
+            SCIPinfoMessage(scip, file, "\\subsection*{\\texttt{\\pname} = %g demand=%d}\n",
+               SCIPgetSolVal(scip, sol, vars[p]), demands[type]);
+            SCIPinfoMessage(scip, file, "\\resizebox{0.3\\textwidth}{!}{\n");
+            SCIPinfoMessage(scip, file, "\\begin{tikzpicture}\n");
+            SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=black!%d!white] (%g,%g) circle (%g);\n",
+               getShadingVal(type, ntypes), 0.0, 0.0, rexts[type]);
+            SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", 0.0, 0.0, rints[type]);
+
+            for( i = 0; i < SCIPpatternGetNElemens(patterns[p]); ++i )
+            {
+               int elemtype = SCIPpatternGetElementType(patterns[p], i);
+               SCIP_Real x = SCIPpatternGetElementPosX(patterns[p], i);
+               SCIP_Real y = SCIPpatternGetElementPosY(patterns[p], i);
+               SCIP_Real rext = rexts[elemtype];
+               SCIP_Real rint = rints[elemtype];
+
+               SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=black!%d!white] (%g,%g) circle (%g);\n",
+                  getShadingVal(elemtype, ntypes), x, y, rext);
+               SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", x, y, rint);
+            }
+
+            SCIPinfoMessage(scip, file, "\\end{tikzpicture}\n");
+            SCIPinfoMessage(scip, file, "}\n\n");
+         }
+      }
+
+      /* rectangular patterns */
+      SCIPinfoMessage(scip, file, "\\section*{rectangular patterns}\n\n");
+      SCIPprobdataGetRInfos(probdata, &patterns, &vars, &npatterns);
+      for( p = 0; p < npatterns; ++p )
+      {
+         int i;
+
+         assert(SCIPpatternGetPackableStatus(patterns[p]) == SCIP_PACKABLE_YES);
+
+         SCIPinfoMessage(scip, file, "\\StrSubstitute{%s}{_}{-}[\\pname]\n", SCIPvarGetName(vars[p]));
+         SCIPinfoMessage(scip, file, "\\subsection*{\\texttt{\\pname} = %g}\n", SCIPgetSolVal(scip, sol, vars[p]));
+         SCIPinfoMessage(scip, file, "\\resizebox{0.3\\textwidth}{!}{\n");
+         SCIPinfoMessage(scip, file, "\\begin{tikzpicture}\n");
+
+         for( i = 0; i < SCIPpatternGetNElemens(patterns[p]); ++i )
+         {
+            int elemtype = SCIPpatternGetElementType(patterns[p], i);
+            SCIP_Real x = SCIPpatternGetElementPosX(patterns[p], i);
+            SCIP_Real y = SCIPpatternGetElementPosY(patterns[p], i);
+            SCIP_Real rext = rexts[elemtype];
+            SCIP_Real rint = rints[elemtype];
+
+            SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=black!%d!white] (%g,%g) circle (%g);\n",
+               getShadingVal(elemtype, ntypes), x, y, rext);
+            SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", x, y, rint);
+         }
+
+         SCIPinfoMessage(scip, file, "\\draw[] (%g,%g) -- (%g,%g) -- (%g,%g) -- (%g,%g) -- cycle;\n",
+            0.0, 0.0, 0.0, height, width, height, width, 0.0);
+
+         SCIPinfoMessage(scip, file, "\\end{tikzpicture}\n");
+         SCIPinfoMessage(scip, file, "}\n\n");
+      }
+
+      SCIPinfoMessage(scip, file, "\\end{document}\n");
 
       fclose(file);
    }

@@ -41,7 +41,7 @@
 #define DEFAULT_NLP_TIMELIMITSOFT            SCIP_REAL_MAX /**< soft time limit for verification NLP */
 #define DEFAULT_HEUR_ITERLIMITSOFT           100       /**< soft iteration limit for heuristic verification */
 #define DEFAULT_HEUR_TIMELIMITSOFT           SCIP_REAL_MAX /**< soft time limit for heuristic verification */
-#define DEFAULT_TEXOUTFILENAME               ""        /**< tex output filename for the best found solution */
+#define DEFAULT_TEXFILENAME                  ""        /**< filename for tex output for the best found solution (\"\": disable) */
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
@@ -125,9 +125,9 @@ SCIP_RETCODE runShell(
          NULL, FALSE, DEFAULT_HEUR_ITERLIMITSOFT, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip,
-         "ringpacking/texoutfilename",
-         "tex output filename for the best found solution (\"\": disable)",
-         NULL, FALSE, DEFAULT_TEXOUTFILENAME, NULL, NULL) );
+         "ringpacking/texfilename",
+         "filename for tex output for the best found solution (\"\": disable)",
+         NULL, FALSE, DEFAULT_TEXFILENAME, NULL, NULL) );
 
    /**********************************
     * Process command line arguments *
