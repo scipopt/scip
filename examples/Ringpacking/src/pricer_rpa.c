@@ -78,7 +78,7 @@ SCIP_Real getDensityUb(int n)
    assert(n > 0);
    if( n == 1 )
       return M_PI / 4.0;
-   return (n * M_PI) / SQR(2 - SQRT(3) + SQRT(7 - M_PI + SQRT(3)*(2*n - 6 + M_PI)) );
+   return (n * M_PI) / SQR(2.0 - SQRT(3.0) + SQRT(7.0 - M_PI + SQRT(3.0)*(2.0*n - 6.0 + M_PI)) );/*lint !e666*/
 }
 
 /** helper function to count how many circles of a given type are needed */
@@ -106,21 +106,21 @@ int getNCircles(
    volcircle = M_PI * SQR(rext);
    assert(volcircle != 0.0);
 
-   ncircles = SCIPfeasFloor(scip, (getDensityUb(demand) * volrect) / volcircle);
+   ncircles = (int)SCIPfeasFloor(scip, (getDensityUb(demand) * volrect) / volcircle);
 
    /* special cases where too big circles have a minimum distance to each other (in x direction) */
    if( SCIPisGT(scip, rext, height / 4.0) )
    {
       SCIP_Real c = SQRT(4.0 * rext * height - SQR(height));
-      ncircles = MIN(ncircles, 1 + (int)SCIPfloor(scip, (width - 2.0*rext) / c));
+      ncircles = (int)MIN(ncircles, 1 + (int)SCIPfloor(scip, (width - 2.0*rext) / c)); /*lint !e666*/
    }
    if( SCIPisGT(scip, rext, height / 6.0) && SCIPisLE(scip, rext, height / 4.0) )
    {
       SCIP_Real c = MIN(SQRT(3.0*rext*rext + rext * height - height * height / 4.0),
-         SQRT(8.0 * rext * height - height * height - 12.0 * rext * rext));
-      int k = (int)SCIPfloor(scip, height / (2.0 * rext)) + 1;
-      int l = (width - 2.0 * rext) / c;
-      ncircles = MIN(ncircles, k + l*(k-1) - 1);
+         SQRT(8.0 * rext * height - height * height - 12.0 * rext * rext)); /*lint !e666*/
+      SCIP_Real k = SCIPfloor(scip, height / (2.0 * rext)) + 1;
+      SCIP_Real l = (width - 2.0 * rext) / c;
+      ncircles = (int)MIN(ncircles, k + l*(k-1) - 1);
    }
    assert(ncircles > 0);
 
@@ -131,23 +131,21 @@ int getNCircles(
 static
 SCIP_RETCODE addVariable(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
    int*                  types,              /**< types of elements */
    int                   nelems              /**< total number of elements */
    )
 {
    SCIP_CONS** conss;
-   SCIP_PROBDATA* probdata;
    SCIP_PATTERN* pattern;
    SCIP_VAR* var;
    char name[SCIP_MAXSTRLEN];
    char strtmp[SCIP_MAXSTRLEN];
    int i;
 
+   assert(probdata != NULL);
    assert(types != NULL);
    assert(nelems > 0);
-
-   probdata = SCIPgetProbData(scip);
-   assert(probdata != NULL);
 
    conss = SCIPprobdataGetPatternConss(probdata);
    assert(conss != NULL);
@@ -241,7 +239,7 @@ SCIP_RETCODE extractVariablesMINLP(
    assert(nselected > 0); /* otherwise the reduced cost can not be negative */
 
    /* add variable to main SCIP */
-   SCIP_CALL( addVariable(scip, selectedtypes, nselected) );
+   SCIP_CALL( addVariable(scip, probdata, selectedtypes, nselected) );
 
    /* free memory */
    SCIPfreeBufferArray(scip, &selectedtypes);

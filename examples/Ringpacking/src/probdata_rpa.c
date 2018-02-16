@@ -859,7 +859,6 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
 }
 
 /** verifies a circular pattern via a verification NLP */
-extern
 SCIP_RETCODE SCIPverifyCircularPatternNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
@@ -1043,7 +1042,6 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
 }
 
 /** check whether a pattern for consistency */
-extern
 void SCIPcheckPattern(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
