@@ -121,6 +121,12 @@ void SCIPprobdataUpdateDualbound(
    SCIP_Real             dualbound           /**< new dual bound */
    );
 
+/** marks that further reported dual bounds are not valid */
+extern
+void SCIPprobdataInvalidateDualbound(
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   );
+
 /** verifies a circular pattern heuristically */
 extern
 SCIP_RETCODE SCIPverifyCircularPatternHeuristic(

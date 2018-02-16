@@ -71,6 +71,7 @@ struct SCIP_ProbData
    /* variables for statistics */
    int                   ncppatternsunknownbeg;/**< number of unknown circular patterns after enumeration step */
    SCIP_Real             enumtime;           /**< time spend for enumerating circular patterns */
+   SCIP_Bool             isdualinvalid;      /**< whether the following reported dual bounds are valid */
    SCIP_Real             dualbound;          /**< valid dual bound for RCPP instance */
 };
 
@@ -363,8 +364,8 @@ SCIP_RETCODE setupProblem(
    /* create initial rectangular patterns */
    for( t = 0; t < ntypes; ++t )
    {
-      SCIP_VAR* var;
       SCIP_PATTERN* pattern;
+      SCIP_VAR* var;
 
       /* create a pattern containing a single circle of type t; set position of the circle to the left-bottom */
       SCIP_CALL( SCIPpatternCreateRectangular(scip, &pattern) );
@@ -486,6 +487,7 @@ static
 SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
 { /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
+   SCIP_Real dualbound;
    int* demands;
    int ntypes;
    int nrings;
@@ -498,6 +500,15 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
    demands = SCIPprobdataGetDemands(probdata);
    nrings = 0;
 
+   /* use global dual bound if it is still valid */
+   if( !probdata->isdualinvalid )
+   {
+      assert(SCIPisGE(scip, SCIPgetDualbound(scip), probdata->dualbound));
+      dualbound = SCIPgetDualbound(scip);
+   }
+   else
+      dualbound = probdata->dualbound;
+
    /* count the number of rings */
    for( t = 0; t < ntypes; ++t )
       nrings += demands[t];
@@ -506,7 +517,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
       "dual", "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_no", "RP", "CP_time");
 
    SCIPinfoMessage(scip, file, "  %-17s:", SCIPgetProbName(scip));
-   SCIPinfoMessage(scip, file, " %10.2f", probdata->dualbound);
+   SCIPinfoMessage(scip, file, " %10.2f", dualbound);
    SCIPinfoMessage(scip, file, " %10d", ntypes);
    SCIPinfoMessage(scip, file, " %10d", nrings);
    SCIPinfoMessage(scip, file, " %10.2f", SCIPprobdataGetWidth(probdata));
@@ -796,7 +807,27 @@ void SCIPprobdataUpdateDualbound(
    )
 {
    assert(probdata != NULL);
-   probdata->dualbound = MAX(probdata->dualbound, dualbound);
+
+   if( !probdata->isdualinvalid )
+   {
+      SCIPdebugMessage("update dual bound from %g to %g\n", probdata->dualbound,
+         MAX(probdata->dualbound, dualbound));
+      probdata->dualbound = MAX(probdata->dualbound, dualbound);
+   }
+}
+
+/** marks that further reported dual bounds are not valid */
+void SCIPprobdataInvalidateDualbound(
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+{
+   assert(probdata != NULL);
+
+   if( !probdata->isdualinvalid )
+   {
+      SCIPdebugMessage("invalidate dual bound\n");
+      probdata->isdualinvalid = TRUE;
+   }
 }
 
 /** verifies a circular pattern heuristically */

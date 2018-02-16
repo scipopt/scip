@@ -225,8 +225,12 @@ SCIP_RETCODE enforceSol(
 
       solval = SCIPgetSolVal(scip, sol, cvars[p]);
 
+      /* skip unused circular patterns */
+      if( SCIPisFeasZero(scip, solval) )
+         continue;
+
       /* try to verify an unknown circular pattern */
-      if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN && !SCIPisFeasZero(scip, solval) && !conshdlrdata->tried[p] )
+      if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN && !conshdlrdata->tried[p] )
       {
          SCIP_CALL( verifyCircularPattern(scip, probdata, cpatterns[p]) );
          conshdlrdata->tried[p] = TRUE;
@@ -269,6 +273,9 @@ SCIP_RETCODE enforceSol(
          SCIP_CALL( SCIPfixVar(scip, cvars[p], 0.0, &infeasible, &success) );
          SCIPdebugMsg(scip, "fix unknown pattern %d in [%g,%g] (success=%u)\n", p, SCIPvarGetLbLocal(cvars[p]),
             SCIPvarGetUbLocal(cvars[p]), success);
+
+         /* dual bound is not valid anymore */
+         SCIPprobdataInvalidateDualbound(probdata);
 
          if( infeasible )
          {

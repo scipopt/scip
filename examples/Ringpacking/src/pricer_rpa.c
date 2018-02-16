@@ -60,7 +60,6 @@
 /** @brief Variable pricer data used in the \ref pricer_ringpacking.c "pricer" */
 struct SCIP_PricerData
 {
-
 };
 
 
@@ -555,19 +554,21 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
 
    *result = SCIP_SUCCESS;
 
-   /* only run pricer in the root node */
-   if( SCIPgetDepth(scip) > 0 )
-      return SCIP_OKAY;
-
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
+
+   /* only run pricer in the root node */
+   if( SCIPgetDepth(scip) > 0 )
+   {
+      SCIPprobdataInvalidateDualbound(probdata);
+      return SCIP_OKAY;
+   }
 
    conss = SCIPprobdataGetPatternConss(probdata);
    assert(conss != NULL);
 
    /* collect dual multipliers */
    SCIP_CALL( SCIPallocBufferArray(scip, &lambdas, SCIPprobdataGetNTypes(probdata)) );
-
    for( t = 0; t < SCIPprobdataGetNTypes(probdata); ++t )
    {
       assert(conss[t] != NULL);
@@ -578,7 +579,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    }
 
    /* TODO add parameter for time and node limit */
-   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 100.0, 1000L, &success, &solstat, &redcosts) );
+   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 10.0, 1000L, &success, &solstat, &redcosts) );
    redcosts += 1.0;
    SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 
@@ -592,6 +593,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
 
    /* updates dual bound that is stored in the problem data */
    SCIPprobdataUpdateDualbound(probdata, *lowerbound);
+
+   /* TODO invalidate dual bound if no variable has been added and the pricing problem has not been solved to optimality */
 
    /* free memory */
    SCIPfreeBufferArray(scip, &lambdas);
