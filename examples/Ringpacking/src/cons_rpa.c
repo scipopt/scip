@@ -160,6 +160,7 @@ SCIP_RETCODE verifyCircularPattern(
    }
 
    SCIPdebugMsg(scip, "packable status? %d\n", SCIPpatternGetPackableStatus(pattern));
+   SCIPcheckPattern(scip, probdata, pattern);
 
    return SCIP_OKAY;
 }

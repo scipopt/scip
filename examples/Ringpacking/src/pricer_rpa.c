@@ -133,6 +133,8 @@ SCIP_RETCODE addVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
    int*                  types,              /**< types of elements */
+   SCIP_Real*            xs,                 /**< x coordinate of each element */
+   SCIP_Real*            ys,                 /**< y coordinate of each element */
    int                   nelems              /**< total number of elements */
    )
 {
@@ -145,6 +147,8 @@ SCIP_RETCODE addVariable(
 
    assert(probdata != NULL);
    assert(types != NULL);
+   assert(xs != NULL);
+   assert(ys != NULL);
    assert(nelems > 0);
 
    conss = SCIPprobdataGetPatternConss(probdata);
@@ -152,7 +156,6 @@ SCIP_RETCODE addVariable(
 
    /* create rectangular pattern */
    SCIP_CALL( SCIPpatternCreateRectangular(scip, &pattern) );
-   SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
    /* create variable name */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r");
@@ -160,7 +163,12 @@ SCIP_RETCODE addVariable(
    {
       (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", types[i]);
       (void) strcat(name, strtmp);
+
+      SCIP_CALL( SCIPpatternAddElement(pattern, types[i], xs[i], ys[i]) );
    }
+
+   /* mark pattern to be packable */
+   SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
    /* create and add variable */
    SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_INTEGER) );
@@ -193,6 +201,8 @@ SCIP_RETCODE extractVariablesMINLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SCIP_VAR**            x,                  /**< x variables of sub-SCIP */
+   SCIP_VAR**            y,                  /**< y variables of sub-SCIP */
    SCIP_VAR**            w,                  /**< w variables of sub-SCIP */
    int*                  types,              /**< type corresponding to each variable */
    int                   nvars,              /**< number of variables */
@@ -200,6 +210,8 @@ SCIP_RETCODE extractVariablesMINLP(
    )
 {
    SCIP_SOL* sol;
+   SCIP_Real* xs;
+   SCIP_Real* ys;
    int* selectedtypes;
    int nselected;
    int i;
@@ -223,6 +235,8 @@ SCIP_RETCODE extractVariablesMINLP(
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &selectedtypes, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ys, nvars) );
 
    /* scan which circles have been selected */
    nselected = 0;
@@ -233,15 +247,19 @@ SCIP_RETCODE extractVariablesMINLP(
       if( solval >= 0.5 )
       {
          selectedtypes[nselected] = types[i];
+         xs[nselected] = SCIPgetSolVal(subscip, sol, x[i]);
+         ys[nselected] = SCIPgetSolVal(subscip, sol, y[i]);
          ++nselected;
       }
    }
    assert(nselected > 0); /* otherwise the reduced cost can not be negative */
 
    /* add variable to main SCIP */
-   SCIP_CALL( addVariable(scip, probdata, selectedtypes, nselected) );
+   SCIP_CALL( addVariable(scip, probdata, selectedtypes, xs, ys, nselected) );
 
    /* free memory */
+   SCIPfreeBufferArray(scip, &ys);
+   SCIPfreeBufferArray(scip, &xs);
    SCIPfreeBufferArray(scip, &selectedtypes);
 
    return SCIP_OKAY;
@@ -466,7 +484,7 @@ SCIP_RETCODE solvePricingMINLP(
    *solstat = SCIPgetStatus(subscip);
 
    /* add variable with negative reduced costs */
-   SCIP_CALL( extractVariablesMINLP(scip, probdata, subscip, w, types, nvars, addedvar) );
+   SCIP_CALL( extractVariablesMINLP(scip, probdata, subscip, x, y, w, types, nvars, addedvar) );
 
    /* free variables */
    for( i = 0; i < nvars; ++i )
@@ -560,7 +578,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    }
 
    /* TODO add parameter for time and node limit */
-   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 1.0, 1000L, &success, &solstat, &redcosts) );
+   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 100.0, 1000L, &success, &solstat, &redcosts) );
    redcosts += 1.0;
    SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 

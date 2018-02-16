@@ -184,10 +184,6 @@ SCIP_RETCODE probdataFree(
    }
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->patternconss, (*probdata)->ntypes);
 
-   SCIPfreeBlockMemoryArray(scip, &(*probdata)->rexts, (*probdata)->ntypes);
-   SCIPfreeBlockMemoryArray(scip, &(*probdata)->rints, (*probdata)->ntypes);
-   SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands, (*probdata)->ntypes);
-
    /* release circular patterns */
    for( i = 0; i < (*probdata)->ncpatterns; ++i )
    {
@@ -200,8 +196,6 @@ SCIP_RETCODE probdataFree(
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->cpatterns, (*probdata)->cpatternsize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->cvars, (*probdata)->cpatternsize);
-   (*probdata)->cpatternsize = 0;
-   (*probdata)->ncpatterns = 0;
 
    /* release rectangular patterns */
    for( i = 0; i < (*probdata)->nrpatterns; ++i )
@@ -215,8 +209,10 @@ SCIP_RETCODE probdataFree(
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->rpatterns, (*probdata)->rpatternsize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->rvars, (*probdata)->rpatternsize);
-   (*probdata)->rpatternsize = 0;
-   (*probdata)->nrpatterns = 0;
+
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->rexts, (*probdata)->ntypes);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->rints, (*probdata)->ntypes);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands, (*probdata)->ntypes);
 
    SCIPfreeBlockMemory(scip, probdata);
    SCIP_CALL( SCIPsetProbData(scip, NULL) );
@@ -850,7 +846,6 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
          SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
       else
          SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_NO);
-
       return SCIP_OKAY;
    }
 
