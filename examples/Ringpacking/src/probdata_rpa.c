@@ -71,6 +71,7 @@ struct SCIP_ProbData
    /* variables for statistics */
    int                   ncppatternsunknownbeg;/**< number of unknown circular patterns after enumeration step */
    SCIP_Real             enumtime;           /**< time spend for enumerating circular patterns */
+   SCIP_Real             dualbound;          /**< valid dual bound for RCPP instance */
 };
 
 
@@ -505,10 +506,11 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
    for( t = 0; t < ntypes; ++t )
       nrings += demands[t];
 
-   SCIPinfoMessage(scip, file, "Ringpacking        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_no", "RP", "CP_time");
+   SCIPinfoMessage(scip, file, "Ringpacking        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "dual", "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_no", "RP", "CP_time");
 
    SCIPinfoMessage(scip, file, "  %-17s:", SCIPgetProbName(scip));
+   SCIPinfoMessage(scip, file, " %10.2f", probdata->dualbound);
    SCIPinfoMessage(scip, file, " %10d", ntypes);
    SCIPinfoMessage(scip, file, " %10d", nrings);
    SCIPinfoMessage(scip, file, " %10.2f", SCIPprobdataGetWidth(probdata));
@@ -789,6 +791,16 @@ SCIP_RETCODE SCIPprobdataAddVar(
    SCIPpatternCapture(pattern);
 
    return SCIP_OKAY;
+}
+
+/** updates the dual bound */
+void SCIPprobdataUpdateDualbound(
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_Real             dualbound           /**< new dual bound */
+   )
+{
+   assert(probdata != NULL);
+   probdata->dualbound = MAX(probdata->dualbound, dualbound);
 }
 
 /** verifies a circular pattern heuristically */

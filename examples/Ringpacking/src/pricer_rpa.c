@@ -572,6 +572,9 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    *lowerbound = SCIPfeasCeil(scip, *lowerbound);
    SCIPdebugMsg(scip, "Farley's bound = %g LP(master) = %g dual(pricing) = %g\n", *lowerbound, SCIPgetLPObjval(scip), redcosts);
 
+   /* updates dual bound that is stored in the problem data */
+   SCIPprobdataUpdateDualbound(probdata, *lowerbound);
+
    /* free memory */
    SCIPfreeBufferArray(scip, &lambdas);
 

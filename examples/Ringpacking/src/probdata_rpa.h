@@ -114,6 +114,13 @@ SCIP_RETCODE SCIPprobdataAddVar(
    SCIP_PATTERNTYPE      patterntype         /**< pattern type */
    );
 
+/** updates the dual bound */
+extern
+void SCIPprobdataUpdateDualbound(
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_Real             dualbound           /**< new dual bound */
+   );
+
 /** verifies a circular pattern heuristically */
 extern
 SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
