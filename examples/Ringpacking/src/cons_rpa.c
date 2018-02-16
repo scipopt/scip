@@ -408,12 +408,12 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
                int elemtype = SCIPpatternGetElementType(patterns[p], i);
                SCIP_Real x = SCIPpatternGetElementPosX(patterns[p], i);
                SCIP_Real y = SCIPpatternGetElementPosY(patterns[p], i);
-               SCIP_Real rext = rexts[elemtype];
-               SCIP_Real rint = rints[elemtype];
+               SCIP_Real _rext = rexts[elemtype];
+               SCIP_Real _rint = rints[elemtype];
 
                SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=black!%d!white] (%g,%g) circle (%g);\n",
-                  getShadingVal(elemtype, ntypes), x, y, rext);
-               SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", x, y, rint);
+                  getShadingVal(elemtype, ntypes), x, y, _rext);
+               SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", x, y, _rint);
             }
 
             SCIPinfoMessage(scip, file, "\\end{tikzpicture}\n");
@@ -440,12 +440,12 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
             int elemtype = SCIPpatternGetElementType(patterns[p], i);
             SCIP_Real x = SCIPpatternGetElementPosX(patterns[p], i);
             SCIP_Real y = SCIPpatternGetElementPosY(patterns[p], i);
-            SCIP_Real rext = rexts[elemtype];
-            SCIP_Real rint = rints[elemtype];
+            SCIP_Real _rext = rexts[elemtype];
+            SCIP_Real _rint = rints[elemtype];
 
             SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=black!%d!white] (%g,%g) circle (%g);\n",
-               getShadingVal(elemtype, ntypes), x, y, rext);
-            SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", x, y, rint);
+               getShadingVal(elemtype, ntypes), x, y, _rext);
+            SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", x, y, _rint);
          }
 
          SCIPinfoMessage(scip, file, "\\draw[] (%g,%g) -- (%g,%g) -- (%g,%g) -- (%g,%g) -- cycle;\n",
