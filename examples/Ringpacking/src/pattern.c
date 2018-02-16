@@ -88,7 +88,7 @@ SCIP_RETCODE SCIPpatternCreateCircular(
    return createPattern(scip, pattern, SCIP_PATTERNTYPE_CIRCULAR, type);
 }
 
-/** creates an empty circular pattern */
+/** creates an empty rectangular pattern */
 SCIP_RETCODE SCIPpatternCreateRectangular(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PATTERN**        pattern             /**< pointer to store pattern */
