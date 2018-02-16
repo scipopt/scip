@@ -1,0 +1,172 @@
+ =opt=       C01-A        180000
+ =opt=       C01-B        85
+ =opt=       C02-A        50
+ =opt=       C02-B        141
+ =opt=       C03-A        414
+ =opt=       C03-B        737
+ =opt=       C04-A        618
+ =opt=       C04-B        1063
+ =opt=       C05-A        1080
+ =opt=       C05-B        1528
+ =opt=       C06-A        18
+ =opt=       C06-B        55
+ =opt=       C07-A        50
+ =opt=       C07-B        102
+ =opt=       C08-A        361
+ =opt=       C08-B        500
+ =opt=       C09-A        533
+ =opt=       C09-B        694
+ =opt=       C10-A        859
+ =opt=       C10-B        1069
+ =opt=       C11-A        18
+ =opt=       C11-B        32
+ =opt=       C12-A        38
+ =opt=       C12-B        46
+ =opt=       C13-A        236
+ =opt=       C13-B        258
+ =opt=       C14-A        293
+ =opt=       C14-B        318
+ =opt=       C15-A        501
+ =opt=       C15-B        551
+ =opt=       C16-A        11
+ =opt=       C16-B        11
+ =opt=       C17-A        18
+ =opt=       C17-B        18
+ =opt=       C18-A        111
+ =opt=       C18-B        113
+ =opt=       C19-A        146
+ =opt=       C19-B        146
+ =opt=       C20-A        266
+ =opt=       C20-B        267
+ =opt=       D01-A        18
+ =opt=       D01-B        106
+ =opt=       D02-A        50
+ =opt=       D02-B        218
+ =opt=       D03-A        807
+ =opt=       D03-B        1509
+ =opt=       D04-A        1203
+ =opt=       D04-B        1881
+ =opt=       D05-A        2157
+ =opt=       D05-B        3135
+ =opt=       D06-A        18
+ =opt=       D06-B        67
+ =opt=       D07-A        50
+ =opt=       D07-B        103
+ =opt=       D08-A        755
+ =opt=       D08-B        1036
+ =opt=       D09-A        1070
+ =opt=       D09-B        1420
+ =opt=       D10-A        1671
+ =opt=       D10-B        2079
+ =opt=       D11-A        18
+ =opt=       D11-B        29
+ =opt=       D12-A        42
+ =opt=       D12-B        42
+ =opt=       D13-A        445
+ =opt=       D13-B        486
+ =opt=       D14-A        602
+ =opt=       D14-B        665
+ =opt=       D15-A        1042
+ =opt=       D15-B        1108
+ =opt=       D16-A        13
+ =opt=       D16-B        13
+ =opt=       D17-A        23
+ =opt=       D17-B        23
+ =opt=       D18-A        218
+ =opt=       D18-B        223
+ =opt=       D19-A        306
+ =opt=       D19-B        310
+ =opt=       D20-A        536
+ =opt=       D20-B        537
+ =opt=       drosophila001                        8273.98263
+ =opt=       drosophila005                        8121.313578
+ =opt=       drosophila0075                       8039.859460
+ =opt=       HCMV                                 7371.536373
+ =opt=       lymphoma                             3341.890237
+ =opt=       metabol_expr_mice_1                 11346.927189
+ =opt=       metabol_expr_mice_2                 16250.235191
+ =opt=       metabol_expr_mice_3                 16919.620407
+=opt=           K100-10                 133567
+=opt=           K100-1                  124108
+=opt=           K100-2                  200262
+=opt=           K100-3                  115953
+=opt=              K100-4               87498
+=opt=              K100-5               119078
+=opt=              K100-6               132886
+=opt=              K100-7               172457
+=opt=             K100-8                210869
+=opt=             K100-9                122917
+=opt=             K100-0                135511
+=opt=             K200-0                329211
+=opt=            K400-10                394191
+=opt=            K400-1                 490771
+=opt=            K400-2                 477073
+=opt=            K400-3                 415328
+=opt=            K400-4                 389451
+=opt=            K400-5                 519526
+=opt=            K400-6                 374849
+=opt=            K400-7                 474466
+=opt=            K400-8                 418614
+=opt=            K400-9                 383105
+=opt=            K400-0                 350093
+=opt=            P100-1                 926238
+=opt=            P100-2                 401641
+=opt=              P100-3             659644
+=opt=              P100-4             827419
+=opt=              P100-0             803300
+=opt=              P200-0             1317874
+=opt=              P400-1             2808440
+=opt=              P400-2             2518577
+=opt=              P400-3             2951725
+=opt=              P400-4             2852956
+=opt=              P400-0             2459904
+=opt=        e01.stp-A                         13
+=opt=        e01.stp-B                         109
+=opt=        e02.stp-A                         30
+=opt=        e02.stp-B                         170
+=opt=        e03.stp-A                         2231
+=opt=        e03.stp-B                         3806
+=opt=        e04.stp-A                         3151
+=opt=        e04.stp-B                         4888
+=opt=        e05.stp-A                         5657
+=opt=        e05.stp-B                         7998
+=opt=        e06.stp-A                         19
+=opt=        e06.stp-B                         70
+=opt=        e07.stp-A                         40
+=opt=        e07.stp-B                         136
+=opt=        e08.stp-A                         1878
+=opt=        e08.stp-B                         2555
+=opt=        e09.stp-A                         2787
+=opt=        e09.stp-B                         3541
+=opt=        e10.stp-A                         4586
+=opt=        e10.stp-B                         5502
+=opt=        e11.stp-A                         21
+=opt=        e11.stp-B                         34
+=opt=        e12.stp-A                         49
+=opt=        e12.stp-B                         67
+=opt=        e13.stp-A                         1169
+=opt=        e13.stp-B                         1269
+=opt=        e14.stp-A                         1579
+=opt=        e14.stp-B                         1716
+=opt=        e15.stp-A                         2610
+=opt=        e15.stp-B                         2767
+=opt=        e16.stp-A                         15
+=opt=        e16.stp-B                         15
+=opt=        e17.stp-A                         25
+=opt=        e17.stp-B                         25
+=opt=        e18.stp-A                         555
+=opt=        e18.stp-B                         564
+=opt=        e19.stp-A                         747
+=opt=        e19.stp-B                         758
+=opt=        e20.stp-A                         1331
+=opt=        e20.stp-B                         1342
+=opt=     bipe2nu         53
+=opt=     cc3-10nu        61
+=opt=     cc3-11nu        79
+=opt=     cc3-12nu        95
+=opt=     cc3-4nu         10
+=opt=     cc3-5nu         17
+=opt=     cc5-3nu         36
+=opt=     cc6-2nu         15
+=opt=     cc6-3nu         95
+=opt=     cc9-2nu         83

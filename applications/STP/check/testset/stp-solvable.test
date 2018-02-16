@@ -260,6 +260,10 @@
 ../steinlib/PUC/bipe2u.stp
 ../steinlib/PUC/cc3-4p.stp
 ../steinlib/PUC/cc3-4u.stp
+../steinlib/PUC/cc6-2p.stp
+../steinlib/PUC/cc6-2u.stp
+../steinlib/PUC/hc6p.stp
+../steinlib/PUC/hc6u.stp
 ../steinlib/I640/i640-001.stp
 ../steinlib/I640/i640-002.stp
 ../steinlib/I640/i640-003.stp
@@ -315,3 +319,8 @@
 ../steinlib/I640/i640-203.stp
 ../steinlib/I640/i640-204.stp
 ../steinlib/I640/i640-205.stp
+../steinlib/I640/i640-331.stp
+../steinlib/I640/i640-332.stp
+../steinlib/I640/i640-333.stp
+../steinlib/I640/i640-334.stp
+../steinlib/I640/i640-335.stp
