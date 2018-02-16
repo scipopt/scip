@@ -52,7 +52,7 @@ SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
 
 if test -e "$SOLUFILE"
 then
-    OBJECTIVEVAL=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+    OBJECTIVEVAL=`grep "$SHORTPROBNAME " $SOLUFILE | grep -e =opt= -e =best= | tail -n 1 | awk '{print $3}'`
 else
     OBJECTIVEVAL=""
 fi
