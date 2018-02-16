@@ -125,14 +125,14 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
 
 /** informs about availability of a simplex solving method */
 EXTERN
-SCIP_BOOL SCIPlpiHasSimplexSolve(
+SCIP_Bool SCIPlpiHasSimplexSolve(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** informs about availability of a barrier solving method */
 EXTERN
-SCIP_BOOL SCIPlpiHasBarrierSolve(
-   SCIP_LPI*             lpi,                /**< LP interface structure */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /**@} */
