@@ -826,6 +826,7 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    if( SCIPpatternGetNElemens(pattern) == 0 )
    {
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
+      SCIPcheckPattern(scip, probdata, pattern);
       return SCIP_OKAY;
    }
 
@@ -846,6 +847,8 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
          SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
       else
          SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_NO);
+
+      SCIPcheckPattern(scip, probdata, pattern);
       return SCIP_OKAY;
    }
 
@@ -861,6 +864,8 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
 
       ++niters;
    }
+
+   SCIPcheckPattern(scip, probdata, pattern);
 
    return SCIP_OKAY;
 }
