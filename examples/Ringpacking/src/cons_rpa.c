@@ -53,7 +53,8 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
-#define EVENTHDLR_NAME         "newsol"
+/* new best solution event handler properties */
+#define EVENTHDLR_NAME         "bestsol"
 #define EVENTHDLR_DESC         "best solution event handler"
 
 /*
