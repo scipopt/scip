@@ -33,7 +33,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	rinpacking
+MAINNAME	=	ringpacking
 CMAINOBJ	=	cmain.o \
 	cons_rpa.o \
 	reader_rpa.o \
