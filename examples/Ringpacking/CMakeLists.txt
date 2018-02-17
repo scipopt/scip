@@ -5,7 +5,7 @@ project(Rinpacking)
 find_package(SCIP REQUIRED)
 include_directories(${SCIP_INCLUDE_DIRS})
 
-add_executable(rinpacking
+add_executable(ringpacking
    src/cmain.c
    src/reader_rpa.c
    src/probdata_rpa.c
@@ -13,9 +13,15 @@ add_executable(rinpacking
    src/cons_rpa.c
    src/pattern.c)
 
-target_link_libraries(rinpacking ${SCIP_LIBRARIES})
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
+target_link_libraries(ringpacking ${SCIP_LIBRARIES} ${LIBM})
 if( TARGET examples )
-    add_dependencies( examples rinpacking )
+    add_dependencies( examples ringpacking )
 endif()
 
 #

@@ -28,6 +28,7 @@
 #include "pricer_rpa.h"
 
 #include <string.h>
+#include <math.h>
 
 /* properties of the ringpacking statistics table */
 #define TABLE_NAME_RPA                       "ringpacking"

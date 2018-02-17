@@ -14,7 +14,13 @@ add_executable(binpacking
    src/reader_bpa.c
    src/vardata_binpacking.c)
 
-target_link_libraries(binpacking ${SCIP_LIBRARIES})
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
+target_link_libraries(binpacking ${SCIP_LIBRARIES} ${LIBM})
 if( TARGET examples )
     add_dependencies( examples binpacking )
 endif()
