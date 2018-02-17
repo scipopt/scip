@@ -850,6 +850,7 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    assert(iterlim > 0);
    assert(SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR);
    assert(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+   assert(SCIPpatternGetType(pattern) < SCIPprobdataGetNTypes(probdata));
 
    rexts = SCIPprobdataGetRexts(probdata);
    rints = SCIPprobdataGetRints(probdata);
