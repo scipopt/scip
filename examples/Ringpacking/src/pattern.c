@@ -133,7 +133,7 @@ void SCIPpatternRelease(
       *pattern = NULL;
 }
 
-/** adds an element of a given type to a pattern; resets packable status if no (x,y) position is given */
+/** adds an element of a given type to a pattern; packable status does not change */
 SCIP_RETCODE SCIPpatternAddElement(
    SCIP_PATTERN*         pattern,            /**< pattern */
    int                   type,               /**< element of a given type */
@@ -150,10 +150,6 @@ SCIP_RETCODE SCIPpatternAddElement(
    pattern->ys[pattern->nelems] = y;
 
    ++(pattern->nelems);
-
-   /* no position is given -> assume that pattern is unknown to be packable */
-   if( x == SCIP_INVALID || y == SCIP_INVALID )
-      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
 
    return SCIP_OKAY;
 }

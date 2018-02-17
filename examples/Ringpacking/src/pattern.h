@@ -87,7 +87,7 @@ void SCIPpatternRelease(
    SCIP_PATTERN**        pattern             /**< pointer to free pattern */
    );
 
-/** adds an element of a given type to a pattern; resets packable status if no (x,y) position is given */
+/** adds an element of a given type to a pattern; packable status does not change */
 extern
 SCIP_RETCODE SCIPpatternAddElement(
    SCIP_PATTERN*         pattern,            /**< pattern */

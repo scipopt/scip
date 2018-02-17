@@ -152,6 +152,7 @@ Test(verification, heur_two)
    /* cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO); */
 
    /* remove element of type 2 and add another element of type 1 -> packable */
+   SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
    SCIPpatternRemoveLastElement(pattern);
    SCIP_CALL( SCIPpatternAddElement(pattern, 1, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
