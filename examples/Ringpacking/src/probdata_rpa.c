@@ -517,7 +517,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
    SCIPinfoMessage(scip, file, "Ringpacking        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
       "dual", "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_no", "RP", "CP_time");
 
-   SCIPinfoMessage(scip, file, "  %-17s:", SCIPgetProbName(scip));
+   SCIPinfoMessage(scip, file, "  %-17s:", "");
    SCIPinfoMessage(scip, file, " %10.2f", dualbound);
    SCIPinfoMessage(scip, file, " %10d", ntypes);
    SCIPinfoMessage(scip, file, " %10d", nrings);
