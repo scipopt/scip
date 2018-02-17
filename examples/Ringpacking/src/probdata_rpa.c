@@ -342,12 +342,17 @@ SCIP_RETCODE setupProblem(
 {
    char name[SCIP_MAXSTRLEN];
    SCIP_Real* rexts;
+   SCIP_Real* _rints;
+   SCIP_Real dualbound;
+   SCIP_Real minrext;
+   SCIP_Real volume;
    int* demands;
    int ntypes;
    int p;
    int t;
 
    assert(probdata != NULL);
+   assert(SCIPprobdataGetNTypes(probdata) > 0);
 
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
@@ -357,6 +362,7 @@ SCIP_RETCODE setupProblem(
 
    ntypes = SCIPprobdataGetNTypes(probdata);
    rexts = SCIPprobdataGetRexts(probdata);
+   _rints = SCIPprobdataGetRints(probdata);
    demands = SCIPprobdataGetDemands(probdata);
 
    /* compute all non-dominated circular patterns */
@@ -479,6 +485,24 @@ SCIP_RETCODE setupProblem(
          }
       }
    }
+
+   /* compute an initial dual bound by considering the volume of all rings */
+   minrext = rexts[ntypes-1];
+   volume = 0.0;
+   for( t = 0; t < ntypes; ++t )
+   {
+      /* consider ring as circle if there is no ring with a smaller radius than than inner one */
+      if( SCIPisFeasLT(scip, _rints[t], minrext) )
+         volume += M_PI * SQR(rexts[t]);
+      else
+         volume += M_PI * (SQR(rexts[t]) - SQR(_rints[t]));
+   }
+
+   /* update initial dual bound */
+   dualbound = SCIPfeasCeil(scip, volume / (SCIPprobdataGetWidth(probdata) + SCIPprobdataGetHeight(probdata)));
+   SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+   SCIPprobdataUpdateDualbound(probdata, dualbound);
+   SCIPdebugMsg(scip, "volume-based dual bound = %g\n", dualbound);
 
    return SCIP_OKAY;
 }
@@ -636,7 +660,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbInitsol(scip, probinitsolRingpacking) );
    SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolRingpacking) );
 
-   /* setup master problem*/
+   /* setup master problem */
    SCIP_CALL( setupProblem(scip, probdata) );
 
    /* activate pricer */
