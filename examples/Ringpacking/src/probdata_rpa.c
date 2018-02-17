@@ -876,7 +876,10 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
 
       /* check whether element fits into the circular pattern */
       if( SCIPisGE(scip, rints[type], rexts[elemtype]) )
+      {
+         SCIPpatternSetElementPos(pattern, 0, rexts[elemtype]-rints[type], 0.0);
          SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
+      }
       else
          SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_NO);
 
@@ -962,7 +965,7 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
       int elemtype;
 
       elemtype = SCIPpatternGetElementType(pattern, k);
-      assert(elemtype >= 0 && elemtype < nelems);
+      assert(elemtype >= 0 && elemtype < SCIPprobdataGetNTypes(probdata));
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x_%d", k);
       SCIP_CALL( SCIPcreateVarBasic(subscip, &xvars[k], name, rexts[elemtype] - rints[type], rints[type] - rexts[elemtype], 0.0, SCIP_VARTYPE_CONTINUOUS) );

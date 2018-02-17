@@ -52,6 +52,12 @@ if( CRITERION_FOUND )
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../tests)
 
+  # link to math library if it is available
+  find_library(LIBM m)
+  if(NOT LIBM)
+    set(LIBM "")
+  endif()
+
   #
   # Prepare unit test executable for every source file
   #
@@ -72,12 +78,18 @@ if( CRITERION_FOUND )
     #
     # add compile target
     #
-    add_executable(${testName} src/${testSrc})
+    add_executable(${testName} src/${testSrc}
+      ../src/reader_rpa.c
+      ../src/probdata_rpa.c
+      ../src/pricer_rpa.c
+      ../src/cons_rpa.c
+      ../src/pattern.c
+    )
 
     #
     # link the executable against both criterion and the SCIP library target
     #
-    target_link_libraries(${testName} ${CRITERION_LIBRARIES} libscip m)
+    target_link_libraries(${testName} ${CRITERION_LIBRARIES} ${SCIP_LIBRARIES} ${LIBM})
 
     #
     # use the directory name (relative to src/) to build the executable

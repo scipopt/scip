@@ -22,8 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PROBDATA_RINPACKING__
-#define __SCIP_PROBDATA_RINPACKING__
+#ifndef __SCIP_PROBDATA_RINGPACKING__
+#define __SCIP_PROBDATA_RINGPACKING__
 
 #include "scip/scip.h"
 #include "pattern.h"
@@ -155,4 +155,4 @@ void SCIPcheckPattern(
    SCIP_PATTERN*         pattern             /**< pattern */
    );
 
-#endif /* __SCIP_PROBDATA_RINPACKING__ */
+#endif /* __SCIP_PROBDATA_RINGPACKING__ */

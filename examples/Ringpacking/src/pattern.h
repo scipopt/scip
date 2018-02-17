@@ -87,19 +87,18 @@ void SCIPpatternRelease(
    SCIP_PATTERN**        pattern             /**< pointer to free pattern */
    );
 
-/** adds an element of a given type to a pattern */
+/** adds an element of a given type to a pattern; resets packable status if no (x,y) position is given */
 extern
 SCIP_RETCODE SCIPpatternAddElement(
    SCIP_PATTERN*         pattern,            /**< pattern */
    int                   type,               /**< element of a given type */
-   SCIP_Real             x,                  /**< x-coordinate */
-   SCIP_Real             y                   /**< y-coordinate */
+   SCIP_Real             x,                  /**< x-coordinate (SCIP_INVALID: unknown) */
+   SCIP_Real             y                   /**< y-coordinate (SCIP_INVALID: unknown) */
    );
 
 /** removes the last added element */
 extern
 void SCIPpatternRemoveLastElement(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PATTERN*         pattern             /**< pattern */
    );
 
