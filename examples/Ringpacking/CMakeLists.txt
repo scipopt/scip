@@ -29,4 +29,9 @@ endif()
 #
 add_subdirectory(check)
 
+#
+# add tests subdirectory for unit tests
+#
+add_subdirectory(tests)
+
 enable_testing()
