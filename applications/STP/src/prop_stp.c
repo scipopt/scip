@@ -595,14 +595,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
 
-   if( propdata->propgraph == NULL )
-   {
-      propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-      SCIP_CALL( graph_copy(scip, graph, &(propdata->propgraph)) );
-      SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
-      assert(propdata->nfixededges == 0);
-   }
-
    nfixed = 0;
    *result = SCIP_DIDNOTFIND;
 
@@ -614,6 +606,14 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT )
    {
       const SCIP_Real redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
+
+      if( propdata->propgraph == NULL )
+      {
+         propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+         SCIP_CALL( graph_copy(scip, graph, &(propdata->propgraph)) );
+         SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
+         assert(propdata->nfixededges == 0);
+      }
 
       /* in the tree? */
       if( SCIPgetDepth(scip) > 0 )
