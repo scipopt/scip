@@ -107,8 +107,7 @@ SCIP_RETCODE SCIPprobdataAddVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_PATTERN*         pattern,            /**< pattern */
-   SCIP_VAR*             var,                /**< variables to add */
-   SCIP_PATTERNTYPE      patterntype         /**< pattern type */
+   SCIP_VAR*             var                 /**< variables to add */
    );
 
 /** updates the dual bound */

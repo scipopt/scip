@@ -185,7 +185,7 @@ SCIP_RETCODE addVariable(
    }
 
    /* add pattern and variable to the problem data */
-   SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var, SCIP_PATTERNTYPE_RECTANGULAR) );
+   SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var) );
 
    /* release memory */
    SCIP_CALL( SCIPreleaseVar(scip, &var) );

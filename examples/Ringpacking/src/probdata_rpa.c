@@ -280,13 +280,52 @@ SCIP_RETCODE ensureSize(
 
 /** helper function to create a variable for a given pattern */
 static
-SCIP_RETCODE createPatternVar(
+SCIP_RETCODE addPattern(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_PATTERN*         pattern             /**< pattern */
    )
 {
-   
+   SCIP_VAR* var;
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Real obj;
+   SCIP_Real ub;
+   int i;
+
+   if( SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR )
+   {
+      int type = SCIPpatternGetType(pattern);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", type);
+      obj = 0.0;
+      ub = (SCIP_Real)SCIPprobdataGetDemands(probdata)[type];
+   }
+   else
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r");
+      obj = 1.0;
+      ub = SCIPinfinity(scip);
+   }
+
+   /* create variable name */
+   for( i = 0; i < SCIPpatternGetNElemens(pattern); ++i )
+   {
+      char strtmp[SCIP_MAXSTRLEN];
+      int elemtype = SCIPpatternGetElementType(pattern, i);
+      (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", elemtype);
+      (void) strcat(name, strtmp);
+   }
+
+   /* create variable */
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, ub, obj, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, var) );
+
+   /* add variable and pattern to problem data */
+   SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var) );
+
+   /* release variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
+
+   return SCIP_OKAY;
 }
 
 /** enumerates all circular patterns for a given type */
@@ -358,19 +397,12 @@ SCIP_RETCODE computeCircularPatterns(
    for( t = 0; t < ntypes; ++t )
    {
       SCIP_PATTERN* pattern;
-      SCIP_VAR* var;
 
       SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, t) );
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", t);
-      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, (SCIP_Real)demands[t], 0.0, SCIP_VARTYPE_INTEGER) );
-      SCIP_CALL( SCIPaddVar(scip, var) );
-
-      /* add variable and pattern to the problem data */
-      SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var, SCIP_PATTERNTYPE_CIRCULAR) );
-
-      SCIP_CALL( SCIPreleaseVar(scip, &var) );
+      /* add and release */
+      SCIP_CALL( addPattern(scip, probdata, pattern) );
       SCIPpatternRelease(scip, &pattern);
    }
 
@@ -421,24 +453,15 @@ SCIP_RETCODE setupProblem(
    for( t = 0; t < ntypes; ++t )
    {
       SCIP_PATTERN* pattern;
-      SCIP_VAR* var;
 
       /* create a pattern containing a single circle of type t; set position of the circle to the left-bottom */
       SCIP_CALL( SCIPpatternCreateRectangular(scip, &pattern) );
       SCIP_CALL( SCIPpatternAddElement(pattern, t, rexts[t], rexts[t]) );
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
-      /* create variable */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r_%d", t);
-      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_INTEGER) );
-      SCIP_CALL( SCIPaddVar(scip, var) );
-
-      /* add pattern and variable to problem data */
-      SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var, SCIP_PATTERNTYPE_RECTANGULAR) );
-
-      /* release pattern and variable */
+      /* add and release pattern */
+      SCIP_CALL( addPattern(scip, probdata, pattern) );
       SCIPpatternRelease(scip, &pattern);
-      SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
 
    /* create demand constraints */
@@ -836,8 +859,7 @@ SCIP_RETCODE SCIPprobdataAddVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_PATTERN*         pattern,            /**< pattern */
-   SCIP_VAR*             var,                /**< variables to add */
-   SCIP_PATTERNTYPE      patterntype         /**< pattern type */
+   SCIP_VAR*             var                 /**< variables to add */
    )
 {
    SCIP_PATTERN* copy;
@@ -845,23 +867,22 @@ SCIP_RETCODE SCIPprobdataAddVar(
    assert(probdata != NULL);
    assert(pattern != NULL);
    assert(var != NULL);
-   assert(SCIPpatternGetPatternType(pattern) == patterntype);
    assert(SCIPpatternGetPackableStatus(pattern) != SCIP_PACKABLE_NO);
 
    /* copy pattern */
    SCIP_CALL( SCIPpatternCopy(scip, pattern, &copy) );
    SCIPcheckPattern(scip, probdata, copy);
 
-   if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
+   if( SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR )
    {
-      SCIP_CALL( ensureSize(scip, probdata, patterntype, probdata->ncpatterns + 1) );
+      SCIP_CALL( ensureSize(scip, probdata, SCIP_PATTERNTYPE_CIRCULAR, probdata->ncpatterns + 1) );
       probdata->cpatterns[probdata->ncpatterns] = copy;
       probdata->cvars[probdata->ncpatterns] = var;
       ++(probdata->ncpatterns);
    }
    else
    {
-      SCIP_CALL( ensureSize(scip, probdata, patterntype, probdata->nrpatterns + 1) );
+      SCIP_CALL( ensureSize(scip, probdata, SCIP_PATTERNTYPE_RECTANGULAR, probdata->nrpatterns + 1) );
       probdata->rpatterns[probdata->nrpatterns] = copy;
       probdata->rvars[probdata->nrpatterns] = var;
       ++(probdata->nrpatterns);
