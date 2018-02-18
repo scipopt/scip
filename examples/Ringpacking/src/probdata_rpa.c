@@ -328,40 +328,144 @@ SCIP_RETCODE addPattern(
    return SCIP_OKAY;
 }
 
+/** upper bound on the number of circles of a single type that fit into a circular pattern of a given type */
+static
+int maxCircles(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   int                   type,               /**< type of the circular pattern */
+   int                   elemtype            /**< type of element to pack */
+   )
+{
+   SCIP_Real _rint;
+   SCIP_Real rext;
+   SCIP_Real rintscaled;
+   int demand;
+   int n;
+
+   assert(type >= 0 && type < SCIPprobdataGetNTypes(probdata));
+   assert(elemtype >= 0 && elemtype < SCIPprobdataGetNTypes(probdata));
+
+   _rint = SCIPprobdataGetRints(probdata)[type];
+   rext = SCIPprobdataGetRexts(probdata)[elemtype];
+   demand = SCIPprobdataGetDemands(probdata)[elemtype];
+
+   /* volume-bsaed bound */
+   n = MIN(demand, (int) SCIPceil(scip, SQR(_rint) / SQR(rext)));
+
+   if( n <= 1 )
+      return 1;
+
+   /* use proven bounds on the density */
+   rintscaled = _rint / rext;
+   assert(rintscaled >= 1.0);
+
+   if( SCIPisLT(scip, rintscaled, 2.0) )
+      return MIN(1, n);
+   else if( SCIPisLT(scip, rintscaled, 2.1547005383792515) )
+      return MIN(2, n);
+   else if( SCIPisLT(scip, rintscaled, 2.414213562373095) )
+      return MIN(3, n);
+   else if( SCIPisLT(scip, rintscaled, 2.7013016167040798) )
+      return MIN(4, n);
+   else if( SCIPisLT(scip, rintscaled, 3.0) )
+      return MIN(5, n);
+   else if( SCIPisLT(scip, rintscaled, 3.3047648709624866) )
+      return MIN(7, n); /* note that here is a jump and 7 is correct */
+   else if( SCIPisLT(scip, rintscaled, 3.613125929752753) )
+      return MIN(8, n);
+
+   return n;
+}
+
 /** enumerates all circular patterns for a given type */
 static
 SCIP_RETCODE enumeratePatterns(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
-   int                   t                   /**< type of the circular pattern */
+   SCIP_PATTERN*         pattern,            /**< pattern (passed for performance reasons) */
+   int*                  ms,                 /**< maximum number of elements for each type (passed for performance reasons) */
+   int*                  nselected           /**< number of selected elements for each type (passed for performance reasons) */
    )
 {
-   SCIP_PATTERN* pattern;
    SCIP_Real* exts;
    SCIP_Real* _ints;
    int* demand;
    int ntypes;
-   int i;
+   int type;
+   int lasttype;
+   int vi;
 
-   assert(t >= 0 && t < SCIPprobdataGetNTypes(probdata));
+   assert(ms != NULL);
+   assert(pattern != NULL);
+
+   type = SCIPpatternGetType(pattern);
+   assert(type >= 0 && type < SCIPprobdataGetNTypes(probdata));
 
    /* get problem data */
    exts = SCIPprobdataGetRexts(probdata);
    _ints = SCIPprobdataGetRints(probdata);
    demand = SCIPprobdataGetDemands(probdata);
    ntypes = SCIPprobdataGetNTypes(probdata);
+   lasttype = ntypes -1;
 
-   /* create pattern for creating all possible patterns */
-   SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, t) );
-
-   /* nothing fits into the last type */
-   if( t == ntypes - 1 )
+   /* main loop */
+   while( TRUE )
    {
-      
+      int i = lasttype;
+
+      /* reset packable status */
+      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
+
+      /* TODO check volume */
+
+      /* try to verify with heuristic
+       *
+       * TODO use parameters here
+       */
+      SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, 10.0, 10) );
+
+      /* try to verify with NLP
+       *
+       * TODO use parameters here
+       */
+      if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
+      {
+         SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, 10.0, 100L) );
+      }
+
+      /* pattern is not packable -> don't add more elements */
+      if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO )
+      {
+         SCIPpatternRemoveLastElements(pattern, nselected[i]);
+         nselected[i] = 0;
+         --i;
+      }
+      /* otherwise add the pattern (and hope for filtering) */
+      else
+      {
+         SCIP_CALL( addPattern(scip, probdata, pattern) );
+      }
+
+      /* update selection */
+      while( i > type && nselected[i] == ms[i] )
+      {
+         SCIPpatternRemoveLastElements(pattern, nselected[i]);
+         nselected[i] = 0;
+         i--;
+      }
+
+      /* check termination criterion */
+      if( i == type )
+         break;
+
+      /* add element of type i to the pattern */
+      assert(nselected[i] < ms[i]);
+      ++(nselected[i]);
+      SCIPpatternAddElement(pattern, i, SCIP_INVALID, SCIP_INVALID);
    }
 
-   /* release pattern */
-   SCIPpatternRelease(scip, &pattern);
+   assert(SCIPpatternGetNElemens(pattern) == 0);
 
    return SCIP_OKAY;
 }
@@ -373,38 +477,45 @@ SCIP_RETCODE computeCircularPatterns(
    SCIP_PROBDATA*        probdata            /**< problem data */
    )
 {
+   SCIP_PATTERN* pattern;
    char name[SCIP_MAXSTRLEN];
    int* demands;
+   int* ms;
+   int* nselected;
    int ntypes;
    int t;
 
    assert(probdata != NULL);
-
    ntypes = SCIPprobdataGetNTypes(probdata);
    assert(ntypes > 0);
-
    demands = SCIPprobdataGetDemands(probdata);
    assert(demands != NULL);
 
    probdata->enumtime = -SCIPgetTotalTime(scip);
 
-   /* TODO compute all circular patterns (use soft working limits for the verification) */
+   /* create data that is used for the whole enumeration algorithm */
+   SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, 0) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ms, ntypes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nselected, ntypes) );
+   BMSclearMemoryArray(nselected, ntypes);
+   BMSclearMemoryArray(nselected, ntypes);
 
-   /* create an empty circular pattern for each type
-    *
-    * TODO remove this
-    */
+   /* find all circlular patterns of each type separately */
    for( t = 0; t < ntypes; ++t )
    {
-      SCIP_PATTERN* pattern;
+      int k;
 
-      SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, t) );
-      SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
+      for( k = t+1; k < ntypes; ++k )
+         ms[k] = maxCircles(scip, probdata, t, k);
 
-      /* add and release */
-      SCIP_CALL( addPattern(scip, probdata, pattern) );
-      SCIPpatternRelease(scip, &pattern);
+      SCIPpatternSetType(pattern, t);
+      SCIP_CALL( enumeratePatterns(scip, probdata, pattern, ms, nselected) );
    }
+
+   /* release memory */
+   SCIPfreeBufferArray(scip, &nselected);
+   SCIPfreeBufferArray(scip, &ms);
+   SCIPpatternRelease(scip, &pattern);
 
    /* update statistics */
    probdata->enumtime += SCIPgetTotalTime(scip);

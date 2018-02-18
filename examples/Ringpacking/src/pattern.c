@@ -184,16 +184,16 @@ SCIP_RETCODE SCIPpatternAddElement(
    return SCIP_OKAY;
 }
 
-/** removes the last added element */
-void SCIPpatternRemoveLastElement(
-   SCIP_PATTERN*         pattern             /**< pattern */
-
+/** removes the last k elements */
+void SCIPpatternRemoveLastElements(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   k                   /**< number of elements to remove */
    )
 {
    assert(pattern != NULL);
-   assert(pattern->nelems > 0);
+   assert(pattern->nelems >= k);
 
-   --(pattern->nelems);
+   pattern->nelems -= k;
 }
 
 /** returns the total number of elements */
@@ -299,6 +299,21 @@ int SCIPpatternGetType(
    assert(pattern->patterntype == SCIP_PATTERNTYPE_CIRCULAR);
 
    return pattern->type;
+}
+
+/** sets the type of the boundary circle
+ *
+ * @note this function can only be called for circular patterns
+ */
+void SCIPpatternSetType(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< type */
+   )
+{
+   assert(pattern != NULL);
+   assert(pattern->patterntype == SCIP_PATTERNTYPE_CIRCULAR);
+
+   pattern->type = type;
 }
 
 /** returns the packable status of a pattern */

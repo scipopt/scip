@@ -104,10 +104,11 @@ SCIP_RETCODE SCIPpatternAddElement(
    SCIP_Real             y                   /**< y-coordinate (SCIP_INVALID: unknown) */
    );
 
-/** removes the last added element */
+/** removes the last k elements */
 extern
-void SCIPpatternRemoveLastElement(
-   SCIP_PATTERN*         pattern             /**< pattern */
+void SCIPpatternRemoveLastElements(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   k                   /**< number of elements to remove */
    );
 
 /** returns the total number of elements of a given type in the pattern */
@@ -164,6 +165,16 @@ SCIP_PATTERNTYPE SCIPpatternGetPatternType(
 extern
 int SCIPpatternGetType(
    SCIP_PATTERN*         pattern             /**< pattern */
+   );
+
+/** sets the type of the boundary circle
+ *
+ * @note this function can only be called for circular patterns
+ */
+extern
+void SCIPpatternSetType(
+   SCIP_PATTERN*         pattern,            /**< pattern */
+   int                   type                /**< type */
    );
 
 /** returns the packable status of a pattern */

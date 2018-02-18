@@ -121,6 +121,6 @@ Test(pattern, packable)
    cr_expect(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_YES);
 
    /* removing an element does not change packable status */
-   SCIPpatternRemoveLastElement(rpattern);
+   SCIPpatternRemoveLastElements(rpattern, 1);
    cr_expect(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_YES);
 }
