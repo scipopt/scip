@@ -131,13 +131,14 @@ int SCIPpatternCountElements(
    int                   type                /**< type */
    );
 
-/** returns the x-corrdinate of an element */
+/** returns the x-coordinate of an element */
+extern
 SCIP_Real SCIPpatternGetElementPosX(
    SCIP_PATTERN*         pattern,            /**< pattern */
    int                   elem                /**< index of the element */
    );
 
-/** returns the y-corrdinate of an element */
+/** returns the y-coordinate of an element */
 SCIP_Real SCIPpatternGetElementPosY(
    SCIP_PATTERN*         pattern,            /**< pattern */
    int                   elem                /**< index of the element */

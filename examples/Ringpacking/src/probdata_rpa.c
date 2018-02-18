@@ -821,13 +821,22 @@ SCIP_RETCODE SCIPprobdataCreate(
    const char*           probname,           /**< problem name */
    int*                  demands,            /**< array containing the demands */
    SCIP_Real*            rints,              /**< internal radii of each ring */
-   SCIP_Real*            rexts,              /**< external radii of each ring */
+   SCIP_Real*            rexts,              /**< external radii of each ring (assumed to be sorted) */
    int                   ntypes,             /**< number of different types */
    SCIP_Real             width,              /**< width of each rectangle */
    SCIP_Real             height              /**< height of each rectangle */
    )
 {
    SCIP_PROBDATA* probdata;
+
+#ifndef NDEBUG
+   {
+      int t;
+
+      for( t = 0; t < ntypes -1; ++t )
+         assert(rexts[t] >= rexts[t+1]);
+   }
+#endif
 
    /* create SCIP problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
@@ -1268,13 +1277,21 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
 
    SCIPdebugMsg(scip, "result of verification NLP: nsols=%d solstat=%d\n", SCIPgetNSols(subscip), SCIPgetStatus(subscip));
 
-   /* check whether
-    *
-    *   -(at least) one solution could be found or
-    *   - the problem is proven to be infeasible
-    */
+   /* check whether a solution could be found or whether the problem is proven to be infeasible */
    if( SCIPgetNSols(subscip) > 0 )
+   {
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
+
+      for( k = 0; k < nelems; ++k )
+      {
+         SCIP_Real solx = SCIPgetSolVal(subscip, SCIPgetBestSol(subscip), xvars[k]);
+         SCIP_Real soly = SCIPgetSolVal(subscip, SCIPgetBestSol(subscip), yvars[k]);
+
+         SCIPpatternSetElementPos(pattern, k, solx, soly);
+      }
+
+      SCIPcheckPattern(scip, probdata, pattern);
+   }
    else if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_NO);
 

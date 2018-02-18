@@ -35,7 +35,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    const char*           probname,           /**< problem name */
    int*                  demands,            /**< array containing the demands */
    SCIP_Real*            rints,              /**< internal radii of each ring */
-   SCIP_Real*            rexts,              /**< external radii of each ring */
+   SCIP_Real*            rexts,              /**< external radii of each ring (assumed to be sorted) */
    int                   nitems,             /**< number of items */
    SCIP_Real             width,              /**< width of each rectangle */
    SCIP_Real             height              /**< height of each rectangle */
