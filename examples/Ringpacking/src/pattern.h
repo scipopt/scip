@@ -87,6 +87,14 @@ void SCIPpatternRelease(
    SCIP_PATTERN**        pattern             /**< pointer to free pattern */
    );
 
+/** copies a pattern */
+extern
+SCIP_RETCODE SCIPpatternCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PATTERN*         pattern,            /**< pattern to copy */
+   SCIP_PATTERN**        copy                /**< pointer to store the copy */
+   );
+
 /** adds an element of a given type to a pattern; packable status does not change */
 extern
 SCIP_RETCODE SCIPpatternAddElement(

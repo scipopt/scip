@@ -101,10 +101,7 @@ SCIP_CONS** SCIPprobdataGetPatternConss(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
-/** adds given variable to the problem data
- *
- * @note this function captures the variable and pattern
- */
+/** adds given variable to the problem data */
 extern
 SCIP_RETCODE SCIPprobdataAddVar(
    SCIP*                 scip,               /**< SCIP data structure */

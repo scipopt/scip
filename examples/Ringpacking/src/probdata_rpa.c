@@ -782,10 +782,7 @@ SCIP_CONS** SCIPprobdataGetPatternConss(
    return probdata->patternconss;
 }
 
-/** adds given variable to the problem data
- *
- * @note this function captures the variable and pattern
- */
+/** adds given variable to the problem data */
 SCIP_RETCODE SCIPprobdataAddVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
@@ -794,33 +791,35 @@ SCIP_RETCODE SCIPprobdataAddVar(
    SCIP_PATTERNTYPE      patterntype         /**< pattern type */
    )
 {
+   SCIP_PATTERN* copy;
+
    assert(probdata != NULL);
    assert(pattern != NULL);
    assert(var != NULL);
    assert(SCIPpatternGetPatternType(pattern) == patterntype);
    assert(SCIPpatternGetPackableStatus(pattern) != SCIP_PACKABLE_NO);
 
-   /* check pattern for consistency */
-   SCIPcheckPattern(scip, probdata, pattern);
+   /* copy pattern */
+   SCIP_CALL( SCIPpatternCopy(scip, pattern, &copy) );
+   SCIPcheckPattern(scip, probdata, copy);
 
    if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
    {
       SCIP_CALL( ensureSize(scip, probdata, patterntype, probdata->ncpatterns + 1) );
-      probdata->cpatterns[probdata->ncpatterns] = pattern;
+      probdata->cpatterns[probdata->ncpatterns] = copy;
       probdata->cvars[probdata->ncpatterns] = var;
       ++(probdata->ncpatterns);
    }
    else
    {
       SCIP_CALL( ensureSize(scip, probdata, patterntype, probdata->nrpatterns + 1) );
-      probdata->rpatterns[probdata->nrpatterns] = pattern;
+      probdata->rpatterns[probdata->nrpatterns] = copy;
       probdata->rvars[probdata->nrpatterns] = var;
       ++(probdata->nrpatterns);
    }
 
    /* capture variable and pattern */
    SCIP_CALL( SCIPcaptureVar(scip, var) );
-   SCIPpatternCapture(pattern);
 
    return SCIP_OKAY;
 }

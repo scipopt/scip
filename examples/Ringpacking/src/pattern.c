@@ -133,6 +133,36 @@ void SCIPpatternRelease(
       *pattern = NULL;
 }
 
+/** copies a pattern */
+SCIP_RETCODE SCIPpatternCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PATTERN*         pattern,            /**< pattern to copy */
+   SCIP_PATTERN**        copy                /**< pointer to store the copy */
+   )
+{
+   int i;
+
+   assert(pattern != NULL);
+   assert(copy != NULL);
+
+   SCIP_CALL( createPattern(scip, copy, pattern->patterntype, pattern->type) );
+   assert(*copy != NULL);
+
+   /* ensure that we can store all elements */
+   SCIP_CALL( ensureElemSize(*copy, pattern->nelems) );
+
+   /* add elements */
+   for( i = 0; i < pattern->nelems; ++i )
+   {
+      SCIP_CALL( SCIPpatternAddElement(*copy, pattern->types[i], pattern->xs[i], pattern->ys[i]) );
+   }
+
+   /* copy packable status */
+   (*copy)->packable = pattern->packable;
+
+   return SCIP_OKAY;
+}
+
 /** adds an element of a given type to a pattern; packable status does not change */
 SCIP_RETCODE SCIPpatternAddElement(
    SCIP_PATTERN*         pattern,            /**< pattern */
