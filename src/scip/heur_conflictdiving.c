@@ -60,8 +60,8 @@
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
 
 #define DEFAULT_MINCONFLICTLOCKS      0 /**< threshold for penalizing the score */
-#define DEFAULT_MAXVARSFAC          0.1 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
-#define DEFAULT_MINMAXVARS           30 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
+#define DEFAULT_MAXVARSFAC           -1 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
+#define DEFAULT_MINMAXVARS           -1 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -268,13 +268,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    mayrounddown = (nconflictlocksdown == 0);
    mayroundup = (nconflictlocksup == 0);
 
-   /* variable can be rounded in exactly one direction */
+   /* variable can be rounded in exactly one direction and we try to go into the feasible direction */
    if( mayrounddown != mayroundup )
    {
-      if( heurdata->maxviol )
-         *roundup = mayrounddown;
-      else
-         *roundup = mayroundup;
+      *roundup = mayroundup;
    }
    /* variable is locked in both directions */
    else if( !mayroundup )
@@ -297,7 +294,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
             *roundup = !(*roundup);
       }
       else if( !SCIPisEQ(scip, candsfrac, 0.5) )
-         *roundup = (candsfrac > 0.5);
+         *roundup = (candsfrac < 0.5);
       else
          *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
    }
@@ -306,14 +303,27 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    {
       assert(nconflictlocksdown == 0 && nconflictlocksup == 0);
 
-      if( !SCIPisEQ(scip, candsfrac, 0.5) )
-         *roundup = (candsfrac > 0.5);
+      if( nlocksup != nlocksdown )
+      {
+         *roundup = (nconflictlocksup > nconflictlocksdown);
+      }
+      else if( !SCIPisEQ(scip, candsfrac, 0.5) )
+      {
+         *roundup = (candsfrac < 0.5);
+      }
       else
+      {
          *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
+      }
+
+      if( !heurdata->maxviol )
+         *roundup = !(*roundup);
    }
 
    if( *roundup )
    {
+      SCIP_Real scalefactor;
+
       switch( divetype )
       {
          case SCIP_DIVETYPE_INTEGRALITY:
@@ -329,22 +339,30 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
 
+      scalefactor = (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND));
+
+      *score = 0.0;
+
       if( nconflictlocksup > 0 )
-         *score = nconflictlocksup
-            + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * nlocksup/MAX(1.0, locksum);
-      else
-         *score = LOCKFRAC * (nlocksup / MAX(1.0, locksum));
+         *score += nconflictlocksup;
+
+      *score += (scalefactor * nlocksup / MAX(1.0, locksum));
    }
    else
    {
+      SCIP_Real scalefactor;
+
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
 
+      scalefactor = (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND));
+
+      *score = 0.0;
+
       if( nconflictlocksdown > 0 )
-         *score = nconflictlocksdown
-               + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * nlocksdown/MAX(1.0, locksum);
-      else
-         *score = LOCKFRAC * (nlocksdown / MAX(1.0, locksum));
+         *score += nconflictlocksdown;
+
+      *score += (scalefactor * nlocksdown / MAX(1.0, locksum));
    }
 
    /* penalize too less conflict locks */
