@@ -38,8 +38,8 @@ static SCIP_PATTERN* cpattern;
 static
 void setup(void)
 {
-   SCIP_Real rexts[3] = {1.0, 0.5, 0.6};
-   SCIP_Real rints[3] = {1.0, 0.0, 0.5};
+   SCIP_Real rexts[3] = {1.0, 0.6, 0.5};
+   SCIP_Real rints[3] = {1.0, 0.5, 0.0};
    int demands[3] = {100, 100, 100};
 
    /* initialize SCIP */

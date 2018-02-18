@@ -179,12 +179,17 @@ SCIP_RETCODE probdataFree(
    assert(*probdata != NULL);
 
    /* release pattern constraints */
-   for( i = 0; i < SCIPprobdataGetNTypes(*probdata); ++i )
+   if( (*probdata)->patternconss != NULL )
    {
-      assert((*probdata)->patternconss[i] != NULL);
-      SCIP_CALL( SCIPreleaseCons(scip, &(*probdata)->patternconss[i]));
+      for( i = 0; i < SCIPprobdataGetNTypes(*probdata); ++i )
+      {
+         if( (*probdata)->patternconss[i] != NULL )
+         {
+            SCIP_CALL( SCIPreleaseCons(scip, &(*probdata)->patternconss[i]));
+         }
+      }
+      SCIPfreeBlockMemoryArray(scip, &(*probdata)->patternconss, (*probdata)->ntypes);
    }
-   SCIPfreeBlockMemoryArray(scip, &(*probdata)->patternconss, (*probdata)->ntypes);
 
    /* release circular patterns */
    for( i = 0; i < (*probdata)->ncpatterns; ++i )

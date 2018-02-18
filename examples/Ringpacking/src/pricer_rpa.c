@@ -579,7 +579,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    }
 
    /* TODO add parameter for time and node limit */
-   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 10.0, 1000L, &success, &solstat, &redcosts) );
+   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 100.0, 10000L, &success, &solstat, &redcosts) );
    redcosts += 1.0;
    SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 

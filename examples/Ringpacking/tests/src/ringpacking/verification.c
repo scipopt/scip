@@ -37,9 +37,9 @@ static SCIP_PROBDATA* probdata;
 static
 void setup(void)
 {
-   SCIP_Real rexts[4] = {1.0, 0.5, 0.6, 2.414213562373095};
-   SCIP_Real rints[4] = {1.0, 0.0, 0.5, 2.414213562373095};
-   int demands[4] = {5, 5, 5, 1};
+   SCIP_Real rexts[4] = {2.414213562373095, 1.0, 0.6, 0.5};
+   SCIP_Real rints[4] = {2.414213562373095, 1.0, 0.5, 0.0};
+   int demands[4] = {1, 5, 5, 5};
 
    /* initialize SCIP */
    scip = NULL;
@@ -60,7 +60,7 @@ void setup(void)
    cr_assert(probdata != NULL);
 
    /* creates a circular pattern */
-   SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, 0) );
+   SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, 1) );
 }
 
 /** deinitialization method */
@@ -105,16 +105,16 @@ Test(verification, nlp_two)
 {
    cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
-   /* add element of type 1 and element of type 2 -> not packable */
-   SCIP_CALL( SCIPpatternAddElement(pattern, 1, SCIP_INVALID, SCIP_INVALID) );
+   /* add element of type 3 and element of type 2 -> not packable */
+   SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPpatternAddElement(pattern, 2, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
    cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO);
 
-   /* remove element of type 2 and add another element of type 1 -> packable */
+   /* remove element of type 2 and add another element of type 3 -> packable */
    SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
    SCIPpatternRemoveLastElements(pattern, 1);
-   SCIP_CALL( SCIPpatternAddElement(pattern, 1, SCIP_INVALID, SCIP_INVALID) );
+   SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
    cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
@@ -126,17 +126,17 @@ Test(verification, nlp_complex)
    int i;
 
    /* pattern with inner radius of 1+sqrt(2) */
-   SCIP_CALL( SCIPpatternCreateCircular(scip, &p, 3) );
+   SCIP_CALL( SCIPpatternCreateCircular(scip, &p, 0) );
 
    /* add four circles with radius 1 */
    for( i = 0; i < 4; ++i )
-      SCIPpatternAddElement(p, 0, SCIP_INVALID, SCIP_INVALID);
+      SCIPpatternAddElement(p, 1, SCIP_INVALID, SCIP_INVALID);
 
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, p, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
    cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES);
 
    /* add one more element -> not packable anymore */
-   SCIPpatternAddElement(p, 0, SCIP_INVALID, SCIP_INVALID);
+   SCIPpatternAddElement(p, 1, SCIP_INVALID, SCIP_INVALID);
    SCIPpatternSetPackableStatus(p, SCIP_PACKABLE_UNKNOWN);
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, p, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
    cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_NO);
@@ -170,18 +170,18 @@ Test(verification, heur_two)
 {
    cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
-   /* add element of type 1 and element of type 2 -> not packable */
-   SCIP_CALL( SCIPpatternAddElement(pattern, 1, SCIP_INVALID, SCIP_INVALID) );
+   /* add element of type 3 and element of type 2 -> not packable */
+   SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPpatternAddElement(pattern, 2, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
 
    /* TODO */
    /* cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO); */
 
-   /* remove element of type 2 and add another element of type 1 -> packable */
+   /* remove element of type 3 and add another element of type 2 -> packable */
    SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
    SCIPpatternRemoveLastElements(pattern, 1);
-   SCIP_CALL( SCIPpatternAddElement(pattern, 1, SCIP_INVALID, SCIP_INVALID) );
+   SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
 
    /* TODO */
@@ -199,7 +199,7 @@ Test(verification, nlp_heuristic)
 
    /* add four circles with radius 1 */
    for( i = 0; i < 4; ++i )
-      SCIPpatternAddElement(p, 0, SCIP_INVALID, SCIP_INVALID);
+      SCIPpatternAddElement(p, 1, SCIP_INVALID, SCIP_INVALID);
 
    /* easy enough for any heuristic */
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, p, SCIPinfinity(scip), 1) );
@@ -208,7 +208,7 @@ Test(verification, nlp_heuristic)
    /* cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES); */
 
    /* add one more element -> not packable anymore (heuristic should only detect UNKNOWN) */
-   SCIPpatternAddElement(p, 0, SCIP_INVALID, SCIP_INVALID);
+   SCIPpatternAddElement(p, 1, SCIP_INVALID, SCIP_INVALID);
    SCIPpatternSetPackableStatus(p, SCIP_PACKABLE_UNKNOWN);
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, p, SCIPinfinity(scip), 10) );
    cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_UNKNOWN);
