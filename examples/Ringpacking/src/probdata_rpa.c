@@ -278,6 +278,55 @@ SCIP_RETCODE ensureSize(
    return SCIP_OKAY;
 }
 
+/** helper function to create a variable for a given pattern */
+static
+SCIP_RETCODE createPatternVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PATTERN*         pattern             /**< pattern */
+   )
+{
+   
+}
+
+/** enumerates all circular patterns for a given type */
+static
+SCIP_RETCODE enumeratePatterns(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   int                   t                   /**< type of the circular pattern */
+   )
+{
+   SCIP_PATTERN* pattern;
+   SCIP_Real* exts;
+   SCIP_Real* _ints;
+   int* demand;
+   int ntypes;
+   int i;
+
+   assert(t >= 0 && t < SCIPprobdataGetNTypes(probdata));
+
+   /* get problem data */
+   exts = SCIPprobdataGetRexts(probdata);
+   _ints = SCIPprobdataGetRints(probdata);
+   demand = SCIPprobdataGetDemands(probdata);
+   ntypes = SCIPprobdataGetNTypes(probdata);
+
+   /* create pattern for creating all possible patterns */
+   SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, t) );
+
+   /* nothing fits into the last type */
+   if( t == ntypes - 1 )
+   {
+      
+   }
+
+   /* release pattern */
+   SCIPpatternRelease(scip, &pattern);
+
+   return SCIP_OKAY;
+}
+
 /** computes all non-dominated circular patterns and stores them into the problem data */
 static
 SCIP_RETCODE computeCircularPatterns(
