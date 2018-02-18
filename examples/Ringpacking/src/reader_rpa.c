@@ -185,6 +185,7 @@ SCIP_DECL_READERREAD(readerReadRpa)
 
       /* create and set problem data */
       SCIP_CALL( SCIPprobdataCreate(scip, filename, demands, rints, rexts, ntypes, MAX(width,height), MIN(width,height)) );
+      SCIP_CALL( SCIPprobdataSetupProblem(scip) );
    }
 
    (void)SCIPfclose(file);

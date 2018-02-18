@@ -41,6 +41,12 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real             height              /**< height of each rectangle */
    );
 
+/** enumerates circular patterns and creates restricted master problem */
+extern
+SCIP_RETCODE SCIPprobdataSetupProblem(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns number of different types */
 extern
 int SCIPprobdataGetNTypes(

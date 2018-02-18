@@ -852,9 +852,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbInitsol(scip, probinitsolRingpacking) );
    SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolRingpacking) );
 
-   /* setup master problem */
-   SCIP_CALL( setupProblem(scip, probdata) );
-
    /* activate pricer */
    SCIP_CALL( SCIPpricerRingpackingActivate(scip) );
 
@@ -863,6 +860,19 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RPA, TABLE_DESC_RPA, TRUE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputRpa,
          NULL, TABLE_POSITION_RPA, TABLE_EARLIEST_STAGE_RPA) );
+
+   return SCIP_OKAY;
+}
+
+/** enumerates circular patterns and creates restricted master problem */
+SCIP_RETCODE SCIPprobdataSetupProblem(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   SCIP_CALL( setupProblem(scip, probdata) );
 
    return SCIP_OKAY;
 }
