@@ -75,6 +75,8 @@ fi
 
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
+# defines the following environment variables: SCIPPATH, SETTINGSLIST, SOLUFILE, HARDMEMLIMIT, DEBUGTOOLCMD, INSTANCELIST,
+#                                              TIMELIMLIST, HARDTIMELIMLIST
 TIMEFORMAT="sec"
 MEMFORMAT="kB"
 . ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
@@ -137,7 +139,11 @@ do
 
 
 		# infer the names of all involved files from the arguments
-		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s $THREADS $GLBSEEDSHIFT
+		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
+		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
+
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
+		  $THREADS $GLBSEEDSHIFT
 
 		if test "$INSTANCE" = "DONE"
 		then
