@@ -341,7 +341,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
              */
             for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
             {
-               if( result[j] == 0 )
+               if( result[j] == CONNECT )
                {
                   result[j]    = -1;
                   g->mark[i]   = FALSE;
@@ -355,6 +355,22 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
       }
    }
    while( count > 0 );
+
+#ifndef NDEBUG
+   /* make sure there is no unconnected vertex */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( connected[i] && i != g->source )
+      {
+         for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
+            if( result[j] == CONNECT )
+               break;
+
+         assert(j != EAT_LAST);
+
+      }
+   }
+#endif
 
    assert(graph_sol_valid(scip, g, result));
    SCIPfreeBufferArray(scip, &mst);
