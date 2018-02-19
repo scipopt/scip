@@ -55,6 +55,7 @@ REOPT=${22}
 OPTCOMMAND=${23}
 SETCUTOFF=${24}
 VISUALIZE=${25}
+GLBSEEDSHIFT=${26}
 
 SOLVER=fscip
 
@@ -152,7 +153,8 @@ do
 	    for SETNAME in ${SETTINGSLIST[@]}
 	    do
 		# infer the names of all involved files from the arguments
-		. ./configuration_logfiles_fscip.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $THREADS $p $s
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
+		  $THREADS $GLBSEEDSHIFT
 
 		# skip instance if log file is present and we want to continue a previously launched test run
 		if test "$SKIPINSTANCE" = "true"
