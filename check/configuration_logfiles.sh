@@ -123,8 +123,7 @@ for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflis
 do
     SHORTPROBNAME=`basename $SHORTPROBNAME $EXTENSION`
 done
-NEWSHORTPROBNAME=`echo $SHORTPROBNAME | cut -c1-25`
-SHORTPROBNAME=$NEWSHORTPROBNAME
+VERYSHORTPROBNAME=`echo $SHORTPROBNAME | cut -c1-25`
 
 # if number of permutations is positive, add postfix
 if test $p -gt 0
@@ -132,17 +131,17 @@ then
     # if number of seeds is positive, add postfix
     if test $s -gt 0
     then
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s-"p"$p
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$VERYSHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s-"p"$p
     else
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"p"$p
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$VERYSHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"p"$p
     fi
 else
     # if number of seeds is positive, add postfix
     if test $s -gt 0
     then
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$VERYSHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s
     else
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$VERYSHORTPROBNAME.$BINID.$QUEUE.$SETNAME
     fi
 fi
 
