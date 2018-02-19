@@ -4445,7 +4445,7 @@ SCIP_RETCODE normalizeCons(
          /* since the lhs/rhs is not respected for gcd calculation it can happen that we detect infeasibility */
          if( !consdata->hascontvar && onlyintegral )
          {
-            if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) && !SCIPisIntegral(scip, consdata->rhs / gcd) )
+            if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) && !SCIPisFeasIntegral(scip, consdata->rhs / gcd) )
             {
                *infeasible = TRUE;
 
