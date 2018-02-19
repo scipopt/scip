@@ -499,7 +499,7 @@ SCIP_RETCODE redbasedVarfixing(
       }
    }
 
-   printf("reduction based fixings: %d \n", *nfixed);
+   SCIPdebugMessage("reduction based fixings: %d \n", *nfixed);
 
 TERMINATE:
 

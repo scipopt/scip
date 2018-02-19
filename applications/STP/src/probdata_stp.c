@@ -3646,7 +3646,7 @@ void initReceivedSubproblem(
    for( int i = 0; i < lLinearConsNames; i++ )
    {
       const char* consname = getBranchLinearConsName(linearConsNames, i);
-      printf("add lin cons %s \n", consname);
+      SCIPdebugMessage("add lin cons %s \n", consname);
       if( consname != NULL)
          SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, NULL, graph, consname, FALSE) );
    }
@@ -3654,7 +3654,7 @@ void initReceivedSubproblem(
    for( int i = 0; i < lSetppcConsNames; i++ )
    {
       const char* consname = getBranchSetppcConsName(setppcConsNames, i);
-      printf("add ppc cons %s \n", consname);
+      SCIPdebugMessage("add ppc cons %s \n", consname);
       if( consname != NULL)
          SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, NULL, graph, consname, FALSE) );
    }
