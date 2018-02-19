@@ -129,6 +129,18 @@ SCIP_Bool SCIPlpiHasSimplexSolve(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
+/** informs about availability of a primal simplex solving method */
+EXTERN
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** informs about availability of a dual simplex solving method */
+EXTERN
+SCIP_Bool SCIPlpiHasDualSolve(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   );
+
 /** informs about availability of a barrier solving method */
 EXTERN
 SCIP_Bool SCIPlpiHasBarrierSolve(

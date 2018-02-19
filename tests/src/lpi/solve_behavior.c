@@ -126,5 +126,7 @@ Test(solve_behavior, testhassolve)
 {
    /* try calling all methods at least once */
    SCIPlpiHasSimplexSolve(lpi);
+   SCIPlpiHasPrimalSolve(lpi);
+   SCIPlpiHasDualSolve(lpi);
    SCIPlpiHasBarrierSolve(lpi);
 }
