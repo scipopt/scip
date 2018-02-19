@@ -6378,7 +6378,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
 
    /* remember the LP state in order to restore the LP solution quickly after probing */
    /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
-   if( tree->probinglpwassolved )
+   if( lp->flushed && lp->solved )
    {
       SCIP_CALL( SCIPlpGetState(lp, blkmem, &tree->probinglpistate) );
       SCIP_CALL( SCIPlpGetNorms(lp, blkmem, &tree->probinglpinorms) );
