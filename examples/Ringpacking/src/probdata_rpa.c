@@ -422,6 +422,15 @@ SCIP_RETCODE enumeratePatterns(
       /* reset packable status */
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
 
+      {
+         int j;
+         SCIPdebugMsg(scip, "verify c%d", type);
+
+         for( j = 0; j < SCIPpatternGetNElemens(pattern); ++j )
+            SCIPdebugMsgPrint(scip, "_%d", SCIPpatternGetElementType(pattern, j));
+         SCIPdebugMsgPrint(scip, "\n");
+      }
+
       /* TODO check volume */
 
       /* try to verify with heuristic
