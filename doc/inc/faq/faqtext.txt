@@ -287,16 +287,32 @@ SECTION: General Questions about SCIP
     LABEL:visualizebranchandbound
     ANSWER:
     <p>
-        Yes, currently there are three tree visualizations supported, the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>,
-        <a href="http://hydraw.zib.de/">HyDraw</a>, and <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>.
-        The first comes with a viewer that has an option to uncover the nodes one-by-one (each time you
-        hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
-        context menu. HyDraw can display a live visualization of the tree using JavaView.
-        GrUMPy is a Python tool that allows to create noninteractive visualizations of the tree in various formats.
+        Here is a list of external tools that can be used to create interactive and noninteractive visualizations in
+        various formats.
     </p>
+    <ul>
+        <li>
+            <a href="http://hydraw.zib.de/">HyDraw</a>
+            can display a live visualization of the tree using JavaView.
+        </li>
+        <li>
+            <a href="http://www.informatik.uni-koeln.de/ls_juenger/vbctool">vbctool</a>
+             comes with a viewer that has an option to uncover the nodes one-by-one (each time you
+            hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
+            context menu.
+        </li>
+        <li>
+            <a href="https://www.uni-due.de/~si203go/#vbc">Vbc2dot</a> is a script that generates a visualization of SCIP's branch-and-bound tree
+            in ps and pdf format. It is written in Ruby and requires dot (graphviz).
+        </li>
+        <li>
+            <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>
+            is a Python tool that allows to create noninteractive visualizations of the tree in various formats.
+        </li>
+    </ul>
     <p>
         For using one of these tools, SCIP lets you define file names <code>set visual vbcfilename somefilename.vbc</code>
-        and <code>set visual bakfilename somefilename.dat</code>. GrUMPy uses BAK files while the other two tools parse
+        and <code>set visual bakfilename somefilename.dat</code>. GrUMPy uses BAK files while the other tools parse
         vbc output.
     </p>
     <p>
