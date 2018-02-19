@@ -13063,7 +13063,6 @@ SCIP_RETCODE SCIPaddConflict(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(scip->conflictstore != NULL);
-   assert(scip->set->conf_enable);
    assert(conftype != SCIP_CONFTYPE_UNKNOWN);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
