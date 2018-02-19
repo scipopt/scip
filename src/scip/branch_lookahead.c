@@ -2486,8 +2486,8 @@ SCIP_RETCODE executeBranching(
          solstat = SCIPgetLPSolstat(scip);
          assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
-         /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
-          * cutoff, or if the iter or time limit was reached. */
+         /* for us an error occurred, if an error during the solving occurred or the lp could not be solved but was not
+          * cutoff */
          status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
 
          /* if we seem to have reached a {time, iteration}-limit or the user cancelled the execution we want to stop
@@ -2811,10 +2811,11 @@ SCIP_Bool areBoundsChanged(
 /** Checks whether the branching rule should continue or terminate with the currently gathered data */
 static
 SCIP_Bool isBranchFurther(
-   STATUS*               status              /**< current status */
+   STATUS*               status,             /**< current status */
+   SCIP_Bool             checkdomreds        /**< should domain reductions be checked? */
    )
 {
-   return !status->lperror && !status->cutoff && !status->limitreached && !status->maxnconsreached;
+   return !status->lperror && !status->cutoff && !status->limitreached && !status->maxnconsreached && (!checkdomreds || !status->domred);
 }
 
 /** Checks whether the branching rule should continue or terminate with the currently gathered data. Additionally decrements
@@ -2825,7 +2826,7 @@ SCIP_Bool isBranchFurtherLoopDecrement(
    int*                  loopcounter         /**< the counter to decrement */
    )
 {
-   SCIP_Bool branchfurther = isBranchFurther(status);
+   SCIP_Bool branchfurther = isBranchFurther(status, FALSE);
    if( !branchfurther )
    {
       (*loopcounter)--;
@@ -3476,7 +3477,7 @@ SCIP_RETCODE getBestCandidates(
 #endif
 
    /* if we didn't find any domreds or constraints during the FSB, we branch on */
-   if( isBranchFurther(status) )
+   if( isBranchFurther(status, TRUE) )
    {
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "%s", "Filter the candidates by their score.\n");
 
@@ -3680,7 +3681,7 @@ SCIP_RETCODE executeBranchingRecursive(
 #endif
 
             /* the status may have changed because of FSB to get the best candidates */
-            if( isBranchFurther(deeperstatus) )
+            if( isBranchFurther(deeperstatus, FALSE) )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Now the objval is <%g>\n", branchingresult->objval);
 
@@ -4330,7 +4331,7 @@ SCIP_RETCODE selectVarStart(
 
    /* the status may have changed because of FSB to get the best candidates
     * if that is the case we already changed the base node and should start again */
-   if( isBranchFurther(status) )
+   if( isBranchFurther(status, TRUE) )
    {
       assert(candidates->ncandidates > 0);
 
@@ -4470,7 +4471,7 @@ SCIP_RETCODE selectVarStart(
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching would branch on variable <%s>\n",
             SCIPvarGetName(candidates->candidates[0]->branchvar));
 
-         if( isBranchFurther(status) && branchingDecisionIsValid(decision) )
+         if( isBranchFurther(status, FALSE) && branchingDecisionIsValid(decision) )
          {
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching would branch on variable <%s>\n",
                SCIPvarGetName(decision->cand->branchvar));
@@ -4868,7 +4869,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       }
       else if( status->lperror )
       {
-         *result = SCIP_DIDNOTFIND;
+         if( !branchingDecisionIsValid(decision) )
+         {
+            LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "LP error with no valid candidate: select first candidate variable\n");
+
+            assert(candidates->ncandidates > 0);
+            decision->cand = candidates->candidates[0];
+         }
       }
       else if( status->maxnconsreached )
       {
@@ -4884,7 +4891,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
                                   * reductions was infeasible */
          && *result != SCIP_REDUCEDDOM /* the domain of a variable was reduced by evaluating the calculated cutoffs */
          && *result != SCIP_CONSADDED /* implied binary constraints were already added */
-         && *result != SCIP_DIDNOTFIND /* an lp error occurred on the way */
          && !status->depthtoosmall /* branching depth wasn't high enough */
          && branchingDecisionIsValid(decision)
          /*&& (0 <= bestcand && bestcand < nlpcands)*/ /* no valid candidate index could be found */
@@ -4919,10 +4925,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       else if( *result == SCIP_CONSADDED )
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by adding constraints.\n");
-      }
-      else if( *result == SCIP_DIDNOTFIND )
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: An error occurred during the solving of one of the lps.\n");
       }
       else if( status->depthtoosmall )
       {
