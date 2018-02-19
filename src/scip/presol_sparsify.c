@@ -332,7 +332,9 @@ SCIP_RETCODE cancelRow(
                            break;
                         }
                      }
-                     else
+
+                     if( (cancelrowvals[a] < 0.0 && ! SCIPisInfinity(scip, cancelrhs)) ||
+                         (cancelrowvals[a] > 0.0 && ! SCIPisInfinity(scip, -cancellhs)) )
                      {
                         /* symmetric case where the variable had a downlock */
                         if( SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]) > 1 &&
@@ -353,16 +355,44 @@ SCIP_RETCODE cancelRow(
                }
                else
                {
-                  SCIP_VAR* var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
+                  SCIP_Real newcoef;
+                  SCIP_VAR* var;
+
+                  var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
+                  newcoef = scale * eqrowvals[b];
+
+                  if( (newcoef > 0.0 && ! SCIPisInfinity(scip, cancelrhs)) ||
+                      (newcoef < 0.0 && ! SCIPisInfinity(scip, -cancellhs)) )
+                  {
+                     if( SCIPmatrixGetColNUplocks(matrix, eqrowinds[b]) <= 1 )
+                     {
+                        abortpair = TRUE;
+                        ++b;
+                        break;
+                     }
+                  }
+
+                  if( (newcoef < 0.0 && ! SCIPisInfinity(scip, cancelrhs)) ||
+                      (newcoef > 0.0 && ! SCIPisInfinity(scip, -cancellhs)) )
+                  {
+                     if( SCIPmatrixGetColNDownlocks(matrix, eqrowinds[b]) <= 1 )
+                     {
+                        abortpair = TRUE;
+                        ++b;
+                        break;
+                     }
+                  }
+
                   ++b;
+
                   if( SCIPvarIsIntegral(var) )
                   {
-                     if( ++nintfillin > maxintfillin )
+                     if( SCIPvarIsBinary(var) && ++nbinfillin > maxbinfillin )
                      {
                         abortpair = TRUE;
                         break;
                      }
-                     if( SCIPvarIsBinary(var) && ++nbinfillin > maxbinfillin )
+                     else if( ++nintfillin > maxintfillin )
                      {
                         abortpair = TRUE;
                         break;
@@ -382,23 +412,15 @@ SCIP_RETCODE cancelRow(
             if( abortpair )
                continue;
 
-            cancelrate = ncancel / (SCIP_Real) eqrowlen;
-
-            if( cancelrate < mincancelrate )
-               continue;
-
             while( b < eqrowlen )
             {
                SCIP_VAR* var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
                ++b;
-               if( SCIPvarIsBinary(var) )
+               if( SCIPvarIsIntegral(var) )
                {
-                  if( ++nbinfillin > maxbinfillin )
+                  if( SCIPvarIsBinary(var) && ++nbinfillin > maxbinfillin )
                      break;
-               }
-               else if( SCIPvarIsIntegral(var) )
-               {
-                  if( ++nintfillin > maxintfillin )
+                  else if( ++nintfillin > maxintfillin )
                      break;
                }
                else
@@ -411,7 +433,15 @@ SCIP_RETCODE cancelRow(
             if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
                continue;
 
-            ntotfillin = nbinfillin + nintfillin + ncontfillin;
+            ntotfillin = nintfillin + ncontfillin;
+
+            if( ntotfillin >= ncancel )
+               continue;
+
+            cancelrate = (ncancel - ntotfillin) / (SCIP_Real) eqrowlen;
+
+            if( cancelrate < mincancelrate )
+               continue;
 
             if( cancelrate > bestcancelrate )
             {
@@ -876,7 +906,9 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          /* since the function parameters for the max fillin are unsigned we do not need to handle the
           * unlimited (-1) case due to implicit conversion rules */
          SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
-               presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, \
+               presoldata->maxcontfillin == -1 ? INT_MAX : 0, \
+               presoldata->maxintfillin == -1 ? INT_MAX : 0, \
+               presoldata->maxbinfillin == -1 ? INT_MAX : 0, \
                presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
       }
