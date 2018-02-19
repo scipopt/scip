@@ -137,7 +137,7 @@ do
 
 
 		# infer the names of all involved files from the arguments
-		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s $THREADS $GLBSEEDSHIFT
 
 		if test "$INSTANCE" = "DONE"
 		then

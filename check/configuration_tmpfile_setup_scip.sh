@@ -49,19 +49,6 @@ SOLUFILE=${19}   # - solu file, only necessary if $SETCUTOFF is 1
 #set solfile
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
 
-if test -e "$SOLUFILE"
-then
-    OBJECTIVEVAL=`grep " $SHORTPROBNAME " $SOLUFILE | grep -e =opt= -e =best= | sort -k 3 -g | tail -n 1 | awk '{print $3}'`
-    CHECKOBJECTIVEVAL=`grep " $SHORTPROBNAME " $SOLUFILE | grep -e =opt= -e =best= | sort -k 3 -g -r | tail -n 1 | awk '{print $3}'`
-     if awk -v n1="$OBJECTIVEVAL" -v n2="$CHECKOBJECTIVEVAL" 'BEGIN { exit (n1 <= n2 + 0.0001 && n2 <= n1 + 0.0001) }' /dev/null;
-    then
-	echo "Exiting test because objective value in solu file is inconsistent: $OBJECTIVEVAL vs. $CHECKOBJECTIVEVAL"
-        exit
-    fi
-else
-    OBJECTIVEVAL=""
-fi
-#echo "Reference value $OBJECTIVEVAL $SOLUFILE"
 # reset TMPFILE
 echo > $TMPFILE
 
@@ -86,15 +73,11 @@ then
     echo set randomization permutationseed $p   >> $TMPFILE
 fi
 
-# if seed counter is positive add random seed shift
-if test $s -gt 0
+# set random seed shift
+SEED=$(($s + $GLBSEEDSHIFT))
+if test $SEED -gt 0
 then
-    echo set randomization randomseedshift $(($s + $GLBSEEDSHIFT)) >> $TMPFILE
-else
-    if test $GLBSEEDSHIFT -gt 0
-    then
-        echo set randomization randomseedshift $GLBSEEDSHIFT >> $TMPFILE
-    fi
+    echo set randomization randomseedshift $SEED >> $TMPFILE
 fi
 
 # avoid solving LPs in case of LPS=none
@@ -102,6 +85,8 @@ if test "$LPS" = "none"
 then
     echo set lp solvefreq -1           >> $TMPFILE
 fi
+
+# set reference value
 if test "$OBJECTIVEVAL" != ""
 then
     #echo "Reference value $OBJECTIVEVAL"
@@ -132,11 +117,6 @@ then
     # set objective limit: optimal solution value from solu file, if existent
     if test $SETCUTOFF = 1 || test $SETCUTOFF = true
     then
-        if test $SOLUFILE == ""
-        then
-            echo Exiting test because no solu file can be found for this test
-            exit
-        fi
         if test ""$OBJECTIVEVAL != ""
         then
             echo set limits objective $OBJECTIVEVAL >> $TMPFILE
