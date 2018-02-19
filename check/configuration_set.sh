@@ -110,7 +110,7 @@ do
 done
 
 # if cutoff should be passed, solu file must exist
-if test $SETCUTOFF = 1
+if test $SETCUTOFF = 1 || test $SETCUTOFF = true
 then
     if test $SOLUFILE = ""
     then

@@ -36,9 +36,8 @@ REOPT=${14}      # - true if we use reoptimization, i.e., using a difflist file 
 OPTCOMMAND=${15} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
 CLIENTTMPDIR=${16}
 SOLBASENAME=${17}
-SETCUTOFF=${18}
-VISUALIZE=${19}
-SOLUFILE=${20}   # - solu file, only necessary if $SETCUTOFF is 1
+VISUALIZE=${18}
+SOLUFILE=${19}   # - solu file, only necessary if $SETCUTOFF is 1
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
 #   echo "argument $((i+1)): ${args[$i]}"
@@ -52,7 +51,13 @@ SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
 
 if test -e "$SOLUFILE"
 then
-    OBJECTIVEVAL=`grep "$SHORTPROBNAME " $SOLUFILE | grep -e =opt= -e =best= | tail -n 1 | awk '{print $3}'`
+    OBJECTIVEVAL=`grep " $SHORTPROBNAME " $SOLUFILE | grep -e =opt= -e =best= | sort -k 3 -g | tail -n 1 | awk '{print $3}'`
+    CHECKOBJECTIVEVAL=`grep " $SHORTPROBNAME " $SOLUFILE | grep -e =opt= -e =best= | sort -k 3 -g -r | tail -n 1 | awk '{print $3}'`
+     if awk -v n1="$OBJECTIVEVAL" -v n2="$CHECKOBJECTIVEVAL" 'BEGIN { exit (n1 <= n2 + 0.0001 && n2 <= n1 + 0.0001) }' /dev/null;
+    then
+	echo "Exiting test because objective value in solu file is inconsistent: $OBJECTIVEVAL vs. $CHECKOBJECTIVEVAL"
+        exit
+    fi
 else
     OBJECTIVEVAL=""
 fi
@@ -125,7 +130,7 @@ then
     echo read $INSTANCE         >> $TMPFILE
 
     # set objective limit: optimal solution value from solu file, if existent
-    if test $SETCUTOFF = 1
+    if test $SETCUTOFF = 1 || test $SETCUTOFF = true
     then
         if test $SOLUFILE == ""
         then
