@@ -46,13 +46,15 @@ extern "C" {
 /** creates separation storage */
 extern
 SCIP_RETCODE SCIPsepastoreCreate(
-   SCIP_SEPASTORE**      sepastore           /**< pointer to store separation storage */
+   SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** frees separation storage */
 extern
 SCIP_RETCODE SCIPsepastoreFree(
-   SCIP_SEPASTORE**      sepastore           /**< pointer to store separation storage */
+   SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs separation storage, that the setup of the initial LP starts now */

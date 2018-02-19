@@ -74,7 +74,8 @@ SCIP_RETCODE sepastoreEnsureCutsMem(
 
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreCreate(
-   SCIP_SEPASTORE**      sepastore           /**< pointer to store separation storage */
+   SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepastore != NULL);
@@ -90,19 +91,22 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->ncutsapplied = 0;
    (*sepastore)->initiallp = FALSE;
    (*sepastore)->forcecuts = FALSE;
+   SCIP_CALL( SCIPcreateRandom(set->scip, &(*sepastore)->rng, 0x5EED) );
 
    return SCIP_OKAY;
 }
 
 /** frees separation storage */
 SCIP_RETCODE SCIPsepastoreFree(
-   SCIP_SEPASTORE**      sepastore           /**< pointer to store separation storage */
+   SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepastore != NULL);
    assert(*sepastore != NULL);
    assert((*sepastore)->ncuts == 0);
 
+   SCIPfreeRandom(set->scip, &(*sepastore)->rng);
    BMSfreeMemoryArrayNull(&(*sepastore)->cuts);
    BMSfreeMemory(sepastore);
 
@@ -881,7 +885,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    depth = SCIPnodeGetDepth(node);
 
    /* call cut selection algorithm */
-   SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
+   SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->rng, sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
 
    /* apply all selected cuts */
    for( i = 0; i < nselectedcuts && !(*cutoff); i++ )
