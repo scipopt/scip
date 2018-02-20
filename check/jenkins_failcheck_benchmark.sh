@@ -15,7 +15,7 @@ sleep 5
 echo "Evaluating the runs and uploading them to rubberband."
 
 # SCIP check files are check.clusterbench.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
-EVALFILES=`ls results/clusterbench/*.eval`
+EVALFILES=`ls ${OUTPUTDIR}*.eval`
 OUTPUT="clusterbenchmark_output.tmp"
 
 # evaluate with evalcheck_cluster.sh, that also uploads to rubberband, and collect rubberbandids
