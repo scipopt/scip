@@ -13,6 +13,7 @@ performance improvements:
   (disaggregation can still be very helpful on some instances, but also seems hurtful on others)
 - test additional scaling factors in CMIR cut generatio heuristic
 - cleaned up implementation of the cut selection procedure and added new cut quality measure
+- use random tie-breaking in cut selection
 
 features:
 - allow output of lower bounds for visualization
