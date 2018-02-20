@@ -3,6 +3,8 @@ SCIP version 5.0.2
 
 fixed bugs:
 - fixed check for activated debugging solution in components constraint handler
+- fixed potential bug concerning solution linking to LP in SCIPperformGenericDivingAlgorithm()
+
 
 SCIP version 5.0.1
 ==================
