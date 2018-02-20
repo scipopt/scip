@@ -392,7 +392,8 @@ SCIP_RETCODE cancelRow(
                         abortpair = TRUE;
                         break;
                      }
-                     else if( ++nintfillin > maxintfillin )
+
+                     if( ++nintfillin > maxintfillin )
                      {
                         abortpair = TRUE;
                         break;
@@ -420,7 +421,7 @@ SCIP_RETCODE cancelRow(
                {
                   if( SCIPvarIsBinary(var) && ++nbinfillin > maxbinfillin )
                      break;
-                  else if( ++nintfillin > maxintfillin )
+                  if( ++nintfillin > maxintfillin )
                      break;
                }
                else
