@@ -166,6 +166,7 @@ SCIP_RETCODE cancelRow(
    int nchgcoef;
    int nretrieves;
    int bestnfillin;
+   int ntotfillin;
    SCIP_Real mincancelrate;
    SCIP_Bool rowiseq;
    SCIP_CONS* cancelcons;
@@ -179,6 +180,7 @@ SCIP_RETCODE cancelRow(
    cancelcons = SCIPmatrixGetCons(matrix, rowidx);
 
    mincancelrate = 0.0;
+   ntotfillin = 0;
 
    /* for set packing and logicor constraints, only accept equalities where all modified coefficients are cancelled */
    if( SCIPconsGetHdlr(cancelcons) == SCIPfindConshdlr(scip, "setppc") ||
@@ -540,6 +542,8 @@ SCIP_RETCODE cancelRow(
             ++b;
          }
 
+         ntotfillin += bestnfillin;
+
          /* swap the temporary arrays so that the cancelrowinds and cancelrowvals arrays, contain the new
           * changed row, and the tmpinds and tmpvals arrays can be overwritten in the next iteration
           */
@@ -583,7 +587,7 @@ SCIP_RETCODE cancelRow(
       /* update counters */
       *nchgcoefs += nchgcoef;
       *ncanceled += SCIPmatrixGetRowNNonzs(matrix, rowidx) - cancelrowlen;
-      *nfillin += bestnfillin;
+      *nfillin += ntotfillin;
 
       /* if successful, decrease the useless hashtable retrieves counter; the rationale here is that we want to keep
        * going if, after many useless calls that almost exceeded the budget, we finally reach a useful section; but we
