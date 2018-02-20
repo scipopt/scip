@@ -371,7 +371,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
 
    /* prefer decisions on binary variables */
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-      *score *= 0.001;
+      *score = -1.0 / *score;
 
    return SCIP_OKAY;
 
