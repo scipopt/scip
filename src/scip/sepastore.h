@@ -47,6 +47,7 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPsepastoreCreate(
    SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -54,7 +55,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
 extern
 SCIP_RETCODE SCIPsepastoreFree(
    SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** informs separation storage, that the setup of the initial LP starts now */

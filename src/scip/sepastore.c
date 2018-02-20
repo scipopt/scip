@@ -38,6 +38,7 @@
 #include "scip/scip.h"
 #include "scip/cuts.h"
 #include "scip/struct_sepastore.h"
+#include "scip/misc.h"
 
 
 
@@ -75,6 +76,7 @@ SCIP_RETCODE sepastoreEnsureCutsMem(
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreCreate(
    SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -91,7 +93,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->ncutsapplied = 0;
    (*sepastore)->initiallp = FALSE;
    (*sepastore)->forcecuts = FALSE;
-   SCIP_CALL( SCIPcreateRandom(set->scip, &(*sepastore)->rng, 0x5EED) );
+   SCIP_CALL( SCIPrandomCreate(&(*sepastore)->rng, blkmem, SCIPsetInitializeRandomSeed(set, 0x5EED)) );
 
    return SCIP_OKAY;
 }
@@ -99,14 +101,14 @@ SCIP_RETCODE SCIPsepastoreCreate(
 /** frees separation storage */
 SCIP_RETCODE SCIPsepastoreFree(
    SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(sepastore != NULL);
    assert(*sepastore != NULL);
    assert((*sepastore)->ncuts == 0);
 
-   SCIPfreeRandom(set->scip, &(*sepastore)->rng);
+   SCIPrandomFree(&(*sepastore)->rng, blkmem);
    BMSfreeMemoryArrayNull(&(*sepastore)->cuts);
    BMSfreeMemory(sepastore);
 
