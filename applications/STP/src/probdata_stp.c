@@ -1836,11 +1836,6 @@ SCIP_DECL_PROBINITSOL(probinitsolStp)
    assert(scip != NULL);
    assert(probdata != NULL);
 
-#ifdef WITH_UG
-   assert(probdata->orggraph != NULL);
-   graph_copy_data(scip, probdata->orggraph, probdata->graph);
-
-#endif
    return SCIP_OKAY;
 }
 
@@ -3636,12 +3631,18 @@ void initReceivedSubproblem(
 #ifdef WITH_UG
    SCIP_PROBDATA* probdata;
    GRAPH* graph;
+   SCIP_Real lpobjval;
 
    assert(scip != NULL);
-
    probdata = SCIPgetProbData(scip);
 
    graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+
+   assert(probdata->orggraph != NULL);
+   graph_copy_data(scip, probdata->orggraph, graph);
+
+   assert(graph != NULL && probdata->mode == MODE_CUT);
 
    for( int i = 0; i < lLinearConsNames; i++ )
    {
@@ -3658,6 +3659,23 @@ void initReceivedSubproblem(
       if( consname != NULL)
          SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, NULL, graph, consname, FALSE) );
    }
+
+   if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
+   {
+      SCIP_CALL_ABORT( SCIPStpDualAscentPcMw(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
+   }
+   else
+   {
+      if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
+      {
+         SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
+      }
+      else
+      {
+         SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
+      }
+   }
+
 #else
    assert(0 && "only call me when using UG");
 #endif
