@@ -1975,6 +1975,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
 }
 
 /** stores the original parameters from the subproblem */
+static
 SCIP_RETCODE storeOrigSubprobParams(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
@@ -1999,6 +2000,7 @@ SCIP_RETCODE storeOrigSubprobParams(
 }
 
 /** sets the parameters for the subproblem */
+static
 SCIP_RETCODE setSubprobParams(
    SCIP*                 scip                /**< the SCIP data structure */
    )
@@ -2037,6 +2039,7 @@ SCIP_RETCODE setSubprobParams(
 }
 
 /** resets the original parameters from the subproblem */
+static
 SCIP_RETCODE resetOrigSubprobParams(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
@@ -2127,8 +2130,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
 {
    SCIP* subproblem;
    SCIP_SUBPROBPARAMS* origparams;
-   SCIP_Bool lperror;
-   SCIP_Bool cutoff;
    SCIP_Bool mipchecksolve;         /* flag to indicate whether the MIP problem is solved during the CHECK.
                                        In this case, the subproblems may be interrupted because of the upper bound. */
 
@@ -2232,48 +2233,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    return SCIP_OKAY;
 }
 
-/** resets the bound of the master problem variables */
-static
-SCIP_RETCODE resetMasterVarBoundsAndObj(
-   SCIP_BENDERS*         benders,            /**< variable benders */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   probnum             /**< the subproblem number */
-   )
-{
-   SCIP* subproblem;
-   SCIP_VAR** vars;
-   SCIP_VAR* mastervar;
-   int nvars;
-   int i;
-
-   assert(benders != NULL);
-   assert(set != NULL);
-   assert(probnum >= 0 && probnum < SCIPbendersGetNSubproblems(benders));
-
-   subproblem = SCIPbendersSubproblem(benders, probnum);
-   assert(SCIPgetStage(subproblem) == SCIP_STAGE_PROBLEM);
-
-   vars = SCIPgetVars(subproblem);
-   nvars = SCIPgetNVars(subproblem);
-
-   /* looping over all master problem variables and resetting their bounds. */
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
-
-      if( mastervar != NULL )
-      {
-         /* resetting the variable bounds in the subproblem */
-         SCIP_CALL( SCIPchgVarLb(subproblem, vars[i], SCIPvarGetLbOriginal(mastervar)) );
-         SCIP_CALL( SCIPchgVarUb(subproblem, vars[i], SCIPvarGetUbOriginal(mastervar)) );
-
-         assert(SCIPisFeasLE(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** frees the subproblems. */
 SCIP_RETCODE SCIPbendersFreeSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -2304,9 +2263,6 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
             SCIP_CALL( SCIPendProbing(subproblem) );
 
          SCIP_CALL( SCIPfreeTransform(subproblem) );
-
-         /* if the subproblem is a MIP, then the variable bounds must be reset */
-         //SCIP_CALL( resetMasterVarBoundsAndObj(benders, set, probnum) );
       }
    }
 
