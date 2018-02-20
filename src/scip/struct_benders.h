@@ -92,6 +92,7 @@ struct SCIP_Benders
                                                   This flag is used when retransforming the problem.*/
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
                                                to continuous variables. */
+   SCIP_Bool*            subprobsetup;       /**< flag to indicate whether the subproblem has been set up. */
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 
@@ -102,6 +103,24 @@ struct SCIP_Benders
    SCIP_Bool             benderscutssorted;  /**< are the Benders' cuts algorithms sorted by priority */
    SCIP_Bool             benderscutsnamessorted;/**< are the Benders' cuts algorithms sorted by name */
 };
+
+/** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored
+ *  and reset after the solving loop. */
+struct SCIP_SubprobParams
+{
+   int cons_linear_propfreq;
+   int lp_disablecutoff;
+   int lp_scaling;
+   int prop_maxrounds;
+   int prop_maxroundsroot;
+   char lp_initalg;
+   char lp_resolvealg;
+   SCIP_Bool conflict_enable;
+   SCIP_Bool misc_alwaysgetduals;
+   SCIP_Bool misc_catchctrlc;
+   SCIP_Bool misc_scaleobj;
+};
+typedef struct SCIP_SubprobParams SCIP_SUBPROBPARAMS;
 
 #ifdef __cplusplus
 }

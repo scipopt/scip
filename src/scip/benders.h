@@ -366,9 +366,9 @@ SCIP_RETCODE SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/* sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
- * process. One example is when the three-phase method is employed, where the first phase solves the of both the master
- * and subproblems and by the third phase the integer subproblem is solved. */
+/** sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
+ *  process. One example is when the three-phase method is employed, where the first phase solves the of both the master
+ *  and subproblems and by the third phase the integer subproblem is solved. */
 extern
 void SCIPbendersSetSubprobIsLP(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -376,7 +376,23 @@ void SCIPbendersSetSubprobIsLP(
    SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
    );
 
+/** sets the subproblem setup flag */
+extern
+void SCIPbendersSetSubprobIsSetup(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             issetup             /**< flag to indicate whether the subproblem has been setup */
+   );
+
+/** returns the subproblem setup flag */
+extern
+SCIP_Bool SCIPbendersSubprobIsSetup(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /** changes all of the master problem variables in the given subproblem to continuous */
+extern
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -384,6 +400,7 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    );
 
 /** sets a flag to indicate whether the master variables are all set to continuous */
+extern
 SCIP_RETCODE SCIPbendersSetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -391,6 +408,7 @@ SCIP_RETCODE SCIPbendersSetMastervarsCont(
    );
 
 /** returns whether the master variables are all set to continuous */
+extern
 SCIP_Bool SCIPbendersGetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
