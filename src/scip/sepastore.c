@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->ncutsapplied = 0;
    (*sepastore)->initiallp = FALSE;
    (*sepastore)->forcecuts = FALSE;
-   SCIP_CALL( SCIPrandomCreate(&(*sepastore)->rng, blkmem, SCIPsetInitializeRandomSeed(set, 0x5EED)) );
+   SCIP_CALL( SCIPrandomCreate(&(*sepastore)->rng, blkmem, (unsigned int)SCIPsetInitializeRandomSeed(set, 0x5EED)) );
 
    return SCIP_OKAY;
 }
