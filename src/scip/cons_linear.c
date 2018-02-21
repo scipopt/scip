@@ -8785,7 +8785,8 @@ static
 SCIP_RETCODE tightenSides(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   int*                  nchgsides           /**< pointer to count number of side changes */
+   int*                  nchgsides,          /**< pointer to count number of side changes */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8799,6 +8800,8 @@ SCIP_RETCODE tightenSides(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   *infeasible = FALSE;
+
    if( !SCIPisIntegral(scip, consdata->lhs) || !SCIPisIntegral(scip, consdata->rhs) )
    {
       integral = TRUE;
@@ -8809,6 +8812,15 @@ SCIP_RETCODE tightenSides(
       }
       if( integral )
       {
+         if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) && !SCIPisFeasIntegral(scip, consdata->rhs) )
+         {
+            SCIPdebugMsg(scip, "linear constraint <%s> is an equality and has only integral coefficients and variables "
+                  "but fractional sides sides=[%.15g,%.15g]\n", SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+
          SCIPdebugMsg(scip, "linear constraint <%s>: make sides integral: sides=[%.15g,%.15g]\n",
             SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
          if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
@@ -16064,7 +16076,14 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
 
          /* tighten left and right hand side due to integrality */
-         SCIP_CALL( tightenSides(scip, cons, nchgsides) );
+         SCIP_CALL( tightenSides(scip, cons, nchgsides, &infeasible) );
+
+         if( infeasible )
+         {
+            SCIPdebugMsg(scip, " -> infeasibility detected during tightening sides\n");
+            cutoff = TRUE;
+            break;
+         }
 
          /* check bounds */
          if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
