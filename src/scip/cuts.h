@@ -274,6 +274,7 @@ EXTERN
 SCIP_RETCODE SCIPselectCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   SCIP_RANDNUMGEN*      rng,                /**< random number generator for tie-breaking, or NULL */
    int                   ncuts,              /**< number of cuts in given array */
    int                   nforcedcuts,        /**< number of forced cuts at start of given array */
    int                   maxselectedcuts,    /**< maximal number of cuts to select */
