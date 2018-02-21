@@ -5,7 +5,10 @@ SCIP version 5.0.2
 =================
 
 fixed bugs:
-- fixed check for activated debugging solution in components constraint handler
+	- fixed check for activated debugging solution in components constraint handler
+
+deleted files:
+	- presol_implfree removed
 
 SCIP version 5.0.1
 ==================
