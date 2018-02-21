@@ -8790,6 +8790,10 @@ SCIP_RETCODE tightenSides(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real newlhs;
+   SCIP_Real newrhs;
+   SCIP_Bool chglhs;
+   SCIP_Bool chgrhs;
    SCIP_Bool integral;
    int i;
 
@@ -8802,6 +8806,11 @@ SCIP_RETCODE tightenSides(
 
    *infeasible = FALSE;
 
+   chglhs = FALSE;
+   chgrhs = FALSE;
+   newlhs = -SCIPinfinity(scip);
+   newrhs = SCIPinfinity(scip);
+
    if( !SCIPisIntegral(scip, consdata->lhs) || !SCIPisIntegral(scip, consdata->rhs) )
    {
       integral = TRUE;
@@ -8812,10 +8821,22 @@ SCIP_RETCODE tightenSides(
       }
       if( integral )
       {
-         if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) && !SCIPisFeasIntegral(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
          {
-            SCIPdebugMsg(scip, "linear constraint <%s> is an equality and has only integral coefficients and variables "
-                  "but fractional sides sides=[%.15g,%.15g]\n", SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+            newlhs = SCIPfeasCeil(scip, consdata->lhs);
+            chglhs = TRUE;
+         }
+         if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisIntegral(scip, consdata->rhs) )
+         {
+            newrhs = SCIPfeasFloor(scip, consdata->rhs);
+            chgrhs = TRUE;
+         }
+
+         /* check whether rounding would lead to an unsatisfiable constraint */
+         if( SCIPisGT(scip, newlhs, newrhs) )
+         {
+            SCIPdebugMsg(scip, "rounding sides=[%.15g,%.15g] of linear constraint <%s> with integral coefficients and variables only "
+                  "is infeasible\n", consdata->lhs, consdata->rhs, SCIPconsGetName(cons));
 
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -8823,15 +8844,20 @@ SCIP_RETCODE tightenSides(
 
          SCIPdebugMsg(scip, "linear constraint <%s>: make sides integral: sides=[%.15g,%.15g]\n",
             SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
-         if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
+
+         if( chglhs )
          {
-            SCIP_CALL( chgLhs(scip, cons, SCIPfeasCeil(scip, consdata->lhs)) );
+            assert(!SCIPisInfinity(scip, -newlhs));
+
+            SCIP_CALL( chgLhs(scip, cons, newlhs) );
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
-         if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisIntegral(scip, consdata->rhs) )
+         if( chgrhs )
          {
-            SCIP_CALL( chgRhs(scip, cons, SCIPfeasFloor(scip, consdata->rhs)) );
+            assert(!SCIPisInfinity(scip, newrhs));
+
+            SCIP_CALL( chgRhs(scip, cons, newrhs) );
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
