@@ -55,6 +55,12 @@ SCIP_RETCODE SCIPcreateConsStp(
    GRAPH*                graph               /**< graph data structure */
    );
 
+/** sets graph */
+void SCIPStpConshdlrSetGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< graph data structure */
+   );
+
 /** dual ascent heuristic */
 extern
 SCIP_RETCODE SCIPStpDualAscent(

@@ -3686,6 +3686,9 @@ SCIP_RETCODE graph_pack(
 
    SCIPfreeBufferArray(scip, &new);
 
+   if( g->path_heap != NULL )
+      graph_path_exit(scip, g);
+
    g->stp_type = UNKNOWN;
    graph_free(scip, &g, FALSE);
 

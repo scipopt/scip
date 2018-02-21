@@ -49,11 +49,15 @@
 #include "scip/misc.h"
 #include "scip/cons_linear.h"
 #include <time.h>
+#if 0
 #ifdef WITH_UG
 #define ADDCUTSTOPOOL 1
 #else
 #define ADDCUTSTOPOOL 0
 #endif
+#endif
+
+#define ADDCUTSTOPOOL 0
 
 #define Q_NULL     -1         /* NULL element of queue/list */
 
@@ -1143,6 +1147,7 @@ SCIP_DECL_CONSFREE(consFreeStp)
 static
 SCIP_DECL_CONSINITSOL(consInitsolStp)
 {  /*lint --e{715}*/
+   SCIPStpConshdlrSetGraph(scip, SCIPprobdataGetGraph2(scip));
    return SCIP_OKAY;
 }
 
@@ -1303,15 +1308,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsStp)
 static
 SCIP_DECL_CONSCHECK(consCheckStp)
 {  /*lint --e{715}*/
+   GRAPH* g;
    SCIP_Bool feasible;
    SCIP_CONSDATA* consdata;
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   g = SCIPprobdataGetGraph2(scip);
+   assert(g != NULL);
+   assert(nconss == 1);
+
+   for( int i = 0; i < nconss; i++ )
    {
       consdata = SCIPconsGetData(conss[i]);
 
-      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, sol), &feasible) );
+      SCIP_CALL( SCIPStpValidateSol(scip, g, SCIPprobdataGetXval(scip, sol), &feasible) );
 
       if( !feasible )
       {
@@ -1516,6 +1526,27 @@ SCIP_RETCODE SCIPcreateConsStp(
    return SCIP_OKAY;
 }
 
+/** sets graph */
+void SCIPStpConshdlrSetGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< graph data structure */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   conshdlr = SCIPfindConshdlr(scip, "stp");
+   assert(conshdlr != NULL);
+   assert(SCIPconshdlrGetNConss(conshdlr) > 0);
+
+   consdata = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[0]);
+
+   assert(consdata != NULL);
+
+   consdata->graph = SCIPprobdataGetGraph2(scip);
+   assert(consdata->graph != NULL);
+}
+
 /* dual ascent heuristic */
 SCIP_RETCODE SCIPStpDualAscent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1534,6 +1565,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    STP_Bool* RESTRICT    nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
 {
+   SCIP_CONSHDLR* conshdlr = NULL;
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
    SCIP_Real dualobj;
@@ -1556,6 +1588,10 @@ SCIP_RETCODE SCIPStpDualAscent(
    int nnewedges;
    int norgcutverts;
    int stacklength;
+   const SCIP_Bool addconss = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+
+   /* should currently not  be activated */
+   assert(addconss || !addcuts);
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -1570,6 +1606,12 @@ SCIP_RETCODE SCIPStpDualAscent(
    {
       vars = SCIPprobdataGetVars(scip);
       assert(vars != NULL);
+
+      if( !addconss )
+      {
+         conshdlr = SCIPfindConshdlr(scip, "stp");
+         assert(conshdlr != NULL);
+      }
    }
    else
    {
@@ -1849,6 +1891,8 @@ SCIP_RETCODE SCIPStpDualAscent(
          if( ((currscore - prio1) / prio1) <= DEFAULT_DAMAXDEVIATION || currscore <= prio2 )
          {
             SCIP_CONS* cons = NULL;
+            SCIP_ROW* row = NULL;
+
             int shift = 0;
             SCIP_Real min = FARAWAY;
             SCIP_Bool isactive = FALSE;
@@ -1889,13 +1933,21 @@ SCIP_RETCODE SCIPStpDualAscent(
 
             /* 3. step: perform augmentation */
 
-            /* create constraints? */
+            /* create constraints/cuts ? */
             if( addcuts )
             {
-               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
-                     1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               if( addconss )
+               {
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
+                        1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0,
+                        SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
-               SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+               }
             }
 
             shift = 0;
@@ -1910,9 +1962,12 @@ SCIP_RETCODE SCIPStpDualAscent(
 
                if( addcuts )
                {
-                  assert(cons != NULL);
                   assert(vars != NULL);
-                  SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[edgearr[a]], 1.0) );
+
+                  if( addconss )
+                     SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[edgearr[a]], 1.0) );
+                  else
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, vars[edgearr[a]], 1.0) );
                }
                rescap[a] -= min;
 
@@ -1961,8 +2016,21 @@ SCIP_RETCODE SCIPStpDualAscent(
 
             if( addcuts )
             {
-               assert(cons != NULL);
-               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               if( addconss )
+               {
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               }
+               else
+               {
+                  SCIP_Bool infeasible;
+
+                  SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+                  SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+                  assert(!infeasible);
+               }
             }
 
             if( isactive )
@@ -2081,9 +2149,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    int                   nruns               /**< number of dual ascent runs */
    )
 {
-#if 0
-   SCIP_CONSHDLR* conshdlr;
-#endif
+   SCIP_CONSHDLR* conshdlr = NULL;
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
    GRAPH* transgraph;
@@ -2121,6 +2187,10 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    STP_Bool firstrun;
    STP_Bool* sat;
    STP_Bool* active;
+   const SCIP_Bool addconss = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+
+   /* should currently not  be activated */
+   assert(addconss || !addcuts);
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -2134,6 +2204,11 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    {
       vars = SCIPprobdataGetVars(scip);
       assert(vars != NULL);
+      if( !addconss )
+      {
+         conshdlr = SCIPfindConshdlr(scip, "stp");
+         assert(conshdlr != NULL);
+      }
    }
    else
    {
@@ -2144,9 +2219,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    degsum = 0;
    offset = 0.0;
    dualobj = 0.0;
-#if 0
-   conshdlr = SCIPfindConshdlr(scip, "stp");
-#endif
+
    ncutverts = 0;
    norgcutverts = 0;
    maxdeviation = DEFAULT_DAMAXDEVIATION;
@@ -2318,10 +2391,8 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
          /* augmentation criteria met? */
          if( SCIPisLE(scip, (currscore - prio1) / prio1, maxdeviation) || (SCIPpqueueNElems(pqueue) == 0) )
          {
-            int in = FALSE;
-#if 0
+            SCIP_Bool in = FALSE;
             SCIP_ROW* row;
-#endif
             SCIP_CONS* cons = NULL;
 
             /* 2. pass: get minimum residual capacity among cut-arcs */
@@ -2360,14 +2431,20 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
             /* 3. pass: perform augmentation */
 
 
-            /* create constraint */
+            /* create constraint/row */
 
             if( addcuts )
             {
-               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
-                     1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-
-               SCIP_CALL( SCIPaddCons(scip, cons) );
+               if( addconss )
+               {
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
+                        1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               }
+               else
+               {
+                  SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
+                  SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+               }
             }
 
             dualobj += min;
@@ -2384,11 +2461,11 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
 
                   if( g->tail[a] == root && g->head[a] == v )
                      in = TRUE;
-#if 1
-                  SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[a], 1.0) );
-#else
-                  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[a], 1.0) );
-#endif
+
+                  if( addconss )
+                     SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[a], 1.0) );
+                  else
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, vars[a], 1.0) );
                }
                rescap[a] -= min;
 
@@ -2409,23 +2486,36 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
 
             if( addcuts )
             {
+               assert(vars != NULL);
+
                if( !in )
                {
-                  assert(vars != NULL);
                   for( i = g->outbeg[root]; i != EAT_LAST; i = g->oeat[i] )
-                  {
                      if( g->head[i] == v )
                      {
-                        SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i], 1.0) );
+                        if( addconss )
+                           SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i], 1.0) );
+                        else
+                           SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], 1.0) );
                      }
-                  }
                }
-#if 1
-               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-#else
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
-#endif
 
+               if( addconss )
+               {
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               }
+               else
+               {
+                  SCIP_Bool infeasible;
+                  assert(row != NULL);
+
+                  SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+                  SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+                  assert(!infeasible);
+               }
             }
 
             continue;

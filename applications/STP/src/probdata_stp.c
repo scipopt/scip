@@ -38,7 +38,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
-
 #include "probdata_stp.h"
 #include <stdio.h>
 #include "scip/scip.h"
@@ -1988,14 +1987,25 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPgetStringParam(scip, "stp/logfile", &logfilename) );
    SCIP_CALL( SCIPgetStringParam(scip, "stp/intlogfile", &intlogfilename) );
 
+   /* copy filename */
+   (void) SCIPsnprintf(tmpfilename, SCIP_MAXSTRLEN, "%s", filename);
+   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
+
    if( logfilename != NULL && logfilename[0] != '\0' )
    {
-      probdata->logfile = fopen(logfilename, "w");
+      char* finalfilename;
+
+      if( strcmp("stp_logfile", logfilename) == 0 )
+         finalfilename = probname;
+      else
+         finalfilename = logfilename;
+
+      probdata->logfile = fopen(finalfilename, "w");
 
       if( probdata->logfile == NULL )
       {
-         SCIPerrorMessage("cannot create file <%s> for writing\n", logfilename);
-         SCIPprintSysError(logfilename);
+         SCIPerrorMessage("cannot create file <%s> for writing\n", finalfilename);
+         SCIPprintSysError(finalfilename);
          return SCIP_FILECREATEERROR;
       }
    }
@@ -2011,11 +2021,6 @@ SCIP_RETCODE SCIPprobdataCreate(
          return SCIP_FILECREATEERROR;
       }
    }
-
-   /* copy filename */
-   (void) SCIPsnprintf(tmpfilename, SCIP_MAXSTRLEN, "%s", filename);
-
-   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
@@ -3631,6 +3636,7 @@ void initReceivedSubproblem(
 #ifdef WITH_UG
    SCIP_PROBDATA* probdata;
    GRAPH* graph;
+   GRAPH* packedgraph;
    SCIP_Real lpobjval;
 
    assert(scip != NULL);
@@ -3638,9 +3644,12 @@ void initReceivedSubproblem(
 
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
-
    assert(probdata->orggraph != NULL);
-   graph_copy_data(scip, probdata->orggraph, graph);
+
+   graph_mincut_exit(scip, graph);
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   graph_copy(scip, probdata->orggraph, &graph);
 
    assert(graph != NULL && probdata->mode == MODE_CUT);
 
@@ -3658,6 +3667,22 @@ void initReceivedSubproblem(
       SCIPdebugMessage("add ppc cons %s \n", consname);
       if( consname != NULL)
          SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, NULL, graph, consname, FALSE) );
+   }
+
+   SCIP_CALL_ABORT( graph_init_history(scip, graph) );
+   SCIP_CALL_ABORT( graph_pack(scip, graph, &packedgraph, TRUE) );
+   graph = packedgraph;
+   probdata->graph = graph;
+
+   SCIP_CALL_ABORT( graph_path_init(scip, graph) );
+   SCIP_CALL_ABORT( graph_mincut_init(scip, graph) );
+
+   /* graph might have become infeasible (don't do it before, to keep invariant) */
+   if( !graph_valid(graph) )
+   {
+      printf("infeasible problem! \n");
+      SCIP_CALL_ABORT( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
+      return;
    }
 
    if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
