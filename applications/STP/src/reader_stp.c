@@ -217,7 +217,7 @@ SCIP_RETCODE SCIPincludeReaderStp(
 
    SCIP_CALL( SCIPaddStringParam(scip,
          "stp/intlogfile",
-         "log file in DIMACS challenge format for intermediate solutions",
+         "log file for intermediate solutions; use_probname for using problem name",
          NULL, FALSE, "",
          NULL, NULL) );
 

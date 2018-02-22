@@ -1993,12 +1993,12 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    if( logfilename != NULL && logfilename[0] != '\0' )
    {
-      char* finalfilename;
+      char finalfilename[SCIP_MAXSTRLEN];;
 
       if( strcmp("use_probname", logfilename) == 0 )
-         finalfilename = probname;
+         (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s.stplog", probname);
       else
-         finalfilename = logfilename;
+         (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s", logfilename);
 
       probdata->logfile = fopen(finalfilename, "w");
 
@@ -2012,12 +2012,19 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    if( intlogfilename != NULL && intlogfilename[0] != '\0' )
    {
-      probdata->intlogfile = fopen(intlogfilename, "w");
+      char finalfilename[SCIP_MAXSTRLEN];;
+
+      if( strcmp("use_probname", intlogfilename) == 0 )
+         (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s_int.stplog", probname);
+      else
+         (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s", intlogfilename);
+
+      probdata->intlogfile = fopen(finalfilename, "w");
 
       if( probdata->intlogfile == NULL )
       {
-         SCIPerrorMessage("cannot create file <%s> for writing\n", intlogfilename);
-         SCIPprintSysError(intlogfilename);
+         SCIPerrorMessage("cannot create file <%s> for writing\n", finalfilename);
+         SCIPprintSysError(finalfilename);
          return SCIP_FILECREATEERROR;
       }
    }
@@ -3165,12 +3172,18 @@ void SCIPprobdataWriteLogLine(
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   if( probdata->logfile == NULL )
-      return;
-
-   va_start(ap, formatstr); /*lint !e826*/
-   SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->logfile, formatstr, ap);
-   va_end(ap);
+   if( probdata->logfile != NULL )
+   {
+      va_start(ap, formatstr); /*lint !e826*/
+      SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->logfile, formatstr, ap);
+      va_end(ap);
+   }
+   if( probdata->intlogfile != NULL )
+   {
+      va_start(ap, formatstr); /*lint !e826*/
+      SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->intlogfile, formatstr, ap);
+      va_end(ap);
+   }
 }
 
 /** add new solution */
