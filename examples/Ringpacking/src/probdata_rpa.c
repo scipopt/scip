@@ -755,7 +755,10 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
    return SCIP_OKAY;
 }
 
-/** auxiliary function to compute the left-most, bottom-second intersection point of two circles */
+/** Auxiliary function to compute the left-most, bottom-second intersection point of two circles.
+ *  Optionally, a bounding circle in which the point has to lie can be specified through parameter rbound.
+ *  If rbound is SCIP_INVALID, this will be ignored. Results will be SCIP_INVALID if computation failed.
+ */
 static
 void computeCircleIntersection(
    SCIP_Real             x1,                 /**< x-coordinate of first circle */
@@ -764,6 +767,7 @@ void computeCircleIntersection(
    SCIP_Real             x2,                 /**< x-coordinate of second circle */
    SCIP_Real             y2,                 /**< y-coordinate of second circle */
    SCIP_Real             r2,                 /**< radius of second circle */
+   SCIP_Real             rbound,             /**< radius of bounding circle */
    SCIP_Real*            xres,               /**< buffer for x-coordinate of intersection point */
    SCIP_Real*            yres                /**< buffer for y-coordinate of intersection point */
    )
@@ -777,6 +781,7 @@ void computeCircleIntersection(
    assert(yres != NULL);
    assert(r1 >= 0.0);
    assert(r2 >= 0.0);
+   assert(rbound >= 0.0);
 
    distsqr = SQR(x2 - x1) + SQR(y2 - y1);
    assert(distsqr != 0.0);
@@ -802,6 +807,19 @@ void computeCircleIntersection(
 
    *xres += sqrtterm * (y2 - y1);
    *yres += sqrtterm * (x2 - x1);
+
+   /* if point does not lie in the bounding circle, try the other one */
+   if( rbound != SCIP_INVALID && SQR(*xres) + SQR(*yres) > SQR(rbound) )
+   {
+      *xres -= 2 * sqrtterm * (y2 - y1);
+      *yres -= 2 * sqrtterm * (x2 - x1);
+
+      if( SQR(*xres) + SQR(*yres) > SQR(rbound) )
+      {
+         *xres = SCIP_INVALID;
+         *yres = SCIP_INVALID;
+      }
+   }
 }
 
 /**@} */
