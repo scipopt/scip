@@ -755,6 +755,55 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
    return SCIP_OKAY;
 }
 
+/** auxiliary function to compute the left-most, bottom-second intersection point of two circles */
+static
+void computeCircleIntersection(
+   SCIP_Real             x1,                 /**< x-coordinate of first circle */
+   SCIP_Real             y1,                 /**< y-coordinate of first circle */
+   SCIP_Real             r1,                 /**< radius of first circle */
+   SCIP_Real             x2,                 /**< x-coordinate of second circle */
+   SCIP_Real             y2,                 /**< y-coordinate of second circle */
+   SCIP_Real             r2,                 /**< radius of second circle */
+   SCIP_Real*            xres,               /**< buffer for x-coordinate of intersection point */
+   SCIP_Real*            yres                /**< buffer for y-coordinate of intersection point */
+   )
+{
+   SCIP_Real distsqr;
+   SCIP_Real r1sqr;
+   SCIP_Real r2sqr;
+   SCIP_Real sqrtterm;
+
+   assert(xres != NULL);
+   assert(yres != NULL);
+   assert(r1 >= 0.0);
+   assert(r2 >= 0.0);
+
+   distsqr = SQR(x2 - x1) + SQR(y2 - y1);
+   assert(distsqr != 0.0);
+
+   /* if the distance is too large, the circles don't intersect */
+   if( distsqr > SQR(r1 + r2) )
+   {
+      *xres = SCIP_INVALID;
+      *yres = SCIP_INVALID;
+      return;
+   }
+
+   r1sqr = SQR(r1);
+   r2sqr = SQR(r2);
+   sqrtterm = 0.5 * SQRT(2 * (r1sqr + r2sqr) / distsqr - SQR(r1sqr - r2sqr) / SQR(distsqr) - 1);
+
+   *xres = 0.5 * (x1 + x2) + 0.5 * (r1sqr - r2sqr) * (x2 - x1) / distsqr;
+   *yres = 0.5 * (y1 + y2) + 0.5 * (r1sqr - r2sqr) * (y2 - y1) / distsqr;
+
+   /* choose intersection according to left-first, bottom-second order */
+   if( (y1 != y2 && sqrtterm * (y2 - y1) > 0.0) || (y1 == y2 && sqrtterm * (x2 - x1) > 0.0) )
+      sqrtterm *= -1.0;
+
+   *xres += sqrtterm * (y2 - y1);
+   *yres += sqrtterm * (x2 - x1);
+}
+
 /**@} */
 
 /**@name Callback methods of problem data
