@@ -36,49 +36,77 @@
 /* GLOBAL VARIABLES */
 static SCIP_LPI* lpi = NULL;
 
-/** write ncols, nrows and objsen into variables to check later */
+/** initialize a 3x3 maximization problem, write nrows and ncols in variables for later use. */
 static
-SCIP_Bool initProb(int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* objsen)
+void initProb(int* ncols, int* nrows)
 {
+   int beg = 0;
+   int inds[2];
+   SCIP_Real vals[2];
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   *ncols = 3;
+   *nrows = 3;
+
+   /* clean up after old problem */
+   if ( lpi != NULL )
+   {
+      SCIP_CALL( SCIPlpiFree(&lpi) );
+   }
+
+   /* create LPI */
    SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
 
-   SCIP_Real obj[100] = { 1.0, 1.0 };
-   SCIP_Real  lb[100] = { 0.0, 0.0 };
-   SCIP_Real  ub[100] = { SCIPlpiInfinity(lpi),  SCIPlpiInfinity(lpi) };
-   SCIP_Real lhs[100] = {-SCIPlpiInfinity(lpi), -SCIPlpiInfinity(lpi) };
-   SCIP_Real rhs[100] = { 1.0, 1.0 };
-   SCIP_Real val[100] = { 1.0, 1.0 };
-   int beg[100] = { 0, 1 };
-   int ind[100] = { 0, 1 };
+   /* use the following LP (same as in bases.c):
+    * max 1 x1 + 1 x2 + 1 x3
+    *       -8 <= -x1 -          x3 <= -1
+    *       -7 <= -x1 -   x2        <= -1
+    *              x1 + 2 x2        <= 12
+    *              x1,    x2,    x3 >= 0
+    * dual:
+    * min  -x1 + -x2 + 12 x3
+    *       -8 <= -x1 -          x3 <= -1
+    *       -7 <= -x1 -   x2        <= -1
+    *              x1 + 2 x2        <= 12
+    *              x1,    x2,    x3 >= 0
+    */
+   /* add columns */
+   lb = 0.0;
+   ub = SCIPlpiInfinity(lpi);
+   obj = 1.0;
 
-   /* optimal - optimal
-    * (P):  max x+y
-    * x     <= 1 (constr)
-    *     y <= 1 (constr)
-    *
-    *  0 <= x (bound)
-    *  0 <= y (bound)
-    *
-    * (D):  min x+y
-    * 1 <= x    (constr)
-    * 1 <=    y (constr)
-    *
-    * 0 <= x (bound)
-    * 0 <= y (bound)
-    j* */
-   *ncols = 2;
-   *nrows = 2;
-   *nnonz = 2;
-   *objsen = SCIP_OBJSEN_MAXIMIZE;
+   SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
 
-   SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
-   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, NULL, *nnonz, beg, ind, val) );
+   /* add rows */
+   lhs = -8.0;
+   rhs = -1.0;
+   inds[0] = 0;
+   inds[1] = 2;
+   vals[0] = -1.0;
+   vals[1] = -1.0;
+   SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 2, &beg, inds, vals) );
+
+   lhs = -7.0;
+   rhs = -1.0;
+   inds[0] = 0;
+   inds[1] = 1;
+   vals[0] = -1.0;
+   vals[1] = -1.0;
+   SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 2, &beg, inds, vals) );
+
+   lhs = -SCIPlpiInfinity(lpi);
+   rhs = 12.0;
+   inds[0] = 0;
+   inds[1] = 1;
+   vals[0] = 1.0;
+   vals[1] = 2.0;
+   SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 2, &beg, inds, vals) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
-   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
-   cr_assert( SCIPlpiWasSolved(lpi) );
-
-   return TRUE;
 }
 
 /* TEST SUITE */
@@ -93,7 +121,6 @@ void setup(void)
 static
 void teardown(void)
 {
-   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiFree(&lpi) );
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
@@ -106,19 +133,54 @@ TestSuite(solve_behavior, .init = setup, .fini = teardown);
  *  if the lp solver does not have a barrier method it should default to dualsimplex. */
 Test(solve_behavior, testbarriersolve)
 {
-   int nrows, ncols, nnonz;
-   SCIP_OBJSEN sense;
-   initProb(&ncols, &nrows, &nnonz, &sense);
+   SCIP_Real objval;
+   int cstats[3];
+   int rstats[3];
+   int i;
+   bool crossover = true;
+   int nrows, ncols;
+   SCIP_Real exp_primsol[10] = { 0.0, 6.0, 8.0};
+   SCIP_Real exp_dualsol[10] = {-1.0, 0.0, 0.5};
+   SCIP_Real* primsol;
+   SCIP_Real* dualsol;
 
-   SCIP_CALL( SCIPlpiSolveBarrier(lpi, true) );
+   /* do this twice, with and without crossover */
+   for (i = 0; i < 2; ++i)
+   {
+      /* initialize */
+      initProb(&nrows, &ncols);
 
-   /* Problem is optimal - optimal, should be solved */
-   cr_assert( SCIPlpiWasSolved(lpi) );
+      /* solve problem */
+      SCIP_CALL( SCIPlpiSolveBarrier(lpi, crossover) );
 
-   SCIP_CALL( SCIPlpiSolveBarrier(lpi, false) );
+      /* very short check (subset of complex test1 in bases.c) */
+      cr_assert( SCIPlpiWasSolved(lpi) );
+      SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+      cr_assert_float_eq(objval, 14.0, EPS);
 
-   /* Problem is optimal - optimal, should be solved */
-   cr_assert( SCIPlpiWasSolved(lpi) );
+      /* allocate storage for solution */
+      BMSallocMemoryArray(&primsol, ncols);
+      BMSallocMemoryArray(&dualsol, nrows);
+
+      /* get solution */
+      SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primsol, dualsol, NULL, NULL) );
+
+      for (i = 0; i < ncols; ++i)
+      {
+         cr_assert_float_eq(primsol[i], exp_primsol[i], EPS, "Violation of primal solution %d: %g != %g\n", i, primsol[i], exp_primsol[i]);
+      }
+
+      for (i = 0; i < nrows; ++i)
+      {
+         cr_assert_float_eq(dualsol[i], exp_dualsol[i], EPS, "Violation of dual solution %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
+      }
+      /* free up memory */
+      BMSfreeMemoryArray(&primsol);
+      BMSfreeMemoryArray(&dualsol);
+
+      /* prepare for second run */
+      crossover = !crossover;
+   }
 }
 
 /** Test if the two method giving information about availability of solve methods do not crash. */
