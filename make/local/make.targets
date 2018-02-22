@@ -9,7 +9,7 @@ testfscip: check/configuration_set_fscip.sh check/configuration_logfiles_fscip.s
 		cd check; \
 		$(SHELL) ./check_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) $(notdir $(FSCIP)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-		$(SEEDS);
+		$(SEEDS) $(GLBSEEDSHIFT);
 
 .PHONY: testcplex
 testcplex:
@@ -75,7 +75,7 @@ testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh ch
 		$(notdir $(FSCIP)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(GLBSEEDSHIFT);
 
 .PHONY: testclustercpx
 testclustercpx:

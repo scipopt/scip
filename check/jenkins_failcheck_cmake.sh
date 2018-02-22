@@ -171,10 +171,12 @@ EOF
 SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1`
 
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
-RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
-touch $RBDB
-OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
-NEWTIMESTAMP=`date '+%F-%H-%M'`
+if [ "${PERFORMANCE}" == "performance" ]; then
+  RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
+  touch $RBDB
+  OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
+  NEWTIMESTAMP=`date '+%F-%H-%M'`
+fi
 
 PERM=0
 while [ $PERM -le $PERMUTE ]; do

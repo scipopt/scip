@@ -44,7 +44,6 @@ extern "C" {
 
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
-#include "zimpl/bool.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
 
