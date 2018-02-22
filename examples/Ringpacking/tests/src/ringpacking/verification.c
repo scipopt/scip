@@ -165,7 +165,7 @@ Test(verification, heur_single)
    cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
-/** verify circular pattern containing a single element with heuristic */
+/** verify circular pattern containing two elements with heuristic */
 Test(verification, heur_two)
 {
    cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
@@ -188,8 +188,8 @@ Test(verification, heur_two)
    /* cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES); */
 }
 
-/** verifies circular pattern containing two elements with heuristic */
-Test(verification, nlp_heuristic)
+/** verifies circular pattern containing four and five elements with heuristic */
+Test(verification, heuer_four)
 {
    SCIP_PATTERN* p;
    int i;
