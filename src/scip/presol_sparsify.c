@@ -909,9 +909,9 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          /* since the function parameters for the max fillin are unsigned we do not need to handle the
           * unlimited (-1) case due to implicit conversion rules */
          SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
-               presoldata->maxcontfillin == -1 ? INT_MAX : 0, \
-               presoldata->maxintfillin == -1 ? INT_MAX : 0, \
-               presoldata->maxbinfillin == -1 ? INT_MAX : 0, \
+               presoldata->maxcontfillin == -1 ? INT_MAX : presoldata->maxcontfillin, \
+               presoldata->maxintfillin == -1 ? INT_MAX : presoldata->maxintfillin, \
+               presoldata->maxbinfillin == -1 ? INT_MAX : presoldata->maxbinfillin, \
                presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
       }
