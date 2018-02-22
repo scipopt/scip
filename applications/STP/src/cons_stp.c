@@ -44,6 +44,7 @@
 #include "heur_prune.h"
 #include "heur_ascendprune.h"
 #include "portab.h"
+#include "branch_stp.h"
 
 #include "scip/scip.h"
 #include "scip/misc.h"
@@ -1147,7 +1148,9 @@ SCIP_DECL_CONSFREE(consFreeStp)
 static
 SCIP_DECL_CONSINITSOL(consInitsolStp)
 {  /*lint --e{715}*/
+#ifdef WITH_UG
    SCIPStpConshdlrSetGraph(scip, SCIPprobdataGetGraph2(scip));
+#endif
    return SCIP_OKAY;
 }
 
@@ -1224,31 +1227,74 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpStp)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   GRAPH* g;
+   int* termorg = NULL;
+   int* nodestatenew = NULL;
    int maxcuts;
    int ncuts = 0;
-   int i;
+   const SCIP_Bool atrootnode = (SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0);
+#ifndef NDEBUG
+   int nterms;
+#endif
 
    *result = SCIP_DIDNOTRUN;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   maxcuts = SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 ?
-      conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
+   assert(nconss == 1);
+   consdata = SCIPconsGetData(conss[0]);
 
-   for( i = 0; i < nconss; ++i )
+   assert(consdata != NULL);
+
+   g = consdata->graph;
+   assert(g != NULL);
+
+#ifndef NDEBUG
+   nterms = g->terms;
+#endif
+
+   /* change graph according to branch-and-bound terminal changes  */
+   if( !atrootnode && g->stp_type == STP_SPG )
    {
-      SCIP_CONSDATA* consdata;
+      const int nnodes = g->knots;
 
-      consdata = SCIPconsGetData(conss[i]);
+      SCIP_CALL(SCIPallocBufferArray(scip, &nodestatenew, nnodes));
+      SCIP_CALL(SCIPallocBufferArray(scip, &termorg, nnodes));
+      BMScopyMemoryArray(termorg, g->term, nnodes);
 
-      SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+      SCIPStpBranchruleInitNodeState(g, nodestatenew);
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestatenew, NULL) );
 
-      SCIP_CALL( sep_2cut(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+      for( int k = 0; k < nnodes; k++ )
+         if( nodestatenew[k] == BRANCH_STP_VERTEX_TERM && !Is_term(g->term[k]) )
+            graph_knot_chg(g, k, 0);
    }
+
+   maxcuts = atrootnode ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
+
+   SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+
+   SCIP_CALL( sep_2cut(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
    if( ncuts > 0 )
       *result = SCIP_SEPARATED;
+
+   /* restore graph */
+   if( !atrootnode && g->stp_type == STP_SPG )
+   {
+      for( int k = 0; k < g->knots; k++ )
+         if( g->term[k] != termorg[k] )
+            graph_knot_chg(g, k, termorg[k]);
+   }
+
+#ifndef NDEBUG
+   assert(g->terms == nterms);
+#endif
+
+   SCIPfreeBufferArrayNull(scip, &termorg);
+   SCIPfreeBufferArrayNull(scip, &nodestatenew);
 
    return SCIP_OKAY;
 }

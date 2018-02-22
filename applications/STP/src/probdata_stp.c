@@ -3633,10 +3633,12 @@ void initReceivedSubproblem(
    const char*           setppcConsNames     /**< number of setppc constraints */
    )
 {
+
 #ifdef WITH_UG
    SCIP_PROBDATA* probdata;
    GRAPH* graph;
-   SCIP_Bool reachable;
+   int* nodestate;
+   int nnodes;
    SCIP_Real lpobjval;
 
    assert(scip != NULL);
@@ -3655,12 +3657,16 @@ void initReceivedSubproblem(
 
    assert(graph != NULL && probdata->mode == MODE_CUT);
 
+   nnodes = graph->knots;
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &nodestate, nnodes) );
+   SCIPStpBranchruleInitNodeState(graph, nodestate);
+
    for( int i = 0; i < lLinearConsNames; i++ )
    {
       const char* consname = getBranchLinearConsName(linearConsNames, i);
       SCIPdebugMessage("add lin cons %s \n", consname);
       if( consname != NULL)
-         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, NULL, graph, consname, FALSE) );
+         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, nodestate, NULL, consname, FALSE) );
    }
 
    for( int i = 0; i < lSetppcConsNames; i++ )
@@ -3668,22 +3674,34 @@ void initReceivedSubproblem(
       const char* consname = getBranchSetppcConsName(setppcConsNames, i);
       SCIPdebugMessage("add ppc cons %s \n", consname);
       if( consname != NULL)
-         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, NULL, graph, consname, FALSE) );
+         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, nodestate, NULL, consname, FALSE) );
    }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( nodestate[k] == BRANCH_STP_VERTEX_TERM && !Is_term(graph->term[k]) )
+      {
+         SCIPdebugMessage("UG make term: %d \n", k);
+         graph_knot_chg(graph, k, 0);
+      }
+      else if( nodestate[k] == BRANCH_STP_VERTEX_KILLED )
+      {
+         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+         {
+            if( graph->cost[e] < BLOCKED )
+               graph->cost[e] = BLOCKED;
+
+            if( graph->cost[flipedge(e)] < BLOCKED )
+               graph->cost[flipedge(e)] = BLOCKED;
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &nodestate);
 
    SCIP_CALL_ABORT( graph_init_history(scip, graph) );
    SCIP_CALL_ABORT( graph_path_init(scip, graph) );
    SCIP_CALL_ABORT( graph_mincut_init(scip, graph) );
-
-   SCIP_CALL_ABORT( graph_termsReachable(scip, graph, &reachable) );
-
-   /* graph might have become unconnected (don't do it before, to keep invariant) */
-   if( !reachable )
-   {
-      printf("infeasible problem in b&b! \n");
-      SCIP_CALL_ABORT( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
-      return;
-   }
 
    if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
    {

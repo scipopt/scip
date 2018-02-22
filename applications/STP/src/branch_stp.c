@@ -49,10 +49,6 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 #define BRANCHRULE_TMRUNS          20
 
-#define BRANCH_STP_VERTEX_KILLED      -1
-#define BRANCH_STP_VERTEX_NONTERM      0
-#define BRANCH_STP_VERTEX_TERM         1
-
 #define BRANCH_STP_ON_LP   0
 #define BRANCH_STP_ON_LP2  1
 #define BRANCH_STP_ON_SOL  2
@@ -100,15 +96,8 @@ SCIP_RETCODE selectBranchingVertexByDegree(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
 
    *vertex = UNKNOWN;
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( g->grad[k] == 0 )
-         nodestate[k] = BRANCH_STP_VERTEX_KILLED;
-      else if( Is_term(g->term[k]) )
-         nodestate[k] = BRANCH_STP_VERTEX_TERM;
-      else
-         nodestate[k] = BRANCH_STP_VERTEX_NONTERM;
-   }
+
+   SCIPStpBranchruleInitNodeState(g, nodestate);
 
    SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL) );
 
@@ -679,6 +668,31 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
    }
    return SCIP_OKAY;
 }
+
+/** applies vertex changes caused by this branching rule, either on a graph or on an array */
+void SCIPStpBranchruleInitNodeState(
+   const GRAPH*          g,                  /**< graph data structure */
+   int*                  nodestate           /**< node state array */
+   )
+{
+   const int nnodes = g->knots;
+
+   assert(g != NULL);
+   assert(nodestate != NULL);
+
+   assert(nnodes > 0);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( g->grad[k] == 0 )
+         nodestate[k] = BRANCH_STP_VERTEX_KILLED;
+      else if( Is_term(g->term[k]) )
+         nodestate[k] = BRANCH_STP_VERTEX_TERM;
+      else
+         nodestate[k] = BRANCH_STP_VERTEX_NONTERM;
+   }
+}
+
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
 SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
