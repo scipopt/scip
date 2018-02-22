@@ -3636,7 +3636,7 @@ void initReceivedSubproblem(
 #ifdef WITH_UG
    SCIP_PROBDATA* probdata;
    GRAPH* graph;
-   GRAPH* packedgraph;
+   SCIP_Bool reachable;
    SCIP_Real lpobjval;
 
    assert(scip != NULL);
@@ -3650,6 +3650,8 @@ void initReceivedSubproblem(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
    graph_copy(scip, probdata->orggraph, &graph);
+
+   probdata->graph = graph;
 
    assert(graph != NULL && probdata->mode == MODE_CUT);
 
@@ -3670,17 +3672,15 @@ void initReceivedSubproblem(
    }
 
    SCIP_CALL_ABORT( graph_init_history(scip, graph) );
-   SCIP_CALL_ABORT( graph_pack(scip, graph, &packedgraph, TRUE) );
-   graph = packedgraph;
-   probdata->graph = graph;
-
    SCIP_CALL_ABORT( graph_path_init(scip, graph) );
    SCIP_CALL_ABORT( graph_mincut_init(scip, graph) );
 
-   /* graph might have become infeasible (don't do it before, to keep invariant) */
-   if( !graph_valid(graph) )
+   SCIP_CALL_ABORT( graph_termsReachable(scip, graph, &reachable) );
+
+   /* graph might have become unconnected (don't do it before, to keep invariant) */
+   if( !reachable )
    {
-      printf("infeasible problem! \n");
+      printf("infeasible problem in b&b! \n");
       SCIP_CALL_ABORT( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
       return;
    }

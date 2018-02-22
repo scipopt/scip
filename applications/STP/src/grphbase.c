@@ -3762,14 +3762,12 @@ SCIP_RETCODE graph_trail_arr(
    int                   i                   /**< node to start from */
    )
 {
-   int* gmark;
+   int* const gmark = g->mark;
 
    assert(scip   != NULL);
    assert(g      != NULL);
    assert(i      >= 0);
    assert(i      <  g->knots);
-
-   gmark = g->mark;
 
    if( !gmark[i] )
    {
@@ -3783,7 +3781,7 @@ SCIP_RETCODE graph_trail_arr(
       gmark[i] = TRUE;
 
       if( g->grad[i] == 0 )
-         return SCIP_OKAY;;
+         return SCIP_OKAY;
 
       nnodes = g->knots;
       stacksize = 0;
@@ -3811,6 +3809,35 @@ SCIP_RETCODE graph_trail_arr(
       }
       SCIPfreeBufferArray(scip, &stackarr);
    }
+   return SCIP_OKAY;
+}
+
+/** checks whether all terminals are reachable from root */
+SCIP_RETCODE graph_termsReachable(
+   SCIP*                 scip,               /**< scip struct */
+   const GRAPH*          g,                  /**< the new graph */
+   SCIP_Bool*            reachable           /**< are they reachable? */
+   )
+{
+   const int nnodes = g->knots;
+
+   assert(g != NULL);
+   assert(reachable != NULL);
+
+   for( int k = 0; k < nnodes; k++ )
+      g->mark[k] = FALSE;
+
+   *reachable = TRUE;
+
+   graph_trail_arr(scip, g, g->source);
+
+   for( int k = 0; k < nnodes; k++ )
+      if( Is_term(g->term[k]) && !g->mark[k] )
+      {
+         *reachable = FALSE;
+         break;
+      }
+
    return SCIP_OKAY;
 }
 
