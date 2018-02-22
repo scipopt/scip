@@ -36,6 +36,7 @@ fixed bugs:
 - fix bug in sepa_gomory if cut is a bound change
 - fixed bug with NULL pointer handling in LPIs
 - fixed handling of infinite bounds in cons_sos1
+- fixed bug while scaling linear constraints
 
 unit tests:
 - expanded unit tests of the lpis
