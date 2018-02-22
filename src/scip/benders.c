@@ -585,6 +585,7 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->subprobobjval = NULL;
    (*benders)->bestsubprobobjval = NULL;
    (*benders)->subprobislp = NULL;
+   (*benders)->subprobsetup = NULL;
    (*benders)->mastervarscont = NULL;
 
    /* add parameters */
@@ -2090,7 +2091,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    assert(SCIPinProbing(subproblem));
 
    /* allocating memory for the parameter storage */
-   SCIP_CALL( SCIPallocBuffer(subproblem, &origparams) );
+   SCIP_CALL( SCIPallocBlockMemory(subproblem, &origparams) );
 
    /* store the original parameters of the subproblem */
    SCIP_CALL( storeOrigSubprobParams(subproblem, origparams) );
@@ -2113,7 +2114,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP_CALL( resetOrigSubprobParams(subproblem, origparams) );
 
    /* freeing the parameter storage */
-   SCIPfreeBuffer(subproblem, &origparams);
+   SCIPfreeBlockMemory(subproblem, &origparams);
 
    return SCIP_OKAY;
 }
@@ -2146,7 +2147,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    /* allocating memory for the parameter storage */
-   SCIP_CALL( SCIPallocBuffer(subproblem, &origparams) );
+   SCIP_CALL( SCIPallocBlockMemory(subproblem, &origparams) );
 
    /* store the original parameters of the subproblem */
    SCIP_CALL( storeOrigSubprobParams(subproblem, origparams) );
@@ -2228,7 +2229,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    SCIP_CALL( resetOrigSubprobParams(subproblem, origparams) );
 
    /* freeing the parameter storage */
-   SCIPfreeBuffer(subproblem, &origparams);
+   SCIPfreeBlockMemory(subproblem, &origparams);
 
    return SCIP_OKAY;
 }
