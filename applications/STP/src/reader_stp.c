@@ -96,14 +96,11 @@ SCIP_DECL_READERREAD(readerReadStp)
    SCIP_CALL( retcode );
 
    probdata = SCIPgetProbData(scip);
-   if( SCIPgetStage(scip) == SCIP_STAGE_INIT ||  probdata == NULL )
+   if( SCIPgetStage(scip) == SCIP_STAGE_INIT || probdata == NULL )
       return SCIP_READERROR;
    else if(SCIPprobdataGetGraph(probdata) != NULL && mode == 'p')
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "activate pricer\n");
-#if 0
-      SCIP_CALL( SCIPsetBoolParam(scip, "propagating/pseudoobj/force", TRUE) );
-#endif
       SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "stp")) );
    }
 
@@ -214,7 +211,7 @@ SCIP_RETCODE SCIPincludeReaderStp(
 
    SCIP_CALL( SCIPaddStringParam(scip,
          "stp/logfile",
-         "log file in DIMACS challenge format",
+         "log file in DIMACS challenge format; use_probname for using problem name",
          NULL, FALSE, "",
          NULL, NULL) );
 

@@ -1995,7 +1995,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    {
       char* finalfilename;
 
-      if( strcmp("stp_logfile", logfilename) == 0 )
+      if( strcmp("use_probname", logfilename) == 0 )
          finalfilename = probname;
       else
          finalfilename = logfilename;
@@ -2858,7 +2858,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       }
 
       assert(nsolnodes == solgraph->knots);
-      assert(nodechild[solgraph->orgsource] >= 0);
+      assert(nodechild[graph->orgsource] >= 0);
 
       /* set root of new graph */
       solgraph->source = nodechild[graph->orgsource];

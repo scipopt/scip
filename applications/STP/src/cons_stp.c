@@ -1284,12 +1284,12 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsStp)
 {  /*lint --e{715}*/
    SCIP_Bool feasible;
-   SCIP_CONSDATA* consdata;
-   int i;
 
-   for( i = 0; i < nconss; i++ )
+   assert(nconss == 1);
+
+   for( int i = 0; i < nconss; i++ )
    {
-      consdata = SCIPconsGetData(conss[i]);
+      const SCIP_CONSDATA* consdata = SCIPconsGetData(conss[i]);
 
       SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
 
@@ -1307,28 +1307,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsStp)
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckStp)
-{  /*lint --e{715}*/
-   GRAPH* g;
+{ /*lint --e{715}*/
+   const GRAPH* g = SCIPprobdataGetGraph2(scip);
    SCIP_Bool feasible;
-   SCIP_CONSDATA* consdata;
-   int i;
 
-   g = SCIPprobdataGetGraph2(scip);
    assert(g != NULL);
-   assert(nconss == 1);
 
-   for( int i = 0; i < nconss; i++ )
+   SCIP_CALL(SCIPStpValidateSol(scip, g, SCIPprobdataGetXval(scip, sol), &feasible));
+
+   if( !feasible )
    {
-      consdata = SCIPconsGetData(conss[i]);
-
-      SCIP_CALL( SCIPStpValidateSol(scip, g, SCIPprobdataGetXval(scip, sol), &feasible) );
-
-      if( !feasible )
-      {
-         *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
-      }
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
    }
+
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
