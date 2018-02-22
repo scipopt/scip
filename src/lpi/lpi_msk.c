@@ -3452,9 +3452,8 @@ SCIP_RETCODE SCIPlpiGetSol(
          assert(sux != NULL);
          redcost[i] -= sux[i];
       }
+      BMSfreeMemoryArray(&sux);
    }
-
-   BMSfreeMemoryArray(&sux);
 
    return SCIP_OKAY;
 }
