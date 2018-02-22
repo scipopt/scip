@@ -8,6 +8,7 @@ add_subdirectory(LOP EXCLUDE_FROM_ALL)
 add_subdirectory(MIPSolver EXCLUDE_FROM_ALL)
 add_subdirectory(Queens EXCLUDE_FROM_ALL)
 add_subdirectory(Relaxator EXCLUDE_FROM_ALL)
+add_subdirectory(Ringpacking EXCLUDE_FROM_ALL)
 add_subdirectory(TSP EXCLUDE_FROM_ALL)
 add_subdirectory(VRP EXCLUDE_FROM_ALL)
 
