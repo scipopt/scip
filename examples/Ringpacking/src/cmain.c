@@ -13,10 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   Binpacking/src/cmain.c
- * @brief  Main file for binpacking pricing example
- * @author Timo Berthold
- * @author Stefan Heinz
+/**@file   Ringpacking/src/cmain.c
+ * @brief  Main file for ringpacking pricing example
+ * @author Benjamin Mueller
  *
  *  This the file contains the \ref main() main function of the projects. This includes all the default plugins of
  *  \SCIP and the once which belong to that projects. After that is starts the interactive shell of \SCIP or processes
