@@ -453,7 +453,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 
             SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=black!%d!white] (%g,%g) circle (%g);\n",
                getShadingVal(elemtype, ntypes), x, y, _rext);
-            SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", x, y, _rint);
+            /* SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=white] (%g,%g) circle (%g);\n", x, y, _rint); */
          }
 
          SCIPinfoMessage(scip, file, "\\draw[] (%g,%g) -- (%g,%g) -- (%g,%g) -- (%g,%g) -- cycle;\n",
