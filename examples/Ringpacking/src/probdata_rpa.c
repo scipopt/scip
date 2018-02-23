@@ -396,6 +396,11 @@ SCIP_RETCODE enumeratePatterns(
    SCIP_Real* exts;
    SCIP_Real* _ints;
    int* demands;
+   SCIP_Real totaltimelim;
+   SCIP_Real heurtilim;
+   SCIP_Real nlptilim;
+   SCIP_Longint nlpnodelim;
+   int heuritlim;
    int ntypes;
    int type;
    int lasttype;
@@ -413,9 +418,19 @@ SCIP_RETCODE enumeratePatterns(
    ntypes = SCIPprobdataGetNTypes(probdata);
    lasttype = ntypes -1;
 
+   /* collect working limits */
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/nlptimelimitsoft", &nlptilim) );
+   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/nlpnodelimitsoft", &nlpnodelim) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/heurtimelimitsoft", &heurtilim) );
+   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/heuriterlimitsoft", &heuritlim) );
+
+   /* check whether there is enough time left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &totaltimelim) );
+
    /* main loop */
    while( TRUE )
    {
+      SCIP_Real timelim;
       int i = lasttype;
 
       /* reset packable status */
@@ -432,18 +447,31 @@ SCIP_RETCODE enumeratePatterns(
 
       /* TODO check volume */
 
-      /* try to verify with heuristic
-       *
-       * TODO use parameters here
+      /*
+       * try to verify with heuristic
        */
-      SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, 10.0, 10) );
 
-      /* try to verify with NLP
-       *
-       * TODO use parameters here
+      /* compute time limit */
+      if( !SCIPisInfinity(scip, totaltimelim) )
+         timelim = MIN(heurtilim, totaltimelim - SCIPgetSolvingTime(scip));
+      else
+         timelim = heurtilim;
+
+      /* verify pattern */
+      SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuritlim) );
+
+      /*
+       * try to verify with NLP
        */
       if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
       {
+         /* compute time limit */
+         if( !SCIPisInfinity(scip, totaltimelim) )
+            timelim = MIN(heurtilim, totaltimelim - SCIPgetSolvingTime(scip));
+         else
+            timelim = heurtilim;
+
+         /* verify pattern */
          SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, 10.0, 100L) );
       }
 
@@ -1160,6 +1188,10 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    assert(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
    assert(SCIPpatternGetType(pattern) < SCIPprobdataGetNTypes(probdata));
 
+   /* check whether there is any time left */
+   if( timelim <= 0.0 )
+      return SCIP_OKAY;
+
    rexts = SCIPprobdataGetRexts(probdata);
    rints = SCIPprobdataGetRints(probdata);
 
@@ -1241,6 +1273,10 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
    assert(pattern != NULL);
    assert(SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR);
    assert(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+
+   /* check whether there is any time left */
+   if( timelim <= 0.0 )
+      return SCIP_OKAY;
 
    rexts = SCIPprobdataGetRexts(probdata);
    rints = SCIPprobdataGetRints(probdata);
