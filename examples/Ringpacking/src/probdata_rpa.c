@@ -395,11 +395,10 @@ SCIP_RETCODE enumeratePatterns(
 {
    SCIP_Real* exts;
    SCIP_Real* _ints;
-   int* demand;
+   int* demands;
    int ntypes;
    int type;
    int lasttype;
-   int vi;
 
    assert(ms != NULL);
    assert(pattern != NULL);
@@ -410,7 +409,7 @@ SCIP_RETCODE enumeratePatterns(
    /* get problem data */
    exts = SCIPprobdataGetRexts(probdata);
    _ints = SCIPprobdataGetRints(probdata);
-   demand = SCIPprobdataGetDemands(probdata);
+   demands = SCIPprobdataGetDemands(probdata);
    ntypes = SCIPprobdataGetNTypes(probdata);
    lasttype = ntypes -1;
 
@@ -492,7 +491,6 @@ SCIP_RETCODE computeCircularPatterns(
    )
 {
    SCIP_PATTERN* pattern;
-   char name[SCIP_MAXSTRLEN];
    int* demands;
    int* ms;
    int* nselected;
