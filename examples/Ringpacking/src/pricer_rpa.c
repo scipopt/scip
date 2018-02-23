@@ -560,7 +560,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    /* only run pricer in the root node */
    if( SCIPgetDepth(scip) > 0 )
    {
-      SCIPprobdataInvalidateDualbound(probdata);
+      SCIPprobdataInvalidateDualbound(scip, probdata);
       return SCIP_OKAY;
    }
 
@@ -592,9 +592,14 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIPdebugMsg(scip, "Farley's bound = %g LP(master) = %g dual(pricing) = %g\n", *lowerbound, SCIPgetLPObjval(scip), redcosts);
 
    /* updates dual bound that is stored in the problem data */
-   SCIPprobdataUpdateDualbound(probdata, *lowerbound);
+   SCIPprobdataUpdateDualbound(scip, probdata, *lowerbound);
 
-   /* TODO invalidate dual bound if no variable has been added and the pricing problem has not been solved to optimality */
+   /* invalidate dual bound if no variable has been added and the pricing problem has not been solved to optimality */
+   if( !success && solstat != SCIP_STATUS_OPTIMAL )
+   {
+      assert(SCIPisFeasLE(scip, redcostslb, 0.0));
+      SCIPprobdataInvalidateDualbound(scip, probdata);
+   }
 
    /* free memory */
    SCIPfreeBufferArray(scip, &lambdas);

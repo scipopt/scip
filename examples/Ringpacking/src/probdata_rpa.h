@@ -119,6 +119,7 @@ SCIP_RETCODE SCIPprobdataAddVar(
 /** updates the dual bound */
 extern
 void SCIPprobdataUpdateDualbound(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_Real             dualbound           /**< new dual bound */
    );
@@ -126,6 +127,7 @@ void SCIPprobdataUpdateDualbound(
 /** marks that further reported dual bounds are not valid */
 extern
 void SCIPprobdataInvalidateDualbound(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 

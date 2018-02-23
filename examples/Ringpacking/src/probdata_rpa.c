@@ -705,6 +705,7 @@ SCIP_RETCODE setupProblem(
    SCIPprobdataUpdateDualbound(probdata, dualbound);
    SCIPinfoMessage(scip, NULL, "Volume-based bound = ceil(%g / %g) = %g\n", volume,
       SCIPprobdataGetWidth(probdata) * SCIPprobdataGetHeight(probdata), dualbound);
+   SCIPprobdataUpdateDualbound(scip, probdata, dualbound);
 
    return SCIP_OKAY;
 }
@@ -1112,22 +1113,23 @@ SCIP_RETCODE SCIPprobdataAddVar(
 
 /** updates the dual bound */
 void SCIPprobdataUpdateDualbound(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_Real             dualbound           /**< new dual bound */
    )
 {
    assert(probdata != NULL);
 
-   if( !probdata->isdualinvalid )
+   if( !probdata->isdualinvalid && SCIPisLT(scip, probdata->dualbound, dualbound) )
    {
-      SCIPdebugMessage("update dual bound from %g to %g\n", probdata->dualbound,
-         MAX(probdata->dualbound, dualbound));
-      probdata->dualbound = MAX(probdata->dualbound, dualbound);
+      SCIPinfoMessage(scip, NULL, "+++++++++++++ update dual bound to %g\n", dualbound);
+      probdata->dualbound = dualbound;
    }
 }
 
 /** marks that further reported dual bounds are not valid */
 void SCIPprobdataInvalidateDualbound(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata            /**< problem data */
    )
 {
@@ -1135,7 +1137,7 @@ void SCIPprobdataInvalidateDualbound(
 
    if( !probdata->isdualinvalid )
    {
-      SCIPdebugMessage("invalidate dual bound\n");
+      SCIPinfoMessage(scip, NULL, "+++++++++++++ invalidate dual bound\n");
       probdata->isdualinvalid = TRUE;
    }
 }

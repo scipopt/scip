@@ -275,7 +275,7 @@ SCIP_RETCODE enforceSol(
             SCIPvarGetUbLocal(cvars[p]), success);
 
          /* dual bound is not valid anymore */
-         SCIPprobdataInvalidateDualbound(probdata);
+         SCIPprobdataInvalidateDualbound(scip, probdata);
 
          if( infeasible )
          {
