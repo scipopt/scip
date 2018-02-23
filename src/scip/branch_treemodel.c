@@ -28,10 +28,12 @@
 
 #include <limits.h>
 
+#define LAGUERRE_THRESHOLD    100      /**< Maximum value of r/l at which Laguerre is the prefered FP method */
+
 /* Default parameters for the Treemodel branching rules */
-#define DEFAULT_ENABLE         FALSE    /**< should candidate branching variables be scored using the Treemodel rule? */
+#define DEFAULT_ENABLE         TRUE    /**< should candidate branching variables be scored using the Treemodel rule? */
 #define DEFAULT_HIGHRULE       'r'      /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-#define DEFAULT_LOWRULE        'd'      /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+#define DEFAULT_LOWRULE        'r'      /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
 #define DEFAULT_HEIGHT         10       /**< estimated tree height at which we switch from using the low rule to the high rule */
 #define DEFAULT_FILTERHIGH     'a'      /**< should dominated candidates be filtered before using the high scoring function? ('a'uto, 't'rue, 'f'alse) */
 #define DEFAULT_FILTERLOW      'a'      /**< should dominated candidates be filtered before using the low scoring function? ('a'uto, 't'rue, 'f'alse) */
@@ -230,9 +232,9 @@ SCIP_RETCODE findNonDominatedVars(
 /** Returns true iff the variable with given gains has a ratio better (i.e smaller) than the given one */
 static
 SCIP_Bool hasBetterRatio(
-   SCIP_BRANCHRATIO *branchratio,        /**< The variable's ratio to compare against */
-   SCIP_Real leftgain,           /**< the left gain of a variable */
-   SCIP_Real rightgain           /**< the right gain of a variable */
+   SCIP_BRANCHRATIO *branchratio,         /**< The variable's ratio to compare against */
+   SCIP_Real leftgain,                    /**< the left gain of a variable */
+   SCIP_Real rightgain                    /**< the right gain of a variable */
 )
 {
    SCIP_Real result = -1;
@@ -265,10 +267,10 @@ void computeVarRatio(
    SCIP_Real r;
    int iters;
 
-   assert(leftgain >= 0);
-   assert(rightgain >= leftgain);
+   assert(SCIPisGE(scip, leftgain, 0));
+   assert(SCIPisGE(scip, rightgain, leftgain));
 
-   if( leftgain == 0 || rightgain == 0 ) {
+   if( SCIPisZero(scip, leftgain) || SCIPisZero(scip, rightgain) ) {
       branchratio->valid = FALSE;
       return;
    }
@@ -303,25 +305,24 @@ void computeVarRatio(
       newratio = SCIPhistoryGetLastRatio(var->history);
 
    /* Depending on the value of rightgain/leftgain, we have two different methods to compute the ratio
-    * If this value if bigger than 100, we use a fixed-point method. Otherwise, we use Laguerre's method
+    * If this value is bigger than 100, we use a fixed-point method. Otherwise, we use Laguerre's method
     * This is strictly for numerical efficiency and based on experiments.
     */
 
    /* Use Laguerre's method */
-   if( r <= 100 ) {
+   if( r <= LAGUERRE_THRESHOLD ) {
       /* We relax the epsilon after 5 iterations since we may not have enough precision to achieve any better convergence */
       for( iters = 0; ((iters <= 5 && !SCIPisEQ(scip, ratio, newratio)) || (iters > 5 && !SCIPisSumEQ(scip, ratio, newratio))) && iters < treemodel->maxfpiter && newratio > 1; iters++ ) {
-         double G, H, a, p, p1, p2;
-         double phi_r = pow(ratio, r);
-
+         double G, H, a, p, p1, p2, phi_r;
          ratio = newratio;
+         phi_r = pow(ratio, r);
          p = phi_r - phi_r / ratio - 1;
          if( p != 0 ) {
-            p1 = (r * phi_r - (r-1) * phi_r / ratio) / ratio;
-            p2 = (r * (r-1) *  phi_r - (r-1) * (r-2) * phi_r / ratio) / ratio / ratio;
+            p1 = (r * phi_r - (r - 1) * phi_r / ratio) / ratio;
+            p2 = (r * (r - 1) *  phi_r - (r - 1) * (r - 2) * phi_r / ratio) / ratio / ratio;
             G = p1 / p;
-            H = G*G - (p2/p);
-            a = r / (G + ((0<=G)-(G<0)) * sqrt((r-1) * (r*H-G*G)));
+            H = G * G - (p2 / p);
+            a = r / (G + ((0 <= G) - (G < 0)) * sqrt((r - 1) * (r * H - G * G)));
             newratio = ratio - a;
          }
       }
