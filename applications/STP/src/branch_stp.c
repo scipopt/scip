@@ -356,7 +356,7 @@ SCIP_RETCODE selectBranchingVertexByLp2Flow(
 
    SCIPfreeBufferArray(scip, &nodestate);
 
-   printf("LP2: branch on vertex %d with abs(flow - 0.5): %f \n", *vertex, bestflow);
+   SCIPdebugMessage("LP2: branch on vertex %d with abs(flow - 0.5): %f \n", *vertex, bestflow);
 
    return SCIP_OKAY;
 }
