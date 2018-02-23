@@ -512,7 +512,7 @@ SCIP_RETCODE computeCircularPatterns(
    SCIP_CALL( SCIPallocBufferArray(scip, &ms, ntypes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nselected, ntypes) );
    BMSclearMemoryArray(nselected, ntypes);
-   BMSclearMemoryArray(nselected, ntypes);
+   BMSclearMemoryArray(ms, ntypes);
 
    /* find all circlular patterns of each type separately */
    for( t = 0; t < ntypes; ++t )
@@ -702,8 +702,7 @@ SCIP_RETCODE setupProblem(
    /* update initial dual bound */
    dualbound = SCIPfeasCeil(scip, volume / (SCIPprobdataGetWidth(probdata) * SCIPprobdataGetHeight(probdata)));
    SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
-   SCIPprobdataUpdateDualbound(probdata, dualbound);
-   SCIPinfoMessage(scip, NULL, "Volume-based bound = ceil(%g / %g) = %g\n", volume,
+   SCIPinfoMessage(scip, NULL, "+++++++++++++ volume-based bound = ceil(%g / %g) = %g\n", volume,
       SCIPprobdataGetWidth(probdata) * SCIPprobdataGetHeight(probdata), dualbound);
    SCIPprobdataUpdateDualbound(scip, probdata, dualbound);
 

@@ -221,7 +221,7 @@ SCIP_RETCODE extractVariablesMINLP(
    sol = SCIPgetBestSol(subscip);
    assert(sol != NULL);
 
-   SCIPdebugMsg(scip, "reduced cost = %f\n", 1.0 + SCIPgetSolOrigObj(subscip, sol));
+   SCIPdebugMsg(scip, "found column with reduced cost = %f\n", 1.0 + SCIPgetSolOrigObj(subscip, sol));
 
    /* reduced cost is non-negative */
    if( SCIPisFeasGE(subscip, 1.0 + SCIPgetSolOrigObj(subscip, sol), 0.0) )
@@ -548,7 +548,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_CONS** conss;
    SCIP_Real* lambdas;
    SCIP_STATUS solstat;
-   SCIP_Real redcosts;
+   SCIP_Real redcostslb;
    SCIP_Bool success;
    int t;
 
@@ -579,17 +579,23 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    }
 
    /* TODO add parameter for time and node limit */
-   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 100.0, 10000L, &success, &solstat, &redcosts) );
-   redcosts += 1.0;
+   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 100.0, 10000L, &success, &solstat, &redcostslb) );
+   redcostslb += 1.0;
    SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 
    /* compute Farley's bound */
-   if( SCIPisFeasGE(scip, redcosts, 0.0) )
+   if( SCIPisFeasGE(scip, redcostslb, 0.0) )
+   {
       *lowerbound = SCIPgetLPObjval(scip);
+      SCIPinfoMessage(scip, NULL, "+++++++++++++ LP(master) = ceil(%g) = %g\n", *lowerbound, SCIPfeasCeil(scip, *lowerbound));
+   }
    else
-      *lowerbound = SCIPgetLPObjval(scip) / (1.0 - redcosts);
+   {
+      *lowerbound = SCIPgetLPObjval(scip) / (1.0 - redcostslb);
+      SCIPinfoMessage(scip, NULL, "+++++++++++++ Farley's bound = ceil(%g/%g) = %g\n", SCIPgetLPObjval(scip), 1.0 - redcostslb,
+         SCIPfeasCeil(scip, *lowerbound));
+   }
    *lowerbound = SCIPfeasCeil(scip, *lowerbound);
-   SCIPdebugMsg(scip, "Farley's bound = %g LP(master) = %g dual(pricing) = %g\n", *lowerbound, SCIPgetLPObjval(scip), redcosts);
 
    /* updates dual bound that is stored in the problem data */
    SCIPprobdataUpdateDualbound(scip, probdata, *lowerbound);
