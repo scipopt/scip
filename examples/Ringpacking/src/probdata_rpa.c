@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   probdata_rinpacking.c
+/**@file   probdata_ringpacking.c
  * @brief  Problem data for ringpacking problem
  * @author Benjamin Mueller
  *
