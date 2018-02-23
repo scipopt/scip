@@ -627,7 +627,8 @@ SCIP_RETCODE setupProblem(
    for( t = 0; t < ntypes; ++t )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "patterncons_%d", t);
-      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &probdata->patternconss[t], name, 0, NULL, NULL, 0.0, SCIPinfinity(scip) ) );
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &probdata->patternconss[t], name, 0, NULL, NULL, 0.0,
+            SCIPinfinity(scip) ) );
 
       /* declare constraint modifiable for adding variables during pricing */
       SCIP_CALL( SCIPsetConsModifiable(scip, probdata->patternconss[t], TRUE) );
@@ -994,12 +995,13 @@ SCIP_DECL_PROBTRANS(probtransRingpacking)
 {  /*lint --e{715}*/
    /* create transformed problem data */
    SCIP_CALL( probdataCreate(scip, targetdata, sourcedata->patternconss, sourcedata->cpatterns, sourcedata->cvars,
-            sourcedata->ncpatterns, sourcedata->rpatterns, sourcedata->rvars, sourcedata->nrpatterns,
-            sourcedata->demands, sourcedata->rints, sourcedata->rexts, sourcedata->ntypes,
-            sourcedata->width, sourcedata->height) );
+         sourcedata->ncpatterns, sourcedata->rpatterns, sourcedata->rvars, sourcedata->nrpatterns,
+         sourcedata->demands, sourcedata->rints, sourcedata->rexts, sourcedata->ntypes,
+         sourcedata->width, sourcedata->height) );
 
    /* transform pattern constraints */
-   SCIP_CALL( SCIPtransformConss(scip, (*targetdata)->ntypes, (*targetdata)->patternconss, (*targetdata)->patternconss) );
+   SCIP_CALL( SCIPtransformConss(scip, (*targetdata)->ntypes, (*targetdata)->patternconss,
+         (*targetdata)->patternconss) );
 
    /* transform all variables */
    SCIP_CALL( SCIPtransformVars(scip, (*targetdata)->ncpatterns, (*targetdata)->cvars, (*targetdata)->cvars) );
@@ -1062,7 +1064,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* create and set problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, NULL, NULL, NULL, 0, NULL, NULL, 0, demands, rints, rexts, ntypes, width,
-            height) );
+         height) );
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
 
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigRingpacking) );
@@ -1137,7 +1139,8 @@ SCIP_RETCODE SCIPprobdataEnumeratePatterns(
          ms[k] = maxCircles(scip, probdata, t, k);
 
       SCIPpatternSetType(pattern, t);
-      SCIP_CALL( enumeratePatterns(scip, probdata, pattern, ms, nselected, nlptilim, heurtilim, nlpnodelim, heuriterlim) );
+      SCIP_CALL( enumeratePatterns(scip, probdata, pattern, ms, nselected,
+            nlptilim, heurtilim, nlpnodelim, heuriterlim) );
    }
 
    /* release memory */
@@ -1476,11 +1479,13 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
       assert(elemtype >= 0 && elemtype < SCIPprobdataGetNTypes(probdata));
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x_%d", k);
-      SCIP_CALL( SCIPcreateVarBasic(subscip, &xvars[k], name, rexts[elemtype] - rints[type], rints[type] - rexts[elemtype], 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &xvars[k], name, rexts[elemtype] - rints[type],
+            rints[type] - rexts[elemtype], 0.0, SCIP_VARTYPE_CONTINUOUS) );
       SCIP_CALL( SCIPaddVar(subscip, xvars[k]) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "y_%d", k);
-      SCIP_CALL( SCIPcreateVarBasic(subscip, &yvars[k], name, rexts[elemtype] - rints[type], rints[type] - rexts[elemtype], 1.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &yvars[k], name, rexts[elemtype] - rints[type],
+            rints[type] - rexts[elemtype], 1.0, SCIP_VARTYPE_CONTINUOUS) );
       SCIP_CALL( SCIPaddVar(subscip, yvars[k]) );
    }
 
@@ -1509,7 +1514,7 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "over_%d_%d", k, l);
          SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 0, NULL, NULL, 6, quadvars1, quadvars2,
-            quadcoefs, SQR(rexts[elemtype1] + rexts[elemtype2]), SCIPinfinity(subscip)) );
+               quadcoefs, SQR(rexts[elemtype1] + rexts[elemtype2]), SCIPinfinity(subscip)) );
 
          SCIP_CALL( SCIPaddCons(subscip, cons) );
          SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -1529,7 +1534,7 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "bound_%d", k);
       SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
-         0.0, SQR(rints[type] - rexts[elemtype])) );
+            0.0, SQR(rints[type] - rexts[elemtype])) );
 
       SCIP_CALL( SCIPaddCons(subscip, cons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -1569,7 +1574,8 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
    SCIP_CALL( SCIPsolve(subscip) );
    SCIPdebugMsg(scip, "----------------------------------------------------------------\n");
 
-   SCIPdebugMsg(scip, "result of verification NLP: nsols=%d solstat=%d\n", SCIPgetNSols(subscip), SCIPgetStatus(subscip));
+   SCIPdebugMsg(scip, "result of verification NLP: nsols=%d solstat=%d\n",
+      SCIPgetNSols(subscip), SCIPgetStatus(subscip));
 
    /* check whether a solution could be found or whether the problem is proven to be infeasible */
    if( SCIPgetNSols(subscip) > 0 )
