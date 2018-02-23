@@ -195,9 +195,12 @@ SCIP_RETCODE probdataFree(
    for( i = 0; i < (*probdata)->ncpatterns; ++i )
    {
       assert((*probdata)->cpatterns[i] != NULL);
-      assert((*probdata)->cvars[i] != NULL);
 
-      SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->cvars[i]) );
+      if( (*probdata)->cvars[i] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->cvars[i]) );
+      }
+
       SCIPpatternRelease(scip, &(*probdata)->cpatterns[i]);
    }
 
@@ -210,7 +213,11 @@ SCIP_RETCODE probdataFree(
       assert((*probdata)->rpatterns[i] != NULL);
       assert((*probdata)->rvars[i] != NULL);
 
-      SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->rvars[i]) );
+      if( (*probdata)->rvars[i] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->rvars[i]) );
+      }
+
       SCIPpatternRelease(scip, &(*probdata)->rpatterns[i]);
    }
 
@@ -295,40 +302,88 @@ SCIP_RETCODE addPattern(
    char name[SCIP_MAXSTRLEN];
    SCIP_Real obj;
    SCIP_Real ub;
-   int i;
-
-   if( SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR )
-   {
-      int type = SCIPpatternGetType(pattern);
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", type);
-      obj = 0.0;
-      ub = (SCIP_Real)SCIPprobdataGetDemands(probdata)[type];
-   }
-   else
-   {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r");
-      obj = 1.0;
-      ub = SCIPinfinity(scip);
-   }
-
-   /* create variable name */
-   for( i = 0; i < SCIPpatternGetNElemens(pattern); ++i )
-   {
-      char strtmp[SCIP_MAXSTRLEN];
-      int elemtype = SCIPpatternGetElementType(pattern, i);
-      (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", elemtype);
-      (void) strcat(name, strtmp);
-   }
-
-   /* create variable */
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, ub, obj, SCIP_VARTYPE_INTEGER) );
-   SCIP_CALL( SCIPaddVar(scip, var) );
 
    /* add variable and pattern to problem data */
    SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var) );
 
-   /* release variable */
-   SCIP_CALL( SCIPreleaseVar(scip, &var) );
+   return SCIP_OKAY;
+}
+
+/** create variables for all existing circular and rectangular patterns */
+static
+SCIP_RETCODE createPatternVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_PATTERN* pattern;
+   char name[SCIP_MAXSTRLEN];
+   int k;
+
+   assert(probdata != NULL);
+   assert(probdata->ncpatterns > 0);
+   assert(probdata->nrpatterns > 0);
+
+   /* create variables for circular patterns */
+   for( k = 0; k < probdata->ncpatterns; ++k )
+   {
+      SCIP_Real ub;
+      int type;
+      int i;
+
+      pattern = probdata->cpatterns[k];
+      assert(pattern != NULL);
+
+      type = SCIPpatternGetType(pattern);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", type);
+      ub = (SCIP_Real)SCIPprobdataGetDemands(probdata)[type];
+
+      /* create variable name */
+      for( i = 0; i < SCIPpatternGetNElemens(pattern); ++i )
+      {
+         char strtmp[SCIP_MAXSTRLEN];
+         int elemtype = SCIPpatternGetElementType(pattern, i);
+         (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", elemtype);
+         (void) strcat(name, strtmp);
+      }
+
+      /* create variable */
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, ub, 0.0, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* store variables in problem data */
+      probdata->cvars[k] = var;
+   }
+
+   /* create variables for rectangular patterns */
+   for( k = 0; k < probdata->nrpatterns; ++k )
+   {
+      SCIP_Real obj;
+      SCIP_Real ub;
+      int i;
+
+      pattern = probdata->rpatterns[k];
+      assert(pattern != NULL);
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r");
+
+      /* create variable name */
+      for( i = 0; i < SCIPpatternGetNElemens(pattern); ++i )
+      {
+         char strtmp[SCIP_MAXSTRLEN];
+         int elemtype = SCIPpatternGetElementType(pattern, i);
+         (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", elemtype);
+         (void) strcat(name, strtmp);
+      }
+
+      /* create variable */
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* store variables in problem data */
+      probdata->rvars[k] = var;
+   }
 
    return SCIP_OKAY;
 }
@@ -383,6 +438,70 @@ int maxCircles(
    return n;
 }
 
+/** helper function to compare two patterns; returns
+ *
+ *   -1 if p dominates q
+ *   +1 if q dominates p
+ *    0 otherwise
+ */
+static
+int isPatternDominating(
+   SCIP_PATTERN*         p,                  /**< pattern */
+   SCIP_PATTERN*         q                   /**< pattern */
+   )
+{
+   SCIP_Bool res1;
+   SCIP_Bool res2;
+   int np;
+   int nq;
+   int ip;
+   int iq;
+
+   assert(p != NULL);
+   assert(q != NULL);
+
+   /* pattern can only dominate if they are of the same type */
+   if( SCIPpatternGetType(p) != SCIPpatternGetType(q) )
+      return 0;
+
+   np = SCIPpatternGetNElemens(p);
+   nq = SCIPpatternGetNElemens(q);
+   res1 = np >= nq;
+   res2 = nq >= np;
+   ip = 0;
+   iq = 0;
+
+   while( ip < np && iq < nq && (res1 || res2) )
+   {
+      int tp = SCIPpatternGetElementType(p, ip);
+      int tq = SCIPpatternGetElementType(q, iq);
+
+      if( tp == tq )
+      {
+         ++ip;
+         ++iq;
+      }
+      else if( tp < tq )
+      {
+         res2 = FALSE;
+         ++ip;
+      }
+      else
+      {
+         res1 = FALSE;
+         ++iq;
+      }
+   }
+
+   assert(!res1 || !res2);
+
+   if( res1 && (SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES || SCIPpatternGetPackableStatus(q) == SCIP_PACKABLE_UNKNOWN) )
+      return -1;
+   else if( res2 && (SCIPpatternGetPackableStatus(q) == SCIP_PACKABLE_YES || SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_UNKNOWN) )
+      return 1;
+   return 0;
+}
+
 /** filter dominated patterns */
 static
 SCIP_RETCODE filterPatterns(
@@ -390,7 +509,63 @@ SCIP_RETCODE filterPatterns(
    SCIP_PROBDATA*        probdata            /**< problem data */
    )
 {
-   /* TODO */
+   SCIP_PATTERN** cpatterns;
+   SCIP_Bool* deleted;
+   int ncpatterns;
+   int i;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cpatterns, probdata->ncpatterns) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &deleted, probdata->ncpatterns) );
+   BMSclearMemoryArray(deleted, probdata->ncpatterns);
+
+   for( i = 0; i < probdata->ncpatterns - 1; ++i )
+   {
+      SCIP_PATTERN* p = probdata->cpatterns[i];
+      int j;
+
+      if( deleted[i] )
+         continue;
+
+      for( j = i + 1; j < probdata->ncpatterns; ++j )
+      {
+         SCIP_PATTERN* q = probdata->cpatterns[j];
+         int res;
+
+         if( deleted[j] )
+            continue;
+
+         res = isPatternDominating(p, q);
+
+         /* p dominates q */
+         if( res == -1 )
+            deleted[j] = TRUE;
+         else if( res == 1 ) /* q dominates p */
+            deleted[i] = TRUE;
+      }
+   }
+
+   /* remove filtered patterns */
+   ncpatterns = 0;
+   for( i = 0; i < probdata->ncpatterns; ++i )
+   {
+      if( deleted[i] )
+      {
+         SCIPpatternRelease(scip, &probdata->cpatterns[i]);
+      }
+      else
+      {
+         cpatterns[ncpatterns] = probdata->cpatterns[i];
+         ++ncpatterns;
+      }
+   }
+   assert(ncpatterns > 0);
+
+   BMScopyMemoryArray(probdata->cpatterns, cpatterns, ncpatterns);
+   probdata->ncpatterns = ncpatterns;
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &deleted);
+   SCIPfreeBufferArray(scip, &cpatterns);
 
    return SCIP_OKAY;
 }
@@ -410,7 +585,7 @@ SCIP_RETCODE enumeratePatterns(
    )
 {
    SCIP_Real* rexts;
-   SCIP_Real* _ints;
+   SCIP_Real* _rints;
    int* demands;
    SCIP_Real totaltimelim;
    SCIP_Real maxvolume;
@@ -427,12 +602,12 @@ SCIP_RETCODE enumeratePatterns(
 
    /* get problem data */
    rexts = SCIPprobdataGetRexts(probdata);
-   _ints = SCIPprobdataGetRints(probdata);
+   _rints = SCIPprobdataGetRints(probdata);
    demands = SCIPprobdataGetDemands(probdata);
    ntypes = SCIPprobdataGetNTypes(probdata);
    lasttype = ntypes -1;
    volume = 0.0;
-   maxvolume = SQR(_ints[SCIPpatternGetType(pattern)]) * M_PI;
+   maxvolume = SQR(_rints[SCIPpatternGetType(pattern)]) * M_PI;
 
    /* check whether there is enough time left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &totaltimelim) );
@@ -458,52 +633,47 @@ SCIP_RETCODE enumeratePatterns(
       }
 
       /* check volume */
-      if( SCIPisGT(scip, volume, maxvolume) )
+      if( SCIPisLE(scip, volume, maxvolume) )
       {
-         SCIPdebugMsg(scip, "exceed volume\n");
-         volume -= SQR(rexts[t]) * M_PI * nselected[t];
-         nselected[t] = 0;
-         t--;
-      }
+         /*
+          * try to verify with heuristic
+          */
 
-      /*
-       * try to verify with heuristic
-       */
-
-      /* compute time limit */
-      timelim = MIN(heurtilim, totaltimelim - SCIPgetSolvingTime(scip)); /*lint !e666*/
-
-      /* verify pattern */
-      SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuriterlim) );
-
-      /*
-       * try to verify with NLP
-       */
-      if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
-      {
          /* compute time limit */
-         timelim = MIN(nlptilim, totaltimelim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+         timelim = MIN(heurtilim, totaltimelim - SCIPgetSolvingTime(scip)); /*lint !e666*/
 
          /* verify pattern */
-         SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, timelim, nlpnodelim) );
-      }
+         SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuriterlim) );
 
-      /* pattern is not packable -> don't add more elements */
-      if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO )
-      {
-         SCIPpatternRemoveLastElements(pattern, nselected[t]);
-         volume -= SQR(rexts[t]) * M_PI * nselected[t];
-         nselected[t] = 0;
-         --t;
-      }
-      /* otherwise add the pattern (and hope for filtering) */
-      else
-      {
-         SCIP_CALL( addPattern(scip, probdata, pattern) );
+         /*
+          * try to verify with NLP
+          */
+         if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
+         {
+            /* compute time limit */
+            timelim = MIN(nlptilim, totaltimelim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+
+            /* verify pattern */
+            SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, timelim, nlpnodelim) );
+         }
+
+         /* pattern is not packable -> don't add more elements */
+         if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO )
+         {
+            SCIPpatternRemoveLastElements(pattern, nselected[t]);
+            volume -= SQR(rexts[t]) * M_PI * nselected[t];
+            nselected[t] = 0;
+            --t;
+         }
+         /* otherwise add the pattern (and hope for filtering) */
+         else
+         {
+            SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, NULL) );
+         }
       }
 
       /* update selection */
-      while( t > type && nselected[t] == ms[t] )
+      while( t > type && (nselected[t] == ms[t] || SCIPisGT(scip, volume, maxvolume)) )
       {
          SCIPpatternRemoveLastElements(pattern, nselected[t]);
          volume -= SQR(rexts[t]) * M_PI * nselected[t];
@@ -575,6 +745,8 @@ SCIP_RETCODE setupProblem(
 
    /* compute all non-dominated circular patterns */
    SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, nlptilim, heurtilim, nlpnodelim, heuriterlim) );
+   SCIPinfoMessage(scip, NULL, "+++++++++++++ starting with |CP|=%d\n", probdata->ncpatterns,
+      probdata->nrpatterns);
 
    /* create initial rectangular patterns */
    for( t = 0; t < ntypes; ++t )
@@ -587,9 +759,12 @@ SCIP_RETCODE setupProblem(
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
       /* add and release pattern */
-      SCIP_CALL( addPattern(scip, probdata, pattern) );
+      SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, NULL) );
       SCIPpatternRelease(scip, &pattern);
    }
+
+   /* create variables for all existing patterns */
+   SCIP_CALL( createPatternVars(scip, probdata) );
 
    /* create demand constraints */
    for( t = 0; t < ntypes; ++t )
@@ -1010,6 +1185,8 @@ SCIP_DECL_PROBTRANS(probtransRingpacking)
    /* copy statistics to transformed problem data */
    (*targetdata)->ncppatternsunknownbeg = sourcedata->ncppatternsunknownbeg;
    (*targetdata)->enumtime = sourcedata->enumtime;
+   (*targetdata)->dualbound = sourcedata->dualbound;
+   (*targetdata)->isdualinvalid = sourcedata->isdualinvalid;
 
    return SCIP_OKAY;
 }
@@ -1274,7 +1451,6 @@ SCIP_RETCODE SCIPprobdataAddVar(
 
    assert(probdata != NULL);
    assert(pattern != NULL);
-   assert(var != NULL);
    assert(SCIPpatternGetPackableStatus(pattern) != SCIP_PACKABLE_NO);
 
    /* copy pattern */
@@ -1297,7 +1473,10 @@ SCIP_RETCODE SCIPprobdataAddVar(
    }
 
    /* capture variable and pattern */
-   SCIP_CALL( SCIPcaptureVar(scip, var) );
+   if( var != NULL )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+   }
 
    return SCIP_OKAY;
 }

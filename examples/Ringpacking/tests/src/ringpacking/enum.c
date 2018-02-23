@@ -105,7 +105,11 @@ Test(enumerate, two)
    /* get circular pattern information */
    SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
    cr_assert(patterns != NULL);
-   //cr_expect(npatterns == 2);
-   //cr_expect(SCIPpatternGetType(patterns[0]) == 0);
-   //cr_expect(SCIPpatternGetNElemens(patterns[0]) == 0);
+   cr_expect(npatterns == 2);
+   cr_expect(SCIPpatternGetType(patterns[0]) == 0);
+   cr_expect(SCIPpatternGetNElemens(patterns[0]) == 2);
+   cr_expect(SCIPpatternGetElementType(patterns[0], 0) == 1);
+   cr_expect(SCIPpatternGetElementType(patterns[0], 1) == 1);
+   cr_expect(SCIPpatternGetType(patterns[1]) == 1);
+   cr_expect(SCIPpatternGetNElemens(patterns[1]) == 0);
 }
