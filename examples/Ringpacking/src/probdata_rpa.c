@@ -1117,7 +1117,7 @@ void SCIPprobdataUpdateDualbound(
 {
    assert(probdata != NULL);
 
-   if( !probdata->isdualinvalid && SCIPisLT(scip, probdata->dualbound, dualbound) )
+   if( !probdata->isdualinvalid && SCIPisFeasLT(scip, probdata->dualbound, dualbound) )
    {
       SCIPinfoMessage(scip, NULL, "+++++++++++++ update dual bound to %g\n", dualbound);
       probdata->dualbound = dualbound;
