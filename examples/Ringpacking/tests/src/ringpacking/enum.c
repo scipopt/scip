@@ -85,7 +85,7 @@ Test(enumerate, empty)
    cr_expect(SCIPpatternGetNElemens(patterns[0]) == 0);
 }
 
-/** two patterns */
+/** two ring types */
 Test(enumerate, two)
 {
    SCIP_Real rexts[2] = {1.2, 0.5};
@@ -112,4 +112,35 @@ Test(enumerate, two)
    cr_expect(SCIPpatternGetElementType(patterns[0], 1) == 1);
    cr_expect(SCIPpatternGetType(patterns[1]) == 1);
    cr_expect(SCIPpatternGetNElemens(patterns[1]) == 0);
+}
+
+/** three ring types */
+Test(enumerate, three)
+{
+   SCIP_Real rexts[3] = {3.0, 1.0, 0.45};
+   SCIP_Real rints[3] = {2.414213562373095, 0.9, 0.0};
+   int demands[3] = {100, 100, 3};
+   SCIP_PATTERN** patterns;
+   int npatterns;
+
+   /* create problem data */
+   SCIP_CALL( SCIPprobdataCreate(scip, "unit test", demands, rints, rexts, 3, 100.0, 100.0) );
+   probdata = SCIPgetProbData(scip);
+   cr_assert(probdata != NULL);
+
+   /* compute circular patterns */
+   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIP_LONGINT_MAX, INT_MAX) );
+
+   /* get circular pattern information */
+   SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
+   cr_assert(patterns != NULL);
+   cr_expect(npatterns == 4);
+   cr_expect(SCIPpatternGetType(patterns[0]) == 0);
+   cr_expect(SCIPpatternGetNElemens(patterns[0]) == 6);
+   cr_expect(SCIPpatternGetType(patterns[1]) == 0);
+   cr_expect(SCIPpatternGetNElemens(patterns[1]) == 4);
+   cr_expect(SCIPpatternGetType(patterns[2]) == 1);
+   cr_expect(SCIPpatternGetNElemens(patterns[2]) == 2);
+   cr_expect(SCIPpatternGetType(patterns[3]) == 2);
+   cr_expect(SCIPpatternGetNElemens(patterns[3]) == 0);
 }
