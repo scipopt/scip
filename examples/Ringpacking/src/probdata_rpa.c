@@ -383,6 +383,18 @@ int maxCircles(
    return n;
 }
 
+/** filter dominated patterns */
+static
+SCIP_RETCODE filterPatterns(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+{
+   /* TODO */
+
+   return SCIP_OKAY;
+}
+
 /** enumerates all circular patterns for a given type */
 static
 SCIP_RETCODE enumeratePatterns(
@@ -390,19 +402,19 @@ SCIP_RETCODE enumeratePatterns(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_PATTERN*         pattern,            /**< pattern (passed for performance reasons) */
    int*                  ms,                 /**< maximum number of elements for each type (passed for performance reasons) */
-   int*                  nselected           /**< number of selected elements for each type (passed for performance reasons) */
+   int*                  nselected,          /**< number of selected elements for each type (passed for performance reasons) */
+   SCIP_Real             nlptilim,           /**< time limit for each NLP verification */
+   SCIP_Real             heurtilim,          /**< time limit for each call of the heuristics */
+   SCIP_Longint          nlpnodelim,         /**< node limit for each NLP verification */
+   int                   heuriterlim         /**< iteration limit for each call of the heuristics */
    )
 {
    SCIP_Real* rexts;
    SCIP_Real* _ints;
    int* demands;
    SCIP_Real totaltimelim;
-   SCIP_Real heurtilim;
-   SCIP_Real nlptilim;
    SCIP_Real maxvolume;
    SCIP_Real volume;
-   SCIP_Longint nlpnodelim;
-   int heuritlim;
    int ntypes;
    int type;
    int lasttype;
@@ -421,12 +433,6 @@ SCIP_RETCODE enumeratePatterns(
    lasttype = ntypes -1;
    volume = 0.0;
    maxvolume = SQR(_ints[SCIPpatternGetType(pattern)]) * M_PI;
-
-   /* collect working limits */
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/nlptimelimitsoft", &nlptilim) );
-   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/nlpnodelimitsoft", &nlpnodelim) );
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/heurtimelimitsoft", &heurtilim) );
-   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/heuriterlimitsoft", &heuritlim) );
 
    /* check whether there is enough time left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &totaltimelim) );
@@ -468,7 +474,7 @@ SCIP_RETCODE enumeratePatterns(
       timelim = MIN(heurtilim, totaltimelim - SCIPgetSolvingTime(scip)); /*lint !e666*/
 
       /* verify pattern */
-      SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuritlim) );
+      SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuriterlim) );
 
       /*
        * try to verify with NLP
@@ -512,69 +518,18 @@ SCIP_RETCODE enumeratePatterns(
       /* add element of type i to the pattern */
       assert(nselected[t] < ms[t]);
       ++(nselected[t]);
-      volume += SQR(rexts[t]) * M_PI * nselected[t];
+      volume += SQR(rexts[t]) * M_PI;
       SCIPpatternAddElement(pattern, t, SCIP_INVALID, SCIP_INVALID);
    }
 
    assert(SCIPpatternGetNElemens(pattern) == 0);
    assert(SCIPisZero(scip, volume));
 
-   return SCIP_OKAY;
-}
-
-/** computes all non-dominated circular patterns and stores them into the problem data */
-static
-SCIP_RETCODE computeCircularPatterns(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   )
-{
-   SCIP_PATTERN* pattern;
-   int* demands;
-   int* ms;
-   int* nselected;
-   int ntypes;
-   int t;
-
-   assert(probdata != NULL);
-   ntypes = SCIPprobdataGetNTypes(probdata);
-   assert(ntypes > 0);
-   demands = SCIPprobdataGetDemands(probdata);
-   assert(demands != NULL);
-
-   probdata->enumtime = -SCIPgetTotalTime(scip);
-
-   /* create data that is used for the whole enumeration algorithm */
-   SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, 0) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ms, ntypes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nselected, ntypes) );
-   BMSclearMemoryArray(nselected, ntypes);
-   BMSclearMemoryArray(ms, ntypes);
-
-   /* find all circlular patterns of each type separately */
-   for( t = 0; t < ntypes; ++t )
-   {
-      int k;
-
-      for( k = t+1; k < ntypes; ++k )
-         ms[k] = maxCircles(scip, probdata, t, k);
-
-      SCIPpatternSetType(pattern, t);
-      SCIP_CALL( enumeratePatterns(scip, probdata, pattern, ms, nselected) );
-   }
-
-   /* release memory */
-   SCIPfreeBufferArray(scip, &nselected);
-   SCIPfreeBufferArray(scip, &ms);
-   SCIPpatternRelease(scip, &pattern);
-
-   /* update statistics */
-   probdata->enumtime += SCIPgetTotalTime(scip);
-   probdata->ncppatternsunknownbeg = getNCPatterns(scip, probdata, SCIP_PACKABLE_UNKNOWN);
+   /* filter circular pattern */
+   SCIP_CALL( filterPatterns(scip, probdata) );
 
    return SCIP_OKAY;
 }
-
 
 /** auxiliary function to setup the master problem */
 static
@@ -586,16 +541,26 @@ SCIP_RETCODE setupProblem(
    char name[SCIP_MAXSTRLEN];
    SCIP_Real* rexts;
    SCIP_Real* _rints;
+   int* demands;
+   SCIP_Real heurtilim;
+   SCIP_Real nlptilim;
    SCIP_Real dualbound;
    SCIP_Real minrext;
    SCIP_Real volume;
-   int* demands;
+   SCIP_Longint nlpnodelim;
+   int heuriterlim;
    int ntypes;
    int p;
    int t;
 
    assert(probdata != NULL);
    assert(SCIPprobdataGetNTypes(probdata) > 0);
+
+   /* collect working limits */
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/nlptimelimitsoft", &nlptilim) );
+   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/nlpnodelimitsoft", &nlpnodelim) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/heurtimelimitsoft", &heurtilim) );
+   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/heuriterlimitsoft", &heuriterlim) );
 
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
@@ -609,7 +574,7 @@ SCIP_RETCODE setupProblem(
    demands = SCIPprobdataGetDemands(probdata);
 
    /* compute all non-dominated circular patterns */
-   SCIP_CALL( computeCircularPatterns(scip, probdata) );
+   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, nlptilim, heurtilim, nlpnodelim, heuriterlim) );
 
    /* create initial rectangular patterns */
    for( t = 0; t < ntypes; ++t )
@@ -1127,6 +1092,62 @@ SCIP_RETCODE SCIPprobdataSetupProblem(
    assert(probdata != NULL);
 
    SCIP_CALL( setupProblem(scip, probdata) );
+
+   return SCIP_OKAY;
+}
+
+/** enumerate all non-dominated circular patterns */
+SCIP_RETCODE SCIPprobdataEnumeratePatterns(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_Real             nlptilim,           /**< time limit for each NLP verification */
+   SCIP_Real             heurtilim,          /**< time limit for each call of the heuristics */
+   SCIP_Longint          nlpnodelim,         /**< node limit for each NLP verification */
+   int                   heuriterlim         /**< iteration limit for each call of the heuristics */
+   )
+{
+   SCIP_PATTERN* pattern;
+   int* demands;
+   int* ms;
+   int* nselected;
+   int ntypes;
+   int t;
+
+   assert(probdata != NULL);
+   ntypes = SCIPprobdataGetNTypes(probdata);
+   assert(ntypes > 0);
+   demands = SCIPprobdataGetDemands(probdata);
+   assert(demands != NULL);
+
+   probdata->enumtime = -SCIPgetTotalTime(scip);
+
+   /* create data that is used for the whole enumeration algorithm */
+   SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, 0) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ms, ntypes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nselected, ntypes) );
+   BMSclearMemoryArray(nselected, ntypes);
+   BMSclearMemoryArray(ms, ntypes);
+
+   /* find all circlular patterns of each type separately */
+   for( t = 0; t < ntypes; ++t )
+   {
+      int k;
+
+      for( k = t+1; k < ntypes; ++k )
+         ms[k] = maxCircles(scip, probdata, t, k);
+
+      SCIPpatternSetType(pattern, t);
+      SCIP_CALL( enumeratePatterns(scip, probdata, pattern, ms, nselected, nlptilim, heurtilim, nlpnodelim, heuriterlim) );
+   }
+
+   /* release memory */
+   SCIPfreeBufferArray(scip, &nselected);
+   SCIPfreeBufferArray(scip, &ms);
+   SCIPpatternRelease(scip, &pattern);
+
+   /* update statistics */
+   probdata->enumtime += SCIPgetTotalTime(scip);
+   probdata->ncppatternsunknownbeg = getNCPatterns(scip, probdata, SCIP_PACKABLE_UNKNOWN);
 
    return SCIP_OKAY;
 }

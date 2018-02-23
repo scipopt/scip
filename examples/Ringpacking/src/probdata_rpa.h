@@ -47,6 +47,17 @@ SCIP_RETCODE SCIPprobdataSetupProblem(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** enumerate all non-dominated circular patterns */
+extern
+SCIP_RETCODE SCIPprobdataEnumeratePatterns(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_Real             nlptilim,           /**< time limit for each NLP verification */
+   SCIP_Real             heurtilim,          /**< time limit for each call of the heuristics */
+   SCIP_Longint          nlpnodelim,         /**< node limit for each NLP verification */
+   int                   heuriterlim         /**< iteration limit for each call of the heuristics */
+   );
+
 /** returns number of different types */
 extern
 int SCIPprobdataGetNTypes(
