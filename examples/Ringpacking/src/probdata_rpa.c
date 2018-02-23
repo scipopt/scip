@@ -452,10 +452,7 @@ SCIP_RETCODE enumeratePatterns(
        */
 
       /* compute time limit */
-      if( !SCIPisInfinity(scip, totaltimelim) )
-         timelim = MIN(heurtilim, totaltimelim - SCIPgetSolvingTime(scip));
-      else
-         timelim = heurtilim;
+      timelim = MIN(heurtilim, totaltimelim - SCIPgetSolvingTime(scip)); /*lint !e666*/
 
       /* verify pattern */
       SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuritlim) );
@@ -466,13 +463,10 @@ SCIP_RETCODE enumeratePatterns(
       if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
       {
          /* compute time limit */
-         if( !SCIPisInfinity(scip, totaltimelim) )
-            timelim = MIN(heurtilim, totaltimelim - SCIPgetSolvingTime(scip));
-         else
-            timelim = heurtilim;
+         timelim = MIN(nlptilim, totaltimelim - SCIPgetSolvingTime(scip)); /*lint !e666*/
 
          /* verify pattern */
-         SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, 10.0, 100L) );
+         SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, timelim, nlpnodelim) );
       }
 
       /* pattern is not packable -> don't add more elements */
@@ -1236,7 +1230,7 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
       && niters < iterlim
       && SCIPgetTotalTime(scip) - timestart >= timelim )
    {
-      /* TODO */
+      /* TODO call heuristic here */
 
       ++niters;
    }
