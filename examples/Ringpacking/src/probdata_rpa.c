@@ -393,12 +393,14 @@ SCIP_RETCODE enumeratePatterns(
    int*                  nselected           /**< number of selected elements for each type (passed for performance reasons) */
    )
 {
-   SCIP_Real* exts;
+   SCIP_Real* rexts;
    SCIP_Real* _ints;
    int* demands;
    SCIP_Real totaltimelim;
    SCIP_Real heurtilim;
    SCIP_Real nlptilim;
+   SCIP_Real maxvolume;
+   SCIP_Real volume;
    SCIP_Longint nlpnodelim;
    int heuritlim;
    int ntypes;
@@ -412,11 +414,13 @@ SCIP_RETCODE enumeratePatterns(
    assert(type >= 0 && type < SCIPprobdataGetNTypes(probdata));
 
    /* get problem data */
-   exts = SCIPprobdataGetRexts(probdata);
+   rexts = SCIPprobdataGetRexts(probdata);
    _ints = SCIPprobdataGetRints(probdata);
    demands = SCIPprobdataGetDemands(probdata);
    ntypes = SCIPprobdataGetNTypes(probdata);
    lasttype = ntypes -1;
+   volume = 0.0;
+   maxvolume = SQR(_ints[SCIPpatternGetType(pattern)]) * M_PI;
 
    /* collect working limits */
    SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/nlptimelimitsoft", &nlptilim) );
@@ -431,10 +435,12 @@ SCIP_RETCODE enumeratePatterns(
    while( TRUE )
    {
       SCIP_Real timelim;
-      int i = lasttype;
+      int t = lasttype;
 
       /* reset packable status */
       SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
+
+      SCIPdebugMsg(scip, "volume = %g <= %g\n", volume, maxvolume);
 
       {
          int j;
@@ -445,7 +451,14 @@ SCIP_RETCODE enumeratePatterns(
          SCIPdebugMsgPrint(scip, "\n");
       }
 
-      /* TODO check volume */
+      /* check volume */
+      if( SCIPisGT(scip, volume, maxvolume) )
+      {
+         SCIPdebugMsg(scip, "exceed volume\n");
+         volume -= SQR(rexts[t]) * M_PI * nselected[t];
+         nselected[t] = 0;
+         t--;
+      }
 
       /*
        * try to verify with heuristic
@@ -472,9 +485,10 @@ SCIP_RETCODE enumeratePatterns(
       /* pattern is not packable -> don't add more elements */
       if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO )
       {
-         SCIPpatternRemoveLastElements(pattern, nselected[i]);
-         nselected[i] = 0;
-         --i;
+         SCIPpatternRemoveLastElements(pattern, nselected[t]);
+         volume -= SQR(rexts[t]) * M_PI * nselected[t];
+         nselected[t] = 0;
+         --t;
       }
       /* otherwise add the pattern (and hope for filtering) */
       else
@@ -483,24 +497,27 @@ SCIP_RETCODE enumeratePatterns(
       }
 
       /* update selection */
-      while( i > type && nselected[i] == ms[i] )
+      while( t > type && nselected[t] == ms[t] )
       {
-         SCIPpatternRemoveLastElements(pattern, nselected[i]);
-         nselected[i] = 0;
-         i--;
+         SCIPpatternRemoveLastElements(pattern, nselected[t]);
+         volume -= SQR(rexts[t]) * M_PI * nselected[t];
+         nselected[t] = 0;
+         t--;
       }
 
       /* check termination criterion */
-      if( i == type )
+      if( t == type )
          break;
 
       /* add element of type i to the pattern */
-      assert(nselected[i] < ms[i]);
-      ++(nselected[i]);
-      SCIPpatternAddElement(pattern, i, SCIP_INVALID, SCIP_INVALID);
+      assert(nselected[t] < ms[t]);
+      ++(nselected[t]);
+      volume += SQR(rexts[t]) * M_PI * nselected[t];
+      SCIPpatternAddElement(pattern, t, SCIP_INVALID, SCIP_INVALID);
    }
 
    assert(SCIPpatternGetNElemens(pattern) == 0);
+   assert(SCIPisZero(scip, volume));
 
    return SCIP_OKAY;
 }
