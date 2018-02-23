@@ -13,6 +13,7 @@ set(instances
   "test_circle6\;1"
   #"test_circle16\;1"
   "test_ring0\;2"
+  #"test_ring1\;1"
   )
 
 add_test(NAME examples-ringpacking-build
