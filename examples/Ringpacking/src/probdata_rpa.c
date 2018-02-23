@@ -688,18 +688,23 @@ SCIP_RETCODE setupProblem(
    volume = 0.0;
    for( t = 0; t < ntypes; ++t )
    {
+      SCIP_Real vol;
+
       /* consider ring as circle if there is no ring with a smaller radius than than inner one */
       if( SCIPisFeasLT(scip, _rints[t], minrext) )
-         volume += M_PI * SQR(rexts[t]);
+         vol = M_PI * SQR(rexts[t]);
       else
-         volume += M_PI * (SQR(rexts[t]) - SQR(_rints[t]));
+         vol = M_PI * (SQR(rexts[t]) - SQR(_rints[t]));
+
+      volume += vol * demands[t];
    }
 
    /* update initial dual bound */
-   dualbound = SCIPfeasCeil(scip, volume / (SCIPprobdataGetWidth(probdata) + SCIPprobdataGetHeight(probdata)));
+   dualbound = SCIPfeasCeil(scip, volume / (SCIPprobdataGetWidth(probdata) * SCIPprobdataGetHeight(probdata)));
    SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
    SCIPprobdataUpdateDualbound(probdata, dualbound);
-   SCIPdebugMsg(scip, "volume-based dual bound = %g\n", dualbound);
+   SCIPinfoMessage(scip, NULL, "Volume-based bound = ceil(%g / %g) = %g\n", volume,
+      SCIPprobdataGetWidth(probdata) * SCIPprobdataGetHeight(probdata), dualbound);
 
    return SCIP_OKAY;
 }
