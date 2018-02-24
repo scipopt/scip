@@ -17,6 +17,7 @@
  * @brief  methods for storing separated cuts
  * @author Tobias Achterberg
  * @author Marc Pfetsch
+ * @author Robert Lion Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -70,9 +71,6 @@ SCIP_RETCODE sepastoreEnsureCutsMem(
    return SCIP_OKAY;
 }
 
-
-
-
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreCreate(
    SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
@@ -93,6 +91,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->ncutsapplied = 0;
    (*sepastore)->initiallp = FALSE;
    (*sepastore)->forcecuts = FALSE;
+
    SCIP_CALL( SCIPrandomCreate(&(*sepastore)->rng, blkmem, (unsigned int)SCIPsetInitializeRandomSeed(set, 0x5EED)) );
 
    return SCIP_OKAY;
@@ -115,7 +114,7 @@ SCIP_RETCODE SCIPsepastoreFree(
    return SCIP_OKAY;
 }
 
-/** informs separation storage, that the setup of the initial LP starts now */
+/** informs separation storage that the setup of the initial LP starts now */
 void SCIPsepastoreStartInitialLP(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
@@ -127,7 +126,7 @@ void SCIPsepastoreStartInitialLP(
    sepastore->initiallp = TRUE;
 }
 
-/** informs separation storage, that the setup of the initial LP is now finished */
+/** informs separation storage that the setup of the initial LP is now finished */
 void SCIPsepastoreEndInitialLP(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
@@ -139,7 +138,7 @@ void SCIPsepastoreEndInitialLP(
    sepastore->initiallp = FALSE;
 }
 
-/** informs separation storage, that the following cuts should be used in any case */
+/** informs separation storage that the following cuts should be used in any case */
 void SCIPsepastoreStartForceCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
@@ -150,7 +149,7 @@ void SCIPsepastoreStartForceCuts(
    sepastore->forcecuts = TRUE;
 }
 
-/** informs separation storage, that the following cuts should no longer be used in any case */
+/** informs separation storage that the following cuts should no longer be used in any case */
 void SCIPsepastoreEndForceCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
@@ -187,8 +186,9 @@ SCIP_Bool sepastoreIsCutRedundant(
    rhs = SCIProwGetRhs(cut);
    minactivity = SCIProwGetMinActivity(cut, set, stat);
    maxactivity = SCIProwGetMaxActivity(cut, set, stat);
-   if( (SCIPsetIsInfinity(set, -lhs) || SCIPsetIsLE(set, lhs, minactivity))
-      && (SCIPsetIsInfinity(set, rhs) || SCIPsetIsLE(set, maxactivity, rhs)) )
+
+   if( (SCIPsetIsInfinity(set, -lhs) || SCIPsetIsLE(set, lhs, minactivity)) &&
+       (SCIPsetIsInfinity(set, rhs) || SCIPsetIsLE(set, maxactivity, rhs)) )
    {
       SCIPsetDebugMsg(set, "ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
@@ -229,16 +229,18 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
    rhs = SCIProwGetRhs(cut);
    minactivity = SCIProwGetMinActivity(cut, set, stat);
    maxactivity = SCIProwGetMaxActivity(cut, set, stat);
-   if( (SCIPsetIsInfinity(set, -lhs) || SCIPsetIsLE(set, lhs, minactivity))
-      && (SCIPsetIsInfinity(set, rhs) || SCIPsetIsLE(set, maxactivity, rhs)) )
+
+   if( (SCIPsetIsInfinity(set, -lhs) || SCIPsetIsLE(set, lhs, minactivity)) &&
+       (SCIPsetIsInfinity(set, rhs) || SCIPsetIsLE(set, maxactivity, rhs)) )
    {
       SCIPsetDebugMsg(set, "ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
       return TRUE;
    }
-   if( (!SCIPsetIsInfinity(set, rhs) && SCIPsetIsFeasGT(set, minactivity, rhs))
-      || (!SCIPsetIsInfinity(set, -lhs) &&  SCIPsetIsFeasLT(set, maxactivity, lhs) ))
+
+   if( (!SCIPsetIsInfinity(set, rhs) && SCIPsetIsFeasGT(set, minactivity, rhs)) ||
+       (!SCIPsetIsInfinity(set, -lhs) &&  SCIPsetIsFeasLT(set, maxactivity, lhs) ))
    {
       SCIPsetDebugMsg(set, "cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
@@ -252,9 +254,8 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
 
 /** checks whether a cut with only one variable can be applied as boundchange
  *
- * This is the case if the bound change would prove infeasibility (w.r.t feastol),
- * or if the new bound is at least epsilon better than the old bound.
- * In the latter case, also the opposite bound has to be taken into account.
+ *  This is the case if the bound change would prove infeasibility (w.r.t feastol), or if the new bound is at least
+ *  epsilon better than the old bound.  In the latter case, also the opposite bound has to be taken into account.
  */
 static
 SCIP_Bool sepastoreIsBdchgApplicable(
@@ -272,6 +273,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
    SCIP_Real oldub;
 
    assert(set != NULL);
+   assert(cut != NULL);
    assert(!SCIProwIsModifiable(cut));
    assert(SCIProwGetNNonz(cut) == 1);
 
@@ -370,9 +372,7 @@ SCIP_RETCODE sepastoreDelCut(
    assert(sepastore->cuts != NULL);
    assert(sepastore->nforcedcuts <= pos && pos < sepastore->ncuts);
 
-   /* check, if the row deletions from separation storage events are tracked
-    * if so, issue ROWDELETEDSEPA event
-    */
+   /* check, if the row deletions from separation storage events are tracked if so, issue ROWDELETEDSEPA event */
    if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
    {
       SCIP_EVENT* event;
@@ -429,7 +429,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
       sepastore->ncutsfoundround++;
    }
 
-   /* in the root node, every local cut is a global cut, and global cuts are nicer in many ways...*/
+   /* in the root node, every local cut is a global cut, and global cuts are nicer in many ways ... */
    if( root && SCIProwIsLocal(cut) )
    {
       SCIPsetDebugMsg(set, "change local flag of cut <%s> to FALSE due to addition in root node\n", SCIProwGetName(cut));
@@ -448,9 +448,8 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    if( !forcecut && sepastore->ncuts > 0 && redundant )
       return SCIP_OKAY;
 
-   /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
-    * again, because now a non redundant cut enters the store
-    */
+   /* if only one cut is currently present in sepastore, it could be redundant; in this case, it can now be removed
+    * again, because now a non redundant cut enters the sepastore */
    if( sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
       /* check, if the row deletions from separation storage events are tracked if so, issue ROWDELETEDSEPA event */
@@ -502,9 +501,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    sepastore->cuts[pos] = cut;
    sepastore->ncuts++;
 
-   /* check, if the row addition to separation storage events are tracked
-    * if so, issue ROWADDEDSEPA event
-    */
+   /* check, if the row addition to separation storage events are tracked if so, issue ROWADDEDSEPA event */
    if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWADDEDSEPA) != 0 )
    {
       SCIP_EVENT* event;
@@ -898,15 +895,14 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
       if( i < sepastore->nforcedcuts || SCIPsetIsFeasPositive(set, SCIProwGetLPEfficacy(cut, set, stat, lp)) )
       {
-         SCIP_Bool applied;
+         SCIP_Bool applied = FALSE;
 
          /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
-         applied = FALSE;
          if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
          {
             SCIPsetDebugMsg(set, " -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
             SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-                                           eventqueue, cliquetable, cut, &applied, cutoff) );
+                  eventqueue, cliquetable, cut, &applied, cutoff) );
 
             assert(applied || !sepastoreIsBdchgApplicable(set, cut));
          }
@@ -946,9 +942,7 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
    /* release cuts */
    for( c = 0; c < sepastore->ncuts; ++c )
    {
-      /* check, if the row deletions from separation storage events are tracked
-       * if so, issue ROWDELETEDSEPA event
-       */
+      /* check, if the row deletions from separation storage events are tracked if so, issue ROWDELETEDSEPA event */
       if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
       {
          SCIP_EVENT* event;
@@ -988,17 +982,17 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
    )
 {
-   int cnt;
+   int cnt = 0;
    int c;
 
    assert( sepastore != NULL );
 
    /* check non-forced cuts only */
-   cnt = 0;
    c = sepastore->nforcedcuts;
    while( c < sepastore->ncuts )
    {
       SCIP_Real cutefficacy;
+
       /* calculate cut's efficacy */
       switch ( efficiacychoice )
       {
@@ -1015,6 +1009,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
             SCIPerrorMessage("Invalid efficiacy choice.\n");
             return SCIP_INVALIDCALL;
       }
+
       if( !SCIPsetIsEfficacious(set, root, cutefficacy) )
       {
          SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, c) );
@@ -1030,7 +1025,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
 
 /** indicates whether a cut is applicable
  *
- * A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
+ *  A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
  */
 SCIP_Bool SCIPsepastoreIsCutApplicable(
    SCIP_SET*             set,                /**< global SCIP settings */
