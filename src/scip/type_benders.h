@@ -34,101 +34,100 @@ extern "C" {
 
 enum SCIP_BendersEnfoType
 {
-    LP      = 1,
-    RELAX   = 2,
-    PSEUDO  = 3,
-    CHECK   = 4
+    LP      = 1,     /**< the Benders' subproblems are solved during the enforcement of an LP solution */
+    RELAX   = 2,     /**< the Benders' subproblems are solved during the enforcement of a relaxation solution */
+    PSEUDO  = 3,     /**< the Benders' subproblems are solved during the enforcement of a pseudo solution */
+    CHECK   = 4      /**< the Benders' subproblems are solved during the checking of a solution for feasibility */
 };
-typedef enum SCIP_BendersEnfoType SCIP_BENDERSENFOTYPE;
+typedef enum SCIP_BendersEnfoType SCIP_BENDERSENFOTYPE;  /**< indicates the callback in cons_benders and cons_benderslp that triggered the subproblem solve */
 
-typedef struct SCIP_Benders SCIP_BENDERS;           /**< variable benders data */
-typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variable benders data */
+typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
+typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */
 
 
-/** copy method for benders plugins (called when SCIP copies plugins)
+/** copy method for Benders' decomposition plugins (called when SCIP copies plugins)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the variable benders itself
+ *  - benders          : the Benders' decomposition itself
  *  - valid           : was the copying process valid?
  */
 #define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_Bool* valid)
 
-/** destructor of variable benders to free user data (called when SCIP is exiting)
+/** destructor of Benders' decomposition to free user data (called when SCIP is exiting)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the variable benders itself
+ *  - benders         : the Benders' decomposition itself
  */
 #define SCIP_DECL_BENDERSFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** initialization method of variable benders (called after problem was transformed and benders is active)
+/** initialization method of Benders' decomposition (called after problem was transformed and benders is active)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the variable benders itself
+ *  - benders         : the Benders' decomposition itself
  */
 #define SCIP_DECL_BENDERSINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** deinitialization method of variable benders (called before transformed problem is freed and benders is active)
+/** deinitialization method of Benders' decomposition (called before transformed problem is freed and benders is active)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the variable benders itself
+ *  - benders         : the Benders' decomposition itself
  */
 #define SCIP_DECL_BENDERSEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin)
+/** presolving initialization method of the Benders' decomposition (called when presolving is about to begin)
  *
  *  This function is called immediately after the auxiliary variables are created in the master problem. The callback
  *  provides the user an opportunity to add variable data to the auxiliary variables.
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the variable benders itself
+ *  - benders         : the Benders' decomposition itself
  */
 #define SCIP_DECL_BENDERSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished)
+/** presolving deinitialization method of the Benders' decomposition (called after presolving has been finished)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the variable benders itself
+ *  - benders         : the Benders' decomposition itself
  */
 #define SCIP_DECL_BENDERSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** solving process initialization method of variable benders (called when branch and bound process is about to begin)
+/** solving process initialization method of Benders' decomposition (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
- *  The variable benders may use this call to initialize its branch and bound specific data.
+ *  The Benders' decomposition may use this call to initialize its branch and bound specific data.
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the variable benders itself
+ *  - benders         : the Benders' decomposition itself
  */
 #define SCIP_DECL_BENDERSINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** solving process deinitialization method of variable benders (called before branch and bound process data is freed)
+/** solving process deinitialization method of Benders' decomposition (called before branch and bound process data is freed)
  *
  *  This method is called before the branch and bound process is freed.
- *  The variable benders should use this call to clean up its branch and bound data.
+ *  The Benders' decomposition should use this call to clean up its branch and bound data.
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the variable benders itself
+ *  - benders         : the Benders' decomposition itself
  */
 #define SCIP_DECL_BENDERSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
 /** the method for creating the Benders' decomposition subproblem. This method is called during the initialisation stage
  *  (after the master problem was transformed)
  *
- *  This method must create the SCIP instance for the subproblem and add the required variables and constraints. In
- *  addition, the settings required for the solving the problem must be set here. However, some settings will be
- *  overridden by the standard solving method included in the Benders' decomposition framework. If a special solving
- *  method is desired, the user can implement the bendersSolvesubXyz callback.
- *
- *  When creating the subproblems, they must be registered with the Benders' decomposition structure. This is done by
- *  calling SCIPaddBendersSubproblem.
+ *  This method must register the SCIP instance for the subproblem with the Benders' decomposition core by calling
+ *  SCIPaddBendersSubproblem. Typically, the user must create the SCIP instances for the subproblems. These can be
+ *  created within a reader or probdata and then registered with the Benders' decomposition core during the call of this
+ *  callback. If there are any settings required for solving the subproblems, then they should be set here. However,
+ *  some settings will be overridden by the standard solving method included in the Benders' decomposition framework.
+ *  If a special solving method is desired, the user can implement the bendersSolvesubXyz callback.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -159,28 +158,43 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  *  - sol             : the solution that will be checked in the subproblem. Can be NULL.
  *  - probnumber      : the subproblem problem number
  *  - infeasible      : pointer to store whether the problem is infeasible
- *  TODO: Need to update the parameters for this callback
  */
 #define SCIP_DECL_BENDERSSOLVESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol, int probnumber,\
   SCIP_Bool* infeasible)
 
 /** the post-solve method for Benders' decomposition. The post-solve method is called after the subproblems have
- * been solved but before they are freed.
+ * been solved but before they have been freed. After the solving of the Benders' decomposition subproblems, the
+ * subproblem solving data is freed in the SCIP_DECL_BENDERSFREESUB callback. However, it is not necessary to implement
+ * SCIP_DECL_BENDERSFREESUB.
  *
- * This provides the opportunity for the user to clean up and data structures
- * that should not exist beyond the current iteration. Also, the user has full access to the master and subproblems. So
- * it is possible to construct solution for the master problem in the method.
+ * If SCIP_DECL_BENDERSFREESUB is not implemented, then the Benders' decomposition framework will perform a default
+ * freeing of the subproblems. If a subproblem is an LP, then they will be in probing mode for the subproblem
+ * solve. So the freeing process involves ending the probing mode. If the subproblem is a MIP, then the subproblem is
+ * solved by calling SCIPsolve. As such, the transformed problem must be freed after each subproblem solve.
+ *
+ * This callback provides the opportunity for the user to clean up any data structures that should not exist beyond the current
+ * iteration.
+ * The user has full access to the master and subproblems in this callback. So it is possible to construct solution for
+ * the master problem in the method.
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition data structure
+ *  - sol             : the solution that was checked by solving the subproblems. Can be NULL.
  *  - infeasible      : indicates whether at least one subproblem is infeasible
- *  TODO: Need to update the parameters for this callback
  */
 #define SCIP_DECL_BENDERSPOSTSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol, SCIP_Bool infeasible)
 
-/** frees the subproblem so that it can be resolved in the next iteration. In the SCIP case, this involves freeing the
- *  transformed problem using SCIPfreeTransform()
+/** frees the subproblem so that it can be resolved in the next iteration. As stated above, it is not necessary to
+ *  implement this callback. If the callback is implemented, the subproblems should be freed by calling
+ *  SCIPfreeTransform(). However, if the subproblems are LPs, then it could be more efficient to put the subproblem
+ *  into probing mode prior to solving and then exiting the probing mode during the callback. To put the subproblem into
+ *  probing mode, the subproblem must be in SCIP_STAGE_SOLVING. This can be achieved by using eventhandlers.
+ *
+ *  If SCIP_DECL_BENDERSFREESUB is not implemented, then the Benders' decomposition framework will perform a default
+ *  freeing of the subproblems. If a subproblem is an LP, then they will be in probing mode for the subproblem
+ *  solve. So the freeing process involves ending the probing mode. If the subproblem is a MIP, then the subproblem is
+ *  solved by calling SCIPsolve. As such, the transformed problem must be freed after each subproblem solve.
  *
  *  NOTE: The freeing methods must be thread safe.
  *
@@ -188,11 +202,12 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition data structure
  *  - probnumber      : the subproblem problem number
- *  TODO: Need to update the parameters for this callback
  */
 #define SCIP_DECL_BENDERSFREESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, int probnumber)
 
-/** the variable mapping from the subproblem to the master problem.
+/** the variable mapping from the subproblem to the master problem. It is neccessary to have a mapping between every
+ *  master problem variable and its counterpart in the subproblem. This mapping must go both ways: from master to sub
+ *  and sub to master.
  *
  *  This method is called when generating the cuts. The cuts are generated by using the solution to the subproblem to
  *  eliminate a solution to the master problem.
