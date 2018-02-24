@@ -2116,8 +2116,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    {
       for( k = 0; k < nrowinds; ++k )
       {
-         SCIP_CALL( addOneRow(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal,
-                              negslack, maxaggrlen, &rowtoolong) );
+         SCIP_CALL( addOneRow(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
 
          if( rowtoolong )
             return SCIP_OKAY;
@@ -2127,8 +2126,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    {
       for( k = 0; k < nrows; ++k )
       {
-         SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal,
-                              negslack, maxaggrlen, &rowtoolong) );
+         SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
 
          if( rowtoolong )
             return SCIP_OKAY;
@@ -2323,8 +2321,10 @@ SCIP_Bool SCIPaggrRowHasRowBeenAdded(
    rowind = SCIProwGetLPPos(row);
 
    for( i = 0; i < aggrrow->nrows; ++i )
+   {
       if( aggrrow->rowsinds[i] == rowind )
          return TRUE;
+   }
 
    return FALSE;
 }
@@ -2464,14 +2464,16 @@ SCIP_RETCODE SCIPselectCuts(
    SCIP_Real efficacyfac;
    SCIP_SOL* sol;
 
-   /* if all cuts are forced cuts no selection is required */
+   assert( nselectedcuts != NULL );
+
+   /* if all cuts are forced cuts, no selection is required */
    if( nforcedcuts >= MIN(ncuts, maxselectedcuts) )
    {
       *nselectedcuts = nforcedcuts;
       return SCIP_OKAY;
    }
-
    *nselectedcuts = 0;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncuts) );
 
    sol = SCIPgetBestSol(scip);
@@ -3008,8 +3010,8 @@ SCIP_RETCODE cutsTransformMIR(
    for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
    {
       SCIP_CALL( determineBestBounds(scip, vars[cutinds[i]], sol, boundswitch, usevbds, allowlocal, fixintegralrhs,
-                                     ignoresol, boundsfortrans, boundtypesfortrans,
-                                     bestlbs + i, bestubs + i, bestlbtypes + i, bestubtypes + i, selectedbounds + i, freevariable) );
+            ignoresol, boundsfortrans, boundtypesfortrans,
+            bestlbs + i, bestubs + i, bestlbtypes + i, bestubtypes + i, selectedbounds + i, freevariable) );
 
       if( *freevariable )
          goto TERMINATE;
@@ -3153,8 +3155,8 @@ SCIP_RETCODE cutsTransformMIR(
 
       /* determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
       SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch, FALSE, allowlocal, fixintegralrhs,
-                                     ignoresol, boundsfortrans, boundtypesfortrans,
-                                     bestlbs + i, bestubs + i, bestlbtypes + i, bestubtypes + i, selectedbounds + i, freevariable) );
+            ignoresol, boundsfortrans, boundtypesfortrans,
+            bestlbs + i, bestubs + i, bestlbtypes + i, bestubtypes + i, selectedbounds + i, freevariable) );
 
       /* increase i */
       ++i;
@@ -4484,46 +4486,46 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       /* now compute the solution value in the transform space considering complementation */
       switch( boundtype[i] )
       {
-         case -1:
-            /* variable was complemented with global (simple) bound */
-            if( varsign[i] == -1 )
-               solval = SCIPvarGetUbGlobal(vars[mksetinds[i]]) - solval;
-            else
-               solval = solval - SCIPvarGetLbGlobal(vars[mksetinds[i]]);
-            break;
-         case -2:
-            /* variable was complemented with local (simple) bound */
-            if( varsign[i] == -1 )
-               solval = SCIPvarGetUbLocal(vars[mksetinds[i]]) - solval;
-            else
-               solval = solval - SCIPvarGetLbLocal(vars[mksetinds[i]]);
-            break;
-         default:
-            /* variable was complemented with a variable bound */
-            if( varsign[i] == -1 )
-            {
-               SCIP_Real coef;
-               SCIP_Real constant;
-               SCIP_Real vbdsolval;
+      case -1:
+         /* variable was complemented with global (simple) bound */
+         if( varsign[i] == -1 )
+            solval = SCIPvarGetUbGlobal(vars[mksetinds[i]]) - solval;
+         else
+            solval = solval - SCIPvarGetLbGlobal(vars[mksetinds[i]]);
+         break;
+      case -2:
+         /* variable was complemented with local (simple) bound */
+         if( varsign[i] == -1 )
+            solval = SCIPvarGetUbLocal(vars[mksetinds[i]]) - solval;
+         else
+            solval = solval - SCIPvarGetLbLocal(vars[mksetinds[i]]);
+         break;
+      default:
+         /* variable was complemented with a variable bound */
+         if( varsign[i] == -1 )
+         {
+            SCIP_Real coef;
+            SCIP_Real constant;
+            SCIP_Real vbdsolval;
 
-               coef = SCIPvarGetVubCoefs(vars[mksetinds[i]])[boundtype[i]];
-               constant = SCIPvarGetVubConstants(vars[mksetinds[i]])[boundtype[i]];
-               vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVubVars(vars[mksetinds[i]])[boundtype[i]]);
+            coef = SCIPvarGetVubCoefs(vars[mksetinds[i]])[boundtype[i]];
+            constant = SCIPvarGetVubConstants(vars[mksetinds[i]])[boundtype[i]];
+            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVubVars(vars[mksetinds[i]])[boundtype[i]]);
 
-               solval = (coef * vbdsolval + constant) - solval;
-            }
-            else
-            {
-               SCIP_Real coef;
-               SCIP_Real constant;
-               SCIP_Real vbdsolval;
+            solval = (coef * vbdsolval + constant) - solval;
+         }
+         else
+         {
+            SCIP_Real coef;
+            SCIP_Real constant;
+            SCIP_Real vbdsolval;
 
-               coef = SCIPvarGetVlbCoefs(vars[mksetinds[i]])[boundtype[i]];
-               constant = SCIPvarGetVlbConstants(vars[mksetinds[i]])[boundtype[i]];
-               vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVlbVars(vars[mksetinds[i]])[boundtype[i]]);
+            coef = SCIPvarGetVlbCoefs(vars[mksetinds[i]])[boundtype[i]];
+            constant = SCIPvarGetVlbConstants(vars[mksetinds[i]])[boundtype[i]];
+            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVlbVars(vars[mksetinds[i]])[boundtype[i]]);
 
-               solval = solval - (coef * vbdsolval + constant);
-            }
+            solval = solval - (coef * vbdsolval + constant);
+         }
       }
 
       contactivity += solval * (QUAD_TO_DBL(mksetcoef) * varsign[i]);
@@ -6988,43 +6990,43 @@ SCIP_RETCODE computeLiftingData(
 
       switch(s)
       {
-         case 0: /* var is in N2 \ C2 */
-            assert(snf->transvarvubcoefs[i] >= 0.0);
-            assert(snf->transvarcoefs[i] == -1 && transvarflowcoverstatus[i] == -1);
+      case 0: /* var is in N2 \ C2 */
+         assert(snf->transvarvubcoefs[i] >= 0.0);
+         assert(snf->transvarcoefs[i] == -1 && transvarflowcoverstatus[i] == -1);
 
-            if( SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
-            {
-               SCIPquadprecSumQD(sumN2mC2GT, sumN2mC2GT, snf->transvarvubcoefs[i]);
-               liftingdata->m[liftingdata->r++] = snf->transvarvubcoefs[i];
-            }
-            else
-            {
-               SCIPquadprecSumQD(sumN2mC2LE, sumN2mC2LE, snf->transvarvubcoefs[i]);
-            }
-            break;
-         case 1: /* var is in C2 */
-            assert(snf->transvarvubcoefs[i] > 0.0);
-            assert(snf->transvarcoefs[i] == -1 && transvarflowcoverstatus[i] == 1);
+         if( SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
+         {
+            SCIPquadprecSumQD(sumN2mC2GT, sumN2mC2GT, snf->transvarvubcoefs[i]);
+            liftingdata->m[liftingdata->r++] = snf->transvarvubcoefs[i];
+         }
+         else
+         {
+            SCIPquadprecSumQD(sumN2mC2LE, sumN2mC2LE, snf->transvarvubcoefs[i]);
+         }
+         break;
+      case 1: /* var is in C2 */
+         assert(snf->transvarvubcoefs[i] > 0.0);
+         assert(snf->transvarcoefs[i] == -1 && transvarflowcoverstatus[i] == 1);
 
-            SCIPquadprecSumQD(sumC2, sumC2, snf->transvarvubcoefs[i]);
-            break;
-         case 3: /* var is in C1 */
-            assert(snf->transvarcoefs[i] == 1 && transvarflowcoverstatus[i] == 1);
-            assert(snf->transvarvubcoefs[i] > 0.0);
+         SCIPquadprecSumQD(sumC2, sumC2, snf->transvarvubcoefs[i]);
+         break;
+      case 3: /* var is in C1 */
+         assert(snf->transvarcoefs[i] == 1 && transvarflowcoverstatus[i] == 1);
+         assert(snf->transvarvubcoefs[i] > 0.0);
 
-            if( SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
-            {
-               liftingdata->m[liftingdata->r++] = snf->transvarvubcoefs[i];
-               liftingdata->mp = MIN(liftingdata->mp, snf->transvarvubcoefs[i]);
-            }
-            else
-            {
-               SCIPquadprecSumQD(sumC1LE, sumC1LE, snf->transvarvubcoefs[i]);
-            }
-            break;
-         default:
-            assert(s == 2);
-            continue;
+         if( SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
+         {
+            liftingdata->m[liftingdata->r++] = snf->transvarvubcoefs[i];
+            liftingdata->mp = MIN(liftingdata->mp, snf->transvarvubcoefs[i]);
+         }
+         else
+         {
+            SCIPquadprecSumQD(sumC1LE, sumC1LE, snf->transvarvubcoefs[i]);
+         }
+         break;
+      default:
+         assert(s == 2);
+         continue;
       }
    }
 
@@ -7119,137 +7121,77 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
 
       switch(s)
       {
-         case 0: /* var is in N2 \ C2 */
-            if( SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
-            {
-               /* var is in L- */
-               if( snf->origbinvars[i] != -1 )
-               {
-                  assert(cutcoefs[snf->origbinvars[i]] == 0.0);
-                  cutinds[*nnz] = snf->origbinvars[i];
-                  cutcoefs[snf->origbinvars[i]] = -lambda;
-                  ++(*nnz);
-               }
-               else
-               {
-                  SCIPquadprecSumQD(rhs, rhs, lambda);
-               }
-            }
-            else
-            {
-               /* var is in L-- */
-               if( snf->origcontvars[i] != -1 && snf->aggrcoefscont[i] != 0.0 )
-               {
-                  assert(cutcoefs[snf->origcontvars[i]] == 0.0);
-                  cutinds[*nnz] = snf->origcontvars[i];
-                  cutcoefs[snf->origcontvars[i]] = -snf->aggrcoefscont[i];
-                  ++(*nnz);
-               }
-
-               if( snf->origbinvars[i] != -1 && snf->aggrcoefsbin[i] != 0.0 )
-               {
-                  assert(cutcoefs[snf->origbinvars[i]] == 0.0);
-                  cutinds[*nnz] = snf->origbinvars[i];
-                  cutcoefs[snf->origbinvars[i]] = -snf->aggrcoefsbin[i];
-                  ++(*nnz);
-               }
-
-               SCIPquadprecSumQD(rhs, rhs, snf->aggrconstants[i]);
-            }
-            break;
-         case 1: /* var is in C2 */
+      case 0: /* var is in N2 \ C2 */
+         if( SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
          {
-            assert(snf->transvarvubcoefs[i] > 0.0);
-            assert(snf->transvarcoefs[i] == -1 && flowcoverstatus[i] == 1);
-
+            /* var is in L- */
             if( snf->origbinvars[i] != -1 )
-            {
-               SCIP_Real liftedbincoef = evaluateLiftingFunction(scip, &liftingdata, snf->transvarvubcoefs[i]);
-               assert(cutcoefs[snf->origbinvars[i]] == 0.0);
-               if( liftedbincoef != 0.0 )
-               {
-                  cutinds[*nnz] = snf->origbinvars[i];
-                  cutcoefs[snf->origbinvars[i]] = -liftedbincoef;
-                  ++(*nnz);
-                  SCIPquadprecSumQD(rhs, rhs, -liftedbincoef);
-               }
-            }
-            break;
-         }
-         case 2: /* var is in N1 \ C1 */
-         {
-            int alpha;
-            SCIP_Real beta;
-
-            assert(snf->transvarcoefs[i] == 1 && flowcoverstatus[i] == -1);
-
-            getAlphaAndBeta(scip, &liftingdata, snf->transvarvubcoefs[i], &alpha, &beta);
-            assert(alpha == 0 || alpha == 1);
-
-            if( alpha == 1 )
-            {
-               SCIP_Real QUAD(binvarcoef);
-               assert(beta > 0.0);
-
-               if( snf->origcontvars[i] != -1 && snf->aggrcoefscont[i] != 0.0 )
-               {
-                  assert(cutcoefs[snf->origcontvars[i]] == 0.0);
-                  cutinds[*nnz] = snf->origcontvars[i];
-                  cutcoefs[snf->origcontvars[i]] = snf->aggrcoefscont[i];
-                  ++(*nnz);
-               }
-
-               SCIPquadprecSumDD(binvarcoef, snf->aggrcoefsbin[i], -beta);
-               if( snf->origbinvars[i] != -1 )
-               {
-                  SCIP_Real tmp;
-
-                  assert(cutcoefs[snf->origbinvars[i]] == 0.0);
-
-                  tmp = QUAD_TO_DBL(binvarcoef);
-                  if( tmp != 0.0 )
-                  {
-                     cutinds[*nnz] = snf->origbinvars[i];
-                     cutcoefs[snf->origbinvars[i]] = tmp;
-                     ++(*nnz);
-                  }
-               }
-               else
-               {
-                  SCIPquadprecSumQQ(rhs, rhs, -binvarcoef);
-               }
-
-               SCIPquadprecSumQD(rhs, rhs, -snf->aggrconstants[i]);
-            }
-            break;
-         }
-         case 3: /* var is in C1 */
-         {
-            SCIP_Real bincoef = snf->aggrcoefsbin[i];
-            SCIP_Real constant = snf->aggrconstants[i];
-
-            if( snf->origbinvars[i] != -1 && SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
-            {
-               /* var is in C++ */
-               SCIP_Real QUAD(tmp);
-               SCIP_Real QUAD(tmp2);
-
-               SCIPquadprecSumDD(tmp, snf->transvarvubcoefs[i], -lambda);
-
-               SCIPquadprecSumQD(tmp2, tmp, constant);
-               constant = QUAD_TO_DBL(tmp2);
-
-               SCIPquadprecSumQD(tmp2, tmp, -bincoef);
-               bincoef = -QUAD_TO_DBL(tmp2);
-            }
-
-            if( snf->origbinvars[i] != -1 && bincoef != 0.0 )
             {
                assert(cutcoefs[snf->origbinvars[i]] == 0.0);
                cutinds[*nnz] = snf->origbinvars[i];
-               cutcoefs[snf->origbinvars[i]] = bincoef;
+               cutcoefs[snf->origbinvars[i]] = -lambda;
                ++(*nnz);
             }
+            else
+            {
+               SCIPquadprecSumQD(rhs, rhs, lambda);
+            }
+         }
+         else
+         {
+            /* var is in L-- */
+            if( snf->origcontvars[i] != -1 && snf->aggrcoefscont[i] != 0.0 )
+            {
+               assert(cutcoefs[snf->origcontvars[i]] == 0.0);
+               cutinds[*nnz] = snf->origcontvars[i];
+               cutcoefs[snf->origcontvars[i]] = -snf->aggrcoefscont[i];
+               ++(*nnz);
+            }
+
+            if( snf->origbinvars[i] != -1 && snf->aggrcoefsbin[i] != 0.0 )
+            {
+               assert(cutcoefs[snf->origbinvars[i]] == 0.0);
+               cutinds[*nnz] = snf->origbinvars[i];
+               cutcoefs[snf->origbinvars[i]] = -snf->aggrcoefsbin[i];
+               ++(*nnz);
+            }
+
+            SCIPquadprecSumQD(rhs, rhs, snf->aggrconstants[i]);
+         }
+         break;
+      case 1: /* var is in C2 */
+      {
+         assert(snf->transvarvubcoefs[i] > 0.0);
+         assert(snf->transvarcoefs[i] == -1 && flowcoverstatus[i] == 1);
+
+         if( snf->origbinvars[i] != -1 )
+         {
+            SCIP_Real liftedbincoef = evaluateLiftingFunction(scip, &liftingdata, snf->transvarvubcoefs[i]);
+            assert(cutcoefs[snf->origbinvars[i]] == 0.0);
+            if( liftedbincoef != 0.0 )
+            {
+               cutinds[*nnz] = snf->origbinvars[i];
+               cutcoefs[snf->origbinvars[i]] = -liftedbincoef;
+               ++(*nnz);
+               SCIPquadprecSumQD(rhs, rhs, -liftedbincoef);
+            }
+         }
+         break;
+      }
+      case 2: /* var is in N1 \ C1 */
+      {
+         int alpha;
+         SCIP_Real beta;
+
+         assert(snf->transvarcoefs[i] == 1 && flowcoverstatus[i] == -1);
+
+         getAlphaAndBeta(scip, &liftingdata, snf->transvarvubcoefs[i], &alpha, &beta);
+         assert(alpha == 0 || alpha == 1);
+
+         if( alpha == 1 )
+         {
+            SCIP_Real QUAD(binvarcoef);
+            assert(beta > 0.0);
 
             if( snf->origcontvars[i] != -1 && snf->aggrcoefscont[i] != 0.0 )
             {
@@ -7259,11 +7201,71 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
                ++(*nnz);
             }
 
-            SCIPquadprecSumQD(rhs, rhs, -constant);
-            break;
+            SCIPquadprecSumDD(binvarcoef, snf->aggrcoefsbin[i], -beta);
+            if( snf->origbinvars[i] != -1 )
+            {
+               SCIP_Real tmp;
+
+               assert(cutcoefs[snf->origbinvars[i]] == 0.0);
+
+               tmp = QUAD_TO_DBL(binvarcoef);
+               if( tmp != 0.0 )
+               {
+                  cutinds[*nnz] = snf->origbinvars[i];
+                  cutcoefs[snf->origbinvars[i]] = tmp;
+                  ++(*nnz);
+               }
+            }
+            else
+            {
+               SCIPquadprecSumQQ(rhs, rhs, -binvarcoef);
+            }
+
+            SCIPquadprecSumQD(rhs, rhs, -snf->aggrconstants[i]);
          }
-         default:
-            SCIPABORT();
+         break;
+      }
+      case 3: /* var is in C1 */
+      {
+         SCIP_Real bincoef = snf->aggrcoefsbin[i];
+         SCIP_Real constant = snf->aggrconstants[i];
+
+         if( snf->origbinvars[i] != -1 && SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
+         {
+            /* var is in C++ */
+            SCIP_Real QUAD(tmp);
+            SCIP_Real QUAD(tmp2);
+
+            SCIPquadprecSumDD(tmp, snf->transvarvubcoefs[i], -lambda);
+
+            SCIPquadprecSumQD(tmp2, tmp, constant);
+            constant = QUAD_TO_DBL(tmp2);
+
+            SCIPquadprecSumQD(tmp2, tmp, -bincoef);
+            bincoef = -QUAD_TO_DBL(tmp2);
+         }
+
+         if( snf->origbinvars[i] != -1 && bincoef != 0.0 )
+         {
+            assert(cutcoefs[snf->origbinvars[i]] == 0.0);
+            cutinds[*nnz] = snf->origbinvars[i];
+            cutcoefs[snf->origbinvars[i]] = bincoef;
+            ++(*nnz);
+         }
+
+         if( snf->origcontvars[i] != -1 && snf->aggrcoefscont[i] != 0.0 )
+         {
+            assert(cutcoefs[snf->origcontvars[i]] == 0.0);
+            cutinds[*nnz] = snf->origcontvars[i];
+            cutcoefs[snf->origcontvars[i]] = snf->aggrcoefscont[i];
+            ++(*nnz);
+         }
+
+         SCIPquadprecSumQD(rhs, rhs, -constant);
+         break;
+      }
+      default:
+         SCIPABORT();
       }
    }
 
