@@ -544,7 +544,9 @@ SCIP_RETCODE aggregateNextRow(
    assert( success != NULL );
    *success = FALSE;
 
+   firstcontvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    ncontvars = SCIPgetNImplVars(scip) + SCIPgetNContVars(scip);
+   assert( firstcontvar + ncontvars == SCIPgetNVars(scip) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &badvarinds, MIN(ncontvars, nnz)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &badvarbddist, MIN(ncontvars, nnz)) );
