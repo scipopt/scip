@@ -218,14 +218,13 @@ SCIP_Real calcEfficacyNormQuad(
    int                   nnz                 /**< the number of non-zeros in the vector */
    )
 {
-   SCIP_Real norm;
+   SCIP_Real norm = 0.0;
    SCIP_Real QUAD(coef);
    int i;
 
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   norm = 0.0;
    switch( scip->set->sepa_efficacynorm )
    {
    case 'e':
@@ -1987,6 +1986,7 @@ SCIP_RETCODE addOneRow(
    SCIP_Bool uselhs;
    int i;
 
+   assert( rowtoolong != NULL );
    *rowtoolong = FALSE;
 
    if( SCIPisFeasZero(scip, weight) || SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !allowlocal) )
@@ -2008,24 +2008,15 @@ SCIP_RETCODE addOneRow(
          assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
          uselhs = FALSE;
       }
-      else if( SCIPisInfinity(scip, SCIProwGetRhs(row)) ||
-         (weight < 0.0 && ! SCIPisInfinity(scip, -SCIProwGetLhs(row))) )
-      {
+      else if( SCIPisInfinity(scip, SCIProwGetRhs(row)) || (weight < 0.0 && ! SCIPisInfinity(scip, -SCIProwGetLhs(row))) )
          uselhs = TRUE;
-      }
       else
-      {
          uselhs = FALSE;
-      }
    }
    else if( (weight < 0.0 && !SCIPisInfinity(scip, -row->lhs)) || SCIPisInfinity(scip, row->rhs) )
-   {
       uselhs = TRUE;
-   }
    else
-   {
       uselhs = FALSE;
-   }
 
    if( uselhs )
    {
@@ -2106,6 +2097,10 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    int k;
    SCIP_Bool rowtoolong;
 
+   assert( scip != NULL );
+   assert( aggrrow != NULL );
+   assert( valid != NULL );
+
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
@@ -2163,6 +2158,7 @@ SCIP_RETCODE postprocessCut(
    assert(cutinds != NULL);
    assert(cutcoefs != NULL);
    assert(cutrhs != NULL);
+   assert(success != NULL);
 
    *success = FALSE;
 
@@ -2227,6 +2223,7 @@ SCIP_RETCODE postprocessCutQuad(
    assert(cutinds != NULL);
    assert(cutcoefs != NULL);
    assert(QUAD_HI(cutrhs) != NULL);
+   assert(success != NULL);
 
    *success = FALSE;
 
@@ -2270,6 +2267,7 @@ void SCIPaggrRowRemoveZeros(
    )
 {
    assert(aggrrow != NULL);
+   assert(valid != NULL);
 
    *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), aggrrow->local, aggrrow->vals, QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
 }
@@ -2394,6 +2392,10 @@ int filterWithParallelism(
 {
    int i;
 
+   assert( cut != NULL );
+   assert( ncuts == 0 || cuts != NULL );
+   assert( ncuts == 0 || scores != NULL );
+
    for( i = ncuts - 1; i >= 0; --i )
    {
       SCIP_Real thisparall;
@@ -2426,6 +2428,8 @@ void selectBestCut(
    SCIP_Real bestscore;
 
    assert(ncuts > 0);
+   assert(cuts != NULL);
+   assert(scores != NULL);
 
    bestscore = scores[0];
    bestpos = 0;
