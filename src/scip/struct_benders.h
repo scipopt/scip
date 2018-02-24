@@ -70,7 +70,7 @@ struct SCIP_Benders
    SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
    SCIP_Bool             lnscheck;           /**< Should Benders' decomposition be used in LNS heuristics? */
    int                   lnsmaxdepth;        /**< The maximum depth at which the LNS check is performed */
-   SCIP_Bool             cutsascons;         /**< Should the transferred cuts be added as constraints? */
+   SCIP_Bool             cutsasconss;        /**< Should the transferred cuts be added as constraints? */
    int                   mipcheckfreq;       /**< the frequency that the MIP subproblem is checked for feasibility, -1 for always.*/
    SCIP_Real             subprobfrac;        /**< the fraction of subproblems that are solved in each iteration */
 
@@ -84,7 +84,7 @@ struct SCIP_Benders
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
    SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */
    SCIP_Real*            bestsubprobobjval;  /**< the best objective value of the subproblem */
-   int                   addedsubprobs;      /**< subproblems added to the Benders' decomposition data */
+   int                   naddedsubprobs;     /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
    SCIP_Bool*            subprobislp;        /**< is the subproblem formulated as an LP? */
    int                   nlpsubprobs;        /**< the number of LP subproblems */

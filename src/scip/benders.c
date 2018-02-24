@@ -1,3 +1,4 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
@@ -43,15 +44,14 @@
 #include "scip/misc_benders.h"
 
 /* Defaults for parameters */
-#define SCIP_DEFAULT_TRANSFERCUTS         TRUE  /** Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
-#define SCIP_DEFAULT_CUTSASCONS           TRUE  /** Should the transferred cuts be added as constraints? */
-//#define SCIP_DEFAULT_CUTSASCONS          FALSE  /** Should the transferred cuts be added as constraints? */
-#define SCIP_DEFAULT_MIPCHECKFREQ            5  /** the number of iterations that the MIP is checked, -1 for always. */
-#define SCIP_DEFAULT_LNSCHECK              TRUE /** should the Benders' decomposition be used in LNS heuristics */
-#define SCIP_DEFAULT_LNSMAXDEPTH             -1 /** the maximum depth at which the LNS check is performed */
-#define SCIP_DEFAULT_SUBPROBFRAC            1.0 /** the fraction of subproblems that are solved in each iteration */
+#define SCIP_DEFAULT_TRANSFERCUTS          TRUE  /** Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
+#define SCIP_DEFAULT_CUTSASCONSS           TRUE  /** Should the transferred cuts be added as constraints? */
+#define SCIP_DEFAULT_MIPCHECKFREQ             5  /** the number of iterations that the MIP is checked, -1 for always. */
+#define SCIP_DEFAULT_LNSCHECK              TRUE  /** should the Benders' decomposition be used in LNS heuristics */
+#define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** the maximum depth at which the LNS check is performed */
+#define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** the fraction of subproblems that are solved in each iteration */
 
-#define AUXILIARYVAR_NAME     "##bendersauxiliaryvar"
+#define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
 
 /* event handler properties */
 #define NODEFOCUS_EVENTHDLR_NAME         "bendersnodefocus"
@@ -320,10 +320,11 @@ SCIP_RETCODE updateEventhdlrUpperbound(
 
 /* Local methods */
 
-/* A workaround for GCG. This is a temp vardata that is set for the auxiliary variables */
+/** A workaround for GCG. This is a temp vardata that is set for the auxiliary variables */
 struct SCIP_VarData
 {
-   int vartype;
+   int                   vartype;             /**< the variable type. In GCG this indicates whether the variable is a
+                                                   master problem or subproblem variable. */
 };
 
 
@@ -454,7 +455,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBendersPriority)
 SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_BENDERS*         benders,            /**< benders */
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
@@ -462,21 +463,21 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    int i;
 
    assert(benders != NULL);
-   assert(set != NULL);
+   assert(targetset != NULL);
    assert(valid != NULL);
-   assert(set->scip != NULL);
+   assert(targetset->scip != NULL);
 
    (*valid) = FALSE;
 
-   if( benders->benderscopy != NULL && set->benders_copybenders )
+   if( benders->benderscopy != NULL && targetset->benders_copybenders )
    {
-      SCIPsetDebugMsg(set, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)set->scip);
-      SCIP_CALL( benders->benderscopy(set->scip, benders, valid) );
+      SCIPsetDebugMsg(targetset, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)targetset->scip);
+      SCIP_CALL( benders->benderscopy(targetset->scip, benders, valid) );
 
       /* if the copy was valid, then the Benders cuts are copied. */
       if( (*valid) )
       {
-         targetbenders = SCIPsetFindBenders(set, SCIPbendersGetName(benders));
+         targetbenders = SCIPsetFindBenders(targetset, SCIPbendersGetName(benders));
 
          /* storing the pointer to the source scip instance */
          targetbenders->sourcescip = sourceset->scip;
@@ -488,7 +489,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
          SCIPbendersSortBenderscuts(benders);
          for( i = 0; i < benders->nbenderscuts; i++ )
          {
-            SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], set) );
+            SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], targetset) );
          }
       }
    }
@@ -535,6 +536,7 @@ SCIP_RETCODE SCIPbendersCreate(
    assert(desc != NULL);
 
    SCIP_ALLOC( BMSallocMemory(benders) );
+   BMSclearMemory(benders);
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benders)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benders)->desc, desc, strlen(desc)+1) );
    (*benders)->priority = priority;
@@ -558,35 +560,6 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->bendersdata = bendersdata;
    SCIP_CALL( SCIPclockCreate(&(*benders)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*benders)->bendersclock, SCIP_CLOCKTYPE_DEFAULT) );
-   (*benders)->ncalls = 0;
-   (*benders)->ncutsfound = 0;
-   (*benders)->ntransferred = 0;
-   (*benders)->active = FALSE;
-   (*benders)->initialized = FALSE;
-   (*benders)->cutsascons = SCIP_DEFAULT_CUTSASCONS;
-   (*benders)->sourcescip = NULL;
-   (*benders)->iscopy = FALSE;
-   (*benders)->mastervarsmap = NULL;
-   (*benders)->addedsubprobs = 0;
-   (*benders)->nlpsubprobs = 0;
-   (*benders)->subprobscreated = FALSE;
-   (*benders)->firstchecked = 0;
-   (*benders)->lastchecked = 0;
-
-   (*benders)->benderscuts = NULL;
-   (*benders)->nbenderscuts = 0;
-   (*benders)->benderscutssize = 0;
-   (*benders)->benderscutssorted = FALSE;
-   (*benders)->benderscutsnamessorted = FALSE;
-
-   /* setting the subproblem arrays to NULL */
-   (*benders)->subproblems = NULL;
-   (*benders)->auxiliaryvars = NULL;
-   (*benders)->subprobobjval = NULL;
-   (*benders)->bestsubprobobjval = NULL;
-   (*benders)->subprobislp = NULL;
-   (*benders)->subprobsetup = NULL;
-   (*benders)->mastervarscont = NULL;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/priority", name);
@@ -596,46 +569,48 @@ SCIP_RETCODE SCIPbendersCreate(
                   paramChgdBendersPriority, (SCIP_PARAMDATA*)(*benders)) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutlp", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "should Benders' cuts be generated for LP solutions?");
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->cutlp, FALSE, cutlp, NULL, NULL) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+        "should Benders' cuts be generated for LP solutions?", &(*benders)->cutlp, FALSE, cutlp, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutpseudo", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "should Benders' cuts be generated for pseudo solutions?");
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->cutpseudo, FALSE, cutpseudo, NULL, NULL) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+        "should Benders' cuts be generated for pseudo solutions?", &(*benders)->cutpseudo, FALSE, cutpseudo, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutrelax", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "should Benders' cuts be generated for relaxation solutions?");
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->cutrelax, FALSE, cutrelax, NULL, NULL) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+        "should Benders' cuts be generated for relaxation solutions?", &(*benders)->cutrelax, FALSE, cutrelax, NULL, NULL) ); /*lint !e740*/
 
    /* These parameters are left for the user to decide in a settings file. This departs from the usual SCIP convention
     * where the settings available at the creation of the plugin can be set in the function call. */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/transfercuts", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should Benders' cuts from LNS heuristics be transferred to the main SCIP instance?");
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->transfercuts, FALSE, SCIP_DEFAULT_TRANSFERCUTS, NULL, NULL) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+        "Should Benders' cuts from LNS heuristics be transferred to the main SCIP instance?", &(*benders)->transfercuts,
+        FALSE, SCIP_DEFAULT_TRANSFERCUTS, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/mipcheckfreq", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "The frequency at which the MIP subproblems are checked, -1 for always");
-   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->mipcheckfreq, FALSE, SCIP_DEFAULT_MIPCHECKFREQ, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+        "The frequency at which the MIP subproblems are checked, -1 for always", &(*benders)->mipcheckfreq, FALSE,
+        SCIP_DEFAULT_MIPCHECKFREQ, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/lnscheck", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should Benders' decomposition be used in LNS heurisics?");
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->lnscheck, FALSE, SCIP_DEFAULT_LNSCHECK, NULL, NULL) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+        "Should Benders' decomposition be used in LNS heurisics?", &(*benders)->lnscheck, FALSE, SCIP_DEFAULT_LNSCHECK,
+        NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/lnsmaxdepth", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level at which the LNS check is performed (-1: no limit)");
-   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->lnsmaxdepth, TRUE, SCIP_DEFAULT_LNSMAXDEPTH, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+        "maximal depth level at which the LNS check is performed (-1: no limit)", &(*benders)->lnsmaxdepth, TRUE,
+        SCIP_DEFAULT_LNSMAXDEPTH, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutsasconss", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+        "Should the transferred cuts be added as constraints?", &(*benders)->cutsasconss, FALSE,
+        SCIP_DEFAULT_CUTSASCONSS, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/subprobfrac", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "The fraction of subproblems that are solved in each iteration.");
-   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->subprobfrac, FALSE, SCIP_DEFAULT_SUBPROBFRAC, 0.0, 1.0, NULL, NULL) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+        "The fraction of subproblems that are solved in each iteration.", &(*benders)->subprobfrac, FALSE,
+        SCIP_DEFAULT_SUBPROBFRAC, 0.0, 1.0, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1254,8 +1229,6 @@ SCIP_RETCODE SCIPbendersExitpre(
       /* stop timing */
       SCIPclockStop(benders->setuptime, set);
    }
-
-
 
    return SCIP_OKAY;
 }
@@ -2480,6 +2453,7 @@ void SCIPbendersSetSolvesub(
 
    benders->benderssolvesub = benderssolvesub;
 }
+
 /** sets post-solve callback of benders */
 void SCIPbendersSetPostsolve(
    SCIP_BENDERS*         benders,            /**< benders */
