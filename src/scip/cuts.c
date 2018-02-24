@@ -15,7 +15,6 @@
 
 /**@file   cuts.c
  * @brief  methods for aggregation of rows
- *
  * @author Jakob Witzig
  * @author Robert Lion Gottwald
  */
@@ -85,12 +84,12 @@ void printCutQuad(
 }
 #endif
 
-/* macro to make sure a value is not equal to zero, i.e. NONZERO(x) != 0.0
- * will be TRUE for every x including 0.0
+/** macro to make sure a value is not equal to zero, i.e. NONZERO(x) != 0.0
+ *  will be TRUE for every x including 0.0
  *
- * To avoid branches it will add 1e-100 with the same sign as x to x which will
- * be rounded away for any sane non-zero value but will make sure the value is
- * never exactly 0.0
+ *  To avoid branches it will add 1e-100 with the same sign as x to x which will
+ *  be rounded away for any sane non-zero value but will make sure the value is
+ *  never exactly 0.0.
  */
 #define NONZERO(x)   (COPYSIGN(1e-100, (x)) + (x))
 
@@ -180,7 +179,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuad(
    return SCIP_OKAY;
 }
 
-/* calculates the cuts efficacy for the given solution */
+/** calculates the cuts efficacy for the given solution */
 static
 SCIP_Real calcEfficacy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -210,6 +209,7 @@ SCIP_Real calcEfficacy(
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
 
+/** calculates the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter */
 static
 SCIP_Real calcEfficacyNormQuad(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -272,7 +272,7 @@ SCIP_Real calcEfficacyNormQuad(
    return norm;
 }
 
-/* calculates the cuts efficacy for the given solution; the cut coefs are stored densely and in quad precision */
+/** calculates the cuts efficacy for the given solution; the cut coefs are stored densely and in quad precision */
 static
 SCIP_Real calcEfficacyDenseStorageQuad(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -575,8 +575,7 @@ SCIP_Bool chgQuadCoeffWithBound(
    return FALSE;
 }
 
-
-/** scales the cut and then  tighten the coefficients of the given cut based on the maximal activity;
+/** scales the cut and then tightens the coefficients of the given cut based on the maximal activity;
  *  see cons_linear.c consdataTightenCoefs() for details; the cut is given in a semi-sparse quad precision array;
  */
 static
@@ -964,7 +963,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
    return SCIP_OKAY;
 }
 
-/** scales the cut and then  tighten the coefficients of the given cut based on the maximal activity;
+/** scales the cut and then tightens the coefficients of the given cut based on the maximal activity;
  *  see cons_linear.c consdataTightenCoefs() for details; the cut is given in a semi-sparse array;
  */
 static
@@ -4079,6 +4078,7 @@ SCIP_RETCODE SCIPcalcMIR(
          QUAD_ARRAY_STORE(tmpcoefs, cutinds[i], tmp);
       }
    }
+
    /* free temporary memory */
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
    SCIPfreeBufferArray(scip, &boundtype);
@@ -4229,6 +4229,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_Bool localbdsused;
    SCIP_Real contactivity;
    SCIP_Real contsqrnorm;
+
    assert(aggrrow != NULL);
    assert(aggrrow->nrows + aggrrow->nnz >= 1);
    assert(success != NULL);
@@ -4239,7 +4240,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
-
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &mksetcoefs, QUAD_ARRAY_SIZE(nvars)) );
@@ -4247,6 +4247,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvalues, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz + 6) );
+
    /* we only compute bound distance for integer variables; we allocate an array of length aggrrow->nnz to store this, since
     * this is the largest number of integer variables. (in contrast to the number of total variables which can be 2 *
     * aggrrow->nnz variables: if all are continuous and we use variable bounds to completement, we introduce aggrrow->nnz
@@ -7694,7 +7695,7 @@ SCIP_RETCODE cutsTransformStrongCG(
 
       /* determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
       SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch, FALSE, allowlocal, FALSE, FALSE, NULL, NULL,
-                                     &bestlb, &bestub, &bestlbtype, &bestubtype, &selectedbound, freevariable) );
+            &bestlb, &bestub, &bestlbtype, &bestubtype, &selectedbound, freevariable) );
 
       /* check if we have an unbounded integral variable */
       if( *freevariable )
@@ -8261,7 +8262,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
        *   a_{zu_j} := a_{zu_j} + a_j * bu_j
        */
       SCIP_CALL( cutsTransformStrongCG(scip, sol, boundswitch, usevbds, allowlocal,
-                                       tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, &freevariable, &localbdsused) );
+            tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, &freevariable, &localbdsused) );
 
       assert(allowlocal || !localbdsused);
       *cutislocal = *cutislocal || localbdsused;
