@@ -391,9 +391,7 @@ SCIP_RETCODE sepastoreDelCut(
    return SCIP_OKAY;
 }
 
-/** adds cut to separation storage and captures it;
- *  if the cut should be forced to enter the LP, an infinite score has to be used
- */
+/** adds cut to separation storage and captures it */
 SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
