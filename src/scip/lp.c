@@ -17084,15 +17084,19 @@ SCIP_RETCODE computeRelIntPoint(
    assert(lpi != NULL);
 
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPsetLpfeastol(set));
-   if( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
+   if( retcode != SCIP_OKAY )
    {
-      SCIP_CALL( retcode );
+      /* stop execution on error, since result is likely to be unsuable */
+      SCIPmessagePrintWarning(messagehdlr, "Could not set feasibility tolerance of LP solver for relative interior point computation.\n");
+      return SCIP_LPERROR;
    }
 
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_DUALFEASTOL, SCIPsetDualfeastol(set));
-   if( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
+   if( retcode != SCIP_OKAY )
    {
-      SCIP_CALL( retcode );
+      /* stop execution on error, since result is likely to be unsuable */
+      SCIPmessagePrintWarning(messagehdlr, "Could not set dual feasibility tolerance of LP solver for relative interior point computation.\n");
+      return SCIP_LPERROR;
    }
 
    /* get storage */
@@ -17557,15 +17561,19 @@ SCIP_RETCODE computeRelIntPoint(
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit);
 
    /* check, if parameter is unknown */
-   if ( retcode == SCIP_PARAMETERUNKNOWN )
+   if( retcode == SCIP_PARAMETERUNKNOWN )
       SCIPmessagePrintWarning(messagehdlr, "Could not set time limit of LP solver for relative interior point computation.\n");
+   else
+      return retcode;
 
    /* set iteration limit */
    retcode = SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, iterlimit);
 
    /* check, if parameter is unknown */
-   if ( retcode == SCIP_PARAMETERUNKNOWN )
+   if( retcode == SCIP_PARAMETERUNKNOWN )
       SCIPmessagePrintWarning(messagehdlr, "Could not set iteration limit of LP solver for relative interior point computation.\n");
+   else
+      return retcode;
 
    /* solve and store point */
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
@@ -17751,7 +17759,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    )
 {
    SCIP_LPI* lpi;
-
    SCIP_RETCODE retcode;
 
    assert(set != NULL);
@@ -17795,5 +17802,11 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
    SCIP_CALL( SCIPlpiFree(&lpi) );
 
-   return retcode;
+   /* return error, unless we obtained an LP error */
+   if ( retcode != SCIP_OKAY && retcode != SCIP_LPERROR )
+   {
+      SCIP_CALL( retcode );
+   }
+
+   return SCIP_OKAY;
 }
