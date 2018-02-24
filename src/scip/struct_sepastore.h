@@ -17,6 +17,7 @@
  * @ingroup INTERNALAPI
  * @brief  datastructures for storing separated cuts
  * @author Tobias Achterberg
+ * @author Robert Lion Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,7 +39,7 @@ extern "C" {
 struct SCIP_SepaStore
 {
    SCIP_ROW**            cuts;               /**< array with separated cuts sorted by score */
-   SCIP_RANDNUMGEN*      rng;                /**< randum number generator used for tie breaking */
+   SCIP_RANDNUMGEN*      rng;                /**< random number generator used for tie breaking */
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
    int                   nforcedcuts;        /**< number of forced separated cuts (first positions in cuts array) */
