@@ -537,26 +537,17 @@ SCIP_RETCODE aggregateNextRow(
    SCIP_Real bestrowscore;
    SCIP_Real aggrfac;
    int bestrowside;
-
+   int ncontvars;
    int nnz = SCIPaggrRowGetNNz(aggrrow);
    int* inds = SCIPaggrRowGetInds(aggrrow);
 
    assert( success != NULL );
    *success = FALSE;
 
-   {
-      int nbinvars;
-      int nintvars;
-      int ncontvars;
+   ncontvars = SCIPgetNImplVars(scip) + SCIPgetNContVars(scip);
 
-      nbinvars = SCIPgetNBinVars(scip);
-      nintvars = SCIPgetNIntVars(scip);
-      firstcontvar =  nbinvars + nintvars;
-      ncontvars = SCIPgetNVars(scip) - firstcontvar;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &badvarinds, MIN(ncontvars, nnz)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &badvarbddist, MIN(ncontvars, nnz)) );
-   }
+   SCIP_CALL( SCIPallocBufferArray(scip, &badvarinds, MIN(ncontvars, nnz)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &badvarbddist, MIN(ncontvars, nnz)) );
 
    nbadvars = 0;
 
