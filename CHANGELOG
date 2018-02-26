@@ -5,6 +5,7 @@ fixed bugs:
 - fixed check for activated debugging solution in components constraint handler
 - fixed potential bug concerning solution linking to LP in SCIPperformGenericDivingAlgorithm()
 - fixed reward computation in ALNS on continuous, especially nonlinear, problems
+- fixed check of timing in heur_completesol
 
 
 SCIP version 5.0.1
