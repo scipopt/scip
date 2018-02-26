@@ -940,15 +940,15 @@ void computeCircleIntersection(
 
    assert(xres != NULL);
    assert(yres != NULL);
-   assert(r1 >= 0.0);
-   assert(r2 >= 0.0);
-   assert(rbound >= 0.0);
+   assert(SCIPisGE(scip, r1, 0.0));
+   assert(SCIPisGE(scip, r2, 0.0));
+   assert(SCIPisGE(scip, rbound, 0.0));
 
    distsqr = SQR(x2 - x1) + SQR(y2 - y1);
    assert(distsqr != 0.0);
 
    /* if the distance is too large, the circles don't intersect */
-   if( distsqr > SQR(r1 + r2) )
+   if( SCIPisGT(scip, distsqr, SQR(r1 + r2)) )
    {
       *xres = SCIPinfinity(scip);
       *yres = SCIPinfinity(scip);
@@ -963,20 +963,23 @@ void computeCircleIntersection(
    *yres = 0.5 * (y1 + y2) + 0.5 * (r1sqr - r2sqr) * (y2 - y1) / distsqr;
 
    /* choose intersection according to left-first, bottom-second order */
-   if( (y1 != y2 && sqrtterm * (y2 - y1) > 0.0) || (y1 == y2 && sqrtterm * (x2 - x1) > 0.0) )
+   if( (!SCIPisEQ(scip, y1, y2) && SCIPisGT(scip, sqrtterm * (y2 - y1), 0.0))
+       || (SCIPisEQ(scip, y1, y2) && SCIPisGT(scip, sqrtterm * (x2 - x1), 0.0)) )
+   {
       sqrtterm *= -1.0;
+   }
 
    *xres += sqrtterm * (y2 - y1);
    *yres += sqrtterm * (x2 - x1);
 
    /* if point does not lie in the bounding circle, try the other one */
 
-   if( !SCIPisInfinity(scip, rbound) && SQR(*xres) + SQR(*yres) > SQR(rbound) )
+   if( !SCIPisInfinity(scip, rbound) && SCIPisGT(scip, SQR(*xres) + SQR(*yres), SQR(rbound)) )
    {
       *xres -= 2 * sqrtterm * (y2 - y1);
       *yres -= 2 * sqrtterm * (x2 - x1);
 
-      if( SQR(*xres) + SQR(*yres) > SQR(rbound) )
+      if( SCIPisGT(scip, SQR(*xres) + SQR(*yres), SQR(rbound)) )
       {
          *xres = SCIPinfinity(scip);
          *yres = SCIPinfinity(scip);
@@ -987,6 +990,7 @@ void computeCircleIntersection(
 /** checks whether a potential position of a circle intersects any other already packed circle */
 static
 SCIP_Bool isValidPosition(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            xvalues,            /**< x-coordinates of packed elements */
    SCIP_Real*            yvalues,            /**< y-coordinates of packed elements */
    SCIP_Real*            rexts,              /**< radii of packed elements */
@@ -1007,8 +1011,10 @@ SCIP_Bool isValidPosition(
 
    for( i = 0; i < nelements; ++i )
    {
+      SCIP_Real dist = SQR(xcand - xvalues[i]) + SQR(ycand - yvalues[i]);
+
       /* check if the distance between mid points is larger than the sum of the radii */
-      if( ispacked[i] && SQR(xcand - xvalues[i]) + SQR(ycand - yvalues[i]) > SQR(rcand + rexts[elements[i]]) )
+      if( ispacked[i] && SCIPisGT(scip, dist, SQR(rcand + rexts[elements[i]])) )
          return FALSE;
    }
 
