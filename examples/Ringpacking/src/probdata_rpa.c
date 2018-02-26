@@ -290,25 +290,6 @@ SCIP_RETCODE ensureSize(
    return SCIP_OKAY;
 }
 
-/** helper function to create a variable for a given pattern */
-static
-SCIP_RETCODE addPattern(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROBDATA*        probdata,           /**< problem data */
-   SCIP_PATTERN*         pattern             /**< pattern */
-   )
-{
-   SCIP_VAR* var;
-   char name[SCIP_MAXSTRLEN];
-   SCIP_Real obj;
-   SCIP_Real ub;
-
-   /* add variable and pattern to problem data */
-   SCIP_CALL( SCIPprobdataAddVar(scip, probdata, pattern, var) );
-
-   return SCIP_OKAY;
-}
-
 /** create variables for all existing circular and rectangular patterns */
 static
 SCIP_RETCODE createPatternVars(
@@ -359,8 +340,6 @@ SCIP_RETCODE createPatternVars(
    /* create variables for rectangular patterns */
    for( k = 0; k < probdata->nrpatterns; ++k )
    {
-      SCIP_Real obj;
-      SCIP_Real ub;
       int i;
 
       pattern = probdata->rpatterns[k];
@@ -586,7 +565,6 @@ SCIP_RETCODE enumeratePatterns(
 {
    SCIP_Real* rexts;
    SCIP_Real* _rints;
-   int* demands;
    SCIP_Real totaltimelim;
    SCIP_Real maxvolume;
    SCIP_Real volume;
@@ -603,17 +581,16 @@ SCIP_RETCODE enumeratePatterns(
    /* get problem data */
    rexts = SCIPprobdataGetRexts(probdata);
    _rints = SCIPprobdataGetRints(probdata);
-   demands = SCIPprobdataGetDemands(probdata);
    ntypes = SCIPprobdataGetNTypes(probdata);
    lasttype = ntypes -1;
    volume = 0.0;
-   maxvolume = SQR(_rints[SCIPpatternGetType(pattern)]) * M_PI;
+   maxvolume = SQR(_rints[SCIPpatternGetType(pattern)]) * M_PI; /*lint !e666*/
 
    /* check whether there is enough time left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &totaltimelim) );
 
    /* main loop */
-   while( TRUE )
+   while( !SCIPisStopped(scip) )
    {
       SCIP_Real timelim;
       int t = lasttype;
@@ -689,7 +666,7 @@ SCIP_RETCODE enumeratePatterns(
       assert(nselected[t] < ms[t]);
       ++(nselected[t]);
       volume += SQR(rexts[t]) * M_PI;
-      SCIPpatternAddElement(pattern, t, SCIP_INVALID, SCIP_INVALID);
+      SCIP_CALL( SCIPpatternAddElement(pattern, t, SCIP_INVALID, SCIP_INVALID) );
    }
 
    assert(SCIPpatternGetNElemens(pattern) == 0);
@@ -1055,7 +1032,6 @@ SCIP_PACKABLE verifyCircularPatternInOrder(
 {
    SCIP_Real* rexts;
    SCIP_Real rbounding;
-   int ntypes;
    int i;
    int j;
    int k;
@@ -1069,9 +1045,8 @@ SCIP_PACKABLE verifyCircularPatternInOrder(
 
    rexts = SCIPprobdataGetRexts(probdata);
    rbounding = SCIPprobdataGetRints(probdata)[type];
-   ntypes = SCIPprobdataGetNTypes(probdata);
 
-   assert(elements[0] <= ntypes);
+   assert(elements[0] <= SCIPprobdataGetNTypes(probdata));
 
    /* place first element at left-most position */
    *xvalues[0] = rexts[elements[0]]- rbounding;
@@ -1286,7 +1261,6 @@ SCIP_RETCODE SCIPprobdataEnumeratePatterns(
    )
 {
    SCIP_PATTERN* pattern;
-   int* demands;
    int* ms;
    int* nselected;
    int ntypes;
@@ -1295,8 +1269,6 @@ SCIP_RETCODE SCIPprobdataEnumeratePatterns(
    assert(probdata != NULL);
    ntypes = SCIPprobdataGetNTypes(probdata);
    assert(ntypes > 0);
-   demands = SCIPprobdataGetDemands(probdata);
-   assert(demands != NULL);
 
    probdata->enumtime = -SCIPgetTotalTime(scip);
 

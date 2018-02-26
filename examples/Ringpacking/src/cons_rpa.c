@@ -449,7 +449,6 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
             SCIP_Real x = SCIPpatternGetElementPosX(patterns[p], i);
             SCIP_Real y = SCIPpatternGetElementPosY(patterns[p], i);
             SCIP_Real _rext = rexts[elemtype];
-            SCIP_Real _rint = rints[elemtype];
 
             SCIPinfoMessage(scip, file, "\\draw[draw=none,fill=black!%d!white] (%g,%g) circle (%g);\n",
                getShadingVal(elemtype, ntypes), x, y, _rext);
