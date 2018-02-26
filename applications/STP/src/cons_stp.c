@@ -179,6 +179,7 @@ SCIP_RETCODE cut_add(
    int*                  capa,               /**< edges capacities (scaled) */
    const int             updatecapa,         /**< update capacities? */
    int*                  ncuts,              /**< pointer to store number of cuts */
+   SCIP_Bool             local,              /**< is the cut local? */
    SCIP_Bool*            success             /**< pointer to store whether add cut be added */
    )
 {
@@ -199,7 +200,7 @@ SCIP_RETCODE cut_add(
    assert(g != NULL);
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -647,6 +648,7 @@ SCIP_RETCODE sep_2cut(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
+   const int*            termorg,            /**< original terminals or NULL */
    int                   maxcuts,            /**< maximal number of cuts */
    int*                  ncuts               /**< pointer to store number of cuts */
    )
@@ -962,6 +964,8 @@ SCIP_RETCODE sep_2cut(
 
          fclose(fptr);
 #endif
+         // declare cuts on branched-on (artificial) terminals as local
+         const SCIP_Bool localcut = (termorg != NULL && termorg[i] != g->term[i]);
 
          /* non-trivial cut? */
          if( w[i] != 1 )
@@ -994,7 +998,7 @@ SCIP_RETCODE sep_2cut(
 
          rerun = TRUE;
 
-         SCIP_CALL( cut_add(scip, conshdlr, g, xval, capa, nested_cut || disjunct_cut, ncuts, &addedcut) );
+         SCIP_CALL( cut_add(scip, conshdlr, g, xval, capa, nested_cut || disjunct_cut, ncuts, localcut, &addedcut) );
          if( addedcut )
          {
             count++;
@@ -1243,6 +1247,8 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   maxcuts = atrootnode ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
+
    assert(nconss == 1);
    consdata = SCIPconsGetData(conss[0]);
 
@@ -1254,6 +1260,8 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
 #ifndef NDEBUG
    nterms = g->terms;
 #endif
+
+   SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
    /* change graph according to branch-and-bound terminal changes  */
    if( !atrootnode && g->stp_type == STP_SPG )
@@ -1272,11 +1280,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
             graph_knot_chg(g, k, 0);
    }
 
-   maxcuts = atrootnode ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
-
-   SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
-
-   SCIP_CALL( sep_2cut(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+   SCIP_CALL( sep_2cut(scip, conshdlr, conshdlrdata, consdata, termorg, maxcuts, &ncuts) );
 
    if( ncuts > 0 )
       *result = SCIP_SEPARATED;
