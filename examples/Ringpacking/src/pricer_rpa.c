@@ -302,7 +302,6 @@ SCIP_RETCODE solvePricingMINLP(
 
    assert(probdata != NULL);
    assert(lambdas != NULL);
-   assert(timelim >= 0.0);
    assert(nodelim >= -1L);
    assert(addedvar != NULL);
    assert(solstat != NULL);
@@ -311,6 +310,10 @@ SCIP_RETCODE solvePricingMINLP(
    *addedvar = FALSE;
    *solstat = SCIP_STATUS_UNKNOWN;
    *dualbound = -SCIPinfinity(scip);
+
+   /* no time left */
+   if( timelim <= 0.0 )
+      return SCIP_OKAY;
 
    width = SCIPprobdataGetWidth(probdata);
    height = SCIPprobdataGetHeight(probdata);
@@ -549,7 +552,12 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_Real* lambdas;
    SCIP_STATUS solstat;
    SCIP_Real redcostslb;
+   SCIP_Real nlptilim;
+   SCIP_Real heurtilim;
+   SCIP_Real totaltilim;
+   SCIP_Longint nlpnodelim;
    SCIP_Bool success;
+   int heuriterlim;
    int t;
 
    *result = SCIP_SUCCESS;
@@ -578,8 +586,19 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
       SCIPdebugMsg(scip, "lambda_%d = %g\n", t, lambdas[t]);
    }
 
-   /* TODO add parameter for time and node limit */
-   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, 100.0, 10000L, &success, &solstat, &redcostslb) );
+   /* collect working limits */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &totaltilim) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/pricing/nlptilim", &nlptilim) );
+   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/pricing/nlpnodelim", &nlpnodelim) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/pricing/heurtilim", &heurtilim) );
+   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/pricing/heuriterlim", &heuriterlim) );
+
+   /* TODO solve pricing problem with heuristic */
+   heurtilim = MIN(heurtilim, SCIPgetSolvingTime(scip) - totaltilim);
+
+   /* solve pricing problem as MINLP  */
+   nlptilim = MIN(nlptilim, totaltilim - SCIPgetSolvingTime(scip));
+   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, nlptilim, nlpnodelim, &success, &solstat, &redcostslb) );
    redcostslb += 1.0;
    SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 

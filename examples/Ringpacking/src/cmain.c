@@ -40,6 +40,11 @@
 #define DEFAULT_NLP_TIMELIMITSOFT            SCIP_REAL_MAX /**< soft time limit for verification NLP */
 #define DEFAULT_HEUR_ITERLIMITSOFT           100       /**< soft iteration limit for heuristic verification */
 #define DEFAULT_HEUR_TIMELIMITSOFT           SCIP_REAL_MAX /**< soft time limit for heuristic verification */
+#define DEFAULT_PRICING_NLPTILIM             10.0      /**< time limit for each pricing NLP */
+#define DEFAULT_PRICING_NLPNODELIM           SCIP_LONGINT_MAX /**< node limit for each pricing NLP */
+#define DEFAULT_PRICING_HEURTILIM            10.0      /**< time limit for each heuristic pricing */
+#define DEFAULT_PRICING_HEURITERLIM          100       /**< iteration limit for each heuristic pricing */
+
 #define DEFAULT_TEXFILENAME                  ""        /**< filename for tex output for the best found solution (\"\": disable) */
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
@@ -82,7 +87,10 @@ SCIP_RETCODE runShell(
    /* turn off all separation algorithms */
    SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
-   /* add parameters */
+   /*
+    * parameters for verification
+    */
+
    SCIP_CALL( SCIPaddRealParam(scip,
          "ringpacking/nlptimelimit",
          "time limit for verification NLP",
@@ -96,7 +104,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPaddRealParam(scip,
          "ringpacking/heurtimelimit",
          "time limit for heuristic verification",
-         NULL, FALSE, DEFAULT_HEUR_TIMELIMIT, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+         NULL, FALSE, DEFAULT_HEUR_TIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "ringpacking/heuriterlimit",
@@ -106,7 +114,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPaddRealParam(scip,
          "ringpacking/nlptimelimitsoft",
          "soft time limit for verification NLP",
-         NULL, FALSE, DEFAULT_NLP_TIMELIMITSOFT, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+         NULL, FALSE, DEFAULT_NLP_TIMELIMITSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip,
          "ringpacking/nlpnodelimitsoft",
@@ -116,12 +124,40 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPaddRealParam(scip,
          "ringpacking/heurtimelimitsoft",
          "soft time limit for heuristic verification",
-         NULL, FALSE, DEFAULT_HEUR_TIMELIMITSOFT, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+         NULL, FALSE, DEFAULT_HEUR_TIMELIMITSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "ringpacking/heuriterlimitsoft",
          "soft iteration limit for heuristic verification",
          NULL, FALSE, DEFAULT_HEUR_ITERLIMITSOFT, 0, INT_MAX, NULL, NULL) );
+
+   /*
+    * parameters for pricing
+    */
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "ringpacking/pricing/nlptilim",
+         "time limit for each pricing NLP",
+         NULL, FALSE, DEFAULT_PRICING_NLPTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip,
+         "ringpacking/pricing/nlpnodelim",
+         "node limit for each pricing NLP",
+         NULL, FALSE, DEFAULT_PRICING_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "ringpacking/pricing/heurtilim",
+         "time limit for each heuristic pricing",
+         NULL, FALSE, DEFAULT_PRICING_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "ringpacking/pricing/heuriterlim",
+         "iteration limit for each heuristic pricing",
+         NULL, FALSE, DEFAULT_PRICING_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
+
+   /*
+    * miscellaneous parameters
+    */
 
    SCIP_CALL( SCIPaddStringParam(scip,
          "ringpacking/texfilename",
