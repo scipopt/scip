@@ -92,7 +92,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->initiallp = FALSE;
    (*sepastore)->forcecuts = FALSE;
 
-   SCIP_CALL( SCIPrandomCreate(&(*sepastore)->rng, blkmem, (unsigned int)SCIPsetInitializeRandomSeed(set, 0x5EED)) );
+   SCIP_CALL( SCIPrandomCreate(&(*sepastore)->randnumgen, blkmem, (unsigned int)SCIPsetInitializeRandomSeed(set, 0x5EED)) );
 
    return SCIP_OKAY;
 }
@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPsepastoreFree(
    assert(*sepastore != NULL);
    assert((*sepastore)->ncuts == 0);
 
-   SCIPrandomFree(&(*sepastore)->rng, blkmem);
+   SCIPrandomFree(&(*sepastore)->randnumgen, blkmem);
    BMSfreeMemoryArrayNull(&(*sepastore)->cuts);
    BMSfreeMemory(sepastore);
 
@@ -882,7 +882,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    depth = SCIPnodeGetDepth(node);
 
    /* call cut selection algorithm */
-   SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->rng, sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
+   SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->randnumgen, sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
 
    /* apply all selected cuts */
    for( i = 0; i < nselectedcuts && !(*cutoff); i++ )

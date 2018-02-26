@@ -2453,7 +2453,7 @@ void selectBestCut(
 SCIP_RETCODE SCIPselectCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
-   SCIP_RANDNUMGEN*      rng,                /**< random number generator for tie-breaking, or NULL */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
    int                   ncuts,              /**< number of cuts in given array */
    int                   nforcedcuts,        /**< number of forced cuts at start of given array */
    int                   maxselectedcuts,    /**< maximal number of cuts to select */
@@ -2546,9 +2546,9 @@ SCIP_RETCODE SCIPselectCuts(
          /* add small term to prefer global pool cuts */
          scores[i] += SCIProwIsInGlobalCutpool(cuts[i]) ? 1e-4 : 0.0;
 
-         if( rng != NULL )
+         if( randnumgen != NULL )
          {
-            scores[i] += SCIPrandomGetReal(rng, -1e-6, 1e-6);
+            scores[i] += SCIPrandomGetReal(randnumgen, -1e-6, 1e-6);
          }
 
          goodscore = MAX(goodscore, scores[i]);

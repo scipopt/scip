@@ -39,7 +39,7 @@ extern "C" {
 struct SCIP_SepaStore
 {
    SCIP_ROW**            cuts;               /**< array with separated cuts sorted by score */
-   SCIP_RANDNUMGEN*      rng;                /**< random number generator used for tie breaking */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator used for tie breaking */
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
    int                   nforcedcuts;        /**< number of forced separated cuts (first positions in cuts array) */
