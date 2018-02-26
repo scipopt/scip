@@ -142,8 +142,8 @@ SCIP_RETCODE verifyCircularPattern(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
    /* verify heuristically */
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/heurtimelimit", &heurtimelimit) );
-   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/heuriterlimit", &heuriterlimit) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilim", &heurtimelimit) );
+   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlim", &heuriterlimit) );
    heurtimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), heurtimelimit); /*lint !e666*/
 
    SCIPdebugMsg(scip, "call verification heuristic (%g,%d)\n", heurtimelimit, heuriterlimit);
@@ -152,8 +152,8 @@ SCIP_RETCODE verifyCircularPattern(
    /* use verification NLP if pattern is still not verified */
    if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
    {
-      SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/nlptimelimit", &nlptimelimit) );
-      SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/nlpnodelimit", &nlpnodelimit) );
+      SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/nlptilim", &nlptimelimit) );
+      SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/verification/nlpnodelim", &nlpnodelimit) );
       nlptimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), nlptimelimit); /*lint !e666*/
 
       SCIPdebugMsg(scip, "call verification NLP (%g,%lld)\n", nlptimelimit, nlpnodelimit);

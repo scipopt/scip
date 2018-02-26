@@ -704,10 +704,10 @@ SCIP_RETCODE setupProblem(
    assert(SCIPprobdataGetNTypes(probdata) > 0);
 
    /* collect working limits */
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/nlptimelimitsoft", &nlptilim) );
-   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/nlpnodelimitsoft", &nlpnodelim) );
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/heurtimelimitsoft", &heurtilim) );
-   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/heuriterlimitsoft", &heuriterlim) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/nlptilimsoft", &nlptilim) );
+   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/verification/nlpnodelimsoft", &nlpnodelim) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilimsoft", &heurtilim) );
+   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlimsoft", &heuriterlim) );
 
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
