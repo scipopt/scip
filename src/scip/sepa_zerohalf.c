@@ -65,9 +65,6 @@
 #define DEFAULT_MAXCUTCANDS        2000 /**< maximal number of zerohalf cuts considered per separation round */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.0 /**< maximal slack of rows to be used in aggregation in the root node */
-#define DEFAULT_GOODSCORE           0.9 /**< threshold for score of cut relative to best score to be considered good,
-                                         *   so that less strict filtering is applied */
-#define DEFAULT_BADSCORE            0.5 /**< threshold for score of cut relative to best score to be discarded */
 #define DEFAULT_MINVIOL             0.1 /**< minimal violation to generate zerohalfcut for */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
@@ -161,16 +158,13 @@ struct Mod2Matrix
 /** data of separator */
 struct SCIP_SepaData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random generator for tiebreaking */
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row used for generating cuts */
    SCIP_ROW**            cuts;               /**< generated in the current call */
-   SCIP_Real*            cutscores;          /**< score for each cut genereted in the current call */
    SCIP_Real             minviol;            /**< minimal violation to generate zerohalfcut for */
    SCIP_Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
    SCIP_Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
    SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
-   SCIP_Real             goodscore;          /**< threshold for score of cut relative to best score to be considered good,
-                                              *   so that less strict filtering is applied */
-   SCIP_Real             badscore;           /**< threshold for score of cut relative to best score to be discarded */
    SCIP_Bool             infeasible;         /**< infeasibility was detected after adding a zerohalf cut */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
@@ -1795,12 +1789,10 @@ SCIP_RETCODE generateZerohalfCut(
             {
                int newsize = SCIPcalcMemGrowSize(scip, sepadata->ncuts);
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->cuts, sepadata->cutssize, newsize) );
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->cutscores, sepadata->cutssize, newsize) );
                sepadata->cutssize = newsize;
             }
 
             sepadata->cuts[pos] = cut;
-            sepadata->cutscores[pos] = cutefficacy + 1e-4 * (1 - SCIProwIsLocal(cut));
          }
          else
          {
@@ -2085,6 +2077,39 @@ SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_SEPAINITSOL(sepaInitsolZerohalf)
+{
+   SCIP_SEPADATA* sepadata;
+
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* allocate random generator */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   assert(sepadata->randnumgen == NULL);
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, 0x5EED) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_SEPAEXITSOL(sepaExitsolZerohalf)
+{
+   SCIP_SEPADATA* sepadata;
+
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* free random generator */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPfreeRandom(scip, &sepadata->randnumgen);
+
+   return SCIP_OKAY;
+}
+
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
@@ -2137,7 +2162,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    SCIP_CALL( SCIPaggrRowCreate(scip, &sepadata->aggrrow) );
    sepadata->ncuts = 0;
    sepadata->cutssize = 0;
-   sepadata->cutscores = NULL;
    sepadata->cuts = NULL;
    sepadata->infeasible = FALSE;
 
@@ -2272,83 +2296,30 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
     */
    if( sepadata->ncuts > 0  )
    {
-      SCIP_Real goodscore;
-      SCIP_Real badscore;
-      int naccepted;
+      int nselectedcuts;
 
-      SCIPsortDownRealPtr(sepadata->cutscores, (void**)sepadata->cuts, sepadata->ncuts);
-
-      goodscore = sepadata->goodscore * sepadata->cutscores[0];
-      badscore = sepadata->badscore * sepadata->cutscores[0];
-      naccepted = 0;
+      SCIP_CALL( SCIPselectCuts(scip, sepadata->cuts, sepadata->randnumgen, sepadata->ncuts, 0, maxsepacuts, &nselectedcuts) );
 
       for( i = 0; i < sepadata->ncuts; ++i )
       {
-         int j;
-         int newncuts;
-
-         if( sepadata->cuts[i] == NULL )
-            continue;
-
-         /* just release remaining cuts if the maximum number has been accepted or score is too bad */
-         if( naccepted == maxsepacuts || sepadata->cutscores[i] < badscore )
+         if( i < nselectedcuts )
          {
-            SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
-            continue;
-         }
-
-         /* add global cuts to the pool and local cuts to the sepastore */
-         if( SCIProwIsLocal(sepadata->cuts[i]) )
-         {
-            SCIP_CALL( SCIPaddRow(scip, sepadata->cuts[i], FALSE, &sepadata->infeasible) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPaddPoolCut(scip, sepadata->cuts[i]) );
-         }
-
-         /* increase counters and initialize newncuts variable to truncate the
-          * the loop if cuts at the end of the array have been removed already
-          */
-         newncuts = i;
-         ++naccepted;
-
-         for( j = i + 1; j < sepadata->ncuts; ++j )
-         {
-            SCIP_Real ortho;
-
-            if( sepadata->cuts[j] == NULL )
-               continue;
-
-            /* compute orthogonality */
-            ortho = SCIProwGetOrthogonality(sepadata->cuts[j], sepadata->cuts[i], 'e');
-
-            /* if the orthogonality is below 0.5 we always discard the other cut and if it
-             * is above 0.9 we always keep it. If the orthogonality is between these values we
-             * only keep global cuts of relatively high quality.
-             */
-            if( ortho < 0.5 ||
-               (ortho < 0.9 && (SCIProwIsLocal(sepadata->cuts[j]) || sepadata->cutscores[j] < goodscore)) )
+            /* if selected, add global cuts to the pool and local cuts to the sepastore */
+            if( SCIProwIsLocal(sepadata->cuts[i]) )
             {
-               SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[j]) );
+               SCIP_CALL( SCIPaddRow(scip, sepadata->cuts[i], FALSE, &sepadata->infeasible) );
             }
             else
             {
-               newncuts = j + 1;
+               SCIP_CALL( SCIPaddPoolCut(scip, sepadata->cuts[i]) );
             }
          }
 
          /* release current cut */
          SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
-
-         /* remember new number of cuts so that we do not iterate over NULL values
-          * at the end of the array over and over again
-          */
-         sepadata->ncuts = newncuts;
       }
 
       SCIPfreeBlockMemoryArray(scip, &sepadata->cuts, sepadata->cutssize);
-      SCIPfreeBlockMemoryArray(scip, &sepadata->cutscores, sepadata->cutssize);
 
       if( sepadata->infeasible )
          *result = SCIP_CUTOFF;
@@ -2375,6 +2346,8 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    /* create zerohalf separator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
+   sepadata->randnumgen = NULL;
+
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
                                    SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpZerohalf, NULL, sepadata) );
@@ -2384,6 +2357,8 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyZerohalf) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeZerohalf) );
+   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolZerohalf) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolZerohalf) );
 
    /* add zerohalf separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -2414,14 +2389,6 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/" SEPA_NAME "/maxslackroot",
          "maximal slack of rows to be used in aggregation in the root node",
          &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/" SEPA_NAME "/goodscore",
-         "threshold for score of cut relative to best score to be considered good, so that less strict filtering is applied",
-         &sepadata->goodscore, TRUE, DEFAULT_GOODSCORE, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/" SEPA_NAME "/badscore",
-         "threshold for score of cut relative to best score to be discarded",
-         &sepadata->badscore, TRUE, DEFAULT_BADSCORE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/minviol",
          "minimal violation to generate zerohalfcut for",
