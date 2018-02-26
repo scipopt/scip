@@ -1175,22 +1175,20 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
        */
       if( nunknown == 0 && nfracints == 0 && SCIPgetNContVars(scip) == 0 && SCIPgetNImplVars(scip) == 0 )
       {
-         SCIP_VAR** origvars;
          SCIP_SOL* newsol;
          SCIP_Bool stored;
-         int norigvars;
 
-         origvars = SCIPgetOrigVars(scip);
-         norigvars = SCIPgetNOrigVars(scip);
+         assert(vars != NULL);
+         assert(nvars >= 0);
 
-         SCIP_CALL( SCIPcreateOrigSol(scip, &newsol, heur) );
+         SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
-         for( v = 0; v < norigvars; v++ )
+         for( v = 0; v < nvars; v++ )
          {
-            solval = SCIPgetSolVal(scip, sol, origvars[v]);
+            solval = SCIPgetSolVal(scip, sol, vars[v]);
             assert(solval != SCIP_UNKNOWN); /*lint !e777*/
 
-            SCIP_CALL( SCIPsetSolVal(scip, newsol, origvars[v], solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], solval) );
          }
 
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
