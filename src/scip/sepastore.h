@@ -17,6 +17,7 @@
  * @ingroup INTERNALAPI
  * @brief  internal methods for storing separated cuts
  * @author Tobias Achterberg
+ * @author Robert Lion Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -58,33 +59,31 @@ SCIP_RETCODE SCIPsepastoreFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** informs separation storage, that the setup of the initial LP starts now */
+/** informs separation storage that the setup of the initial LP starts now */
 extern
 void SCIPsepastoreStartInitialLP(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
-/** informs separation storage, that the setup of the initial LP is now finished */
+/** informs separation storage that the setup of the initial LP is now finished */
 extern
 void SCIPsepastoreEndInitialLP(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
-/** informs separation storage, that the following cuts should be used in any case */
+/** informs separation storage that the following cuts should be used in any case */
 extern
 void SCIPsepastoreStartForceCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
-/** informs separation storage, that the following cuts should no longer be used in any case */
+/** informs separation storage that the following cuts should no longer be used in any case */
 extern
 void SCIPsepastoreEndForceCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
-/** adds cut to separation storage and captures it;
- *  if the cut should be forced to enter the LP, an infinite score has to be used
- */
+/** adds cut to separation storage and captures it */
 extern
 SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
@@ -148,7 +147,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
 
 /** indicates whether a cut is applicable
  *
- * A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
+ *  A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
  */
 extern
 SCIP_Bool SCIPsepastoreIsCutApplicable(
