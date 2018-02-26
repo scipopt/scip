@@ -1088,11 +1088,12 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
       return SCIP_OKAY;
 
    /* check whether we want to run before presolving */
-   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL && !heurdata->beforepresol )
+   if( (heurtiming & SCIP_HEURTIMING_BEFOREPRESOL) == SCIP_HEURTIMING_BEFOREPRESOL && !heurdata->beforepresol )
       return SCIP_OKAY;
 
    /* only run before root node */
-   if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPgetCurrentNode(scip) != SCIPgetRootNode(scip) )
+   if( (heurtiming & SCIP_HEURTIMING_BEFORENODE) == SCIP_HEURTIMING_BEFORENODE
+         && (heurdata->beforepresol || SCIPgetCurrentNode(scip) != SCIPgetRootNode(scip)) )
       return SCIP_OKAY;
 
    /* get variable data and return of no variables are left in the problem */
