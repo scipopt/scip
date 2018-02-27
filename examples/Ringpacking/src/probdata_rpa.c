@@ -939,7 +939,7 @@ void updateBestCandidate(
    int i;
 
    /* candidate is not valid -> skip */
-   if( x == SCIP_INVALID || y == SCIP_INVALID )
+   if( x == SCIP_INVALID || y == SCIP_INVALID ) /*lint !e777*/
       return;
 
    /* check whether there is an intersection with the boundary */
@@ -972,8 +972,8 @@ void updateBestCandidate(
    }
 
    /* check whether the candidate is better than the best known candidate */
-   if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID
-      || SCIPisLT(scip, x, *bestx) || (SCIPisEQ(scip, x, *bestx) && SCIPisLT(scip, y, *besty)) )
+   if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID /*lint !e777*/
+      || SCIPisLT(scip, x, *bestx) || (SCIPisEQ(scip, x, *bestx) && SCIPisLT(scip, y, *besty)) ) /*lint !e777*/
    {
       *bestx = x;
       *besty = y;
@@ -1271,7 +1271,7 @@ int packCirclesHeuristically(
          width, height, patterntype, &bestx, &besty);
 
       /* pack circle if a possible position has been found */
-      if( bestx != SCIP_INVALID && besty != SCIP_INVALID )
+      if( bestx != SCIP_INVALID && besty != SCIP_INVALID ) /*lint !e777*/
       {
          assert(!ispacked[i]);
          ispacked[i] = TRUE;

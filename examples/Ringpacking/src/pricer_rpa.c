@@ -594,10 +594,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/pricing/heuriterlim", &heuriterlim) );
 
    /* TODO solve pricing problem with heuristic */
-   heurtilim = MIN(heurtilim, SCIPgetSolvingTime(scip) - totaltilim);
+   heurtilim = MIN(heurtilim, SCIPgetSolvingTime(scip) - totaltilim); /*lint !e666*/
 
    /* solve pricing problem as MINLP  */
-   nlptilim = MIN(nlptilim, totaltilim - SCIPgetSolvingTime(scip));
+   nlptilim = MIN(nlptilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
    SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, nlptilim, nlpnodelim, &success, &solstat, &redcostslb) );
    redcostslb += 1.0;
    SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
