@@ -1052,9 +1052,9 @@ void computeIntersectionCircles(
    }
 }
 
-/** auxiliary function for computing the intersection point */
+/** auxiliary function for computing a candidate position between a circle and the outer ring */
 static
-void computeIntersectionRingCircle(
+void computePosRingCircle(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  elements,           /**< types of elements that have been packed */
    int                   nelements,          /**< the total number of elements */
@@ -1064,7 +1064,6 @@ void computeIntersectionRingCircle(
    int                   pos,                /**< position of element in the elements array */
    SCIP_Bool*            ispacked,           /**< array indicating whether an element has been packed already */
    SCIP_Real             rbound,             /**< radius of bounding circle */
-   int                   npacked,            /**< number of elements packed */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
    SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
    )
@@ -1074,8 +1073,6 @@ void computeIntersectionRingCircle(
    /* consider already packed patterns */
    for( i = 0; i < nelements; ++i )
    {
-      SCIP_Real tmpx;
-      SCIP_Real tmpy;
       SCIP_Real alpha, a, b, c, h, u, v, n1, n2;
 
       /* only consider packed elements */
@@ -1085,7 +1082,8 @@ void computeIntersectionRingCircle(
       c = SQRT(xs[i]*xs[i] + ys[i]*ys[i]);
 
       /* inner ring is too far away from boundary or both rings can not fit */
-      if( !SCIPisGE(scip, c + rexts[elements[i]] + 2.0*rexts[elements[pos]], rbound) || SCIPisGT(scip, rexts[elements[pos]] + rexts[elements[i]], rbound) )
+      if( !SCIPisGE(scip, c + rexts[elements[i]] + 2.0*rexts[elements[pos]], rbound)
+         || SCIPisGT(scip, rexts[elements[pos]] + rexts[elements[i]], rbound) )
          continue;
 
       a = rexts[elements[pos]] + rexts[elements[i]];
@@ -1117,27 +1115,97 @@ void computeIntersectionRingCircle(
    }
 }
 
+/** auxiliary function for computing trivial candidate positions */
 static
-void computeIntersectionRectangleCircle(
+void computePosTrivial(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             xcircle,            /**< x-coordinate of circle midpoint */
-   SCIP_Real             ycircle,            /**< y-coordinate of circle midpoint */
-   SCIP_Real             rcircle,            /**< radius of circle */
-   SCIP_Real             xrect,              /**< x-coordinate of lower left corner of rectangle */
-   SCIP_Real             yrect,              /**< y-coordinate of lower left corner of rectangle */
-   SCIP_Real             wrect,              /**< width of rectangle */
-   SCIP_Real             hrect,              /**< height of rectangle */
-   SCIP_Real*            xres,               /**< buffer for x-coordinate of intersection point */
-   SCIP_Real*            yres                /**< buffer for y-coordinate of intersection point */
+   int*                  elements,           /**< types of elements that have been packed */
+   int                   nelements,          /**< the total number of elements */
+   SCIP_Real*            rexts,              /**< external radii */
+   SCIP_Real*            xs,                 /**< x-coordinate of circle */
+   SCIP_Real*            ys,                 /**< y-coordinate of circle */
+   int                   pos,                /**< position of element in the elements array */
+   SCIP_Bool*            ispacked,           /**< array indicating whether an element has been packed already */
+   SCIP_Real             rbound,             /**< radius of bounding circle */
+   SCIP_Real             width,              /**< width of the rectangle */
+   SCIP_Real             height,             /**< height of the rectangle */
+   SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
+   SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
+   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
    )
 {
-   assert(xres != NULL);
-   assert(yres != NULL);
-   assert(SCIPisGE(scip, rcircle, 0.0));
-   assert(SCIPisGE(scip, xrect, 0.0));
-   assert(SCIPisGE(scip, yrect, 0.0));
+   SCIP_Real rext = rexts[elements[pos]];
 
-   /* TODO: implement */
+   if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
+   {
+      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
+         ispacked, elements, nelements, bestx, besty, -rbound + rext, 0.0);
+
+      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
+         ispacked, elements, nelements, bestx, besty, +rbound - rext, 0.0);
+
+      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
+         ispacked, elements, nelements, bestx, besty, 0.0, -rbound + rext);
+
+      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
+         ispacked, elements, nelements, bestx, besty, 0.0, +rbound - rext);
+   }
+   else
+   {
+      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
+         ispacked, elements, nelements, bestx, besty, rext, rext);
+
+      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
+         ispacked, elements, nelements, bestx, besty, width - rext, rext);
+
+      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
+         ispacked, elements, nelements, bestx, besty, rext, height - rext);
+
+      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
+         ispacked, elements, nelements, bestx, besty, width - rext, height - rext);
+   }
+}
+
+/** auxiliary function for computing a candidate position between a circle and the rectangle */
+static
+void computePosRectangleCircle(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  elements,           /**< types of elements that have been packed */
+   int                   nelements,          /**< the total number of elements */
+   SCIP_Real*            rexts,              /**< external radii */
+   SCIP_Real*            xs,                 /**< x-coordinate of circle */
+   SCIP_Real*            ys,                 /**< y-coordinate of circle */
+   int                   pos,                /**< position of element in the elements array */
+   SCIP_Bool*            ispacked,           /**< array indicating whether an element has been packed already */
+   SCIP_Real             width,              /**< width of the rectangle */
+   SCIP_Real             height,             /**< height of the rectangle */
+   SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
+   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   )
+{
+   /* TODO */
+}
+
+/** auxiliary function for computing a candidate position between two circles */
+static
+void computePosCircleCircle(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  elements,           /**< types of elements that have been packed */
+   int                   nelements,          /**< the total number of elements */
+   SCIP_Real*            rexts,              /**< external radii */
+   SCIP_Real*            xs,                 /**< x-coordinate of circle */
+   SCIP_Real*            ys,                 /**< y-coordinate of circle */
+   int                   pos,                /**< position of element in the elements array */
+   SCIP_Bool*            ispacked,           /**< array indicating whether an element has been packed already */
+   SCIP_Real             rbound,             /**< radius of bounding circle */
+   SCIP_Real             width,              /**< width of the rectangle */
+   SCIP_Real             height,             /**< height of the rectangle */
+   SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
+   SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
+   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   )
+{
+   /* TODO */
 }
 
 /** Tries to pack a list of elements into a specified boundary circle by using a simple left-first bottom-second
@@ -1151,8 +1219,8 @@ int packCirclesHeuristically(
    SCIP_Real*            xs,                 /**< buffer to store the resulting x-coordinates */
    SCIP_Real*            ys,                 /**< buffer to store the resulting y-coordinates */
    SCIP_Real             rbounding,          /**< inner radius of bounding circle (ignored for rectangular patterns) */
-   SCIP_Real             wbounding,          /**< width of bounding rectangular (ignored for circular patterns) */
-   SCIP_Real             hbounding,          /**< height of bounding rectangular (ignored for circular patterns) */
+   SCIP_Real             width,              /**< width of the rectangle */
+   SCIP_Real             height,             /**< height of the rectangle */
    SCIP_Bool*            ispacked,           /**< buffer to store which elements could be packed */
    int*                  elements,           /**< the order of the elements in the pattern */
    int                   nelements,          /**< number of elements in the pattern */
@@ -1161,8 +1229,6 @@ int packCirclesHeuristically(
 {
    int npacked;
    int i;
-   int j;
-   int k;
 
    assert(rexts != NULL);
    assert(xs != NULL);
@@ -1170,8 +1236,6 @@ int packCirclesHeuristically(
    assert(ispacked != NULL);
    assert(elements != NULL);
    assert(nelements > 0);
-   assert(patterntype == SCIP_PATTERNTYPE_CIRCULAR || (wbounding > 0.0 && hbounding > 0.0));
-   assert(patterntype == SCIP_PATTERNTYPE_RECTANGULAR || rbounding >= 0.0);
 
    /* no element packed so far */
    BMSclearMemoryArray(ispacked, nelements);
@@ -1185,8 +1249,8 @@ int packCirclesHeuristically(
    }
    else
    {
-      assert(2.0 * rexts[elements[0]] <= wbounding);
-      assert(2.0 * rexts[elements[0]] <= hbounding);
+      assert(2.0 * rexts[elements[0]] <= width);
+      assert(2.0 * rexts[elements[0]] <= height);
       xs[0] = rexts[elements[0]];
       ys[0] = rexts[elements[0]];
    }
@@ -1198,68 +1262,32 @@ int packCirclesHeuristically(
    /* iterate over all elements and try to pack them */
    for( i = 1; i < nelements; ++i )
    {
-      SCIP_Real xbest = SCIP_INVALID;
-      SCIP_Real ybest = SCIP_INVALID;
-      SCIP_Real rcurr = rexts[elements[i]];
+      SCIP_Real bestx = SCIP_INVALID;
+      SCIP_Real besty = SCIP_INVALID;
+
+      /* use trivial candidates */
+      computePosTrivial(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, width, height, patterntype,
+         &bestx, &besty);
 
       /* consider circles intersection a previous circle and the boundary ring */
-      computeIntersectionRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, npacked, &xbest, &ybest);
+      if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
+         computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, &bestx, &besty);
+      else
+         computePosRectangleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, width, height, &bestx, &besty);
 
-      if( xbest != SCIP_INVALID && ybest != SCIP_INVALID )
+      /* consider circles that have been packed already */
+      computePosCircleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding,
+         width, height, patterntype, &bestx, &besty);
+
+      /* pack circle if a possible position has been found */
+      if( bestx != SCIP_INVALID && besty != SCIP_INVALID )
       {
          assert(!ispacked[i]);
          ispacked[i] = TRUE;
-         xs[i] = xbest;
-         ys[i] = ybest;
+         xs[i] = bestx;
+         ys[i] = besty;
          ++npacked;
       }
-
-//      /* for all combinations of two packed circles (and boundary) try to place next element as close as possible */
-//      for( j = 0; j < i; ++j )
-//      {
-//         for( k = j+1; k < i; ++k )
-//         {
-//            /* compute position implied by circles elem1 and elem2 */
-//            computeIntersectionCircles(scip, xvalues[j], yvalues[j], rexts[elements[j]], xvalues[k], yvalues[k],
-//               rexts[elements[k]], rbounding, &xtmp, &ytmp);
-//
-//            /* check whether new position has higher priority and is valid w.r.t already packed circles */
-//            if( (SCIPisLT(scip, xtmp, xbest) || (SCIPisEQ(scip, xtmp, xbest) && SCIPisLT(scip, ytmp, ybest)))
-//                && isValidPosition(scip, xvalues, yvalues, rexts, xtmp, ytmp, rcurr, ispacked, elements, nelements) )
-//            {
-//               xbest = xtmp;
-//               ybest = ytmp;
-//            }
-//         }
-//
-//         /* compute position implied by circle elements[j] and boundary */
-//         if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
-//         {
-//            computeIntersectionCircles(scip, xvalues[j], yvalues[j], rexts[elements[j]], 0.0, 0.0, rbounding - rcurr,
-//               SCIPinfinity(scip), &xtmp, &ytmp);
-//         }
-//         else
-//         {
-//            /* TODO: call computeIntersectionRectangle */
-//         }
-//
-//         /* check whether new position has higher priority and is valid w.r.t already packed circles */
-//         if( (SCIPisLT(scip, xtmp, xbest) || (SCIPisEQ(scip, xtmp, xbest) && SCIPisLT(scip, ytmp, ybest)))
-//             && isValidPosition(scip, xvalues, yvalues, rexts, xtmp, ytmp, rcurr, ispacked, elements, nelements) )
-//         {
-//            xbest = xtmp;
-//            ybest = ytmp;
-//         }
-//      }
-
-//      /* if a valid position could be found, place the element there and update results */
-//      if( !SCIPisInfinity(scip, xbest) )
-//      {
-//         xs[i] = xbest;
-//         ys[i] = ybest;
-//         ispacked[i] = TRUE;
-//         ++npacked;
-//      }
    }
 
    return npacked;
