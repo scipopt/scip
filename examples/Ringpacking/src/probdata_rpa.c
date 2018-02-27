@@ -1143,7 +1143,7 @@ void computePosTrivial(
       SCIP_Real ycands[4] = {0.0, 0.0, -rbound + rext, +rbound - rext};
 
       for( i = 0; i < 4; ++i )
-         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
+         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, patterntype,
          ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
    }
    else
@@ -1152,7 +1152,7 @@ void computePosTrivial(
       SCIP_Real ycands[4] = {rext, rext, height - rext, height - rext};
 
       for( i = 0; i < 4; ++i )
-         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
+         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, patterntype,
          ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
    }
 }
