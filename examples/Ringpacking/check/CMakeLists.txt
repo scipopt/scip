@@ -12,7 +12,7 @@ set(instances
   "test_circle5\;1"
   "test_circle6\;1"
   #"test_circle16\;1"
-  "test_ring0\;2"
+  #"test_ring0\;2"
   #"test_ring1\;1"
   )
 
