@@ -174,18 +174,14 @@ Test(verification, heur_two)
    SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPpatternAddElement(pattern, 2, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
-
-   /* TODO */
-   /* cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO); */
+   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    /* remove element of type 3 and add another element of type 2 -> packable */
    SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
    SCIPpatternRemoveLastElements(pattern, 1);
    SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
-
-   /* TODO */
-   /* cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES); */
+   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verifies circular pattern containing four and five elements with heuristic */
@@ -195,7 +191,7 @@ Test(verification, heuer_four)
    int i;
 
    /* pattern with inner radius of 1+sqrt(2) */
-   SCIP_CALL( SCIPpatternCreateCircular(scip, &p, 3) );
+   SCIP_CALL( SCIPpatternCreateCircular(scip, &p, 0) );
 
    /* add four circles with radius 1 */
    for( i = 0; i < 4; ++i )
@@ -203,9 +199,7 @@ Test(verification, heuer_four)
 
    /* easy enough for any heuristic */
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, p, SCIPinfinity(scip), 1) );
-
-   /* TODO */
-   /* cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES); */
+   cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES);
 
    /* add one more element -> not packable anymore (heuristic should only detect UNKNOWN) */
    SCIPpatternAddElement(p, 1, SCIP_INVALID, SCIP_INVALID);

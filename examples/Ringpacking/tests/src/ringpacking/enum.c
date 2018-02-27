@@ -129,7 +129,7 @@ Test(enumerate, three)
    cr_assert(probdata != NULL);
 
    /* compute circular patterns */
-   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIP_LONGINT_MAX, INT_MAX) );
+   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIP_LONGINT_MAX, 10) );
 
    /* get circular pattern information */
    SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
