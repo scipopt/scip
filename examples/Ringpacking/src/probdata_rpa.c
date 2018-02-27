@@ -1135,34 +1135,25 @@ void computePosTrivial(
    )
 {
    SCIP_Real rext = rexts[elements[pos]];
+   int i;
 
    if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
    {
-      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
-         ispacked, elements, nelements, bestx, besty, -rbound + rext, 0.0);
+      SCIP_Real xcands[4] = {-rbound + rext, +rbound - rext, 0.0, 0.0};
+      SCIP_Real ycands[4] = {0.0, 0.0, -rbound + rext, +rbound - rext};
 
-      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
-         ispacked, elements, nelements, bestx, besty, +rbound - rext, 0.0);
-
-      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
-         ispacked, elements, nelements, bestx, besty, 0.0, -rbound + rext);
-
-      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
-         ispacked, elements, nelements, bestx, besty, 0.0, +rbound - rext);
+      for( i = 0; i < 4; ++i )
+         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_CIRCULAR,
+         ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
    }
    else
    {
-      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
-         ispacked, elements, nelements, bestx, besty, rext, rext);
+      SCIP_Real xcands[4] = {rext, width - rext, rext, width - rext};
+      SCIP_Real ycands[4] = {rext, rext, height - rext, height - rext};
 
-      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
-         ispacked, elements, nelements, bestx, besty, width - rext, rext);
-
-      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
-         ispacked, elements, nelements, bestx, besty, rext, height - rext);
-
-      updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
-         ispacked, elements, nelements, bestx, besty, width - rext, height - rext);
+      for( i = 0; i < 4; ++i )
+         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, SCIP_PATTERNTYPE_RECTANGULAR,
+         ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
    }
 }
 
