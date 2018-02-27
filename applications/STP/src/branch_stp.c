@@ -532,7 +532,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    if( branchvertex == UNKNOWN )
       SCIP_CALL( selectBranchingVertexByDegree(scip, &branchvertex, g) );
 
-   assert(branchvertex != UNKNOWN);
+   /* we should only have terminals in this case */
+   if( branchvertex == UNKNOWN )
+   {
+      SCIPdebugMessage("Stp branching did not run \n");
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( branchOnVertex(scip, g, branchvertex) );
 
@@ -707,14 +712,11 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    assert(scip != NULL);
    assert(graph != NULL || vertexchgs != NULL);
 
-   if( SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) != 1 )
-   {
-      printf("FAIL: added %d \n", SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)));
-
-      exit(1);
-   }
-
    assert(SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) == 1);
+
+   /* not very clean, but this should only happen when the whole b&b tree is explored */
+   if( SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) != 1 )
+      return SCIP_OKAY;
 
    /* move up branch-and-bound path and check constraints */
    for( SCIP_NODE* node = SCIPgetCurrentNode(scip); SCIPnodeGetDepth(node) > 0; node = SCIPnodeGetParent(node) )
@@ -722,6 +724,9 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
       char* consname;
 
       assert(SCIPnodeGetNAddedConss(node) == 1);
+
+      if( SCIPnodeGetNAddedConss(node) != 1 )
+         break;
 
       /* get constraints */
       SCIPnodeGetAddedConss(node, &parentcons, &naddedconss, 1);
