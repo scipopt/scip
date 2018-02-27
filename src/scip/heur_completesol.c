@@ -33,7 +33,7 @@
 #define HEUR_DESC             "primal heuristic trying to complete given partial solutions"
 #define HEUR_DISPCHAR         'h'
 #define HEUR_PRIORITY         0
-#define HEUR_FREQ             1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
