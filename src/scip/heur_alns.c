@@ -1750,6 +1750,7 @@ SCIP_RETCODE neighborhoodFixVariables(
    *nfixings = 0;
 
    *result = SCIP_DIDNOTRUN;
+   ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
 
    if( neighborhood->varfixings != NULL )
    {
@@ -1758,14 +1759,19 @@ SCIP_RETCODE neighborhoodFixVariables(
       if( *result != SCIP_SUCCESS )
          return SCIP_OKAY;
    }
+   else if( ntargetfixings == 0 )
+   {
+      *result = SCIP_SUCCESS;
+
+      return SCIP_OKAY;
+   }
 
    assert(neighborhood->varfixings == NULL || *result != SCIP_DIDNOTRUN);
 
-   ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
    SCIPdebugMsg(scip, "Neighborhood Fixings/Target: %d / %d\n",*nfixings, ntargetfixings);
 
    /* if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost based, mix */
-   if( (*result == SCIP_SUCCESS || *result == SCIP_DIDNOTRUN) && (*nfixings <= (1.0 - heurdata->fixtol) * ntargetfixings) )
+   if( (*result == SCIP_SUCCESS || *result == SCIP_DIDNOTRUN) && (*nfixings < (1.0 - heurdata->fixtol) * ntargetfixings) )
    {
       SCIP_Bool success;
       SCIP_SOL* refsol;
@@ -1972,15 +1978,19 @@ SCIP_RETCODE getReward(
 {
    SCIP_Real reward = 0.0;
    SCIP_Real effort;
+   int ndiscretevars;
 
    assert(runstats->usednodes >= 0);
    assert(runstats->nfixings >= 0);
 
    /* just add one node to avoid division by zero */
    effort = runstats->usednodes / (SCIP_Real)(heurdata->targetnodes + 1.0);
-
+   ndiscretevars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    /* assume that every fixed variable linearly reduces the subproblem complexity */
-   effort = (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)))) * effort;
+   if( ndiscretevars > 0 )
+   {
+      effort = (1.0 - (runstats->nfixings / (SCIP_Real)ndiscretevars)) * effort;
+   }
    assert(rewardptr != NULL);
 
    /* a positive reward is only assigned if a new incumbent solution was found */
@@ -2028,7 +2038,10 @@ SCIP_RETCODE getReward(
       SCIP_Real maxeffort = heurdata->targetnodes * heurdata->stallnodefactor;
       SCIP_Real usednodes = runstats->usednodes;
 
-      usednodes *= (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip))));
+      if( ndiscretevars > 0 )
+      {
+         usednodes *= (1.0 - (runstats->nfixings / (SCIP_Real)ndiscretevars));
+      }
 
       reward = heurdata->rewardbaseline - (usednodes) * heurdata->rewardbaseline / maxeffort;
 
@@ -2355,7 +2368,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       /* determine variable fixings and objective coefficients of this neighborhood */
       SCIP_CALL( neighborhoodFixVariables(scip, heurdata, neighborhood, varbuf, valbuf, &nfixings, &fixresult) );
 
-      SCIPdebugMsg(scip, "Fix %d/%d variables\n", nfixings, nvars);
+      SCIPdebugMsg(scip, "Fix %d/%d variables, result code %d\n", nfixings, nvars,fixresult);
 
       /* Fixing was not successful, either because the fixing rate was not reached (and no additional variable
        * prioritization was used), or the neighborhood requested a delay, e.g., because no LP relaxation solution exists
