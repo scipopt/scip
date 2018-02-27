@@ -1343,7 +1343,10 @@ SCIP_RETCODE cleanActiveConss(
    int i;
 
    assert(reopt != NULL);
-   assert(reopt->activeconss != NULL);
+
+   /* the hashmap need not to be exist, e.g., if the problem was solved during presolving */
+   if( reopt->activeconss == NULL )
+      return SCIP_OKAY;
 
    nentries = SCIPhashmapGetNEntries(reopt->activeconss);
 
@@ -5228,8 +5231,12 @@ SCIP_RETCODE SCIPreoptFree(
    /* clocks */
    SCIPclockFree(&(*reopt)->savingtime);
 
-   SCIPhashmapFree(&(*reopt)->activeconss);
-   (*reopt)->activeconss = NULL;
+   /* the hashmap need not to be exist, e.g., if the problem was solved during presolving */
+   if( (*reopt)->activeconss != NULL )
+   {
+      SCIPhashmapFree(&(*reopt)->activeconss);
+      (*reopt)->activeconss = NULL;
+   }
 
    if( (*reopt)->glblb != NULL )
    {
