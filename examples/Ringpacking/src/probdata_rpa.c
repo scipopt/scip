@@ -921,16 +921,16 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
  */
 static
 void computeIntersectionCircles(
-   SCIP *scip,               /**< SCIP data structure */
-   SCIP_Real x1,                 /**< x-coordinate of first circle */
-   SCIP_Real y1,                 /**< y-coordinate of first circle */
-   SCIP_Real r1,                 /**< radius of first circle */
-   SCIP_Real x2,                 /**< x-coordinate of second circle */
-   SCIP_Real y2,                 /**< y-coordinate of second circle */
-   SCIP_Real r2,                 /**< radius of second circle */
-   SCIP_Real rbound,             /**< radius of bounding circle */
-   SCIP_Real *xres,               /**< buffer for x-coordinate of intersection point */
-   SCIP_Real *yres                /**< buffer for y-coordinate of intersection point */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             x1,                 /**< x-coordinate of first circle */
+   SCIP_Real             y1,                 /**< y-coordinate of first circle */
+   SCIP_Real             r1,                 /**< radius of first circle */
+   SCIP_Real             x2,                 /**< x-coordinate of second circle */
+   SCIP_Real             y2,                 /**< y-coordinate of second circle */
+   SCIP_Real             r2,                 /**< radius of second circle */
+   SCIP_Real             rbound,             /**< radius of bounding circle */
+   SCIP_Real*            xres,               /**< buffer for x-coordinate of intersection point */
+   SCIP_Real*            yres                /**< buffer for y-coordinate of intersection point */
 )
 {
    SCIP_Real distsqr;
@@ -1060,7 +1060,7 @@ int packCirclesHeuristically(
    SCIP_Bool*            ispacked,           /**< buffer to store which elements could be packed */
    int*                  elements,           /**< the order of the elements in the pattern */
    int                   nelements,          /**< number of elements in the pattern */
-   SCIP_PATTERNTYPE      patterntype         /**< the patterntype (rectangular or circular) */
+   SCIP_PATTERNTYPE      patterntype         /**< the pattern type (rectangular or circular) */
    )
 {
    int npacked;
