@@ -34,8 +34,8 @@
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "rpa"
 #define CONSHDLR_DESC          "ringpacking constraint handler"
-#define CONSHDLR_ENFOPRIORITY  -3000000 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_ENFOPRIORITY         1 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY       -1 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
