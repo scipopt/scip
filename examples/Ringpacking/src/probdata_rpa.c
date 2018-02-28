@@ -1122,24 +1122,24 @@ void computePosRectangleCircle(
       /* fix x */
       for( k = 0; k < 2; ++k )
       {
-         SCIP_Real alpha = SQR(rext + Ri) - (xfix[k] - xs[i]);
+         SCIP_Real alpha = SQR(rext + Ri) - SQR(xfix[k] - xs[i]);
 
          if( alpha < 0.0 )
             continue;
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
             SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
-            xfix[k], xs[i] + SQRT(alpha));
+            xfix[k], ys[i] + SQRT(alpha));
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
             SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
-            xfix[k], xs[i] - SQRT(alpha));
+            xfix[k], ys[i] - SQRT(alpha));
       }
 
       /* fix y */
       for( k = 0; k < 2; ++k )
       {
-         SCIP_Real alpha = SQR(rext + Ri) - (yfix[k] - ys[i]);
+         SCIP_Real alpha = SQR(rext + Ri) - SQR(yfix[k] - ys[i]);
 
          if( alpha < 0.0 )
             continue;
@@ -1223,91 +1223,6 @@ void computePosCircleCircle(
             nelements, bestx, besty, u - n1, v - n2);
       }
    }
-}
-
-/** Tries to pack a list of elements into a specified boundary circle by using a simple left-first bottom-second
- *  heuristic. Returns the number of elements that could be stored and indicated which ones these are in the buffer
- *  parameter ispacked. This auxiliary method can be used both to find such a packing or to verify a certain pattern.
- */
-static
-int packCirclesHeuristically(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            rexts,              /**< outer radii of elements (in original order of probdata) */
-   SCIP_Real*            xs,                 /**< buffer to store the resulting x-coordinates */
-   SCIP_Real*            ys,                 /**< buffer to store the resulting y-coordinates */
-   SCIP_Real             rbounding,          /**< inner radius of bounding circle (ignored for rectangular patterns) */
-   SCIP_Real             width,              /**< width of the rectangle */
-   SCIP_Real             height,             /**< height of the rectangle */
-   SCIP_Bool*            ispacked,           /**< buffer to store which elements could be packed */
-   int*                  elements,           /**< the order of the elements in the pattern */
-   int                   nelements,          /**< number of elements in the pattern */
-   SCIP_PATTERNTYPE      patterntype         /**< the pattern type (rectangular or circular) */
-   )
-{
-   int npacked;
-   int i;
-
-   assert(rexts != NULL);
-   assert(xs != NULL);
-   assert(ys != NULL);
-   assert(ispacked != NULL);
-   assert(elements != NULL);
-   assert(nelements > 0);
-
-   /* no element packed so far */
-   BMSclearMemoryArray(ispacked, nelements);
-
-   /* place first element at left-most position */
-   if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
-   {
-      assert(rexts[elements[0]] <= rbounding);
-      xs[0] = rexts[elements[0]] - rbounding;
-      ys[0] = 0.0;
-   }
-   else
-   {
-      assert(2.0 * rexts[elements[0]] <= width);
-      assert(2.0 * rexts[elements[0]] <= height);
-      xs[0] = rexts[elements[0]];
-      ys[0] = rexts[elements[0]];
-   }
-
-   /* initialize results */
-   npacked = 1;
-   ispacked[0] = TRUE;
-
-   /* iterate over all elements and try to pack them */
-   for( i = 1; i < nelements; ++i )
-   {
-      SCIP_Real bestx = SCIP_INVALID;
-      SCIP_Real besty = SCIP_INVALID;
-
-      /* use trivial candidates */
-      computePosTrivial(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, width, height, patterntype,
-         &bestx, &besty);
-
-      /* consider circles intersection a previous circle and the boundary ring */
-      if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
-         computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, &bestx, &besty);
-      else
-         computePosRectangleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, width, height, &bestx, &besty);
-
-      /* consider circles that have been packed already */
-      computePosCircleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding,
-         width, height, patterntype, &bestx, &besty);
-
-      /* pack circle if a possible position has been found */
-      if( bestx != SCIP_INVALID && besty != SCIP_INVALID ) /*lint !e777*/
-      {
-         assert(!ispacked[i]);
-         ispacked[i] = TRUE;
-         xs[i] = bestx;
-         ys[i] = besty;
-         ++npacked;
-      }
-   }
-
-   return npacked;
 }
 
 /**@} */
@@ -1683,6 +1598,91 @@ void SCIPprobdataInvalidateDualbound(
    }
 }
 
+/** Tries to pack a list of elements into a specified boundary circle by using a simple left-first bottom-second
+ *  heuristic. Returns the number of elements that could be stored and indicated which ones these are in the buffer
+ *  parameter ispacked. This auxiliary method can be used both to find such a packing or to verify a certain pattern.
+ */
+void SCIPpackCirclesGreedy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            rexts,              /**< outer radii of elements (in original order of probdata) */
+   SCIP_Real*            xs,                 /**< buffer to store the resulting x-coordinates */
+   SCIP_Real*            ys,                 /**< buffer to store the resulting y-coordinates */
+   SCIP_Real             rbounding,          /**< inner radius of bounding circle (ignored for rectangular patterns) */
+   SCIP_Real             width,              /**< width of the rectangle */
+   SCIP_Real             height,             /**< height of the rectangle */
+   SCIP_Bool*            ispacked,           /**< buffer to store which elements could be packed */
+   int*                  elements,           /**< the order of the elements in the pattern */
+   int                   nelements,          /**< number of elements in the pattern */
+   SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
+   int*                  npacked             /**< pointer to store the number of packed elements */
+   )
+{
+   int i;
+
+   assert(rexts != NULL);
+   assert(xs != NULL);
+   assert(ys != NULL);
+   assert(ispacked != NULL);
+   assert(elements != NULL);
+   assert(nelements > 0);
+   assert(npacked != NULL);
+
+   /* no element packed so far */
+   BMSclearMemoryArray(ispacked, nelements);
+
+   /* place first element at left-most position */
+   if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
+   {
+      assert(rexts[elements[0]] <= rbounding);
+      xs[0] = rexts[elements[0]] - rbounding;
+      ys[0] = 0.0;
+   }
+   else
+   {
+      assert(2.0 * rexts[elements[0]] <= width);
+      assert(2.0 * rexts[elements[0]] <= height);
+      xs[0] = rexts[elements[0]];
+      ys[0] = rexts[elements[0]];
+   }
+
+   /* initialize results */
+   (*npacked) = 1;
+   ispacked[0] = TRUE;
+
+   /* iterate over all elements and try to pack them */
+   for( i = 1; i < nelements; ++i )
+   {
+      SCIP_Real bestx = SCIP_INVALID;
+      SCIP_Real besty = SCIP_INVALID;
+
+      /* use trivial candidates */
+      computePosTrivial(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, width, height, patterntype,
+         &bestx, &besty);
+
+      /* consider circles intersection a previous circle and the boundary ring */
+      if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
+         computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, &bestx, &besty);
+      else
+         computePosRectangleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, width, height, &bestx, &besty);
+
+      /* consider circles that have been packed already */
+      computePosCircleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding,
+         width, height, patterntype, &bestx, &besty);
+
+      /* pack circle if a possible position has been found */
+      if( bestx != SCIP_INVALID && besty != SCIP_INVALID ) /*lint !e777*/
+      {
+         assert(!ispacked[i]);
+         ispacked[i] = TRUE;
+         xs[i] = bestx;
+         ys[i] = besty;
+         ++(*npacked);
+      }
+   }
+
+   return;
+}
+
 /** verifies a circular pattern heuristically */
 SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1787,8 +1787,8 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
       SCIPsortRealIntInt(scores, elements, pos, nelements);
 
       /* call heuristic */
-      npacked = packCirclesHeuristically(scip, rexts, xs, ys, rints[type], SCIPprobdataGetWidth(probdata),
-         SCIPprobdataGetHeight(probdata), ispacked, elements, nelements, SCIP_PATTERNTYPE_CIRCULAR);
+      SCIPpackCirclesGreedy(scip, rexts, xs, ys, rints[type], SCIPprobdataGetWidth(probdata),
+         SCIPprobdataGetHeight(probdata), ispacked, elements, nelements, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
 
       /* check whether all elements could have been packed */
       if( npacked == nelements )
