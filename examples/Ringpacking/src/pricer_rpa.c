@@ -441,22 +441,6 @@ SCIP_RETCODE solvePricingHeuristic(
       ++niters;
    }
 
-   extern
-   void SCIPpackCirclesGreedy(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_Real*            rexts,              /**< outer radii of elements (in original order of probdata) */
-      SCIP_Real*            xs,                 /**< buffer to store the resulting x-coordinates */
-      SCIP_Real*            ys,                 /**< buffer to store the resulting y-coordinates */
-      SCIP_Real             rbounding,          /**< inner radius of bounding circle (ignored for rectangular patterns) */
-      SCIP_Real             width,              /**< width of the rectangle */
-      SCIP_Real             height,             /**< height of the rectangle */
-      SCIP_Bool*            ispacked,           /**< buffer to store which elements could be packed */
-      int*                  elements,           /**< the order of the elements in the pattern */
-      int                   nelements,          /**< number of elements in the pattern */
-      SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
-      int*                  npacked             /**< pointer to store the number of packed elements */
-      );
-
    /* free memory */
    SCIPfreeBufferArray(scip, &ispacked);
    SCIPfreeBufferArray(scip, &scores);
