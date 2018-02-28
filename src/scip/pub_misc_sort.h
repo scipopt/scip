@@ -837,6 +837,15 @@ void SCIPsortDownRealInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of Reals/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortDownRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< int array to be sorted */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortDownRealBoolPtr(
