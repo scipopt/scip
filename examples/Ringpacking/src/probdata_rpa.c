@@ -1675,6 +1675,7 @@ void SCIPpackCirclesGreedy(
    int*                  npacked             /**< pointer to store the number of packed elements */
    )
 {
+   SCIP_Bool added;
    int i;
 
    assert(rexts != NULL);
@@ -1706,35 +1707,46 @@ void SCIPpackCirclesGreedy(
    /* initialize results */
    (*npacked) = 1;
    ispacked[0] = TRUE;
+   added = TRUE;
 
    /* iterate over all elements and try to pack them */
-   for( i = 1; i < nelements; ++i )
+   while( added )
    {
-      SCIP_Real bestx = SCIP_INVALID;
-      SCIP_Real besty = SCIP_INVALID;
+      added = FALSE;
 
-      /* use trivial candidates */
-      computePosTrivial(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, width, height, patterntype,
-         &bestx, &besty);
-
-      /* consider circles intersection a previous circle and the boundary ring */
-      if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
-         computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, &bestx, &besty);
-      else
-         computePosRectangleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, width, height, &bestx, &besty);
-
-      /* consider circles that have been packed already */
-      computePosCircleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding,
-         width, height, patterntype, &bestx, &besty);
-
-      /* pack circle if a possible position has been found */
-      if( bestx != SCIP_INVALID && besty != SCIP_INVALID ) /*lint !e777*/
+      for( i = 1; i < nelements; ++i )
       {
-         assert(!ispacked[i]);
-         ispacked[i] = TRUE;
-         xs[i] = bestx;
-         ys[i] = besty;
-         ++(*npacked);
+         SCIP_Real bestx = SCIP_INVALID;
+         SCIP_Real besty = SCIP_INVALID;
+
+         /* skip packed elements */
+         if( ispacked[i] )
+            continue;
+
+         /* use trivial candidates */
+         computePosTrivial(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, width, height, patterntype,
+            &bestx, &besty);
+
+         /* consider circles intersection a previous circle and the boundary ring */
+         if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
+            computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, &bestx, &besty);
+         else
+            computePosRectangleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, width, height, &bestx, &besty);
+
+         /* consider circles that have been packed already */
+         computePosCircleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding,
+            width, height, patterntype, &bestx, &besty);
+
+         /* pack circle if a possible position has been found */
+         if( bestx != SCIP_INVALID && besty != SCIP_INVALID ) /*lint !e777*/
+         {
+            assert(!ispacked[i]);
+            ispacked[i] = TRUE;
+            xs[i] = bestx;
+            ys[i] = besty;
+            ++(*npacked);
+            added = TRUE;
+         }
       }
    }
 
