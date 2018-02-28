@@ -340,6 +340,7 @@ SCIP_RETCODE solvePricingHeuristic(
    SCIP_Real height;
    SCIP_Real timestart;
    SCIP_Real bestredcosts;
+   SCIP_Real bestvol;
    int nelements;
    int ntypes;
    int npacked;
@@ -353,6 +354,7 @@ SCIP_RETCODE solvePricingHeuristic(
    niters = 0;
    timestart = SCIPgetSolvingTime(scip);
    bestredcosts = 0.0;
+   bestvol = 0.0;
 
    /* get problem data */
    rexts = SCIPprobdataGetRexts(probdata);
@@ -395,6 +397,7 @@ SCIP_RETCODE solvePricingHeuristic(
       && !SCIPisStopped(scip) )
    {
       SCIP_Real redcosts = 1.0;
+      SCIP_Real vol = 0.0;
       int i;
 
       /* compute scores */
@@ -411,17 +414,21 @@ SCIP_RETCODE solvePricingHeuristic(
       for( i = 0; i < nelements; ++i )
       {
          if( ispacked[i] )
+         {
             redcosts -= lambdas[elements[i]];
+            vol += rexts[elements[i]];
+         }
       }
 
       /* add pattern if reduced costs are negative */
-      if( SCIPisFeasLT(scip, redcosts, bestredcosts) )
+      if( SCIPisFeasLT(scip, redcosts, bestredcosts) || (SCIPisGT(scip, vol, bestvol) && SCIPisFeasNegative(scip, redcosts)) )
       {
-         SCIPdebugMsg(scip, "pricing heuristic found column with reduced costs %g after %d iterations\n", redcosts, niters + 1);
+         SCIPdebugMsg(scip, "pricing heuristic found column with reduced costs %g and volume %g after %d iterations\n", redcosts, vol, niters + 1);
 
          SCIP_CALL( addVariable(scip, probdata, elements, xs, ys, ispacked, nelements) );
          *addedvar = TRUE;
-         bestredcosts = redcosts;
+         bestredcosts = MIN(bestredcosts, redcosts);
+         bestvol = MAX(bestvol, vol);
       }
 
       ++niters;
