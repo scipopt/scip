@@ -3686,6 +3686,16 @@ void SCIPsortedvecDelPosDownRealInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from two joint arrays of Reals/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
+   int*                  intarray1,          /**< first int array where an element is to be deleted */
+   int*                  intarray2,          /**< second int array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecDelPosDownRealIntLong(
