@@ -60,6 +60,7 @@
 /** @brief Variable pricer data used in the \ref pricer_ringpacking.c "pricer" */
 struct SCIP_PricerData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -134,6 +135,7 @@ SCIP_RETCODE addVariable(
    int*                  types,              /**< types of elements */
    SCIP_Real*            xs,                 /**< x coordinate of each element */
    SCIP_Real*            ys,                 /**< y coordinate of each element */
+   SCIP_Bool*            ispacked,           /**< checks whether an element has been packed (might be NULL) */
    int                   nelems              /**< total number of elements */
    )
 {
@@ -160,10 +162,12 @@ SCIP_RETCODE addVariable(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r");
    for( i = 0; i < nelems; ++i )
    {
-      (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", types[i]);
-      (void) strcat(name, strtmp);
-
-      SCIP_CALL( SCIPpatternAddElement(pattern, types[i], xs[i], ys[i]) );
+      if( ispacked == NULL || ispacked[i] )
+      {
+         (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", types[i]);
+         (void) strcat(name, strtmp);
+         SCIP_CALL( SCIPpatternAddElement(pattern, types[i], xs[i], ys[i]) );
+      }
    }
 
    /* mark pattern to be packable */
@@ -180,8 +184,11 @@ SCIP_RETCODE addVariable(
    /* add coefficients */
    for( i = 0; i < nelems; ++i )
    {
-      assert(types[i] >= 0 && types[i] < SCIPprobdataGetNTypes(probdata));
-      SCIP_CALL( SCIPaddCoefLinear(scip, conss[types[i]], var, 1.0) );
+      if( ispacked == NULL || ispacked[i] )
+      {
+         assert(types[i] >= 0 && types[i] < SCIPprobdataGetNTypes(probdata));
+         SCIP_CALL( SCIPaddCoefLinear(scip, conss[types[i]], var, 1.0) );
+      }
    }
 
    /* add pattern and variable to the problem data */
@@ -254,12 +261,192 @@ SCIP_RETCODE extractVariablesMINLP(
    assert(nselected > 0); /* otherwise the reduced cost can not be negative */
 
    /* add variable to main SCIP */
-   SCIP_CALL( addVariable(scip, probdata, selectedtypes, xs, ys, nselected) );
+   SCIP_CALL( addVariable(scip, probdata, selectedtypes, xs, ys, NULL, nselected) );
 
    /* free memory */
    SCIPfreeBufferArray(scip, &ys);
    SCIPfreeBufferArray(scip, &xs);
    SCIPfreeBufferArray(scip, &selectedtypes);
+
+   return SCIP_OKAY;
+}
+
+/** array to compute the score of each element */
+static
+void computeScores(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            rexts,              /**< external radii for each type */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   int*                  elements,           /**< type of each element */
+   int                   nelements,          /**< total number of elements */
+   SCIP_Real*            lambdas,            /**< dual multipliers for each type */
+   SCIP_Real*            scores,             /**< array to store the score of each element */
+   int                   iter                /**< iteration round */
+   )
+{
+   int i;
+
+   for( i = 0; i < nelements; ++i )
+   {
+      int elemtype = elements[i];
+      SCIP_Real rext = rexts[elemtype];
+
+      /* use items with largest multipliers first */
+      if( iter == 0 )
+         scores[i] = lambdas[elemtype];
+
+      /* use largest elements first */
+      else if( iter == 1 )
+         scores[i] = rext;
+
+      /* use smallest elements first */
+      else if( iter == 2 )
+         scores[i] = -rext;
+
+      /* use [0,1] * radius * lambda */
+      else if( iter <= 10 )
+         scores[i] = SCIPrandomGetReal(randnumgen, 0.0, 1.0) * rext * lambdas[elemtype];
+
+      /* use [-1,0] * radius */
+      else if( iter <= 20 )
+         scores[i] = SCIPrandomGetReal(randnumgen, -1.0, 0.0) * rext * lambdas[elemtype];
+
+      /* use a random order (multiplied with dual multipliers) */
+      else
+         scores[i] = SCIPrandomGetReal(randnumgen, 0.0, 1.0) * lambdas[elemtype];
+   }
+}
+
+/** tries to find a column with negative reduced cost by using a greedy packing heuristic */
+static
+SCIP_RETCODE solvePricingHeuristic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PRICERDATA*      pricerdata,         /**< pricer data */
+   SCIP_Real*            lambdas,            /**< dual multipliers for pattern constraints */
+   SCIP_Real             timelim,            /**< time limit */
+   int                   iterlim,            /**< iteration limit */
+   SCIP_Bool*            addedvar            /**< pointer to store whether a variable with negative reduced cost has been added */
+   )
+{
+   SCIP_Real* scores;
+   SCIP_Real* rexts;
+   SCIP_Real* xs;
+   SCIP_Real* ys;
+   SCIP_Bool* ispacked;
+   int* demands;
+   int* elements;
+   SCIP_Real width;
+   SCIP_Real height;
+   SCIP_Real timestart;
+   int nelements;
+   int ntypes;
+   int npacked;
+   int niters;
+   int t;
+
+   assert(pricerdata != NULL);
+   assert(addedvar != NULL);
+
+   *addedvar = FALSE;
+   niters = 0;
+   timestart = SCIPgetSolvingTime(scip);
+
+   /* get problem data */
+   rexts = SCIPprobdataGetRexts(probdata);
+   demands = SCIPprobdataGetDemands(probdata);
+   width = SCIPprobdataGetWidth(probdata);
+   height = SCIPprobdataGetHeight(probdata);
+   ntypes = SCIPprobdataGetNTypes(probdata);
+
+   /* compute the total number of elements that need to be considered */
+   nelements = 0;
+   for( t = 0; t < ntypes; ++t )
+      nelements += getNCircles(scip, rexts[t], demands[t], width, height, lambdas[t]);
+
+   /* allocate enough memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &elements, nelements) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xs, nelements) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ys, nelements) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &scores, nelements) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ispacked, nelements) );
+
+   /* create entry for each element */
+   nelements = 0;
+   for( t = 0; t < ntypes; ++t )
+   {
+      int i;
+      int n;
+
+      n = getNCircles(scip, rexts[t], demands[t], width, height, lambdas[t]);
+
+      for( i = 0; i < n; ++i )
+      {
+         elements[nelements] = t;
+         ++nelements;
+      }
+   }
+
+   /* main loop */
+   while( niters < iterlim
+      && SCIPgetTotalTime(scip) - timestart <= timelim
+      && !SCIPisStopped(scip) )
+   {
+      SCIP_Real redcosts = 1.0;
+      int i;
+
+      /* compute scores */
+      computeScores(scip, rexts, pricerdata->randnumgen, elements, nelements, lambdas, scores, niters);
+
+      /* sort elements in non-increasing order */
+      SCIPsortDownRealInt(scores, elements, nelements);
+
+      /* call heuristic */
+      SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, width, height, ispacked, elements, nelements,
+         SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+
+      /* compute reduced costs */
+      for( i = 0; i < nelements; ++i )
+      {
+         if( ispacked[i] )
+            redcosts -= lambdas[elements[i]];
+      }
+
+      /* add pattern if reduced costs are negative */
+      if( SCIPisFeasNegative(scip, redcosts) )
+      {
+         SCIPdebugMsg(scip, "pricing heuristic found column with reduced costs %g after %d iterations\n", redcosts, niters + 1);
+
+         SCIP_CALL( addVariable(scip, probdata, elements, xs, ys, ispacked, nelements) );
+         *addedvar = TRUE;
+         break;
+      }
+
+      ++niters;
+   }
+
+   extern
+   void SCIPpackCirclesGreedy(
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_Real*            rexts,              /**< outer radii of elements (in original order of probdata) */
+      SCIP_Real*            xs,                 /**< buffer to store the resulting x-coordinates */
+      SCIP_Real*            ys,                 /**< buffer to store the resulting y-coordinates */
+      SCIP_Real             rbounding,          /**< inner radius of bounding circle (ignored for rectangular patterns) */
+      SCIP_Real             width,              /**< width of the rectangle */
+      SCIP_Real             height,             /**< height of the rectangle */
+      SCIP_Bool*            ispacked,           /**< buffer to store which elements could be packed */
+      int*                  elements,           /**< the order of the elements in the pattern */
+      int                   nelements,          /**< number of elements in the pattern */
+      SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
+      int*                  npacked             /**< pointer to store the number of packed elements */
+      );
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &ispacked);
+   SCIPfreeBufferArray(scip, &scores);
+   SCIPfreeBufferArray(scip, &ys);
+   SCIPfreeBufferArray(scip, &xs);
+   SCIPfreeBufferArray(scip, &elements);
 
    return SCIP_OKAY;
 }
@@ -531,6 +718,13 @@ SCIP_DECL_PRICERFREE(pricerFreeRingpacking)
 static
 SCIP_DECL_PRICERINIT(pricerInitRingpacking)
 {  /*lint --e{715}*/
+   SCIP_PRICERDATA* pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata != NULL);
+   assert(pricerdata->randnumgen == NULL);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &pricerdata->randnumgen, 0) );
+
    return SCIP_OKAY;
 }
 
@@ -539,6 +733,14 @@ SCIP_DECL_PRICERINIT(pricerInitRingpacking)
 static
 SCIP_DECL_PRICEREXITSOL(pricerExitsolRingpacking)
 {  /*lint --e{715}*/
+   SCIP_PRICERDATA* pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata != NULL);
+
+   if( pricerdata->randnumgen != NULL )
+   {
+      SCIPfreeRandom(scip, &pricerdata->randnumgen);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -547,6 +749,7 @@ SCIP_DECL_PRICEREXITSOL(pricerExitsolRingpacking)
 static
 SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
 {  /*lint --e{715}*/
+   SCIP_PRICERDATA* pricerdata;
    SCIP_PROBDATA* probdata;
    SCIP_CONS** conss;
    SCIP_Real* lambdas;
@@ -562,6 +765,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
 
    *result = SCIP_SUCCESS;
 
+   pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata != NULL);
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
@@ -593,37 +798,41 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/pricing/heurtilim", &heurtilim) );
    SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/pricing/heuriterlim", &heuriterlim) );
 
-   /* TODO solve pricing problem with heuristic */
-   heurtilim = MIN(heurtilim, SCIPgetSolvingTime(scip) - totaltilim); /*lint !e666*/
+   /* solve pricing problem with heuristic */
+   heurtilim = MIN(heurtilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+   SCIP_CALL( solvePricingHeuristic(scip, probdata, pricerdata, lambdas, heurtilim, heuriterlim, &success) );
 
-   /* solve pricing problem as MINLP  */
-   nlptilim = MIN(nlptilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
-   SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, nlptilim, nlpnodelim, &success, &solstat, &redcostslb) );
-   redcostslb += 1.0;
-   SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
-
-   /* compute Farley's bound */
-   if( SCIPisFeasGE(scip, redcostslb, 0.0) )
+   /* solve pricing problem as MINLP if heuristic was not successful */
+   if( !success )
    {
-      *lowerbound = SCIPgetLPObjval(scip);
-      SCIPinfoMessage(scip, NULL, "+++++++++++++ LP(master) = ceil(%g) = %g\n", *lowerbound, SCIPfeasCeil(scip, *lowerbound));
-   }
-   else
-   {
-      *lowerbound = SCIPgetLPObjval(scip) / (1.0 - redcostslb);
-      SCIPinfoMessage(scip, NULL, "+++++++++++++ Farley's bound = ceil(%g/%g) = %g\n", SCIPgetLPObjval(scip), 1.0 - redcostslb,
-         SCIPfeasCeil(scip, *lowerbound));
-   }
-   *lowerbound = SCIPfeasCeil(scip, *lowerbound);
+      nlptilim = MIN(nlptilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+      SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, nlptilim, nlpnodelim, &success, &solstat, &redcostslb) );
+      redcostslb += 1.0;
+      SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 
-   /* updates dual bound that is stored in the problem data */
-   SCIPprobdataUpdateDualbound(scip, probdata, *lowerbound);
+         /* compute Farley's bound */
+      if( SCIPisFeasGE(scip, redcostslb, 0.0) )
+      {
+         *lowerbound = SCIPgetLPObjval(scip);
+         SCIPinfoMessage(scip, NULL, "+++++++++++++ LP(master) = ceil(%g) = %g\n", *lowerbound, SCIPfeasCeil(scip, *lowerbound));
+      }
+      else
+      {
+         *lowerbound = SCIPgetLPObjval(scip) / (1.0 - redcostslb);
+         SCIPinfoMessage(scip, NULL, "+++++++++++++ Farley's bound = ceil(%g/%g) = %g\n", SCIPgetLPObjval(scip), 1.0 - redcostslb,
+            SCIPfeasCeil(scip, *lowerbound));
+      }
+      *lowerbound = SCIPfeasCeil(scip, *lowerbound);
 
-   /* invalidate dual bound if no variable has been added and the pricing problem has not been solved to optimality */
-   if( !success && solstat != SCIP_STATUS_OPTIMAL )
-   {
-      assert(SCIPisFeasLE(scip, redcostslb, 0.0));
-      SCIPprobdataInvalidateDualbound(scip, probdata);
+      /* updates dual bound that is stored in the problem data */
+      SCIPprobdataUpdateDualbound(scip, probdata, *lowerbound);
+
+      /* invalidate dual bound if no variable has been added and the pricing problem has not been solved to optimality */
+      if( !success && solstat != SCIP_STATUS_OPTIMAL )
+      {
+         assert(SCIPisFeasLE(scip, redcostslb, 0.0));
+         SCIPprobdataInvalidateDualbound(scip, probdata);
+      }
    }
 
    /* free memory */
