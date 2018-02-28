@@ -339,6 +339,7 @@ SCIP_RETCODE solvePricingHeuristic(
    SCIP_Real width;
    SCIP_Real height;
    SCIP_Real timestart;
+   SCIP_Real bestredcosts;
    int nelements;
    int ntypes;
    int npacked;
@@ -351,6 +352,7 @@ SCIP_RETCODE solvePricingHeuristic(
    *addedvar = FALSE;
    niters = 0;
    timestart = SCIPgetSolvingTime(scip);
+   bestredcosts = 0.0;
 
    /* get problem data */
    rexts = SCIPprobdataGetRexts(probdata);
@@ -413,13 +415,13 @@ SCIP_RETCODE solvePricingHeuristic(
       }
 
       /* add pattern if reduced costs are negative */
-      if( SCIPisFeasNegative(scip, redcosts) )
+      if( SCIPisFeasLT(scip, redcosts, bestredcosts) )
       {
          SCIPdebugMsg(scip, "pricing heuristic found column with reduced costs %g after %d iterations\n", redcosts, niters + 1);
 
          SCIP_CALL( addVariable(scip, probdata, elements, xs, ys, ispacked, nelements) );
          *addedvar = TRUE;
-         break;
+         bestredcosts = redcosts;
       }
 
       ++niters;
