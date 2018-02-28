@@ -980,78 +980,6 @@ void updateBestCandidate(
    }
 }
 
-/** Auxiliary function to compute the left-most, bottom-second intersection point of two circles.
- *  Optionally, a bounding circle in which the point has to lie can be specified through parameter rbound
- *  If rbound is infinity, all points are valid. Results will be infinity if computation failed.
- */
-static
-void computeIntersectionCircles(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             x1,                 /**< x-coordinate of first circle */
-   SCIP_Real             y1,                 /**< y-coordinate of first circle */
-   SCIP_Real             r1,                 /**< radius of first circle */
-   SCIP_Real             x2,                 /**< x-coordinate of second circle */
-   SCIP_Real             y2,                 /**< y-coordinate of second circle */
-   SCIP_Real             r2,                 /**< radius of second circle */
-   SCIP_Real             rbound,             /**< radius of bounding circle */
-   SCIP_Real*            xres,               /**< buffer for x-coordinate of intersection point */
-   SCIP_Real*            yres                /**< buffer for y-coordinate of intersection point */
-)
-{
-   SCIP_Real distsqr;
-   SCIP_Real r1sqr;
-   SCIP_Real r2sqr;
-   SCIP_Real sqrtterm;
-
-   assert(xres != NULL);
-   assert(yres != NULL);
-   assert(SCIPisGE(scip, r1, 0.0));
-   assert(SCIPisGE(scip, r2, 0.0));
-   assert(SCIPisGE(scip, rbound, 0.0));
-
-   distsqr = SQR(x2 - x1) + SQR(y2 - y1);
-   assert(distsqr != 0.0);
-
-   /* if the distance is too large, the circles don't intersect */
-   if( SCIPisGT(scip, distsqr, SQR(r1 + r2)) )
-   {
-      *xres = SCIPinfinity(scip);
-      *yres = SCIPinfinity(scip);
-      return;
-   }
-
-   r1sqr = SQR(r1);
-   r2sqr = SQR(r2);
-   sqrtterm = 0.5 * SQRT(2 * (r1sqr + r2sqr) / distsqr - SQR(r1sqr - r2sqr) / SQR(distsqr) - 1);
-
-   *xres = 0.5 * (x1 + x2) + 0.5 * (r1sqr - r2sqr) * (x2 - x1) / distsqr;
-   *yres = 0.5 * (y1 + y2) + 0.5 * (r1sqr - r2sqr) * (y2 - y1) / distsqr;
-
-   /* choose intersection according to left-first, bottom-second order */
-   if( (!SCIPisEQ(scip, y1, y2) && SCIPisGT(scip, sqrtterm * (y2 - y1), 0.0))
-       || (SCIPisEQ(scip, y1, y2) && SCIPisGT(scip, sqrtterm * (x2 - x1), 0.0)) )
-   {
-      sqrtterm *= -1.0;
-   }
-
-   *xres += sqrtterm * (y2 - y1);
-   *yres += sqrtterm * (x2 - x1);
-
-   /* if point does not lie in the bounding circle, try the other one */
-
-   if( !SCIPisInfinity(scip, rbound) && SCIPisGT(scip, SQR(*xres) + SQR(*yres), SQR(rbound)) )
-   {
-      *xres -= 2.0 * sqrtterm * (y2 - y1);
-      *yres -= 2.0 * sqrtterm * (x2 - x1);
-
-      if( SCIPisGT(scip, SQR(*xres) + SQR(*yres), SQR(rbound)) )
-      {
-         *xres = SCIPinfinity(scip);
-         *yres = SCIPinfinity(scip);
-      }
-   }
-}
-
 /** auxiliary function for computing a candidate position between a circle and the outer ring */
 static
 void computePosRingCircle(
@@ -1144,7 +1072,7 @@ void computePosTrivial(
 
       for( i = 0; i < 4; ++i )
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, patterntype,
-         ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
+            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
    }
    else
    {
@@ -1153,7 +1081,7 @@ void computePosTrivial(
 
       for( i = 0; i < 4; ++i )
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, patterntype,
-         ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
+            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
    }
 }
 
@@ -1174,7 +1102,57 @@ void computePosRectangleCircle(
    SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
    )
 {
-   /* TODO */
+   SCIP_Real rext;
+   int i;
+
+   rext = rexts[elements[pos]];
+
+   for( i = 0; i < nelements; ++i )
+   {
+      SCIP_Real xfix[2] = {rext, width - rext};
+      SCIP_Real yfix[2] = {rext, height - rext};
+      SCIP_Real Ri;
+      int k;
+
+      if( !ispacked[i] )
+         continue;
+
+      Ri = rexts[elements[i]];
+
+      /* fix x */
+      for( k = 0; k < 2; ++k )
+      {
+         SCIP_Real alpha = SQR(rext + Ri) - (xfix[k] - xs[i]);
+
+         if( alpha < 0.0 )
+            continue;
+
+         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
+            xfix[k], xs[i] + SQRT(alpha));
+
+         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
+            xfix[k], xs[i] - SQRT(alpha));
+      }
+
+      /* fix y */
+      for( k = 0; k < 2; ++k )
+      {
+         SCIP_Real alpha = SQR(rext + Ri) - (yfix[k] - ys[i]);
+
+         if( alpha < 0.0 )
+            continue;
+
+         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
+            xs[i] + SQRT(alpha), yfix[k]);
+
+         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
+            xs[i] - SQRT(alpha), yfix[k]);
+      }
+   }
 }
 
 /** auxiliary function for computing a candidate position between two circles */
@@ -1196,7 +1174,55 @@ void computePosCircleCircle(
    SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
    )
 {
-   /* TODO */
+   SCIP_Real rext;
+   int i;
+
+   rext = rexts[elements[pos]];
+
+   /* consider all pairs of already packed circles */
+   for( i = 0; i < nelements - 1; ++i )
+   {
+      SCIP_Real alpha, a, b, h, u, v, n1, n2;
+      SCIP_Real Ri;
+      int j;
+
+      if( !ispacked[i] )
+         continue;
+
+      Ri = rexts[elements[i]];
+
+      for( j = i + 1; j < nelements; ++j )
+      {
+         SCIP_Real Rj;
+         SCIP_Real dist;
+
+         if( !ispacked[j] )
+            continue;
+
+         Rj = rexts[elements[j]];
+         dist = SQRT(SQR(xs[i] - xs[j]) + SQR(ys[i] - ys[j]));
+
+         /* circles are too far away */
+         if( SCIPisGE(scip, dist, Ri + Rj + 2.0 * rext) )
+            continue;
+
+         a = Ri + rext;
+         b = Rj + rext;
+         assert(dist != 0.0);
+         alpha = (dist*dist - b*b + a*a) / (2.0*dist);
+         h = SQRT(a*a - alpha*alpha);
+         u = xs[i] + (alpha / dist) * (xs[j] - xs[i]);
+         v = ys[i] + (alpha / dist) * (ys[j] - ys[i]);
+         n1 = h * ((ys[j] - ys[i]) / dist);
+         n2 = h * ((xs[i] - xs[j]) / dist);
+         assert(n1*n1 + n2*n2 > 0.0);
+
+         updateBestCandidate(scip, xs, ys, rexts, rext, rbound, width, height, patterntype, ispacked, elements,
+            nelements, bestx, besty, u + n1, v + n2);
+         updateBestCandidate(scip, xs, ys, rexts, rext, rbound, width, height, patterntype, ispacked, elements,
+            nelements, bestx, besty, u - n1, v - n2);
+      }
+   }
 }
 
 /** Tries to pack a list of elements into a specified boundary circle by using a simple left-first bottom-second
