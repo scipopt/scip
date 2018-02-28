@@ -74,6 +74,8 @@ struct SCIP_ProbData
    SCIP_Real             enumtime;           /**< time spend for enumerating circular patterns */
    SCIP_Bool             isdualinvalid;      /**< whether the following reported dual bounds are valid */
    SCIP_Real             dualbound;          /**< valid dual bound for RCPP instance */
+
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -158,6 +160,9 @@ SCIP_RETCODE probdataCreate(
       BMSclearMemoryArray((*probdata)->patternconss, ntypes);
    }
 
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &(*probdata)->randnumgen, 0) );
+
    (*probdata)->ntypes = ntypes;
    (*probdata)->width = width;
    (*probdata)->height = height;
@@ -177,6 +182,12 @@ SCIP_RETCODE probdataFree(
    assert(scip != NULL);
    assert(probdata != NULL);
    assert(*probdata != NULL);
+
+   /* free random number generator */
+   if( (*probdata)->randnumgen != NULL )
+   {
+      SCIPfreeRandom(scip, &(*probdata)->randnumgen);
+   }
 
    /* release pattern constraints */
    if( (*probdata)->patternconss != NULL )
@@ -1029,16 +1040,21 @@ void computePosRingCircle(
       {
          assert(c != 0.0);
          alpha = (c*c - b*b + a*a) / (2*c);
-         h = SQRT(a*a - alpha*alpha);
-         u = (c - alpha) * xs[i] / c;
-         v = (c - alpha) * ys[i] / c;
-         n1 = h * (v / SQRT(v*v + u*u));
-         n2 = h * (-u / SQRT(v*v + u*u));
 
-         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, SCIP_PATTERNTYPE_CIRCULAR,
-            ispacked, elements, nelements, bestx, besty, u + n1, v + n2);
-         updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, SCIP_PATTERNTYPE_CIRCULAR,
-            ispacked, elements, nelements, bestx, besty, u - n1, v - n2);
+         if( a*a >= alpha*alpha )
+         {
+            h = SQRT(a*a - alpha*alpha);
+            u = (c - alpha) * xs[i] / c;
+            v = (c - alpha) * ys[i] / c;
+
+            n1 = SCIPisZero(scip, v) ? 0.0 : h * (v / SQRT(v*v + u*u));
+            n2 = SCIPisZero(scip, u) ? 0.0 : h * (-u / SQRT(v*v + u*u));
+
+            updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, SCIP_PATTERNTYPE_CIRCULAR,
+               ispacked, elements, nelements, bestx, besty, u + n1, v + n2);
+            updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, SCIP_PATTERNTYPE_CIRCULAR,
+               ispacked, elements, nelements, bestx, besty, u - n1, v - n2);
+         }
       }
    }
 }
@@ -1222,6 +1238,48 @@ void computePosCircleCircle(
          updateBestCandidate(scip, xs, ys, rexts, rext, rbound, width, height, patterntype, ispacked, elements,
             nelements, bestx, besty, u - n1, v - n2);
       }
+   }
+}
+
+/** array to compute the score of each element */
+static
+void computeScores(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   int*                  elements,           /**< type of each element */
+   int                   nelements,          /**< total number of elements */
+   SCIP_Real*            scores,             /**< array to store the score of each element */
+   int                   iter                /**< iteration round */
+   )
+{
+   SCIP_Real* rexts;
+   int i;
+
+   rexts = SCIPprobdataGetRexts(probdata);
+   assert(rexts != NULL);
+
+   for( i = 0; i < nelements; ++i )
+   {
+      SCIP_Real rext = rexts[elements[i]];
+      /* use largest elements first */
+      if( iter == 0 )
+         scores[i] = rext;
+
+      /* use smallest elements first */
+      else if( iter == 1 )
+         scores[i] = -rext;
+
+      /* use [0,1] * radius */
+      else if( iter <= 10 )
+         scores[i] = SCIPrandomGetReal(probdata->randnumgen, 0.0, 1.0) * rext;
+
+      /* use [-1,0] * radius */
+      else if( iter <= 20 )
+         scores[i] = SCIPrandomGetReal(probdata->randnumgen, -1.0, 0.0) * rext;
+
+      /* use a random order */
+      else
+         scores[i] = SCIPrandomGetReal(probdata->randnumgen, 0.0, 1.0);
    }
 }
 
@@ -1776,15 +1834,11 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    {
       int npacked;
 
-      /* compute scores TODO use callback functions */
-      for( i = 0; i < nelements; ++i )
-      {
-         int elemtype = SCIPpatternGetElementType(pattern, pos[i]);
-         scores[ pos[i] ] = 0.0;
-      }
+      /* compute scores depending on iteration counter */
+      computeScores(scip, probdata, elements, nelements, scores, niters);
 
-      /* sort elements */
-      SCIPsortRealIntInt(scores, elements, pos, nelements);
+      /* sort elements in non-increasing order */
+      SCIPsortDownRealIntInt(scores, elements, pos, nelements);
 
       /* call heuristic */
       SCIPpackCirclesGreedy(scip, rexts, xs, ys, rints[type], SCIPprobdataGetWidth(probdata),
@@ -1800,7 +1854,7 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
          }
          SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_YES);
 
-         SCIPdebugMsg(scip, "heuristic verified pattern after %d iterations\n", niters);
+         SCIPdebugMsg(scip, "heuristic verified pattern after %d iterations\n", niters + 1);
       }
 
       ++niters;
