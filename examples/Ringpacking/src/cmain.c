@@ -42,8 +42,8 @@
 #define DEFAULT_VERIFICATION_HEURITERLIMSOFT 100       /**< soft iteration limit for heuristic verification */
 #define DEFAULT_PRICING_NLPTILIM             10.0      /**< time limit for each pricing NLP */
 #define DEFAULT_PRICING_NLPNODELIM           SCIP_LONGINT_MAX /**< node limit for each pricing NLP */
-#define DEFAULT_PRICING_HEURTILIM            10.0      /**< time limit for each heuristic pricing */
-#define DEFAULT_PRICING_HEURITERLIM          100       /**< iteration limit for each heuristic pricing */
+#define DEFAULT_PRICING_HEURTILIM            60.0     /**< time limit for each heuristic pricing */
+#define DEFAULT_PRICING_HEURITERLIM          1000      /**< iteration limit for each heuristic pricing */
 
 #define DEFAULT_TEXFILENAME                  ""        /**< filename for tex output for the best found solution (\"\": disable) */
 

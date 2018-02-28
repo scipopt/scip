@@ -281,10 +281,13 @@ void computeScores(
    int                   nelements,          /**< total number of elements */
    SCIP_Real*            lambdas,            /**< dual multipliers for each type */
    SCIP_Real*            scores,             /**< array to store the score of each element */
-   int                   iter                /**< iteration round */
+   int                   iter,               /**< iteration round */
+   int                   iterlim             /**< total iteration limit */
    )
 {
    int i;
+
+   assert(iter < iterlim);
 
    for( i = 0; i < nelements; ++i )
    {
@@ -303,17 +306,21 @@ void computeScores(
       else if( iter == 2 )
          scores[i] = -rext;
 
+      /* use [0,1] * radius^2 */
+      else if( iter <= iterlim * 0.1 )
+         scores[i] = SCIPrandomGetReal(randnumgen, 0.0, 1.0) * rext * rext;
+
       /* use [0,1] * radius * lambda */
-      else if( iter <= 10 )
+      else if( iter <= iterlim * 0.4 )
          scores[i] = SCIPrandomGetReal(randnumgen, 0.0, 1.0) * rext * lambdas[elemtype];
 
-      /* use [-1,0] * radius */
-      else if( iter <= 20 )
-         scores[i] = SCIPrandomGetReal(randnumgen, -1.0, 0.0) * rext * lambdas[elemtype];
+      /* use [-1,1] *  lambda / radius */
+      else if( iter <= iterlim * 0.8 )
+         scores[i] = SCIPrandomGetReal(randnumgen, -1.0, 1.0) * rext * lambdas[elemtype];
 
-      /* use a random order (multiplied with dual multipliers) */
+      /* use a random order */
       else
-         scores[i] = SCIPrandomGetReal(randnumgen, 0.0, 1.0) * lambdas[elemtype];
+         scores[i] = SCIPrandomGetReal(randnumgen, 0.0, 1.0);
    }
 }
 
@@ -401,7 +408,7 @@ SCIP_RETCODE solvePricingHeuristic(
       int i;
 
       /* compute scores */
-      computeScores(scip, rexts, pricerdata->randnumgen, elements, nelements, lambdas, scores, niters);
+      computeScores(scip, rexts, pricerdata->randnumgen, elements, nelements, lambdas, scores, niters, iterlim);
 
       /* sort elements in non-increasing order */
       SCIPsortDownRealInt(scores, elements, nelements);
