@@ -28,8 +28,6 @@
 
 static SCIP* scip;
 
-static int i;
-
 /** setup of test run */
 static
 void setup(void)
@@ -226,4 +224,24 @@ Test(heuristic, opt_twenty)
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 8.978083352821738, 8.978083352821738, ispacked, elements, 20, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
    cr_expect(npacked >= 18); /* note that greedy fails for this example */
+}
+
+/* tests a more complicated example */
+Test(heuristic, complex_1)
+{
+   SCIP_Real rexts[3] = {2.0, 1.0, 0.3};
+   SCIP_Real xs[24];
+   SCIP_Real ys[24];
+   SCIP_Bool ispacked[24];
+   int elements[24] = {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+   int npacked;
+   int i;
+
+   /* pack into a ring */
+   SCIPpackCirclesGreedy(scip, rexts, xs, ys, 4.0, -1.0, -1.0, ispacked, elements, 24, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   cr_expect(npacked == 24);
+
+   /* pack into a square */
+   SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, 7.7, 7.7, ispacked, elements, 24, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   cr_expect(npacked == 24);
 }
