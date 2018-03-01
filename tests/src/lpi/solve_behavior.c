@@ -181,7 +181,6 @@ Test(solve_behavior, testbarriersolve)
 Test(solve_behavior, testhassolve)
 {
    /* try calling all methods at least once */
-   SCIPlpiHasSimplexSolve();
    SCIPlpiHasPrimalSolve();
    SCIPlpiHasDualSolve();
    SCIPlpiHasBarrierSolve();
