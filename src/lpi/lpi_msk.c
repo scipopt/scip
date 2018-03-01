@@ -684,7 +684,6 @@ SCIP_Bool SCIPlpiHasPrimalSolve(
    void
    )
 {
-   assert( lpi != NULL );
    return TRUE;
 }
 
@@ -694,7 +693,6 @@ SCIP_Bool SCIPlpiHasDualSolve(
    void
    )
 {
-   assert( lpi != NULL );
    return TRUE;
 }
 
@@ -704,7 +702,6 @@ SCIP_Bool SCIPlpiHasBarrierSolve(
    void
    )
 {
-   assert( lpi != NULL );
    return TRUE;
 }
 
