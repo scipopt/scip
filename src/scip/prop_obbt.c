@@ -3152,10 +3152,8 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    BMSclearMemory(propdata);
 
-   /* initialize statistic variables */
+   /* initialize variables with a non-zero default value */
    propdata->lastidx = -1;
-   propdata->propagatecounter = 0;
-   propdata->npropagatedomreds = 0;
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
