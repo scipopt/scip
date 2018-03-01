@@ -128,8 +128,6 @@ TestSuite(solve_behavior, .init = setup, .fini = teardown);
 Test(solve_behavior, testbarriersolve)
 {
    SCIP_Real objval;
-   int cstats[3];
-   int rstats[3];
    int i;
    bool crossover = true;
    int nrows, ncols;
