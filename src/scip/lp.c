@@ -17563,7 +17563,7 @@ SCIP_RETCODE computeRelIntPoint(
    /* check, if parameter is unknown */
    if( retcode == SCIP_PARAMETERUNKNOWN )
       SCIPmessagePrintWarning(messagehdlr, "Could not set time limit of LP solver for relative interior point computation.\n");
-   else
+   else if ( retcode != SCIP_OKAY )
       return retcode;
 
    /* set iteration limit */
@@ -17572,7 +17572,7 @@ SCIP_RETCODE computeRelIntPoint(
    /* check, if parameter is unknown */
    if( retcode == SCIP_PARAMETERUNKNOWN )
       SCIPmessagePrintWarning(messagehdlr, "Could not set iteration limit of LP solver for relative interior point computation.\n");
-   else
+   else if ( retcode != SCIP_OKAY )
       return retcode;
 
    /* solve and store point */
