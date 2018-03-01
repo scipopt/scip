@@ -123,28 +123,22 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    );
 
-/** informs about availability of a simplex solving method */
-EXTERN
-SCIP_Bool SCIPlpiHasSimplexSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
-   );
-
 /** informs about availability of a primal simplex solving method */
 EXTERN
 SCIP_Bool SCIPlpiHasPrimalSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
+   void
    );
 
 /** informs about availability of a dual simplex solving method */
 EXTERN
 SCIP_Bool SCIPlpiHasDualSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
+   void
    );
 
 /** informs about availability of a barrier solving method */
 EXTERN
 SCIP_Bool SCIPlpiHasBarrierSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
+   void
    );
 
 /**@} */

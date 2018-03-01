@@ -66,12 +66,6 @@ void initProb(int* ncols, int* nrows)
     *       -7 <= -x1 -   x2        <= -1
     *              x1 + 2 x2        <= 12
     *              x1,    x2,    x3 >= 0
-    * dual:
-    * min  -x1 + -x2 + 12 x3
-    *       -8 <= -x1 -          x3 <= -1
-    *       -7 <= -x1 -   x2        <= -1
-    *              x1 + 2 x2        <= 12
-    *              x1,    x2,    x3 >= 0
     */
    /* add columns */
    lb = 0.0;
@@ -139,8 +133,8 @@ Test(solve_behavior, testbarriersolve)
    int i;
    bool crossover = true;
    int nrows, ncols;
-   SCIP_Real exp_primsol[10] = { 0.0, 6.0, 8.0};
-   SCIP_Real exp_dualsol[10] = {-1.0, 0.0, 0.5};
+   SCIP_Real exp_primsol[3] = { 0.0, 6.0, 8.0};
+   SCIP_Real exp_dualsol[3] = {-1.0, 0.0, 0.5};
    SCIP_Real* primsol;
    SCIP_Real* dualsol;
 
@@ -187,8 +181,8 @@ Test(solve_behavior, testbarriersolve)
 Test(solve_behavior, testhassolve)
 {
    /* try calling all methods at least once */
-   SCIPlpiHasSimplexSolve(lpi);
-   SCIPlpiHasPrimalSolve(lpi);
-   SCIPlpiHasDualSolve(lpi);
-   SCIPlpiHasBarrierSolve(lpi);
+   SCIPlpiHasSimplexSolve();
+   SCIPlpiHasPrimalSolve();
+   SCIPlpiHasDualSolve();
+   SCIPlpiHasBarrierSolve();
 }

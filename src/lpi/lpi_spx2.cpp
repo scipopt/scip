@@ -988,20 +988,10 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
 #endif
 }
 
-/** informs about availability of a simplex solving method */
-EXTERN
-SCIP_Bool SCIPlpiHasSimplexSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
-   )
-{
-   assert( lpi != NULL );
-   return TRUE;
-}
-
 /** informs about availability of a primal simplex solving method */
 EXTERN
 SCIP_Bool SCIPlpiHasPrimalSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
+   void
    )
 {
    assert( lpi != NULL );
@@ -1011,7 +1001,7 @@ SCIP_Bool SCIPlpiHasPrimalSolve(
 /** informs about availability of a dual simplex solving method */
 EXTERN
 SCIP_Bool SCIPlpiHasDualSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
+   void
    )
 {
    assert( lpi != NULL );
@@ -1021,7 +1011,7 @@ SCIP_Bool SCIPlpiHasDualSolve(
 /** informs about availability of a barrier solving method */
 EXTERN
 SCIP_Bool SCIPlpiHasBarrierSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
+   void
    )
 {
    assert( lpi != NULL );
