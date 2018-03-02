@@ -1521,7 +1521,7 @@ endif
 endif
 ifneq ($(WORHP),true)
 ifneq ($(WORHP),false)
-		$(error invalid WORHP flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+		$(error invalid WORHP flag selected: WORHP=$(WORHP). Possible options are: true false)
 endif
 endif
 ifneq ($(READLINE),true)
