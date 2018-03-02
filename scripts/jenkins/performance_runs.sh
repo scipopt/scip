@@ -84,7 +84,7 @@ declare -A JOBS
 # jobs running on saturday
 JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
 JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
-TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GIT_BRANCH}_weekly/build?token=weeklysaptoken"
+TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
 JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-501-pure PERFORMANCE=performance"
