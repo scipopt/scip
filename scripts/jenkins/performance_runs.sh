@@ -183,5 +183,5 @@ done
 # NOTE: only check up to 10 triggers. If there are more there is something wrong...
 echo "Triggering the following jobs:"
 for i in `seq 1 ${TODAYS_N_TRIGGERS}`; do
-  curl -I "${TRIGGER[${DAY_OF_WEEK},$i]}"
+  curl -f -I "${TRIGGER[${DAY_OF_WEEK},$i]}"
 done
