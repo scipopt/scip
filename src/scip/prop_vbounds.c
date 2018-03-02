@@ -2749,7 +2749,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    if( presoltiming == SCIP_PRESOLTIMING_MEDIUM && ncliques > propdata->maxcliquesmedium * SCIPgetNBinVars(scip) )
       return SCIP_OKAY;
 
-   /* too many cliques for medium presolving */
+   /* too many cliques for exhaustive presolving */
    if( ncliques > propdata->maxcliquesexhaustive * SCIPgetNBinVars(scip) )
       return SCIP_OKAY;
 

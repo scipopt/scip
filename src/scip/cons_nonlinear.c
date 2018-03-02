@@ -2628,7 +2628,7 @@ SCIP_RETCODE reformMonomial(
       productnode = NULL;
       for( p = 0; p < SCIPexprgraphGetNodeNParents(leftright[0]); ++p)
       {
-         parent = SCIPexprgraphGetNodeParents(factors[0])[p];
+         parent = SCIPexprgraphGetNodeParents(leftright[0])[p];
          if( SCIPexprgraphGetNodeOperator(parent) != SCIP_EXPR_MUL )
             continue;
 
