@@ -678,6 +678,34 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+EXTERN
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+EXTERN
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+EXTERN
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/**@} */
 
 
 /*
@@ -3411,9 +3439,8 @@ SCIP_RETCODE SCIPlpiGetSol(
          assert(sux != NULL);
          redcost[i] -= sux[i];
       }
+      BMSfreeMemoryArray(&sux);
    }
-
-   BMSfreeMemoryArray(&sux);
 
    return SCIP_OKAY;
 }

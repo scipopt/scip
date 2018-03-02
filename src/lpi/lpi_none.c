@@ -113,6 +113,33 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+EXTERN
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return FALSE;
+}
+
+/** informs about availability of a dual simplex solving method */
+EXTERN
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return FALSE;
+}
+
+/** informs about availability of a barrier solving method */
+EXTERN
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return FALSE;
+}
+
 /**@} */
 
 
