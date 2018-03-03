@@ -5587,7 +5587,7 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
-   CHECK_ZERO( lpi->messagehdlr, GRBread(lpi->grbmodel, fname) );
+   CHECK_ZERO( lpi->messagehdlr, GRBreadmodel(lpi->grbenv, fname, &lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
