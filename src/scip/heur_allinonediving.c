@@ -71,6 +71,7 @@
 #define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15
 #define DEFAULT_LPSOLVEFREQ 0
 #define DEFAULT_INITIALSEED 12345
+#define DEFAULT_SELTYPE 'w'
 
 
 /* locally defined heuristic data */
@@ -93,10 +94,11 @@ struct SCIP_HeurData
    int                   nupdatedvars;       /**< the current number of variables with pending bound changes */
    int                   memsize;            /**< memory size of current arrays, needed for dynamic reallocation */
    int                   varpossmemsize;     /**< memory size of updated vars and varposs array */
-
+   int                   lastselection;      /**< stores the last selected diveset when the heuristics was run */
    char                  scoreparam;         /**< score parameter for distribution branching */
    char                  scoretype;          /**< score parameter to compare different divesets */
    SCIP_Real             epsilon;            /**< parameter that increases probability of exploration among divesets */
+   char                  seltype;            /**< selection strategy: (e)psilon-greedy, (w)eighted distribution, (n)ext diving */
    SCIP_Bool             usescipscore;       /**< should the SCIP branching score be used for weighing up and down score? */
 };
 
@@ -895,6 +897,7 @@ SCIP_DECL_HEURINIT(heurInitAllinonediving) /*lint --e{715}*/
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
+   heurdata->lastselection = -1;
    assert(heurdata != NULL);
 
    /* create working solution */
@@ -1046,44 +1049,69 @@ SCIP_Longint getLPIterlimit(
    return lpiterlimit;
 }
 
-/** execution method of primal heuristic */
+/** sample from a distribution defined by weights */
 static
-SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-   SCIP_DIVESET* diveset;
+int sampleWeighted(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      rand,               /**< random number generator */
+   SCIP_Real*            weights,            /**< weights of a ground set that define the sampling distribution */
+   int                   nweights            /**< number of elements in the ground set */
+   )
+{
+   SCIP_Real weightsum;
+   SCIP_Real randomnr;
+   int w;
+   int selection;
+
+   weightsum = 0.0;
+   /* collect sum of weights */
+   for( w = 0; w < nweights; ++w )
+   {
+      weightsum += weights[w];
+   }
+   assert(weightsum > 0);
+
+   randomnr = SCIPrandomGetReal(rand, 0, weightsum);
+
+   weightsum = 0.0;
+   /* choose first element i such that the weight sum exceeds the random number */
+   for( w = 0; w < nweights - 1; ++w )
+   {
+      weightsum += weights[w];
+
+      if( weightsum >= randomnr )
+         break;
+   }
+   assert(w < nweights);
+   assert(weights[w] > 0.0);
+
+   return w;
+}
+
+/** select the diving method to apply */
+static
+SCIP_RETCODE selectDiving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< the heuristic */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int*                  selection           /**< selection made */
+   )
+{
+   SCIP_Bool* methodunavailable;
    SCIP_DIVESET** divesets;
-   ALLINONEDIVINGMETHOD method;
-   int d;
    int nlprows;
    int ndivesets;
-   SCIP_Bool* methodunavailable;
+   int d;
    SCIP_RANDNUMGEN* rng;
+   SCIP_Real* weights;
    SCIP_Real epsilon_t;
-   SCIP_Longint lpiterlimit;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
-   assert(result != NULL);
-   assert(SCIPhasCurrentNodeLP(scip));
 
    divesets = SCIPheurGetDivesets(heur);
    ndivesets = SCIPheurGetNDivesets(heur);
-   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(ndivesets > 0);
    assert(divesets != NULL);
-   heurdata = SCIPheurGetData(heur);
 
-   *result = SCIP_DIDNOTRUN;
-
-   lpiterlimit = getLPIterlimit(scip, heur, heurdata);
-
-   if( lpiterlimit <= 0 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &methodunavailable, SCIPheurGetNDivesets(heur)) );
-   BMSclearMemoryArray(methodunavailable, SCIPheurGetNDivesets(heur));
-
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &methodunavailable, ndivesets) );
 
    /* check for certain methods if it is possible to execute them */
    nlprows = SCIPgetNLPRows(scip);
@@ -1097,49 +1125,148 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
    if( SCIPgetNSols(scip) == 0 || SCIPsolIsOriginal(SCIPgetBestSol(scip)))
       methodunavailable[(int)ALLINONEDIVING_GUIDEDDIVING] = TRUE;
 
-
-   diveset = NULL;
    rng = SCIPdivesetGetRandnumgen(divesets[0]);
    assert(rng != NULL);
 
-   method = ALLINONEDIVING_VECLENDIVING;
+   switch (heurdata->seltype) {
+   case 'e':
+      epsilon_t = heurdata->epsilon * sqrt(ndivesets / (SCIPheurGetNCalls(heur) + 1.0));
+      epsilon_t = MAX(epsilon_t, 0.05);
 
-   epsilon_t = heurdata->epsilon * sqrt(ndivesets / (SCIPheurGetNCalls(heur) + 1.0));
-   epsilon_t = MAX(epsilon_t, 0.05);
-
-
-   /* select one of the available methods at random */
-   if( SCIPrandomGetReal(rng, 0.0, 1.0) < epsilon_t )
-   {
-      do
+      /* select one of the available methods at random */
+      if( SCIPrandomGetReal(rng, 0.0, 1.0) < epsilon_t )
       {
-         d = SCIPrandomGetInt(rng, 0, ndivesets - 1);
-      }
-      while( methodunavailable[d] );
-      diveset = divesets[d];
-      method = (ALLINONEDIVINGMETHOD)d;
-   }
-   else
-   {
-      SCIP_Real bestscore = SCIP_REAL_MAX;
-      for( d = 0; d < SCIPheurGetNDivesets(heur); ++d )
-      {
-         if( !methodunavailable[d] && SCIPdivesetGetAvgDepth(divesets[d]) < bestscore )
+         do
          {
-            diveset = divesets[d];
-            bestscore = divesetGetScore(diveset, heurdata->scoretype);
-            method = (ALLINONEDIVINGMETHOD)d;
+            *selection = SCIPrandomGetInt(rng, 0, ndivesets - 1);
+         }
+         while( methodunavailable[*selection] );
+      }
+      else
+      {
+         SCIP_Real bestscore = SCIP_REAL_MAX;
+         for( d = 0; d < SCIPheurGetNDivesets(heur); ++d )
+         {
+            SCIP_Real score;
+
+            if( methodunavailable[d] )
+               continue;
+
+            score = divesetGetScore(divesets[d], heurdata->scoretype);
+            if( !methodunavailable[d] && score < bestscore )
+            {
+               bestscore = score;
+               *selection = d;
+            }
          }
       }
+      break;
+   case 'w':
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &weights, ndivesets) );
+
+      /* initialize weights as inverse of the score + a small positive epsilon */
+      for( d = 0; d < ndivesets; ++d )
+      {
+         weights[d] = methodunavailable[d] ? 0.0 : 1 / (divesetGetScore(divesets[d], heurdata->scoretype) + 1e-4);
+      }
+
+      *selection = sampleWeighted(scip, rng, weights, ndivesets);
+
+      SCIPfreeBufferArray(scip, &weights);
+      break;
+   case 'n':
+
+         /* continue from last selection and stop at the next available method */
+         *selection = heurdata->lastselection;
+
+         do
+         {
+            *selection = (*selection + 1) % ndivesets;
+         }
+         while (methodunavailable[*selection]);
+         heurdata->lastselection = *selection;
+      break;
+   default:
+      break;
    }
+
+   assert(*selection >= 0 && *selection < ndivesets);
+   SCIPfreeBufferArray(scip, &methodunavailable);
+
+   return SCIP_OKAY;
+
+
+}
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   SCIP_DIVESET* diveset;
+   SCIP_DIVESET** divesets;
+   ALLINONEDIVINGMETHOD method;
+   SCIP_Longint lpiterlimit;
+   int selection;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+   assert(SCIPhasCurrentNodeLP(scip));
+
+   divesets = SCIPheurGetDivesets(heur);
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(divesets != NULL);
+   heurdata = SCIPheurGetData(heur);
+
+   *result = SCIP_DELAYED;
+
+   /* do not call heuristic in node that was already detected to be infeasible */
+   if( nodeinfeasible )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if an optimal LP solution is at hand */
+   if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
+   if( !SCIPisLPSolBasic(scip) )
+      return SCIP_OKAY;
+
+   /* don't dive two times at the same node */
+   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTRUN;
+
+   lpiterlimit = getLPIterlimit(scip, heur, heurdata);
+
+   if( lpiterlimit <= 0 )
+      return SCIP_OKAY;
+
+
+   /* select the next diving strategy based on previous success */
+   SCIP_CALL( selectDiving(scip, heur, heurdata, &selection) );
+   assert(selection >= 0 && selection < SCIPheurGetNDivesets(heur));
+
+   method = (ALLINONEDIVINGMETHOD)selection;
 
    if( method == ALLINONEDIVING_DISTRIBUTIONDIVING )
    {
+      int nlprows = SCIPgetNLPRows(scip);
+
+      /* this assertion is true because the selection process skips distribution diving otherwise */
+      assert(nlprows > 0);
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, nlprows) );
    }
 
-   assert((int)method >= 0 && (int)method < SCIPheurGetNDivesets(heur));
-   diveset = SCIPheurGetDivesets(heur)[(int)method];
+   diveset = divesets[selection];
    assert(diveset != NULL);
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, lpiterlimit) );
 
@@ -1147,8 +1274,6 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
    {
       SCIP_CALL( heurdataFreeArrays(scip, heurdata) );
    }
-
-   SCIPfreeBufferArray(scip, &methodunavailable);
 
    return SCIP_OKAY;
 }
@@ -1261,6 +1386,10 @@ SCIP_RETCODE SCIPincludeHeurAllinonediving(
     *
     * TODO put default values to the top of the file as preprocessor defines
     */
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/seltype",
+         "selection strategy: (e)psilon-greedy, (w)eighted distribution, (n)ext diving",
+         &heurdata->seltype, FALSE, DEFAULT_SELTYPE, "enw", NULL, NULL) );
+
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoretype",
          "score parameter", &heurdata->scoretype, FALSE, 'd', "nicd", NULL, NULL) );
 
