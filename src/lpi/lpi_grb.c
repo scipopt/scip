@@ -5589,6 +5589,9 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    CHECK_ZERO( lpi->messagehdlr, GRBreadmodel(lpi->grbenv, fname, &lpi->grbmodel) );
 
+   /* the model name seems to be empty, use filename */
+   CHECK_ZERO( lpi->messagehdlr, GRBsetstrattr(lpi->grbmodel, GRB_STR_ATTR_MODELNAME, fname) );
+
    return SCIP_OKAY;
 }
 
