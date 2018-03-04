@@ -5470,7 +5470,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
-      return SCIP_PARAMETERUNKNOWN;
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_BARCONVTOL, dval) );
+      break;
    case SCIP_LPPAR_OBJLIM:
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
@@ -5508,7 +5509,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
-      return SCIP_PARAMETERUNKNOWN;
+      SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_BARCONVTOL, dval) );
+      break;
    case SCIP_LPPAR_OBJLIM:
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
