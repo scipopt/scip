@@ -25,8 +25,6 @@
  * @todo Try quad-precision and concurrent runs.
  *
  * @todo Make this lpi thread safe.
- *
- * @todo Check whether parameter InfUnbdInfo (GRB_INT_PAR_INFUNBDINFO) needs to be set.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
