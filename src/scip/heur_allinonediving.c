@@ -821,7 +821,7 @@ SCIP_Real divesetGetScore(
          return SCIPdivesetGetNLPIterations(diveset) / (SCIPdivesetGetNCalls(diveset) + 10.0);
 
       case 'c': /* min backtrack / conflict ratio */
-         return SCIPdivesetGetNBacktracks(diveset) / (SCIPdivesetGetNConflicts(diveset) + 10.0);
+         return (SCIPdivesetGetNBacktracks(diveset) + 100) / (SCIPdivesetGetNConflicts(diveset) + 100.0);
 
       case 'd': /* minimum average depth (the current default) */
          return SCIPdivesetGetAvgDepth(diveset) * SCIPdivesetGetNCalls(diveset) / (SCIPdivesetGetNCalls(diveset) + 10.0);
