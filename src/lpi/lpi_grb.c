@@ -147,6 +147,8 @@ struct SCIP_LPi
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             fromscratch;        /**< should each solve be performed without previous basis state? */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
+   SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+   SCIP_Bool             checkcondition;     /**< should condition number of LP basis be checked for stability? */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
    int*                  rngrowmap;          /**< maps row id to rngrows array position, or -1 if not a ranged row
                                               *   (can be NULL, which means that no ranged rows exist) */
@@ -1356,6 +1358,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->iterations = 0;
    (*lpi)->solisbasic = FALSE;
    (*lpi)->fromscratch = FALSE;
+   (*lpi)->conditionlimit = -1.0;
+   (*lpi)->checkcondition = FALSE;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->messagehdlr = messagehdlr;
    invalidateSolution(*lpi);
@@ -3856,6 +3860,25 @@ SCIP_Bool SCIPlpiIsStable(
 
    SCIPdebugMessage("checking for stability: Gurobi solstat = %d\n", lpi->solstat);
 
+   /* If the condition number of the basis should be checked, everything above the specified threshold is counted as
+    * instable. */
+   if ( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
+   {
+      SCIP_Real kappa;
+      SCIP_RETCODE retcode;
+
+      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      if ( retcode != SCIP_OKAY )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      /* if the kappa could not be computed (e.g., because we do not have a basis), we cannot check the condition */
+      if ( kappa != SCIP_INVALID || kappa > lpi->conditionlimit ) /*lint !e777*/
+         return FALSE;
+   }
+
    return (lpi->solstat != GRB_NUMERIC);
 }
 
@@ -5488,6 +5511,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_MARKOWITZ:
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_MARKOWITZTOL, dval) );
       break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      *dval = lpi->conditionlimit;
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -5526,6 +5552,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_MARKOWITZ:
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_MARKOWITZTOL, dval) );
+      break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      lpi->conditionlimit = dval;
+      lpi->checkcondition = (dval >= 0.0) ? TRUE : FALSE;
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
