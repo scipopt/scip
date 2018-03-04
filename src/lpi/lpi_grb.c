@@ -81,23 +81,26 @@ typedef SCIP_DUALPACKET ROWPACKET;           /**< each row needs two bit of info
 
 
 /** number of Gurobi integer parameters that can be changed */
-#define NUMINTPARAM 4
+#define NUMINTPARAM 6
 
 static const char* intparam[NUMINTPARAM] =
 {
    GRB_INT_PAR_SCALEFLAG,
    GRB_INT_PAR_PRESOLVE,
    GRB_INT_PAR_SIMPLEXPRICING,
-   GRB_INT_PAR_OUTPUTFLAG
+   GRB_INT_PAR_OUTPUTFLAG,
+   GRB_INT_PAR_THREADS,
+   GRB_INT_PAR_SEED
 };
 
 /** number of Gurobi double parameters that can be changed */
-#define NUMDBLPARAM 6
+#define NUMDBLPARAM 7
 
 static const char* dblparam[NUMDBLPARAM] =
 {
    GRB_DBL_PAR_FEASIBILITYTOL,
    GRB_DBL_PAR_OPTIMALITYTOL,
+   GRB_DBL_PAR_BARCONVTOL,
    GRB_DBL_PAR_CUTOFF,
    GRB_DBL_PAR_TIMELIMIT,
    GRB_DBL_PAR_ITERATIONLIMIT,
@@ -107,8 +110,9 @@ static const char* dblparam[NUMDBLPARAM] =
 /** default values for double parameters */
 static const double dblparammin[NUMDBLPARAM] =
 {
-   +1e-09,               /* GRB_DBL_PAR_FEASIBILITYTOL */
-   +1e-09,               /* GRB_DBL_PAR_OPTIMALITYTOL */
+   +1e-06,               /* GRB_DBL_PAR_FEASIBILITYTOL */
+   +1e-06,               /* GRB_DBL_PAR_OPTIMALITYTOL */
+   +1e-08,               /* GRB_DBL_PAR_BARCONVTOL */
    -GRB_INFINITY,        /* GRB_DBL_PAR_CUTOFF */
    0,                    /* GRB_DBL_PAR_TIMELIMIT */
    0,                    /* GRB_DBL_PAR_ITERATIONLIMIT */
