@@ -5353,6 +5353,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       else
          *ival = (int) dtemp;
       break;
+   case SCIP_LPPAR_RANDOMSEED:
+      SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_SEED, ival) );
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -5433,6 +5436,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          itlim = (ival >= INT_MAX ? GRB_INFINITY : ival);
          SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_ITERATIONLIMIT, itlim) );
       }
+      break;
+   case SCIP_LPPAR_RANDOMSEED:
+      assert( ival >= 0 );
+      SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SEED, ival) );
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
