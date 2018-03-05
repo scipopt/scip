@@ -69,6 +69,7 @@
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
+#define DEFAULT_INITSEED         0x5EED /**< default initial seed used for random tie-breaking in cut selection */
 
 /* SCIPcalcRowIntegralScalar parameters */
 #define MAXDNOM                  1000LL
@@ -173,6 +174,7 @@ struct SCIP_SepaData
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
    int                   maxcutcands;        /**< maximal number of zerohalf cuts considered per separation round */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
+   int                   initseed;           /**< initial seed used for random tie-breaking in cut selection */
    int                   cutssize;           /**< size of cuts and cutscores arrays */
    int                   ncuts;              /**< number of cuts generated in the current call */
    int                   nreductions;        /**< number of reductions to the mod 2 system found so far */
@@ -2089,7 +2091,7 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolZerohalf)
    assert(sepadata != NULL);
 
    assert(sepadata->randnumgen == NULL);
-   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, 0x5EED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, (unsigned int)sepadata->initseed) );
 
    return SCIP_OKAY;
 }
@@ -2345,6 +2347,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
 
    /* create zerohalf separator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
+   BMSclearMemory(sepadata);
 
    sepadata->randnumgen = NULL;
 
@@ -2373,6 +2376,10 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/" SEPA_NAME "/maxsepacuts",
          "maximal number of cmir cuts separated per separation round",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/" SEPA_NAME "/initseed",
+         "initial seed used for random tie-breaking in cut selection",
+         &sepadata->initseed, FALSE, DEFAULT_INITSEED, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxsepacutsroot",
          "maximal number of cmir cuts separated per separation round in the root node",
