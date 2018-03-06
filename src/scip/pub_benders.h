@@ -47,35 +47,35 @@ SCIP_DECL_SORTPTRCOMP(SCIPbendersComp);
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPbendersCompName);
 
-/** gets user data of variable benders */
+/** gets user data of Benders' decomposition */
 EXTERN
 SCIP_BENDERSDATA* SCIPbendersGetData(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** sets user data of variable benders; user has to free old data in advance! */
+/** sets user data of Benders' decomposition; user has to free old data in advance! */
 EXTERN
 void SCIPbendersSetData(
-   SCIP_BENDERS*         benders,            /**< variable benders */
-   SCIP_BENDERSDATA*     bendersdata         /**< new variable benders user data */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSDATA*     bendersdata         /**< new Benders' decomposition user data */
    );
 
-/** gets name of variable benders */
+/** gets name of Benders' decomposition */
 EXTERN
 const char* SCIPbendersGetName(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** gets description of variable benders */
+/** gets description of Benders' decomposition */
 EXTERN
 const char* SCIPbendersGetDesc(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** gets priority of variable benders */
+/** gets priority of Benders' decomposition */
 EXTERN
 int SCIPbendersGetPriority(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets the number of subproblems for the Benders' decomposition */
@@ -91,34 +91,34 @@ SCIP* SCIPbendersSubproblem(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** gets the number of times, the benders was called and tried to find a variable with negative reduced costs */
+/** gets the number of times, the Bender' decomposition was called and tried to find a violated second stage constraint */
 EXTERN
 int SCIPbendersGetNCalls(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets the number of optimality cuts found by the collection of Benders' decomposition subproblems */
 EXTERN
 int SCIPbendersGetNCutsFound(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** gets time in seconds used in this benders for setting up for next stages */
+/** gets time in seconds used in this Benders' decomposition for setting up for next stages */
 EXTERN
 SCIP_Real SCIPbendersGetSetupTime(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** gets time in seconds used in this benders */
+/** gets execution time in seconds used in this Benders' decomposition */
 EXTERN
 SCIP_Real SCIPbendersGetTime(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** is variable benders initialized? */
+/** is Benders' decomposition initialized? */
 EXTERN
 SCIP_Bool SCIPbendersIsInitialized(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** returns whether the given Benders decomposition is in use in the current problem */
@@ -129,19 +129,19 @@ SCIP_Bool SCIPbendersIsActive(
 /** are Benders' cuts generated from the LP solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutLP(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** are Benders' cuts generated from the pseudo solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutPseudo(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** are Benders' cuts generated from the relaxation solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutRelaxation(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** returns the auxiliary variable for the given subproblem */
@@ -160,7 +160,7 @@ SCIP_VAR** SCIPbendersGetAuxiliaryVars(
 /** stores the objective function value of the subproblem for use in cut generation */
 EXTERN
 void SCIPbendersSetSubprobObjval(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_Real             objval,             /**< the objective function value for the subproblem */
    int                   probnumber          /**< the subproblem number */
    );
@@ -168,11 +168,11 @@ void SCIPbendersSetSubprobObjval(
 /** returns the objective function value of the subproblem for use in cut generation */
 EXTERN
 SCIP_Real SCIPbendersGetSubprobObjval(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
-/* returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
+/** returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
 EXTERN
 SCIP_Bool SCIPbendersSubprobIsLP(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -200,7 +200,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             initialisation,   /**< indicates whether the MIP is solved as part of an initalisation */
+   SCIP_Bool             initialisation,     /**< indicates whether the MIP is solved as part of an initalisation */
    SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    );
 

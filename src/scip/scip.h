@@ -2886,7 +2886,7 @@ SCIP_RETCODE SCIPsetBendersPresubsolve(
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve))/**< method called prior to solving the subproblems */
    );
 
-/** sets the solving method for benders
+/** sets the subproblem solving and freeing methods for Benders' decomposition
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2894,14 +2894,12 @@ SCIP_RETCODE SCIPsetBendersPresubsolve(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
- *
- *  @note If the subproblem solving method is implemented, then the freeing subproblem method must also be implemented
  */
-EXTERN
-SCIP_RETCODE SCIPsetBendersSolvesub(
+SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub))/**< solving method for a Benders' decomposition subproblem */
+   SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< solving method for a Benders' decomposition subproblem */
+   SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the subproblem freeing method for Benders' decomposition */
    );
 
 /** sets the post solving methods for benders
@@ -2995,7 +2993,7 @@ SCIP_RETCODE SCIPdeactivateBenders(
 
 /** sets the priority of a Benders' decomposition */
 EXTERN
-SCIP_RETCODE SCIPsetBendersPriority(
+void SCIPsetBendersPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   priority            /**< new priority of the Benders' decomposition */
@@ -3043,7 +3041,7 @@ int SCIPgetBendersNSubproblems(
 
 /** frees the subproblem after calling the solve subproblem method. This will either call the user defined free
  *  subproblem callback for Benders' decomposition or the default freeing methods. In the default case, if the
- *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is a MIP, then SCIPfreeTransform is called. */
+ *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is general CIP, then SCIPfreeTransform is called. */
 EXTERN
 SCIP_RETCODE SCIPfreeBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
