@@ -943,7 +943,8 @@ void updateBestCandidate(
    SCIP_Real*            bestx,              /**< buffer to update best x-coordinate */
    SCIP_Real*            besty,              /**< buffer to update best y-coordinate */
    SCIP_Real             x,                  /**< x-coordinate of a candidate point */
-   SCIP_Real             y                   /**< y-coordinate of a candidate point */
+   SCIP_Real             y,                  /**< y-coordinate of a candidate point */
+   SCIP_Bool             isnearlyfull        /**< indicates whether we are close to right boundary */
    )
 {
 
@@ -983,8 +984,9 @@ void updateBestCandidate(
    }
 
    /* check whether the candidate is better than the best known candidate */
-   if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID /*lint !e777*/
-      || SCIPisLT(scip, x, *bestx) || (SCIPisEQ(scip, x, *bestx) && SCIPisLT(scip, y, *besty)) ) /*lint !e777*/
+   if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID
+      || (!isnearlyfull && SCIPisLT(scip, x, *bestx)) /*lint !e777*/
+      || ((SCIPisEQ(scip, x, *bestx) || isnearlyfull) && SCIPisLT(scip, y, *besty)) ) /*lint !e777*/
    {
       *bestx = x;
       *besty = y;
@@ -1004,7 +1006,8 @@ void computePosRingCircle(
    SCIP_Bool*            ispacked,           /**< array indicating whether an element has been packed already */
    SCIP_Real             rbound,             /**< radius of bounding circle */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
-   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   SCIP_Real*            besty,              /**< pointer to store the best y-coordinate */
+   SCIP_Bool             isnearlyfull        /**< indicates whether we are close to right boundary */
    )
 {
    int i;
@@ -1032,9 +1035,9 @@ void computePosRingCircle(
       if( SCIPisZero(scip, c) )
       {
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, SCIP_PATTERNTYPE_CIRCULAR,
-            ispacked, elements, nelements, bestx, besty, -rbound + rexts[elements[pos]], 0.0);
+            ispacked, elements, nelements, bestx, besty, -rbound + rexts[elements[pos]], 0.0, isnearlyfull);
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, SCIP_PATTERNTYPE_CIRCULAR,
-            ispacked, elements, nelements, bestx, besty, +rbound - rexts[elements[pos]], 0.0);
+            ispacked, elements, nelements, bestx, besty, +rbound - rexts[elements[pos]], 0.0, isnearlyfull);
       }
       else
       {
@@ -1051,9 +1054,9 @@ void computePosRingCircle(
             n2 = SCIPisZero(scip, u) ? 0.0 : h * (-u / SQRT(v*v + u*u));
 
             updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, SCIP_PATTERNTYPE_CIRCULAR,
-               ispacked, elements, nelements, bestx, besty, u + n1, v + n2);
+               ispacked, elements, nelements, bestx, besty, u + n1, v + n2, isnearlyfull);
             updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, SCIP_PATTERNTYPE_CIRCULAR,
-               ispacked, elements, nelements, bestx, besty, u - n1, v - n2);
+               ispacked, elements, nelements, bestx, besty, u - n1, v - n2, isnearlyfull);
          }
       }
    }
@@ -1075,7 +1078,8 @@ void computePosTrivial(
    SCIP_Real             height,             /**< height of the rectangle */
    SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
-   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   SCIP_Real*            besty,              /**< pointer to store the best y-coordinate */
+   SCIP_Bool             isnearlyfull        /**< indicates whether we are close to right boundary */
    )
 {
    SCIP_Real rext = rexts[elements[pos]];
@@ -1088,7 +1092,7 @@ void computePosTrivial(
 
       for( i = 0; i < 4; ++i )
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, patterntype,
-            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
+            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i], isnearlyfull);
    }
    else
    {
@@ -1097,7 +1101,7 @@ void computePosTrivial(
 
       for( i = 0; i < 4; ++i )
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, patterntype,
-            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
+            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i], isnearlyfull);
    }
 }
 
@@ -1115,7 +1119,8 @@ void computePosRectangleCircle(
    SCIP_Real             width,              /**< width of the rectangle */
    SCIP_Real             height,             /**< height of the rectangle */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
-   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   SCIP_Real*            besty,              /**< pointer to store the best y-coordinate */
+   SCIP_Bool             isnearlyfull        /**< indicates whether we are close to right boundary */
    )
 {
    SCIP_Real rext;
@@ -1145,11 +1150,11 @@ void computePosRectangleCircle(
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
             SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
-            xfix[k], ys[i] + SQRT(alpha));
+            xfix[k], ys[i] + SQRT(alpha), isnearlyfull);
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
             SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
-            xfix[k], ys[i] - SQRT(alpha));
+            xfix[k], ys[i] - SQRT(alpha), isnearlyfull);
       }
 
       /* fix y */
@@ -1162,11 +1167,11 @@ void computePosRectangleCircle(
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
             SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
-            xs[i] + SQRT(alpha), yfix[k]);
+            xs[i] + SQRT(alpha), yfix[k], isnearlyfull);
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height,
             SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty,
-            xs[i] - SQRT(alpha), yfix[k]);
+            xs[i] - SQRT(alpha), yfix[k], isnearlyfull);
       }
    }
 }
@@ -1187,7 +1192,8 @@ void computePosCircleCircle(
    SCIP_Real             height,             /**< height of the rectangle */
    SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
-   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   SCIP_Real*            besty,              /**< pointer to store the best y-coordinate */
+   SCIP_Bool             isnearlyfull        /**< indicates whether we are close to right boundary */
    )
 {
    SCIP_Real rext;
@@ -1234,9 +1240,9 @@ void computePosCircleCircle(
          assert(n1*n1 + n2*n2 > 0.0);
 
          updateBestCandidate(scip, xs, ys, rexts, rext, rbound, width, height, patterntype, ispacked, elements,
-            nelements, bestx, besty, u + n1, v + n2);
+            nelements, bestx, besty, u + n1, v + n2, isnearlyfull);
          updateBestCandidate(scip, xs, ys, rexts, rext, rbound, width, height, patterntype, ispacked, elements,
-            nelements, bestx, besty, u - n1, v - n2);
+            nelements, bestx, besty, u - n1, v - n2, isnearlyfull);
       }
    }
 }
@@ -1675,7 +1681,9 @@ void SCIPpackCirclesGreedy(
    int*                  npacked             /**< pointer to store the number of packed elements */
    )
 {
+   SCIP_Real rmax;
    SCIP_Bool added;
+   SCIP_Bool isnearlyfull;
    int i;
 
    assert(rexts != NULL);
@@ -1709,6 +1717,16 @@ void SCIPpackCirclesGreedy(
    ispacked[0] = TRUE;
    added = TRUE;
 
+   isnearlyfull = FALSE;
+
+   /* find max radius */
+   rmax = rexts[elements[0]];
+   for( i = 1; i < nelements; ++i )
+   {
+      if( rexts[elements[i]] > rmax )
+         rmax = rexts[elements[i]];
+   }
+
    /* iterate over all elements and try to pack them */
    while( added )
    {
@@ -1725,17 +1743,19 @@ void SCIPpackCirclesGreedy(
 
          /* use trivial candidates */
          computePosTrivial(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, width, height, patterntype,
-            &bestx, &besty);
+            &bestx, &besty, isnearlyfull);
 
          /* consider circles intersection a previous circle and the boundary ring */
          if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
-            computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, &bestx, &besty);
+            computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding, &bestx, &besty,
+               isnearlyfull);
          else
-            computePosRectangleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, width, height, &bestx, &besty);
+            computePosRectangleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, width, height, &bestx,
+               &besty, isnearlyfull);
 
          /* consider circles that have been packed already */
          computePosCircleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rbounding,
-            width, height, patterntype, &bestx, &besty);
+            width, height, patterntype, &bestx, &besty, isnearlyfull);
 
          /* pack circle if a possible position has been found */
          if( bestx != SCIP_INVALID && besty != SCIP_INVALID ) /*lint !e777*/
@@ -1746,6 +1766,13 @@ void SCIPpackCirclesGreedy(
             ys[i] = besty;
             ++(*npacked);
             added = TRUE;
+
+            /* check if right boundary has almost been reached */
+            if( (patterntype == SCIP_PATTERNTYPE_RECTANGULAR && SCIPisGT(scip, bestx, width - 4*rmax))
+               || (patterntype == SCIP_PATTERNTYPE_CIRCULAR && SCIPisGT(scip, bestx, rbounding - 4*rmax)) )
+            {
+               isnearlyfull = TRUE;
+            }
          }
       }
    }
