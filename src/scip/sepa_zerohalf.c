@@ -65,11 +65,19 @@
 #define DEFAULT_MAXCUTCANDS        2000 /**< maximal number of zerohalf cuts considered per separation round */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.0 /**< maximal slack of rows to be used in aggregation in the root node */
+#define DEFAULT_GOODSCORE           1.0 /**< threshold for score of cut relative to best score to be considered good,
+                                         *   so that less strict filtering is applied */
+#define DEFAULT_BADSCORE            0.5 /**< threshold for score of cut relative to best score to be discarded */
 #define DEFAULT_MINVIOL             0.1 /**< minimal violation to generate zerohalfcut for */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 #define DEFAULT_INITSEED         0x5EED /**< default initial seed used for random tie-breaking in cut selection */
+#define DEFAULT_OBJPARALWEIGHT      0.0 /**< weight of objective parallelism in cut score calculation */
+#define DEFAULT_EFFICACYWEIGHT      1.0 /**< weight of efficacy in cut score calculation */
+#define DEFAULT_DIRCUTOFFDISTWEIGHT 0.0 /**< weight of directed cutoff distance in cut score calculation */
+#define DEFAULT_GOODMAXPARALL       0.1 /**< maximum parallelism for good cuts */
+#define DEFAULT_MAXPARALL           0.1 /**< maximum parallelism for non-good cuts */
 
 /* SCIPcalcRowIntegralScalar parameters */
 #define MAXDNOM                  1000LL
@@ -166,12 +174,20 @@ struct SCIP_SepaData
    SCIP_Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
    SCIP_Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
    SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
+   SCIP_Real             goodscore;          /**< threshold for score of cut relative to best score to be considered good,
+                                              *   so that less strict filtering is applied */
+   SCIP_Real             badscore;           /**< threshold for score of cut relative to best score to be discarded */
+   SCIP_Real             objparalweight;     /**< weight of objective parallelism in cut score calculation */
+   SCIP_Real             efficacyweight;     /**< weight of efficacy in cut score calculation */
+   SCIP_Real             dircutoffdistweight;/**< weight of directed cutoff distance in cut score calculation */
+   SCIP_Real             goodmaxparall;      /**< maximum parallelism for good cuts */
+   SCIP_Real             maxparall;          /**< maximum parallelism for non-good cuts */
    SCIP_Bool             infeasible;         /**< infeasibility was detected after adding a zerohalf cut */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
-   int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
-   int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
-   int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
-   int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
+   int                   maxrounds;          /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
+   int                   maxsepacuts;        /**< maximal number of zerohalf cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of zerohalf cuts separated per separation round in root node */
    int                   maxcutcands;        /**< maximal number of zerohalf cuts considered per separation round */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
    int                   initseed;           /**< initial seed used for random tie-breaking in cut selection */
@@ -312,6 +328,7 @@ void getIntegralScalar(
 static
 SCIP_RETCODE transformNonIntegralRow(
    SCIP*                 scip,               /**< scip data structure */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_Real             maxslack,           /**< maximum slack allowed for transformed row */
    int                   sign,               /**< +1 or -1 scale to select the side of the row */
@@ -519,7 +536,7 @@ SCIP_RETCODE transformNonIntegralRow(
          slack = 0.0;
          for( i = 0; i < transrowlen; ++i )
          {
-            SCIP_Real solval = SCIPgetVarSol(scip, vars[transrowvars[i]]);
+            SCIP_Real solval = SCIPgetSolVal(scip, sol, vars[transrowvars[i]]);
             SCIP_Real intval;
             SCIP_Real newval;
 
@@ -598,6 +615,7 @@ SCIP_RETCODE transformNonIntegralRow(
 static
 SCIP_RETCODE mod2MatrixTransformContRows(
    SCIP*                 scip,               /**< scip data structure */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
    SCIP_SEPADATA*        sepadata,           /**< zerohalf separator data */
    MOD2_MATRIX*          mod2matrix,         /**< mod2 matrix structure */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
@@ -661,8 +679,8 @@ SCIP_RETCODE mod2MatrixTransformContRows(
       {
          SCIP_Bool success;
          TRANSINTROW* introw = &mod2matrix->transintrows[mod2matrix->ntransintrows];
-         SCIP_CALL( transformNonIntegralRow(scip, allowlocal, maxslack, 1, SCIProwIsLocal(rows[i]), SCIProwGetRank(rows[i]), \
-                                            rowlen, rowvals, rowcols, rhs, intvarpos, introw, &success) );
+         SCIP_CALL( transformNonIntegralRow(scip, sol, allowlocal, maxslack, 1, SCIProwIsLocal(rows[i]), SCIProwGetRank(rows[i]), \
+               rowlen, rowvals, rowcols, rhs, intvarpos, introw, &success) );
 
          assert(success == 1 || success == 0);
          mod2matrix->ntransintrows += (int)success;
@@ -672,8 +690,8 @@ SCIP_RETCODE mod2MatrixTransformContRows(
       {
          SCIP_Bool success;
          TRANSINTROW* introw = &mod2matrix->transintrows[mod2matrix->ntransintrows];
-         SCIP_CALL( transformNonIntegralRow(scip, allowlocal, maxslack, -1, SCIProwIsLocal(rows[i]), SCIProwGetRank(rows[i]), \
-                                            rowlen, rowvals, rowcols, -lhs, intvarpos, introw, &success) );
+         SCIP_CALL( transformNonIntegralRow(scip, sol, allowlocal, maxslack, -1, SCIProwIsLocal(rows[i]), SCIProwGetRank(rows[i]), \
+               rowlen, rowvals, rowcols, -lhs, intvarpos, introw, &success) );
 
          assert(success == 1 || success == 0);
          mod2matrix->ntransintrows += (int)success;
@@ -994,6 +1012,7 @@ void destroyMod2Matrix(
 static
 SCIP_RETCODE buildMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
    SCIP_SEPADATA*        sepadata,           /**< zerohalf separator data */
    BMS_BLKMEM*           blkmem,             /**< block memory shell */
    MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
@@ -1037,7 +1056,7 @@ SCIP_RETCODE buildMod2Matrix(
       SCIP_Real primsol;
       SCIP_Bool useub;
 
-      primsol = SCIPgetVarSol(scip, vars[i]);
+      primsol = SCIPgetSolVal(scip, sol, vars[i]);
 
       lb = allowlocal ? SCIPvarGetLbLocal(vars[i]) : SCIPvarGetLbGlobal(vars[i]);
       lbsol = MAX(0.0, primsol - lb);
@@ -1095,7 +1114,7 @@ SCIP_RETCODE buildMod2Matrix(
 
       lhsmod2 = 0;
       rhsmod2 = 0;
-      activity = SCIPgetRowLPActivity(scip, rows[i]) - SCIProwGetConstant(rows[i]);
+      activity = SCIPgetRowSolActivity(scip, rows[i], sol) - SCIProwGetConstant(rows[i]);
 
       /* since row is integral we can ceil/floor the lhs/rhs after subtracting the constant */
       lhs = SCIPfeasCeil(scip, SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]));
@@ -1151,7 +1170,7 @@ SCIP_RETCODE buildMod2Matrix(
    }
 
    /* transform non-integral rows */
-   SCIP_CALL( mod2MatrixTransformContRows(scip, sepadata, mod2matrix, allowlocal, maxslack) );
+   SCIP_CALL( mod2MatrixTransformContRows(scip, sol, sepadata, mod2matrix, allowlocal, maxslack) );
 
    /* add all transformed integral rows using the created columns */
    for( i = 0; i < mod2matrix->ntransintrows; ++i )
@@ -1503,6 +1522,7 @@ void addTransRow(
 static
 SCIP_Real calcEfficacy(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
    SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
    SCIP_Real             cutrhs,             /**< the right hand side of the cut */
    int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
@@ -1523,7 +1543,7 @@ SCIP_Real calcEfficacy(
 
    activity = 0.0;
    for( i = 0; i < cutnnz; ++i )
-      activity += cutcoefs[i] * SCIPgetVarSol(scip, vars[cutinds[i]]);
+      activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
 
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
@@ -1569,6 +1589,7 @@ SCIP_Real computeViolation(
 static
 SCIP_RETCODE generateZerohalfCut(
    SCIP*                 scip,               /**< scip data structure */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
    MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
    SCIP_SEPA*            sepa,               /**< zerohalf separator */
    SCIP_SEPADATA*        sepadata,           /**< zerohalf separator data */
@@ -1669,7 +1690,7 @@ SCIP_RETCODE generateZerohalfCut(
          SCIP_Bool useub;
 
          /* complement with closest bound */
-         primsol = SCIPgetVarSol(scip, vars[k]);
+         primsol = SCIPgetSolVal(scip, sol, vars[k]);
          lb = SCIPvarGetLbGlobal(vars[k]);
          ub = SCIPvarGetUbGlobal(vars[k]);
          loclb = FALSE;
@@ -1751,7 +1772,7 @@ SCIP_RETCODE generateZerohalfCut(
    if( ! SCIPcutsTightenCoefficients(scip, cutislocal, cutcoefs, &cutrhs, cutinds, &cutnnz, &nchgcoefs) )
    {
       /* calculate efficacy */
-      cutefficacy = calcEfficacy(scip, cutcoefs, cutrhs, cutinds, cutnnz);
+      cutefficacy = calcEfficacy(scip, sol, cutcoefs, cutrhs, cutinds, cutnnz);
 
       if( SCIPisEfficacious(scip, cutefficacy) )
       {
@@ -1819,6 +1840,7 @@ SCIP_RETCODE generateZerohalfCut(
 static
 SCIP_RETCODE mod2matrixPreprocessRows(
    SCIP*                 scip,               /**< scip data structure */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
    MOD2_MATRIX*          mod2matrix,         /**< the mod 2 matrix */
    SCIP_SEPA*            sepa,               /**< the zerohalf separator */
    SCIP_SEPADATA*        sepadata,           /**< data of the zerohalf separator */
@@ -1891,7 +1913,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
          /* (d) */
          assert(row->nnonzcols == 0 && row->rhs == 1 && SCIPisLT(scip, row->slack, 1.0));
 
-         SCIP_CALL( generateZerohalfCut(scip, mod2matrix, sepa, sepadata, allowlocal, row) );
+         SCIP_CALL( generateZerohalfCut(scip, sol, mod2matrix, sepa, sepadata, allowlocal, row) );
 
          if( sepadata->infeasible )
             goto TERMINATE;
@@ -2112,9 +2134,15 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolZerohalf)
    return SCIP_OKAY;
 }
 
-/** LP solution separation method of separator */
+/** perform the zerohalf cut separation */
 static
-SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
+SCIP_RETCODE doSeparation(
+   SCIP*                 scip,
+   SCIP_SEPA*            sepa,
+   SCIP_SOL*             sol,
+   SCIP_RESULT*          result,
+   SCIP_Bool             allowlocal
+   )
 {
    int i;
    int k;
@@ -2126,21 +2154,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    assert(result != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* only call separator, if we are not close to terminating */
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   /* only call separator, if an optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
-
-   /* only call separator, if there are fractional variables */
-   if( SCIPgetNLPBranchCands(scip) == 0 )
-      return SCIP_OKAY;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
@@ -2149,7 +2162,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       int depth = SCIPgetDepth(scip);
       int ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
-      /* only call the cmir cut separator a given number of times at each node */
+      /* only call the zerohalf cut separator a given number of times at each node */
       if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
          || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
          return SCIP_OKAY;
@@ -2167,7 +2180,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    sepadata->cuts = NULL;
    sepadata->infeasible = FALSE;
 
-   SCIP_CALL( buildMod2Matrix(scip, sepadata, SCIPblkmem(scip), &mod2matrix, allowlocal, maxslack) );
+   SCIP_CALL( buildMod2Matrix(scip, NULL, sepadata, SCIPblkmem(scip), &mod2matrix, allowlocal, maxslack) );
 
    SCIPdebugMsg(scip, "built mod2 matrix (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
@@ -2180,7 +2193,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       sepadata->nreductions = 0;
 
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
-      SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata, allowlocal) );
+      SCIP_CALL( mod2matrixPreprocessRows(scip, sol, &mod2matrix, sepa, sepadata, allowlocal) );
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
 
       SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols, %i cuts) \n", mod2matrix.nrows, mod2matrix.ncols,
@@ -2287,7 +2300,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       if( row->rhs == 0 )
          continue;
 
-      SCIP_CALL( generateZerohalfCut(scip, &mod2matrix, sepa, sepadata, allowlocal, row) );
+      SCIP_CALL( generateZerohalfCut(scip, sol, &mod2matrix, sepa, sepadata, allowlocal, row) );
    }
 
    SCIPdebugMsg(scip, "total number of cuts found: %i\n", sepadata->ncuts);
@@ -2300,7 +2313,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    {
       int nselectedcuts;
 
-      SCIP_CALL( SCIPselectCuts(scip, sepadata->cuts, sepadata->randnumgen, sepadata->ncuts, 0, maxsepacuts, &nselectedcuts) );
+      SCIP_CALL( SCIPselectCuts(scip, sepadata->cuts, sepadata->randnumgen, sepadata->goodscore, sepadata->badscore,
+            sepadata->goodmaxparall, sepadata->maxparall, sepadata->dircutoffdistweight, sepadata->efficacyweight, sepadata->objparalweight, 0.0,
+            sepadata->ncuts, 0, maxsepacuts, &nselectedcuts) );
 
       for( i = 0; i < sepadata->ncuts; ++i )
       {
@@ -2337,6 +2352,52 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    return SCIP_OKAY;
 }
 
+/** LP solution separation method of separator */
+static
+SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
+{
+   assert(result != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( doSeparation(scip, sepa, NULL, result, allowlocal) );
+
+   return SCIP_OKAY;
+}
+
+/** custom solution separation method of separator */
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolZerohalf)
+{
+   assert(result != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( doSeparation(scip, sepa, sol, result, allowlocal) );
+
+   return SCIP_OKAY;
+}
+
 /** creates the zerohalf separator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSepaZerohalf(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2349,11 +2410,9 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    BMSclearMemory(sepadata);
 
-   sepadata->randnumgen = NULL;
-
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
-                                   SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpZerohalf, NULL, sepadata) );
+                                   SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpZerohalf, sepaExecsolZerohalf, sepadata) );
 
    assert(sepa != NULL);
 
@@ -2366,15 +2425,15 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    /* add zerohalf separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxrounds",
-         "maximal number of cmir separation rounds per node (-1: unlimited)",
+         "maximal number of zerohalf separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxroundsroot",
-         "maximal number of cmir separation rounds in the root node (-1: unlimited)",
+         "maximal number of zerohalf separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxsepacuts",
-         "maximal number of cmir cuts separated per separation round",
+         "maximal number of zerohalf cuts separated per separation round",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/initseed",
@@ -2382,7 +2441,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          &sepadata->initseed, FALSE, DEFAULT_INITSEED, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxsepacutsroot",
-         "maximal number of cmir cuts separated per separation round in the root node",
+         "maximal number of zerohalf cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxcutcands",
@@ -2396,6 +2455,34 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/" SEPA_NAME "/maxslackroot",
          "maximal slack of rows to be used in aggregation in the root node",
          &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/goodscore",
+         "threshold for score of cut relative to best score to be considered good, so that less strict filtering is applied",
+         &sepadata->goodscore, TRUE, DEFAULT_GOODSCORE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/badscore",
+         "threshold for score of cut relative to best score to be discarded",
+         &sepadata->badscore, TRUE, DEFAULT_BADSCORE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/objparalweight",
+         "weight of objective parallelism in cut score calculation",
+         &sepadata->objparalweight, TRUE, DEFAULT_OBJPARALWEIGHT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/efficacyweight",
+         "weight of efficacy in cut score calculation",
+         &sepadata->efficacyweight, TRUE, DEFAULT_EFFICACYWEIGHT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/dircutoffdistweight",
+         "weight of directed cutoff distance in cut score calculation",
+         &sepadata->dircutoffdistweight, TRUE, DEFAULT_DIRCUTOFFDISTWEIGHT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/goodmaxparall",
+         "maximum parallelism for good cuts",
+         &sepadata->goodmaxparall, TRUE, DEFAULT_GOODMAXPARALL, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/maxparall",
+         "maximum parallelism for non-good cuts",
+         &sepadata->maxparall, TRUE, DEFAULT_MAXPARALL, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/minviol",
          "minimal violation to generate zerohalfcut for",

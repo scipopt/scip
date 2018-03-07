@@ -275,6 +275,16 @@ SCIP_RETCODE SCIPselectCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
+   SCIP_Real             goodscorefac,       /**< factor of best score among the given cuts to consider a cut good
+                                              *   and filter with less strict settings of the maximum parallelism */
+   SCIP_Real             badscorefac,        /**< factor of best score among the given cuts to consider a cut bad
+                                              *   and discard it regardless of its parallelism to other cuts */
+   SCIP_Real             goodmaxparall,      /**< maximum parallelism for good cuts */
+   SCIP_Real             maxparall,          /**< maximum parallelism for non-good cuts */
+   SCIP_Real             dircutoffdistweight,/**< weight of directed cutoff distance in score calculation */
+   SCIP_Real             efficacyweight,     /**< weight of efficacy (shortest cutoff distance) in score calculation */
+   SCIP_Real             objparalweight,     /**< weight of objective parallelism in score calculation */
+   SCIP_Real             intsupportweight,   /**< weight of integral support in score calculation */
    int                   ncuts,              /**< number of cuts in given array */
    int                   nforcedcuts,        /**< number of forced cuts at start of given array */
    int                   maxselectedcuts,    /**< maximal number of cuts to select */
