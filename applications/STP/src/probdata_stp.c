@@ -3725,7 +3725,7 @@ void initReceivedSubproblem(
       if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
       {
          //SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );}
-      else
+}else
       {
          SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, FALSE, TRUE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
       }
