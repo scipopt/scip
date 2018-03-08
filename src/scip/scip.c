@@ -474,18 +474,6 @@ SCIP_RETCODE checkStage(
    initsolve,solving,solved,exitsolve,freetrans,freescip) SCIP_OKAY
 #endif
 
-/** gets global lower (dual) bound in transformed problem */
-static
-SCIP_Real getLowerbound(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      return -SCIPinfinity(scip);
-
-   return MIN(SCIPtreeGetLowerbound(scip->tree, scip->set), getUpperbound(scip));
-}
-
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
 static
 SCIP_Real getUpperbound(
@@ -498,6 +486,17 @@ SCIP_Real getUpperbound(
       return scip->primal->upperbound;
 }
 
+/** gets global lower (dual) bound in transformed problem */
+static
+SCIP_Real getLowerbound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      return -SCIPinfinity(scip);
+
+   return MIN(SCIPtreeGetLowerbound(scip->tree, scip->set), getUpperbound(scip));
+}
 
 /** gets global primal bound (objective value of best solution or user objective limit) */
 static
