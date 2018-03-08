@@ -8,6 +8,7 @@ fixed bugs:
 - fixed bug in freeing reoptimization data if problem was solved during presolving
 - fixed check of timing in heur_completesol
 - fixed wrong propagation in optcumulative constraint handler
+- ensured that SCIPgetDualbound() returns global dual bound instead of the dual bound of the remaining search tree
 
 SCIP version 5.0.1
 ==================

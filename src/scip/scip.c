@@ -483,7 +483,7 @@ SCIP_Real getLowerbound(
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
       return -SCIPinfinity(scip);
 
-   return SCIPtreeGetLowerbound(scip->tree, scip->set);
+   return MIN(SCIPtreeGetLowerbound(scip->tree, scip->set), getUpperbound(scip));
 }
 
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
@@ -527,7 +527,7 @@ SCIP_Real getDualbound(
          return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, -SCIPinfinity(scip));
    }
    else
-      lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+      lowerbound = getLowerbound(scip);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
    {
