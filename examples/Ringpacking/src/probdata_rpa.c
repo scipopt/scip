@@ -879,7 +879,11 @@ static
 SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
 { /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
+   SCIP_Real* rexts;
+   SCIP_Real* rints;
    SCIP_Real dualbound;
+   SCIP_Real maxrint;
+   SCIP_Real minrext;
    int* demands;
    int ntypes;
    int nrings;
@@ -890,7 +894,11 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
 
    ntypes = SCIPprobdataGetNTypes(probdata);
    demands = SCIPprobdataGetDemands(probdata);
+   rexts = SCIPprobdataGetRexts(probdata);
+   rints = SCIPprobdataGetRints(probdata);
    nrings = 0;
+   maxrint = 0.0;
+   minrext = SCIPinfinity(scip);
 
    /* use global dual bound if it is still valid */
    if( !probdata->isdualinvalid )
@@ -903,10 +911,14 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
 
    /* count the number of rings */
    for( t = 0; t < ntypes; ++t )
+   {
       nrings += demands[t];
+      maxrint = MAX(maxrint, rints[t]);
+      minrext = MIN(minrext, rexts[t]);
+   }
 
-   SCIPinfoMessage(scip, file, "Ringpacking        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "dual", "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_infeas", "RP", "enumtime");
+   SCIPinfoMessage(scip, file, "Ringpacking        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "dual", "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_infeas", "RP", "enumtime", "radiiratio");
 
    SCIPinfoMessage(scip, file, "  %-17s:", "");
    SCIPinfoMessage(scip, file, " %10.2f", dualbound);
@@ -920,6 +932,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
    SCIPinfoMessage(scip, file, " %10d", getNCPatterns(scip, probdata, SCIP_PACKABLE_NO));
    SCIPinfoMessage(scip, file, " %10d", probdata->nrpatterns);
    SCIPinfoMessage(scip, file, " %10.2f", probdata->enumtime);
+   SCIPinfoMessage(scip, file, " %10.1f", maxrint / minrext);
    SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
