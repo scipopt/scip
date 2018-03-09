@@ -25,6 +25,8 @@ do
   fi
 done < /dev/stdin
 
+export OUTPUTDIR="results/clusterbench$(date +%Y%m%d)"
+
 # build job ids string for sbatch dependency
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}

@@ -257,6 +257,26 @@ SCIP_RETCODE ensureColsSize(
    return SCIP_OKAY;
 }
 
+/** ensures, that soldirection array can store at least num entries */
+static
+SCIP_RETCODE ensureSoldirectionSize(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   if( num > lp->soldirectionsize )
+   {
+      BMSfreeMemoryArrayNull(&lp->soldirection);
+      SCIP_ALLOC( BMSallocMemoryArray(&lp->soldirection, num) );
+
+      lp->soldirectionsize = num;
+   }
+
+   assert(num <= lp->soldirectionsize);
+
+   return SCIP_OKAY;
+}
+
 /** ensures, that lazy cols array can store at least num entries */
 static
 SCIP_RETCODE ensureLazycolsSize(
@@ -6610,6 +6630,59 @@ int SCIProwGetNumIntCols(
    return row->numintcols;
 }
 
+/** returns row's cutoff distance in the direction of the given primal solution */
+SCIP_Real SCIProwGetLPSolCutoffDistance(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SOL*             sol,                /**< solution to compute direction for cutoff distance; must not be NULL */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_Real solcutoffdist;
+   int k;
+
+   assert(sol != NULL);
+
+   if( lp->validsoldirlp != stat->lpcount || lp->validsoldirsol != sol )
+   {
+      SCIP_Real scale;
+
+      scale = 0.0;
+      lp->validsoldirlp = stat->lpcount;
+      lp->validsoldirsol = sol;
+
+      SCIP_CALL_ABORT( ensureSoldirectionSize(lp, lp->ncols) );
+
+      for( k = 0; k < lp->ncols; ++k )
+      {
+         assert(lp->cols[k]->lppos == k);
+         lp->soldirection[k] = SCIPsolGetVal(sol, set, stat, lp->cols[k]->var) - lp->cols[k]->primsol;
+         scale += SQR(lp->soldirection[k]);
+      }
+
+      assert(scale > 0.0);
+      scale = 1.0 / SQRT(scale);
+
+      for( k = 0; k < lp->ncols; ++k )
+      {
+         lp->soldirection[k] *= scale;
+      }
+   }
+
+   solcutoffdist = 0.0;
+   for( k = 0; k < row->len; ++k )
+   {
+      solcutoffdist += row->vals[k] * lp->soldirection[row->cols[k]->lppos];
+   }
+   if( SCIPsetIsSumZero(set, solcutoffdist) )
+      solcutoffdist = COPYSIGN(set->num_sumepsilon, solcutoffdist);
+
+   solcutoffdist = SCIProwGetLPFeasibility(row, set, stat, lp) / solcutoffdist; /*lint !e795*/
+
+   return solcutoffdist;
+}
+
 /** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */
 SCIP_Real SCIProwGetLPEfficacy(
    SCIP_ROW*             row,                /**< LP row */
@@ -8904,6 +8977,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->chgcols = NULL;
    (*lp)->chgrows = NULL;
    (*lp)->cols = NULL;
+   (*lp)->soldirection = NULL;
    (*lp)->lazycols = NULL;
    (*lp)->rows = NULL;
    (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
@@ -8933,6 +9007,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpifirstchgcol = 0;
    (*lp)->lpifirstchgrow = 0;
    (*lp)->colssize = 0;
+   (*lp)->soldirectionsize = 0;
    (*lp)->ncols = 0;
    (*lp)->lazycolssize = 0;
    (*lp)->nlazycols = 0;
@@ -8948,6 +9023,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->nremovablerows = 0;
    (*lp)->validsollp = stat->lpcount; /* the initial (empty) SCIP_LP is solved with primal and dual solution of zero */
    (*lp)->validfarkaslp = -1;
+   (*lp)->validsoldirlp = -1;
+   (*lp)->validsoldirsol = NULL;
    (*lp)->objsqrnormunreliable = FALSE;
    (*lp)->flushdeletedcols = FALSE;
    (*lp)->flushaddedcols = FALSE;
@@ -9192,6 +9269,7 @@ SCIP_RETCODE SCIPlpFree(
    BMSfreeMemoryArrayNull(&(*lp)->lazycols);
    BMSfreeMemoryArrayNull(&(*lp)->cols);
    BMSfreeMemoryArrayNull(&(*lp)->rows);
+   BMSfreeMemoryArrayNull(&(*lp)->soldirection);
    BMSfreeMemory(lp);
 
    return SCIP_OKAY;
@@ -9219,6 +9297,8 @@ SCIP_RETCODE SCIPlpReset(
    lp->lpobjval = 0.0;
    lp->validsollp = stat->lpcount; /* the initial (empty) SCIP_LP is solved with primal and dual solution of zero */
    lp->validfarkaslp = -1;
+   lp->validsoldirlp = -1;
+   lp->validsoldirsol = NULL;
    lp->solved = TRUE;
    lp->primalfeasible = TRUE;
    lp->primalchecked = TRUE;
@@ -17084,15 +17164,19 @@ SCIP_RETCODE computeRelIntPoint(
    assert(lpi != NULL);
 
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPsetLpfeastol(set));
-   if( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
+   if( retcode != SCIP_OKAY )
    {
-      SCIP_CALL( retcode );
+      /* stop execution on error, since result is likely to be unsuable */
+      SCIPmessagePrintWarning(messagehdlr, "Could not set feasibility tolerance of LP solver for relative interior point computation.\n");
+      return SCIP_LPERROR;
    }
 
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_DUALFEASTOL, SCIPsetDualfeastol(set));
-   if( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
+   if( retcode != SCIP_OKAY )
    {
-      SCIP_CALL( retcode );
+      /* stop execution on error, since result is likely to be unsuable */
+      SCIPmessagePrintWarning(messagehdlr, "Could not set dual feasibility tolerance of LP solver for relative interior point computation.\n");
+      return SCIP_LPERROR;
    }
 
    /* get storage */
@@ -17557,15 +17641,19 @@ SCIP_RETCODE computeRelIntPoint(
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit);
 
    /* check, if parameter is unknown */
-   if ( retcode == SCIP_PARAMETERUNKNOWN )
+   if( retcode == SCIP_PARAMETERUNKNOWN )
       SCIPmessagePrintWarning(messagehdlr, "Could not set time limit of LP solver for relative interior point computation.\n");
+   else if ( retcode != SCIP_OKAY )
+      return retcode;
 
    /* set iteration limit */
    retcode = SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, iterlimit);
 
    /* check, if parameter is unknown */
-   if ( retcode == SCIP_PARAMETERUNKNOWN )
+   if( retcode == SCIP_PARAMETERUNKNOWN )
       SCIPmessagePrintWarning(messagehdlr, "Could not set iteration limit of LP solver for relative interior point computation.\n");
+   else if ( retcode != SCIP_OKAY )
+      return retcode;
 
    /* solve and store point */
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
@@ -17751,7 +17839,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    )
 {
    SCIP_LPI* lpi;
-
    SCIP_RETCODE retcode;
 
    assert(set != NULL);
@@ -17795,5 +17882,11 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
    SCIP_CALL( SCIPlpiFree(&lpi) );
 
-   return retcode;
+   /* return error, unless we obtained an LP error */
+   if ( retcode != SCIP_OKAY && retcode != SCIP_LPERROR )
+   {
+      SCIP_CALL( retcode );
+   }
+
+   return SCIP_OKAY;
 }
