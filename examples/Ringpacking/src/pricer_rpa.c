@@ -708,13 +708,15 @@ SCIP_DECL_PRICERFREE(pricerFreeRingpacking)
    SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata->randnumgen == NULL);
+
    SCIPfreeBlockMemoryNull(scip, &pricerdata);
 
    return SCIP_OKAY;
 }
 
 
-/** initialization method of variable pricer (called after problem was transformed) */
+/** initialization method of variable pricer (called after problem was transformed and pricer is active) */
 static
 SCIP_DECL_PRICERINIT(pricerInitRingpacking)
 {  /*lint --e{715}*/
@@ -728,22 +730,18 @@ SCIP_DECL_PRICERINIT(pricerInitRingpacking)
    return SCIP_OKAY;
 }
 
-
-/** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
+/** deinitialization method of variable pricer (called before transformed problem is freed and pricer is active) */
 static
-SCIP_DECL_PRICEREXITSOL(pricerExitsolRingpacking)
+SCIP_DECL_PRICEREXIT(pricerExitRingpacking)
 {  /*lint --e{715}*/
    SCIP_PRICERDATA* pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
+   assert(pricerdata->randnumgen != NULL);
 
-   if( pricerdata->randnumgen != NULL )
-   {
-      SCIPfreeRandom(scip, &pricerdata->randnumgen);
-   }
+   SCIPfreeRandom(scip, &pricerdata->randnumgen);
 
    return SCIP_OKAY;
 }
-
 
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
@@ -878,7 +876,7 @@ SCIP_RETCODE SCIPincludePricerRingpacking(
 
    SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeRingpacking) );
    SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitRingpacking) );
-   SCIP_CALL( SCIPsetPricerExitsol(scip, pricer, pricerExitsolRingpacking) );
+   SCIP_CALL( SCIPsetPricerExit(scip, pricer, pricerExitRingpacking) );
 
    /* variable pricer parameters */
 
