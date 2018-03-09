@@ -14472,6 +14472,9 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_COL** lpicols;
    SCIP_ROW** lpirows;
    SCIP_Real* dualfarkas;
+   SCIP_Real* farkascoefs;
+   SCIP_Real farkaslhs;
+   SCIP_Real maxactivity;
    int nlpicols;
    int nlpirows;
    int c;
@@ -14490,8 +14493,17 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       return SCIP_OKAY;
    lp->validfarkaslp = stat->lpcount;
 
+   maxactivity = 0.0;
+   farkaslhs = 0.0;
+
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, lp->nlpirows) );
+
+   if( set->lp_checkfarkas )
+   {
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, lp->nlpicols) );
+      BMSclearMemoryArray(farkascoefs, lp->nlpicols);
+   }
 
    /* get dual Farkas infeasibility proof */
    SCIP_CALL( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
@@ -14511,6 +14523,33 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       lpirows[r]->activity = 0.0;
       lpirows[r]->validactivitylp = -1L;
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
+
+      if( set->lp_checkfarkas )
+      {
+         /* iterate over all columns and scale with dual solution */
+         for( c = 0; c < lpirows[r]->len; c++ )
+         {
+            int pos = SCIPcolGetIndex(lpirows[r]->cols[c]);
+            assert(pos >= 0 && pos < nlpicols);
+
+            farkascoefs[pos] += dualfarkas[r] * lpirows[r]->vals[c];
+         }
+
+         /* the row contributes with its left-hand side to the proof */
+         if( dualfarkas[r] > 0.0 )
+         {
+            assert(!SCIPsetIsInfinity(set, -lpirows[r]->lhs));
+
+            farkaslhs += dualfarkas[r] * lpirows[r]->lhs;
+         }
+         /* the row contributes with its right-hand side to the proof */
+         else
+         {
+            assert(!SCIPsetIsInfinity(set, lpirows[r]->rhs));
+
+            farkaslhs += dualfarkas[r] * lpirows[r]->rhs;
+         }
+      }
    }
 
    /* set columns as invalid */
@@ -14520,9 +14559,28 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
+
+      if( set->lp_checkfarkas )
+      {
+         /* calculate the maximal activity */
+         if( farkascoefs[c] > 0.0 )
+            maxactivity += farkascoefs[c] * SCIPcolGetUb(lpicols[c]);
+         else
+            maxactivity += farkascoefs[c] * SCIPcolGetLb(lpicols[c]);
+      }
+   }
+
+   /* check whether the farkasproof is valid */
+   if( set->lp_checkfarkas && SCIPsetIsGE(set, maxactivity, farkaslhs) )
+   {
+      SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f >= lhs=%.12f\n", maxactivity, farkaslhs);
+      return SCIP_LPERROR;
    }
 
    /* free temporary memory */
+   if( set->lp_checkfarkas )
+      SCIPsetFreeBufferArray(set, &farkascoefs);
+
    SCIPsetFreeBufferArray(set, &dualfarkas);
 
    return SCIP_OKAY;

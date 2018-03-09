@@ -12,6 +12,9 @@ fixed bugs:
 - fixed check of timing in heur_completesol
 - fixed wrong propagation in optcumulative constraint handler
 
+new parameters:
+- "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+
 deleted files:
 - presol_implfree removed
 
