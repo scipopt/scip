@@ -6020,6 +6020,8 @@ SCIP_RETCODE generateCutFactorableDo(
       }
 
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_factorablesecant_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+
+      rowprep->local = TRUE;
    }
    else
    {
@@ -6057,8 +6059,6 @@ SCIP_RETCODE generateCutFactorableDo(
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_factorablelinearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
    }
 
-   /* @todo does not always need to be local */
-   rowprep->local = TRUE;
    *success = TRUE;
 
    return SCIP_OKAY;
@@ -6082,6 +6082,10 @@ SCIP_RETCODE generateCutFactorable(
    SCIP_Real leftmaxactivity;
    SCIP_Real rightminactivity;
    SCIP_Real rightmaxactivity;
+   SCIP_Real leftminactivityglobal;
+   SCIP_Real leftmaxactivityglobal;
+   SCIP_Real rightminactivityglobal;
+   SCIP_Real rightmaxactivityglobal;
    SCIP_Real multleft;
    SCIP_Real multright;
    SCIP_Real rhs;
@@ -6101,10 +6105,10 @@ SCIP_RETCODE generateCutFactorable(
 
    *success = FALSE;
 
-   leftminactivity = consdata->factorleft[consdata->nquadvars];
-   leftmaxactivity = consdata->factorleft[consdata->nquadvars];
-   rightminactivity = consdata->factorright[consdata->nquadvars];
-   rightmaxactivity = consdata->factorright[consdata->nquadvars];
+   leftminactivityglobal  = leftminactivity  = consdata->factorleft[consdata->nquadvars];
+   leftmaxactivityglobal  = leftmaxactivity  = consdata->factorleft[consdata->nquadvars];
+   rightminactivityglobal = rightminactivity = consdata->factorright[consdata->nquadvars];
+   rightmaxactivityglobal = rightmaxactivity = consdata->factorright[consdata->nquadvars];
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       if( !SCIPisInfinity(scip, -leftminactivity) )
@@ -6176,6 +6180,80 @@ SCIP_RETCODE generateCutFactorable(
                rightmaxactivity += consdata->factorright[i] * SCIPvarGetLbLocal(consdata->quadvarterms[i].var);
          }
       }
+
+      if( SCIPgetDepth(scip) > 0 )
+      {
+         if( !SCIPisInfinity(scip, -leftminactivityglobal) )
+         {
+            if( consdata->factorleft[i] > 0.0 )
+            {
+               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->quadvarterms[i].var)) )
+                  leftminactivityglobal = -SCIPinfinity(scip);
+               else
+                  leftminactivityglobal += consdata->factorleft[i] * SCIPvarGetLbGlobal(consdata->quadvarterms[i].var);
+            }
+            else if( consdata->factorleft[i] < 0.0 )
+            {
+               if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->quadvarterms[i].var)) )
+                  leftminactivityglobal = -SCIPinfinity(scip);
+               else
+                  leftminactivityglobal += consdata->factorleft[i] * SCIPvarGetUbGlobal(consdata->quadvarterms[i].var);
+            }
+         }
+         if( !SCIPisInfinity(scip, leftmaxactivityglobal) )
+         {
+            if( consdata->factorleft[i] > 0.0 )
+            {
+               if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->quadvarterms[i].var)) )
+                  leftmaxactivityglobal = SCIPinfinity(scip);
+               else
+                  leftmaxactivityglobal += consdata->factorleft[i] * SCIPvarGetUbGlobal(consdata->quadvarterms[i].var);
+            }
+            else if( consdata->factorleft[i] < 0.0 )
+            {
+               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->quadvarterms[i].var)) )
+                  leftmaxactivityglobal = SCIPinfinity(scip);
+               else
+                  leftmaxactivityglobal += consdata->factorleft[i] * SCIPvarGetLbGlobal(consdata->quadvarterms[i].var);
+            }
+         }
+
+         if( !SCIPisInfinity(scip, -rightminactivityglobal) )
+         {
+            if( consdata->factorright[i] > 0.0 )
+            {
+               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->quadvarterms[i].var)) )
+                  rightminactivityglobal = -SCIPinfinity(scip);
+               else
+                  rightminactivityglobal += consdata->factorright[i] * SCIPvarGetLbGlobal(consdata->quadvarterms[i].var);
+            }
+            else if( consdata->factorright[i] < 0.0 )
+            {
+               if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->quadvarterms[i].var)) )
+                  rightminactivityglobal = -SCIPinfinity(scip);
+               else
+                  rightminactivityglobal += consdata->factorright[i] * SCIPvarGetUbGlobal(consdata->quadvarterms[i].var);
+            }
+         }
+         if( !SCIPisInfinity(scip, rightmaxactivityglobal) )
+         {
+            if( consdata->factorright[i] > 0.0 )
+            {
+               if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->quadvarterms[i].var)) )
+                  rightmaxactivityglobal = SCIPinfinity(scip);
+               else
+                  rightmaxactivityglobal += consdata->factorright[i] * SCIPvarGetUbGlobal(consdata->quadvarterms[i].var);
+            }
+            else if( consdata->factorright[i] < 0.0 )
+            {
+               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->quadvarterms[i].var)) )
+                  rightmaxactivityglobal = SCIPinfinity(scip);
+               else
+                  rightmaxactivityglobal += consdata->factorright[i] * SCIPvarGetLbGlobal(consdata->quadvarterms[i].var);
+            }
+         }
+      }
+
    }
 
    /* write violated constraints as multleft * factorleft * factorright <= rhs */
@@ -6217,6 +6295,10 @@ SCIP_RETCODE generateCutFactorable(
 
       /* generate cut for multleft * factorleft * multright <= rhs / (factorright * multright) */
       SCIP_CALL( generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorleft, multright, consdata->factorright, rightminactivity, rightmaxactivity, rhs, rowprep, success) );
+
+      /* if right factor has 0 within global activity bounds, then the added linearization is not globally valid */
+      if( rhs < 0.0 && SCIPgetDepth(scip) > 0 && rightminactivityglobal < 0.0 && rightmaxactivityglobal > 0.0 )
+         rowprep->local = TRUE;
    }
    else if( !SCIPisFeasPositive(scip, rightminactivity) && !SCIPisFeasNegative(scip, rightmaxactivity) )
    {
@@ -6235,6 +6317,10 @@ SCIP_RETCODE generateCutFactorable(
 
       /* generate cut for multleft * factorright * multright <= rhs / (factorleft * multright) */
       SCIP_CALL( generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, rowprep, success) );
+
+      /* if left factor has 0 within global activity bounds, then the added linearization is not globally valid */
+      if( rhs < 0.0 && SCIPgetDepth(scip) > 0 && leftminactivityglobal < 0.0 && leftmaxactivityglobal > 0.0 )
+         rowprep->local = TRUE;
    }
    else if( SCIPisInfinity(scip, -leftminactivity) || SCIPisInfinity(scip, leftmaxactivity) ||
       (!SCIPisInfinity(scip, -rightminactivity) && !SCIPisInfinity(scip, rightmaxactivity) && rightmaxactivity - rightminactivity < leftmaxactivity - leftminactivity) )
@@ -6251,6 +6337,10 @@ SCIP_RETCODE generateCutFactorable(
 
       /* generate cut for multleft * factorleft * multright <= rhs / (factorright * multright) */
       SCIP_CALL( generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorleft, multright, consdata->factorright, rightminactivity, rightmaxactivity, rhs, rowprep, success) );
+
+      /* if right factor has 0 within global activity bounds, then the added linearization is not globally valid */
+      if( rhs < 0.0 && SCIPgetDepth(scip) > 0 && rightminactivityglobal < 0.0 && rightmaxactivityglobal > 0.0 )
+         rowprep->local = TRUE;
    }
    else
    {
@@ -6266,6 +6356,10 @@ SCIP_RETCODE generateCutFactorable(
 
       /* generate cut for multleft * factorright * multright <= rhs / (factorleft * multright) */
       SCIP_CALL( generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, rowprep, success) );
+
+      /* if left factor has 0 within global activity bounds, then the added linearization is not globally valid */
+      if( rhs < 0.0 && SCIPgetDepth(scip) > 0 && leftminactivityglobal < 0.0 && leftmaxactivityglobal > 0.0 )
+         rowprep->local = TRUE;
    }
 
    return SCIP_OKAY;
