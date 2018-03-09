@@ -14493,6 +14493,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       return SCIP_OKAY;
    lp->validfarkaslp = stat->lpcount;
 
+   farkascoefs = NULL;
    maxactivity = 0.0;
    farkaslhs = 0.0;
 
@@ -14526,6 +14527,8 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
 
       if( set->lp_checkfarkas )
       {
+         assert(farkascoefs != NULL);
+
          /* iterate over all columns and scale with dual solution */
          for( c = 0; c < lpirows[r]->len; c++ )
          {
@@ -14562,6 +14565,8 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
 
       if( set->lp_checkfarkas )
       {
+         assert(farkascoefs != NULL);
+
          /* calculate the maximal activity */
          if( farkascoefs[c] > 0.0 )
             maxactivity += farkascoefs[c] * SCIPcolGetUb(lpicols[c]);
