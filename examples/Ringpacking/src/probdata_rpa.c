@@ -906,7 +906,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRpa)
       nrings += demands[t];
 
    SCIPinfoMessage(scip, file, "Ringpacking        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "dual", "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_no", "RP", "CP_time");
+      "dual", "ntypes", "nrings", "width", "height", "CP", "CP_unk", "CP_unk_end" ,"CP_infeas", "RP", "enumtime");
 
    SCIPinfoMessage(scip, file, "  %-17s:", "");
    SCIPinfoMessage(scip, file, " %10.2f", dualbound);
