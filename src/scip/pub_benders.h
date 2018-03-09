@@ -91,7 +91,7 @@ SCIP* SCIPbendersSubproblem(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** gets the number of times, the benders was called and tried to find a variable with negative reduced costs */
+/** gets the number of times, the Bender' decomposition was called and tried to find a violated second stage constraint */
 EXTERN
 int SCIPbendersGetNCalls(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -103,13 +103,13 @@ int SCIPbendersGetNCutsFound(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** gets time in seconds used in this benders for setting up for next stages */
+/** gets time in seconds used in this Benders' decomposition for setting up for next stages */
 EXTERN
 SCIP_Real SCIPbendersGetSetupTime(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** gets time in seconds used in this benders */
+/** gets execution time in seconds used in this Benders' decomposition */
 EXTERN
 SCIP_Real SCIPbendersGetTime(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -203,7 +203,7 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/* returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
+/** returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
 EXTERN
 SCIP_Bool SCIPbendersSubprobIsLP(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -231,7 +231,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             initialisation,   /**< indicates whether the MIP is solved as part of an initalisation */
+   SCIP_Bool             initialisation,     /**< indicates whether the MIP is solved as part of an initalisation */
    SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    );
 

@@ -47,7 +47,7 @@ extern
 SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_BENDERS*         benders,            /**< benders */
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
@@ -140,12 +140,12 @@ SCIP_RETCODE SCIPbendersActivate(
    );
 
 /** deactivates benders such that it is no longer called in LP solving loop */
-SCIP_RETCODE SCIPbendersDeactivate(
+void SCIPbendersDeactivate(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** enables or disables all clocks of \pbenders,depending on the value of the flag */
+/** enables or disables all clocks of Benders' decomposition depending on the value of the flag */
 extern
 void SCIPbendersEnableOrDisableClocks(
    SCIP_BENDERS*         benders,            /**< the benders for which all clocks should be enabled or disabled */
@@ -241,78 +241,78 @@ void SCIPbendersSetCopy(
    SCIP_DECL_BENDERSCOPY ((*benderscopy))    /**< copy callback of benders */
    );
 
-/** sets destructor callback of benders */
+/** sets destructor callback of Benders' decomposition */
 extern
 void SCIPbendersSetFree(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSFREE ((*bendersfree))    /**< destructor of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSFREE ((*bendersfree))    /**< destructor of Benders' decomposition */
    );
 
-/** sets initialization callback of benders */
+/** sets initialization callback of Benders' decomposition */
 extern
 void SCIPbendersSetInit(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINIT((*bendersinit))     /**< initialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINIT((*bendersinit))     /**< initialize Benders' decomposition */
    );
 
-/** sets deinitialization callback of benders */
+/** sets deinitialization callback of Benders' decomposition */
 extern
 void SCIPbendersSetExit(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXIT((*bendersexit))     /**< deinitialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXIT((*bendersexit))     /**< deinitialize Benders' decomposition */
    );
 
-/** sets presolving initialization callback of benders */
+/** sets presolving initialization callback of Benders' decomposition */
 void SCIPbendersSetInitpre(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINITPRE((*bendersinitpre))     /**< initialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINITPRE((*bendersinitpre))/**< initialize presolving for Benders' decomposition */
    );
 
-/** sets presolving deinitialization callback of benders */
+/** sets presolving deinitialization callback of Benders' decomposition */
 void SCIPbendersSetExitpre(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre))     /**< deinitialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre))/**< deinitialize presolving for Benders' decomposition */
    );
 
-/** sets solving process initialization callback of benders */
+/** sets solving process initialization callback of Benders' decomposition */
 extern
 void SCIPbendersSetInitsol(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINITSOL((*bendersinitsol))/**< solving process initialization callback of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINITSOL((*bendersinitsol))/**< solving process initialization callback of Benders' decomposition */
    );
 
-/** sets solving process deinitialization callback of benders */
+/** sets solving process deinitialization callback of Benders' decomposition */
 extern
 void SCIPbendersSetExitsol(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization callback of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization callback of Benders' decomposition */
    );
 
-/** sets the pre subproblem solve callback of benders */
+/** sets the pre subproblem solve callback of Benders' decomposition */
 extern
 void SCIPbendersSetPresubsolve(
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve))/**< called prior to the subproblem solving loop */
    );
 
-/** sets solve callback of benders */
+/** sets solve callback of Benders' decomposition */
 extern
 void SCIPbendersSetSolvesub(
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub))/**< solving method for a Benders' decomposition subproblem */
    );
 
-/** sets post-solve callback of benders */
+/** sets post-solve callback of Benders' decomposition */
 extern
 void SCIPbendersSetPostsolve(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of Benders' decomposition */
    );
 
-/** sets free subproblem callback of benders */
+/** sets free subproblem callback of Benders' decomposition */
 extern
 void SCIPbendersSetFreesub(
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the freeing callback for the subproblem */
    );
 

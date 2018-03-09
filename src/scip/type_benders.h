@@ -34,10 +34,10 @@ extern "C" {
 
 enum SCIP_BendersEnfoType
 {
-    LP      = 1,     /**< the Benders' subproblems are solved during the enforcement of an LP solution */
-    RELAX   = 2,     /**< the Benders' subproblems are solved during the enforcement of a relaxation solution */
-    PSEUDO  = 3,     /**< the Benders' subproblems are solved during the enforcement of a pseudo solution */
-    CHECK   = 4      /**< the Benders' subproblems are solved during the checking of a solution for feasibility */
+    SCIP_BENDERSENFOTYPE_LP      = 1,        /**< the Benders' subproblems are solved during the enforcement of an LP solution */
+    SCIP_BENDERSENFOTYPE_RELAX   = 2,        /**< the Benders' subproblems are solved during the enforcement of a relaxation solution */
+    SCIP_BENDERSENFOTYPE_PSEUDO  = 3,        /**< the Benders' subproblems are solved during the enforcement of a pseudo solution */
+    SCIP_BENDERSENFOTYPE_CHECK   = 4         /**< the Benders' subproblems are solved during the checking of a solution for feasibility */
 };
 typedef enum SCIP_BendersEnfoType SCIP_BENDERSENFOTYPE;  /**< indicates the callback in cons_benders and cons_benderslp that triggered the subproblem solve */
 

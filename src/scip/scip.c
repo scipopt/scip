@@ -6117,7 +6117,7 @@ SCIP_RETCODE SCIPsetBendersPresubsolve(
    return SCIP_OKAY;
 }
 
-/** sets the solving method for benders
+/** sets the subproblem solving and freeing methods for Benders' decomposition
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6126,17 +6126,27 @@ SCIP_RETCODE SCIPsetBendersPresubsolve(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-SCIP_RETCODE SCIPsetBendersSolvesub(
+SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub))/**< solving method for a Benders' decomposition subproblem */
+   SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< solving method for a Benders' decomposition subproblem */
+   SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the subproblem freeing method for Benders' decomposition */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetBendersSolvesub", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetBendersSolveAndFreesub", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(benders != NULL);
 
+   /* Checking whether the benderssolvesub and the bendersfreesub are both implemented or both are not implemented */
+   if( (benderssolvesub == NULL && bendersfreesub != NULL) || (benderssolvesub != NULL && bendersfreesub == NULL) )
+   {
+      SCIPerrorMessage("Benders' decomposition <%s> requires that both bendersSolvesub%s and bendersFreesub%s are \
+         implemented or neither\n", SCIPbendersGetName(benders), SCIPbendersGetName(benders), SCIPbendersGetName(benders));
+      return SCIP_INVALIDCALL;
+   }
+
    SCIPbendersSetSolvesub(benders, benderssolvesub);
+   SCIPbendersSetFreesub(benders, bendersfreesub);
 
    return SCIP_OKAY;
 }
@@ -6161,32 +6171,6 @@ SCIP_RETCODE SCIPsetBendersPostsolve(
    assert(benders != NULL);
 
    SCIPbendersSetPostsolve(benders, benderspostsolve);
-
-   return SCIP_OKAY;
-}
-
-/** sets the free subproblem method for benders
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *
- *  @note If the subproblem solving method is implemented, then the freeing subproblem method` must also be implemented
- */
-SCIP_RETCODE SCIPsetBendersFreesub(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the subproblem freeing method for Benders' decomposition */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetBendersFreesub", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   assert(benders != NULL);
-
-   SCIPbendersSetFreesub(benders, bendersfreesub);
 
    return SCIP_OKAY;
 }
@@ -6279,13 +6263,13 @@ SCIP_RETCODE SCIPdeactivateBenders(
 {
    SCIP_CALL( checkStage(scip, "SCIPdeactivateBenders", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbendersDeactivate(benders, scip->set) );
+   SCIPbendersDeactivate(benders, scip->set);
 
    return SCIP_OKAY;
 }
 
 /** sets the priority of a Benders' decomposition */
-SCIP_RETCODE SCIPsetBendersPriority(
+void SCIPsetBendersPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   priority            /**< new priority of the Benders' decomposition */
@@ -6296,8 +6280,6 @@ SCIP_RETCODE SCIPsetBendersPriority(
    assert(benders != NULL);
 
    SCIPbendersSetPriority(benders, scip->set, priority);
-
-   return SCIP_OKAY;
 }
 
 /** calls the exec method of Benders' decomposition to solve the subproblems.
@@ -11582,7 +11564,7 @@ SCIP_RETCODE SCIPfreeProb(
       /* deactivate all Benders' decomposition */
       for( i = scip->set->nactivebenders-1; i >= 0; --i )
       {
-         SCIP_CALL( SCIPbendersDeactivate(scip->set->benders[i], scip->set) );
+         SCIPbendersDeactivate(scip->set->benders[i], scip->set);
       }
       assert(scip->set->nactivebenders == 0);
 

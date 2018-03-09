@@ -446,7 +446,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBendersPriority)
    assert(paramdata != NULL);
 
    /* use SCIPsetBendersPriority() to mark the benderss unsorted */
-   SCIP_CALL( SCIPsetBendersPriority(scip, (SCIP_BENDERS*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+   SCIPsetBendersPriority(scip, (SCIP_BENDERS*)paramdata, SCIPparamGetInt(param)); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -534,6 +534,14 @@ SCIP_RETCODE SCIPbendersCreate(
    assert(benders != NULL);
    assert(name != NULL);
    assert(desc != NULL);
+
+   /* Checking whether the benderssolvesub and the bendersfreesub are both implemented or both are not implemented */
+   if( (benderssolvesub == NULL && bendersfreesub != NULL) || (benderssolvesub != NULL && bendersfreesub == NULL) )
+   {
+      SCIPerrorMessage("Benders' decomposition <%s> requires that both bendersSolvesub%s and bendersFreesub%s are \
+         implemented or neither\n", name, name, name);
+      return SCIP_INVALIDCALL;
+   }
 
    SCIP_ALLOC( BMSallocMemory(benders) );
    BMSclearMemory(benders);
@@ -871,15 +879,6 @@ SCIP_RETCODE SCIPbendersInit(
 
    assert(benders != NULL);
    assert(set != NULL);
-
-   /* Checking whether the benderssolvesub and the bendersfreesub are both implemented or both are not implemented */
-   if( (benders->benderssolvesub == NULL && benders->bendersfreesub != NULL)
-      || (benders->benderssolvesub != NULL && benders->bendersfreesub == NULL) )
-   {
-      SCIPerrorMessage("Benders' decomposition <%s> requires that both bendersSolvesub%s and bendersFreesub%s are \
-         implemented or neither\n", benders->name, benders->name, benders->name);
-      return SCIP_INVALIDCALL;
-   }
 
    if( benders->initialized )
    {
@@ -1244,13 +1243,16 @@ SCIP_RETCODE SCIPbendersInitsol(
    assert(benders != NULL);
    assert(set != NULL);
 
-   /* start timing */
-   SCIPclockStart(benders->setuptime, set);
-
    /* call solving process initialization method of Benders' decomposition */
    if( benders->bendersinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(benders->setuptime, set);
+
       SCIP_CALL( benders->bendersinitsol(set->scip, benders) );
+
+      /* stop timing */
+      SCIPclockStop(benders->setuptime, set);
    }
 
    /* calling the initsol method for the Benders' cuts */
@@ -1259,9 +1261,6 @@ SCIP_RETCODE SCIPbendersInitsol(
    {
       SCIP_CALL( SCIPbenderscutInitsol(benders->benderscuts[i], set) );
    }
-
-   /* stop timing */
-   SCIPclockStop(benders->setuptime, set);
 
    return SCIP_OKAY;
 }
@@ -1277,13 +1276,16 @@ SCIP_RETCODE SCIPbendersExitsol(
    assert(benders != NULL);
    assert(set != NULL);
 
-   /* start timing */
-   SCIPclockStart(benders->setuptime, set);
-
    /* call solving process deinitialization method of Benders' decomposition */
    if( benders->bendersexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(benders->setuptime, set);
+
       SCIP_CALL( benders->bendersexitsol(set->scip, benders) );
+
+      /* stop timing */
+      SCIPclockStop(benders->setuptime, set);
    }
 
    /* calling the exitsol method for the Benders' cuts */
@@ -1292,9 +1294,6 @@ SCIP_RETCODE SCIPbendersExitsol(
    {
       SCIP_CALL( SCIPbenderscutExitsol(benders->benderscuts[i], set) );
    }
-
-   /* stop timing */
-   SCIPclockStop(benders->setuptime, set);
 
    return SCIP_OKAY;
 }
@@ -1345,7 +1344,7 @@ SCIP_RETCODE SCIPbendersActivate(
 }
 
 /** deactivates benders such that it is no longer called in LP solving loop */
-SCIP_RETCODE SCIPbendersDeactivate(
+void SCIPbendersDeactivate(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -1356,6 +1355,20 @@ SCIP_RETCODE SCIPbendersDeactivate(
 
    if( benders->active )
    {
+#ifndef NDEBUG
+      /* checking whether the auxiliary variables and subproblems are all NULL */
+      int nsubproblems;
+      int i;
+
+      nsubproblems = SCIPbendersGetNSubproblems(benders);
+
+      for( i = 0; i < nsubproblems; i++ )
+      {
+         assert(benders->auxiliaryvars[i] == NULL);
+         assert(benders->subproblems[i] == NULL);
+      }
+#endif
+
       benders->active = FALSE;
       set->nactivebenders--;
       set->benderssorted = FALSE;
@@ -1369,8 +1382,6 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->auxiliaryvars);
       BMSfreeMemoryArray(&benders->subproblems);
    }
-
-   return SCIP_OKAY;
 }
 
 /** returns whether the given Benders decomposition is in use in the current problem */
@@ -2355,10 +2366,10 @@ void SCIPbendersSetCopy(
    benders->benderscopy = benderscopy;
 }
 
-/** sets destructor callback of benders */
+/** sets destructor callback of Benders' decomposition */
 void SCIPbendersSetFree(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSFREE ((*bendersfree))    /**< destructor of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSFREE ((*bendersfree))    /**< destructor of Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -2366,10 +2377,10 @@ void SCIPbendersSetFree(
    benders->bendersfree = bendersfree;
 }
 
-/** sets initialization callback of benders */
+/** sets initialization callback of Benders' decomposition */
 void SCIPbendersSetInit(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINIT((*bendersinit))     /**< initialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINIT((*bendersinit))     /**< initialize the Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -2377,10 +2388,10 @@ void SCIPbendersSetInit(
    benders->bendersinit = bendersinit;
 }
 
-/** sets deinitialization callback of benders */
+/** sets deinitialization callback of Benders' decomposition */
 void SCIPbendersSetExit(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXIT((*bendersexit))     /**< deinitialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXIT((*bendersexit))     /**< deinitialize the Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -2388,10 +2399,10 @@ void SCIPbendersSetExit(
    benders->bendersexit = bendersexit;
 }
 
-/** sets presolving initialization callback of benders */
+/** sets presolving initialization callback of Benders' decomposition */
 void SCIPbendersSetInitpre(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINITPRE((*bendersinitpre))     /**< initialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINITPRE((*bendersinitpre))/**< initialize presolving for Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -2399,10 +2410,10 @@ void SCIPbendersSetInitpre(
    benders->bendersinitpre = bendersinitpre;
 }
 
-/** sets presolving deinitialization callback of benders */
+/** sets presolving deinitialization callback of Benders' decomposition */
 void SCIPbendersSetExitpre(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre))     /**< deinitialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre))/**< deinitialize presolving for Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -2410,10 +2421,10 @@ void SCIPbendersSetExitpre(
    benders->bendersexitpre = bendersexitpre;
 }
 
-/** sets solving process initialization callback of benders */
+/** sets solving process initialization callback of Benders' decomposition */
 void SCIPbendersSetInitsol(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINITSOL((*bendersinitsol))/**< solving process initialization callback of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINITSOL((*bendersinitsol))/**< solving process initialization callback of Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -2421,10 +2432,10 @@ void SCIPbendersSetInitsol(
    benders->bendersinitsol = bendersinitsol;
 }
 
-/** sets solving process deinitialization callback of benders */
+/** sets solving process deinitialization callback of Benders' decomposition */
 void SCIPbendersSetExitsol(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization callback of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization callback of Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -2432,9 +2443,9 @@ void SCIPbendersSetExitsol(
    benders->bendersexitsol = bendersexitsol;
 }
 
-/** sets the pre subproblem solve callback of benders */
+/** sets the pre subproblem solve callback of Benders' decomposition */
 void SCIPbendersSetPresubsolve(
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve))/**< called prior to the subproblem solving loop */
    )
 {
@@ -2443,9 +2454,9 @@ void SCIPbendersSetPresubsolve(
    benders->benderspresubsolve = benderspresubsolve;
 }
 
-/** sets solve callback of benders */
+/** sets solve callback of Benders' decomposition */
 void SCIPbendersSetSolvesub(
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub))/**< solving method for a Benders' decomposition subproblem */
    )
 {
@@ -2454,10 +2465,10 @@ void SCIPbendersSetSolvesub(
    benders->benderssolvesub = benderssolvesub;
 }
 
-/** sets post-solve callback of benders */
+/** sets post-solve callback of Benders' decomposition */
 void SCIPbendersSetPostsolve(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -2465,9 +2476,9 @@ void SCIPbendersSetPostsolve(
    benders->benderspostsolve = benderspostsolve;
 }
 
-/** sets free subproblem callback of benders */
+/** sets free subproblem callback of Benders' decomposition */
 void SCIPbendersSetFreesub(
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the freeing callback for the subproblem */
    )
 {
