@@ -114,8 +114,8 @@ struct SCIP_ConsData
    SCIP_Real             root;               /**< root of polynomial */
    DECL_MYPOW            ((*power));         /**< function for computing power*/
 
-   SCIP_Real             lhsviol;            /**< current (scaled) violation of left  hand side */
-   SCIP_Real             rhsviol;            /**< current (scaled) violation of right hand side */
+   SCIP_Real             lhsviol;            /**< current violation of left  hand side */
+   SCIP_Real             rhsviol;            /**< current violation of right hand side */
 
    int                   xeventfilterpos;    /**< position of x var event in SCIP event filter */
    int                   zeventfilterpos;    /**< position of z var event in SCIP event filter */
@@ -6752,8 +6752,8 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
 
          if( printreason )
          {
-            SCIPinfoMessage(scip, NULL, "absolute power constraint <%s> violated by %g (scaled = %g)\n\t",
-               SCIPconsGetName(conss[c]), viol, MAX(consdata->lhsviol, consdata->rhsviol));
+            SCIPinfoMessage(scip, NULL, "absolute power constraint <%s> violated by %g\n\t",
+               SCIPconsGetName(conss[c]), viol);
             SCIP_CALL( consPrintAbspower(scip, conshdlr, conss[c], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
          }
