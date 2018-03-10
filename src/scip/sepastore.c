@@ -908,7 +908,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          if( !applied )
          {
             /* add cut to the LP and update orthogonalities */
-            SCIPsetDebugMsg(set, " -> applying forced cut <%s>\n", SCIProwGetName(cut));
+            SCIPsetDebugMsg(set, " -> applying%s cut <%s>\n", (i < sepastore->nforcedcuts) ? " forced" : "", SCIProwGetName(cut));
             /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
             SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, depth, &ncutsapplied) );
          }
