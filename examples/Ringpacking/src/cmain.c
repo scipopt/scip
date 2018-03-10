@@ -169,9 +169,6 @@ SCIP_RETCODE runShell(
     **********************************/
    SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
 
-   SCIPinfoMessage(scip, NULL, "primal solution (transformed space):\n");
-   SCIP_CALL( SCIPprintBestTransSol(scip, NULL, FALSE) );
-
    /********************
     * Deinitialization *
     ********************/
