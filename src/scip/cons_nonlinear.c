@@ -2885,7 +2885,7 @@ SCIP_RETCODE reformulate(
                child = SCIPexprgraphGetNodeChildren(node)[c];
                assert(child != NULL);
 
-               if( SCIPexprgraphGetNodeCurvature(child) != SCIP_EXPRCURV_LINEAR || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_USER )
+               if( SCIPexprgraphGetNodeCurvature(child) != SCIP_EXPRCURV_LINEAR || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_USER || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_ABS )
                {
                   SCIPdebugMessage("add auxiliary variable for child %p(%d,%d) with curvature %s operator %s\n",
                      (void*)child, SCIPexprgraphGetNodeDepth(child), SCIPexprgraphGetNodePosition(child), SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(child)), SCIPexpropGetName(SCIPexprgraphGetNodeOperator(child)) );
