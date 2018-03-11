@@ -1117,13 +1117,14 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
    {
       /* register presolver for symmetry information */
       SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-   }
 
-   if ( presoldata->addconsstiming == 0 && presoldata->enabled )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Executing presolver <%s> early, since symmetries are computed early.\n\n", SCIPpresolGetName(presol));
+      if ( presoldata->addconsstiming == 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Executing presolver <%s> early, since symmetries are computed early.\n\n", SCIPpresolGetName(presol));
 
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/" PRESOL_NAME "/priority", 90000000) );
+         /* increase priority */
+         SCIP_CALL( SCIPsetIntParam(scip, "presolving/" PRESOL_NAME "/priority", 90000000) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1155,8 +1156,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
    if ( ! presoldata->enabled )
       return SCIP_OKAY;
 
-   /* skip presolving if we are not at the end */
-   if ( presoldata->addconsstiming > 0 && ! SCIPisPresolveFinished(scip) )
+   /* skip presolving if we are not at the end if addconsstiming == 2 */
+   if ( presoldata->addconsstiming > 1 && ! SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
 
    /* possibly stop */
