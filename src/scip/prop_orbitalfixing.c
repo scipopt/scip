@@ -26,7 +26,7 @@
  * orbit to 0 or 1 if one of the other variables in the orbit is fixed to 0 or 1, respectively. Different from Margot,
  * the subgroup is obtained by filtering out generators that do not individually stabilize the variables branched to 1.
  *
- * @todo Turn off propagator in subtrees.
+ * @todo Possibly turn off propagator in subtrees.
  * @todo Check application of conflict resolution.
  */
 
@@ -48,6 +48,14 @@
 #define PROP_FREQ                     1           /**< propagator frequency */
 #define PROP_DELAY                FALSE           /**< should propagation method be delayed, if other propagators found reductions? */
 
+#define PROP_PRESOL_PRIORITY    -1000000          /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers) */
+#define PROP_PRESOLTIMING   SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolving method (fast, medium, or exhaustive) */
+#define PROP_PRESOL_MAXROUNDS        -1           /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+
+/* parameters */
+#define DEFAULT_OFTIMING              1           /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
+
+
 /* output table properties */
 #define TABLE_NAME_ORBITALFIXING        "orbitalfixing"
 #define TABLE_DESC_ORBITALFIXING        "orbital fixing statistics"
@@ -68,6 +76,7 @@ struct SCIP_PropData
    int                   nperms;             /**< pointer to store number of permutations */
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Bool             enabled;            /**< run orbital branching? */
+   int                   oftiming;           /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
@@ -99,7 +108,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
    assert( tabledata != NULL );
    assert( tabledata->propdata != NULL );
 
-   if ( tabledata->propdata->enabled )
+   if ( tabledata->propdata->nfixedzero + tabledata->propdata->nfixedone > 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Orbital fixing     :\n");
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :%11d\n", tabledata->propdata->nfixedzero);
@@ -387,15 +396,38 @@ SCIP_RETCODE propagateOrbitalFixing(
    *infeasible = FALSE;
    *nprop = 0;
 
-   assert( propdata->permvars != NULL );
-   assert( propdata->npermvars > 0 );
-   assert( propdata->permvarmap != NULL );
-   assert( propdata->perms != NULL );
+   /* possibly get symmetries */
+   if ( propdata->nperms < 0 )
+   {
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
+
+      if ( propdata->nperms == 0 )
+         return SCIP_OKAY;
+
+      /* create hashmap for storing the indices of variables */
+      assert( propdata->permvarmap == NULL );
+      SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
+
+      /* insert variables */
+      for (v = 0; v < propdata->npermvars; ++v)
+      {
+         SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[v], (void*) (size_t) v) );
+      }
+   }
 
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
    perms = propdata->perms;
    nperms = propdata->nperms;
+
+   /* return if there is no symmetry available */
+   if ( nperms == 0 )
+      return SCIP_OKAY;
+
+   assert( propdata->permvars != NULL );
+   assert( propdata->npermvars > 0 );
+   assert( propdata->permvarmap != NULL );
+   assert( propdata->perms != NULL );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &activeperms, nperms) );
 
@@ -557,6 +589,8 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
 
+   propdata->nperms = -1;
+   propdata->perms = NULL;
    propdata->permvars = NULL;
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
@@ -565,11 +599,12 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
 }
 
 
-/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+/** presolving initialization method of propagator (called when presolving is about to begin) */
 static
-SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
+SCIP_DECL_PROPINITPRE(propInitpreOrbitalfixing)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   int v;
 
    assert( scip != NULL );
    assert( prop != NULL );
@@ -579,42 +614,81 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    assert( propdata != NULL );
 
    /* possibly skip orbital fixing */
-   if ( ! propdata->enabled )
+   if ( ! propdata->enabled ||  propdata->nperms == 0 )
       return SCIP_OKAY;
 
    /* stop, if problem has already been solved */
    if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
 
-   if ( SCIPisStopped(scip) )
+   /* run only if timing is correct */
+   assert( 0 <= propdata->oftiming && propdata->oftiming <= 2 );
+   if ( propdata->oftiming > 0 )
       return SCIP_OKAY;
 
    assert( SCIPisTransformed(scip) );
 
    /* possibly get symmetries */
-   if ( propdata->npermvars < 0 )
+   if ( propdata->nperms < 0 )
    {
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
 
-      if ( propdata->nperms <= 0 )
+      if ( propdata->nperms > 0 )
       {
-         /* Skip orbital fixing, since no symmetries were found. */
-         propdata->enabled = FALSE;
-      }
-      else
-      {
-         int j;
-
          /* create hashmap for storing the indices of variables */
          assert( propdata->permvarmap == NULL );
          SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
 
          /* insert variables */
-         for (j = 0; j < propdata->npermvars; ++j)
+         for (v = 0; v < propdata->npermvars; ++v)
          {
-            SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[j], (void*) (size_t) j) );
+            SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[v], (void*) (size_t) v) );
          }
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** presolving method of propagator */
+static
+SCIP_DECL_PROPPRESOL(propPresolOrbitalFixing)
+{
+   SCIP_PROPDATA* propdata;
+   SCIP_Bool infeasible = FALSE;
+   int nprop = 0;
+
+   assert( scip != NULL );
+   assert( nfixedvars != NULL );
+   assert( result != NULL );
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get data */
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   /* do not run if not enabled */
+   if ( ! propdata->enabled )
+      return SCIP_OKAY;
+
+   /* run only if timing is correct */
+   assert( 0 <= propdata->oftiming && propdata->oftiming <= 2 );
+   if ( propdata->oftiming > 1 )
+      return SCIP_OKAY;
+
+   /* propagate */
+   *result = SCIP_DIDNOTFIND;
+
+   SCIPdebugMsg(scip, "Presolving <%s>.\n", SCIPpropGetName(prop));
+   SCIP_CALL( propagateOrbitalFixing(scip, propdata, &infeasible, &nprop) );
+   if ( infeasible )
+      *result = SCIP_CUTOFF;
+   else if ( nprop > 0 )
+   {
+      *result = SCIP_SUCCESS;
+      *nfixedvars += nprop;
    }
 
    return SCIP_OKAY;
@@ -657,7 +731,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
       return SCIP_OKAY;
 
    /* return if there is no symmetry available */
-   if ( propdata->npermvars == 0 || propdata->permvars == NULL )
+   if ( propdata->nperms == 0 )
       return SCIP_OKAY;
 
    /* return if we already ran in this node */
@@ -715,6 +789,8 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
 
+   propdata->nperms = -1;
+   propdata->perms = NULL;
    propdata->permvars = NULL;
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
@@ -726,8 +802,9 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeOrbitalfixing) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitOrbitalfixing) );
    SCIP_CALL( SCIPsetPropExit(scip, prop, propExitOrbitalfixing) );
-   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolOrbitalfixing) );
+   SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreOrbitalfixing) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropOrbitalfixing) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolOrbitalFixing, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
 
    /* include table */
    SCIP_CALL( SCIPallocBlockMemory(scip, &tabledata) );
@@ -735,6 +812,12 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORBITALFIXING, TABLE_DESC_ORBITALFIXING, TRUE,
          NULL, tableFreeOrbitalfixing, NULL, NULL, NULL, NULL, tableOutputOrbitalfixing,
          tabledata, TABLE_POSITION_ORBITALFIXING, TABLE_EARLIEST_ORBITALFIXING) );
+
+   /* add parameters */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "propagating/" PROP_NAME "/oftiming",
+         "timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call)",
+         &propdata->oftiming, TRUE, DEFAULT_OFTIMING, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }

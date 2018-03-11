@@ -57,7 +57,6 @@
 
 /* default parameter values */
 #define DEFAULT_MAXGENERATORS      1500      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
-#define DEFAULT_COMPUTEPRESOLVED   TRUE      /**< Should the symmetry be computed after presolving (otherwise before presol)? */
 #define DEFAULT_CHECKSYMMETRIES   FALSE      /**< Should all symmetries be checked after computation? */
 #define DEFAULT_DISPLAYNORBITVARS FALSE      /**< Should the number of variables affected by some symmetry be displayed? */
 
@@ -68,7 +67,6 @@
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Bool             computepresolved;   /**< Should the symmetry be computed afer presolving (otherwise before presol)? */
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
@@ -1452,32 +1450,6 @@ SCIP_DECL_PRESOLINIT(presolInitSymmetry)
 }
 
 
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-static
-SCIP_DECL_PRESOLINITPRE(presolInitpreSymmetry)
-{
-   SCIP_PRESOLDATA* presoldata;
-
-   assert( scip != NULL );
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   SCIPdebugMsg(scip, "Initialization of symmetry presolver.\n");
-
-   /* compute symmetries if not requested during presolving */
-   if ( ! presoldata->computepresolved && ! presoldata->computedsym && presoldata->symtype != 0 )
-   {
-      /* determine symmetry here in initpre, since other plugins specify their problem type in init() */
-      SCIP_CALL( determineSymmetry(scip, presoldata) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** deinitialization method of presolver (called before transformed problem is freed) */
 static
 SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
@@ -1566,44 +1538,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSymmetry)
 }
 
 
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-static
-SCIP_DECL_PRESOLEXITPRE(presolExitpreSymmetry)
-{
-   SCIP_PRESOLDATA* presoldata;
-
-   assert( scip != NULL );
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   /* skip if we are in a restart */
-   if ( SCIPgetNRuns(scip) > 1 )
-      return SCIP_OKAY;
-
-   /* skip if we already terminated */
-   if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
-      return SCIP_OKAY;
-
-   /* skip if we are exiting */
-   if ( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   SCIPdebugMsg(scip, "Exitpre method of symmetry presolver ...\n");
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   /* compute symmetries if requested during presolving */
-   if ( presoldata->computepresolved && ! presoldata->computedsym && presoldata->symtype != 0 )
-   {
-      SCIP_CALL( determineSymmetry(scip, presoldata) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-
 /*
  * External methods
  */
@@ -1642,15 +1576,8 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSymmetry) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSymmetry) );
    SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitSymmetry) );
-   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreSymmetry) );
-   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreSymmetry) );
 
    /* add parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PRESOL_NAME "/computepresolved",
-         "Should the symmetry be computed after presolving (otherwise before presol)?",
-         &presoldata->computepresolved, TRUE, DEFAULT_COMPUTEPRESOLVED, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/" PRESOL_NAME "/maxgenerators",
          "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
@@ -1712,7 +1639,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    if ( ! presoldata->computedsym )
    {
       if ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED &&
-           SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE )
+           SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE &&
+           SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       {
          SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
          return SCIP_INVALIDCALL;
@@ -1802,37 +1730,6 @@ SCIP_RETCODE SCIPregisterSymmetry(
    presoldata->symtype |= symtype;
    presoldata->symspecrequire |= type;
    presoldata->symspecrequirefixed |= fixedtype;
-
-   return SCIP_OKAY;
-}
-
-
-/** return at what time symmetry is computed (before or after presolving) */
-SCIP_RETCODE SCIPgetTimingSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            afterpresolve       /**< pointer to store whether symmetry is computed in stage initpre or exitpre */
-   )
-{
-   SCIP_PRESOLDATA* presoldata;
-   SCIP_PRESOL* presol;
-
-   assert( scip != NULL );
-   assert( afterpresolve != NULL );
-
-   /* find symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   if ( presol == NULL )
-   {
-      SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   *afterpresolve = presoldata->computepresolved;
 
    return SCIP_OKAY;
 }
