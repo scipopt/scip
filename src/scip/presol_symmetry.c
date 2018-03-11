@@ -790,6 +790,10 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( ! SCIPconsIsActive(cons) )
          continue;
 
+      /* Skip conflict constraints if we are late in the solving process */
+      if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsConflict(cons) )
+         continue;
+
       /* get constraint handler */
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
