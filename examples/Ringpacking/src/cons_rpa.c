@@ -261,14 +261,10 @@ SCIP_RETCODE enforceSol(
    /* (3.) fix an unverified patterns that is used */
    for( p = 0; p < ncpatterns; ++p )
    {
-      SCIP_Real solval = SCIPgetSolVal(scip, sol, cvars[p]);
-
-      if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN && !SCIPisFeasZero(scip, solval) )
+      if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN )
       {
          SCIP_Bool infeasible;
          SCIP_Bool success;
-
-         assert(conshdlrdata->tried[p]);
 
          SCIP_CALL( SCIPfixVar(scip, cvars[p], 0.0, &infeasible, &success) );
          SCIPdebugMsg(scip, "fix unknown pattern %d in [%g,%g] (success=%u)\n", p, SCIPvarGetLbLocal(cvars[p]),
@@ -283,11 +279,7 @@ SCIP_RETCODE enforceSol(
             return SCIP_OKAY;
          }
          else if( success )
-         {
-            /* stop since we cutoff the LP solution */
             *result = SCIP_REDUCEDDOM;
-            return SCIP_OKAY;
-         }
       }
    }
 
