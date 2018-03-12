@@ -997,7 +997,7 @@ void updateBestCandidate(
          return;
    }
 
-   threshold = wbounding - 2.0 * rmax - rext;
+   threshold = (patterntype == SCIP_PATTERNTYPE_RECTANGULAR ? wbounding - 2.0*rmax - rext : rbounding - 2.0*rmax - rext);
    isoverthreshold = SCIPisGT(scip, *bestx, threshold) && SCIPisGT(scip, x, threshold);
 
    /* check whether the candidate is better than the best known candidate */
