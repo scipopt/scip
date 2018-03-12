@@ -880,6 +880,7 @@ SCIP_RETCODE aggregation(
       }
       else if ( flowcoversuccess )
       {
+         /* cppcheck-suppress uninitvar */
          SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal,
                sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
