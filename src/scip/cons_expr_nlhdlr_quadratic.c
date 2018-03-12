@@ -1104,7 +1104,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
             SCIP_ROUNDMODE roundmode;
 
             roundmode = SCIPintervalGetRoundingMode();
-            SCIPintervalSetRoundingModeDownwards();
+            SCIPintervalSetRoundingModeUpwards();
 
             nlhdlrexprdata->maxquadfiniteact += quadub;
 
