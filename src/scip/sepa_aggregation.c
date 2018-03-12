@@ -126,6 +126,8 @@ struct SCIP_SepaData
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
+   SCIP_Bool             sepflowcover;       /**< whether flowcover cuts should be separated in the current call */
+   SCIP_Bool             sepcmir;            /**< whether cMIR cuts should be separated in the current call */
    SCIP_SEPA*            cmir;               /**< separator for adding cmir cuts */
    SCIP_SEPA*            flowcover;          /**< separator for adding flowcover cuts */
 };
@@ -846,12 +848,28 @@ SCIP_RETCODE aggregation(
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow,
-         cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
+
+      if( sepadata->sepflowcover )
+      {
+         SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow,
+            cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
+      }
+      else
+      {
+         flowcoversuccess = FALSE;
+      }
 
       cutefficacy = flowcoverefficacy;
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
-         aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
+
+      if( sepadata->sepcmir )
+      {
+         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
+            aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
+      }
+      else
+      {
+         cmirsuccess = FALSE;
+      }
 
       cut = NULL;
 
@@ -1017,6 +1035,13 @@ SCIP_RETCODE separateCuts(
    /* only call the cmir cut separator a given number of times at each node */
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* check which cuts should be separated */
+   sepadata->sepcmir = (depth % SCIPsepaGetFreq(sepadata->cmir)) == 0;
+   sepadata->sepflowcover = (depth % SCIPsepaGetFreq(sepadata->flowcover)) == 0;
+
+   if( ! sepadata->sepcmir && ! sepadata->sepflowcover )
       return SCIP_OKAY;
 
    /* get all rows and number of columns */
