@@ -1717,10 +1717,10 @@ SCIP_RETCODE checkConsQuadraticProblem(
    else
    {			  
       if ( !SCIPisInfinity(scip, origObjUb) )
-	     return SCIP_OKAY;
-	  if ( !SCIPisInfinity(scip, -origObjLb)
-		  && !SCIPisFeasGE(scip, quadlhs/coef, (origObjLb-origObjConstant)/origObjScalar) )
-	     return SCIP_OKAY;
+         return SCIP_OKAY;
+      if ( !SCIPisInfinity(scip, -origObjLb)
+            && !SCIPisFeasGE(scip, quadlhs/coef, (origObjLb-origObjConstant)/origObjScalar) )
+         return SCIP_OKAY;
    }
 
    
