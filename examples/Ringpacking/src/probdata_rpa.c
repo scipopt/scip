@@ -1675,6 +1675,16 @@ void SCIPprobdataInvalidateDualbound(
    }
 }
 
+/** returns whether dual bound is marked to be invalid */
+SCIP_Bool SCIPprobdataIsDualboundInvalid(
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+{
+   assert(probdata != NULL);
+
+   return probdata->isdualinvalid;
+}
+
 /** Tries to pack a list of elements into a specified boundary circle by using a simple left-first bottom-second
  *  heuristic. Returns the number of elements that could be stored and indicated which ones these are in the buffer
  *  parameter ispacked. This auxiliary method can be used both to find such a packing or to verify a certain pattern.
