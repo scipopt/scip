@@ -1039,8 +1039,16 @@ SCIP_RETCODE separateCuts(
       return SCIP_OKAY;
 
    /* check which cuts should be separated */
-   sepadata->sepcmir = (depth % SCIPsepaGetFreq(sepadata->cmir)) == 0;
-   sepadata->sepflowcover = (depth % SCIPsepaGetFreq(sepadata->flowcover)) == 0;
+   {
+      int cmirfreq;
+      int flowcoverfreq;
+
+      cmirfreq = SCIPsepaGetFreq(sepadata->cmir);
+      flowcoverfreq = SCIPsepaGetFreq(sepadata->flowcover);
+
+      sepadata->sepcmir = cmirfreq > 0 ? (depth % cmirfreq) == 0 : cmirfreq == depth;
+      sepadata->sepflowcover = flowcoverfreq > 0 ? (depth % flowcoverfreq) == 0 : flowcoverfreq == depth;
+   }
 
    if( ! sepadata->sepcmir && ! sepadata->sepflowcover )
       return SCIP_OKAY;
