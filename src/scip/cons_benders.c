@@ -184,25 +184,25 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    {
       switch( type )
       {
-         case LP:
+         case SCIP_BENDERSENFOTYPE_LP:
             if( SCIPbendersCutLP(benders[i]) )
             {
                SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type, checkint) );
             }
             break;
-         case RELAX:
+         case SCIP_BENDERSENFOTYPE_RELAX:
             if( SCIPbendersCutRelaxation(benders[i]) )
             {
                SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, type, checkint) );
             }
             break;
-         case PSEUDO:
+         case SCIP_BENDERSENFOTYPE_PSEUDO:
             if( SCIPbendersCutPseudo(benders[i]) )
             {
                SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type, checkint) );
             }
             break;
-         case CHECK:
+         case SCIP_BENDERSENFOTYPE_CHECK:
             SCIPwarningMessage(scip, "The conscheck callback is not supported\n");
             break;
          default:
@@ -308,7 +308,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, LP, TRUE) );
+   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -319,7 +319,7 @@ static
 SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, RELAX, TRUE) );
+   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -330,7 +330,7 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsBenders)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, PSEUDO, TRUE) );
+   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -385,7 +385,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    {
       for( i = 0; i < nactivebenders; i++ )
       {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, CHECK, TRUE) );
+         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
 
          /* if the result is infeasible, it is not necessary to check any more subproblems. */
          if( (*result) == SCIP_INFEASIBLE )

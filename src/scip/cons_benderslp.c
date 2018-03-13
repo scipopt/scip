@@ -108,7 +108,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
    if( conshdlrdata->maxdepth < -1 || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, LP, FALSE) );
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -128,7 +128,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenderslp)
    if( conshdlrdata->maxdepth < -1 || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, RELAX, FALSE) );
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -148,7 +148,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
    if( conshdlrdata->maxdepth < -1 || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, PSEUDO, FALSE) );
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, FALSE) );
 
    return SCIP_OKAY;
 }

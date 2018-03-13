@@ -685,7 +685,7 @@ SCIP_RETCODE initialiseLPSubproblem(
    assert(eventhdlr != NULL);
 
    /* Getting the problem into the right SCIP stage for solving */
-   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, LP, TRUE, FALSE) );
+   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, TRUE, FALSE) );
 
    /* Constructing the LP that can be solved in later iterations */
    SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
@@ -714,7 +714,7 @@ SCIP_RETCODE initialiseMIPSubproblem(
    assert(subproblem != NULL);
 
    /* Getting the problem into the right SCIP stage for solving */
-   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, LP, TRUE, FALSE) );
+   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, TRUE, FALSE) );
 
    /* Constructing the LP that can be solved in later iterations */
    SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
@@ -964,7 +964,7 @@ SCIP_RETCODE createAndAddTransferredCut(
       SCIPbendersGetNTransferredCuts(sourcebenders) );
 
    /* creating an empty row/constraint for the transferred cut */
-   if( sourcebenders->cutsascons )
+   if( sourcebenders->cutsasconss )
    {
       SCIP_CALL( SCIPcreateConsBasicLinear(sourcescip, &transfercons, cutname, 0, NULL, NULL, lhs, rhs) );
       SCIP_CALL( SCIPsetConsRemovable(sourcescip, transfercons, TRUE) );
@@ -987,7 +987,7 @@ SCIP_RETCODE createAndAddTransferredCut(
          break;
       }
 
-      if( sourcebenders->cutsascons )
+      if( sourcebenders->cutsasconss )
          SCIP_CALL( SCIPaddCoefLinear(sourcescip, transfercons, sourcevar, vals[i]) );    /*lint !e644*/
       else
          SCIP_CALL( SCIPaddVarToRow(sourcescip, transfercut, sourcevar, vals[i]) );       /*lint !e644*/
@@ -998,7 +998,7 @@ SCIP_RETCODE createAndAddTransferredCut(
    /* if all of the source variables were found to generate the cut */
    if( !fail )
    {
-      if( sourcebenders->cutsascons )
+      if( sourcebenders->cutsasconss )
          SCIP_CALL( SCIPaddCons(sourcescip, transfercons) );
       else
          SCIP_CALL( SCIPaddPoolCut(sourcescip, transfercut) );
@@ -1007,7 +1007,7 @@ SCIP_RETCODE createAndAddTransferredCut(
    }
 
    /* release the row/constraint */
-   if( sourcebenders->cutsascons )
+   if( sourcebenders->cutsasconss )
       SCIP_CALL( SCIPreleaseCons(sourcescip, &transfercons) );
    else
       SCIP_CALL( SCIPreleaseRow(sourcescip, &transfercut) );
@@ -1482,7 +1482,7 @@ SCIP_RETCODE SCIPbendersExec(
    onlylpcheck = benders->iscopy && benders->lnscheck;
 
    nsubproblems = SCIPbendersGetNSubproblems(benders);
-   if( benders->ncalls == 0 || type == CHECK || onlylpcheck )
+   if( benders->ncalls == 0 || type == SCIP_BENDERSENFOTYPE_CHECK || onlylpcheck )
       numtocheck = nsubproblems;
    else
       numtocheck = (int) SCIPsetCeil(set, (SCIP_Real) nsubproblems*benders->subprobfrac);
@@ -1508,7 +1508,7 @@ SCIP_RETCODE SCIPbendersExec(
     * benderssolvesub callback. If there is a subproblem that is not an LP, then 2 solve loops are performed. The first
     * loop is the LP solving loop, the second solves the subproblem to integer optimality. */
    nsolveloops = 1;
-   //if( SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders) && benders->benderssolvesub == NULL && type == CHECK && benders->ncalls % benders->mipcheckfreq == 0 )
+   //if( SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders) && benders->benderssolvesub == NULL && type == SCIP_BENDERSENFOTYPE_CHECK && benders->ncalls % benders->mipcheckfreq == 0 )
       //nsolveloops = 2;
 
    /* the result flag is set to FEASIBLE as default. If a cut is added, then this is changed to CONS_ADDED. If the
@@ -1521,7 +1521,7 @@ SCIP_RETCODE SCIPbendersExec(
       numnotopt = 0;
       subproblemcount = 0;
 
-      if( type == CHECK && sol == NULL )
+      if( type == SCIP_BENDERSENFOTYPE_CHECK && sol == NULL )
       {
          /* This if statement doesn't make sense to me. Need to determine what happens in the cut generation stage if
           * this is true */
@@ -1555,7 +1555,7 @@ SCIP_RETCODE SCIPbendersExec(
                SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, l, FALSE, &subinfeas, type) );
 
 #ifdef SCIP_DEBUG
-               if( type == LP )
+               if( type == SCIP_BENDERSENFOTYPE_LP )
                {
                   SCIPdebugMessage("LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
                      SCIPbendersGetSubprobObjval(benders, i));
@@ -1694,7 +1694,7 @@ SCIP_RETCODE SCIPbendersExec(
    }
 #endif
 
-   if( checkint && (type == CHECK || (*result) != SCIP_CONSADDED) )
+   if( checkint && (type == SCIP_BENDERSENFOTYPE_CHECK || (*result) != SCIP_CONSADDED) )
    {
       /* if the subproblems are being solved as part of conscheck, then the results flag must be returned after the solving
        * has completed. */
@@ -1710,9 +1710,9 @@ SCIP_RETCODE SCIPbendersExec(
       }
    }
 #if 0
-   /* The else branch existed when the if statement checked for type == CHECK. I think that the else is not needed.
+   /* The else branch existed when the if statement checked for type == SCIP_BENDERSENFOTYPE_CHECK. I think that the else is not needed.
     * Keeping it here to check whether it was needed  */
-   else if( type == PSEUDO )
+   else if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
    {
       if( (*infeasible) || !(optimal && allchecked) )
          (*result) = SCIP_INFEASIBLE;
@@ -1726,8 +1726,7 @@ SCIP_RETCODE SCIPbendersExec(
    if( benders->benderspostsolve != NULL )
    {
       printf("checkint %d result %d\n", checkint, (*result));
-      SCIP_CALL( benders->benderspostsolve(set->scip, benders, sol, (*infeasible),
-            (checkint && (*result) != SCIP_CONSADDED && (*result) != SCIP_SEPARATED)) );
+      SCIP_CALL( benders->benderspostsolve(set->scip, benders, sol, (*infeasible)) );
    }
 
    /* freeing the subproblems after the cuts are generated */
@@ -2150,7 +2149,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
       SCIP_CALL( SCIPrestartSolve(subproblem) );
 
       /* if the solve type is for CHECK, then the FEASIBILITY emphasis setting is used. */
-      if( type == CHECK )
+      if( type == SCIP_BENDERSENFOTYPE_CHECK )
       {
          //SCIP_CALL( SCIPsetEmphasis(subproblem, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
 
@@ -2183,7 +2182,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
       /* setting the subproblem parameters */
       SCIP_CALL( setSubprobParams(subproblem) );
 
-      //if( type != CHECK )
+      //if( type != SCIP_BENDERSENFOTYPE_CHECK )
          //SCIP_CALL( SCIPsetIntParam(subproblem, "limits/nodes", 0) );
 #ifdef SCIP_MOREDEBUG
       SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
@@ -2654,11 +2653,11 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
    assert(benders != NULL);
    assert(subproblem != NULL);
    assert(benders->subproblems != NULL);
-   assert(benders->addedsubprobs + 1 <= benders->nsubproblems);
+   assert(benders->naddedsubprobs + 1 <= benders->nsubproblems);
 
-   benders->subproblems[benders->addedsubprobs] = subproblem;
+   benders->subproblems[benders->naddedsubprobs] = subproblem;
 
-   benders->addedsubprobs++;
+   benders->naddedsubprobs++;
 
    return SCIP_OKAY;
 }
@@ -2671,10 +2670,10 @@ SCIP_RETCODE SCIPbendersRemoveSubproblems(
    assert(benders != NULL);
    assert(benders->subproblems != NULL);
 
-   while( benders->addedsubprobs > 0 )
+   while( benders->naddedsubprobs > 0 )
    {
-      benders->addedsubprobs--;
-      benders->subproblems[benders->addedsubprobs] = NULL;
+      benders->naddedsubprobs--;
+      benders->subproblems[benders->naddedsubprobs] = NULL;
    }
 
    return SCIP_OKAY;

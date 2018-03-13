@@ -333,14 +333,14 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    {
       SCIP_Bool infeasible;
 
-      if( type == LP || type == RELAX )
+      if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
       {
          SCIP_CALL( SCIPaddRow(masterprob, row, FALSE, &infeasible) );
          assert(!infeasible);
       }
       else
       {
-         assert(type == CHECK || type == PSEUDO);
+         assert(type == SCIP_BENDERSENFOTYPE_CHECK || type == SCIP_BENDERSENFOTYPE_PSEUDO);
          SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
       }
 
