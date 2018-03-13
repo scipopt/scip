@@ -1369,7 +1369,7 @@ SCIP_RETCODE propagateFullOrbitope(
 
       if ( SCIPvarGetLbLocal(vars[currow][j]) > 0.5 )
       {
-         /* fix all variables smaller than j to 1 */
+         /* fix all variables smaller than j to 1; we iterate backwards to guarantee correcteness of infeasibility detection */
          for (l = j - 1; l > lastone; --l)
          {
             /* check again since fixing previous entries may have modified the current entry */
@@ -1382,6 +1382,7 @@ SCIP_RETCODE propagateFullOrbitope(
                if ( tightened )
                   ++(*nfixedvars);
             }
+            /* since we iterate backwards, we have (vars[currow][l], vars[currow][l + 1]) = (0, 1) -> infeasible */
             else if ( SCIPvarGetUbLocal(vars[currow][l]) < 0.5 )
             {
                assert( l < lastcol -1 );
