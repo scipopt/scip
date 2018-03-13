@@ -3929,7 +3929,7 @@ SCIP_Bool SCIPlpiIsStable(
       return FALSE; /*lint !e527*/
    }
 
-   return (lpi->solstat != GRB_NUMERIC) && ( consviol <= eps && boundviol <= eps );
+   return (lpi->solstat != GRB_NUMERIC) && ( consviol <= feastol && boundviol <= feastol );
 }
 
 /** returns TRUE iff the objective limit was reached */
