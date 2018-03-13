@@ -1832,9 +1832,6 @@ static SCIP_RETCODE lpiSolve(
 
    invalidateSolution(lpi);
 
-   /* disable general presolving to ensure that we get dual or primal rays */
-   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
-
    /* check if the current basis should be ignored */
    if( lpi->clearstate )
    {
@@ -1883,6 +1880,50 @@ static SCIP_RETCODE lpiSolve(
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &dualinfeasible) );
    SCIPdebugMessage(" -> Xpress returned solstat=%d, pinfeas=%d, dinfeas=%d (%d iterations)\n",
       lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
+
+   /* Make sure that always a primal / dual ray exists */
+   if( lpi->solstat == XPRS_LP_INFEAS  || lpi->solstat == XPRS_LP_UNBOUNDED )
+   {
+      int presolving;
+
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_PRESOLVE, &presolving) );
+
+      if( presolving )
+      {
+         int tmpiterations;
+
+         /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+         SCIPdebugMessage("presolver may have solved the problem -> calling Xpress %s again without presolve\n",
+               strcmp(method, "p") == 0 ? "primal simplex" : strcmp(method, "d") == 0 ? "dual simplex" : "barrier");
+
+         /* switch off preprocessing */
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
+
+         /* resolve w/o presolving */
+         CHECK_ZERO( lpi->messagehdlr, XPRSlpoptimize(lpi->xprslp, method) );
+
+         /* evaluate the result */
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_LPSTATUS, &lpi->solstat) );
+         if( lpi->solstat == XPRS_LP_UNBOUNDED || lpi->solstat == XPRS_LP_INFEAS )
+         {
+            CHECK_ZERO( lpi->messagehdlr, XPRSgetunbvec(lpi->xprslp, &lpi->unbvec) );
+         }
+         else
+            lpi->unbvec = -1;
+
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &tmpiterations) );
+         lpi->iterations += tmpiterations;
+         lpi->solisbasic = TRUE;
+
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &primalinfeasible) );
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &dualinfeasible) );
+         SCIPdebugMessage(" -> Xpress returned solstat=%d, pinfeas=%d, dinfeas=%d (%d iterations)\n",
+            lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
+
+         /* switch on preprocessing again */
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 1) );
+      }
+   }
 
    if( (lpi->solstat == XPRS_LP_OPTIMAL) && (primalinfeasible || dualinfeasible) )
       lpi->solstat = XPRS_LP_OPTIMAL_SCALEDINFEAS;
