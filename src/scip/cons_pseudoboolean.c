@@ -840,10 +840,8 @@ SCIP_RETCODE getLinVarsAndAndRess(
 	 }
       }
 
-      if( !hashmapentryexists && linvars != NULL )
+      if( !hashmapentryexists && linvars != NULL && nlinvars != NULL )
       {
-         assert(nlinvars != NULL);
-
          linvars[*nlinvars] = vars[v];
 	 if( lincoefs != NULL )
 	 {
