@@ -799,7 +799,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    SCIP_Bool success;
    int j;
 
-   /* FIXME: apparently, cons_expr is not handling correctly the enfomethods provided; once that is fixed, remove me */
+   /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
+    * propagate them
+    */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
       return SCIP_OKAY;
 
