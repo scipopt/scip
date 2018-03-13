@@ -15,10 +15,10 @@
 
 /**@file   type_benderscut.h
  * @ingroup TYPEDEFINITIONS
- * @brief  type definitions for Benders' decomposition cuts
+ * @brief  type definitions for Benders' decomposition cut
  * @author Stephen J. Maher
  *
- *  This file defines the interface for Benders' decomposition cuts implemented in C.
+ *  This file defines the interface for Benders' decomposition cut implemented in C.
  *
  */
 
@@ -36,64 +36,65 @@
 extern "C" {
 #endif
 
-typedef struct SCIP_Benderscut SCIP_BENDERSCUT;              /**< Benders' decomposition cuts */
-typedef struct SCIP_BenderscutData SCIP_BENDERSCUTDATA;      /**< locally defined Benders' decomposition cuts data */
+typedef struct SCIP_Benderscut SCIP_BENDERSCUT;              /**< Benders' decomposition cut */
+typedef struct SCIP_BenderscutData SCIP_BENDERSCUTDATA;      /**< locally defined Benders' decomposition cut data */
 
 
-/** copy method for compression plugins (called when SCIP copies plugins)
+/** copy method for the Benders' decomposition cut plugins (called when SCIP copies plugins)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benderscut           : the compression technique itself
+ *  - benders         : the Benders' decomposition structure
+ *  - benderscut      : the Benders' decomposition cut structure
  */
 #define SCIP_DECL_BENDERSCUTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_BENDERSCUT* benderscut)
 
-/** destructor of Benders' decomposition cuts to free user data (called when SCIP is exiting)
+/** destructor of the Benders' decomposition cut to free user data (called when SCIP is exiting)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benderscut           : the compression technique itself
+ *  - benderscut      : the Benders' decomposition cut structure
  */
 #define SCIP_DECL_BENDERSCUTFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERSCUT* benderscut)
 
-/** initialization method of Benders' decomposition cuts (called after problem was transformed)
+/** initialization method of the Benders' decomposition cut (called after problem was transformed)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benderscut           : the compression technique itself
+ *  - benderscut      : the Benders' decomposition cut structure
  */
 #define SCIP_DECL_BENDERSCUTINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERSCUT* benderscut)
 
-/** deinitialization method of Benders' decomposition cuts (called before transformed problem is freed)
+/** deinitialization method of the Benders' decomposition cut (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benderscut           : the compression technique itself
+ *  - benderscut      : the Benders' decomposition cut structure
  */
 #define SCIP_DECL_BENDERSCUTEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERSCUT* benderscut)
 
-/** solving process initialization method of Benders' decomposition cutsc (called when branch and bound process is about to begin)
+/** solving process initialization method of the Benders' decomposition cut (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benderscut           : the compression technique itself
+ *  - benderscut      : the Benders' decomposition cut structure
  */
 #define SCIP_DECL_BENDERSCUTINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERSCUT* benderscut)
 
-/** solving process deinitialization method of Benders' decomposition cuts (called before branch and bound process data is freed)
+/** solving process deinitialization method of the Benders' decomposition cut (called before branch and bound process data is freed)
  *
  *  This method is called before the branch and bound process is freed.
- *  The Benders' decomposition cuts should use this call to clean up its branch and bound data.
+ *  The Benders' decomposition cut should use this call to clean up its branch and bound data.
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benderscut           : the compression technique itself
+ *  - benderscut      : the Benders' decomposition cut structure
  */
 #define SCIP_DECL_BENDERSCUTEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERSCUT* benderscut)
 
-/** execution method of Benders' decomposition cuts technique
+/** execution method of the Benders' decomposition cut technique
  *
  *  input:
  *  - scip            : SCIP main data structure

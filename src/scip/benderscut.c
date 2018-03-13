@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut.c
- * @brief  methods for Benders' decomposition cuts
+ * @brief  methods for Benders' decomposition cut
  * @author Stephen J. Maher
  */
 
@@ -73,7 +73,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBenderscutPriority)
 
 SCIP_RETCODE SCIPbenderscutCopyInclude(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition that the cuts are copied to */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
@@ -90,25 +90,25 @@ SCIP_RETCODE SCIPbenderscutCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a Benders' decomposition cuts */
+/** creates a Benders' decomposition cut */
 SCIP_RETCODE SCIPbenderscutCreate(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_BENDERSCUT**     benderscut,         /**< pointer to Benders' decomposition cuts data structure */
+   SCIP_BENDERSCUT**     benderscut,         /**< pointer to the Benders' decomposition cut data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
-   const char*           name,               /**< name of Benders' decomposition cuts */
-   const char*           desc,               /**< description of Benders' decomposition cuts */
-   int                   priority,           /**< priority of the Benders' decomposition cuts */
+   const char*           name,               /**< name of the Benders' decomposition cut */
+   const char*           desc,               /**< description of the Benders' decomposition cut */
+   int                   priority,           /**< priority of the the Benders' decomposition cut */
    SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
-   SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTEXIT((*benderscutexit)),/**< deinitialize Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTINITSOL((*benderscutinitsol)),/**< solving process initialization method of Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol)),/**< solving process deinitialization method of Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTEXEC((*benderscutexec)),/**< execution method of Benders' decomposition cuts */
-   SCIP_BENDERSCUTDATA*  benderscutdata      /**< Benders' decomposition cuts data */
+   SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of the Benders' decomposition cut or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTEXIT((*benderscutexit)),/**< deinitialize the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTINITSOL((*benderscutinitsol)),/**< solving process initialization method of the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol)),/**< solving process deinitialization method of the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTEXEC((*benderscutexec)),/**< execution method of the Benders' decomposition cut */
+   SCIP_BENDERSCUTDATA*  benderscutdata      /**< Benders' decomposition cut data */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
@@ -153,9 +153,9 @@ SCIP_RETCODE SCIPbenderscutCreate(
    return SCIP_OKAY;
 }
 
-/** calls destructor and frees memory of Benders' decomposition cuts */
+/** calls destructor and frees memory of the Benders' decomposition cut */
 SCIP_RETCODE SCIPbenderscutFree(
-   SCIP_BENDERSCUT**     benderscut,         /**< pointer to Benders' decomposition cuts data structure */
+   SCIP_BENDERSCUT**     benderscut,         /**< pointer to the Benders' decomposition cut data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPbenderscutFree(
    assert(!(*benderscut)->initialized);
    assert(set != NULL);
 
-   /* call destructor of Benders' decomposition cuts */
+   /* call destructor of the Benders' decomposition cut */
    if( (*benderscut)->benderscutfree != NULL )
    {
       SCIP_CALL( (*benderscut)->benderscutfree(set->scip, *benderscut) );
@@ -179,9 +179,9 @@ SCIP_RETCODE SCIPbenderscutFree(
    return SCIP_OKAY;
 }
 
-/** initializes Benders' decomposition cuts */
+/** initializes the Benders' decomposition cut */
 SCIP_RETCODE SCIPbenderscutInit(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -190,7 +190,7 @@ SCIP_RETCODE SCIPbenderscutInit(
 
    if( benderscut->initialized )
    {
-      SCIPerrorMessage("Benders' decomposition cuts <%s> already initialized\n", benderscut->name);
+      SCIPerrorMessage("Benders' decomposition cut <%s> already initialized\n", benderscut->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -222,9 +222,9 @@ SCIP_RETCODE SCIPbenderscutInit(
    return SCIP_OKAY;
 }
 
-/** calls exit method of Benders' decomposition cuts */
+/** calls exit method of the Benders' decomposition cut */
 SCIP_RETCODE SCIPbenderscutExit(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -233,7 +233,7 @@ SCIP_RETCODE SCIPbenderscutExit(
 
    if( !benderscut->initialized )
    {
-      SCIPerrorMessage("Benders' decomposition cuts <%s> not initialized\n", benderscut->name);
+      SCIPerrorMessage("Benders' decomposition cut <%s> not initialized\n", benderscut->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -268,7 +268,7 @@ SCIP_RETCODE SCIPbenderscutInitsol(
    assert(benderscut != NULL);
    assert(set != NULL);
 
-   /* call solving process initialization method of Benders' decomposition cut */
+   /* call solving process initialization method of the Benders' decomposition cut */
    if( benderscut->benderscutinitsol != NULL )
    {
       /* start timing */
@@ -306,9 +306,9 @@ SCIP_RETCODE SCIPbenderscutExitsol(
 
    return SCIP_OKAY;
 }
-/** calls execution method of Benders' decomposition cuts */
+/** calls execution method of the Benders' decomposition cut */
 SCIP_RETCODE SCIPbenderscutExec(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -327,7 +327,7 @@ SCIP_RETCODE SCIPbenderscutExec(
 
    cutresult = SCIP_DIDNOTRUN;
 
-   SCIPsetDebugMsg(set, "executing Benders' decomposition cuts <%s>\n", benderscut->name);
+   SCIPsetDebugMsg(set, "executing Benders' decomposition cut <%s>\n", benderscut->name);
 
    /* start timing */
    SCIPclockStart(benderscut->benderscutclock, set);
@@ -344,7 +344,7 @@ SCIP_RETCODE SCIPbenderscutExec(
       && cutresult != SCIP_FEASIBLE
       && cutresult != SCIP_SEPARATED )
    {
-      SCIPerrorMessage("execution method of Benders' decomposition cuts <%s> returned invalid result <%d>\n",
+      SCIPerrorMessage("execution method of Benders' decomposition cut <%s> returned invalid result <%d>\n",
          benderscut->name, cutresult);
       return SCIP_INVALIDRESULT;
    }
@@ -359,9 +359,9 @@ SCIP_RETCODE SCIPbenderscutExec(
    return SCIP_OKAY;
 }
 
-/** gets user data of Benders' decomposition cuts */
+/** gets user data of the Benders' decomposition cut */
 SCIP_BENDERSCUTDATA* SCIPbenderscutGetData(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -369,10 +369,10 @@ SCIP_BENDERSCUTDATA* SCIPbenderscutGetData(
    return benderscut->benderscutdata;
 }
 
-/** sets user data of Benders' decomposition cuts; user has to free old data in advance! */
+/** sets user data of the Benders' decomposition cut; user has to free old data in advance! */
 void SCIPbenderscutSetData(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_BENDERSCUTDATA*  benderscutdata      /**< new Benders' decomposition cuts user data */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_BENDERSCUTDATA*  benderscutdata      /**< new Benders' decomposition cut user data */
    )
 {
    assert(benderscut != NULL);
@@ -382,10 +382,10 @@ void SCIPbenderscutSetData(
 
 /* new callback setter methods */
 
-/** sets copy callback of Benders' decomposition cuts */
+/** sets copy callback of the Benders' decomposition cut */
 void SCIPbenderscutSetCopy(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy))/**< copy callback of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy))/**< copy callback of the Benders' decomposition cut or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    assert(benderscut != NULL);
@@ -393,10 +393,10 @@ void SCIPbenderscutSetCopy(
    benderscut->benderscutcopy = benderscutcopy;
 }
 
-/** sets destructor callback of Benders' decomposition cuts */
+/** sets destructor callback of the Benders' decomposition cut */
 void SCIPbenderscutSetFree(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTFREE((*benderscutfree))/**< destructor of Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTFREE((*benderscutfree))/**< destructor of the Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -404,10 +404,10 @@ void SCIPbenderscutSetFree(
    benderscut->benderscutfree = benderscutfree;
 }
 
-/** sets initialization callback of Benders' decomposition cuts */
+/** sets initialization callback of the Benders' decomposition cut */
 void SCIPbenderscutSetInit(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTINIT((*benderscutinit))/**< initialize Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTINIT((*benderscutinit))/**< initialize the Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -415,10 +415,10 @@ void SCIPbenderscutSetInit(
    benderscut->benderscutinit = benderscutinit;
 }
 
-/** sets deinitialization callback of Benders' decomposition cuts */
+/** sets deinitialization callback of the Benders' decomposition cut */
 void SCIPbenderscutSetExit(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTEXIT((*benderscutexit))/**< deinitialize Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTEXIT((*benderscutexit))/**< deinitialize the Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -426,10 +426,10 @@ void SCIPbenderscutSetExit(
    benderscut->benderscutexit = benderscutexit;
 }
 
-/** sets solving process initialization callback of Benders' decomposition cuts */
+/** sets solving process initialization callback of the Benders' decomposition cut */
 void SCIPbenderscutSetInitsol(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTINITSOL((*benderscutinitsol))/**< solving process initialization callback of Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTINITSOL((*benderscutinitsol))/**< solving process initialization callback of the Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -437,10 +437,10 @@ void SCIPbenderscutSetInitsol(
    benderscut->benderscutinitsol = benderscutinitsol;
 }
 
-/** sets solving process deinitialization callback of Benders' decomposition cuts */
+/** sets solving process deinitialization callback of Benders' decomposition cut */
 void SCIPbenderscutSetExitsol(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization callback of Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization callback of the Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -448,9 +448,9 @@ void SCIPbenderscutSetExitsol(
    benderscut->benderscutexitsol = benderscutexitsol;
 }
 
-/** gets name of Benders' decomposition cuts */
+/** gets name of the Benders' decomposition cut */
 const char* SCIPbenderscutGetName(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -458,9 +458,9 @@ const char* SCIPbenderscutGetName(
    return benderscut->name;
 }
 
-/** gets description of Benders' decomposition cuts */
+/** gets description of the Benders' decomposition cut */
 const char* SCIPbenderscutGetDesc(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -468,9 +468,9 @@ const char* SCIPbenderscutGetDesc(
    return benderscut->desc;
 }
 
-/** gets priority of Benders' decomposition cuts */
+/** gets priority of the Benders' decomposition cut */
 int SCIPbenderscutGetPriority(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -478,10 +478,10 @@ int SCIPbenderscutGetPriority(
    return benderscut->priority;
 }
 
-/** sets priority of Benders' decomposition cuts */
+/** sets priority of the Benders' decomposition cut */
 void SCIPbenderscutSetPriority(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   int                   priority            /**< new priority of the Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   int                   priority            /**< new priority of the Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -491,7 +491,7 @@ void SCIPbenderscutSetPriority(
 
 /** gets the number of times, the heuristic was called and tried to find a solution */
 SCIP_Longint SCIPbenderscutGetNCalls(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -499,9 +499,9 @@ SCIP_Longint SCIPbenderscutGetNCalls(
    return benderscut->ncalls;
 }
 
-/** gets the number of benders cuts found by this benderscutession */
+/** gets the number of Benders' cuts found by this Benders' decomposition cut */
 SCIP_Longint SCIPbenderscutGetNFound(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -509,9 +509,9 @@ SCIP_Longint SCIPbenderscutGetNFound(
    return benderscut->nfound;
 }
 
-/** is Benders' decomposition cuts initialized? */
+/** is the Benders' decomposition cut initialized? */
 SCIP_Bool SCIPbenderscutIsInitialized(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -519,9 +519,9 @@ SCIP_Bool SCIPbenderscutIsInitialized(
    return benderscut->initialized;
 }
 
-/** gets time in seconds used in this heuristic for setting up for next stages */
+/** gets time in seconds used by this Benders' decomposition cut for setting up */
 SCIP_Real SCIPbenderscutGetSetupTime(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -529,9 +529,9 @@ SCIP_Real SCIPbenderscutGetSetupTime(
    return SCIPclockGetTime(benderscut->setuptime);
 }
 
-/** gets time in seconds used in this heuristic */
+/** gets time in seconds used in this Benders' decomposition cut */
 SCIP_Real SCIPbenderscutGetTime(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
@@ -541,7 +541,7 @@ SCIP_Real SCIPbenderscutGetTime(
 
 /** adds the generated constraint to the Benders cut storage */
 SCIP_RETCODE SCIPbenderscutStoreCons(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
    )
@@ -567,7 +567,7 @@ SCIP_RETCODE SCIPbenderscutStoreCons(
 
 /* adds the generated cuts to the Benders' cut storage */
 SCIP_RETCODE SCIPbenderscutStoreCut(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
    )

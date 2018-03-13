@@ -18,7 +18,7 @@
  * @brief  xyz Benders' decomposition cuts
  * @author Stephen J. Maher
  *
- * template file for Benders' decomposition cuts plugins
+ * template file for Benders' decomposition cut plugins
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,11 +33,11 @@
 extern "C" {
 #endif
 
-/** creates the xyz Benders' decomposition cuts and includes it in SCIP */
+/** creates the xyz Benders' decomposition cut and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeBenderscutXyz(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition structure */
    );
 
 #ifdef __cplusplus

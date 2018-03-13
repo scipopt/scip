@@ -15,7 +15,7 @@
 
 /**@file   pub_benderscut.h
  * @ingroup PUBLICCOREAPI
- * @brief  public methods for Benders' decomposition cutss
+ * @brief  public methods for Benders' decomposition cuts
  * @author Stephen J. Maher
  */
 
@@ -38,73 +38,73 @@ extern "C" {
  * @{
  */
 
-/** compares two compressions w. r. to their priority */
+/** compares two Benders' decomposition cuts w. r. to their priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPbenderscutComp);
 
-/** comparison method for sorting compressions w.r.t. to their name */
+/** comparison method for sorting Benders' decomposition cuts w.r.t. to their name */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPbenderscutCompName);
 
-/** gets user data of Benders' decomposition cuts */
+/** gets user data of the Benders' decomposition cut */
 EXTERN
 SCIP_BENDERSCUTDATA* SCIPbenderscutGetData(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** sets user data of Benders' decomposition cuts; user has to free old data in advance! */
+/** sets user data of the Benders' decomposition cut; user has to free old data in advance! */
 EXTERN
 void SCIPbenderscutSetData(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_BENDERSCUTDATA*   benderscutdata     /**< new Benders' decomposition cuts user data */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_BENDERSCUTDATA*   benderscutdata     /**< new Benders' decomposition cut user data */
    );
 
-/** gets name of Benders' decomposition cuts */
+/** gets name of the Benders' decomposition cut */
 EXTERN
 const char* SCIPbenderscutGetName(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** gets description of Benders' decomposition cuts */
+/** gets description of the Benders' decomposition cut */
 EXTERN
 const char* SCIPbenderscutGetDesc(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** gets priority of Benders' decomposition cuts */
+/** gets priority of the Benders' decomposition cut */
 EXTERN
 int SCIPbenderscutGetPriority(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** gets the number of times, the compression was called and tried to find a compression */
+/** gets the number of times, the Benders' decomposition cut was called and tried to find a violated cut */
 EXTERN
 SCIP_Longint SCIPbenderscutGetNCalls(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** gets the number of Benders' decomposition cuts found for a given subproblem */
+/** gets the number of the cuts found by this Benders' decomposition cut */
 EXTERN
 SCIP_Longint SCIPbenderscutGetNFound(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** is Benders' decomposition cuts initialized? */
+/** is the Benders' decomposition cut initialized? */
 EXTERN
 SCIP_Bool SCIPbenderscutIsInitialized(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** gets time in seconds used in this compression for setting up for next stages */
+/** gets time in seconds used in this Benders' decomposition cut for setting up for next stages */
 EXTERN
 SCIP_Real SCIPbenderscutGetSetupTime(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** gets time in seconds used in this compression */
+/** gets time in seconds used in this Benders' decomposition cut */
 EXTERN
 SCIP_Real SCIPbenderscutGetTime(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** returns the constraints that have been added by the Benders' cut plugin */

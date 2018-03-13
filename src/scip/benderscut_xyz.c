@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_xyz.c
- * @brief  xyz Benders' decomposition cuts
+ * @brief  xyz Benders' decomposition cut
  * @author Stephen J. Maher
  */
 
@@ -26,7 +26,7 @@
 
 
 #define BENDERSCUT_NAME             "xyz"
-#define BENDERSCUT_DESC             "Benders' decomposition cuts template"
+#define BENDERSCUT_DESC             "Benders' decomposition cut template"
 #define BENDERSCUT_PRIORITY         0
 #define BENDERSCUT_LPCUT            TRUE
 
@@ -37,7 +37,7 @@
 
 /* TODO: fill in the necessary compression data */
 
-/** Benders' decomposition cuts data */
+/** Benders' decomposition cut data */
 struct SCIP_BenderscutData
 {
 };
@@ -51,17 +51,17 @@ struct SCIP_BenderscutData
 
 
 /*
- * Callback methods of Benders' decomposition cuts
+ * Callback methods of the Benders' decomposition cut
  */
 
-/* TODO: Implement all necessary Benders' decomposition cuts methods. The methods with an #if 0 ... #else #define ... are optional */
+/* TODO: Implement all necessary Benders' decomposition cut methods. The methods with an #if 0 ... #else #define ... are optional */
 
-/** copy method for Benders' decomposition cuts plugins (called when SCIP copies plugins) */
+/** copy method for the Benders' decomposition cut plugins (called when SCIP copies plugins) */
 #if 0
 static
 SCIP_DECL_BENDERSCUTCOPY(benderscutCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz Benders' decomposition cuts not implemented yet\n");
+   SCIPerrorMessage("method of xyz Benders' decomposition cut not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -70,12 +70,12 @@ SCIP_DECL_BENDERSCUTCOPY(benderscutCopyXyz)
 #define benderscutCopyXyz NULL
 #endif
 
-/** destructor of Benders' decomposition cuts to free user data (called when SCIP is exiting) */
+/** destructor of the Benders' decomposition cut to free user data (called when SCIP is exiting) */
 #if 0
 static
 SCIP_DECL_BENDERSCUTFREE(benderscutFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz Benders' decomposition cuts not implemented yet\n");
+   SCIPerrorMessage("method of xyz Benders' decomposition cut not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -85,12 +85,12 @@ SCIP_DECL_BENDERSCUTFREE(benderscutFreeXyz)
 #endif
 
 
-/** initialization method of Benders' decomposition cuts (called after problem was transformed) */
+/** initialization method of the Benders' decomposition cut (called after problem was transformed) */
 #if 0
 static
 SCIP_DECL_BENDERSCUTINIT(benderscutInitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz Benders' decomposition cuts not implemented yet\n");
+   SCIPerrorMessage("method of xyz Benders' decomposition cut not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -100,12 +100,12 @@ SCIP_DECL_BENDERSCUTINIT(benderscutInitXyz)
 #endif
 
 
-/** deinitialization method of Benders' decomposition cuts (called before transformed problem is freed) */
+/** deinitialization method of the Benders' decomposition cut (called before transformed problem is freed) */
 #if 0
 static
 SCIP_DECL_BENDERSCUTEXIT(benderscutExitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz Benders' decomposition cuts not implemented yet\n");
+   SCIPerrorMessage("method of xyz Benders' decomposition cut not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -115,12 +115,12 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitXyz)
 #endif
 
 
-/** solving process initialization method of Benders' decomposition cuts (called when branch and bound process is about to begin) */
+/** solving process initialization method of the Benders' decomposition cut (called when branch and bound process is about to begin) */
 #if 0
 static
 SCIP_DECL_BENDERSCUTINITSOL(benderscutInitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz Benders' decomposition cuts not implemented yet\n");
+   SCIPerrorMessage("method of xyz Benders' decomposition cut not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -130,12 +130,12 @@ SCIP_DECL_BENDERSCUTINITSOL(benderscutInitsolXyz)
 #endif
 
 
-/** solving process deinitialization method of Benders' decomposition cuts (called before branch and bound process data is freed) */
+/** solving process deinitialization method of the Benders' decomposition cut (called before branch and bound process data is freed) */
 #if 0
 static
 SCIP_DECL_BENDERSCUTEXITSOL(benderscutExitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz Benders' decomposition cuts not implemented yet\n");
+   SCIPerrorMessage("method of xyz Benders' decomposition cut not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -145,11 +145,11 @@ SCIP_DECL_BENDERSCUTEXITSOL(benderscutExitsolXyz)
 #endif
 
 
-/** execution method of Benders' decomposition cuts */
+/** execution method of the Benders' decomposition cut */
 static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz Benders' decomposition cuts not implemented yet\n");
+   SCIPerrorMessage("method of xyz Benders' decomposition cut not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -157,10 +157,10 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecXyz)
 
 
 /*
- * Benders' decomposition cuts specific interface methods
+ * Benders' decomposition cut specific interface methods
  */
 
-/** creates the xyz Benders' decomposition cuts and includes it in SCIP */
+/** creates the xyz Benders' decomposition cut and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBenderscutXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -171,12 +171,12 @@ SCIP_RETCODE SCIPincludeBenderscutXyz(
 
    assert(benders != NULL);
 
-   /* create xyz Benders' decomposition cuts data */
+   /* create xyz Benders' decomposition cut data */
    benderscutdata = NULL;
 
    benderscut = NULL;
 
-   /* include Benders' decomposition cuts */
+   /* include the Benders' decomposition cut */
 #if 0
    /* use SCIPincludeBenderscut() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
     * new callbacks are added in future SCIP versions
@@ -202,8 +202,8 @@ SCIP_RETCODE SCIPincludeBenderscutXyz(
    SCIP_CALL( SCIPsetBenderscutExitsol(scip, benderscut, benderscutExitsolXyz) );
 #endif
 
-   /* add xyz Benders' decomposition cuts parameters */
-   /* TODO: (optional) add Benders' decomposition cuts specific parameters with SCIPaddTypeParam() here */
+   /* add xyz Benders' decomposition cut parameters */
+   /* TODO: (optional) add the Benders' decomposition cut specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
 }
