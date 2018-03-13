@@ -823,7 +823,11 @@ SCIP_RETCODE setIntParam(
 
 /** gets a single double parameter value */
 static
-SCIP_RETCODE getDblParam(SCIP_LPI* lpi, const char* param, double* p)
+SCIP_RETCODE getDblParam(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           param,              /**< parameter name */
+   double*               p                   /**< value of parameter */
+   )
 {
    int i;
 
