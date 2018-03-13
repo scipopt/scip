@@ -960,6 +960,9 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    )
 {
+   /* This calls either the user defined solve method or the inbuilt solve methods.
+    * The details of this function have been removed for the merge request. */
+
    return SCIP_OKAY;
 }
 
