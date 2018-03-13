@@ -11736,7 +11736,7 @@ void adjustLPobjval(
 
    if( SCIPsetIsInfinity(set, lp->lpobjval) && lp->lpobjval != SCIPsetInfinity(set) ) /*lint !e777*/
    {
-      if( !lp->adjustlpval )
+      if( !lp->adjustlpval && messagehdlr != NULL )
       {
          SCIPmessagePrintWarning(messagehdlr, "LP solution value is above SCIP's infinity value\n");
          lp->adjustlpval = TRUE;
@@ -11745,7 +11745,7 @@ void adjustLPobjval(
    }
    else if( SCIPsetIsInfinity(set, -lp->lpobjval) && lp->lpobjval != -SCIPsetInfinity(set) ) /*lint !e777*/
    {
-      if( !lp->adjustlpval )
+      if( !lp->adjustlpval && messagehdlr != NULL )
       {
          SCIPmessagePrintWarning(messagehdlr, "LP solution value is below SCIP's -infinity value\n");
          lp->adjustlpval = TRUE;
@@ -11882,7 +11882,14 @@ SCIP_RETCODE lpSolve(
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      adjustLPobjval(lp, set, messagehdlr);
+
+      /* The lpobjval might be infinite, e.g. if the LP solver was not able to produce a valid bound while reaching the
+         iteration limit. In this case, we avoid the warning in adjustLPobjval() by setting the messagehdlr to NULL. */
+      if ( REALABS(lp->lpobjval) == SCIPlpiInfinity(lp->lpi) )
+         adjustLPobjval(lp, set, NULL);
+      else
+         adjustLPobjval(lp, set, messagehdlr);
+
       lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
    }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )
