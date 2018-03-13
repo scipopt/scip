@@ -11885,7 +11885,7 @@ SCIP_RETCODE lpSolve(
 
       /* The lpobjval might be infinite, e.g. if the LP solver was not able to produce a valid bound while reaching the
          iteration limit. In this case, we avoid the warning in adjustLPobjval() by setting the messagehdlr to NULL. */
-      if ( REALABS(lp->lpobjval) == SCIPlpiInfinity(lp->lpi) )
+      if ( REALABS(lp->lpobjval) == SCIPlpiInfinity(lp->lpi) ) /*lint !e777*/
          adjustLPobjval(lp, set, NULL);
       else
          adjustLPobjval(lp, set, messagehdlr);
