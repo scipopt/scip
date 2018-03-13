@@ -3792,7 +3792,8 @@ SCIP_RETCODE computeViolation(
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
          }
 
-         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+         /* coverity[callee_ptr_arith] */
+         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) );
       }
       else
       {
@@ -4215,7 +4216,8 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    assert(SCIPisLE(scip, xlb, xub));
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+   /* coverity[callee_ptr_arith] */
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
    if( !SCIPisFinite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
@@ -4223,7 +4225,8 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    vallb *= treecoef;
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+   /* coverity[callee_ptr_arith] */
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
    if( !SCIPisFinite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in upper bound\n", exprtreeidx, SCIPconsGetName(cons));

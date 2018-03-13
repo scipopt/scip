@@ -1338,7 +1338,8 @@ SCIP_RETCODE solveDerivativeEquation(
          break;
       }
 
-      SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+      /* coverity[callee_ptr_arith] */
+      SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) );
 
       /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g hess = %g\n", s, lb, ub, fval, hess); */
 
@@ -3042,8 +3043,10 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             /* if we could not find an xtilde such that f'(xtilde,yub) = f'(xval,ylb), then probably because f'(x,yub) is constant
              * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
              */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+            /* coverity[callee_ptr_arith] */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
+            /* coverity[callee_ptr_arith] */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
 
             SCIPdebugMsg(scip, "couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
                xlb, ylb, grad[0], xlb, fxlb - grad[0] * xlb,
@@ -3067,7 +3070,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          if( *success )
          {
             /* compute f(xtilde, yub) */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+            /* coverity[callee_ptr_arith] */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
 
             SCIPdebugMsg(scip, "xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, yub, ftilde);
 
@@ -3125,8 +3129,10 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             /* if we could not find an xtilde such that f'(xtilde,ylb) = f'(xval,yub), then probably because f'(x,ylb) is constant
              * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
              */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+            /* coverity[callee_ptr_arith] */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
+            /* coverity[callee_ptr_arith] */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
 
             SCIPdebugMsg(scip, "couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
                xlb, yub, grad[0], xlb, fxlb - grad[0] * xlb,
@@ -3150,7 +3156,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          if( *success )
          {
             /* compute f(xtilde, yub) */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );  /* coverity ignore ARRAY_VS_SINGLETON warning */
+            /* coverity[callee_ptr_arith] */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
 
             SCIPdebugMsg(scip, "xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, ylb, ftilde);
 
