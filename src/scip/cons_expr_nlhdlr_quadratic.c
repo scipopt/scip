@@ -568,7 +568,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
  *
  * @note:
  * - the expression needs to be simplified (in particular, it is assumed to be sorted)
- * - common subexpressions are also assumed to have been identified.
+ * - common subexpressions are also assumed to have been identified, the hashing will fail otherwise!
  *
  * Sorted implies that:
  *  - expr < expr^2: bases are the same, but exponent 1 < 2
@@ -649,7 +649,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    SCIPhashmapFree(&seenexpr);
 
    if( ! properquadratic )
+   {
+      SCIPdebugMsg(scip, "expr %p is not a proper quadratic: can't be handled by us\n", (void*)expr);
       return SCIP_OKAY;
+   }
 
    SCIPdebugMsg(scip, "expr %p is proper quadratic: checking convexity\n", (void*)expr);
 

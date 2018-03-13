@@ -110,6 +110,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
    SCIP_Bool success;
@@ -127,7 +128,8 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    enforceabove = FALSE;
    success = FALSE;
    SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow got %d\n", provided);
+   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
+   cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
    cr_assert(enforcebelow);
    cr_assert(!enforceabove);
    cr_assert(success);
@@ -163,6 +165,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
 Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* expexpr;
@@ -195,7 +198,8 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    enforceabove = FALSE;
    success = FALSE;
    SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow got %d\n", provided);
+   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
+   cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
    cr_assert(enforcebelow);
    cr_assert(!enforceabove);
    cr_assert(success);
@@ -412,6 +416,61 @@ Test(nlhdlrquadratic, noproperquadratic2, .init = setup, .fini = teardown)
    cr_expect_eq(3, SCIPgetConsExprExprNChildren(expr));
    for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); i++ )
       cr_expect_null(SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]));
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* x^2 + y^2 + z^2 * x, should only provide propagation:
+ * Note: we use this expression because variables are automatically detected to be
+ * common subexpressions. Since we cannot call detect common subexpression to a given expression
+ * as easily as calling simplify, we content with this work around
+ * The alternative would be to create a constraint and canonilize it, then get the expression
+ * and call the detection method of the quadratic to this expression. This is the cleanest way
+ * and probably the way it should be done (TODO)
+ */
+Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success;
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <y>^2 + <z>^2 * <x>", NULL, &expr) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
+   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   /* detect */
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
+   cr_assert(!enforcebelow);
+   cr_assert(!enforceabove);
+   cr_assert(success);
+   cr_expect_not_null(nlhdlrexprdata);
+
+   /* no auxiliary variables should have been created */
+   cr_expect_eq(4, SCIPgetNVars(scip), "got %d\n", SCIPgetNVars(scip));
+
+   /* register enforcer info in expr and free */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(expr->enfos[0])) );
+   expr->enfos[0]->nlhdlr = nlhdlr;
+   expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
+   expr->nenfos = 1;
+   expr->enfos[0]->issepainit = FALSE;
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
