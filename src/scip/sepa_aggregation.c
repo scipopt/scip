@@ -1463,13 +1463,13 @@ SCIP_RETCODE SCIPincludeSepaAggregation(
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    /* include dummy separators */
-   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->flowcover, "flowcover", "dummy separator for adding flowcover cuts", -100000, -1, SEPA_MAXBOUNDDIST,
-                                   SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->flowcover, "flowcover", "separator for flowcover cuts", -100000, SEPA_FREQ, 0.0,
+                                   SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
 
    assert(sepadata->flowcover != NULL);
 
-   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->cmir, "cmir", "dummy separator for adding cmir cuts", -100000, -1, SEPA_MAXBOUNDDIST,
-                                   SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->cmir, "cmir", "separator for cmir cuts", -100000, SEPA_FREQ, 0.0,
+                                   SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
 
    assert(sepadata->cmir != NULL);
 
