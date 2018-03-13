@@ -3879,6 +3879,7 @@ SCIP_Bool SCIPlpiIsStable(
    double consviol;
    double boundviol;
    double feastol;
+   int res;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
