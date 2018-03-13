@@ -34,6 +34,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_pricestore.h"
 #include "scip/type_benders.h"
+#include "scip/type_benderscut.h"
 #include "scip/pub_benders.h"
 
 #ifdef __cplusplus
@@ -270,6 +271,33 @@ SCIP_RETCODE SCIPbendersGetVar(
    SCIP_VAR*             var,                /**< the variable for which the corresponding variable is desired */
    SCIP_VAR**            mappedvar,          /**< the variable that is mapped to var */
    int                   probnumber          /**< the problem number for the desired variable, -1 for the master problem */
+   );
+
+/** inserts a Benders' cut into the Benders' cuts list */
+extern
+SCIP_RETCODE SCIPbendersIncludeBenderscut(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' cut */
+   );
+
+/** sets the Benders' cuts sorted flags in the Benders' decomposition */
+extern
+void SCIPbendersSetBenderscutsSorted(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
+   SCIP_Bool             sorted              /**< the value to set the sorted flag to */
+   );
+
+/** sorts benders cuts by priorities */
+extern
+void SCIPbendersSortBenderscuts(
+   SCIP_BENDERS*         benders             /**< benders */
+   );
+
+/** sorts benders cuts by name */
+extern
+void SCIPbendersSortBenderscutsName(
+   SCIP_BENDERS*         benders             /**< benders */
    );
 
 #ifdef __cplusplus

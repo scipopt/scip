@@ -683,6 +683,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/bandit_exp3.o \
 			scip/bandit_ucb.o \
 			scip/benders.o \
+			scip/benderscut.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
