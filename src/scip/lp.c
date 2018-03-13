@@ -12670,18 +12670,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   {
                      SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
 
-                     if( (fastmip > 0) && simplex )
-                     {
-                        /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems): solve again
-                         * without FASTMIP
-                         */
-                        SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                              "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again without FASTMIP\n",
-                              stat->nnodes, stat->nlps);
-                        fastmip = 0;
-                        goto SOLVEAGAIN;
-                     }
-                     else if( !tightprimfeastol )
+                     if( !tightprimfeastol )
                      {
                         /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems):
                          * solve again with tighter feasibility tolerance
@@ -12692,7 +12681,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                         tightprimfeastol = TRUE;
                         goto SOLVEAGAIN;
                      }
-                     else if( !fromscratch && simplex )
+                     else if( simplex )
                      {
                         /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems): solve again
                          * from scratch
