@@ -3872,6 +3872,10 @@ SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   double consviol;
+   double boundviol;
+   double feastol;
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(lpi->solstat >= 0);
@@ -3897,7 +3901,31 @@ SCIP_Bool SCIPlpiIsStable(
          return FALSE;
    }
 
-   return (lpi->solstat != GRB_NUMERIC);
+   /* test whether we have unscaled infeasibilities */
+
+   /* first get tolerance */
+   res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &feastol);
+   if ( res != 0 )
+   {
+      SCIPABORT();
+      return FALSE; /*lint !e527*/
+   }
+
+   /* next get constraint and bound violations */
+   res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
+   if ( res != 0 )
+   {
+      SCIPABORT();
+      return FALSE; /*lint !e527*/
+   }
+   res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
+   if ( res != 0 )
+   {
+      SCIPABORT();
+      return FALSE; /*lint !e527*/
+   }
+
+   return (lpi->solstat != GRB_NUMERIC) && ( consviol <= eps && boundviol <= eps );
 }
 
 /** returns TRUE iff the objective limit was reached */
