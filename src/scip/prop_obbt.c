@@ -2101,12 +2101,12 @@ TERMINATE:
  *  Let x* be the optimal primal and (mu,theta) be the optimal dual solution of this LP. The KKT conditions imply that
  *  the aggregation of the linear constraints mu*Ax <= mu*b can be written as
  *
- *  x * (1 - theta) / (xt - xs) + y * theta / (yt - ys) = mu * Ax <= mu * b
+ *  x * (1 - theta / (xt - xs)) + y * theta / (yt - ys) = mu * Ax <= mu * b
  *
  *  <=> alpha * x + beta * y <= mu * b = alpha * (x*) + beta * (y*)
  *
  *  which is a valid inequality in the (x,y)-space; in order to avoid numerical difficulties when (xs,ys) is too close
- *  to (xt,yt), we scale constraint (1) by max{1,|xt-xs|,|yt-ys|} beforehand
+ *  to (xt,yt), we scale constraint (2) by min{ max{1,|xt-xs|,|yt-ys|}, 100 } beforehand
  */
 static
 SCIP_RETCODE solveBilinearLP(
