@@ -726,7 +726,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    SCIPhashmapFree(&expridx);
 
-   /* every detected quadratic expression will be handled since we can propagate */
+   /* every detected proper quadratic expression will be handled since we can propagate */
    *enforcedbelow = FALSE;
    *enforcedabove = FALSE;
    *success = TRUE;
