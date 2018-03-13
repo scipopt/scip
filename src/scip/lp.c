@@ -12343,13 +12343,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   "(node %" SCIP_LONGINT_FORMAT ") infeasibility of LP %" SCIP_LONGINT_FORMAT " could not be proven by dual ray\n", stat->nnodes, stat->nlps);
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+               farkasvalid = FALSE;
                *lperror = TRUE;
             }
          }
          else
             farkasvalid = TRUE;
 
-         if( !farkasvalid )
+         /* if the LP solver does not provide a Farkas proof we don't want to resolve the LP */
+         if( !farkasvalid && !(*lperror) )
          {
             SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
 
@@ -12641,7 +12643,28 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                else if( solstat == SCIP_LPSOLSTAT_INFEASIBLE )
                {
                   SCIPsetDebugMsg(set, " -> LP infeasible\n");
-                  SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
+
+                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve )
+                  {
+                     if( SCIPlpiHasDualRay(lp->lpi) )
+                     {
+                        SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
+                     }
+                     /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
+                      * with the primal simplex due to numerical problems) - treat this case like an LP error
+                      */
+                     else
+                     {
+                        SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                           "(node %" SCIP_LONGINT_FORMAT ") infeasibility of LP %" SCIP_LONGINT_FORMAT " could not be proven by dual ray\n", stat->nnodes, stat->nlps);
+                        lp->solved = FALSE;
+                        lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+                        farkasvalid = FALSE;
+                        *lperror = TRUE;
+                     }
+                  }
+                  else
+                     farkasvalid = TRUE;
 
                   if( !farkasvalid )
                   {
