@@ -1361,12 +1361,16 @@ SCIP_RETCODE SCIPlpGetPrimalRay(
                                               *   (all entries have to be initialized to 0 before) */
    );
 
-/** stores the dual Farkas multipliers for infeasibility proof in rows */
-extern
+/** stores the dual Farkas multipliers for infeasibility proof in rows. besides, the proof is checked for validity if
+ *  lp/checkfarkas = TRUE.
+ *
+ *  @note the check will not be performed if @p valid is NULL.
+ */
 SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
    );
 
 /** get number of iterations used in last LP solve */

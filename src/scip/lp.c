@@ -12194,6 +12194,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool* dualfeaspointer;
       SCIP_Bool primalfeasible;
       SCIP_Bool dualfeasible;
+      SCIP_Bool farkasvalid;
       SCIP_Bool rayfeasible;
       SCIP_Bool tightprimfeastol;
       SCIP_Bool tightdualfeastol;
@@ -12327,11 +12328,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve )
          {
             if( SCIPlpiHasDualRay(lp->lpi) )
             {
-               SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
+               SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
             }
             /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
              * with the primal simplex due to numerical problems) - treat this case like an LP error
@@ -12345,6 +12346,58 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                *lperror = TRUE;
             }
          }
+         else
+            farkasvalid = TRUE;
+
+         if( !farkasvalid )
+         {
+            SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
+
+            if( (fastmip > 0) && simplex )
+            {
+               /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems): solve again
+                * without FASTMIP
+                */
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again without FASTMIP\n",
+                  stat->nnodes, stat->nlps);
+               fastmip = 0;
+               goto SOLVEAGAIN;
+            }
+            else if( !tightprimfeastol )
+            {
+               /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems):
+                * solve again with tighter feasibility tolerance
+                */
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again with tighter primal feasibility tolerance\n",
+                  stat->nnodes, stat->nlps);
+               tightprimfeastol = TRUE;
+               goto SOLVEAGAIN;
+            }
+            else if( !fromscratch && simplex )
+            {
+               /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems): solve again
+                * from scratch
+                */
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again from scratch\n",
+                  stat->nnodes, stat->nlps);
+               fromscratch = TRUE;
+               goto SOLVEAGAIN;
+            }
+            else
+            {
+               /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems) and nothing
+                * helped forget about the LP at this node and mark it to be unsolved
+                */
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved, LP infeasible");
+               lp->solved = FALSE;
+               lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+               *lperror = TRUE;
+            }
+         }
+
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
@@ -12587,8 +12640,57 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* infeasible solution */
                else if( solstat == SCIP_LPSOLSTAT_INFEASIBLE )
                {
-                  SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
                   SCIPsetDebugMsg(set, " -> LP infeasible\n");
+                  SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
+
+                  if( !farkasvalid )
+                  {
+                     SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
+
+                     if( (fastmip > 0) && simplex )
+                     {
+                        /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems): solve again
+                         * without FASTMIP
+                         */
+                        SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                              "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again without FASTMIP\n",
+                              stat->nnodes, stat->nlps);
+                        fastmip = 0;
+                        goto SOLVEAGAIN;
+                     }
+                     else if( !tightprimfeastol )
+                     {
+                        /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems):
+                         * solve again with tighter feasibility tolerance
+                         */
+                        SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                              "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again with tighter primal feasibility tolerance\n",
+                              stat->nnodes, stat->nlps);
+                        tightprimfeastol = TRUE;
+                        goto SOLVEAGAIN;
+                     }
+                     else if( !fromscratch && simplex )
+                     {
+                        /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems): solve again
+                         * from scratch
+                         */
+                        SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                              "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again from scratch\n",
+                              stat->nnodes, stat->nlps);
+                        fromscratch = TRUE;
+                        goto SOLVEAGAIN;
+                     }
+                     else
+                     {
+                        /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems) and nothing
+                         * helped forget about the LP at this node and mark it to be unsolved
+                         */
+                        lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved, LP infeasible");
+                        lp->solved = FALSE;
+                        lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+                        *lperror = TRUE;
+                     }
+                  }
                }
                /* unbounded solution */
                else if( solstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -12619,7 +12721,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   {
                      /* unbounded solution is infeasible (this can happen due to numerical problems):
                       * forget about the LP at this node and mark it to be unsolved
-
+                      *
                       * @todo: like in the default LP solving evaluation, solve without fastmip,
                       * with tighter feasibility tolerance and from scratch
                       */
@@ -14462,11 +14564,16 @@ SCIP_RETCODE SCIPlpGetPrimalRay(
    return SCIP_OKAY;
 }
 
-/** stores the dual Farkas multipliers for infeasibility proof in rows */
+/** stores the dual Farkas multipliers for infeasibility proof in rows. besides, the proof is checked for validity if
+ *  lp/checkfarkas = TRUE.
+ *
+ *  @note the check will not be performed if @p valid is NULL.
+ */
 SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
    )
 {
    SCIP_COL** lpicols;
@@ -14488,6 +14595,9 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    assert(stat != NULL);
    assert(lp->validfarkaslp <= stat->lpcount);
 
+   if( valid != NULL )
+      *valid = TRUE;
+
    /* check if the values are already calculated */
    if( lp->validfarkaslp == stat->lpcount )
       return SCIP_OKAY;
@@ -14500,7 +14610,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, lp->nlpirows) );
 
-   if( set->lp_checkfarkas )
+   if( set->lp_checkfarkas && valid != NULL )
    {
       SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, lp->nlpicols) );
       BMSclearMemoryArray(farkascoefs, lp->nlpicols);
@@ -14525,14 +14635,18 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       lpirows[r]->validactivitylp = -1L;
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
 
-      if( set->lp_checkfarkas )
+      if( set->lp_checkfarkas && valid != NULL )
       {
          assert(farkascoefs != NULL);
+
+         /* skip dual multipliers that are too close to zero */
+         if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
+            continue;
 
          /* iterate over all columns and scale with dual solution */
          for( c = 0; c < lpirows[r]->len; c++ )
          {
-            int pos = SCIPcolGetIndex(lpirows[r]->cols[c]);
+            int pos = SCIPcolGetLPPos(lpirows[r]->cols[c]);
             assert(pos >= 0 && pos < nlpicols);
 
             farkascoefs[pos] += dualfarkas[r] * lpirows[r]->vals[c];
@@ -14541,16 +14655,32 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
          /* the row contributes with its left-hand side to the proof */
          if( dualfarkas[r] > 0.0 )
          {
-            assert(!SCIPsetIsInfinity(set, -lpirows[r]->lhs));
+            if( SCIPsetIsInfinity(set, -lpirows[r]->lhs) )
+            {
+               SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
+                     SCIProwGetName(lpirows[r]), lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, dualfarkas[r]);
 
-            farkaslhs += dualfarkas[r] * lpirows[r]->lhs;
+               *valid = FALSE;
+
+               goto TERMINATE;
+            }
+
+            farkaslhs += dualfarkas[r] * (lpirows[r]->lhs - lpirows[r]->constant);
          }
          /* the row contributes with its right-hand side to the proof */
-         else
+         else if( dualfarkas[r] < 0.0 )
          {
-            assert(!SCIPsetIsInfinity(set, lpirows[r]->rhs));
+            if( SCIPsetIsInfinity(set, lpirows[r]->rhs) )
+            {
+               SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
+                     SCIProwGetName(lpirows[r]), lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, dualfarkas[r]);
 
-            farkaslhs += dualfarkas[r] * lpirows[r]->rhs;
+               *valid = FALSE;
+
+               goto TERMINATE;
+            }
+
+            farkaslhs += dualfarkas[r] * (lpirows[r]->rhs - lpirows[r]->constant);
          }
       }
    }
@@ -14563,9 +14693,10 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
 
-      if( set->lp_checkfarkas )
+      if( set->lp_checkfarkas && valid != NULL )
       {
          assert(farkascoefs != NULL);
+         assert(SCIPcolGetLPPos(lpicols[c]) == c);
 
          /* calculate the maximal activity */
          if( farkascoefs[c] > 0.0 )
@@ -14576,12 +14707,14 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    }
 
    /* check whether the farkasproof is valid */
-   if( set->lp_checkfarkas && SCIPsetIsGE(set, maxactivity, farkaslhs) )
+   if( set->lp_checkfarkas && valid != NULL && SCIPsetIsSumGE(set, maxactivity, farkaslhs) )
    {
       SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f >= lhs=%.12f\n", maxactivity, farkaslhs);
-      return SCIP_LPERROR;
+
+      *valid = FALSE;
    }
 
+  TERMINATE:
    /* free temporary memory */
    if( set->lp_checkfarkas )
       SCIPsetFreeBufferArray(set, &farkascoefs);
@@ -15437,7 +15570,7 @@ SCIP_RETCODE SCIPlpStartDive(
          assert(lp->validsollp == stat->lpcount);
          break;
       case SCIP_LPSOLSTAT_INFEASIBLE:
-         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
+         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, NULL) );
          break;
       case SCIP_LPSOLSTAT_NOTSOLVED:
       case SCIP_LPSOLSTAT_ERROR:
