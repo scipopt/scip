@@ -1,6 +1,9 @@
 SCIP version NEXT
 =================
 
+performance improvements:
+- cuts generated from certain quadratic constraints with convex feasible region are now global
+
 SCIP version 5.0.2
 =================
 
