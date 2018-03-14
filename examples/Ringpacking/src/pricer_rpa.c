@@ -359,7 +359,7 @@ SCIP_RETCODE solvePricingHeuristic(
 
    *addedvar = FALSE;
    niters = 0;
-   timestart = SCIPgetSolvingTime(scip);
+   timestart = SCIPgetTotalTime(scip);
    bestredcosts = 0.0;
    bestvol = 0.0;
 
