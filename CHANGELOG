@@ -5,12 +5,14 @@ SCIP version 5.0.2
 =================
 
 fixed bugs:
+- suppress debug solution warnings during problem creation stage
 - fixed check for activated debugging solution in components constraint handler
 - fixed potential bug concerning solution linking to LP in SCIPperformGenericDivingAlgorithm()
 - fixed reward computation in ALNS on continuous, especially nonlinear, problems
 - fixed bug in freeing reoptimization data if problem was solved during presolving
 - fixed check of timing in heur_completesol
 - fixed wrong propagation in optcumulative constraint handler
+- fixed non-deterministic behavior in OBBT propagator
 
 deleted files:
 - presol_implfree removed
