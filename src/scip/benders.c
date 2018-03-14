@@ -882,7 +882,6 @@ SCIP_RETCODE SCIPbendersInit(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   int nsubproblems;
    int i;
 
    assert(benders != NULL);
@@ -1134,6 +1133,7 @@ SCIP_RETCODE transferBendersCuts(
 
 
 /** releases the variables that have been captured in the hashmap */
+static
 SCIP_RETCODE releaseVarMappingHashmapVars(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
