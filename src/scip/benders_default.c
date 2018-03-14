@@ -27,12 +27,13 @@
 #include "scip/bendersdefcuts.h"
 
 
-#define BENDERS_NAME            "default"
-#define BENDERS_DESC            "default implementation of Benders' decomposition"
-#define BENDERS_PRIORITY        0
-#define BENDERS_CUTLP        TRUE   /**< should Benders' cut be generated for LP solutions */
-#define BENDERS_CUTPSEUDO    TRUE   /**< should Benders' cut be generated for pseudo solutions */
-#define BENDERS_CUTRELAX     TRUE   /**< should Benders' cut be generated for relaxation solutions */
+#define BENDERS_NAME                "default"
+#define BENDERS_DESC                "default implementation of Benders' decomposition"
+#define BENDERS_PRIORITY            0
+#define BENDERS_CUTLP            TRUE   /**< should Benders' cut be generated for LP solutions */
+#define BENDERS_CUTPSEUDO        TRUE   /**< should Benders' cut be generated for pseudo solutions */
+#define BENDERS_CUTRELAX         TRUE   /**< should Benders' cut be generated for relaxation solutions */
+#define BENDERS_SHAREAUXVARS    FALSE   /**< should this Benders' share the highest priority Benders' aux vars */
 
 
 /*
@@ -376,7 +377,8 @@ SCIP_RETCODE SCIPincludeBendersDefault(
 
    /* include Benders' decomposition */
    SCIP_CALL( SCIPincludeBendersBasic(scip, &benders, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP,
-         BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetvarDefault, bendersCreatesubDefault, bendersdata) );
+         BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, BENDERS_SHAREAUXVARS, bendersGetvarDefault, bendersCreatesubDefault,
+         bendersdata) );
    assert(benders != NULL);
 
    /* set non fundamental callbacks via setter functions */

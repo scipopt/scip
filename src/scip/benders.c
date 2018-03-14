@@ -335,32 +335,50 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
    SCIP_BENDERS*         benders             /**< benders */
    )
 {
+   SCIP_BENDERS* topbenders;        /* the highest priority Benders' decomposition */
    SCIP_VAR* auxiliaryvar;
    SCIP_VARDATA* vardata;
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
+   SCIP_Bool shareauxvars;
    int i;
 
    /* this is a workaround for GCG. GCG expects that the variable has vardata when added. So a dummy vardata is created */
    SCIP_CALL( SCIPallocBlockMemory(scip, &vardata) );
    vardata->vartype = -1;
 
+   /* getting the highest priority Benders' decomposition */
+   topbenders = SCIPgetBenders(scip)[0];
+
+   /* if the current Benders is the highest priority Benders, then we need to create the auxiliary variables.
+    * Otherwise, if the shareauxvars flag is set, then the auxiliar variables from the highest priority Benders' are
+    * stored with this Benders. */
+   shareauxvars = FALSE;
+   if( topbenders != benders && SCIPbendersShareAuxVars(benders) )
+      shareauxvars = TRUE;
+
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
-      /* if no optimality cuts have been added for this subproblem, then the auxiliary variable will be created and
-       * added */
-      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d", AUXILIARYVAR_NAME, i );
-      SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-            SCIP_VARTYPE_CONTINUOUS) );
+      /* if the auxiliary variables are shared, then a pointer to the variable is retrieved from topbenders,
+       * otherwise the auxiliaryvariable is created. */
+      if( shareauxvars )
+         auxiliaryvar = SCIPbendersGetAuxiliaryVar(topbenders, i);
+      else
+      {
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
+         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+               SCIP_VARTYPE_CONTINUOUS) );
 
-      SCIPvarSetData(auxiliaryvar, vardata);
+         SCIPvarSetData(auxiliaryvar, vardata);
 
-      SCIP_CALL( SCIPaddVar(scip, auxiliaryvar) );
+         SCIP_CALL( SCIPaddVar(scip, auxiliaryvar) );
+      }
 
       benders->auxiliaryvars[i] = auxiliaryvar;
 
       SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
 
-      SCIP_CALL( SCIPreleaseVar(scip, &auxiliaryvar) );
+      if( !shareauxvars )
+         SCIP_CALL( SCIPreleaseVar(scip, &auxiliaryvar) );
    }
 
    SCIPfreeBlockMemory(scip, &vardata);
@@ -375,9 +393,11 @@ SCIP_RETCODE assignAuxiliaryVariables(
    SCIP_BENDERS*         benders             /**< benders */
    )
 {
+   SCIP_BENDERS* topbenders;        /* the highest priority Benders' decomposition */
    SCIP_VAR* targetvar;
    SCIP_VARDATA* vardata;
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
+   SCIP_Bool shareauxvars;
    int i;
 
    assert(scip != NULL);
@@ -387,9 +407,21 @@ SCIP_RETCODE assignAuxiliaryVariables(
    SCIP_CALL( SCIPallocBlockMemory(scip, &vardata) );
    vardata->vartype = -1;
 
+   /* getting the highest priority Benders' decomposition */
+   topbenders = SCIPgetBenders(scip)[0];
+
+   /* if the auxiliary variable are shared, then the variable name will have a suffix of the highest priority Benders'
+    * name. So the shareauxvars flag indicates how to search for the auxiliary variables */
+   shareauxvars = FALSE;
+   if( topbenders != benders && SCIPbendersShareAuxVars(benders) )
+      shareauxvars = TRUE;
+
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
-      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d", AUXILIARYVAR_NAME, i );
+      if( shareauxvars )
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(topbenders));
+      else
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders));
 
       /* finding the variable in the copied problem that has the same name as the auxiliary variable */
       targetvar = SCIPfindVar(scip, varname);
@@ -515,6 +547,7 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_Bool             cutlp,              /**< should Benders' cuts be generated for LP solutions */
    SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
    SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
+   SCIP_Bool             shareauxvars,       /**< should this Benders' use the highest priority Benders aux vars */
    SCIP_DECL_BENDERSCOPY ((*benderscopy)),   /**< copy method of benders or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSFREE ((*bendersfree)),   /**< destructor of Benders' decomposition */
    SCIP_DECL_BENDERSINIT ((*bendersinit)),   /**< initialize Benders' decomposition */
@@ -555,6 +588,7 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->cutlp = cutlp;
    (*benders)->cutpseudo = cutpseudo;
    (*benders)->cutrelax = cutrelax;
+   (*benders)->shareauxvars = shareauxvars;
    (*benders)->benderscopy = benderscopy;
    (*benders)->bendersfree = bendersfree;
    (*benders)->bendersinit = bendersinit;
@@ -1703,24 +1737,28 @@ SCIP_RETCODE SCIPbendersExec(
 
                prevaddedcuts = SCIPbenderscutGetNFound(benderscuts[j]);
 
+               cutresult = SCIP_DIDNOTRUN;
+
                /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
                 * the first iteration of the solve loop.
                 * TODO: Need to work out how to handle the solve loops. Should I always run two solve loops? Or only one
                 * when the user defines a subproblem solving method */
                if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[j]))
                   || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[j])) )
-               {
                   SCIP_CALL( SCIPbenderscutExec(benderscuts[j], set, benders, sol, i, type, &cutresult) );
 
-                  if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
-                  {
-                     *result = cutresult;
-
-                     benders->ncutsfound++;
-                  }
-               }
-
                addedcuts += (SCIPbenderscutGetNFound(benderscuts[j]) - prevaddedcuts);
+
+               /* the result is updated only if a Benders' cut is generated */
+               if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
+               {
+                  *result = cutresult;
+
+                  benders->ncutsfound++;
+
+                  /* at most a single cut is generated for each subproblem */
+                  break;
+               }
             }
 
             subproblemcount++;
@@ -2693,6 +2731,16 @@ SCIP_Bool SCIPbendersCutRelaxation(
    assert(benders != NULL);
 
    return benders->cutrelax;
+}
+
+/** should this Benders' use the auxiliary variables from the highest priority Benders' */
+SCIP_Bool SCIPbendersShareAuxVars(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->shareauxvars;
 }
 
 /** Adds a subproblem to the Benders' decomposition data */

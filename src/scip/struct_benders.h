@@ -65,6 +65,7 @@ struct SCIP_Benders
    SCIP_Bool             cutlp;              /**< should Benders' cuts be generated for LP solutions? */
    SCIP_Bool             cutpseudo;          /**< should Benders' cuts be generated for pseudo solutions? */
    SCIP_Bool             cutrelax;           /**< should Benders' cuts be generated for relaxation solutions? */
+   SCIP_Bool             shareauxvars;       /**< should this Benders' share the highest priority Benders' auxiliary vars */
 
    /* additional Benders' decomposition parameters */
    SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */

@@ -73,6 +73,9 @@ public:
    /** should cuts be generated from the relaxation solution */
    const SCIP_Bool scip_cutrelax_;
 
+   /** should this Benders' decomposition share the auxiliary variables from the highest priority Benders? */
+   const SCIP_Bool scip_shareauxvars_;
+
    /** default constructor */
    ObjBenders(
       SCIP*              scip,               /**< SCIP data structure */
@@ -81,7 +84,8 @@ public:
       int                priority,           /**< priority of the Benders' decomposition */
       SCIP_Bool          cutlp,              /**< should Benders' cuts be generated for LP solutions */
       SCIP_Bool          cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
-      SCIP_Bool          cutrelax            /**< should Benders' cuts be generated for relaxation solutions */
+      SCIP_Bool          cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
+      SCIP_Bool          shareauxvars        /**< should this Benders' use the highest priority Benders' aux vars */
       )
       : scip_(scip),
         benders_(0),
@@ -90,7 +94,8 @@ public:
         scip_priority_(priority),
         scip_cutlp_(cutlp),
         scip_cutpseudo_(cutpseudo),
-        scip_cutrelax_(cutrelax)
+        scip_cutrelax_(cutrelax),
+        scip_shareauxvars_(shareauxvars)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );

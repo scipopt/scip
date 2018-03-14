@@ -208,6 +208,11 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
          default:
             break;
       }
+
+      /* in the case of multiple Benders' decompositions, all subproblems are checked for a given decomposition until a
+       * constraint is added */
+      if( (*result) != SCIP_FEASIBLE )
+         break;
    }
 
    /* if the constraint handler was called with an integer feasible solution, then a feasible solution can be proposed */
@@ -216,11 +221,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
       /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
        * still need to be updated. This is done by constructing a valid solution. */
       if( (*result) == SCIP_FEASIBLE && infeasible )
-      {
-         //if( !SCIPsolIsOriginal(sol) )
-            //SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
          (*result) = SCIP_INFEASIBLE;
-      }
    }
 
    conshdlrdata->ncalls++;
@@ -387,8 +388,9 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
       {
          SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
 
-         /* if the result is infeasible, it is not necessary to check any more subproblems. */
-         if( (*result) == SCIP_INFEASIBLE )
+         /* in the case of multiple Benders' decompositions, the subproblems are solved until a constriant is added or
+          * infeasibility is proven. So if the result is not SCIP_FEASIBLE, then the loop is exited */
+         if( (*result) != SCIP_FEASIBLE )
             break;
       }
 

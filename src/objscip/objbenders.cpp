@@ -332,8 +332,8 @@ SCIP_RETCODE SCIPincludeObjBenders(
    /* include Benders' decomposition */
    SCIP_CALL( SCIPincludeBenders(scip, objbenders->scip_name_, objbenders->scip_desc_,
          objbenders->scip_priority_, objbenders->scip_cutlp_, objbenders->scip_cutpseudo_,
-         objbenders->scip_cutrelax_, bendersCopyObj, bendersFreeObj, bendersInitObj, bendersExitObj,
-         bendersInitpreObj, bendersExitpreObj, bendersInitsolObj, bendersExitsolObj, bendersGetvarObj,
+         objbenders->scip_cutrelax_, objbenders->scip_shareauxvars_, bendersCopyObj, bendersFreeObj, bendersInitObj,
+         bendersExitObj, bendersInitpreObj, bendersExitpreObj, bendersInitsolObj, bendersExitsolObj, bendersGetvarObj,
          bendersCreatesubObj, bendersPresubsolveObj, bendersSolvesubObj, bendersPostsolveObj,
          bendersFreesubObj, bendersdata) ); /*lint !e429*/
 

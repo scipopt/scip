@@ -144,6 +144,12 @@ SCIP_Bool SCIPbendersCutRelaxation(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** should this Benders' use the auxiliary variables from the highest priority Benders' */
+EXTERN
+SCIP_Bool SCIPbendersShareAuxVars(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** returns the auxiliary variable for the given subproblem */
 EXTERN
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(
