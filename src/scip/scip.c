@@ -6763,6 +6763,9 @@ SCIP_RETCODE SCIPstoreBenderscutCons(
 
    SCIP_CALL( SCIPbenderscutStoreCons(benderscut, scip->set, cons) );
 
+   /* capturing the stored constraint */
+   SCIP_CALL( SCIPcaptureCons(scip, cons) );
+
    return SCIP_OKAY;
 }
 
@@ -6778,6 +6781,9 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    assert(cut != NULL);
 
    SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, cut) );
+
+   /* capturing the row */
+   SCIP_CALL( SCIPcaptureRow(scip, cut) );
 
    return SCIP_OKAY;
 }

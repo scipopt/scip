@@ -228,6 +228,8 @@ SCIP_RETCODE SCIPbenderscutExit(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int i;
+
    assert(benderscut != NULL);
    assert(set != NULL);
 
@@ -236,6 +238,13 @@ SCIP_RETCODE SCIPbenderscutExit(
       SCIPerrorMessage("Benders' decomposition cut <%s> not initialized\n", benderscut->name);
       return SCIP_INVALIDCALL;
    }
+
+   /* releasing the stored rows and constraints */
+   for( i = 0; i < benderscut->naddedcuts; i++ )
+      SCIP_CALL( SCIPreleaseRow(set->scip, &benderscut->addedcuts[i]) );
+
+   for( i = 0; i < benderscut->naddedcons; i++ )
+      SCIP_CALL( SCIPreleaseCons(set->scip, &benderscut->addedcons[i]) );
 
    BMSfreeMemoryArray(&benderscut->addedcuts);
    BMSfreeMemoryArray(&benderscut->addedcons);

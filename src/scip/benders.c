@@ -358,6 +358,8 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
 
       benders->auxiliaryvars[i] = auxiliaryvar;
 
+      SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
+
       SCIP_CALL( SCIPreleaseVar(scip, &auxiliaryvar) );
    }
 
@@ -394,7 +396,9 @@ SCIP_RETCODE assignAuxiliaryVariables(
 
       SCIPvarSetData(targetvar, vardata);
 
-      benders->auxiliaryvars[i] = targetvar;
+      benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
+
+      SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
    }
 
    SCIPfreeBlockMemory(scip, &vardata);
@@ -544,7 +548,7 @@ SCIP_RETCODE SCIPbendersCreate(
    }
 
    SCIP_ALLOC( BMSallocMemory(benders) );
-   BMSclearMemory(benders);
+   BMSclearMemory(*benders);
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benders)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benders)->desc, desc, strlen(desc)+1) );
    (*benders)->priority = priority;
@@ -862,7 +866,10 @@ SCIP_RETCODE createMasterVarMapping(
 
       sourcevar = SCIPfindVar(benders->sourcescip, SCIPvarGetName(origvar));
       if( sourcevar != NULL )
+      {
          SCIP_CALL( SCIPhashmapInsert(benders->mastervarsmap, vars[i], sourcevar) );
+         SCIP_CALL( SCIPcaptureVar(benders->sourcescip, sourcevar) );
+      }
    }
 
    return SCIP_OKAY;
@@ -875,6 +882,7 @@ SCIP_RETCODE SCIPbendersInit(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int nsubproblems;
    int i;
 
    assert(benders != NULL);
@@ -905,6 +913,12 @@ SCIP_RETCODE SCIPbendersInit(
 
    if( benders->bendersinit != NULL )
       SCIP_CALL( benders->bendersinit(set->scip, benders) );
+
+   /* getting the transformed auxiliary variables */
+   //nsubproblems = SCIPbendersGetNSubproblems(benders);
+   //for( i = 0; i < nsubproblems; i++ )
+      //SCIP_CALL( SCIPgetTransformedVar(set->scip, benders->auxiliaryvars[i], &benders->auxiliaryvars[i]) );
+
 
    /* if the Benders' decomposition is a copy, then a variable mapping between the master problem variables is required */
    if( benders->iscopy )
@@ -1119,6 +1133,39 @@ SCIP_RETCODE transferBendersCuts(
 }
 
 
+/** releases the variables that have been captured in the hashmap */
+SCIP_RETCODE releaseVarMappingHashmapVars(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   int nentries;
+   int i;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   assert(benders->mastervarsmap != NULL);
+
+   nentries = SCIPhashmapGetNEntries(benders->mastervarsmap);
+
+   for( i = 0; i < nentries; ++i )
+   {
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(benders->mastervarsmap, i);
+
+      if( entry != NULL )
+      {
+         SCIP_VAR* var;
+         var = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
+
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** calls exit method of Benders' decomposition */
 SCIP_RETCODE SCIPbendersExit(
@@ -1126,6 +1173,7 @@ SCIP_RETCODE SCIPbendersExit(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int nsubproblems;
    int i;
 
    assert(benders != NULL);
@@ -1149,8 +1197,14 @@ SCIP_RETCODE SCIPbendersExit(
    if( benders->iscopy )
    {
       SCIP_CALL( transferBendersCuts(benders->sourcescip, set->scip, benders) );
+      SCIP_CALL( releaseVarMappingHashmapVars(benders->sourcescip, benders) );
       SCIPhashmapFree(&benders->mastervarsmap);
    }
+
+   /* releasing all of the auxiliary variables */
+   nsubproblems = SCIPbendersGetNSubproblems(benders);
+   for( i = 0; i < nsubproblems; i++ )
+      SCIP_CALL( SCIPreleaseVar(set->scip, &benders->auxiliaryvars[i]) );
 
    /* calling the exit method for the Benders' cuts */
    SCIPbendersSortBenderscuts(benders);
@@ -1356,17 +1410,14 @@ void SCIPbendersDeactivate(
    if( benders->active )
    {
 #ifndef NDEBUG
-      /* checking whether the auxiliary variables and subproblems are all NULL */
       int nsubproblems;
       int i;
 
       nsubproblems = SCIPbendersGetNSubproblems(benders);
 
+      /* checking whether the auxiliary variables and subproblems are all NULL */
       for( i = 0; i < nsubproblems; i++ )
-      {
          assert(benders->auxiliaryvars[i] == NULL);
-         assert(benders->subproblems[i] == NULL);
-      }
 #endif
 
       benders->active = FALSE;
