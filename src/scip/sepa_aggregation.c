@@ -1447,12 +1447,12 @@ SCIP_RETCODE SCIPincludeSepaAggregation(
 
    /* include dummy separators */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->flowcover, "flowcover", "separator for flowcover cuts", -100000, SEPA_FREQ, 0.0,
-                                   SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+      SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
 
    assert(sepadata->flowcover != NULL);
 
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->cmir, "cmir", "separator for cmir cuts", -100000, SEPA_FREQ, 0.0,
-                                   SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+      SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
 
    assert(sepadata->cmir != NULL);
 
