@@ -3737,14 +3737,14 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
       if ( res != 0 )
       {
-         SCIPABORT();
-         return FALSE; /*lint !e527*/
+         /* if Gurobi cannot return the constraint violation, there is no feasible solution available. */
+         return FALSE;
       }
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
       if ( res != 0 )
       {
-         SCIPABORT();
-         return FALSE; /*lint !e527*/
+         /* if Gurobi cannot return the constraint violation, there is no feasible solution available. */
+         return FALSE;
       }
 
       if ( consviol <= eps && boundviol <= eps )
@@ -3907,30 +3907,33 @@ SCIP_Bool SCIPlpiIsStable(
    }
 
    /* test whether we have unscaled infeasibilities */
-
-   /* first get tolerance */
-   res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &feastol);
-   if ( res != 0 )
+   if ( SCIPlpiIsOptimal(lpi) )
    {
-      SCIPABORT();
-      return FALSE; /*lint !e527*/
+      /* first get tolerance */
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &feastol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      /* next get constraint and bound violations */
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      return ( consviol <= feastol && boundviol <= feastol );
    }
 
-   /* next get constraint and bound violations */
-   res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
-   if ( res != 0 )
-   {
-      SCIPABORT();
-      return FALSE; /*lint !e527*/
-   }
-   res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
-   if ( res != 0 )
-   {
-      SCIPABORT();
-      return FALSE; /*lint !e527*/
-   }
-
-   return (lpi->solstat != GRB_NUMERIC) && ( consviol <= feastol && boundviol <= feastol );
+   return (lpi->solstat != GRB_NUMERIC);
 }
 
 /** returns TRUE iff the objective limit was reached */
