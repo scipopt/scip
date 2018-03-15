@@ -923,15 +923,11 @@ SCIP_RETCODE SCIPpricerRingpackingActivate(
    )
 {
    SCIP_PRICER* pricer;
-   SCIP_PRICERDATA* pricerdata;
 
    assert(scip != NULL);
 
    pricer = SCIPfindPricer(scip, PRICER_NAME);
    assert(pricer != NULL);
-
-   pricerdata = SCIPpricerGetData(pricer);
-   assert(pricerdata != NULL);
 
    /* activate pricer */
    SCIP_CALL( SCIPactivatePricer(scip, pricer) );
