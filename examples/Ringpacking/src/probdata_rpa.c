@@ -957,7 +957,8 @@ void updateBestCandidate(
    SCIP_Real*            bestx,              /**< buffer to update best x-coordinate */
    SCIP_Real*            besty,              /**< buffer to update best y-coordinate */
    SCIP_Real             x,                  /**< x-coordinate of a candidate point */
-   SCIP_Real             y                   /**< y-coordinate of a candidate point */
+   SCIP_Real             y,                  /**< y-coordinate of a candidate point */
+   int                   ncalls              /**< total number of calls of the packing heuristic */
    )
 {
    SCIP_Real threshold;
@@ -998,7 +999,7 @@ void updateBestCandidate(
    }
 
    threshold = (patterntype == SCIP_PATTERNTYPE_RECTANGULAR ? wbounding - 2.0*rmax - rext : rbounding - 2.0*rmax - rext);
-   isoverthreshold = SCIPisGT(scip, *bestx, threshold) && SCIPisGT(scip, x, threshold);
+   isoverthreshold = (ncalls % 2) == 1 && SCIPisGT(scip, *bestx, threshold) && SCIPisGT(scip, x, threshold);
 
    /* check whether the candidate is better than the best known candidate */
    if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID
@@ -1024,7 +1025,8 @@ void computePosRingCircle(
    SCIP_Real             rmax,               /**< maximum radius of elements in the pattern */
    SCIP_Real             rbound,             /**< radius of bounding circle */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
-   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   SCIP_Real*            besty,              /**< pointer to store the best y-coordinate */
+   int                   ncalls              /**< total number of calls of the packing heuristic */
    )
 {
    int i;
@@ -1052,9 +1054,9 @@ void computePosRingCircle(
       if( SCIPisZero(scip, c) )
       {
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, rmax, SCIP_PATTERNTYPE_CIRCULAR,
-            ispacked, elements, nelements, bestx, besty, -rbound + rexts[elements[pos]], 0.0);
+            ispacked, elements, nelements, bestx, besty, -rbound + rexts[elements[pos]], 0.0, ncalls);
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, rmax, SCIP_PATTERNTYPE_CIRCULAR,
-            ispacked, elements, nelements, bestx, besty, +rbound - rexts[elements[pos]], 0.0);
+            ispacked, elements, nelements, bestx, besty, +rbound - rexts[elements[pos]], 0.0, ncalls);
       }
       else
       {
@@ -1071,9 +1073,9 @@ void computePosRingCircle(
             n2 = SCIPisZero(scip, u) ? 0.0 : h * (-u / SQRT(v*v + u*u));
 
             updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, rmax, SCIP_PATTERNTYPE_CIRCULAR,
-               ispacked, elements, nelements, bestx, besty, u + n1, v + n2);
+               ispacked, elements, nelements, bestx, besty, u + n1, v + n2, ncalls);
             updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, rmax, SCIP_PATTERNTYPE_CIRCULAR,
-               ispacked, elements, nelements, bestx, besty, u - n1, v - n2);
+               ispacked, elements, nelements, bestx, besty, u - n1, v - n2, ncalls);
          }
       }
    }
@@ -1096,7 +1098,8 @@ void computePosTrivial(
    SCIP_Real             height,             /**< height of the rectangle */
    SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
-   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   SCIP_Real*            besty,              /**< pointer to store the best y-coordinate */
+   int                   ncalls              /**< total number of calls of the packing heuristic */
    )
 {
    SCIP_Real rext = rexts[elements[pos]];
@@ -1109,7 +1112,7 @@ void computePosTrivial(
 
       for( i = 0; i < 4; ++i )
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, rmax, patterntype,
-            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
+            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i], ncalls);
    }
    else
    {
@@ -1118,7 +1121,7 @@ void computePosTrivial(
 
       for( i = 0; i < 4; ++i )
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, width, height, rmax, patterntype,
-            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i]);
+            ispacked, elements, nelements, bestx, besty, xcands[i], ycands[i], ncalls);
    }
 }
 
@@ -1137,7 +1140,8 @@ void computePosRectangleCircle(
    SCIP_Real             width,              /**< width of the rectangle */
    SCIP_Real             height,             /**< height of the rectangle */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
-   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   SCIP_Real*            besty,              /**< pointer to store the best y-coordinate */
+   int                   ncalls              /**< total number of calls of the packing heuristic */
    )
 {
    SCIP_Real rext;
@@ -1166,10 +1170,10 @@ void computePosRectangleCircle(
             continue;
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height, rmax,
-            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xfix[k], ys[i] + SQRT(alpha));
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xfix[k], ys[i] + SQRT(alpha), ncalls);
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height, rmax,
-            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xfix[k], ys[i] - SQRT(alpha));
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xfix[k], ys[i] - SQRT(alpha), ncalls);
       }
 
       /* fix y */
@@ -1181,10 +1185,10 @@ void computePosRectangleCircle(
             continue;
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height, rmax,
-            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xs[i] + SQRT(alpha), yfix[k]);
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xs[i] + SQRT(alpha), yfix[k], ncalls);
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height, rmax,
-            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xs[i] - SQRT(alpha), yfix[k]);
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xs[i] - SQRT(alpha), yfix[k], ncalls);
       }
    }
 }
@@ -1206,7 +1210,8 @@ void computePosCircleCircle(
    SCIP_Real             height,             /**< height of the rectangle */
    SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
    SCIP_Real*            bestx,              /**< pointer to store the best x-coordinate */
-   SCIP_Real*            besty               /**< pointer to store the best y-coordinate */
+   SCIP_Real*            besty,              /**< pointer to store the best y-coordinate */
+   int                   ncalls              /**< total number of calls of the packing heuristic */
    )
 {
    SCIP_Real rext;
@@ -1253,9 +1258,9 @@ void computePosCircleCircle(
          assert(n1*n1 + n2*n2 > 0.0);
 
          updateBestCandidate(scip, xs, ys, rexts, rext, rbound, width, height, rmax, patterntype, ispacked, elements,
-            nelements, bestx, besty, u + n1, v + n2);
+            nelements, bestx, besty, u + n1, v + n2, ncalls);
          updateBestCandidate(scip, xs, ys, rexts, rext, rbound, width, height, rmax, patterntype, ispacked, elements,
-            nelements, bestx, besty, u - n1, v - n2);
+            nelements, bestx, besty, u - n1, v - n2, ncalls);
       }
    }
 }
@@ -1701,7 +1706,8 @@ void SCIPpackCirclesGreedy(
    int*                  elements,           /**< the order of the elements in the pattern */
    int                   nelements,          /**< number of elements in the pattern */
    SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
-   int*                  npacked             /**< pointer to store the number of packed elements */
+   int*                  npacked,            /**< pointer to store the number of packed elements */
+   int                   ncalls              /**< total number of calls of the packing heuristic */
    )
 {
    SCIP_Real rmax;
@@ -1763,18 +1769,19 @@ void SCIPpackCirclesGreedy(
 
          /* use trivial candidates */
          computePosTrivial(scip, elements, nelements, rexts, xs, ys, i, ispacked, rmax, rbounding, width, height,
-            patterntype, &bestx, &besty);
+            patterntype, &bestx, &besty, ncalls);
 
          /* consider circles intersection a previous circle and the boundary ring */
          if( patterntype == SCIP_PATTERNTYPE_CIRCULAR )
-            computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rmax, rbounding, &bestx, &besty);
+            computePosRingCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rmax, rbounding, &bestx,
+               &besty, ncalls);
          else
             computePosRectangleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rmax, width, height, &bestx,
-               &besty);
+               &besty, ncalls);
 
          /* consider circles that have been packed already */
          computePosCircleCircle(scip, elements, nelements, rexts, xs, ys, i, ispacked, rmax, rbounding, width, height,
-            patterntype, &bestx, &besty);
+            patterntype, &bestx, &besty, ncalls);
 
          /* pack circle if a possible position has been found */
          if( bestx != SCIP_INVALID && besty != SCIP_INVALID ) /*lint !e777*/
@@ -1893,7 +1900,7 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
 
       /* call heuristic */
       SCIPpackCirclesGreedy(scip, rexts, xs, ys, rints[type], SCIPprobdataGetWidth(probdata),
-         SCIPprobdataGetHeight(probdata), ispacked, elements, nelements, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+         SCIPprobdataGetHeight(probdata), ispacked, elements, nelements, SCIP_PATTERNTYPE_CIRCULAR, &npacked, niters);
 
       /* check whether all elements could have been packed */
       if( npacked == nelements )

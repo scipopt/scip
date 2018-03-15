@@ -61,14 +61,16 @@ Test(heuristic, single)
    int npacked;
 
    /* pack element into rectangle */
-   SCIPpackCirclesGreedy(scip, &rext, &x, &y, -1.0, 2.0, 2.0, &ispacked, &elements, 1, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, &x, &y, -1.0, 2.0, 2.0, &ispacked, &elements, 1,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked == 1);
    cr_expect(ispacked);
    cr_expect(x == 1.0);
    cr_expect(y == 1.0);
 
    /* pack element into ring */
-   SCIPpackCirclesGreedy(scip, &rext, &x, &y, 2.0, -1.0, -1.0, &ispacked, &elements, 1, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, &x, &y, 2.0, -1.0, -1.0, &ispacked, &elements, 1,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
    cr_expect(npacked == 1);
    cr_expect(ispacked);
    cr_expect(x == -1.0);
@@ -86,7 +88,8 @@ Test(heuristic, rectangle_two_types)
    int npacked;
    int k;
 
-   SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, 6.0, 6.0, ispacked, elements, 5, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, 6.0, 6.0, ispacked, elements, 5,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked == 5);
 
    for( k = 0; k < 5; ++k )
@@ -104,11 +107,13 @@ Test(heuristic, opt_two)
    int npacked;
 
    /* pack into a ring */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.0, -1.0, -1.0, ispacked, elements, 2, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.0, -1.0, -1.0, ispacked, elements, 2,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
    cr_expect(npacked == 2);
 
    /* pack into a square */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 3.414213562373095, 3.414213562373095, ispacked, elements, 2, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 3.414213562373095, 3.414213562373095, ispacked, elements, 2,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked == 2);
 }
 
@@ -123,11 +128,13 @@ Test(heuristic, opt_three)
    int npacked;
 
    /* pack into a ring */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.1547005383792515, -1.0, -1.0, ispacked, elements, 3, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.1547005383792515, -1.0, -1.0, ispacked, elements, 3,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
    cr_expect(npacked == 3);
 
    /* pack into a square */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 3.9318516525781364, 3.9318516525781364, ispacked, elements, 3, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 3.9318516525781364, 3.9318516525781364, ispacked, elements, 3,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked == 3);
 }
 
@@ -142,11 +149,13 @@ Test(heuristic, opt_four)
    int npacked;
 
    /* pack into a ring */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.414213562373095, -1.0, -1.0, ispacked, elements, 4, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.414213562373095, -1.0, -1.0, ispacked, elements, 4,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
    cr_expect(npacked == 4);
 
    /* pack into a square */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 4.0, 4.0, ispacked, elements, 4, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 4.0, 4.0, ispacked, elements, 4,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked >= 3); /* note that greedy fails for this example */
 }
 
@@ -161,11 +170,13 @@ Test(heuristic, opt_five)
    int npacked;
 
    /* pack into a ring */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.7013016167040798, -1.0, -1.0, ispacked, elements, 5, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.7013016167040798, -1.0, -1.0, ispacked, elements, 5,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
    cr_expect(npacked >= 4); /* note that the greedy packing fails for the case of 5 circles */
 
    /* pack into a square */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 4.82842712474619, 4.82842712474619, ispacked, elements, 5, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 4.82842712474619, 4.82842712474619, ispacked, elements, 5,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked >= 4); /* note that greedy fails for this example */
 }
 
@@ -180,11 +191,13 @@ Test(heuristic, opt_six)
    int npacked;
 
    /* pack into a ring */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 3.0, -1.0, -1.0, ispacked, elements, 6, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 3.0, -1.0, -1.0, ispacked, elements, 6,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
    cr_expect(npacked == 6);
 
    /* pack into a square */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 5.328201177351374, 5.328201177351374, ispacked, elements, 6, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 5.328201177351374, 5.328201177351374, ispacked, elements, 6,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked >= 5); /* note that greedy fails for this example */
 }
 
@@ -199,11 +212,13 @@ Test(heuristic, opt_seven)
    int npacked;
 
    /* pack into a ring */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 3.0, -1.0, -1.0, ispacked, elements, 7, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 3.0, -1.0, -1.0, ispacked, elements, 7,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
    cr_expect(npacked == 7);
 
    /* pack into a square */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 5.732050807568877, 5.732050807568877, ispacked, elements, 7, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 5.732050807568877, 5.732050807568877, ispacked, elements, 7,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked >= 6); /* note that greedy fails for this example */
 }
 
@@ -218,11 +233,13 @@ Test(heuristic, opt_twenty)
    int npacked;
 
    /* pack into a ring */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 5.123, -1.0, -1.0, ispacked, elements, 20, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, 5.123, -1.0, -1.0, ispacked, elements, 20,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
    cr_expect(npacked >= 18);
 
    /* pack into a square */
-   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 8.978083352821738, 8.978083352821738, ispacked, elements, 20, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+   SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 8.978083352821738, 8.978083352821738, ispacked, elements, 20,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
    cr_expect(npacked >= 18); /* note that greedy fails for this example */
 }
 
@@ -238,10 +255,12 @@ Test(heuristic, complex_1)
    int i;
 
    /* pack into a ring */
-   SCIPpackCirclesGreedy(scip, rexts, xs, ys, 4.0, -1.0, -1.0, ispacked, elements, 24, SCIP_PATTERNTYPE_CIRCULAR, &npacked);
-   cr_expect(npacked == 24);
+   SCIPpackCirclesGreedy(scip, rexts, xs, ys, 4.0, -1.0, -1.0, ispacked, elements, 24,
+      SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
+   cr_expect(npacked >= 24);
 
    /* pack into a square */
-   SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, 7.7, 7.7, ispacked, elements, 24, SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
-   cr_expect(npacked == 24);
+   SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, 7.7, 7.7, ispacked, elements, 24,
+      SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
+   cr_expect(npacked >= 24);
 }

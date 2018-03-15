@@ -165,7 +165,8 @@ void SCIPpackCirclesGreedy(
    int*                  elements,           /**< the order of the elements in the pattern */
    int                   nelements,          /**< number of elements in the pattern */
    SCIP_PATTERNTYPE      patterntype,        /**< the pattern type (rectangular or circular) */
-   int*                  npacked             /**< pointer to store the number of packed elements */
+   int*                  npacked,            /**< pointer to store the number of packed elements */
+   int                   ncalls              /**< total number of calls of the packing heuristic */
    );
 
 /** verifies a circular pattern heuristically */

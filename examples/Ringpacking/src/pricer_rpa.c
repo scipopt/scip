@@ -415,7 +415,7 @@ SCIP_RETCODE solvePricingHeuristic(
 
       /* call heuristic */
       SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, width, height, ispacked, elements, nelements,
-         SCIP_PATTERNTYPE_RECTANGULAR, &npacked);
+         SCIP_PATTERNTYPE_RECTANGULAR, &npacked, niters);
 
       /* compute reduced costs */
       for( i = 0; i < nelements; ++i )
