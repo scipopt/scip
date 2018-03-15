@@ -117,8 +117,68 @@ void estimateParabola(
    assert(islocal != NULL);
    assert(success != NULL);
    assert((exponent >= 0.0 && EPSISINT(exponent/2.0, 0.0)) || (exponent > 1.0 && xlb >= 0.0));
+   assert(xref >= xlb);
+   assert(xref <= xub);
 
    *success = FALSE;
+
+   if( !overestimate )
+   {
+      SCIP_Real xrefpow;
+
+      /* underestimate -> tangent -> linearization
+       *
+       * linearization in xref is xref^exponent + exponent * xref^(exponent-1) (x - xref)
+       * = (1-exponent) * xref^exponent + exponent * xref^(exponent-1) * x
+       */
+
+      xrefpow = pow(xref, exponent - 1.0);
+
+      /* if huge xref and/or exponent too large, then pow may overflow */
+      if( !SCIPisFinite(xrefpow) )
+         return;
+
+      *constant = (1.0 - exponent) * xrefpow * xref;
+      *slope = exponent * xrefpow;
+      *islocal = FALSE;
+      *success = TRUE;
+   }
+   else
+   {
+      /* overestimation -> secant
+       * secant is xlb^exponent + (xub^exponent - xlb^exponent) / (xub - xlb) * (x - xlb)
+       * = xlb^exponent - slope * xlb + slope * x  with slope = (xub^exponent - xlb^exponent) / (xub - xlb)
+       */
+      SCIP_Real lbval;
+
+      assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointRow */
+
+      /* get xlb^exponent and check for overflow */
+      lbval = pow(xlb, exponent);
+      if( !SCIPisFinite(lbval) )
+         return;
+
+      if( xlb == -xub )
+      {
+         *slope = 0.0;
+         *constant = lbval;
+      }
+      else
+      {
+         SCIP_Real ubval;
+
+         ubval = pow(xub, exponent);
+         if( !SCIPisFinite(ubval) )
+            return;
+
+         /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?) */
+         *slope = (ubval - lbval) / (xub - xlb);
+         *constant = lbval - *slope * xlb;
+      }
+
+      *islocal = TRUE;
+      *success = TRUE;
+   }
 }
 
 
@@ -406,6 +466,10 @@ SCIP_RETCODE separatePointPow(
    refpoint = SCIPisLT(scip, refpoint, childlb) ? childlb : refpoint;
    refpoint = SCIPisGT(scip, refpoint, childub) ? childub : refpoint;
    assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
+
+   /* if child is essentially constant, then there should be no point in separation */
+   if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
+      return SCIP_OKAY;
 
    /* if exponent is not integral, then child must be non-negative */
    assert(isinteger || childlb >= 0.0);
