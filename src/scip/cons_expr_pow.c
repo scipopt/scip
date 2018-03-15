@@ -68,6 +68,267 @@ SCIP_RETCODE createData(
 }
 
 
+/** Separation for parabola
+ *
+ * - even positive powers: x^2, x^4, x^6 with x arbitrary, or
+ * - positive powers > 1: x^1.5, x^2.5 with x >= 0
+
+  100 +--------------------------------------------------------------------+
+      |*               +                 +                +               *|
+   90 |**                                                     x**2 ********|
+      |  *                                                              *  |
+   80 |-+*                                                              *+-|
+      |   **                                                          **   |
+   70 |-+   *                                                        *   +-|
+      |     **                                                      **     |
+   60 |-+     *                                                    *     +-|
+      |       **                                                  **       |
+   50 |-+       *                                                *       +-|
+      |          **                                            **          |
+   40 |-+          *                                          *          +-|
+      |             **                                      **             |
+   30 |-+            **                                    **            +-|
+      |                **                                **                |
+   20 |-+                **                            **                +-|
+      |                   ***                        ***                   |
+   10 |-+                   ***                    ***                   +-|
+      |                +       *****     +    *****       +                |
+    0 +--------------------------------------------------------------------+
+     -10              -5                 0                5                10
+
+ */
+static
+void estimateParabola(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Bool             overestimate,       /**< should the power be overestimated? */
+   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xub,                /**< upper bound on x */
+   SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
+   SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
+)
+{
+   assert(scip != NULL);
+   assert(constant != NULL);
+   assert(slope != NULL);
+   assert(success != NULL);
+   assert((exponent >= 0.0 && EPSISINT(exponent/2.0, 0.0)) || (exponent > 1.0 && xlb >= 0.0));
+
+   *success = FALSE;
+}
+
+
+/** Separation for signpower
+ *
+ * - odd positive powers, x^3, x^5, x^7
+ * - sign(x)|x|^n for n > 1
+
+  100 +--------------------------------------------------------------------+
+      |                +                 +                +              **|
+      |                                                   x*abs(x) ******* |
+      |                                                              **    |
+      |                                                            **      |
+   50 |-+                                                       ***      +-|
+      |                                                      ***           |
+      |                                                   ***              |
+      |                                               *****                |
+      |                                          *****                     |
+    0 |-+                        ****************                        +-|
+      |                     *****                                          |
+      |                *****                                               |
+      |              ***                                                   |
+      |           ***                                                      |
+  -50 |-+      ***                                                       +-|
+      |      **                                                            |
+      |    **                                                              |
+      |  **                                                                |
+      |**              +                 +                +                |
+ -100 +--------------------------------------------------------------------+
+     -10              -5                 0                5                10
+
+ */
+static
+void estimateSignpower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Bool             overestimate,       /**< should the power be overestimated? */
+   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xub,                /**< upper bound on x */
+   SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
+   SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
+)
+{
+   assert(scip != NULL);
+   assert(constant != NULL);
+   assert(slope != NULL);
+   assert(success != NULL);
+   /* assert((exponent >= 3.0 && EPSISINT((exponent-1.0)/2.0, 0.0)) || exponent > 1.0); <-> exponent > 1.0 */
+   assert(exponent >= 1.0);
+
+   *success = FALSE;
+}
+
+/** Separation for positive hyperbola
+ *
+ * - x^-2, x^-4 with x arbitrary
+ * - x^-0.5, x^-1, x^-1.5, x^-3, x^-5 with x >= 0
+
+  5 +----------------------------------------------------------------------+
+    |                 +               * +*               +                 |
+    |                                 *  *                 x**(-2) ******* |
+  4 |-+                               *  *                               +-|
+    |                                 *  *                                 |
+    |                                 *  *                                 |
+    |                                 *  *                                 |
+  3 |-+                               *   *                              +-|
+    |                                *    *                                |
+    |                                *    *                                |
+  2 |-+                              *    *                              +-|
+    |                                *    *                                |
+    |                               *      *                               |
+  1 |-+                             *      *                             +-|
+    |                               *      *                               |
+    |                             **        **                             |
+    |                   **********            **********                   |
+  0 |*******************                                *******************|
+    |                                                                      |
+    |                 +                 +                +                 |
+ -1 +----------------------------------------------------------------------+
+   -10               -5                 0                5                 10
+
+ */
+static
+void estimateHyperbolaPositive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Bool             overestimate,       /**< should the power be overestimated? */
+   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xub,                /**< upper bound on x */
+   SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
+   SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
+)
+{
+   assert(scip != NULL);
+   assert(constant != NULL);
+   assert(slope != NULL);
+   assert(success != NULL);
+   assert(exponent < 0.0);
+   assert(EPSISINT(exponent/2.0, 0.0) || xlb >= 0.0);
+
+   *success = FALSE;
+}
+
+/** Separation for mixed-sign hyperbola
+ *
+ * - x^-1, x^-3, x^-5 without x >= 0 (either x arbitrary or x negative)
+
+    +----------------------------------------------------------------------+
+    |                 +                 *                +                 |
+  4 |-+                                  *                 x**(-1) *******-|
+    |                                    *                                 |
+    |                                    *                                 |
+    |                                    *                                 |
+  2 |-+                                  *                               +-|
+    |                                     *                                |
+    |                                      **                              |
+    |                                        *********                     |
+  0 |*********************                            *********************|
+    |                     *********                                        |
+    |                              **                                      |
+    |                                *                                     |
+ -2 |-+                               *                                  +-|
+    |                                 *                                    |
+    |                                 *                                    |
+    |                                 *                                    |
+ -4 |-+                               *                                  +-|
+    |                 +                *+                +                 |
+    +----------------------------------------------------------------------+
+   -10               -5                 0                5                 10
+
+ */
+static
+void estimateHyperbolaMixed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Bool             overestimate,       /**< should the power be overestimated? */
+   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xub,                /**< upper bound on x */
+   SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
+   SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
+)
+{
+   assert(scip != NULL);
+   assert(constant != NULL);
+   assert(slope != NULL);
+   assert(success != NULL);
+   assert(exponent < 0.0);
+   assert(EPSISINT((exponent-1.0)/2.0, 0.0));
+   assert(xlb < 0.0);
+
+   *success = FALSE;
+}
+
+/** Separation for roots with exponent in [0,1]
+ *
+ * - x^0.5 with x >= 0
+
+  8 +----------------------------------------------------------------------+
+    |             +             +              +             +             |
+  7 |-+                                                     x**0.5 ********|
+    |                                                             *********|
+    |                                                      ********        |
+  6 |-+                                             ********             +-|
+    |                                         ******                       |
+  5 |-+                                 ******                           +-|
+    |                             ******                                   |
+    |                        *****                                         |
+  4 |-+                  ****                                            +-|
+    |               *****                                                  |
+  3 |-+          ****                                                    +-|
+    |         ***                                                          |
+    |      ***                                                             |
+  2 |-+  **                                                              +-|
+    |  **                                                                  |
+  1 |**                                                                  +-|
+    |*                                                                     |
+    |*            +             +              +             +             |
+  0 +----------------------------------------------------------------------+
+    0             10            20             30            40            50
+
+ */
+static
+void estimateRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Bool             overestimate,       /**< should the power be overestimated? */
+   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xub,                /**< upper bound on x */
+   SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
+   SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
+)
+{
+   assert(scip != NULL);
+   assert(constant != NULL);
+   assert(slope != NULL);
+   assert(success != NULL);
+   assert(exponent > 0.0);
+   assert(exponent < 1.0);
+   assert(xlb >= 0.0);
+
+   *success = FALSE;
+}
+
+
 /** helper function to separate a given point; needed for proper unittest */
 static
 SCIP_RETCODE separatePointPow(
@@ -92,6 +353,8 @@ SCIP_RETCODE separatePointPow(
    SCIP_Real linconstant;
    SCIP_Bool islocal;
    SCIP_Bool success;
+   SCIP_Bool isinteger;
+   SCIP_Bool iseven;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -103,6 +366,9 @@ SCIP_RETCODE separatePointPow(
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
    assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
+
+   isinteger = EPSISINT(exponent, 0.0);
+   iseven = isinteger && EPSISINT(exponent/2.0, 0.0);
 
    /* get expression data */
    auxvar = SCIPgetConsExprExprAuxVar(expr);
@@ -129,6 +395,43 @@ SCIP_RETCODE separatePointPow(
    refpoint = SCIPisLT(scip, refpoint, childlb) ? childlb : refpoint;
    refpoint = SCIPisGT(scip, refpoint, childub) ? childub : refpoint;
    assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
+
+   /* if exponent is not integral, then child must be non-negative */
+   assert(isinteger || childlb >= 0.0);
+
+   if( exponent > 0.0 && iseven )
+   {
+      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
+   }
+   else if( exponent > 1.0 && childlb >= 0.0 )
+   {
+      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
+   }
+   else if( exponent > 1.0 )
+   {
+      estimateSignpower(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
+   }
+   else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
+   {
+      estimateHyperbolaPositive(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
+   }
+   else if( exponent < 0.0 )
+   {
+      assert(!iseven); /* should hold due to previous if */
+      assert(childlb < 0.0); /* should hold due to previous if */
+      assert(isinteger); /* should hold because childlb < 0.0 (same as assert above) */
+
+      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
+   }
+   else
+   {
+      assert(exponent < 1.0); /* the only case that should be left */
+      assert(exponent > 0.0); /* should hold due to previous if */
+
+      estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
+   }
+
+   assert(!success);  /* nothing implemented so far */
 
    /* quadratic case */
    if( exponent == 2.0 )
