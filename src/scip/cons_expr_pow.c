@@ -67,6 +67,101 @@ SCIP_RETCODE createData(
    return SCIP_OKAY;
 }
 
+/** computes a tangent at a reference point by linearization
+ *
+ * linearization in xref is xref^exponent + exponent * xref^(exponent-1) (x - xref)
+ * = (1-exponent) * xref^exponent + exponent * xref^(exponent-1) * x
+ */
+static
+void estimateTangent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Real             xref,               /**< reference point where to linearize */
+   SCIP_Real*            constant,           /**< buffer to store constant term of secant */
+   SCIP_Real*            slope,              /**< buffer to store slope of secant */
+   SCIP_Bool*            success             /**< buffer to store whether secant could be computed */
+)
+{
+   SCIP_Real xrefpow;
+
+   assert(scip != NULL);
+   assert(constant != NULL);
+   assert(slope != NULL);
+   assert(success != NULL);
+   assert(xref != 0.0 || exponent > 0.0);
+   assert(xref >= 0.0 || EPSISINT(exponent, 0.0));
+
+   xrefpow = pow(xref, exponent - 1.0);
+
+   /* if huge xref and/or exponent too large, then pow may overflow */
+   if( !SCIPisFinite(xrefpow) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *constant = (1.0 - exponent) * xrefpow * xref;
+   *slope = exponent * xrefpow;
+   *success = TRUE;
+}
+
+/** computes a secant between lower and upper bound
+ *
+ * secant is xlb^exponent + (xub^exponent - xlb^exponent) / (xub - xlb) * (x - xlb)
+ * = xlb^exponent - slope * xlb + slope * x  with slope = (xub^exponent - xlb^exponent) / (xub - xlb)
+ */
+static
+void estimateSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xub,                /**< upper bound on x */
+   SCIP_Real*            constant,           /**< buffer to store constant term of secant */
+   SCIP_Real*            slope,              /**< buffer to store slope of secant */
+   SCIP_Bool*            success             /**< buffer to store whether secant could be computed */
+)
+{
+   SCIP_Real lbval;
+
+   assert(scip != NULL);
+   assert(constant != NULL);
+   assert(slope != NULL);
+   assert(success != NULL);
+   assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointRow */
+   assert(xlb >= 0.0 || EPSISINT(exponent, 0.0));
+   assert(xub >= 0.0 || EPSISINT(exponent, 0.0));
+
+   *success = FALSE;
+
+   /* infinite bounds will not work */
+   if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+      return;
+
+   /* get xlb^exponent and check for overflow */
+   lbval = pow(xlb, exponent);
+   if( !SCIPisFinite(lbval) )
+      return;
+
+   if( xlb == -xub )
+   {
+      *slope = 0.0;
+      *constant = lbval;
+   }
+   else
+   {
+      SCIP_Real ubval;
+
+      ubval = pow(xub, exponent);
+      if( !SCIPisFinite(ubval) )
+         return;
+
+      /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?) */
+      *slope = (ubval - lbval) / (xub - xlb);
+      *constant = lbval - *slope * xlb;
+   }
+
+   *success = TRUE;
+}
 
 /** Separation for parabola
  *
@@ -117,67 +212,17 @@ void estimateParabola(
    assert(islocal != NULL);
    assert(success != NULL);
    assert((exponent >= 0.0 && EPSISINT(exponent/2.0, 0.0)) || (exponent > 1.0 && xlb >= 0.0));
-   assert(xref >= xlb);
-   assert(xref <= xub);
-
-   *success = FALSE;
 
    if( !overestimate )
    {
-      SCIP_Real xrefpow;
-
-      /* underestimate -> tangent -> linearization
-       *
-       * linearization in xref is xref^exponent + exponent * xref^(exponent-1) (x - xref)
-       * = (1-exponent) * xref^exponent + exponent * xref^(exponent-1) * x
-       */
-
-      xrefpow = pow(xref, exponent - 1.0);
-
-      /* if huge xref and/or exponent too large, then pow may overflow */
-      if( !SCIPisFinite(xrefpow) )
-         return;
-
-      *constant = (1.0 - exponent) * xrefpow * xref;
-      *slope = exponent * xrefpow;
+      estimateTangent(scip, exponent, xref, constant, slope, success);
       *islocal = FALSE;
-      *success = TRUE;
    }
    else
    {
-      /* overestimation -> secant
-       * secant is xlb^exponent + (xub^exponent - xlb^exponent) / (xub - xlb) * (x - xlb)
-       * = xlb^exponent - slope * xlb + slope * x  with slope = (xub^exponent - xlb^exponent) / (xub - xlb)
-       */
-      SCIP_Real lbval;
-
-      assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointRow */
-
-      /* get xlb^exponent and check for overflow */
-      lbval = pow(xlb, exponent);
-      if( !SCIPisFinite(lbval) )
-         return;
-
-      if( xlb == -xub )
-      {
-         *slope = 0.0;
-         *constant = lbval;
-      }
-      else
-      {
-         SCIP_Real ubval;
-
-         ubval = pow(xub, exponent);
-         if( !SCIPisFinite(ubval) )
-            return;
-
-         /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?) */
-         *slope = (ubval - lbval) / (xub - xlb);
-         *constant = lbval - *slope * xlb;
-      }
-
+      /* overestimation -> secant */
+      estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
-      *success = TRUE;
    }
 }
 
@@ -233,6 +278,8 @@ void estimateSignpower(
    /* assert((exponent >= 3.0 && EPSISINT((exponent-1.0)/2.0, 0.0)) || exponent > 1.0); <-> exponent > 1.0 */
    assert(exponent >= 1.0);
 
+   /* TODO */
+
    *success = FALSE;
 }
 
@@ -286,6 +333,72 @@ void estimateHyperbolaPositive(
    assert(success != NULL);
    assert(exponent < 0.0);
    assert(EPSISINT(exponent/2.0, 0.0) || xlb >= 0.0);
+
+   if( !overestimate )
+   {
+      if( xlb >= 0.0 || xub <= 0.0 )
+      {
+         /* underestimate and fixed sign -> tangent */
+
+         if( SCIPisZero(scip, xref) )
+         {
+            /* estimator would need to have an (essentially) infinite scope
+             * first try to make up a better refpoint
+             */
+            if( xub > 0.0 )
+            {
+               /* thus xlb >= 0.0; stay close to xlb (probably = 0) */
+               xref = 0.9 * xlb + 0.1 * xub;
+            }
+            else
+            {
+               /* xub <= 0.0; stay close to xub (probably = 0) */
+               xref = 0.1 * xlb + 0.9 * xub;
+            }
+
+            /* if still close to 0, then also bounds are close to 0, then just give up */
+            if( SCIPisZero(scip, xref) )
+               return;
+         }
+
+         estimateTangent(scip, exponent, xref, constant, slope, success);
+         *islocal = FALSE;  /* FIXME this is only true if x has fixed sign globally */
+      }
+      else
+      {
+         /* underestimate but mixed sign */
+         if( SCIPisInfinity(scip, -xlb) )
+         {
+            if( SCIPisInfinity(scip, xub) )
+            {
+               /* underestimator is constant 0, but, wow, that is globally valid */
+               *constant = 0.0;
+               *islocal = FALSE;
+               *success = TRUE;
+               return;
+            }
+
+            /* switch sign of x (mirror on ordinate) to make left bound finite and use its estimator */
+            estimateHyperbolaPositive(scip, exponent, overestimate, -xub, -xlb, -xref, constant, slope, islocal, success);
+            if( *success )
+               *slope = -*slope;
+         }
+         else
+         {
+            /* TODO get line between (xlb,xlb^exponent) and something on the right side */
+         }
+      }
+   }
+   else
+   {
+      /* overestimate and mixed sign -> pole is within domain -> cannot overestimate */
+      if( xlb < 0.0 && xub > 0.0 )
+         return;
+
+      /* overestimate and fixed sign -> secant */
+      estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+      *islocal = TRUE;
+   }
 
    *success = FALSE;
 }
@@ -341,6 +454,8 @@ void estimateHyperbolaMixed(
    assert(EPSISINT((exponent-1.0)/2.0, 0.0));
    assert(xlb < 0.0);
 
+   /* TODO */
+
    *success = FALSE;
 }
 
@@ -394,6 +509,8 @@ void estimateRoot(
    assert(exponent > 0.0);
    assert(exponent < 1.0);
    assert(xlb >= 0.0);
+
+   /* TODO */
 
    *success = FALSE;
 }
