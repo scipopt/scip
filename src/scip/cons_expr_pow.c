@@ -544,9 +544,27 @@ void estimateRoot(
    assert(exponent < 1.0);
    assert(xlb >= 0.0);
 
-   /* TODO */
+   if( !overestimate )
+   {
+      /* underestimate -> secant */
+      estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+      *islocal = TRUE;
+   }
+   else
+   {
+      /* overestimate -> tangent */
+      if( SCIPisZero(scip, xref) && !SCIPisZero(scip, xub) )
+      {
+         /* if xref is 0 (then xlb=0 probably), then slope is infinite, then try to move away from 0 */
+         if( SCIPisInfinity(scip, xub) )
+            xref = 0.9 * xlb + 0.1 * xub;
+         else
+            xref = 0.1;
+      }
 
-   *success = FALSE;
+      estimateTangent(scip, exponent, xref, constant, slope, success);
+      *islocal = FALSE;
+   }
 }
 
 
