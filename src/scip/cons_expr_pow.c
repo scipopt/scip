@@ -107,12 +107,14 @@ void estimateParabola(
    SCIP_Real             xref,               /**< reference point (where to linearize) */
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
 )
 {
    assert(scip != NULL);
    assert(constant != NULL);
    assert(slope != NULL);
+   assert(islocal != NULL);
    assert(success != NULL);
    assert((exponent >= 0.0 && EPSISINT(exponent/2.0, 0.0)) || (exponent > 1.0 && xlb >= 0.0));
 
@@ -159,12 +161,14 @@ void estimateSignpower(
    SCIP_Real             xref,               /**< reference point (where to linearize) */
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
 )
 {
    assert(scip != NULL);
    assert(constant != NULL);
    assert(slope != NULL);
+   assert(islocal != NULL);
    assert(success != NULL);
    /* assert((exponent >= 3.0 && EPSISINT((exponent-1.0)/2.0, 0.0)) || exponent > 1.0); <-> exponent > 1.0 */
    assert(exponent >= 1.0);
@@ -211,12 +215,14 @@ void estimateHyperbolaPositive(
    SCIP_Real             xref,               /**< reference point (where to linearize) */
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
 )
 {
    assert(scip != NULL);
    assert(constant != NULL);
    assert(slope != NULL);
+   assert(islocal != NULL);
    assert(success != NULL);
    assert(exponent < 0.0);
    assert(EPSISINT(exponent/2.0, 0.0) || xlb >= 0.0);
@@ -262,12 +268,14 @@ void estimateHyperbolaMixed(
    SCIP_Real             xref,               /**< reference point (where to linearize) */
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
 )
 {
    assert(scip != NULL);
    assert(constant != NULL);
    assert(slope != NULL);
+   assert(islocal != NULL);
    assert(success != NULL);
    assert(exponent < 0.0);
    assert(EPSISINT((exponent-1.0)/2.0, 0.0));
@@ -314,12 +322,14 @@ void estimateRoot(
    SCIP_Real             xref,               /**< reference point (where to linearize) */
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
 )
 {
    assert(scip != NULL);
    assert(constant != NULL);
    assert(slope != NULL);
+   assert(islocal != NULL);
    assert(success != NULL);
    assert(exponent > 0.0);
    assert(exponent < 1.0);
@@ -386,6 +396,7 @@ SCIP_RETCODE separatePointPow(
       return SCIP_OKAY;
 
    success = TRUE;
+   islocal = TRUE; /* for lint */
    lincoef = 0.0;
    linconstant = 0.0;
 
@@ -399,43 +410,9 @@ SCIP_RETCODE separatePointPow(
    /* if exponent is not integral, then child must be non-negative */
    assert(isinteger || childlb >= 0.0);
 
-   if( exponent > 0.0 && iseven )
-   {
-      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
-   }
-   else if( exponent > 1.0 && childlb >= 0.0 )
-   {
-      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
-   }
-   else if( exponent > 1.0 )
-   {
-      estimateSignpower(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
-   }
-   else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
-   {
-      estimateHyperbolaPositive(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
-   }
-   else if( exponent < 0.0 )
-   {
-      assert(!iseven); /* should hold due to previous if */
-      assert(childlb < 0.0); /* should hold due to previous if */
-      assert(isinteger); /* should hold because childlb < 0.0 (same as assert above) */
-
-      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
-   }
-   else
-   {
-      assert(exponent < 1.0); /* the only case that should be left */
-      assert(exponent > 0.0); /* should hold due to previous if */
-
-      estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &success);
-   }
-
-   assert(!success);  /* nothing implemented so far */
-
-   /* quadratic case */
    if( exponent == 2.0 )
    {
+      /* important special case: quadratic case */
       if( overestimate )
       {
          SCIPaddSquareSecant(scip, 1.0, childlb, childub, refpoint, &lincoef, &linconstant, &success);
@@ -447,11 +424,36 @@ SCIP_RETCODE separatePointPow(
          islocal = FALSE; /* linearizations are globally valid */
       }
    }
+   else if( exponent > 0.0 && iseven )
+   {
+      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
+   }
+   else if( exponent > 1.0 && childlb >= 0.0 )
+   {
+      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
+   }
+   else if( exponent > 1.0 )
+   {
+      estimateSignpower(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
+   }
+   else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
+   {
+      estimateHyperbolaPositive(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
+   }
+   else if( exponent < 0.0 )
+   {
+      assert(!iseven); /* should hold due to previous if */
+      assert(childlb < 0.0); /* should hold due to previous if */
+      assert(isinteger); /* should hold because childlb < 0.0 (same as assert above) */
+
+      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
+   }
    else
    {
-      /* @todo can not be handled so far */
-      success = FALSE;
-      islocal = TRUE; /* for lint */
+      assert(exponent < 1.0); /* the only case that should be left */
+      assert(exponent > 0.0); /* should hold due to previous if */
+
+      estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
    }
 
    /* give up if not successful */
