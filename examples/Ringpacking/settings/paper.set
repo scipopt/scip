@@ -1,0 +1,154 @@
+# SCIP version 5.0.0
+
+# maximal number of restarts (-1: unlimited)
+# [type: int, advanced: FALSE, range: [-1,2147483647], default: -1]
+presolving/maxrestarts = 0
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+constraints/nonlinear/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+constraints/quadratic/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+constraints/linear/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+constraints/abspower/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+constraints/and/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+constraints/bivariate/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+constraints/cardinality/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+constraints/cumulative/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+constraints/indicator/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+constraints/knapsack/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+constraints/linking/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+constraints/logicor/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+constraints/or/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 5]
+constraints/orbisack/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 5]
+constraints/orbitope/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+constraints/setppc/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+constraints/soc/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+constraints/SOS1/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+constraints/SOS2/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 5]
+constraints/symresack/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+constraints/varbound/sepafreq = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+constraints/xor/sepafreq = -1
+
+# frequency for calling separator <clique> (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+separating/clique/freq = -1
+
+# frequency for calling separator <aggregation> (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+separating/aggregation/freq = -1
+
+# frequency for calling separator <disjunctive> (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+separating/disjunctive/freq = -1
+
+# frequency for calling separator <gomory> (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+separating/gomory/freq = -1
+
+# frequency for calling separator <impliedbounds> (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+separating/impliedbounds/freq = -1
+
+# frequency for calling separator <mcf> (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+separating/mcf/freq = -1
+
+# frequency for calling separator <strongcg> (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+separating/strongcg/freq = -1
+
+# frequency for calling separator <zerohalf> (-1: never, 0: only in root node)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+separating/zerohalf/freq = -1
+
+# time limit for verification NLP
+# [type: real, advanced: FALSE, range: [-1,1.79769313486232e+308], default: 10]
+ringpacking/verification/nlptilim = 120
+
+# node limit for verification NLP
+# [type: longint, advanced: FALSE, range: [0,9223372036854775807], default: 10000]
+ringpacking/verification/nlpnodelim = 9223372036854775807
+
+# soft time limit for verification NLP
+# [type: real, advanced: FALSE, range: [0,1.79769313486232e+308], default: 1]
+ringpacking/verification/nlptilimsoft = 10
+
+# soft node limit for verification NLP
+# [type: longint, advanced: FALSE, range: [0,9223372036854775807], default: 1000]
+ringpacking/verification/nlpnodelimsoft = 9223372036854775807
+
+# total time limit for all verification problems during the solving process
+# [type: real, advanced: FALSE, range: [0,1.79769313486232e+308], default: 3600]
+ringpacking/verification/totaltilim = 2400
+
+# time limit for each pricing NLP
+# [type: real, advanced: FALSE, range: [0,1.79769313486232e+308], default: 60]
+ringpacking/pricing/nlptilim = 300
+
+# time limit for each heuristic pricing
+# [type: real, advanced: FALSE, range: [0,1.79769313486232e+308], default: 60]
+ringpacking/pricing/heurtilim = 30
+
