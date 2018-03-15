@@ -61,6 +61,7 @@
 struct SCIP_PricerData
 {
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   SCIP_Real             timeleft;           /**< time left for solving pricing problems (with NLP or heuristic) */
 };
 
 
@@ -715,7 +716,6 @@ SCIP_DECL_PRICERFREE(pricerFreeRingpacking)
    return SCIP_OKAY;
 }
 
-
 /** initialization method of variable pricer (called after problem was transformed and pricer is active) */
 static
 SCIP_DECL_PRICERINIT(pricerInitRingpacking)
@@ -726,6 +726,9 @@ SCIP_DECL_PRICERINIT(pricerInitRingpacking)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &pricerdata->randnumgen, 0) );
+
+   /* get the total time limit for solving pricing problems */
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/pricing/totaltilim", &pricerdata->timeleft) );
 
    return SCIP_OKAY;
 }
@@ -797,8 +800,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/pricing/heuriterlim", &heuriterlim) );
 
    /* solve pricing problem with heuristic */
-   heurtilim = MIN(heurtilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+   heurtilim = MIN3(pricerdata->timeleft, heurtilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+   pricerdata->timeleft += SCIPgetSolvingTime(scip);
    SCIP_CALL( solvePricingHeuristic(scip, probdata, pricerdata, lambdas, heurtilim, heuriterlim, &success) );
+   pricerdata->timeleft -= SCIPgetSolvingTime(scip);
 
    /* heuristic found an improving column */
    if( success )
@@ -807,8 +812,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    /* solve pricing problem as MINLP if heuristic was not successful and dual bound is still valid */
    if( !success && !SCIPprobdataIsDualboundInvalid(probdata) )
    {
-      nlptilim = MIN(nlptilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+      nlptilim = MIN3(pricerdata->timeleft, nlptilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+      pricerdata->timeleft += SCIPgetSolvingTime(scip);
       SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, nlptilim, nlpnodelim, &success, &solstat, &redcostslb) );
+      pricerdata->timeleft -= SCIPgetSolvingTime(scip);
       redcostslb += 1.0;
       SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 

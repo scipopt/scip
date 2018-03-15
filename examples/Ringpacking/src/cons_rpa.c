@@ -68,7 +68,8 @@ struct SCIP_ConshdlrData
 
    SCIP_Bool*            locked;            /**< array to remember which (not verified) patterns have been locked */
    int                   lockedsize;        /**< size of locked array */
-   SCIP_Bool*            tried;             /**< array to mark circular patterns that have been tried to be verified */
+   SCIP_Bool*            tried;             /**< array to mark circular patterns that have been tried to be verified */\
+   SCIP_Real             timeleft;          /**< time left for solving verification problem during the solving process */
 };
 
 /*
@@ -123,6 +124,7 @@ SCIP_Bool isSolFeasible(
 static
 SCIP_RETCODE verifyCircularPattern(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_PATTERN*         pattern             /**< circular pattern */
    )
@@ -144,20 +146,24 @@ SCIP_RETCODE verifyCircularPattern(
    /* verify heuristically */
    SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilim", &heurtimelimit) );
    SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlim", &heuriterlimit) );
-   heurtimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), heurtimelimit); /*lint !e666*/
+   heurtimelimit = MIN3(conshdlrdata->timeleft, timelimit - SCIPgetSolvingTime(scip), heurtimelimit); /*lint !e666*/
 
    SCIPdebugMsg(scip, "call verification heuristic (%g,%d)\n", heurtimelimit, heuriterlimit);
+   conshdlrdata->timeleft += SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, heurtimelimit, heuriterlimit) );
+   conshdlrdata->timeleft -= SCIPgetSolvingTime(scip);
 
    /* use verification NLP if pattern is still not verified */
    if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
    {
       SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/nlptilim", &nlptimelimit) );
       SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/verification/nlpnodelim", &nlpnodelimit) );
-      nlptimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), nlptimelimit); /*lint !e666*/
+      nlptimelimit = MIN3(conshdlrdata->timeleft, timelimit - SCIPgetSolvingTime(scip), nlptimelimit); /*lint !e666*/
 
       SCIPdebugMsg(scip, "call verification NLP (%g,%lld)\n", nlptimelimit, nlpnodelimit);
+      conshdlrdata->timeleft += SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, nlptimelimit, nlpnodelimit) );
+      conshdlrdata->timeleft -= SCIPgetSolvingTime(scip);
    }
 
    SCIPdebugMsg(scip, "packable status? %d\n", SCIPpatternGetPackableStatus(pattern));
@@ -232,7 +238,7 @@ SCIP_RETCODE enforceSol(
       /* try to verify an unknown circular pattern */
       if( SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN && !conshdlrdata->tried[p] )
       {
-         SCIP_CALL( verifyCircularPattern(scip, probdata, cpatterns[p]) );
+         SCIP_CALL( verifyCircularPattern(scip, conshdlrdata, probdata, cpatterns[p]) );
          conshdlrdata->tried[p] = TRUE;
       }
 
@@ -487,6 +493,7 @@ static
 SCIP_DECL_CONSFREE(consFreeRpa)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    if( conshdlrdata->locked != NULL )
    {
@@ -501,18 +508,17 @@ SCIP_DECL_CONSFREE(consFreeRpa)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 0
 static
 SCIP_DECL_CONSINIT(consInitRpa)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* get the time limit available for solving verification problems during the solving process */
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/totaltilim", &conshdlrdata->timeleft) );
 
    return SCIP_OKAY;
 }
-#else
-#define consInitRpa NULL
-#endif
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */

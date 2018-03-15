@@ -32,18 +32,21 @@
 #include "pricer_rpa.h"
 
 /* parameters */
-#define DEFAULT_VERIFICATION_NLPTILIM        10.0      /**< time limit for verification NLP */
-#define DEFAULT_VERIFICATION_NLPNODELIM      10000L    /**< node limit for verification NLP */
+#define DEFAULT_VERIFICATION_NLPTILIM        10.0      /**< time limit for each verification NLP */
+#define DEFAULT_VERIFICATION_NLPNODELIM      10000L    /**< node limit for each verification NLP */
 #define DEFAULT_VERIFICATION_HEURTILIM       10.0      /**< time limit for heuristic verification */
-#define DEFAULT_VERIFICATION_HEURITERLIM     1000      /**< iteration limit for heuristic verification */
-#define DEFAULT_VERIFICATION_NLPTILIMSOFT    1.0       /**< soft time limit for verification NLP */
-#define DEFAULT_VERIFICATION_NLPNODELIMSOFT  1000L     /**< soft node limit for verification NLP */
+#define DEFAULT_VERIFICATION_HEURITERLIM     1000      /**< iteration limit for each heuristic verification */
+#define DEFAULT_VERIFICATION_NLPTILIMSOFT    1.0       /**< soft time limit for each verification NLP */
+#define DEFAULT_VERIFICATION_NLPNODELIMSOFT  1000L     /**< soft node limit for each verification NLP */
 #define DEFAULT_VERIFICATION_HEURTILIMSOFT   1.0       /**< soft time limit for heuristic verification */
-#define DEFAULT_VERIFICATION_HEURITERLIMSOFT 100       /**< soft iteration limit for heuristic verification */
-#define DEFAULT_PRICING_NLPTILIM             60.0     /**< time limit for each pricing NLP */
+#define DEFAULT_VERIFICATION_HEURITERLIMSOFT 100       /**< soft iteration limit for each heuristic verification */
+#define DEFAULT_VERIFICATION_TOTALTILIM      3600.0    /**< total time limit for all verification problems during the solving process */
+#define DEFAULT_VERIFICATION_TOTALTILIMSOFT  1200.0    /**< total time limit for all verification problems during the enumeration */
+#define DEFAULT_PRICING_NLPTILIM             60.0      /**< time limit for each pricing NLP */
 #define DEFAULT_PRICING_NLPNODELIM           SCIP_LONGINT_MAX /**< node limit for each pricing NLP */
 #define DEFAULT_PRICING_HEURTILIM            60.0     /**< time limit for each heuristic pricing */
 #define DEFAULT_PRICING_HEURITERLIM          1000      /**< iteration limit for each heuristic pricing */
+#define DEFAULT_PRICING_TOTALTILIM           3600.0    /**< total time limit for all pricing NLPs and heuristic calls */
 
 #define DEFAULT_TEXFILENAME                  ""        /**< filename for tex output for the best found solution (\"\": disable) */
 
@@ -131,6 +134,16 @@ SCIP_RETCODE runShell(
          "soft iteration limit for heuristic verification",
          NULL, FALSE, DEFAULT_VERIFICATION_HEURITERLIMSOFT, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "ringpacking/verification/totaltilim",
+         "total time limit for all verification problems during the solving process",
+         NULL, FALSE, DEFAULT_VERIFICATION_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "ringpacking/verification/totaltilimsoft",
+         "total time limit for all verification problems during the enumeration",
+         NULL, FALSE, DEFAULT_VERIFICATION_TOTALTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
    /*
     * parameters for pricing
     */
@@ -154,6 +167,11 @@ SCIP_RETCODE runShell(
          "ringpacking/pricing/heuriterlim",
          "iteration limit for each heuristic pricing",
          NULL, FALSE, DEFAULT_PRICING_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "ringpacking/pricing/totaltilim",
+         "total time limit for all pricing NLPs and heuristic calls",
+         NULL, FALSE, DEFAULT_PRICING_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    /*
     * miscellaneous parameters

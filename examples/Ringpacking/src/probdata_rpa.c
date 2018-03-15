@@ -76,6 +76,7 @@ struct SCIP_ProbData
    SCIP_Real             dualbound;          /**< valid dual bound for RCPP instance */
 
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   SCIP_Real             timeleft;           /**< time left for enumerating circular patterns */
 };
 
 
@@ -628,10 +629,12 @@ SCIP_RETCODE enumeratePatterns(
           */
 
          /* compute time limit */
-         timelim = MIN(heurtilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
+         timelim = MIN3(probdata->timeleft, heurtilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
 
          /* verify pattern */
+         probdata->timeleft += SCIPgetTotalTime(scip);
          SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuriterlim) );
+         probdata->timeleft -= SCIPgetTotalTime(scip);
 
          /*
           * try to verify with NLP
@@ -639,10 +642,12 @@ SCIP_RETCODE enumeratePatterns(
          if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
          {
             /* compute time limit */
-            timelim = MIN(nlptilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
+            timelim = MIN3(probdata->timeleft, nlptilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
 
             /* verify pattern */
+            probdata->timeleft += SCIPgetTotalTime(scip);
             SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, timelim, nlpnodelim) );
+            probdata->timeleft -= SCIPgetTotalTime(scip);
          }
 
          /* pattern is not packable -> don't add more elements */
@@ -723,6 +728,7 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/verification/nlpnodelimsoft", &nlpnodelim) );
    SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilimsoft", &heurtilim) );
    SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlimsoft", &heuriterlim) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/totaltilimsoft", &probdata->timeleft) );
 
    /* get problem data */
    ntypes = SCIPprobdataGetNTypes(probdata);
@@ -1484,8 +1490,8 @@ SCIP_RETCODE SCIPprobdataEnumeratePatterns(
          ms[k] = maxCircles(scip, probdata, t, k);
 
       SCIPpatternSetType(pattern, t);
-      SCIP_CALL( enumeratePatterns(scip, probdata, pattern, ms, nselected,
-            nlptilim, heurtilim, nlpnodelim, heuriterlim) );
+      SCIP_CALL( enumeratePatterns(scip, probdata, pattern, ms, nselected, nlptilim, heurtilim, nlpnodelim,
+         heuriterlim) );
    }
 
    /* release memory */
