@@ -348,12 +348,18 @@ void estimateHyperbolaPositive(
             if( xub > 0.0 )
             {
                /* thus xlb >= 0.0; stay close to xlb (probably = 0) */
-               xref = 0.9 * xlb + 0.1 * xub;
+               if( !SCIPisInfinity(scip, xub) )
+                  xref = 0.9 * xlb + 0.1 * xub;
+               else
+                  xref = 0.1;
             }
             else
             {
                /* xub <= 0.0; stay close to xub (probably = 0) */
-               xref = 0.1 * xlb + 0.9 * xub;
+               if( !SCIPisInfinity(scip, -xlb) )
+                  xref = 0.1 * xlb + 0.9 * xub;
+               else
+                  xref = 0.1;
             }
 
             /* if still close to 0, then also bounds are close to 0, then just give up */
@@ -454,7 +460,35 @@ void estimateHyperbolaMixed(
    assert(EPSISINT((exponent-1.0)/2.0, 0.0));
    assert(xlb < 0.0);
 
-   /* TODO */
+   if( xub <= 0.0 )
+   {
+      /* x is negative */
+      if( !overestimate )
+      {
+         /* underestimation -> secant */
+         estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+         *islocal = TRUE;
+      }
+      else
+      {
+         /* overestimation -> tangent */
+
+         if( SCIPisZero(scip, xref) && !SCIPisZero(scip, xlb/10.0) )
+         {
+            /* if xref is very close to 0.0, then slope would be infinite
+             * try to move closer to lower bound (if xlb < -10*eps)
+             */
+            if( !SCIPisInfinity(scip, -xlb) )
+               xref = 0.1*xlb + 0.9*xub;
+            else
+               xref = 0.1;
+         }
+
+         estimateTangent(scip, exponent, xref, constant, slope, success);
+         *islocal = FALSE; /* FIXME this is only true if xub <= 0.0 globally */
+      }
+   }
+   /* else: x has mixed sign -> pole is within domain -> cannot estimate */
 
    *success = FALSE;
 }
