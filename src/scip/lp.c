@@ -14662,6 +14662,10 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
          for( c = 0; c < lpirows[r]->len; c++ )
          {
             int pos = SCIPcolGetLPPos(lpirows[r]->cols[c]);
+
+            if( pos == -1 )
+               continue;
+
             assert(pos >= 0 && pos < nlpicols);
 
             farkascoefs[pos] += dualfarkas[r] * lpirows[r]->vals[c];
@@ -14712,6 +14716,10 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       {
          assert(farkascoefs != NULL);
          assert(SCIPcolGetLPPos(lpicols[c]) == c);
+
+         /* skip coefficients that are too close to zero */
+         if( SCIPsetIsFeasZero(set, farkascoefs[c]) )
+            continue;
 
          /* calculate the maximal activity */
          if( farkascoefs[c] > 0.0 )
@@ -14830,7 +14838,7 @@ SCIP_RETCODE lpDelColset(
    assert(lp->ncols == lp->nlpicols);
    assert(!lp->diving);
    assert(coldstat != NULL);
-   assert(lp->nlazycols <= lp->ncols); 
+   assert(lp->nlazycols <= lp->ncols);
 
    ncols = lp->ncols;
 

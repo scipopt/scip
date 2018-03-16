@@ -57,7 +57,7 @@
  *
  * @warning This separator should be used carefully - it may require a long separation time.
  */
-
+#define SCIP_OUTPUT
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
