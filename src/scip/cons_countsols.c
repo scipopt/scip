@@ -1803,6 +1803,28 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
 {  /*lint --e{715}*/
    SCIP_Bool active;
+   int usesymmetry;
+   SCIP_Bool computesymmetrypresolved;
+
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "presolving/symmetry/computepresolved", &computesymmetrypresolved) );
+
+   if ( usesymmetry != 0 )
+   {
+      if ( SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING ||
+           (SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE && ! computesymmetrypresolved) )
+      {
+         SCIPerrorMessage("Symmetry handling and solution couting are not compatible. " \
+            "You might want to disable symmetry by setting parameter <misc/usesymmetry> to 0.\n");
+
+         return SCIP_INVALIDCALL;
+      }
+
+      SCIPwarningMessage(scip, "Symmetry handling has been deactivated since it is not compatible with couting.\n");
+      SCIPwarningMessage(scip, "=> counting forces parameter <misc/usesymmetry> to 0.\n");
+
+      SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
+   }
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1873,6 +1895,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int displaysols;
    int displayfeasST;
    int nrestarts;
+   int usesymmetry;
+   SCIP_Bool computesymmetrypresolved;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1890,6 +1914,26 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
       }
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
+   }
+
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "presolving/symmetry/computepresolved", &computesymmetrypresolved) );
+
+   if ( usesymmetry != 0 )
+   {
+      if ( SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING ||
+           (SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE && ! computesymmetrypresolved) )
+      {
+         SCIPerrorMessage("Symmetry handling and solution couting are not compatible. " \
+            "You might want to disable symmetry by setting parameter <misc/usesymmetry> to 0.\n");
+
+         return SCIP_INVALIDCALL;
+      }
+
+      SCIPwarningMessage(scip, "Symmetry handling has been deactivated since it is not compatible with couting.\n");
+      SCIPwarningMessage(scip, "=> counting forces parameter <misc/usesymmetry> to 0.\n");
+
+      SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
    }
 
    switch( SCIPgetStage(scip) )
