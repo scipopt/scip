@@ -1256,6 +1256,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
 /**@} */
 
 
@@ -1954,6 +1978,9 @@ SCIP_RETCODE SCIPlpiClear(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int nrows;
+   int ncols;
+
    assert( lpi != NULL );
    assert( lpi->grbmodel != NULL );
    assert( lpi->grbenv != NULL );
@@ -1962,9 +1989,23 @@ SCIP_RETCODE SCIPlpiClear(
 
    invalidateSolution(lpi);
 
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   if ( nrows >= 1 )
+   {
+      SCIP_CALL( SCIPlpiDelRows(lpi, 0, nrows-1) );
+   }
+   if ( ncols >= 1 )
+   {
+      SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols-1) );
+   }
+
+#if 0
    CHECK_ZERO( lpi->messagehdlr, GRBfreemodel(lpi->grbmodel) );
    CHECK_ZERO( lpi->messagehdlr, GRBnewmodel(lpi->grbenv, &(lpi->grbmodel), "", 0, NULL, NULL, NULL, NULL, NULL) );
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+#endif
 
    /* clear ranged row info */
    clearRangeInfo(lpi);
@@ -5302,8 +5343,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_SCALEFLAG, &temp) );
-      assert(temp >= 0 && temp <= 2);
-      *ival = temp;
+      assert(temp >= -1 && temp <= 3);
+      if ( temp == 0 )
+         *ival = 0;
+      else
+         *ival = 1;
       break;
    case SCIP_LPPAR_PRESOLVING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &temp) );
@@ -5355,8 +5399,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      assert(ival >= 0 && ival <= 2);
-      SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, ival) );
+      assert(ival >= 0 && ival <= 1);
+      if ( ival == 0 )
+         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, 0) );
+      else
+         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, -1) );
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
@@ -5546,7 +5593,10 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
-   CHECK_ZERO( lpi->messagehdlr, GRBread(lpi->grbmodel, fname) );
+   CHECK_ZERO( lpi->messagehdlr, GRBreadmodel(lpi->grbenv, fname, &lpi->grbmodel) );
+
+   /* the model name seems to be empty, use filename */
+   CHECK_ZERO( lpi->messagehdlr, GRBsetstrattr(lpi->grbmodel, GRB_STR_ATTR_MODELNAME, fname) );
 
    return SCIP_OKAY;
 }
