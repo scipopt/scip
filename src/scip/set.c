@@ -222,6 +222,7 @@
 #define SCIP_DEFAULT_LP_CONDITIONLIMIT     -1.0 /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
 #define SCIP_DEFAULT_LP_CHECKPRIMFEAS      TRUE /**< should LP solutions be checked for primal feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKDUALFEAS      TRUE /**< should LP solutions be checked for dual feasibility to resolve LP at numerical troubles? */
+#define SCIP_DEFAULT_LP_CHECKFARKAS        TRUE /**< should infeasibility proofs from the LP be checked? */
 #define SCIP_DEFAULT_LP_FASTMIP               1 /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING               1 /**< LP scaling (0: none, 1: normal, 2: aggressive) */
 #define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
@@ -1670,6 +1671,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/checkdualfeas",
          "should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur?",
          &(*set)->lp_checkdualfeas, TRUE, SCIP_DEFAULT_LP_CHECKDUALFEAS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "lp/checkfarkas",
+         "should infeasibility proofs from the LP be checked?",
+         &(*set)->lp_checkfarkas, TRUE, SCIP_DEFAULT_LP_CHECKFARKAS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/fastmip",
