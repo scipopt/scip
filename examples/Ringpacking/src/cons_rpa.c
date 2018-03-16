@@ -146,7 +146,7 @@ SCIP_RETCODE verifyCircularPattern(
    /* verify heuristically */
    SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilim", &heurtimelimit) );
    SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlim", &heuriterlimit) );
-   heurtimelimit = MIN3(conshdlrdata->timeleft, timelimit - SCIPgetSolvingTime(scip), heurtimelimit); /*lint !e666*/
+   heurtimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), heurtimelimit); /*lint !e666*/
 
    SCIPdebugMsg(scip, "call verification heuristic (%g,%d)\n", heurtimelimit, heuriterlimit);
    conshdlrdata->timeleft += SCIPgetSolvingTime(scip);

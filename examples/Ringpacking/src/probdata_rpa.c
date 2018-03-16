@@ -629,7 +629,7 @@ SCIP_RETCODE enumeratePatterns(
           */
 
          /* compute time limit */
-         timelim = MIN3(probdata->timeleft, heurtilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
+         timelim = MIN(heurtilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
 
          /* verify pattern */
          probdata->timeleft += SCIPgetTotalTime(scip);

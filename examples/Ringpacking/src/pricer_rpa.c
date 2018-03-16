@@ -800,7 +800,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/pricing/heuriterlim", &heuriterlim) );
 
    /* solve pricing problem with heuristic */
-   heurtilim = MIN3(pricerdata->timeleft, heurtilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+   heurtilim = MIN(heurtilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
    pricerdata->timeleft += SCIPgetSolvingTime(scip);
    SCIP_CALL( solvePricingHeuristic(scip, probdata, pricerdata, lambdas, heurtilim, heuriterlim, &success) );
    pricerdata->timeleft -= SCIPgetSolvingTime(scip);
