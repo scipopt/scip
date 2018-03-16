@@ -1366,6 +1366,7 @@ SCIP_RETCODE SCIPlpGetPrimalRay(
  *
  *  @note the check will not be performed if @p valid is NULL.
  */
+extern
 SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */

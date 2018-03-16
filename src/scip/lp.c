@@ -14594,6 +14594,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_Real* farkascoefs;
    SCIP_Real farkaslhs;
    SCIP_Real maxactivity;
+   SCIP_Bool checkfarkas;
    int nlpicols;
    int nlpirows;
    int c;
@@ -14619,10 +14620,12 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    maxactivity = 0.0;
    farkaslhs = 0.0;
 
+   checkfarkas = (set->lp_checkfarkas && valid != NULL);
+
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, lp->nlpirows) );
 
-   if( set->lp_checkfarkas && valid != NULL )
+   if( checkfarkas )
    {
       SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, lp->nlpicols) );
       BMSclearMemoryArray(farkascoefs, lp->nlpicols);
@@ -14647,7 +14650,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       lpirows[r]->validactivitylp = -1L;
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
 
-      if( set->lp_checkfarkas && valid != NULL )
+      if( checkfarkas )
       {
          assert(farkascoefs != NULL);
 
@@ -14705,7 +14708,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
 
-      if( set->lp_checkfarkas && valid != NULL )
+      if( checkfarkas )
       {
          assert(farkascoefs != NULL);
          assert(SCIPcolGetLPPos(lpicols[c]) == c);
@@ -14719,7 +14722,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    }
 
    /* check whether the farkasproof is valid */
-   if( set->lp_checkfarkas && valid != NULL && SCIPsetIsSumGE(set, maxactivity, farkaslhs) )
+   if( checkfarkas && SCIPsetIsSumGE(set, maxactivity, farkaslhs) )
    {
       SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f >= lhs=%.12f\n", maxactivity, farkaslhs);
 
@@ -14728,7 +14731,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
 
   TERMINATE:
    /* free temporary memory */
-   if( set->lp_checkfarkas )
+   if( checkfarkas )
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
    SCIPsetFreeBufferArray(set, &dualfarkas);
