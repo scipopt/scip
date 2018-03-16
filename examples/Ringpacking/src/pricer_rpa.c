@@ -764,7 +764,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    int heuriterlim;
    int t;
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_SUCCESS;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
@@ -805,10 +805,6 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_CALL( solvePricingHeuristic(scip, probdata, pricerdata, lambdas, heurtilim, heuriterlim, &success) );
    pricerdata->timeleft -= SCIPgetSolvingTime(scip);
 
-   /* heuristic found an improving column */
-   if( success )
-       *result = SCIP_SUCCESS;
-
    /* solve pricing problem as MINLP if heuristic was not successful and dual bound is still valid */
    if( !success && !SCIPprobdataIsDualboundInvalid(probdata) )
    {
@@ -835,36 +831,6 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
 
       /* updates dual bound that is stored in the problem data */
       SCIPprobdataUpdateDualbound(scip, probdata, *lowerbound);
-
-      /* MINLP found an improving column or it could have been solved to optimality */
-      if( success || solstat == SCIP_STATUS_OPTIMAL )
-         *result = SCIP_SUCCESS;
-   }
-
-   /* check whether the current LP solution can be cutoff by the ringpacking constraint handler; if not then
-    * invalidate the dual bound and set the result to SCIP_SUCCESS
-    */
-   if( *result == SCIP_DIDNOTRUN )
-   {
-      SCIP_PATTERN** cpatterns;
-      SCIP_VAR** cvars;
-      int ncpatterns;
-      int i;
-
-      SCIPprobdataGetCInfos(probdata, &cpatterns, &cvars, &ncpatterns);
-
-      for( i = 0; i < ncpatterns; ++i )
-      {
-         if( SCIPpatternGetPackableStatus(cpatterns[i]) == SCIP_PACKABLE_UNKNOWN
-            && !SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, cvars[i])) )
-            break;
-      }
-
-      if( i == ncpatterns )
-      {
-         SCIPprobdataInvalidateDualbound(scip, probdata);
-         *result = SCIP_SUCCESS;
-      }
    }
 
    /* free memory */
