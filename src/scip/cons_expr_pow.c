@@ -339,6 +339,8 @@ void estimateHyperbolaPositive(
    assert(exponent < 0.0);
    assert(EPSISINT(exponent/2.0, 0.0) || xlb >= 0.0);
 
+   *success = FALSE;
+
    if( !overestimate )
    {
       if( xlb >= 0.0 || xub <= 0.0 )
@@ -384,6 +386,7 @@ void estimateHyperbolaPositive(
             {
                /* underestimator is constant 0, but, wow, that is globally valid */
                *constant = 0.0;
+               *slope = 0.0;
                *islocal = FALSE;
                *success = TRUE;
                return;
@@ -411,7 +414,6 @@ void estimateHyperbolaPositive(
       *islocal = TRUE;
    }
 
-   *success = FALSE;
 }
 
 /** Separation for mixed-sign hyperbola

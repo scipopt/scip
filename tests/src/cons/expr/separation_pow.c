@@ -196,6 +196,80 @@ Test(estimation, parabola, .description = "test computation of parabola estimato
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+/* test estimateHyperbolaPositive */
+Test(estimation, hyperbolaPositive, .description = "test computation of estimators for positive hyperbola")
+{
+   SCIP_Real constant;
+   SCIP_Real slope;
+   SCIP_Real xref;
+   SCIP_Bool islocal;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* x^(-2) on [-infty,+infty] */
+   success = FALSE;
+   constant = slope = 5.0;
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -SCIPinfinity(scip), SCIPinfinity(scip), -0.5, &constant, &slope, &islocal, &success);
+   cr_assert(success); /* underestimator == 0 */
+   cr_assert(!islocal);
+   cr_assert_eq(constant, 0.0);
+   cr_assert_eq(slope, 0.0);
+
+   /* x^(-2) on [-infty,1.0] */
+   success = TRUE;
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -SCIPinfinity(scip), 1.0, -0.5, &constant, &slope, &islocal, &success);
+   cr_assert(!success); /* underestimator not implemented yet */
+
+   /* x^(-2) on [-1.0,infty] */
+   success = TRUE;
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -1.0, SCIPinfinity(scip), -0.5, &constant, &slope, &islocal, &success);
+   cr_assert(!success); /* underestimator not implemented yet */
+
+   /* x^(-2) on [-1,1] */
+   success = TRUE;
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -1.0, 1.0, -0.5, &constant, &slope, &islocal, &success);
+   cr_assert(!success); /* underestimator not implemented yet */
+
+   success = TRUE;
+   estimateHyperbolaPositive(scip, -2.0, TRUE, -1.0, 1.0, -0.5, &constant, &slope, &islocal, &success);
+   cr_assert(!success); /* overestimator does not exist (or equals infty) */
+
+   /* x^(-2) on [-2,-1] -> underestimator = tangent, overestimator = secant */
+   success = FALSE;
+   xref = -1.5;
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(!islocal);
+   cr_assert(SCIPisEQ(scip, slope, -2.0 * pow(xref, -3.0)));  /* exponent * xref^(exponent-1) */
+   cr_assert(SCIPisEQ(scip, constant, pow(xref, -2.0) - slope * xref));
+
+   success = FALSE;
+   estimateHyperbolaPositive(scip, -2.0, TRUE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(islocal);
+   cr_assert(SCIPisEQ(scip, slope, (pow(-1.0, -2.0) - pow(-2.0, -2.0))));
+   cr_assert(SCIPisEQ(scip, constant, pow(-2.0, -2.0) - slope * (-2.0)));
+
+   /* x^(-2) on [1, 2] -> underestimator = tangent, overestimator = secant */
+   success = FALSE;
+   xref = 1.5;
+   estimateHyperbolaPositive(scip, -2.0, FALSE, 1.0, 2.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(!islocal);
+   cr_assert(SCIPisEQ(scip, slope, -2.0 * pow(xref, -3.0)));  /* exponent * xref^(exponent-1) */
+   cr_assert(SCIPisEQ(scip, constant, pow(xref, -2.0) - slope * xref));
+
+   success = FALSE;
+   estimateHyperbolaPositive(scip, -2.0, TRUE, 1.0, 2.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(islocal);
+   cr_assert(SCIPisEQ(scip, slope, -0.75));  /* (2^(-2) - 1^(-2)) / (2-1) */
+   cr_assert(SCIPisEQ(scip, constant, 1.75)); /* 1^(-2) - slope * 1 */
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
+
 Test(separation, convexsquare, .init = setup, .fini = teardown,
    .description = "test separation for a convex square expression"
    )
