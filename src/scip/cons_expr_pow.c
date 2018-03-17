@@ -42,14 +42,104 @@
  * Data structures
  */
 
+#define SIGNPOW_ROOTS_KNOWN 10                  /**< up to which (integer) exponents precomputed roots have been stored */
+
+/** The positive root of the polynomial (n-1) y^n + n y^(n-1) - 1 is needed in separation.
+ *  Here we store these roots for small integer values of n.
+ */
+static
+SCIP_Real signpow_roots[SIGNPOW_ROOTS_KNOWN+1] = {
+   -1.0,                     /* no root for n=0 */
+   -1.0,                     /* no root for n=1 */
+   0.41421356237309504880,   /* root for n=2 (-1+sqrt(2)) */
+   0.5,                      /* root for n=3 */
+   0.56042566045031785945,   /* root for n=4 */
+   0.60582958618826802099,   /* root for n=5 */
+   0.64146546982884663257,   /* root for n=6 */
+   0.67033204760309682774,   /* root for n=7 */
+   0.69428385661425826738,   /* root for n=8 */
+   0.71453772716733489700,   /* root for n=9 */
+   0.73192937842370733350    /* root for n=10 */
+};
+
+
 struct SCIP_ConsExpr_ExprData
 {
    SCIP_Real  exponent;     /**< exponent */
+   SCIP_Real  root;         /**< root for signpower, or SCIP_INVALID if not signpower */
 };
 
 /*
  * Local methods
  */
+
+/** computes positive root of the polynomial (n-1) y^n + n y^(n-1) - 1 for n > 1 */
+static
+SCIP_RETCODE computeSignpowerRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            root,               /**< buffer where to store computed root */
+   SCIP_Real             exponent            /**< exponent n */
+   )
+{
+   SCIP_Real polyval;
+   SCIP_Real gradval;
+   int iter;
+
+   assert(scip != NULL);
+   assert(exponent > 1.0);
+   assert(root != NULL);
+
+   /* lookup for popular integer exponent */
+   if( SCIPisIntegral(scip, exponent) && exponent-0.5 < SIGNPOW_ROOTS_KNOWN )
+   {
+      *root = signpow_roots[(int)SCIPfloor(scip, exponent+0.5)];
+      return SCIP_OKAY;
+   }
+
+   /* loopup for weymouth exponent */
+   if( SCIPisEQ(scip, exponent, 1.852) )
+   {
+      *root = 0.398217;
+      return SCIP_OKAY;
+   }
+
+   /* search for a positive root of (n-1) y^n + n y^(n-1) - 1
+    * use the closest precomputed root as starting value
+    */
+   if( exponent >= SIGNPOW_ROOTS_KNOWN )
+      *root = signpow_roots[SIGNPOW_ROOTS_KNOWN];
+   else if( exponent <= 2.0 )
+      *root = signpow_roots[2];
+   else
+      *root = signpow_roots[(int)SCIPfloor(scip, exponent)];
+
+   for(iter = 0; iter < 1000; ++iter )
+   {
+      polyval = (exponent - 1.0) * pow(*root, exponent) + exponent * pow(*root, exponent - 1.0) - 1.0;
+      if( SCIPisZero(scip, polyval) )
+         break;
+
+      /* gradient of (n-1) y^n + n y^(n-1) - 1 is n(n-1)y^(n-1) + n(n-1)y^(n-2) */
+      gradval = (exponent - 1.0) * exponent * (pow(*root, exponent - 1.0) + pow(*root, exponent - 2.0));
+      if( SCIPisZero(scip, gradval) )
+         break;
+
+      /* update root by adding -polyval/gradval (Newton's method) */
+      *root -= polyval / gradval;
+      if( *root < 0.0 )
+         *root = 0.0;
+   }
+
+   if( !SCIPisZero(scip, polyval) )
+   {
+      SCIPerrorMessage("failed to compute root for exponent %g\n", exponent);
+      return SCIP_ERROR;
+   }
+   SCIPdebugMsg(scip, "root for %g is %.20g, certainty = %g\n", exponent, *root, polyval);
+   /* @todo cache root value for other expressions (an exponent seldom comes alone)?? (they are actually really fast to compute...) */
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_RETCODE createData(
@@ -63,6 +153,7 @@ SCIP_RETCODE createData(
    SCIP_CALL( SCIPallocBlockMemory(scip, exprdata) );
 
    (*exprdata)->exponent = exponent;
+   (*exprdata)->root = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -236,6 +327,7 @@ void estimateParabola(
  *
  * - odd positive powers, x^3, x^5, x^7
  * - sign(x)|x|^n for n > 1
+ * - not x >= 0
 
   100 +--------------------------------------------------------------------+
       |                +                 +                +              **|
@@ -265,10 +357,13 @@ static
 void estimateSignpower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             exponent,           /**< exponent */
+   SCIP_Real             root,               /**< positive root of the polynomial (n-1) y^n + n y^(n-1) - 1, if xubglobal > 0 */
    SCIP_Bool             overestimate,       /**< should the power be overestimated? */
-   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xlb,                /**< lower bound on x, assumed to be non-positive */
    SCIP_Real             xub,                /**< upper bound on x */
    SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real             xlbglobal,          /**< global lower bound on x */
+   SCIP_Real             xubglobal,          /**< global upper bound on x */
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
@@ -282,10 +377,76 @@ void estimateSignpower(
    assert(success != NULL);
    /* assert((exponent >= 3.0 && EPSISINT((exponent-1.0)/2.0, 0.0)) || exponent > 1.0); <-> exponent > 1.0 */
    assert(exponent >= 1.0);
-
-   /* TODO */
+   assert(xlb < 0.0); /* otherwise estimateParabola should have been called */
+   assert(xubglobal <= 0.0 || (root > 0.0 && root < 1.0));
 
    *success = FALSE;
+
+   /* TODO estimateSecant and estimateTangent do not know if we are a real signpower (not just an odd power) */
+
+   if( xub <= 0.0 )
+   {
+      /* easy case */
+      if( !overestimate )
+      {
+         /* underestimator is secant */
+         estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+         *islocal = TRUE;
+      }
+      else
+      {
+         /* overestimator is tangent */
+         estimateTangent(scip, exponent, xref, constant, slope, success);
+
+         /* if global upper bound is > 0, then the tangent is only valid locally if the reference point is right of -root*xubglobal */
+         *islocal = !SCIPisPositive(scip, xubglobal) || xref > -root * xubglobal;
+      }
+   }
+   else
+   {
+      SCIP_Real c;
+
+      if( !overestimate )
+      {
+         /* compute the special point which decides between secant and tangent */
+         c = -xlb * root;
+
+         if( xref < c )
+         {
+            /* underestimator is secant between xlb and c */
+            estimateSecant(scip, exponent, xlb, c, constant, slope, success);
+            *islocal = TRUE;
+         }
+         else
+         {
+            /* underestimator is tangent */
+            estimateTangent(scip, exponent, xref, constant, slope, success);
+
+            /* if reference point is left of -root*xlbglobal (c w.r.t. global bounds), then tangent is not valid w.r.t. global bounds */
+            *islocal = xref < -root * xlbglobal;
+         }
+      }
+      else
+      {
+         /* compute the special point which decides between secant and tangent */
+         c = -xub * root;
+
+         if( xref <= c )
+         {
+            /* overestimator is tangent */
+            estimateTangent(scip, exponent, xref, constant, slope, success);
+
+            /* if reference point is right of -root*xubglobal (c w.r.t. global bounds), then tangent is not valid w.r.t. global bounds */
+            *islocal = xref > -root * xubglobal;
+         }
+         else
+         {
+            /* overestimator is secant */
+            estimateSecant(scip, exponent, c, xub, constant, slope, success);
+            *islocal = TRUE;
+         }
+      }
+   }
 }
 
 /** Separation for positive hyperbola
@@ -593,6 +754,7 @@ SCIP_RETCODE separatePointPow(
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_CONSEXPR_EXPR* child;
    SCIP_ROWPREP* rowprep;
    SCIP_VAR* auxvar;
@@ -616,7 +778,8 @@ SCIP_RETCODE separatePointPow(
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(cut != NULL);
 
-   exponent = SCIPgetConsExprExprPowExponent(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
+   exponent = exprdata->exponent;
    assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
 
    isinteger = EPSISINT(exponent, 0.0);
@@ -676,11 +839,17 @@ SCIP_RETCODE separatePointPow(
    }
    else if( exponent > 1.0 && childlb >= 0.0 )
    {
+      /* FIXME tangents on parabola are only globally valid of global lower bound is also >= 0.0 (thus not signpower) */
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
    }
-   else if( exponent > 1.0 )
+   else if( exponent > 1.0 )  /* and !iseven && childlb < 0.0 due to previous if */
    {
-      estimateSignpower(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
+      /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
+      if( exprdata->root == SCIP_INVALID && SCIPvarGetUbGlobal(childvar) > 0.0 )
+      {
+         SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
+      }
+      estimateSignpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &linconstant, &lincoef, &islocal, &success);
    }
    else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
    {
