@@ -209,6 +209,7 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
 
    /* x^(-2) on [-infty,+infty] */
    success = FALSE;
+   islocal = TRUE;
    constant = slope = 5.0;
    estimateHyperbolaPositive(scip, -2.0, FALSE, -SCIPinfinity(scip), SCIPinfinity(scip), -0.5, &constant, &slope, &islocal, &success);
    cr_assert(success); /* underestimator == 0 */
@@ -237,6 +238,7 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
 
    /* x^(-2) on [-2,-1] -> underestimator = tangent, overestimator = secant */
    success = FALSE;
+   islocal = TRUE;
    xref = -1.5;
    estimateHyperbolaPositive(scip, -2.0, FALSE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success);
@@ -245,6 +247,7 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
    cr_assert(SCIPisEQ(scip, constant, pow(xref, -2.0) - slope * xref));
 
    success = FALSE;
+   islocal = FALSE;
    estimateHyperbolaPositive(scip, -2.0, TRUE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(islocal);
@@ -253,6 +256,7 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
 
    /* x^(-2) on [1, 2] -> underestimator = tangent, overestimator = secant */
    success = FALSE;
+   islocal = TRUE;
    xref = 1.5;
    estimateHyperbolaPositive(scip, -2.0, FALSE, 1.0, 2.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success);
@@ -261,6 +265,7 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
    cr_assert(SCIPisEQ(scip, constant, pow(xref, -2.0) - slope * xref));
 
    success = FALSE;
+   islocal = FALSE;
    estimateHyperbolaPositive(scip, -2.0, TRUE, 1.0, 2.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(islocal);
@@ -297,6 +302,7 @@ Test(estimation, hyperbolaMixed, .description = "test computation of estimators 
    cr_assert(!success); /*  */
 
    success = FALSE;
+   islocal = TRUE;
    constant = slope = 5.0;
    estimateHyperbolaMixed(scip, -3.0, TRUE, -1.0, 0.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success);
@@ -306,6 +312,7 @@ Test(estimation, hyperbolaMixed, .description = "test computation of estimators 
 
    /* x^(-3) on [-2.0,-1.0] -> underestimator is secant */
    success = FALSE;
+   islocal = FALSE;
    constant = slope = 5.0;
    estimateHyperbolaMixed(scip, -3.0, FALSE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success); /* underestimator does not exist (upper bound is pole) */
@@ -348,6 +355,7 @@ Test(estimation, root, .description = "test computation of estimators for roots 
    cr_assert(SCIPisEQ(scip, constant, 0.0));
 
    success = FALSE;
+   islocal = TRUE;
    estimateRoot(scip, 0.25, TRUE, 0.0, 16.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(!islocal);
@@ -356,6 +364,7 @@ Test(estimation, root, .description = "test computation of estimators for roots 
 
    /* if reference point at 0.0, then tangent will still be computed, but it will not touch at 0.0 */
    success = FALSE;
+   islocal = TRUE;
    estimateRoot(scip, 0.25, TRUE, 0.0, 16.0, 0.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(!islocal);
