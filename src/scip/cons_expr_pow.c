@@ -99,7 +99,7 @@ SCIP_RETCODE computeSignpowerRoot(
    /* loopup for weymouth exponent */
    if( SCIPisEQ(scip, exponent, 1.852) )
    {
-      *root = 0.398217;
+      *root = 0.39821689389382575186;
       return SCIP_OKAY;
    }
 
@@ -116,7 +116,7 @@ SCIP_RETCODE computeSignpowerRoot(
    for(iter = 0; iter < 1000; ++iter )
    {
       polyval = (exponent - 1.0) * pow(*root, exponent) + exponent * pow(*root, exponent - 1.0) - 1.0;
-      if( SCIPisZero(scip, polyval) )
+      if( SCIPisZero(scip, polyval) && polyval < 1e-12 )
          break;
 
       /* gradient of (n-1) y^n + n y^(n-1) - 1 is n(n-1)y^(n-1) + n(n-1)y^(n-2) */

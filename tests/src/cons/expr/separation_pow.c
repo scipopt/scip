@@ -196,7 +196,44 @@ Test(estimation, parabola, .description = "test computation of parabola estimato
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-/* TODO test computeSignpowerRoot */
+/* test computeSignpowerRoot */
+Test(estimation, signpower_root, .description = "test calculation of roots for signpower estimators")
+{
+   SCIP_Real exponent;
+   SCIP_Real root;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* try integer exponents, inclues lookup table */
+   for( exponent = 2.0; exponent < 20.0; exponent += 1.0 )
+   {
+      SCIP_CALL( computeSignpowerRoot(scip, &root, exponent) );
+      cr_assert(root > 0.0);
+      cr_assert(root < 1.0);
+      /* check that root is a root of (n-1) y^n + n y^(n-1) - 1 */
+      cr_assert(SCIPisEQ(scip, (exponent-1) * pow(root, exponent) + exponent * pow(root, exponent - 1.0), 1.0));
+   }
+
+   /* try some rational exponents and also bigger ones (for exponent 95, Newton fails, but that is crazy anyway) */
+   for( exponent = 1.1; exponent < 70.0; exponent *= 1.5 )
+   {
+      SCIP_CALL( computeSignpowerRoot(scip, &root, exponent) );
+      cr_assert(root > 0.0);
+      cr_assert(root < 1.0);
+      /* check that root is a root of (n-1) y^n + n y^(n-1) - 1 */
+      cr_assert(SCIPisEQ(scip, (exponent-1) * pow(root, exponent) + exponent * pow(root, exponent - 1.0), 1.0));
+   }
+
+   /* try a special rational exponent (has a lookup) */
+   exponent = 1.852;
+   SCIP_CALL( computeSignpowerRoot(scip, &root, exponent) );
+   cr_assert(root > 0.0);
+   cr_assert(root < 1.0);
+   /* check that root is a root of (n-1) y^n + n y^(n-1) - 1 */
+   cr_assert(SCIPisEQ(scip, (exponent-1) * pow(root, exponent) + exponent * pow(root, exponent - 1.0), 1.0));
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
 
 /* test estimateSignpower */
 Test(estimation, signpower, .description = "test computation of signpower estimators")
