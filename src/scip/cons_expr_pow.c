@@ -325,6 +325,8 @@ void estimateHyperbolaPositive(
    SCIP_Real             xlb,                /**< lower bound on x */
    SCIP_Real             xub,                /**< upper bound on x */
    SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real             xlbglobal,          /**< global lower bound on x */
+   SCIP_Real             xubglobal,          /**< global upper bound on x */
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
@@ -375,7 +377,8 @@ void estimateHyperbolaPositive(
          }
 
          estimateTangent(scip, exponent, xref, constant, slope, success);
-         *islocal = FALSE;  /* FIXME this is only true if x has fixed sign globally */
+         /* if x does not have a fixed sign globally, then our tangent is not globally valid (power is not convex on global domain) */
+         *islocal = xlbglobal * xubglobal < 0.0;
       }
       else
       {
@@ -393,7 +396,7 @@ void estimateHyperbolaPositive(
             }
 
             /* switch sign of x (mirror on ordinate) to make left bound finite and use its estimator */
-            estimateHyperbolaPositive(scip, exponent, overestimate, -xub, -xlb, -xref, constant, slope, islocal, success);
+            estimateHyperbolaPositive(scip, exponent, overestimate, -xub, -xlb, -xref, -xubglobal, -xlbglobal, constant, slope, islocal, success);
             if( *success )
                *slope = -*slope;
          }
@@ -452,6 +455,8 @@ void estimateHyperbolaMixed(
    SCIP_Real             xlb,                /**< lower bound on x */
    SCIP_Real             xub,                /**< upper bound on x */
    SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real             xlbglobal,          /**< global lower bound on x */
+   SCIP_Real             xubglobal,          /**< global upper bound on x */
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
@@ -494,7 +499,8 @@ void estimateHyperbolaMixed(
          }
 
          estimateTangent(scip, exponent, xref, constant, slope, success);
-         *islocal = FALSE; /* FIXME this is only true if xub <= 0.0 globally */
+         /* if x does not have a fixed sign globally, then our tangent is not globally valid (power is not convex on global domain) */
+         *islocal = xlbglobal * xubglobal < 0.0;
       }
    }
    /* else: x has mixed sign -> pole is within domain -> cannot estimate */
@@ -678,7 +684,7 @@ SCIP_RETCODE separatePointPow(
    }
    else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
    {
-      estimateHyperbolaPositive(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
+      estimateHyperbolaPositive(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &linconstant, &lincoef, &islocal, &success);
    }
    else if( exponent < 0.0 )
    {
@@ -686,7 +692,7 @@ SCIP_RETCODE separatePointPow(
       assert(childlb < 0.0); /* should hold due to previous if */
       assert(isinteger); /* should hold because childlb < 0.0 (same as assert above) */
 
-      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
+      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &linconstant, &lincoef, &islocal, &success);
    }
    else
    {

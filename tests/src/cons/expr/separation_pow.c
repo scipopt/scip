@@ -211,7 +211,7 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
    success = FALSE;
    islocal = TRUE;
    constant = slope = 5.0;
-   estimateHyperbolaPositive(scip, -2.0, FALSE, -SCIPinfinity(scip), SCIPinfinity(scip), -0.5, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -SCIPinfinity(scip), SCIPinfinity(scip), -0.5, -SCIPinfinity(scip), SCIPinfinity(scip), &constant, &slope, &islocal, &success);
    cr_assert(success); /* underestimator == 0 */
    cr_assert(!islocal);
    cr_assert_eq(constant, 0.0);
@@ -219,36 +219,41 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
 
    /* x^(-2) on [-infty,1.0] */
    success = TRUE;
-   estimateHyperbolaPositive(scip, -2.0, FALSE, -SCIPinfinity(scip), 1.0, -0.5, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -SCIPinfinity(scip), 1.0, -0.5, -SCIPinfinity(scip), 1.0, &constant, &slope, &islocal, &success);
    cr_assert(!success); /* underestimator not implemented yet */
 
    /* x^(-2) on [-1.0,infty] */
    success = TRUE;
-   estimateHyperbolaPositive(scip, -2.0, FALSE, -1.0, SCIPinfinity(scip), -0.5, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -1.0, SCIPinfinity(scip), -0.5, -1.0, SCIPinfinity(scip), &constant, &slope, &islocal, &success);
    cr_assert(!success); /* underestimator not implemented yet */
 
    /* x^(-2) on [-1,1] */
    success = TRUE;
-   estimateHyperbolaPositive(scip, -2.0, FALSE, -1.0, 1.0, -0.5, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -1.0, 1.0, -0.5, -1.0, 1.0, &constant, &slope, &islocal, &success);
    cr_assert(!success); /* underestimator not implemented yet */
 
    success = TRUE;
-   estimateHyperbolaPositive(scip, -2.0, TRUE, -1.0, 1.0, -0.5, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, TRUE, -1.0, 1.0, -0.5, -1.0, 1.0, &constant, &slope, &islocal, &success);
    cr_assert(!success); /* overestimator does not exist (or equals infty) */
 
    /* x^(-2) on [-2,-1] -> underestimator = tangent, overestimator = secant */
    success = FALSE;
    islocal = TRUE;
    xref = -1.5;
-   estimateHyperbolaPositive(scip, -2.0, FALSE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -2.0, -1.0, xref, -2.0, -1.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(!islocal);
    cr_assert(SCIPisEQ(scip, slope, -2.0 * pow(xref, -3.0)));  /* exponent * xref^(exponent-1) */
    cr_assert(SCIPisEQ(scip, constant, pow(xref, -2.0) - slope * xref));
 
    success = FALSE;
+   estimateHyperbolaPositive(scip, -2.0, FALSE, -2.0, -1.0, xref, -2.0, 2.0, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(islocal);  /* if global domain is [-2,2], then the tangent is not globally valid */
+
+   success = FALSE;
    islocal = FALSE;
-   estimateHyperbolaPositive(scip, -2.0, TRUE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, TRUE, -2.0, -1.0, xref, -2.0, -1.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(islocal);
    cr_assert(SCIPisEQ(scip, slope, (pow(-1.0, -2.0) - pow(-2.0, -2.0))));
@@ -258,15 +263,20 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
    success = FALSE;
    islocal = TRUE;
    xref = 1.5;
-   estimateHyperbolaPositive(scip, -2.0, FALSE, 1.0, 2.0, xref, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, FALSE, 1.0, 2.0, xref, 1.0, 2.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(!islocal);
    cr_assert(SCIPisEQ(scip, slope, -2.0 * pow(xref, -3.0)));  /* exponent * xref^(exponent-1) */
    cr_assert(SCIPisEQ(scip, constant, pow(xref, -2.0) - slope * xref));
 
    success = FALSE;
+   estimateHyperbolaPositive(scip, -2.0, FALSE, 1.0, 2.0, xref, -1.0, 2.0, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(islocal);  /* if global domain is [-1,2], then tangent is not globall valid */
+
+   success = FALSE;
    islocal = FALSE;
-   estimateHyperbolaPositive(scip, -2.0, TRUE, 1.0, 2.0, xref, &constant, &slope, &islocal, &success);
+   estimateHyperbolaPositive(scip, -2.0, TRUE, 1.0, 2.0, xref, 1.0, 2.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(islocal);
    cr_assert(SCIPisEQ(scip, slope, -0.75));  /* (2^(-2) - 1^(-2)) / (2-1) */
@@ -288,40 +298,45 @@ Test(estimation, hyperbolaMixed, .description = "test computation of estimators 
 
    /* x^(-3) on [-1.0,1.0] */
    success = TRUE;
-   estimateHyperbolaMixed(scip, -3.0, FALSE, -1.0, 1.0, -0.5, &constant, &slope, &islocal, &success);
+   estimateHyperbolaMixed(scip, -3.0, FALSE, -1.0, 1.0, -0.5, -1.0, 1.0, &constant, &slope, &islocal, &success);
    cr_assert(!success); /* underestimator does not exist (pole in domain) */
 
    success = TRUE;
-   estimateHyperbolaMixed(scip, -3.0, TRUE, -1.0, 1.0, -0.5, &constant, &slope, &islocal, &success);
+   estimateHyperbolaMixed(scip, -3.0, TRUE, -1.0, 1.0, -0.5, -1.0, 1.0, &constant, &slope, &islocal, &success);
    cr_assert(!success); /* overestimator does not exist (pole in domain) */
 
    /* x^(-3) on [-1.0,0.0] -> underestimator does not exist (upper bound is pole); overestimator is tangent */
    success = TRUE;
    xref = -0.5;
-   estimateHyperbolaMixed(scip, -3.0, FALSE, -1.0, 0.0, xref, &constant, &slope, &islocal, &success);
+   estimateHyperbolaMixed(scip, -3.0, FALSE, -1.0, 0.0, xref, -1.0, 0.0, &constant, &slope, &islocal, &success);
    cr_assert(!success); /*  */
 
    success = FALSE;
    islocal = TRUE;
    constant = slope = 5.0;
-   estimateHyperbolaMixed(scip, -3.0, TRUE, -1.0, 0.0, xref, &constant, &slope, &islocal, &success);
+   estimateHyperbolaMixed(scip, -3.0, TRUE, -1.0, 0.0, xref, -1.0, 0.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(!islocal);
    cr_assert(SCIPisEQ(scip, slope, -3.0 * pow(xref, -4.0)));
    cr_assert(SCIPisEQ(scip, constant, pow(xref, -3.0) - slope * xref));
 
+   success = FALSE;
+   estimateHyperbolaMixed(scip, -3.0, TRUE, -1.0, 0.0, xref, -1.0, 1.0, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(islocal);  /* if global domain is [-1,1], then tangent is not globally valid */
+
    /* x^(-3) on [-2.0,-1.0] -> underestimator is secant */
    success = FALSE;
    islocal = FALSE;
    constant = slope = 5.0;
-   estimateHyperbolaMixed(scip, -3.0, FALSE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
+   estimateHyperbolaMixed(scip, -3.0, FALSE, -2.0, -1.0, xref, -2.0, 0.0, &constant, &slope, &islocal, &success);
    cr_assert(success); /* underestimator does not exist (upper bound is pole) */
    cr_assert(islocal);
    cr_assert(SCIPisEQ(scip, slope, -1.0 - pow(-2.0, -3.0)));
    cr_assert(SCIPisEQ(scip, constant, pow(-2.0, -3.0) - slope * (-2.0)));
 
    /* x^(-3) on [-infty,-1.0] -> underestimator does not exist */
-   estimateHyperbolaMixed(scip, -3.0, FALSE, -SCIPinfinity(scip), -1.0, xref, &constant, &slope, &islocal, &success);
+   estimateHyperbolaMixed(scip, -3.0, FALSE, -SCIPinfinity(scip), -1.0, xref, -SCIPinfinity(scip), -1.0, &constant, &slope, &islocal, &success);
    cr_assert(!success);
 
    SCIP_CALL( SCIPfree(&scip) );
