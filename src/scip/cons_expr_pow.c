@@ -142,7 +142,7 @@ void estimateSecant(
    if( !SCIPisFinite(lbval) )
       return;
 
-   if( xlb == -xub )
+   if( xlb == -xub && EPSISINT(exponent / 2.0, 0.0) )
    {
       *slope = 0.0;
       *constant = lbval;

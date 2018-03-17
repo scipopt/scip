@@ -70,6 +70,54 @@ Test(estimation, tangent, .description = "test computation of tangent")
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+/* test estimateSecant */
+Test(estimation, secant, .description = "test computation of secant")
+{
+   SCIP_Real exponent;
+   SCIP_Real constant;
+   SCIP_Real slope;
+   SCIP_Real xlb;
+   SCIP_Real xub;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   for( exponent = -3.0; exponent <= 3.0; exponent += 0.5 )
+   {
+      if( exponent == 0.0 )
+         continue;
+
+      for( xlb = -2.0; xlb <= 2.0; xlb += 1.0 )
+      {
+         for( xub = xlb + 1.0; xub <= 3.0; xub += 1.0 )
+         {
+            /* skip negative lower bound when exponent is fractional */
+            if( xlb < 0.0 && !EPSISINT(exponent, 0.0) )
+               continue;
+
+            success = FALSE;
+            constant = DBL_MAX;
+            slope = DBL_MAX;
+
+            estimateSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
+
+            /* x^p -> xlb^p + (xub^p - xlb^p) / (xub - xlb) * (x - xlb) */
+
+            /* estimateSecant must fail iff xlb or xub is 0 and exponent < 0 (pole at boundary) */
+            cr_assert(success != ((xlb == 0.0 || xub == 0.0) && exponent < 0.0));
+
+            if( success )
+            {
+               cr_assert(SCIPisEQ(scip, slope, (pow(xub, exponent) - pow(xlb, exponent)) / (xub - xlb)));
+               cr_assert(SCIPisEQ(scip, constant, pow(xlb, exponent) - slope * xlb));
+            }
+         }
+      }
+   }
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
+
 
 Test(separation, convexsquare, .init = setup, .fini = teardown,
    .description = "test separation for a convex square expression"
