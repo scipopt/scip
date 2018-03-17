@@ -118,6 +118,60 @@ Test(estimation, secant, .description = "test computation of secant")
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+/* test estimateParabola */
+Test(estimation, parabola, .description = "test computation of parabola estimators")
+{
+   SCIP_Real exponent;
+   SCIP_Real constant;
+   SCIP_Real slope;
+   SCIP_Real xref;
+   SCIP_Real xlb;
+   SCIP_Real xub;
+   SCIP_Bool islocal;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   for( exponent = 1.5; exponent <= 4.0; exponent += 0.5 )
+   {
+      /* if exponent not even, then start at 0 (otherwise not parabola) */
+      for( xref = EPSISINT(exponent/2.0, 0.0) ? -2.0 : 0.0; xref <= 2.0; xref += 1.5 )
+      {
+         success = FALSE;
+         islocal = TRUE;
+         constant = DBL_MAX;
+         slope = DBL_MAX;
+
+         /* check underestimator (-> tangent) */
+         estimateParabola(scip, exponent, FALSE, xref, xref+1.0, xref, &constant, &slope, &islocal, &success);
+
+         cr_assert(success);
+         cr_assert(!islocal);
+         cr_assert(SCIPisEQ(scip, constant + slope * xref, pow(xref, exponent)));  /* should touch in reference point */
+         cr_assert(SCIPisLE(scip, constant + slope * (xref+1.0), pow(xref+1.0, exponent)));  /* should be underestimating in xref+1 */
+
+         /* check overestimator (-> secant) */
+         xlb = xref;
+         for( xub = xlb + 1.0; xub <= xlb + 2.0; xub += 1.0 )
+         {
+            success = FALSE;
+            islocal = FALSE;
+            constant = DBL_MAX;
+            slope = DBL_MAX;
+
+            estimateParabola(scip, exponent, TRUE, xlb, xub, (xlb + xub)/2.0, &constant, &slope, &islocal, &success);
+
+            cr_assert(success);
+            cr_assert(islocal);
+            cr_assert(SCIPisEQ(scip, constant + slope * xlb, pow(xlb, exponent)));  /* should touch at bounds */
+            cr_assert(SCIPisEQ(scip, constant + slope * xub, pow(xub, exponent)));  /* should touch at bounds */
+            cr_assert(SCIPisGE(scip, constant + slope * (xlb + xub)/2.0, pow((xlb + xub)/2.0, exponent)));  /* should be overestimating in middle point */
+         }
+      }
+   }
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
 
 Test(separation, convexsquare, .init = setup, .fini = teardown,
    .description = "test separation for a convex square expression"
