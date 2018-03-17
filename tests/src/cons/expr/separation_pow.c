@@ -115,6 +115,29 @@ Test(estimation, secant, .description = "test computation of secant")
       }
    }
 
+   /* do one more test where cancellation is likely
+    * cancellation when computing slope occurs, e.g., when xub^exponent - xlb^exponent is too small
+    * in double precision, with xlb = 1 and xub = 1 + 2*SCIPepsilon (estimateSecant forbids SCIPisEQ(xlb,xub)), this means
+    *     (1+2*SCIPepsilon)^exponent - 1 < DBL_EPSILON
+    * <-> 1+2*SCIPepsilon < (1+DBL_EPSILON)^(1/exponent)
+    * <-> log(1+2*SCIPepsilon) < 1/exponent * log(1+DBL_EPSILON)
+    * <-> exponent < log(1+DBL_EPSILON) / log(1+2*SCIPepsilon)
+    */
+   xlb = 1.0;
+   xub = 1.0 + 2 * SCIPepsilon(scip);
+   exponent = log(1+DBL_EPSILON) / log(xub) / 2.0;
+   cr_assert(exponent > 0.0);  /* exponent is about 1e-7, so we look at a very very flat power function */
+   cr_assert(xlb < xub);
+
+   /* in double precision, xlb^exponent looks the same as xub^exponent */
+   cr_assert_eq(pow(xlb, exponent), pow(xub, exponent));
+
+   estimateSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
+
+   /* estimateSecant should either fail or produce a positive slope */
+   cr_assert(!success || (slope > 0.0));
+
+
    SCIP_CALL( SCIPfree(&scip) );
 }
 

@@ -155,7 +155,12 @@ void estimateSecant(
       if( !SCIPisFinite(ubval) )
          return;
 
-      /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?) */
+      /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?)
+       * for now, only check that things did not cancel out completely (for parabola and xlb very close to -xub, lbval=ubval is ok, though)
+       */
+      if( lbval == ubval && !(SCIPisEQ(scip, xlb, -xub) && EPSISINT(exponent / 2.0, 0.0)) )
+         return;
+
       *slope = (ubval - lbval) / (xub - xlb);
       *constant = lbval - *slope * xlb;
    }
