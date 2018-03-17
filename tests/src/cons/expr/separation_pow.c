@@ -320,6 +320,54 @@ Test(estimation, hyperbolaMixed, .description = "test computation of estimators 
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+/* test estimateRoot */
+Test(estimation, root, .description = "test computation of estimators for roots (<1)")
+{
+   SCIP_Real constant;
+   SCIP_Real slope;
+   SCIP_Real xref;
+   SCIP_Bool islocal;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* x^0.25 on [0.0,infty] -> underestimator does not exist */
+   success = TRUE;
+   estimateRoot(scip, 0.25, FALSE, 0.0, SCIPinfinity(scip), 0.5, &constant, &slope, &islocal, &success);
+   cr_assert(!success);
+
+   /* x^0.25 on [0.0,16.0] -> underestimator is secant; overestimator is tangent */
+   xref = 4.0;
+   success = FALSE;
+   islocal = FALSE;
+   constant = slope = -5.0;
+   estimateRoot(scip, 0.25, FALSE, 0.0, 16.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(islocal);
+   cr_assert(SCIPisEQ(scip, slope, 2.0/16.0));
+   cr_assert(SCIPisEQ(scip, constant, 0.0));
+
+   success = FALSE;
+   estimateRoot(scip, 0.25, TRUE, 0.0, 16.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(!islocal);
+   cr_assert(SCIPisEQ(scip, slope, 0.25 * pow(xref, -0.75)));
+   cr_assert(SCIPisEQ(scip, constant, pow(xref, 0.25) - slope * xref));
+
+   /* if reference point at 0.0, then tangent will still be computed, but it will not touch at 0.0 */
+   success = FALSE;
+   estimateRoot(scip, 0.25, TRUE, 0.0, 16.0, 0.0, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(!islocal);
+   cr_assert(constant != 0.0);
+
+   /* if reference point at 0.0 and bounds on x are very small, then no estimator is computed */
+   estimateRoot(scip, 0.25, TRUE, 0.0, SCIPepsilon(scip), 0.0, &constant, &slope, &islocal, &success);
+   cr_assert(!success);
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
+
 Test(separation, convexsquare, .init = setup, .fini = teardown,
    .description = "test separation for a convex square expression"
    )
