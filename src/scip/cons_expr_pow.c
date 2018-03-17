@@ -384,7 +384,7 @@ void estimateSignpower(
 
    /* TODO estimateSecant and estimateTangent do not know if we are a real signpower (not just an odd power) */
 
-   if( xub <= 0.0 )
+   if( !SCIPisPositive(scip, xub) )
    {
       /* easy case */
       if( !overestimate )
@@ -399,7 +399,7 @@ void estimateSignpower(
          estimateTangent(scip, exponent, xref, constant, slope, success);
 
          /* if global upper bound is > 0, then the tangent is only valid locally if the reference point is right of -root*xubglobal */
-         *islocal = !SCIPisPositive(scip, xubglobal) || xref > -root * xubglobal;
+         *islocal = SCIPisPositive(scip, xubglobal) && xref > -root * xubglobal;
       }
    }
    else

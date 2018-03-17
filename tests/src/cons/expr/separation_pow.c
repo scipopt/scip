@@ -196,6 +196,119 @@ Test(estimation, parabola, .description = "test computation of parabola estimato
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+/* TODO test computeSignpowerRoot */
+
+/* test estimateSignpower */
+Test(estimation, signpower, .description = "test computation of signpower estimators")
+{
+   SCIP_Real exponent;
+   SCIP_Real root;
+   SCIP_Real constant;
+   SCIP_Real slope;
+   SCIP_Real xref;
+   SCIP_Real xlb;
+   SCIP_Real xub;
+   SCIP_Bool islocal;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   for( exponent = 3.0; exponent <= 5.0; exponent += 2.0 )
+   {
+      /* later I want this loop to also cover even or rational exponents */
+
+      SCIP_CALL( computeSignpowerRoot(scip, &root, exponent) );
+
+      /* on [-10,-5] and [-10,0], we should get secants (underestimator) and tangents (overestimator) */
+      xlb = -10.0;
+      for( xub = -5; xub <= 0.0; xub += 5.0 )
+      {
+         xref = (xlb + xub) / 2.0;
+
+         success = FALSE;
+         islocal = FALSE;
+         slope = constant = -5;
+         estimateSignpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         cr_assert(success);
+         cr_assert(islocal);
+         cr_assert(SCIPisEQ(scip, -pow(-xlb, exponent), constant + slope * xlb));
+         cr_assert(SCIPisEQ(scip, -pow(-xub, exponent), constant + slope * xub));
+
+         success = FALSE;
+         islocal = TRUE;
+         slope = constant = -5;
+         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         cr_assert(success);
+         cr_assert(!islocal);
+         cr_assert(SCIPisEQ(scip, slope, exponent * pow(-xref, exponent - 1.0)));
+         cr_assert(SCIPisEQ(scip, -pow(-xref, exponent), constant + slope * xref));
+
+         /* if global upper bound is small enough (< -xref/root), then overestimator should still be global */
+         success = FALSE;
+         islocal = TRUE;
+         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root / 2.0 , &constant, &slope, &islocal, &success);
+         cr_assert(success);
+         cr_assert(!islocal);
+
+         /* if global upper bound is too large (> -xref/root), then overestimator is only locally valid */
+         success = FALSE;
+         islocal = FALSE;
+         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root * 2.0 , &constant, &slope, &islocal, &success);
+         cr_assert(success);
+         cr_assert(islocal);
+      }
+
+      /* on [-10,10] it gets more interesting */
+      xub = 10.0;
+      for( xref = xlb; xref <= xub; xref += 2.0 )
+      {
+         /* underestimator is secant for xref < -xlb * root, otherwise tangent */
+         success = FALSE;
+         islocal = !(xref < -xlb * root);
+         slope = constant = -5;
+         estimateSignpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         cr_assert(success);
+         if( xref < -xlb * root )
+         {
+            /* expect secant between xlb and -xlb*root */
+            cr_assert(islocal);
+            cr_assert(SCIPisEQ(scip, -pow(-xlb, exponent), constant + slope * xlb));
+            cr_assert(SCIPisEQ(scip, pow(-xlb*root, exponent), constant + slope * (-xlb*root)));
+         }
+         else
+         {
+            /* expect tangent */
+            cr_assert(!islocal);
+            cr_assert(SCIPisEQ(scip, slope, exponent * pow(xref, exponent - 1.0)));
+            cr_assert(SCIPisEQ(scip, constant, pow(xref, exponent) - slope * xref));
+         }
+
+         /* overestimator is secant for xref > -xub * root, otherwise tangent */
+         success = FALSE;
+         islocal = !(xref > -xub * root);
+         slope = constant = -5;
+         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         cr_assert(success);
+         if( xref > -xub * root )
+         {
+            /* expect secant between -xub*root and xub */
+            cr_assert(islocal);
+            cr_assert(SCIPisEQ(scip, -pow(xub*root, exponent), constant + slope * (-xub*root)));
+            cr_assert(SCIPisEQ(scip, pow(xub, exponent), constant + slope * xub));
+         }
+         else
+         {
+            /* expect tangent */
+            cr_assert(!islocal);
+            cr_assert(SCIPisEQ(scip, slope, exponent * pow(xref, exponent - 1.0)));
+            cr_assert(SCIPisEQ(scip, constant, pow(xref, exponent) - slope * xref));
+         }
+      }
+   }
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
+
 /* test estimateHyperbolaPositive */
 Test(estimation, hyperbolaPositive, .description = "test computation of estimators for positive hyperbola")
 {
