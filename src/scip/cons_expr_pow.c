@@ -467,6 +467,8 @@ void estimateHyperbolaMixed(
    assert(EPSISINT((exponent-1.0)/2.0, 0.0));
    assert(xlb < 0.0);
 
+   *success = FALSE;
+
    if( xub <= 0.0 )
    {
       /* x is negative */
@@ -496,8 +498,6 @@ void estimateHyperbolaMixed(
       }
    }
    /* else: x has mixed sign -> pole is within domain -> cannot estimate */
-
-   *success = FALSE;
 }
 
 /** Separation for roots with exponent in [0,1]

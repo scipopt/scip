@@ -270,6 +270,56 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+/* test estimateHyperbolaMixed */
+Test(estimation, hyperbolaMixed, .description = "test computation of estimators for mixed-sign hyperbola")
+{
+   SCIP_Real constant;
+   SCIP_Real slope;
+   SCIP_Real xref;
+   SCIP_Bool islocal;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* x^(-3) on [-1.0,1.0] */
+   success = TRUE;
+   estimateHyperbolaMixed(scip, -3.0, FALSE, -1.0, 1.0, -0.5, &constant, &slope, &islocal, &success);
+   cr_assert(!success); /* underestimator does not exist (pole in domain) */
+
+   success = TRUE;
+   estimateHyperbolaMixed(scip, -3.0, TRUE, -1.0, 1.0, -0.5, &constant, &slope, &islocal, &success);
+   cr_assert(!success); /* overestimator does not exist (pole in domain) */
+
+   /* x^(-3) on [-1.0,0.0] -> underestimator does not exist (upper bound is pole); overestimator is tangent */
+   success = TRUE;
+   xref = -0.5;
+   estimateHyperbolaMixed(scip, -3.0, FALSE, -1.0, 0.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(!success); /*  */
+
+   success = FALSE;
+   constant = slope = 5.0;
+   estimateHyperbolaMixed(scip, -3.0, TRUE, -1.0, 0.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(!islocal);
+   cr_assert(SCIPisEQ(scip, slope, -3.0 * pow(xref, -4.0)));
+   cr_assert(SCIPisEQ(scip, constant, pow(xref, -3.0) - slope * xref));
+
+   /* x^(-3) on [-2.0,-1.0] -> underestimator is secant */
+   success = FALSE;
+   constant = slope = 5.0;
+   estimateHyperbolaMixed(scip, -3.0, FALSE, -2.0, -1.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(success); /* underestimator does not exist (upper bound is pole) */
+   cr_assert(islocal);
+   cr_assert(SCIPisEQ(scip, slope, -1.0 - pow(-2.0, -3.0)));
+   cr_assert(SCIPisEQ(scip, constant, pow(-2.0, -3.0) - slope * (-2.0)));
+
+   /* x^(-3) on [-infty,-1.0] -> underestimator does not exist */
+   estimateHyperbolaMixed(scip, -3.0, FALSE, -SCIPinfinity(scip), -1.0, xref, &constant, &slope, &islocal, &success);
+   cr_assert(!success);
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
+
 Test(separation, convexsquare, .init = setup, .fini = teardown,
    .description = "test separation for a convex square expression"
    )
