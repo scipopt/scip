@@ -22,6 +22,55 @@
 #include "scip/cons_expr_pow.c"
 #include "separation.h"
 
+/* test estimateTangent */
+Test(estimation, tangent, .description = "test computation of tangent")
+{
+   SCIP_Real exponent;
+   SCIP_Real constant;
+   SCIP_Real slope;
+   SCIP_Real xref;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   for( exponent = -3.0; exponent <= 3.0; exponent += 0.5 )
+   {
+      if( exponent == 0.0 )
+         continue;
+
+      for( xref = -2.0; xref <= 2.0; xref += 1.0 )
+      {
+         /* skip negative reference points when exponent is fractional */
+         if( xref < 0.0 && !EPSISINT(exponent, 0.0) )
+            continue;
+
+         /* skip zero reference point when exponent is negative */
+         if( xref == 0.0 && exponent < 0.0 )
+            continue;
+
+         success = FALSE;
+         constant = DBL_MAX;
+         slope = DBL_MAX;
+
+         estimateTangent(scip, exponent, xref, &constant, &slope, &success);
+
+         /* x^p -> x0^p + p*x0^{p-1} (x-x0) */
+
+         /* estimateTangent must fail iff xref is 0 and exponent < 1 (infinite gradient in reference point) */
+         cr_assert(success != (xref == 0.0 && exponent < 1.0));
+
+         if( success )
+         {
+            cr_assert(SCIPisEQ(scip, slope, exponent * pow(xref, exponent-1.0)));
+            cr_assert(SCIPisEQ(scip, constant, pow(xref, exponent) - slope * xref));
+         }
+      }
+   }
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
+
+
 Test(separation, convexsquare, .init = setup, .fini = teardown,
    .description = "test separation for a convex square expression"
    )
