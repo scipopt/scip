@@ -498,6 +498,16 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    assert(infeasible != NULL);
    assert(nreductions != NULL);
 
+#ifdef DEBUG_PROP
+   SCIPinfoMessage(scip, NULL, "Propagating <expr> by solving a <expr>^2 + b <expr> in rhs, where <expr> is: ");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, quadexpr.expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "expr in [%g, %g], a = %g, b = [%g, %g] and rhs = [%g, %g]\n",
+         SCIPintervalGetInf(SCIPgetConsExprExprInterval(quadexpr.expr)),
+         SCIPintervalGetSup(SCIPgetConsExprExprInterval(quadexpr.expr)), quadexpr.sqrcoef, b.inf, b.sup,
+         rhs.inf, rhs.sup);
+#endif
+
    /* compute solution of a*x^2 + b*x \in rhs */
    if( quadexpr.sqrcoef == 0.0 && SCIPintervalGetInf(b) == 0.0 && SCIPintervalGetSup(b) == 0.0 )
    {
@@ -533,6 +543,9 @@ SCIP_RETCODE propagateBoundsQuadExpr(
       SCIPintervalSet(&a, quadexpr.sqrcoef);
       SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs);
    }
+#ifdef DEBUG_PROP
+   SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
+#endif
 
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, quadexpr.expr, newrange, force, reversepropqueue, infeasible,
             nreductions) );
@@ -998,9 +1011,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
    assert(nlhdlrexprdata->nquadexprs != 0);
 
    SCIPdebugMsg(scip, "Interval evaluation of quadratic expr\n");
-#ifdef DEBUG_PROP
-   SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
-#endif
 
    /*
     * compute activity of linear part
@@ -1275,13 +1285,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs_i, rhs, rest_i);
 
          /* solve a_i expr_i^2 + b expr_i = rhs_i */
-#ifdef DEBUG_PROP
-         SCIPinfoMessage(scip, NULL, "Propagate <expr> by solving a <expr>^2 + b <expr> in rhs, where <expr> is: ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, quadexpr.expr, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-         SCIPinfoMessage(scip, NULL, "a = %g, b = [%g, %g] and rhs = [%g, %g]\n", quadexpr.sqrcoef, b.inf, b.sup,
-               rhs_i.inf, rhs_i.sup);
-#endif
          if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, rhs_i) )
             continue;
 
