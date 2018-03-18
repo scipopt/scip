@@ -1236,8 +1236,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
             continue;
 
          /* let nlhdlr evaluate current expression */
+         SCIPdebugMsg(scip, "Calling interval evaluation of nlhdlr <%s>\n", nlhdlr->name);
          nlhdlrinterval = interval;
          SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, &nlhdlrinterval, expr, expr->enfos[e]->nlhdlrexprdata, propdata->varboundrelax) );
+         SCIPdebugMsg(scip, "Nlhdlr <%s> computed interval [%g, %g] for expr\n", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
+
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
+#endif
 
          /* intersect with interval */
          SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
@@ -2583,6 +2590,9 @@ SCIP_RETCODE reversePropConss(
                continue;
 
             /* call the reverseprop of the nlhdlr */
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "Use nlhdlr <%s>\n", nlhdlr->name);
+#endif
             nreds = 0;
             SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
             assert(nreds >= 0);
@@ -7752,6 +7762,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    oldub = SCIPintervalGetSup(expr->interval);
    *cutoff = FALSE;
 
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "Trying to tighten bounds of expr ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "");
+      SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
+#endif
+
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) || SCIPintervalGetInf(newbounds) > oldub
       || SCIPintervalGetSup(newbounds) < oldlb )
@@ -7774,12 +7791,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-#ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "tighten bounds of expr ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "");
-      SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, newlb, newub);
-#endif
 
    /* check which bound can be tightened */
    if( force )
