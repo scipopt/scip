@@ -14017,7 +14017,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/gaugecuts",
          "should convex quadratics generated strong cuts via gauge function?",
-         &conshdlrdata->gaugecuts, FALSE, TRUE, NULL, NULL) );
+         &conshdlrdata->gaugecuts, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/interiorcomputation",
          "how the interior point for gauge cuts should be computed: 'a'ny point per constraint, 'm'ost interior per constraint",
