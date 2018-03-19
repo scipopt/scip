@@ -2,7 +2,7 @@ SCIP version 5.0.2
 ==================
 
 performance improvements:
-- deactivate guage cuts
+- deactivate gauge cuts
 
 fixed bugs:
 - suppress debug solution warnings during problem creation stage
