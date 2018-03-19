@@ -438,57 +438,50 @@ int maxCircles(
 static
 int isPatternDominating(
    SCIP_PATTERN*         p,                  /**< pattern */
-   SCIP_PATTERN*         q                   /**< pattern */
+   SCIP_PATTERN*         q,                  /**< pattern */
+   int*                  count,              /**< array for counting elements of patterns */
+   int                   ntypes              /**< total number of types */
    )
 {
-   SCIP_Bool res1;
-   SCIP_Bool res2;
-   int np;
-   int nq;
-   int ip;
-   int iq;
+   SCIP_Bool pdomq;
+   SCIP_Bool qdomp;
+   int i;
 
-   assert(p != NULL);
-   assert(q != NULL);
-
-   /* pattern can only dominate if they are of the same type */
+   /* patterns can only dominate each other if they have the same type */
    if( SCIPpatternGetType(p) != SCIPpatternGetType(q) )
       return 0;
 
-   np = SCIPpatternGetNElemens(p);
-   nq = SCIPpatternGetNElemens(q);
-   res1 = np >= nq;
-   res2 = nq >= np;
-   ip = 0;
-   iq = 0;
+   /* reset count array */
+   BMSclearMemoryArray(count, ntypes);
 
-   while( ip < np && iq < nq && (res1 || res2) )
+   /* increase array entry for each element in p */
+   for( i = 0; i < SCIPpatternGetNElemens(p); ++i )
    {
-      int tp = SCIPpatternGetElementType(p, ip);
-      int tq = SCIPpatternGetElementType(q, iq);
-
-      if( tp == tq )
-      {
-         ++ip;
-         ++iq;
-      }
-      else if( tp < tq )
-      {
-         res2 = FALSE;
-         ++ip;
-      }
-      else
-      {
-         res1 = FALSE;
-         ++iq;
-      }
+      int t = SCIPpatternGetElementType(p, i);
+      count[t] += 1;
    }
 
-   assert(!res1 || !res2);
+   /* decrease array entry for each element in q */
+   for( i = 0; i < SCIPpatternGetNElemens(q); ++i )
+   {
+      int t = SCIPpatternGetElementType(q, i);
+      count[t] -= 1;
+   }
 
-   if( res1 && (SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES || SCIPpatternGetPackableStatus(q) == SCIP_PACKABLE_UNKNOWN) )
+   pdomq = TRUE;
+   qdomp = TRUE;
+
+   for( i = 0; i < ntypes && (pdomq || qdomp); ++i )
+   {
+      if( count[i] < 0 )
+         pdomq = FALSE;
+      else if( count[i] > 0 )
+         qdomp = FALSE;
+   }
+
+   if( pdomq && (SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES || SCIPpatternGetPackableStatus(q) == SCIP_PACKABLE_UNKNOWN) )
       return -1;
-   else if( res2 && (SCIPpatternGetPackableStatus(q) == SCIP_PACKABLE_YES || SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_UNKNOWN) )
+   else if( qdomp && (SCIPpatternGetPackableStatus(q) == SCIP_PACKABLE_YES || SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_UNKNOWN) )
       return 1;
    return 0;
 }
@@ -502,9 +495,11 @@ SCIP_RETCODE filterPatterns(
 {
    SCIP_PATTERN** cpatterns;
    SCIP_Bool* deleted;
+   int* count;
    int ncpatterns;
    int i;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &count, SCIPprobdataGetNTypes(probdata)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cpatterns, probdata->ncpatterns) );
    SCIP_CALL( SCIPallocBufferArray(scip, &deleted, probdata->ncpatterns) );
    BMSclearMemoryArray(deleted, probdata->ncpatterns);
@@ -525,7 +520,7 @@ SCIP_RETCODE filterPatterns(
          if( deleted[j] )
             continue;
 
-         res = isPatternDominating(p, q);
+         res = isPatternDominating(p, q, count, SCIPprobdataGetNTypes(probdata));
 
          /* p dominates q */
          if( res == -1 )
@@ -557,6 +552,7 @@ SCIP_RETCODE filterPatterns(
    /* free memory */
    SCIPfreeBufferArray(scip, &deleted);
    SCIPfreeBufferArray(scip, &cpatterns);
+   SCIPfreeBufferArray(scip, &count);
 
    return SCIP_OKAY;
 }
@@ -687,9 +683,6 @@ SCIP_RETCODE enumeratePatterns(
 
    assert(SCIPpatternGetNElemens(pattern) == 0);
    assert(SCIPisZero(scip, volume));
-
-   /* filter circular pattern */
-   SCIP_CALL( filterPatterns(scip, probdata) );
 
    return SCIP_OKAY;
 }
@@ -1498,6 +1491,9 @@ SCIP_RETCODE SCIPprobdataEnumeratePatterns(
    SCIPfreeBufferArray(scip, &nselected);
    SCIPfreeBufferArray(scip, &ms);
    SCIPpatternRelease(scip, &pattern);
+
+   /* filter circular patterns */
+   SCIP_CALL( filterPatterns(scip, probdata) );
 
    /* update statistics */
    probdata->enumtime += SCIPgetTotalTime(scip);

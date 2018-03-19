@@ -815,7 +815,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
       redcostslb += 1.0;
       SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 
-         /* compute Farley's bound */
+      /* compute Farley's bound */
       if( SCIPisFeasGE(scip, redcostslb, 0.0) )
       {
          *lowerbound = SCIPgetLPObjval(scip);
