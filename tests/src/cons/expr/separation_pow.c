@@ -204,7 +204,7 @@ Test(estimation, signpower_root, .description = "test calculation of roots for s
 
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* try integer exponents, inclues lookup table */
+   /* try integer exponents, includes lookup table */
    for( exponent = 2.0; exponent < 20.0; exponent += 1.0 )
    {
       SCIP_CALL( computeSignpowerRoot(scip, &root, exponent) );
@@ -341,6 +341,26 @@ Test(estimation, signpower, .description = "test computation of signpower estima
             cr_assert(SCIPisEQ(scip, constant, pow(xref, exponent) - slope * xref));
          }
       }
+   }
+
+   SCIP_CALL( SCIPfree(&scip) );
+}
+
+/* test computeHyperbolaRoot */
+Test(estimation, hyperbola_root, .description = "test calculation of roots for positive hyperbola estimators")
+{
+   SCIP_Real exponent;
+   SCIP_Real root;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* try odd negative integer exponents (for exponent -42, Newton fails, but that is crazy anyway) */
+   for( exponent = -2.0; exponent > -40.0; exponent -= 2.0 )
+   {
+      SCIP_CALL( computeHyperbolaRoot(scip, &root, exponent) );
+      cr_assert(root < 0.0);
+      /* check that root is a root of (n-1) y^n - n y^(n-1) + 1 */
+      cr_assert(SCIPisZero(scip, (exponent-1) * pow(root, exponent) - exponent * pow(root, exponent - 1.0) + 1.0));
    }
 
    SCIP_CALL( SCIPfree(&scip) );
