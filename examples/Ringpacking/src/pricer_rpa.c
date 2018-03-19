@@ -764,17 +764,19 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    int heuriterlim;
    int t;
 
-   *result = SCIP_SUCCESS;
-
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
+   /* switch to price-and-price algorithm when dual bound has become invalid */
+   *result = SCIPprobdataIsDualboundInvalid(probdata) ? SCIP_SUCCESS : SCIP_DIDNOTRUN;
+
    /* only run pricer in the root node */
    if( SCIPgetDepth(scip) > 0 )
    {
       SCIPprobdataInvalidateDualbound(scip, probdata);
+      *result = SCIP_SUCCESS;
       return SCIP_OKAY;
    }
 
@@ -805,8 +807,12 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_CALL( solvePricingHeuristic(scip, probdata, pricerdata, lambdas, heurtilim, heuriterlim, &success) );
    pricerdata->timeleft -= SCIPgetSolvingTime(scip);
 
+   if( success )
+   {
+      *result = SCIP_SUCCESS;
+   }
    /* solve pricing problem as MINLP if heuristic was not successful and dual bound is still valid */
-   if( !success && !SCIPprobdataIsDualboundInvalid(probdata) )
+   else if ( !SCIPprobdataIsDualboundInvalid(probdata) )
    {
       nlptilim = MIN3(pricerdata->timeleft, nlptilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
       pricerdata->timeleft += SCIPgetSolvingTime(scip);
@@ -815,7 +821,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
       redcostslb += 1.0;
       SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
 
-      /* compute Farley's bound */
+      /* check whether pricing problem could be solved to optimality */
       if( SCIPisFeasGE(scip, redcostslb, 0.0) )
       {
          *lowerbound = SCIPgetLPObjval(scip);
@@ -823,6 +829,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
       }
       else
       {
+         /* compute Farley's bound */
          *lowerbound = SCIPgetLPObjval(scip) / (1.0 - redcostslb);
          SCIPinfoMessage(scip, NULL, "+++++++++++++ Farley's bound = ceil(%g/%g) = %g\n", SCIPgetLPObjval(scip), 1.0 - redcostslb,
             SCIPfeasCeil(scip, *lowerbound));
@@ -831,6 +838,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
 
       /* updates dual bound that is stored in the problem data */
       SCIPprobdataUpdateDualbound(scip, probdata, *lowerbound);
+
+      /* MINLP found an improving column or pricing problem could have been solved to optimality */
+      if( success || solstat == SCIP_STATUS_OPTIMAL || SCIPisFeasGE(scip, redcostslb, 0.0) )
+         *result = SCIP_SUCCESS;
    }
 
    /* free memory */
@@ -859,7 +870,7 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasRingpacking)
  */
 
 /** creates the ringpacking variable pricer and includes it in SCIP */
-SCIP_RETCODE SCIPincludePricerRingpacking(
+SCIP_RETCODE SCIPincludePricerRpa(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -884,7 +895,7 @@ SCIP_RETCODE SCIPincludePricerRingpacking(
 }
 
 /** added problem specific data to pricer and activates pricer */
-SCIP_RETCODE SCIPpricerRingpackingActivate(
+SCIP_RETCODE SCIPpricerRpaActivate(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

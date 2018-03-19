@@ -82,7 +82,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeConshdlrRpa(scip) );
 
    /* include ringpacking pricer  */
-   SCIP_CALL( SCIPincludePricerRingpacking(scip) );
+   SCIP_CALL( SCIPincludePricerRpa(scip) );
 
    /* for column generation instances, disable restarts */
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );

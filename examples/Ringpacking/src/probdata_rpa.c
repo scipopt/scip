@@ -1421,7 +1421,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolRingpacking) );
 
    /* activate pricer */
-   SCIP_CALL( SCIPpricerRingpackingActivate(scip) );
+   SCIP_CALL( SCIPpricerRpaActivate(scip) );
 
    /* add table output */
    assert(SCIPfindTable(scip, TABLE_NAME_RPA) == NULL);
