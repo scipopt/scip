@@ -587,8 +587,25 @@ void estimateHyperbolaPositive(
          }
 
          estimateTangent(scip, exponent, xref, constant, slope, success);
-         /* if x does not have a fixed sign globally, then our tangent is not globally valid (power is not convex on global domain) */
-         *islocal = xlbglobal * xubglobal < 0.0;  /* TODO compare xref with global bounds times root to decide this better */
+
+         /* if x has fixed sign globally, then our tangent is also globally valid
+          * however, if x has mixed sign, then it depends on the constellation between reference point and global bounds, whether the tangent is globally valid
+          * (see also the longer discussion for the mixed-sign underestimator below )
+          */
+         if( xref > 0.0 && xlbglobal < 0.0 )
+         {
+            assert(xubglobal > 0.0);  /* since xref > 0.0 */
+            /* if on right side, then tangent is only locally valid if xref is too much to the left */
+            *islocal = xref < xlbglobal * root;
+         }
+         else if( xref < 0.0 && xubglobal > 0.0 )
+         {
+            assert(xlbglobal < 0.0);  /* since xref < 0.0 */
+            /* if on left side, then tangent is only locally valid if xref is too much to the right */
+            *islocal = xref > xubglobal * root;
+         }
+         else
+            *islocal = FALSE;
       }
       else
       {
@@ -640,9 +657,10 @@ void estimateHyperbolaPositive(
             {
                /* If reference point is right of xhat, then take the tangent at xref.
                 * This will still be underestimating for x in [xlb,0], too.
+                * The tangent is globally valid, if we had also generated w.r.t. global bounds.
                 */
                estimateTangent(scip, exponent, xref, constant, slope, success);
-               *islocal = TRUE;  /* TODO decision to use tangent involved xlb, reevaluate with xlbglobal */
+               *islocal = xref < xlbglobal * root;
             }
          }
       }

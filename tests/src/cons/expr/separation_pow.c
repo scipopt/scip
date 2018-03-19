@@ -395,11 +395,11 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
    xref = 4.0;
    estimateHyperbolaPositive(scip, -2.0, root, FALSE, -1.0, SCIPinfinity(scip), xref, -1.0, SCIPinfinity(scip), &constant, &slope, &islocal, &success);
    cr_assert(success);
-   cr_assert(islocal);
+   cr_assert(!islocal); /* the tangent is also globally valid, since global bounds equal local bounds here */
    cr_assert(SCIPisEQ(scip, slope, -2.0 * pow(xref, -3.0)));  /* slope should be gradient at xref */
    cr_assert(SCIPisEQ(scip, pow(xref, -2.0), constant + slope * xref)); /* touch at xref */
 
-   /* x^(-2) on [-infty,1.0]; underestimator is secant between -2 and 1) */
+   /* x^(-2) on [-infty,1.0]; underestimator is secant between -2 and 1 */
    success = TRUE;
    islocal = FALSE;
    estimateHyperbolaPositive(scip, -2.0, root, FALSE, -SCIPinfinity(scip), 1.0, -0.5, -SCIPinfinity(scip), 1.0, &constant, &slope, &islocal, &success);
@@ -425,7 +425,12 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
    success = FALSE;
    estimateHyperbolaPositive(scip, -2.0, root, FALSE, -2.0, -1.0, xref, -2.0, 2.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
-   cr_assert(islocal);  /* if global domain is [-2,2], then the tangent is not globally valid */ /*TODO */
+   cr_assert(islocal);  /* if global domain is [-2,2], then the tangent is not globally valid if xref > -xubglobal = -2 */
+
+   success = FALSE;
+   estimateHyperbolaPositive(scip, -2.0, root, FALSE, -2.0, -1.0, xref, -2.0, 0.5, &constant, &slope, &islocal, &success);
+   cr_assert(success);
+   cr_assert(!islocal);  /* if global domain is [-2,0.5], then the tangent is globally valid, since xref = -1.5 < xubglobal*root = 0.5*(-2) = -1 */
 
    success = FALSE;
    islocal = FALSE;
@@ -448,7 +453,7 @@ Test(estimation, hyperbolaPositive, .description = "test computation of estimato
    success = FALSE;
    estimateHyperbolaPositive(scip, -2.0, root, FALSE, 1.0, 2.0, xref, -1.0, 2.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
-   cr_assert(islocal);  /* if global domain is [-1,2], then tangent is not globally valid */  /*TODO */
+   cr_assert(islocal);  /* if global domain is [-1,2], then tangent is not globally valid */
 
    success = FALSE;
    islocal = FALSE;
