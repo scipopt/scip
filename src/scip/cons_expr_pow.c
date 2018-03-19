@@ -529,6 +529,7 @@ static
 void estimateHyperbolaPositive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             exponent,           /**< exponent */
+   SCIP_Real             root,               /**< negative root of the polynomial (n-1) y^n - n y^(n-1) + 1, if x has mixed sign (w.r.t. global bounds?) and underestimating */
    SCIP_Bool             overestimate,       /**< should the power be overestimated? */
    SCIP_Real             xlb,                /**< lower bound on x */
    SCIP_Real             xub,                /**< upper bound on x */
@@ -548,6 +549,7 @@ void estimateHyperbolaPositive(
    assert(success != NULL);
    assert(exponent < 0.0);
    assert(EPSISINT(exponent/2.0, 0.0) || xlb >= 0.0);
+   assert(xlbglobal * xubglobal >= 0.0 || overestimate || root < 0.0);
 
    *success = FALSE;
 
@@ -586,7 +588,7 @@ void estimateHyperbolaPositive(
 
          estimateTangent(scip, exponent, xref, constant, slope, success);
          /* if x does not have a fixed sign globally, then our tangent is not globally valid (power is not convex on global domain) */
-         *islocal = xlbglobal * xubglobal < 0.0;
+         *islocal = xlbglobal * xubglobal < 0.0;  /* TODO compare xref with global bounds times root to decide this better */
       }
       else
       {
@@ -604,14 +606,12 @@ void estimateHyperbolaPositive(
             }
 
             /* switch sign of x (mirror on ordinate) to make left bound finite and use its estimator */
-            estimateHyperbolaPositive(scip, exponent, overestimate, -xub, -xlb, -xref, -xubglobal, -xlbglobal, constant, slope, islocal, success);
+            estimateHyperbolaPositive(scip, exponent, root, overestimate, -xub, -xlb, -xref, -xubglobal, -xlbglobal, constant, slope, islocal, success);
             if( *success )
                *slope = -*slope;
          }
          else
          {
-            SCIP_Real root;
-
             /* The convex envelope of x^exponent for x in [xlb, infinity] is a line (secant) between xlb and some positive coordinate xhat, and x^exponent for x > xhat.
              * Further, on [xlb,xub] with xub < xhat, the convex envelope is the secant between xlb and xub.
              *
@@ -625,11 +625,8 @@ void estimateHyperbolaPositive(
              * Divide by xlb^n, one gets a polynomial that looks very much like the one for signpower, but a sign is different (since this is *not signed* power):
              * 0 = 1 + (n-1) * y^n - n * y^(n-1)  where y = xhat/xlb
              *
-             * We look for a solution y < 0 (because xlb < 0 and we want xhat > 0).
+             * The solution y < 0 (because xlb < 0 and we want xhat > 0) is what we expect to be given as "root".
              */
-            SCIP_CALL_ABORT( computeHyperbolaRoot(scip, &root, exponent) );  /* TODO do outside and save for next time */
-            assert(root < 0.0);
-
             if( xref <= xlb * root )
             {
                /* If the reference point is left of xhat (=xlb*root), then we can take the
@@ -936,7 +933,12 @@ SCIP_RETCODE separatePointPow(
    }
    else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
    {
-      estimateHyperbolaPositive(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &linconstant, &lincoef, &islocal, &success);
+      /* compute root if not known yet; only needed if mixed sign (globally) and iseven */
+      if( exprdata->root == SCIP_INVALID && iseven )
+      {
+         SCIP_CALL( computeHyperbolaRoot(scip, &exprdata->root, exponent) );
+      }
+      estimateHyperbolaPositive(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &linconstant, &lincoef, &islocal, &success);
    }
    else if( exponent < 0.0 )
    {
