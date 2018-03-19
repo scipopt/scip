@@ -116,7 +116,7 @@ SCIP_RETCODE computeSignpowerRoot(
    for(iter = 0; iter < 1000; ++iter )
    {
       polyval = (exponent - 1.0) * pow(*root, exponent) + exponent * pow(*root, exponent - 1.0) - 1.0;
-      if( SCIPisZero(scip, polyval) && polyval < 1e-12 )
+      if( fabs(polyval) < 1e-12 && SCIPisZero(scip, polyval) )
          break;
 
       /* gradient of (n-1) y^n + n y^(n-1) - 1 is n(n-1)y^(n-1) + n(n-1)y^(n-2) */
@@ -140,6 +140,53 @@ SCIP_RETCODE computeSignpowerRoot(
 
    return SCIP_OKAY;
 }
+
+/** computes negative root of the polynomial (n-1) y^n - n y^(n-1) + 1 for n < -1 */
+static
+SCIP_RETCODE computeHyperbolaRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            root,               /**< buffer where to store computed root */
+   SCIP_Real             exponent            /**< exponent n */
+   )
+{
+   SCIP_Real polyval;
+   SCIP_Real gradval;
+   int iter;
+
+   assert(scip != NULL);
+   assert(exponent < -1.0);
+   assert(root != NULL);
+
+   *root = -2.0;  /* that's the solution for n=-2 */
+
+   for(iter = 0; iter < 1000; ++iter )
+   {
+      polyval = (exponent - 1.0) * pow(*root, exponent) - exponent * pow(*root, exponent - 1.0) + 1.0;
+      if( fabs(polyval) < 1e-12 && SCIPisZero(scip, polyval) )
+         break;
+
+      /* gradient of (n-1) y^n - n y^(n-1) + 1 is n(n-1)y^(n-1) - n(n-1)y^(n-2) */
+      gradval = (exponent - 1.0) * exponent * (pow(*root, exponent - 1.0) - pow(*root, exponent - 2.0));
+      if( SCIPisZero(scip, gradval) )
+         break;
+
+      /* update root by adding -polyval/gradval (Newton's method) */
+      *root -= polyval / gradval;
+      if( *root >= 0.0 )
+         *root = -1;
+   }
+
+   if( !SCIPisZero(scip, polyval) )
+   {
+      SCIPerrorMessage("failed to compute root for exponent %g\n", exponent);
+      return SCIP_ERROR;
+   }
+   SCIPdebugMsg(scip, "root for %g is %.20g, certainty = %g\n", exponent, *root, polyval);
+   /* @todo cache root value for other expressions (an exponent seldom comes alone)?? (they are actually really fast to compute...) */
+
+   return SCIP_OKAY;
+}
+
 
 static
 SCIP_RETCODE createData(
@@ -563,7 +610,43 @@ void estimateHyperbolaPositive(
          }
          else
          {
-            /* TODO get line between (xlb,xlb^exponent) and something on the right side */
+            SCIP_Real root;
+
+            /* The convex envelope of x^exponent for x in [xlb, infinity] is a line (secant) between xlb and some positive coordinate xhat, and x^exponent for x > xhat.
+             * Further, on [xlb,xub] with xub < xhat, the convex envelope is the secant between xlb and xub.
+             *
+             * To find xhat, consider the affine-linear function  l(x) = xlb^n + c * (x - xlb)   where n = exponent
+             * we look for a value of x such that f(x) and l(x) coincide and such that l(x) will be tangent to f(x) on that point, that is
+             * xhat > 0 such that f(xhat) = l(xhat) and f'(xhat) = l'(xhat)
+             * => xhat^n = xlb^n + c * (xhat - xlb)   and   n * xhat^(n-1) = c
+             * => xhat^n = xlb^n + n * xhat^n - n * xhat^(n-1) * xlb
+             * => 0 = xlb^n + (n-1) * xhat^n - n * xhat^(n-1) * xlb
+             *
+             * Divide by xlb^n, one gets a polynomial that looks very much like the one for signpower, but a sign is different (since this is *not signed* power):
+             * 0 = 1 + (n-1) * y^n - n * y^(n-1)  where y = xhat/xlb
+             *
+             * We look for a solution y < 0 (because xlb < 0 and we want xhat > 0).
+             */
+            SCIP_CALL_ABORT( computeHyperbolaRoot(scip, &root, exponent) );  /* TODO do outside and save for next time */
+            assert(root < 0.0);
+
+            if( xref <= xlb * root )
+            {
+               /* If the reference point is left of xhat (=xlb*root), then we can take the
+                * secant between xlb and root*xlb (= tangent at root*xlb).
+                * However, if xub < root*xlb, then we can tilt the estimator to be the secant between xlb and xub.
+                */
+               estimateSecant(scip, exponent, xlb, MIN(xlb * root, xub), constant, slope, success);
+               *islocal = TRUE;
+            }
+            else
+            {
+               /* If reference point is right of xhat, then take the tangent at xref.
+                * This will still be underestimating for x in [xlb,0], too.
+                */
+               estimateTangent(scip, exponent, xref, constant, slope, success);
+               *islocal = TRUE;  /* TODO decision to use tangent involved xlb, reevaluate with xlbglobal */
+            }
          }
       }
    }
