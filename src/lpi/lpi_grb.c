@@ -3730,7 +3730,8 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       double boundviol;
       double eps;
 
-      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &eps);
+      /* get feasibility tolerance */
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &eps);
       if ( res != 0 )
       {
          SCIPABORT();
@@ -3739,13 +3740,13 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
       if ( res != 0 )
       {
-         /* if Gurobi cannot return the constraint violation, there is no feasible solution available. */
+         /* If Gurobi cannot return the constraint violation, there is no feasible solution available. */
          return FALSE;
       }
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
       if ( res != 0 )
       {
-         /* if Gurobi cannot return the constraint violation, there is no feasible solution available. */
+         /* If Gurobi cannot return the constraint violation, there is no feasible solution available. */
          return FALSE;
       }
 
