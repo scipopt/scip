@@ -1934,9 +1934,8 @@ static
 SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
 {  /*lint --e{715}*/
    SCIP_Real coef;
-   SCIP_Bool allpos;
-   SCIP_Bool allneg;
    int i;
+   int nneg;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1945,11 +1944,10 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
    assert(childidx >= 0 && childidx < SCIPgetConsExprExprNChildren(expr));
 
    coef = SCIPgetConsExprExprProductCoef(expr);
-   allpos = TRUE;
-   allneg = TRUE;
 
-   /* check whether all children (except for childidx) intervals are positive or negative */
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && (allpos || allneg); ++i )
+   /* count the number of negative children (except for childidx); if some children changes sign -> monotonicity unknown */
+   nneg = 0;
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
    {
       SCIP_INTERVAL interval;
 
@@ -1959,22 +1957,20 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
       assert(SCIPgetConsExprExprChildren(expr)[i] != NULL);
       interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]);
 
-      if( SCIPintervalGetInf(interval) < 0.0 )
-         allpos = FALSE;
-      if( SCIPintervalGetSup(interval) > 0.0 )
-         allneg = FALSE;
+      if( SCIPintervalGetSup(interval) <= 0.0 )
+         nneg++;
+      else if( SCIPintervalGetInf(interval) < 0.0 )
+      {
+         *result = SCIP_MONOTONE_UNKNOWN;
+         return SCIP_OKAY;
+      }
    }
 
    /* note that the monotonicity depends on the sign of the coefficient */
-   if( !allpos && !allneg )
-      *result = SCIP_MONOTONE_UNKNOWN;
-   else if( allpos )
+   if( nneg % 2 == 0 )
       *result = (coef >= 0.0) ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
    else
-   {
-      assert(allneg);
       *result = (coef >= 0.0) ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
-   }
 
    return SCIP_OKAY;
 }

@@ -308,7 +308,7 @@ Test(monotonicity, prod_three)
    SCIP_CALL( createExpr("<x>[C] * <y>[C] * <z>[C]", "prod") );
 
    /*
-    * all positive
+    * no nonpositive
     */
    SCIP_CALL( chgBounds(x, 0.0, SCIPinfinity(scip)) );
    SCIP_CALL( chgBounds(y, 0.0, SCIPinfinity(scip)) );
@@ -319,15 +319,15 @@ Test(monotonicity, prod_three)
    SCIP_CALL( testMonotonicity(2, SCIP_MONOTONE_INC) );
 
    /*
-    * all negative
+    * two negatives
     */
    SCIP_CALL( chgBounds(x, -SCIPinfinity(scip), -1.0) );
    SCIP_CALL( chgBounds(y, -SCIPinfinity(scip), -1.0) );
    SCIP_CALL( chgBounds(z, -SCIPinfinity(scip), -1.0) );
 
-   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
-   SCIP_CALL( testMonotonicity(1, SCIP_MONOTONE_DEC) );
-   SCIP_CALL( testMonotonicity(2, SCIP_MONOTONE_DEC) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
+   SCIP_CALL( testMonotonicity(1, SCIP_MONOTONE_INC) );
+   SCIP_CALL( testMonotonicity(2, SCIP_MONOTONE_INC) );
 
    /*
     * mixed
@@ -336,9 +336,9 @@ Test(monotonicity, prod_three)
    SCIP_CALL( chgBounds(y, -3.0, -2.0) );
    SCIP_CALL( chgBounds(z, -4.0, -2.0) );
 
-   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
-   SCIP_CALL( testMonotonicity(1, SCIP_MONOTONE_UNKNOWN) );
-   SCIP_CALL( testMonotonicity(2, SCIP_MONOTONE_UNKNOWN) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
+   SCIP_CALL( testMonotonicity(1, SCIP_MONOTONE_DEC) );
+   SCIP_CALL( testMonotonicity(2, SCIP_MONOTONE_DEC) );
 
    SCIP_CALL( chgBounds(x, 0.0, 1.0) );
    SCIP_CALL( chgBounds(y, 2.0, 4.0) );
