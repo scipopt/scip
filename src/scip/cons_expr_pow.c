@@ -22,6 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/*lint --e{835}*/
+
 #include <string.h>
 
 #include "scip/cons_expr_value.h"
@@ -280,7 +282,7 @@ void estimateSecant(
    if( !SCIPisFinite(lbval) )
       return;
 
-   if( xlb == -xub && EPSISINT(exponent / 2.0, 0.0) )
+   if( xlb == -xub && EPSISINT(exponent / 2.0, 0.0) ) /*lint !e777*/
    {
       *slope = 0.0;
       *constant = lbval;
@@ -296,7 +298,7 @@ void estimateSecant(
       /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?)
        * for now, only check that things did not cancel out completely (for parabola and xlb very close to -xub, lbval=ubval is ok, though)
        */
-      if( lbval == ubval && !(SCIPisEQ(scip, xlb, -xub) && EPSISINT(exponent / 2.0, 0.0)) )
+      if( lbval == ubval && !(SCIPisEQ(scip, xlb, -xub) && EPSISINT(exponent / 2.0, 0.0)) ) /*lint !e777*/
          return;
 
       *slope = (ubval - lbval) / (xub - xlb);
@@ -943,7 +945,7 @@ SCIP_RETCODE separatePointPow(
    else if( exponent > 1.0 )  /* and !iseven && childlb < 0.0 due to previous if */
    {
       /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
-      if( exprdata->root == SCIP_INVALID && SCIPvarGetUbGlobal(childvar) > 0.0 )
+      if( exprdata->root == SCIP_INVALID && SCIPvarGetUbGlobal(childvar) > 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
       }
@@ -952,7 +954,7 @@ SCIP_RETCODE separatePointPow(
    else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
    {
       /* compute root if not known yet; only needed if mixed sign (globally) and iseven */
-      if( exprdata->root == SCIP_INVALID && iseven )
+      if( exprdata->root == SCIP_INVALID && iseven ) /*lint !e777*/
       {
          SCIP_CALL( computeHyperbolaRoot(scip, &exprdata->root, exponent) );
       }
