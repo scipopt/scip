@@ -830,7 +830,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
          &propdata->oftiming, TRUE, DEFAULT_OFTIMING, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/preformpresolving",
+         "propagating/" PROP_NAME "/performpresolving",
          "Run orbital fixing during presolving?",
          &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
 
