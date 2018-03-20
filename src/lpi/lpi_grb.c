@@ -3677,6 +3677,8 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
       return FALSE; /*lint !e527*/
    }
 
+   /* GRB_UNBOUNDED means that there exists a primal ray. SCIPlpiSolvePrimal() will determine whether the problem is
+    * actually infeasible or (feasible and) unbounded. In the latter case, the status will be GRB_UNBOUNDED. */
    return (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL);
 }
 
