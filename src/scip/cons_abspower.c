@@ -5487,7 +5487,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
       }
       else if( SCIPisEQ(scip, consdata->exponent, 1.852) )
       {
-         consdata->root = 0.398217;
+         consdata->root = 0.39821689389382575186;
       }
       else
       {
