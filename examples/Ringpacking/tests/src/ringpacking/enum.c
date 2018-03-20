@@ -43,7 +43,7 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* include ringpacking pricer  */
-   SCIP_CALL( SCIPincludePricerRingpacking(scip) );
+   SCIP_CALL( SCIPincludePricerRpa(scip) );
 }
 
 /** deinitialization method */
