@@ -223,12 +223,16 @@ SCIP_RETCODE extractVariablesMINLP(
    int nselected;
    int i;
 
-   assert(SCIPgetNSols(subscip) > 0);
    assert(success != NULL);
+
+   if( SCIPgetNSols(subscip) == 0 )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
    sol = SCIPgetBestSol(subscip);
    assert(sol != NULL);
-
    SCIPdebugMsg(scip, "found column with reduced cost = %f\n", 1.0 + SCIPgetSolOrigObj(subscip, sol));
 
    /* reduced cost is non-negative */
