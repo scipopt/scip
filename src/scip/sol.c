@@ -1344,7 +1344,7 @@ SCIP_Real SCIPsolGetVal(
       assert(!SCIPvarIsTransformed(origvar));
 
       solval = SCIPsolGetVal(sol, set, stat, origvar);
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          return SCIP_UNKNOWN;
       else
          return scalar * solval + constant;
