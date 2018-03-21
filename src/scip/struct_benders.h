@@ -94,6 +94,7 @@ struct SCIP_Benders
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
                                                to continuous variables. */
    SCIP_Bool*            subprobsetup;       /**< flag to indicate whether the subproblem has been set up. */
+   SCIP_Bool*            indepsubprob;       /**< flag to indicate if a subproblem is independent of the master prob */
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 

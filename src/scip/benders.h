@@ -392,6 +392,21 @@ SCIP_Bool SCIPbendersSubprobIsSetup(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** sets the independent subproblem flag */
+extern
+void SCIPbendersSetSubprobIsIndependent(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             isindep             /**< flag to indicate whether the subproblem is independent */
+   );
+
+/** returns whether the subproblem is independent */
+extern
+SCIP_Bool SCIPbendersSubprobIsIndependent(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /** changes all of the master problem variables in the given subproblem to continuous */
 extern
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
