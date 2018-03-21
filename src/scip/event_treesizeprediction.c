@@ -108,7 +108,7 @@ SCIP_Real computeProbabilities(SCIP* scip, TSEtree* node, ProbabilityMethod prob
          assert(node->branchedvar != NULL);
 
          /* TODO for code below: investigate whether for the known node, using pscosts or known bound is better for estimation. */
-         if( node->leftchild == NULL || node->rightchild == NULL || SCIPisInfinity(scip, node->leftchild->lowerbound) == TRUE || SCIPisInfinity(scip, node->rightchild->lowerbound) == TRUE )
+         if( node->leftchild == NULL || node->rightchild == NULL || SCIPisInfinity(scip, fabs(node->leftchild->lowerbound)) == TRUE || SCIPisInfinity(scip, fabs(node->rightchild->lowerbound)) == TRUE )
          {
             LPgains[0] = SCIPgetVarPseudocostCurrentRun(scip, node->branchedvar, SCIP_BRANCHDIR_DOWNWARDS); /* Here and below we assume that left is downward, as in relpscost. */
             LPgains[1] = SCIPgetVarPseudocostCurrentRun(scip, node->branchedvar, SCIP_BRANCHDIR_UPWARDS);
