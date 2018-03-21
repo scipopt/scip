@@ -13,6 +13,7 @@ fixed bugs:
 - fixed check of timing in heur_completesol
 - fixed wrong propagation in optcumulative constraint handler
 - fixed non-deterministic behavior in OBBT propagator
+- don't disable LP presolving when using Xpress as LP solver
 
 SCIP version 5.0.1
 ==================
