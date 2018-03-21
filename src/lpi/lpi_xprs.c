@@ -1888,7 +1888,7 @@ static SCIP_RETCODE lpiSolve(
       int presolving;
 
       /* check whether a dual ray exists, in that case we don't need to resolve the LP w/o presolving */
-      CHECK_ZERO( XPRSgetdualray(lpi->xprslp, NULL, &hasray) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdualray(lpi->xprslp, NULL, &hasray) );
 
       if( hasray == 1 )
          goto TERMINATE;
