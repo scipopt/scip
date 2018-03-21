@@ -318,7 +318,7 @@ void computeSecant(
             *constant = -*slope * xlb;
 
          /* update term for next iteration */
-         term *= xlb / xub;
+         term *= xlb / xub; /*lint !e414 */
       }
    }
    else
