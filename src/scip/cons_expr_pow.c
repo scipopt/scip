@@ -213,7 +213,7 @@ SCIP_RETCODE createData(
  * = (1-exponent) * xref^exponent + exponent * xref^(exponent-1) * x
  */
 static
-void estimateTangent(
+void computeTangent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             exponent,           /**< exponent */
    SCIP_Real             xref,               /**< reference point where to linearize */
@@ -251,7 +251,7 @@ void estimateTangent(
  * = xlb^exponent - slope * xlb + slope * x  with slope = (xub^exponent - xlb^exponent) / (xub - xlb)
  */
 static
-void estimateSecant(
+void computeSecant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             exponent,           /**< exponent */
    SCIP_Real             xlb,                /**< lower bound on x */
@@ -360,13 +360,13 @@ void estimateParabola(
 
    if( !overestimate )
    {
-      estimateTangent(scip, exponent, xref, constant, slope, success);
+      computeTangent(scip, exponent, xref, constant, slope, success);
       *islocal = FALSE;
    }
    else
    {
       /* overestimation -> secant */
-      estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+      computeSecant(scip, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
    }
 }
@@ -431,7 +431,7 @@ void estimateSignpower(
 
    *success = FALSE;
 
-   /* TODO estimateSecant and estimateTangent do not know if we are a real signpower (not just an odd power) */
+   /* TODO computeSecant and computeTangent do not know if we are a real signpower (not just an odd power) */
 
    if( !SCIPisPositive(scip, xub) )
    {
@@ -439,13 +439,13 @@ void estimateSignpower(
       if( !overestimate )
       {
          /* underestimator is secant */
-         estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+         computeSecant(scip, exponent, xlb, xub, constant, slope, success);
          *islocal = TRUE;
       }
       else
       {
          /* overestimator is tangent */
-         estimateTangent(scip, exponent, xref, constant, slope, success);
+         computeTangent(scip, exponent, xref, constant, slope, success);
 
          /* if global upper bound is > 0, then the tangent is only valid locally if the reference point is right of -root*xubglobal */
          *islocal = SCIPisPositive(scip, xubglobal) && xref > -root * xubglobal;
@@ -463,13 +463,13 @@ void estimateSignpower(
          if( xref < c )
          {
             /* underestimator is secant between xlb and c */
-            estimateSecant(scip, exponent, xlb, c, constant, slope, success);
+            computeSecant(scip, exponent, xlb, c, constant, slope, success);
             *islocal = TRUE;
          }
          else
          {
             /* underestimator is tangent */
-            estimateTangent(scip, exponent, xref, constant, slope, success);
+            computeTangent(scip, exponent, xref, constant, slope, success);
 
             /* if reference point is left of -root*xlbglobal (c w.r.t. global bounds), then tangent is not valid w.r.t. global bounds */
             *islocal = xref < -root * xlbglobal;
@@ -483,7 +483,7 @@ void estimateSignpower(
          if( xref <= c )
          {
             /* overestimator is tangent */
-            estimateTangent(scip, exponent, xref, constant, slope, success);
+            computeTangent(scip, exponent, xref, constant, slope, success);
 
             /* if reference point is right of -root*xubglobal (c w.r.t. global bounds), then tangent is not valid w.r.t. global bounds */
             *islocal = xref > -root * xubglobal;
@@ -491,7 +491,7 @@ void estimateSignpower(
          else
          {
             /* overestimator is secant */
-            estimateSecant(scip, exponent, c, xub, constant, slope, success);
+            computeSecant(scip, exponent, c, xub, constant, slope, success);
             *islocal = TRUE;
          }
       }
@@ -588,7 +588,7 @@ void estimateHyperbolaPositive(
                return;
          }
 
-         estimateTangent(scip, exponent, xref, constant, slope, success);
+         computeTangent(scip, exponent, xref, constant, slope, success);
 
          /* if x has fixed sign globally, then our tangent is also globally valid
           * however, if x has mixed sign, then it depends on the constellation between reference point and global bounds, whether the tangent is globally valid
@@ -652,7 +652,7 @@ void estimateHyperbolaPositive(
                 * secant between xlb and root*xlb (= tangent at root*xlb).
                 * However, if xub < root*xlb, then we can tilt the estimator to be the secant between xlb and xub.
                 */
-               estimateSecant(scip, exponent, xlb, MIN(xlb * root, xub), constant, slope, success);
+               computeSecant(scip, exponent, xlb, MIN(xlb * root, xub), constant, slope, success);
                *islocal = TRUE;
             }
             else
@@ -661,7 +661,7 @@ void estimateHyperbolaPositive(
                 * This will still be underestimating for x in [xlb,0], too.
                 * The tangent is globally valid, if we had also generated w.r.t. global bounds.
                 */
-               estimateTangent(scip, exponent, xref, constant, slope, success);
+               computeTangent(scip, exponent, xref, constant, slope, success);
                *islocal = xref < xlbglobal * root;
             }
          }
@@ -674,7 +674,7 @@ void estimateHyperbolaPositive(
          return;
 
       /* overestimate and fixed sign -> secant */
-      estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+      computeSecant(scip, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
    }
 
@@ -741,7 +741,7 @@ void estimateHyperbolaMixed(
       if( !overestimate )
       {
          /* underestimation -> secant */
-         estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+         computeSecant(scip, exponent, xlb, xub, constant, slope, success);
          *islocal = TRUE;
       }
       else
@@ -759,7 +759,7 @@ void estimateHyperbolaMixed(
                xref = 0.1;
          }
 
-         estimateTangent(scip, exponent, xref, constant, slope, success);
+         computeTangent(scip, exponent, xref, constant, slope, success);
          /* if x does not have a fixed sign globally, then our tangent is not globally valid (power is not convex on global domain) */
          *islocal = xlbglobal * xubglobal < 0.0;
       }
@@ -821,7 +821,7 @@ void estimateRoot(
    if( !overestimate )
    {
       /* underestimate -> secant */
-      estimateSecant(scip, exponent, xlb, xub, constant, slope, success);
+      computeSecant(scip, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
    }
    else
@@ -836,7 +836,7 @@ void estimateRoot(
             xref = 0.1;
       }
 
-      estimateTangent(scip, exponent, xref, constant, slope, success);
+      computeTangent(scip, exponent, xref, constant, slope, success);
       *islocal = FALSE;
    }
 }

@@ -22,7 +22,7 @@
 #include "scip/cons_expr_pow.c"
 #include "separation.h"
 
-/* test estimateTangent */
+/* test computeTangent */
 Test(estimation, tangent, .description = "test computation of tangent")
 {
    SCIP_Real exponent;
@@ -52,11 +52,11 @@ Test(estimation, tangent, .description = "test computation of tangent")
          constant = DBL_MAX;
          slope = DBL_MAX;
 
-         estimateTangent(scip, exponent, xref, &constant, &slope, &success);
+         computeTangent(scip, exponent, xref, &constant, &slope, &success);
 
          /* x^p -> x0^p + p*x0^{p-1} (x-x0) */
 
-         /* estimateTangent must fail iff xref is 0 and exponent < 1 (infinite gradient in reference point) */
+         /* computeTangent must fail iff xref is 0 and exponent < 1 (infinite gradient in reference point) */
          cr_assert(success != (xref == 0.0 && exponent < 1.0));
 
          if( success )
@@ -70,7 +70,7 @@ Test(estimation, tangent, .description = "test computation of tangent")
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-/* test estimateSecant */
+/* test computeSecant */
 Test(estimation, secant, .description = "test computation of secant")
 {
    SCIP_Real exponent;
@@ -99,11 +99,11 @@ Test(estimation, secant, .description = "test computation of secant")
             constant = DBL_MAX;
             slope = DBL_MAX;
 
-            estimateSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
+            computeSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
 
             /* x^p -> xlb^p + (xub^p - xlb^p) / (xub - xlb) * (x - xlb) */
 
-            /* estimateSecant must fail iff xlb or xub is 0 and exponent < 0 (pole at boundary) */
+            /* computeSecant must fail iff xlb or xub is 0 and exponent < 0 (pole at boundary) */
             cr_assert(success != ((xlb == 0.0 || xub == 0.0) && exponent < 0.0));
 
             if( success )
@@ -117,7 +117,7 @@ Test(estimation, secant, .description = "test computation of secant")
 
    /* do one more test where cancellation is likely
     * cancellation when computing slope occurs, e.g., when xub^exponent - xlb^exponent is too small
-    * in double precision, with xlb = 1 and xub = 1 + 2*SCIPepsilon (estimateSecant forbids SCIPisEQ(xlb,xub)), this means
+    * in double precision, with xlb = 1 and xub = 1 + 2*SCIPepsilon (computeSecant forbids SCIPisEQ(xlb,xub)), this means
     *     (1+2*SCIPepsilon)^exponent - 1 < DBL_EPSILON
     * <-> 1+2*SCIPepsilon < (1+DBL_EPSILON)^(1/exponent)
     * <-> log(1+2*SCIPepsilon) < 1/exponent * log(1+DBL_EPSILON)
@@ -132,9 +132,9 @@ Test(estimation, secant, .description = "test computation of secant")
    /* in double precision, xlb^exponent looks the same as xub^exponent */
    /* cr_assert_eq(pow(xlb, exponent), pow(xub, exponent)); */ /* assert fails only on some architectures */
 
-   estimateSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
+   computeSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
 
-   /* estimateSecant should either fail or produce a positive slope */
+   /* computeSecant should either fail or produce a positive slope */
    cr_assert(!success || (slope > 0.0));
 
 
