@@ -2721,7 +2721,6 @@ SCIP_RETCODE SCIPcopyConss(
    nsourceconshdlrs = SCIPgetNConshdlrs(sourcescip);
    sourceconshdlrs = SCIPgetConshdlrs(sourcescip);
    assert(nsourceconshdlrs == 0 || sourceconshdlrs != NULL);
-   assert(SCIPisTransformed(sourcescip));
 
    *valid = TRUE;
 
@@ -3216,8 +3215,6 @@ SCIP_RETCODE SCIPcopyConflicts(
    /* get all conflicts stored in the conflict pool */
    SCIP_CALL( SCIPconflictstoreGetConflicts(sourcescip->conflictstore, sourceconfs, sourceconfssize, &nsourceconfs) );
    assert(nsourceconfs <= sourceconfssize);
-
-   assert(SCIPisTransformed(sourcescip));
 
    /* copy conflicts */
    for( c = 0; c < nsourceconfs; ++c )
@@ -39475,7 +39472,6 @@ SCIP_RETCODE SCIPprintMIPStart(
    SCIP_Real objvalue;
    SCIP_Bool oldquiet = FALSE;
 
-   assert(SCIPisTransformed(scip) || sol != NULL);
    assert(sol != NULL);
    assert(!SCIPsolIsPartial(sol));
 
