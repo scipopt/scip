@@ -2923,24 +2923,6 @@ SCIP_RETCODE SCIPsetBendersPostsolve(
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization method of benders */
    );
 
-/** sets the free subproblem method for benders
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *
- *  @note If the subproblem solving method is implemented, then the freeing subproblem method` must also be implemented
- */
-EXTERN
-SCIP_RETCODE SCIPsetBendersFreesub(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the subproblem freeing method for Benders' decomposition */
-   );
-
 /** returns the Benders' decomposition of the given name, or NULL if not existing */
 EXTERN
 SCIP_BENDERS* SCIPfindBenders(
