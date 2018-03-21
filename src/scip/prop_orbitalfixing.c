@@ -438,6 +438,14 @@ SCIP_RETCODE propagateOrbitalFixing(
             /* we are moving a variable branched to 1 to another variable */
             if ( b1[v] && ! b1[img] )
                break;
+
+            /* Global variable fixings during the solving process might arise because parts of the tree are
+               pruned. Since these fixings might be caused by orbital fixing, they can be in conflict with
+               the symmetry handling decisions of orbital fixing in the part of the tree that is not pruned.
+               Thus, we have to take global fixings into account when filtering out symmetries. */
+            if ( (SCIPvarGetLbGlobal(permvars[v]) > 0.5 && SCIPvarGetLbGlobal(permvars[img]) < 0.5) ||
+               (SCIPvarGetLbGlobal(permvars[v]) < 0.5 && SCIPvarGetLbGlobal(permvars[img]) > 0.5) )
+               break;
          }
       }
 
