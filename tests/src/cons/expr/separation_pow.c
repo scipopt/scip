@@ -510,7 +510,7 @@ Test(estimation, hyperbolaMixed, .description = "test computation of estimators 
    success = TRUE;
    xref = -0.5;
    estimateHyperbolaMixed(scip, -3.0, FALSE, -1.0, 0.0, xref, -1.0, 0.0, &constant, &slope, &islocal, &success);
-   cr_assert(!success); /*  */
+   cr_assert(!success);
 
    success = FALSE;
    islocal = TRUE;
