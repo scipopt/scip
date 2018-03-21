@@ -110,7 +110,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
    assert( tabledata != NULL );
    assert( tabledata->propdata != NULL );
 
-   if ( tabledata->propdata->nfixedzero + tabledata->propdata->nfixedone > 0 )
+   if ( tabledata->propdata->nperms > 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Orbital fixing     :\n");
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :%11d\n", tabledata->propdata->nfixedzero);
