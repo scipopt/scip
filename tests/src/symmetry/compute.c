@@ -345,11 +345,11 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* compute symmetry before presolving */
-   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/computepresolved", FALSE) );
-
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
+
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
    /* mark that we want to have symmetry */
    SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY, 0) );
