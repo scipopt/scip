@@ -655,7 +655,7 @@ SCIP_DECL_PROPINITPRE(propInitpreOrbitalfixing)
 /** presolving method of propagator */
 static
 SCIP_DECL_PROPPRESOL(propPresolOrbitalFixing)
-{
+{  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    SCIP_Bool infeasible = FALSE;
    int nprop = 0;
