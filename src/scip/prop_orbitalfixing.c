@@ -315,7 +315,7 @@ SCIP_RETCODE computeBranchingVariables(
       {
          /* get bound change info */
          boundchg = SCIPdomchgGetBoundchg(domchg, i);
-         assert( boundchg != 0 );
+         assert( boundchg != NULL );
 
          /* branching decisions have to be in the beginning of the bound change array */
          if ( SCIPboundchgGetBoundchgtype(boundchg) != SCIP_BOUNDCHGTYPE_BRANCHING )
