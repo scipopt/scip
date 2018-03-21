@@ -3463,6 +3463,135 @@ SCIP_RETCODE separateGLS(
 }
 
 
+/** separation method */
+static
+SCIP_RETCODE separateOddCycles(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SOL*             sol,                /**< given primal solution */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{
+   SCIP_SEPADATA* sepadata;
+   int depth;
+   int ncalls;
+   /* cppcheck-suppress unassignedVariable */
+   int oldnliftedcuts;
+   int nfrac = 0;
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   depth = SCIPgetDepth(scip);
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+
+   /* only call separator a given number of rounds at each b&b node */
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* only call separator if enough binary variables are present */
+   if( SCIPgetNBinVars(scip) < 3 || (! sepadata->includetriangles && SCIPgetNBinVars(scip) < 5) )
+   {
+      SCIPdebugMsg(scip, "skipping separator: not enough binary variables\n");
+      return SCIP_OKAY;
+   }
+
+   /* only call separator if enough fractional variables are present */
+   if ( sol != NULL )
+   {
+      SCIP_VAR** vars;
+      SCIP_Real solval;
+      int nvars;
+      int v;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+      /* first compute fractional variables */
+      for( v = 0; v < nvars; ++v )
+      {
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         if ( ! SCIPisFeasIntegral(scip, solval) )
+            ++nfrac;
+      }
+   }
+   else
+      nfrac = SCIPgetNLPBranchCands(scip);
+
+   if( nfrac < 3 || (! sepadata->includetriangles && nfrac < 5) )
+   {
+      SCIPdebugMsg(scip, "skipping separator: not enough fractional variables\n");
+      return SCIP_OKAY;
+   }
+
+   /* only call separator if enough implications and cliques are present */
+   if( SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
+   {
+      SCIPdebugMsg(scip, "skipping separator: not enough implications present\n");
+      return SCIP_OKAY;
+   }
+
+   /* only run if number of cuts already found is small enough */
+   if ( sepadata->cutthreshold >= 0 && SCIPgetNCutsFoundRound(scip) >= sepadata->cutthreshold )
+      return SCIP_OKAY;
+
+   /* store node number and reset number of unsuccessful calls */
+   if ( sepadata->lastnode != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
+   {
+      sepadata->nunsucessfull = 0;
+      sepadata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   }
+   else
+   {
+      if ( sepadata->nunsucessfull > sepadata->maxunsucessfull )
+      {
+         SCIPdebugMsg(scip, "skipping separator: number of unsucessfull calls = %d.\n", sepadata->nunsucessfull);
+         return SCIP_OKAY;
+      }
+   }
+
+   *result = SCIP_DIDNOTFIND;
+   sepadata->oldncuts = sepadata->ncuts;
+   SCIPdebug( oldnliftedcuts = sepadata->nliftedcuts; )
+
+   if( depth == 0 )
+      sepadata->maxsepacutsround = sepadata->maxsepacutsroot;
+   else
+      sepadata->maxsepacutsround = sepadata->maxsepacuts;
+
+   /* perform the actual separation routines */
+   if( sepadata->usegls )
+   {
+      SCIPdebugMsg(scip, "using GLS method for finding odd cycles\n");
+      SCIP_CALL( separateGLS(scip, sepa, sepadata, sol, result) );
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "using level graph heuristic for finding odd cycles\n");
+      SCIP_CALL( separateHeur(scip, sepa, sepadata, sol, result) );
+   }
+
+   if( sepadata->ncuts - sepadata->oldncuts > 0 )
+   {
+      SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
+         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts);
+      sepadata->nunsucessfull = 0;
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "no cuts added (%d allowed)\n", sepadata->maxsepacutsround);
+      ++sepadata->nunsucessfull;
+   }
+   SCIPdebugMsg(scip, "total sepatime: %.2f - total number of added cuts: %u\n", SCIPsepaGetTime(sepa), sepadata->ncuts);
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of separator
  */
@@ -3538,99 +3667,26 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
 {  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-   int depth;
-   int ncalls;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnliftedcuts;
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   SCIP_CALL( separateOddCycles(scip, sepa, NULL, result) );
 
-   /* get separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
+   return SCIP_OKAY;
+}
 
-   depth = SCIPgetDepth(scip);
-   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+/** arbitrary primal solution separation method of separator */
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolOddcycle)
+{  /*lint --e{715}*/
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
 
-   /* only call separator a given number of rounds at each b&b node */
-   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
-      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
-      return SCIP_OKAY;
-
-   /* only call separator if enough binary variables are present */
-   if( SCIPgetNBinVars(scip) < 3 || (!(sepadata->includetriangles) && SCIPgetNBinVars(scip) < 5))
-   {
-      SCIPdebugMsg(scip, "skipping separator: not enough binary variables\n");
-      return SCIP_OKAY;
-   }
-
-   /* only call separator if enough fractional variables are present */
-   if( SCIPgetNLPBranchCands(scip) < 3 || (!(sepadata->includetriangles) && SCIPgetNLPBranchCands(scip) < 5))
-   {
-      SCIPdebugMsg(scip, "skipping separator: not enough fractional variables\n");
-      return SCIP_OKAY;
-   }
-
-   /* only call separator if enough implications and cliques are present */
-   if( SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
-   {
-      SCIPdebugMsg(scip, "skipping separator: not enough implications present\n");
-      return SCIP_OKAY;
-   }
-
-   /* only run if number of cuts already found is small enough */
-   if ( sepadata->cutthreshold >= 0 && SCIPgetNCutsFoundRound(scip) >= sepadata->cutthreshold )
-      return SCIP_OKAY;
-
-   /* store node number and reset number of unsuccessful calls */
-   if ( sepadata->lastnode != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
-   {
-      sepadata->nunsucessfull = 0;
-      sepadata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-   }
-   else
-   {
-      if ( sepadata->nunsucessfull > sepadata->maxunsucessfull )
-      {
-         SCIPdebugMsg(scip, "skipping separator: number of unsucessfull calls = %d.\n", sepadata->nunsucessfull);
-         return SCIP_OKAY;
-      }
-   }
-
-   *result = SCIP_DIDNOTFIND;
-   sepadata->oldncuts = sepadata->ncuts;
-   SCIPdebug( oldnliftedcuts = sepadata->nliftedcuts; )
-
-   if( depth == 0 )
-      sepadata->maxsepacutsround = sepadata->maxsepacutsroot;
-   else
-      sepadata->maxsepacutsround = sepadata->maxsepacuts;
-
-   /* perform the actual separation routines */
-   if( sepadata->usegls )
-   {
-      SCIPdebugMsg(scip, "using GLS method for finding odd cycles\n");
-      SCIP_CALL( separateGLS(scip, sepa, sepadata, NULL, result) );
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "using level graph heuristic for finding odd cycles\n");
-      SCIP_CALL( separateHeur(scip, sepa, sepadata, NULL, result) );
-   }
-
-   if( sepadata->ncuts - sepadata->oldncuts > 0 )
-   {
-      SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
-         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts);
-      sepadata->nunsucessfull = 0;
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "no cuts added (%d allowed)\n", sepadata->maxsepacutsround);
-      ++sepadata->nunsucessfull;
-   }
-   SCIPdebugMsg(scip, "total sepatime: %.2f - total number of added cuts: %u\n", SCIPsepaGetTime(sepa), sepadata->ncuts);
+   SCIP_CALL( separateOddCycles(scip, sepa, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -3656,7 +3712,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpOddcycle, NULL,
+         sepaExeclpOddcycle, sepaExecsolOddcycle,
          sepadata) );
 
    assert(sepa != NULL);
