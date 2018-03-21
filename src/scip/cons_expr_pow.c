@@ -406,7 +406,7 @@ void estimateParabola(
  *
  * - odd positive powers, x^3, x^5, x^7
  * - sign(x)|x|^n for n > 1
- * - not x >= 0
+ * - lower bound on x is negative (otherwise one should use separation for parabola)
 
   100 +--------------------------------------------------------------------+
       |                +                 +                +              **|
