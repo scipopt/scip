@@ -2454,6 +2454,16 @@ SCIP_RETCODE SCIPselectCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
+   SCIP_Real             goodscorefac,       /**< factor of best score among the given cuts to consider a cut good
+                                              *   and filter with less strict settings of the maximum parallelism */
+   SCIP_Real             badscorefac,        /**< factor of best score among the given cuts to consider a cut bad
+                                              *   and discard it regardless of its parallelism to other cuts */
+   SCIP_Real             goodmaxparall,      /**< maximum parallelism for good cuts */
+   SCIP_Real             maxparall,          /**< maximum parallelism for non-good cuts */
+   SCIP_Real             dircutoffdistweight,/**< weight of directed cutoff distance in score calculation */
+   SCIP_Real             efficacyweight,     /**< weight of efficacy (shortest cutoff distance) in score calculation */
+   SCIP_Real             objparalweight,     /**< weight of objective parallelism in score calculation */
+   SCIP_Real             intsupportweight,   /**< weight of integral support in score calculation */
    int                   ncuts,              /**< number of cuts in given array */
    int                   nforcedcuts,        /**< number of forced cuts at start of given array */
    int                   maxselectedcuts,    /**< maximal number of cuts to select */
@@ -2463,8 +2473,7 @@ SCIP_RETCODE SCIPselectCuts(
    int i;
    SCIP_Real* scores;
    SCIP_Real goodscore;
-   SCIP_Real goodmaxparall;
-   SCIP_Real maxparall;
+   SCIP_Real badscore;
    SCIP_Real efficacyfac;
    SCIP_SOL* sol;
 
@@ -2482,12 +2491,12 @@ SCIP_RETCODE SCIPselectCuts(
 
    sol = SCIPgetBestSol(scip);
 
-   efficacyfac = scip->set->sepa_efficacyfac;
+   efficacyfac = efficacyweight;
 
    goodscore = 0.0;
 
    /* if there is an incumbent and the factor is not 0.0, compute directed cutoff distances for the incumbent */
-   if( sol != NULL && scip->set->sepa_dircutoffdistfac > 0.0 )
+   if( sol != NULL && dircutoffdistweight > 0.0 )
    {
       for( i = 0; i < ncuts; ++i )
       {
@@ -2495,22 +2504,22 @@ SCIP_RETCODE SCIPselectCuts(
          SCIP_Real intsupport;
          SCIP_Real efficacy;
 
-         intsupport = scip->set->sepa_intsupportfac != 0.0 ?
-         scip->set->sepa_intsupportfac * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) :
+         intsupport = intsupportweight != 0.0 ?
+         intsupportweight * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) :
          0.0;
 
-         objparallelism = scip->set->sepa_objparalfac != 0.0 ? scip->set->sepa_objparalfac * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
+         objparallelism = objparalweight != 0.0 ? objparalweight * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
 
          efficacy = SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp);
 
          if( SCIProwIsLocal(cuts[i]) )
          {
-            scores[i] = scip->set->sepa_dircutoffdistfac * efficacy;
+            scores[i] = dircutoffdistweight * efficacy;
          }
          else
          {
             scores[i] = SCIProwGetLPSolCutoffDistance(cuts[i], scip->set, scip->stat, sol, scip->lp);
-            scores[i] = scip->set->sepa_dircutoffdistfac * MAX(scores[i], efficacy);
+            scores[i] = dircutoffdistweight * MAX(scores[i], efficacy);
          }
 
          efficacy *= efficacyfac;
@@ -2519,23 +2528,28 @@ SCIP_RETCODE SCIPselectCuts(
          /* add small term to prefer global pool cuts */
          scores[i] += SCIProwIsInGlobalCutpool(cuts[i]) ? 1e-4 : 0.0;
 
+         if( randnumgen != NULL )
+         {
+            scores[i] += SCIPrandomGetReal(randnumgen, 0.0, 1e-6);
+         }
+
          goodscore = MAX(goodscore, scores[i]);
       }
    }
    else
    {
-      efficacyfac += scip->set->sepa_dircutoffdistfac;
+      efficacyfac += objparalweight;
       for( i = 0; i < ncuts; ++i )
       {
          SCIP_Real objparallelism;
          SCIP_Real intsupport;
          SCIP_Real efficacy;
 
-         intsupport = scip->set->sepa_intsupportfac > 0.0 ?
-         scip->set->sepa_intsupportfac * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) :
+         intsupport = intsupportweight > 0.0 ?
+         intsupportweight * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) :
          0.0;
 
-         objparallelism = scip->set->sepa_objparalfac > 0.0 ? scip->set->sepa_objparalfac * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
+         objparallelism = objparalweight > 0.0 ? objparalweight * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
 
          efficacy = efficacyfac > 0.0 ?
          efficacyfac * SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp) :
@@ -2548,7 +2562,7 @@ SCIP_RETCODE SCIPselectCuts(
 
          if( randnumgen != NULL )
          {
-            scores[i] += SCIPrandomGetReal(randnumgen, -1e-6, 1e-6);
+            scores[i] += SCIPrandomGetReal(randnumgen, 0.0, 1e-6);
          }
 
          goodscore = MAX(goodscore, scores[i]);
@@ -2556,9 +2570,8 @@ SCIP_RETCODE SCIPselectCuts(
    }
 
    /* compute values for filtering cuts */
-   goodscore *= 0.9;
-   maxparall = 1.0 - scip->set->sepa_minorthoroot;
-   goodmaxparall = MAX(0.5, 1.0 - scip->set->sepa_minorthoroot);
+   badscore = goodscore * badscorefac;
+   goodscore *= goodscorefac;
 
    /* perform cut selection algorithm for the cuts */
    {
@@ -2589,6 +2602,11 @@ SCIP_RETCODE SCIPselectCuts(
 
          selectBestCut(nonforcedcuts, nonforcedscores, nnonforcedcuts);
          selectedcut = nonforcedcuts[0];
+
+         /* if the best cut of the remaining cuts is considered bad, we discard it and all remaining cuts */
+         if( nonforcedscores[0] < badscore )
+            goto TERMINATE;
+
          ++(*nselectedcuts);
 
          /* if the maximal number of cuts was selected, we can stop here */
