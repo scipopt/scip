@@ -1884,11 +1884,19 @@ static SCIP_RETCODE lpiSolve(
    /* Make sure that always a primal / dual ray exists */
    if( lpi->solstat == XPRS_LP_INFEAS  || lpi->solstat == XPRS_LP_UNBOUNDED )
    {
+      int hasray;
       int presolving;
 
+      /* check whether a dual ray exists, in that case we don't need to resolve the LP w/o presolving */
+      CHECK_ZERO( XPRSgetdualray(lpi->xprslp, NULL, &hasray) );
+
+      if( hasray == 1 )
+         goto TERMINATE;
+
+      /* get the current presolving setting */
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_PRESOLVE, &presolving) );
 
-      if( presolving )
+      if( presolving != 0 )
       {
          int tmpiterations;
 
@@ -1920,11 +1928,12 @@ static SCIP_RETCODE lpiSolve(
          SCIPdebugMessage(" -> Xpress returned solstat=%d, pinfeas=%d, dinfeas=%d (%d iterations)\n",
             lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
 
-         /* switch on preprocessing again */
-         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 1) );
+         /* reinstall the previous setting */
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, presolving) );
       }
    }
 
+  TERMINATE:
    if( (lpi->solstat == XPRS_LP_OPTIMAL) && (primalinfeasible || dualinfeasible) )
       lpi->solstat = XPRS_LP_OPTIMAL_SCALEDINFEAS;
 
