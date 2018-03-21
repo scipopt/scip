@@ -3678,7 +3678,8 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    }
 
    /* GRB_UNBOUNDED means that there exists a primal ray. SCIPlpiSolvePrimal() will determine whether the problem is
-    * actually infeasible or (feasible and) unbounded. In the latter case, the status will be GRB_UNBOUNDED. */
+    * actually infeasible or (feasible and) unbounded. In the latter case, the status will be GRB_UNBOUNDED.
+    */
    return (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL);
 }
 
@@ -3746,7 +3747,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
       if ( res != 0 )
       {
-         /* If Gurobi cannot return the constraint violation, there is no feasible solution available. */
+         /* If Gurobi cannot return the bound violation, there is no feasible solution available. */
          return FALSE;
       }
 
