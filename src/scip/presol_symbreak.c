@@ -46,6 +46,8 @@
 #include <scip/presol_symmetry.h>
 #include <symmetry/type_symmetry.h>
 
+#include <string.h>
+
 /* presolver properties */
 #define PRESOL_NAME            "symbreak"
 #define PRESOL_DESC            "presolver for adding symmetry breaking constraints"
@@ -957,6 +959,160 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
 }
 
 
+/** run main routine to add symmetry handling constraints */
+static
+SCIP_RETCODE tryAddSymbreakConss(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_Bool             presolveconss,      /**< whether we presolve the symmetry handling constraints */
+   SCIP_RESULT*          result,             /**< pointer to store result of presolving (or NULL) */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   SCIP_PRESOLTIMING     presoltiming,       /**< presolving timing(s) to be performed */
+   int                   nnewfixedvars,      /**< number of variables fixed since the last call to the presolving method (or 0) */
+   int                   nnewaggrvars,       /**< number of variables aggregated since the last call to the presolving method (or 0) */
+   int                   nnewchgvartypes,    /**< number of variable type changes since the last call to the presolving method (or 0) */
+   int                   nnewchgbds,         /**< number of variable bounds tightened since the last call to the presolving method (or 0) */
+   int                   nnewholes,          /**< number of domain holes added since the last call to the presolving method (or 0) */
+   int                   nnewdelconss,       /**< number of deleted constraints since the last call to the presolving method (or 0) */
+   int                   nnewaddconss,       /**< number of added constraints since the last call to the presolving method (or 0) */
+   int                   nnewupgdconss,      /**< number of upgraded constraints since the last call to the presolving method (or 0) */
+   int                   nnewchgcoefs,       /**< number of changed coefficients since the last call to the presolving method (or 0) */
+   int                   nnewchgsides,       /**< number of changed left or right hand sides since the last call to the presolving method (or 0) */
+   int*                  nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers (or NULL) */
+   int*                  naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers (or NULL) */
+   int*                  nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers (or NULL) */
+   int*                  nchgbds,            /**< pointer to count total number of variable bounds tightened of all presolvers (or NULL) */
+   int*                  naddholes,          /**< pointer to count total number of domain holes added of all presolvers (or NULL) */
+   int*                  ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers (or NULL) */
+   int*                  naddconss,          /**< pointer to count total number of added constraints of all presolvers (or NULL) */
+   int*                  nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers (or NULL) */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers (or NULL) */
+   int*                  nchgsides           /**< pointer to count total number of changed left/right hand sides of all presolvers (or NULL) */
+   )
+{
+   SCIP_PRESOLDATA* presoldata;
+   int noldfixedvars;
+   int noldaggrvars;
+   int noldbdchgs;
+   int noldaddconss;
+
+   assert( scip != NULL );
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
+
+   if ( presolveconss )
+   {
+      assert( result != NULL );
+      assert( nfixedvars != NULL );
+      assert( naggrvars != NULL );
+      assert( nchgvartypes != NULL );
+      assert( nchgbds != NULL );
+      assert( naddholes != NULL );
+      assert( ndelconss != NULL );
+      assert( naddconss != NULL );
+      assert( nupgdconss != NULL );
+      assert( nchgcoefs != NULL );
+      assert( nchgsides != NULL );
+
+      noldfixedvars = *nfixedvars;
+      noldaggrvars = *naggrvars;
+      noldbdchgs = *nchgbds;
+      noldaddconss = *naddconss;
+   }
+
+   /* get symmetry information, if not already computed */
+   if ( ! presoldata->computedsymmetry )
+   {
+      SCIPdebugMsg(scip, "Symmetry breaking presolver: computing symmetry ...\n");
+      assert( presoldata->nperms < 0 );
+
+      /* get symmetries */
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(presoldata->npermvars), &(presoldata->permvars),
+            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
+
+      presoldata->computedsymmetry = TRUE;
+
+      if ( presoldata->nperms <= 0 )
+      {
+         SCIPdebugMsg(scip, "Symmetry breaking presolver: no symmetry has been found, turning presolver off.\n");
+         presoldata->enabled = FALSE;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         assert( presoldata->nperms > 0 );
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
+
+         if ( presoldata->computeorbits )
+         {
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
+
+            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
+                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
+         }
+
+         if ( presoldata->detectorbitopes )
+         {
+            SCIP_CALL( detectOrbitopes(scip, presoldata) );
+         }
+      }
+   }
+   else if ( presoldata->nperms <= 0 )
+      return SCIP_OKAY;
+
+   /* at this point, the symmetry group should be computed and nontrivial */
+   assert( presoldata->nperms > 0 );
+
+   if ( presolveconss )
+      *result = SCIP_DIDNOTFIND;
+
+   /* possibly stop */
+   if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* if not already done, add symmetry breaking constraints */
+   if ( ! presoldata->addedconss )
+   {
+      /* add symmetry breaking constraints */
+      int noldngenconns = presoldata->ngenconss;
+      int i;
+
+      SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
+
+      presoldata->addedconss = TRUE;
+
+      if ( ! presolveconss )
+         return SCIP_OKAY;
+
+      *naddconss += presoldata->ngenconss - noldngenconns;
+      SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", presoldata->ngenconss - noldngenconns);
+
+      /* if constraints have been added, loop through generated constraints and presolve each */
+      for (i = 0; i < presoldata->ngenconss; ++i)
+      {
+         SCIP_CALL( SCIPpresolCons(scip, presoldata->genconss[i], nrounds, SCIP_PRESOLTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
+               nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
+               nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+
+         /* exit if cutoff has been detected */
+         if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+         {
+            SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(presoldata->genconss[i]));
+            return SCIP_OKAY;
+         }
+      }
+      SCIPdebugMsg(scip, "Presolved %d constraints generated by symbreak.\n", presoldata->ngenconss);
+   }
+
+   /* determine success */
+   if ( *naddconss + *nchgbds + *naggrvars + *nfixedvars > noldaddconss + noldbdchgs + noldaggrvars + noldfixedvars )
+      *result = SCIP_SUCCESS;
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of presolver
  */
@@ -1131,16 +1287,37 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 }
 
 
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
+static
+SCIP_DECL_PRESOLEXITPRE(presolExitpreSymbreak)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   assert( scip != NULL );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
+
+   SCIPdebugMsg(scip, "Exitpre method of symbreak presolver ...\n");
+
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
+
+   /* guarantee that symmetries are computed (and handled) even if presolving is disabled */
+   if ( ! presoldata->enabled || presoldata->nperms >= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( tryAddSymbreakConss(scip, presol, FALSE, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
-   int noldfixedvars = *nfixedvars;
-   int noldaggrvars = *naggrvars;
-   int noldbdchgs = *nchgbds;
-   int noldaddconss = *naddconss;
-   int i;
 
    assert( scip != NULL );
    assert( presol != NULL );
@@ -1164,93 +1341,11 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMsg(scip, "Presolving method of symmetry breaking presolver ...\n");
-
-   /* get symmetry information, if not already computed */
-   if ( ! presoldata->computedsymmetry )
-   {
-      SCIPdebugMsg(scip, "Symmetry breaking presolver: computing symmetry ...\n");
-      assert( presoldata->nperms < 0 );
-
-      /* get symmetries */
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(presoldata->npermvars), &(presoldata->permvars),
-            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
-
-      presoldata->computedsymmetry = TRUE;
-
-      if ( presoldata->nperms <= 0 )
-      {
-         SCIPdebugMsg(scip, "Symmetry breaking presolver: no symmetry has been found, turning presolver off.\n");
-         presoldata->enabled = FALSE;
-         return SCIP_OKAY;
-      }
-      else
-      {
-         assert( presoldata->nperms > 0 );
-
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
-
-         if ( presoldata->computeorbits )
-         {
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
-
-            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
-                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
-         }
-
-         if ( presoldata->detectorbitopes )
-         {
-            SCIP_CALL( detectOrbitopes(scip, presoldata) );
-         }
-      }
-   }
-   else if ( presoldata->nperms <= 0 )
-      return SCIP_OKAY;
-
-   /* at this point, the symmetry group should be computed and nontrivial */
-   assert( presoldata->nperms > 0 );
-   *result = SCIP_DIDNOTFIND;
-
-   /* deactivate presolvers that may conflict with symmetry handling routines */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-
-   /* possibly stop */
-   if ( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   /* if not already done, add symmetry breaking constraints */
-   if ( ! presoldata->addedconss )
-   {
-      /* add symmetry breaking constraints */
-      int noldngenconns = presoldata->ngenconss;
-
-      SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
-
-      presoldata->addedconss = TRUE;
-      *naddconss += presoldata->ngenconss - noldngenconns;
-      SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", presoldata->ngenconss - noldngenconns);
-
-      /* if constraints have been added, loop through generated constraints and presolve each */
-      for (i = 0; i < presoldata->ngenconss; ++i)
-      {
-         SCIP_CALL( SCIPpresolCons(scip, presoldata->genconss[i], nrounds, SCIP_PRESOLTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
-               nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
-               nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
-
-         /* exit if cutoff has been detected */
-         if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
-         {
-            SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(presoldata->genconss[i]));
-            return SCIP_OKAY;
-         }
-      }
-      SCIPdebugMsg(scip, "Presolved %d constraints generated by symbreak.\n", presoldata->ngenconss);
-   }
-
-   /* determine success */
-   if ( *naddconss + *nchgbds + *naggrvars + *nfixedvars > noldaddconss + noldbdchgs + noldaggrvars + noldfixedvars )
-      *result = SCIP_SUCCESS;
+   SCIP_CALL( tryAddSymbreakConss(scip, presol, FALSE, result, nrounds, presoltiming,
+         nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+         nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+         nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+         ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides) );
 
    return SCIP_OKAY;
 }
@@ -1300,6 +1395,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSymbreak) );
    SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitSymbreak) );
    SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreSymbreak) );
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreSymbreak) );
 
    /* add symmetry breaking presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

@@ -1643,8 +1643,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    if ( ! presoldata->computedsym )
    {
       if ( SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING &&
-           SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED && SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE &&
-           SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+           SCIPgetStage(scip) != SCIP_STAGE_EXITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED &&
+           SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE && SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       {
          SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
          return SCIP_INVALIDCALL;
