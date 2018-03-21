@@ -521,6 +521,7 @@ SCIP_RETCODE solvePricingMINLP(
 
    /* set heuristics to aggressive */
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mpec/freq", -1) );
 
 #ifndef SCIP_DEBUG
    SCIPsetMessagehdlrQuiet(subscip, TRUE);
