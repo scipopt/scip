@@ -84,7 +84,7 @@ Test(estimation, secant, .description = "test computation of secant")
 
    for( exponent = -3.0; exponent <= 3.0; exponent += 0.5 )
    {
-      if( exponent == 0.0 )
+      if( exponent == 0.0 || exponent == 1.0 )
          continue;
 
       for( xlb = -2.0; xlb <= 2.0; xlb += 1.0 )

@@ -270,6 +270,7 @@ void computeSecant(
    assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointRow */
    assert(xlb >= 0.0 || EPSISINT(exponent, 0.0));
    assert(xub >= 0.0 || EPSISINT(exponent, 0.0));
+   assert(exponent != 1.0);
 
    *success = FALSE;
 
@@ -295,14 +296,43 @@ void computeSecant(
       if( !SCIPisFinite(ubval) )
          return;
 
-      /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?)
-       * for now, only check that things did not cancel out completely (for parabola and xlb very close to -xub, lbval=ubval is ok, though)
-       */
-      if( lbval == ubval && !(SCIPisEQ(scip, xlb, -xub) && EPSISINT(exponent / 2.0, 0.0)) ) /*lint !e777*/
-         return;
+      if( exponent > 1.0 && EPSISINT(exponent, 0.0) && exponent <= 10.0 )
+      {
+         /* for integral exponents, slope can be calculated as
+          * sum_{i=1}^{exponent} xub^{exponent-i} xlb^{i-1}
+          * Further, constant is
+          *   xlb^exponent - slope * xlb
+          * = xlb^{exponent-1} * xlb - sum_{i=1}^{exponent} xub^{exponent-i} xlb^{i-1} * xlb
+          * = - sum_{i=1}^{exponent-1} xub^{exponent-i} xlb^{i-1} * xlb
+          *
+          * TODO when does this have better numerical properties than the other formula below?
+          * the formula below is prone to cancellation, but requires much less calls to pow
+          * for now, I restrict this to exponents <= 10, though this is an arbitrary choice
+          * further, we could also avoid so many pow computations by just reusing the previous
+          * term, multiplied by xub/xlb (we might want special handling for xlb=0 or xub=0, too)
+          */
+         SCIP_Real i;
 
-      *slope = (ubval - lbval) / (xub - xlb);
-      *constant = lbval - *slope * xlb;
+         *slope = 0.0;
+         for( i = 1.0; i <= exponent; ++i )
+         {
+            *slope += pow(xub, exponent - i) * pow(xlb, i-1.0);
+            if( i == exponent - 1.0 )
+               *constant = -*slope * xlb;
+         }
+      }
+      else
+      {
+         /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?)
+          * for now, only check that things did not cancel out completely (for parabola and xlb very close to -xub, lbval=ubval is ok, though)
+          */
+         if( lbval == ubval && !(SCIPisEQ(scip, xlb, -xub) && EPSISINT(exponent / 2.0, 0.0)) ) /*lint !e777*/
+            return;
+
+         *slope = (ubval - lbval) / (xub - xlb);
+         *constant = lbval - *slope * xlb;
+      }
+
    }
 
    *success = TRUE;
