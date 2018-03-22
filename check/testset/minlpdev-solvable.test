@@ -55,6 +55,7 @@ MINLP/instances/MINLPLib2/data/osil/kall_congruentcircles_c61.osil
 MINLP/instances/MINLPLib2/data/osil/kall_congruentcircles_c72.osil
 MINLP/instances/MINLPLib2/data/osil/kall_diffcircles_10.osil
 MINLP/instances/MINLPLib2/data/osil/kall_diffcircles_9.osil
+MINLP/instances/MINLPLib2/data/osil/korcns.osil
 MINLP/instances/MINLPLib2/data/osil/m7_ar5_1.osil
 MINLP/instances/MINLPLib2/data/osil/m7.osil
 MINLP/instances/MINLPLib2/data/osil/milinfract.osil
@@ -68,6 +69,7 @@ MINLP/instances/MINLPLib2/data/osil/o7_ar25_1.osil
 MINLP/instances/MINLPLib2/data/osil/o7_ar3_1.osil
 MINLP/instances/MINLPLib2/data/osil/o7_ar5_1.osil
 MINLP/instances/MINLPLib2/data/osil/o7.osil
+MINLP/instances/MINLPLib2/data/osil/o8_ar4_1.osil
 MINLP/instances/MINLPLib2/data/osil/oil2.osil
 MINLP/instances/MINLPLib2/data/osil/pointpack06.osil
 MINLP/instances/MINLPLib2/data/osil/pointpack08.osil
@@ -101,6 +103,7 @@ MINLP/instances/MINLPLib2/data/osil/torsion100.osil
 MINLP/instances/MINLPLib2/data/osil/torsion75.osil
 MINLP/instances/MINLPLib2/data/osil/tspn05.osil
 MINLP/instances/MINLPLib2/data/osil/turkey.osil
+MINLP/instances/MINLPLib2/data/osil/wastewater05m1.osil
 MINLP/instances/MINLPLib2/data/osil/watercontamination0202.osil
 MINLP/instances/MINLPLib2/data/osil/watercontamination0202r.osil
 MINLP/instances/MINLPLib2/data/osil/watercontamination0303r.osil

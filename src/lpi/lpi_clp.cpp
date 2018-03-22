@@ -469,6 +469,31 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+
 /**@} */
 
 
@@ -2978,8 +3003,8 @@ SCIP_RETCODE SCIPlpiSetBase(
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
 
-   assert(rstat != NULL || clp->numberRows());
-   assert(cstat != NULL || clp->numberCols());
+   assert(rstat != NULL || lpi->clp->numberRows() == 0);
+   assert(cstat != NULL || lpi->clp->numberColumns() == 0);
 
    invalidateSolution(lpi);
 

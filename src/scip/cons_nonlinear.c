@@ -2614,7 +2614,7 @@ SCIP_RETCODE reformMonomial(
       productnode = NULL;
       for( p = 0; p < SCIPexprgraphGetNodeNParents(leftright[0]); ++p)
       {
-         parent = SCIPexprgraphGetNodeParents(factors[0])[p];
+         parent = SCIPexprgraphGetNodeParents(leftright[0])[p];
          if( SCIPexprgraphGetNodeOperator(parent) != SCIP_EXPR_MUL )
             continue;
 
@@ -2871,7 +2871,7 @@ SCIP_RETCODE reformulate(
                child = SCIPexprgraphGetNodeChildren(node)[c];
                assert(child != NULL);
 
-               if( SCIPexprgraphGetNodeCurvature(child) != SCIP_EXPRCURV_LINEAR || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_USER )
+               if( SCIPexprgraphGetNodeCurvature(child) != SCIP_EXPRCURV_LINEAR || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_USER || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_ABS )
                {
                   SCIPdebugMessage("add auxiliary variable for child %p(%d,%d) with curvature %s operator %s\n",
                      (void*)child, SCIPexprgraphGetNodeDepth(child), SCIPexprgraphGetNodePosition(child), SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(child)), SCIPexpropGetName(SCIPexprgraphGetNodeOperator(child)) );
@@ -3793,7 +3793,8 @@ SCIP_RETCODE computeViolation(
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
          }
 
-         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+         /* coverity[callee_ptr_arith] */
+         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) );
       }
       else
       {
@@ -4216,7 +4217,8 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    assert(SCIPisLE(scip, xlb, xub));
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+   /* coverity[callee_ptr_arith] */
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
    if( !SCIPisFinite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
@@ -4224,7 +4226,8 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    vallb *= treecoef;
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+   /* coverity[callee_ptr_arith] */
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
    if( !SCIPisFinite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in upper bound\n", exprtreeidx, SCIPconsGetName(cons));
@@ -8024,11 +8027,11 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
             SCIPinfoMessage(scip, NULL, ";\n");
             if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
-               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhsviol);
             }
             if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
             {
-               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
          }
 

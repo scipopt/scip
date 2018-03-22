@@ -1352,6 +1352,7 @@ SCIP_RETCODE setupAndSolveCumulativeSubscip(
       case SCIP_STATUS_TIMELIMIT:
       case SCIP_STATUS_MEMLIMIT:
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
          /* transfer the global bound changes */
          for( v = 0; v < njobs; ++v )
          {

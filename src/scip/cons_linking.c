@@ -430,6 +430,8 @@ SCIP_RETCODE consdataCreateBinvars(
 
    /* allocate block memory for the binary variables */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->binvars, nbinvars) );
+   /* allocate block memory for the binary variables */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals, nbinvars) );
    consdata->sizebinvars = nbinvars;
 
    /* check if the integer variable is fixed */
@@ -2300,7 +2302,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                /* check that at least one binary variable is fixed */
                if( pos == -1 )
                {
-                  SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one");
+                  SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one\n");
                }
                else if( !SCIPisFeasEQ(scip, (SCIP_Real) (consdata->vals[pos]), SCIPgetSolVal(scip, sol, consdata->intvar)) )
                {
@@ -3330,6 +3332,12 @@ SCIP_RETCODE SCIPcreateConsLinking(
 
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   /* create binary variables for the integer domain */
+   if( nbinvars == 0 )
+   {
+      SCIP_CALL( consdataCreateBinvars(scip, *cons, consdata, conshdlrdata->eventhdlr, conshdlrdata->linearize) );
+   }
 
    /* insert linking constraint into the hash map */
    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varmap, getHashmapKey(intvar), *cons) );

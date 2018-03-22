@@ -594,7 +594,7 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    /* possibly get symmetries */
    if ( propdata->npermvars < 0 )
    {
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL) );
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
 
       if ( propdata->nperms <= 0 )
       {
