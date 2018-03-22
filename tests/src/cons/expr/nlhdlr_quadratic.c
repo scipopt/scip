@@ -116,6 +116,10 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_Bool success;
    SCIP_VAR* var;
 
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
+
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <x>", NULL, &expr) );
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
@@ -173,6 +177,10 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
    SCIP_Bool success;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    /* create expression, simplify it and find common subexpressions*/
    success = FALSE;
