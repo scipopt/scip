@@ -90,7 +90,7 @@ TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de
 JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-next-release-pure-diff PERFORMANCE=performance"
 
 # symlink to SAP settings for the next release settings
-ln -s ~/sap-next-release-pure-diff.set settings/.
+ln -fs ~/sap-next-release-pure-diff.set settings/.
 
 
 #########################
