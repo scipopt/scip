@@ -236,7 +236,7 @@ void computeTangent(
     */
    /* assert(exponent >= 1.0 || xref > 0.0); */
 
-   if( EPSISINT(exponent, 0.0) && xref < 0.0 )
+   if( !EPSISINT(exponent, 0.0) && xref < 0.0 )
       xref = 0.0;
 
    xrefpow = pow(xref, exponent - 1.0);
