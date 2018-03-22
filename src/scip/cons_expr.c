@@ -2775,7 +2775,7 @@ SCIP_RETCODE propConss(
 
 /** returns the total number of variables in an expression
  *
- * @note the function counts variables in common sub-expressions multiple times; use this function to get a descent
+ * @note the function counts variables in common sub-expressions multiple times; use this function to get a decent
  *       upper bound on the number of unique variables in an expression
  */
 SCIP_RETCODE SCIPgetConsExprExprNVars(
