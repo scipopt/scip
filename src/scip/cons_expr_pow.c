@@ -284,11 +284,25 @@ void computeSecant(
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
       return;
 
-   /* first handle some special cases where the formula for the slope simplifies */
-   if( xlb == -xub && EPSISINT(exponent / 2.0, 0.0) ) /*lint !e777*/
+   /* first handle some special cases */
+   if( EPSISINT(exponent / 2.0, 0.0) && xub > 0.1 && SCIPisFeasEQ(scip, xlb, -xub) )
    {
-      *slope = 0.0;
-      *constant = pow(xlb, exponent);
+      /* for even exponents with xlb ~ -xub the slope would be very close to 0
+       * since xub^n - xlb^n is prone to cancellation here, we omit computing this secant (it's probably useless)
+       * unless the bounds are close to 0 as well (xub <= 0.1 in the "if" above)
+       * or we have exactly xlb=-xub, where we can return a clean 0.0 (though it's probably useless)
+       */
+      if( xlb == -xub ) /*lint !e777*/
+      {
+         *slope = 0.0;
+         *constant = pow(xlb, exponent);
+      }
+      else
+      {
+         printf("skip x^%g xlb %g xub %g\n", exponent, xlb, xub);
+         assert(SCIPisFeasZero(scip, (pow(xub,exponent)-pow(xlb,exponent))/(xub-xlb)));
+         return;
+      }
    }
    else if( xlb == 0.0 && exponent > 0.0 ) /*lint !e777*/
    {
@@ -299,35 +313,6 @@ void computeSecant(
    {
       *slope = pow(xlb, exponent-1.0);
       *constant = 0.0;
-   }
-   else if( exponent > 1.0 && EPSISINT(exponent, 0.0) && exponent <= 10.0 )
-   {
-      /* for integral exponents, slope can be calculated as
-       * sum_{i=1}^{exponent} xub^{exponent-i} xlb^{i-1}
-       * Further, constant is
-       *   xlb^exponent - slope * xlb
-       * = xlb^{exponent-1} * xlb - sum_{i=1}^{exponent} xub^{exponent-i} xlb^{i-1} * xlb
-       * = - sum_{i=1}^{exponent-1} xub^{exponent-i} xlb^{i-1} * xlb
-       *
-       * TODO when does this have better numerical properties than the other formula below?
-       * the formula below is prone to cancellation, but might require less arithmetic operations
-       * so for now, I restrict this here to exponents <= 10, though this is an arbitrary choice
-       */
-      SCIP_Real i;
-      SCIP_Real term;  /* = xub^{exponent-i} xlb^{i-1} */
-
-      *slope = 0.0;
-      term = pow(xub, exponent-1.0);  /* for i = 1, term is xub^{exponent-1} */
-      for( i = 1.0; i <= exponent; ++i )
-      {
-         *slope += term;
-         /* *slope += pow(xub, exponent - i) * pow(xlb, i-1.0); */
-         if( i == exponent - 1.0 ) /*lint !e777*/
-            *constant = -*slope * xlb;
-
-         /* update term for next iteration */
-         term *= xlb / xub; /*lint !e414 */
-      }
    }
    else
    {
@@ -342,10 +327,12 @@ void computeSecant(
       if( !SCIPisFinite(ubval) )
          return;
 
-      /* TODO this can have bad numerics when xlb and xub are of similar magnitude (use double-double arithmetics?)
-       * for now, only check that things did not cancel out completely (for parabola and xlb very close to -xub, lbval=ubval is ok, though)
+      /* this can have bad numerics when xlb^exponent and xub^exponent are very close
+       * for now, only check that things did not cancel out completely
+       * - the secant would be ok, if SCIPisEQ(xlb, xub), but this is already excluded above
+       * - the secant would be ok, if SCIPisEQ(xlb, -xub) and the exponent is even, but this is already handled above
        */
-      if( lbval == ubval && !(SCIPisEQ(scip, xlb, -xub) && EPSISINT(exponent / 2.0, 0.0)) ) /*lint !e777*/
+      if( lbval == ubval ) /*lint !e777*/
          return;
 
       *slope = (ubval - lbval) / (xub - xlb);
