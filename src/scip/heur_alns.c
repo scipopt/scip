@@ -50,7 +50,7 @@
 #define DEFAULT_MINNODES         50LL
 #define DEFAULT_MAXNODES         5000LL
 #define DEFAULT_WAITINGNODES     25LL  /**< number of nodes since last incumbent solution that the heuristic should wait */
-#define DEFAULT_TARGETNODEFACTOR 1.5
+#define DEFAULT_TARGETNODEFACTOR 1.05
 #define DEFAULT_STALLNODEFACTOR  0.25
 #define LRATE                    0.95  /**< learning rate for target nodes and minimum improvement */
 #define LRATEMIN                 0.01 /**<  lower bound for learning rate for target nodes and minimum improvement */
@@ -362,7 +362,7 @@ struct SCIP_HeurData
    SCIP_Real             ucb_alpha;          /**< parameter to increase the confidence width in UCB */
    SCIP_Real             rewardcontrol;      /**< reward control to increase the weight of the simple solution indicator
                                                *  and decrease the weight of the closed gap reward */
-   SCIP_Real             targetnodefactor;   /**< initial factor by which target node number is increased/decreased */
+   SCIP_Real             targetnodefactor;   /**< factor by which target node number is eventually increased */
    SCIP_Real             stallnodefactor;    /**< stall node limit as a fraction of total node limit */
    SCIP_Real             rewardbaseline;     /**< the reward baseline to separate successful and failed calls */
    SCIP_Real             fixtol;             /**< tolerance by which the fixing rate may be missed without generic fixing */
@@ -548,7 +548,7 @@ void increaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes * 1.05) + 1;
+   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes * heurdata->targetnodefactor) + 1;
 
    /* respect upper and lower parametrized bounds on targetnodes */
    if( heurdata->targetnodes > heurdata->maxnodes )
@@ -659,7 +659,7 @@ void updateMinimumImprovement(
    switch (subscipstatus) {
       case SCIP_STATUS_INFEASIBLE:
       case SCIP_STATUS_INFORUNBD:
-         /* subproblem was infeasible or , probably due to the minimum improvement -> decrease minimum improvement */
+         /* subproblem was infeasible, probably due to the minimum improvement -> decrease minimum improvement */
          decreaseMinimumImprovement(heurdata);
 
          break;
@@ -1788,7 +1788,7 @@ SCIP_RETCODE neighborhoodFixVariables(
 
    SCIPdebugMsg(scip, "Neighborhood Fixings/Target: %d / %d <= %d <= %d\n",*nfixings, nminfixings, ntargetfixings, nmaxfixings);
 
-   /** if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost based, mix */
+   /* if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost based, mix */
    if( (*result == SCIP_SUCCESS || *result == SCIP_DIDNOTRUN) && (*nfixings < nminfixings) )
    {
       SCIP_Bool success;
@@ -2576,9 +2576,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
          updateFixingRate(scip, heurdata->neighborhoods[banditidx], subscipstatus[banditidx], &runstats[banditidx]);
          SCIPdebugMsg(scip, "New fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
       }
-      /* similarly, update the minimum improvement for the ALNS heuristic
-       * make no adjustments in all rewards mode
-       */
+      /* similarly, update the minimum improvement for the ALNS heuristic */
       if( heurdata->adjustminimprove )
       {
          SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f\n", heurdata->minimprove);
@@ -3881,7 +3879,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          &heurdata->rewardcontrol, TRUE, DEFAULT_REWARDCONTROL, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/targetnodefactor",
-         "factor by which target node number is increased/decreased at every adjustment",
+         "factor by which target node number is eventually increased",
          &heurdata->targetnodefactor, TRUE, DEFAULT_TARGETNODEFACTOR, 1.0, 1e+5, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/stallnodefactor",
