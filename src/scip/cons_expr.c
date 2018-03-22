@@ -1254,6 +1254,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
    {
       /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
       SCIP_CALL( expr->exprhdlr->inteval(scip, expr, &interval, propdata->varboundrelax) );
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "computed interval [%g, %g] for expr\n", interval.inf, interval.sup);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
+#endif
    }
 
    if( propdata->intersect )
@@ -2769,7 +2775,7 @@ SCIP_RETCODE propConss(
 
 /** returns the total number of variables in an expression
  *
- * @note the function counts variables in common sub-expressions multiple times; use this function to get a descent
+ * @note the function counts variables in common sub-expressions multiple times; use this function to get a decent
  *       upper bound on the number of unique variables in an expression
  */
 SCIP_RETCODE SCIPgetConsExprExprNVars(
@@ -4482,13 +4488,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    assert(expr->enfos == NULL);
 
    /* analyze expression with nonlinear handlers
-    * we start with no enforcement methods and requiring enforcement from below and above
-    * (change the latter when we have better locks and have to enforce inequalities only)
+    * if nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
+    * if nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
     */
    nsuccess = 0;
    enforcemethods = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcedbelow = FALSE;
-   enforcedabove = FALSE;
+   enforcedbelow = (SCIPgetConsExprExprNLocksPos(expr) == 0); /* no need for underestimation */
+   enforcedabove = (SCIPgetConsExprExprNLocksNeg(expr) == 0); /* no need for overestimation */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -4521,7 +4527,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
          continue;
       }
 
-      /* if the nldhlr enforces, then it must have added at least one enforcement method */
+      /* if the nlhdlr enforces, then it must have added at least one enforcement method */
       assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
 
       /* remember nlhdlr and its data */

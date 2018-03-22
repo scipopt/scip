@@ -276,6 +276,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
+   SCIP_CALL( SCIPaddCons(scip, cons) ); /* this adds locks which are needed for detectNlhdlrs */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1) );
 
    /* call detection method -> this registers the nlhdlr */
@@ -312,8 +313,8 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
    cr_assert_not_null(expr->auxvar);
 
-   /* TODO: I guess with the proper locks it should be identified that child should have aux vars */
 #if 0
+   /* it should be identified that child should not have aux vars because of locks */
    for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
    {
       SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
@@ -351,7 +352,6 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_expect_eq(SCIPgetConsExprExprAuxVar(bilin.expr1), x);
    cr_expect_eq(SCIPgetConsExprExprAuxVar(bilin.expr2), y);
 
-   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 

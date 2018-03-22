@@ -315,8 +315,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
 
    /* communicate that we will enforce one side by separation */
    *enforcemethods |= exprdata.convex ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-   *enforcedbelow = exprdata.convex;
-   *enforcedabove = !exprdata.convex;
+   *enforcedbelow |= exprdata.convex;
+   *enforcedabove |= !exprdata.convex;
    *success = TRUE;
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 

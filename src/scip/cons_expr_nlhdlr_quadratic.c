@@ -627,6 +627,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    SCIPinfoMessage(scip, NULL, "Nlhdlr quadratic detecting expr %p aka", (void*)expr);
    SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "Have to enforce: Below? %s. Above? %s\n", *enforcedbelow ? "no" : "yes", *enforcedabove ? "no" : "yes");
 #endif
    SCIPdebugMsg(scip, "checking if expr %p is a proper quadratic\n", (void*)expr);
    /* check if expression is a proper quadratic expression */
@@ -740,8 +741,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    SCIPhashmapFree(&expridx);
 
    /* every detected proper quadratic expression will be handled since we can propagate */
-   *enforcedbelow = FALSE;
-   *enforcedabove = FALSE;
    *success = TRUE;
    *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadactivities, nlexprdata->nquadexprs) );
