@@ -741,8 +741,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    SCIPhashmapFree(&expridx);
 
    /* every detected proper quadratic expression will be handled since we can propagate */
-   *enforcedbelow = FALSE;
-   *enforcedabove = FALSE;
    *success = TRUE;
    *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadactivities, nlexprdata->nquadexprs) );
