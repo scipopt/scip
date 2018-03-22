@@ -84,39 +84,6 @@ if(NOT WIN32)
                                      ${IPOPT_DIR}/lib/coin
                                      NO_DEFAULT_PATH)
 
-    if(IPOPT_LIBRARIES)
-      find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin/Ipopt
-                                                     ${IPOPT_DIR}/share/coin/doc/Ipopt
-                                                     NO_DEFAULT_PATH)
-      mark_as_advanced(IPOPT_DEP_FILE)
-
-      if(IPOPT_DEP_FILE)
-        # parse the file and acquire the dependencies
-        file(READ ${IPOPT_DEP_FILE} IPOPT_DEP)
-        string(REGEX REPLACE "-[^l][^ ]* " "" IPOPT_DEP ${IPOPT_DEP})
-        string(REPLACE "-l"                "" IPOPT_DEP ${IPOPT_DEP})
-        string(REPLACE "\n"                "" IPOPT_DEP ${IPOPT_DEP})
-        string(REPLACE "ipopt"             "" IPOPT_DEP ${IPOPT_DEP})       # remove any possible auto-dependency
-        separate_arguments(IPOPT_DEP)
-
-        # use the find_library command in order to prepare rpath correctly
-        foreach(LIB ${IPOPT_DEP})
-          find_library(IPOPT_SEARCH_FOR_${LIB} ${LIB} ${IPOPT_DIR}/lib
-                                                      ${IPOPT_DIR}/lib/coin
-                                                      ${IPOPT_DIR}/lib/coin/ThirdParty
-                                                      NO_DEFAULT_PATH)
-          if(IPOPT_SEARCH_FOR_${LIB})
-            # handle non-system libraries (e.g. coinblas)
-            set(IPOPT_LIBRARIES ${IPOPT_LIBRARIES} ${IPOPT_SEARCH_FOR_${LIB}})
-          else()
-            # handle system libraries (e.g. gfortran)
-            set(IPOPT_LIBRARIES ${IPOPT_LIBRARIES} ${LIB})
-          endif()
-          mark_as_advanced(IPOPT_SEARCH_FOR_${LIB})
-        endforeach()
-      endif()
-    endif()
-
     set(IPOPT_DEFINITIONS "")
     set(IPOPT_LINK_FLAGS "")
   endif()
