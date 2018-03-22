@@ -594,7 +594,6 @@ void estimateHyperbolaPositive(
    assert(success != NULL);
    assert(exponent < 0.0);
    assert(EPSISINT(exponent/2.0, 0.0) || xlb >= 0.0);
-   assert(xlbglobal * xubglobal >= 0.0 || overestimate || root < 0.0);
 
    *success = FALSE;
 
@@ -633,24 +632,35 @@ void estimateHyperbolaPositive(
 
          computeTangent(scip, exponent, xref, constant, slope, success);
 
-         /* if x has fixed sign globally, then our tangent is also globally valid
-          * however, if x has mixed sign, then it depends on the constellation between reference point and global bounds, whether the tangent is globally valid
-          * (see also the longer discussion for the mixed-sign underestimator below )
-          */
-         if( xref > 0.0 && xlbglobal < 0.0 )
+         if( EPSISINT(exponent/2.0, 0.0) )
          {
-            assert(xubglobal > 0.0);  /* since xref > 0.0 */
-            /* if on right side, then tangent is only locally valid if xref is too much to the left */
-            *islocal = xref < xlbglobal * root;
-         }
-         else if( xref < 0.0 && xubglobal > 0.0 )
-         {
-            assert(xlbglobal < 0.0);  /* since xref < 0.0 */
-            /* if on left side, then tangent is only locally valid if xref is too much to the right */
-            *islocal = xref > xubglobal * root;
+            /* for even exponents (as in the picture):
+             * if x has fixed sign globally, then our tangent is also globally valid
+             * however, if x has mixed sign, then it depends on the constellation between reference point and global bounds, whether the tangent is globally valid
+             * (see also the longer discussion for the mixed-sign underestimator below )
+             */
+            if( xref > 0.0 && xlbglobal < 0.0 )
+            {
+               assert(xubglobal > 0.0);  /* since xref > 0.0 */
+               assert(root < 0.0); /* root needs to be given */
+               /* if on right side, then tangent is only locally valid if xref is too much to the left */
+               *islocal = xref < xlbglobal * root;
+            }
+            else if( xref < 0.0 && xubglobal > 0.0 )
+            {
+               assert(xlbglobal < 0.0);  /* since xref < 0.0 */
+               assert(root < 0.0); /* root needs to be given */
+               /* if on left side, then tangent is only locally valid if xref is too much to the right */
+               *islocal = xref > xubglobal * root;
+            }
+            else
+               *islocal = FALSE;
          }
          else
-            *islocal = FALSE;
+         {
+            /* for odd exponents, the tangent is only locally valid if the sign of x is not fixed globally */
+            *islocal = xlbglobal * xubglobal < 0.0;
+         }
       }
       else
       {
@@ -689,6 +699,7 @@ void estimateHyperbolaPositive(
              *
              * The solution y < 0 (because xlb < 0 and we want xhat > 0) is what we expect to be given as "root".
              */
+            assert(root < 0.0); /* root needs to be given */
             if( xref <= xlb * root )
             {
                /* If the reference point is left of xhat (=xlb*root), then we can take the
