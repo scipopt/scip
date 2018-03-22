@@ -363,8 +363,6 @@ struct SCIP_HeurData
    SCIP_Real             rewardcontrol;      /**< reward control to increase the weight of the simple solution indicator
                                                *  and decrease the weight of the closed gap reward */
    SCIP_Real             targetnodefactor;   /**< initial factor by which target node number is increased/decreased */
-   SCIP_Real             nodefaclearningrate;/**< learning rate for target node factor */
-   SCIP_Real             nodefacexponent;    /**< learning rate exponent for target node factor */
    SCIP_Real             stallnodefactor;    /**< stall node limit as a fraction of total node limit */
    SCIP_Real             rewardbaseline;     /**< the reward baseline to separate successful and failed calls */
    SCIP_Real             fixtol;             /**< tolerance by which the fixing rate may be missed without generic fixing */
@@ -551,6 +549,10 @@ void increaseTargetNodeLimit(
    )
 {
    heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes * 1.05) + 1;
+
+   /* respect upper and lower parametrized bounds on targetnodes */
+   if( heurdata->targetnodes > heurdata->maxnodes )
+      heurdata->targetnodes = heurdata->maxnodes;
 }
 
 /** reset target node limit */
@@ -560,8 +562,6 @@ void resetTargetNodeLimit(
    )
 {
    heurdata->targetnodes = heurdata->minnodes;
-   heurdata->nodefaclearningrate = 1.0;
-   heurdata->nodefacexponent = 0.0;
 }
 
 /** update target node limit based on the current run results */
@@ -597,17 +597,6 @@ void updateTargetNodeLimit(
       default:
          break;
    }
-
-
-   /* respect upper and lower parametrized bounds on targetnodes */
-   if( heurdata->targetnodes < heurdata->minnodes )
-      heurdata->targetnodes = heurdata->minnodes;
-   else if( heurdata->targetnodes > heurdata->maxnodes )
-      heurdata->targetnodes = heurdata->maxnodes;
-
-   /* adapt the node factor learning rate */
-   if( heurdata->nodefaclearningrate > LRATEMIN )
-      heurdata->nodefaclearningrate = MAX(heurdata->nodefaclearningrate * LRATE, LRATEMIN);
 }
 
 /** reset the minimum improvement for the sub-SCIPs */
@@ -2602,10 +2591,6 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       {
          updateTargetNodeLimit(heurdata, &runstats[banditidx], subscipstatus[banditidx]);
       }
-
-      SCIPdebugMsg(scip, "LRates %8.5f,%8.5f Exponents %8.5f %8.5f\n",
-            heurdata->minimprovlearnrate, heurdata->nodefaclearningrate,
-            heurdata->minimprovexponent, heurdata->nodefacexponent);
 
       /* update the bandit algorithm by the measured reward */
       SCIP_CALL( updateBanditAlgorithm(scip, heurdata, rewards[banditidx], banditidx) );
