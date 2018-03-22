@@ -15,6 +15,9 @@ fixed bugs:
 - fixed non-deterministic behavior in OBBT propagator
 - don't disable LP presolving when using Xpress as LP solver
 
+data structures:
+- expression interpreter objects are now stored in the block memory
+
 SCIP version 5.0.1
 ==================
 
