@@ -229,7 +229,15 @@ void computeTangent(
    assert(slope != NULL);
    assert(success != NULL);
    assert(xref != 0.0 || exponent > 0.0);
-   assert(xref >= 0.0 || EPSISINT(exponent, 0.0));
+   assert(EPSISINT(exponent, 0.0) || !SCIPisNegative(scip, xref)); /* non-integral exponent -> reference point must be >= 0 */
+
+   /* TODO power is not differentiable at 0.0 for exponent < 0
+    * should we forbid here that xref > 0, do something smart here, or just return success=FALSE?
+    */
+   /* assert(exponent >= 1.0 || xref > 0.0); */
+
+   if( EPSISINT(exponent, 0.0) && xref < 0.0 )
+      xref = 0.0;
 
    xrefpow = pow(xref, exponent - 1.0);
 
