@@ -26,6 +26,7 @@
 #include "scip/scip.h"
 
 #define BANDIT_NAME           "eps-greedy"
+#define EPSGREEDY_SMALL       1e-6
 /*
  * Data structures
  */
@@ -50,16 +51,18 @@ SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy)
 {  /*lint --e{715}*/
 
    SCIP_BANDITDATA* banditdata;
+   int nactions;
 
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);
    assert(banditdata != NULL);
    assert(banditdata->weights != NULL);
+   nactions = SCIPbanditGetNActions(bandit);
 
-   BMSfreeBlockMemoryArray(blkmem, &banditdata->weights, SCIPbanditGetNActions(bandit));
-   BMSfreeBlockMemoryArray(blkmem, &banditdata->priorities, SCIPbanditGetNActions(bandit));
-   BMSfreeBlockMemoryArray(blkmem, &banditdata->sels, SCIPbanditGetNActions(bandit));
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->weights, nactions);
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->priorities, nactions);
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->sels, nactions);
    BMSfreeBlockMemory(blkmem, &banditdata);
 
    SCIPbanditSetData(bandit, NULL);
@@ -111,14 +114,14 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
       /* determine reward for every element */
       for( j = 1; j < nactions; ++j )
       {
-         SCIP_Real reward = weights[j];
+         SCIP_Real weight = weights[j];
 
          /* select the action that maximizes the reward, breaking ties by action priorities */
-         if( maxweight < reward
-               || (reward >= maxweight - 1e-6 && priorities[j] > priorities[*selection] ) )
+         if( maxweight < weight
+               || (weight >= maxweight - EPSGREEDY_SMALL && priorities[j] > priorities[*selection] ) )
          {
             *selection = j;
-            maxweight = reward;
+            maxweight = weight;
          }
       }
    }
@@ -187,7 +190,7 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy)
       for( w = 1; w < nactions; ++w )
       {
          assert(priorities[w] >= 0);
-         banditdata->priorities[w] = priorities[w] + SCIPrandomGetReal(rng, -1e-6, 1e6);
+         banditdata->priorities[w] = priorities[w] + SCIPrandomGetReal(rng, -EPSGREEDY_SMALL, EPSGREEDY_SMALL);
       }
    }
    else
