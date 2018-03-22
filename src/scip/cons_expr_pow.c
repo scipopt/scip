@@ -273,7 +273,7 @@ void computeSecant(
    assert(constant != NULL);
    assert(slope != NULL);
    assert(success != NULL);
-   assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointRow */
+   assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointPow */
    assert(xlb >= 0.0 || EPSISINT(exponent, 0.0));
    assert(xub >= 0.0 || EPSISINT(exponent, 0.0));
    assert(exponent != 1.0);
@@ -679,17 +679,20 @@ void estimateHyperbolaPositive(
          }
          else
          {
-            /* The convex envelope of x^exponent for x in [xlb, infinity] is a line (secant) between xlb and some positive coordinate xhat, and x^exponent for x > xhat.
+            /* The convex envelope of x^exponent for x in [xlb, infinity] is a line (secant) between xlb and some positive
+             * coordinate xhat, and x^exponent for x > xhat.
              * Further, on [xlb,xub] with xub < xhat, the convex envelope is the secant between xlb and xub.
              *
              * To find xhat, consider the affine-linear function  l(x) = xlb^n + c * (x - xlb)   where n = exponent
-             * we look for a value of x such that f(x) and l(x) coincide and such that l(x) will be tangent to f(x) on that point, that is
+             * we look for a value of x such that f(x) and l(x) coincide and such that l(x) will be tangent to f(x) on that
+             * point, that is
              * xhat > 0 such that f(xhat) = l(xhat) and f'(xhat) = l'(xhat)
              * => xhat^n = xlb^n + c * (xhat - xlb)   and   n * xhat^(n-1) = c
              * => xhat^n = xlb^n + n * xhat^n - n * xhat^(n-1) * xlb
              * => 0 = xlb^n + (n-1) * xhat^n - n * xhat^(n-1) * xlb
              *
-             * Divide by xlb^n, one gets a polynomial that looks very much like the one for signpower, but a sign is different (since this is *not signed* power):
+             * Divide by xlb^n, one gets a polynomial that looks very much like the one for signpower, but a sign is
+             * different (since this is *not signed* power):
              * 0 = 1 + (n-1) * y^n - n * y^(n-1)  where y = xhat/xlb
              *
              * The solution y < 0 (because xlb < 0 and we want xhat > 0) is what we expect to be given as "root".
@@ -896,7 +899,7 @@ static
 SCIP_RETCODE separatePointPow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< pow expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
@@ -934,7 +937,7 @@ SCIP_RETCODE separatePointPow(
    isinteger = EPSISINT(exponent, 0.0);
    iseven = isinteger && EPSISINT(exponent/2.0, 0.0);
 
-   /* get expression data */
+   /* get aux variables: we separate auxvar <=(>=) childvar^exponent if over(under)estimate */
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
@@ -997,7 +1000,7 @@ SCIP_RETCODE separatePointPow(
    }
    else if( exponent > 1.0 && childlb >= 0.0 )
    {
-      /* FIXME tangents on parabola are only globally valid of global lower bound is also >= 0.0 (thus not signpower) */
+      /* FIXME tangents on parabola are only globally valid if global lower bound is also >= 0.0 (thus not signpower) */
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, &linconstant, &lincoef, &islocal, &success);
    }
    else if( exponent > 1.0 )  /* and !iseven && childlb < 0.0 due to previous if */
@@ -1007,7 +1010,8 @@ SCIP_RETCODE separatePointPow(
       {
          SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
       }
-      estimateSignpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &linconstant, &lincoef, &islocal, &success);
+      estimateSignpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint,
+            SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &linconstant, &lincoef, &islocal, &success);
    }
    else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
    {
