@@ -971,6 +971,15 @@ SCIP_RETCODE separatePointPow(
       return SCIP_OKAY;
 
    /* if exponent is not integral, then child must be non-negative */
+   if( !isinteger && childlb < 0.0 )
+   {
+      /*FIXME somewhere we should have tightened the bound on x
+       * it is ok to do this tightening here, but let's print a warning for the time being
+       */
+      SCIPwarningMessage(scip, "FIXME: pow(x,%g) with x >= %g: assuming x >= 0\n", exponent, childlb);
+      childlb = 0.0;
+      refpoint = MAX(refpoint, 0.0);
+   }
    assert(isinteger || childlb >= 0.0);
 
    if( exponent == 2.0 )
