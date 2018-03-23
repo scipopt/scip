@@ -13,11 +13,60 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   probdata_ringpacking.c
+/**@file   probdata_rpa.c
  * @brief  Problem data for ringpacking problem
  * @author Benjamin Mueller
  *
- * This file handles the main problem data used in that project. For more details see \ref PROBLEMDATA page.
+ * This file handles the main problem data used in that project. For more details see \ref RINGPACKING_PROBLEMDATA page.
+ *
+ * @page RINGPACKING_PROBLEMDATA Main problem data
+ *
+ * The problem data is accessible in all plugins. The function SCIPgetProbData() returns the pointer to that
+ * structure. We use this data structure to store all the information of the ringpacking problem. Since this structure is
+ * not visible in the other plugins, we implemented setter and getter functions to access most data. This part of the
+ * problem data structure SCIP_ProbData is shown below.
+ *
+ * \code
+ *  /** @brief Problem data which is accessible in all places
+ *
+ * This problem data is used to store the input of the ringpacking, all variables which are created, and all
+ * constraints.
+ * struct SCIP_ProbData
+ * {
+ *    int*                  demands;            /**< array of demands *
+ *    SCIP_Real*            rints;              /**< internal radii of each ring *
+ *    SCIP_Real*            rexts;              /**< external radii of each ring *
+ *    int                   ntypes;             /**< number of different types *
+ *
+ *    SCIP_Real             width;              /**< height of each rectangle *
+ *    SCIP_Real             height;             /**< width of each rectangle *
+ *
+ *    SCIP_CONS**           patternconss;       /**< pattern constraints for each type *
+ *
+ * /* circular pattern data *
+ *    SCIP_PATTERN**        cpatterns;          /**< array containing all circular patterns *
+ *    SCIP_VAR**            cvars;              /**< variables corresponding to circular patterns *
+ *    int                   ncpatterns;         /**< total number of circular patterns *
+ *    int                   cpatternsize;       /**< size of cpatterns and cvars array *
+ *
+ * /* rectangular pattern data *
+ *    SCIP_PATTERN**        rpatterns;          /**< array containing all rectangular patterns *
+ *    SCIP_VAR**            rvars;              /**< variables corresponding to rectangular patterns *
+ *    int                   nrpatterns;         /**< total number of rectangular patterns *
+ *    int                   rpatternsize;       /**< size of rpatterns and rvars array *
+ *
+ * };
+ * \endcode
+ *
+ * The function SCIPprobdataCreate(), which is called in the \ref reader_bpa.c "reader plugin" after the input file was
+ * parsed, initializes the problem data structure. Afterwards, the problem is setup in SCIPprobdataSetupProblem. For this,
+ * it enumerates all dominating circular patterns, selects a set of initial rectangular patterns and creates the
+ * corresponding variables and constraints. Note that the pattern constraints have to have the
+ * <code>modifiable</code>-flag set to TRUE. This is necessary to tell the solver that these constraints are not
+ * completed yet. This means, during the search new variables/patterns might be added. The solver needs this information
+ * because certain reductions are not allowed.
+ *
+ * A list of all interface methods can be found in probdata_binpacking.h.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

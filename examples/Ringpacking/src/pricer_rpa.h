@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   pricer_ringpacking.h
+/**@file   pricer_rpa.h
  * @brief  Ringpacking variable pricer
  * @author Benjamin Mueller
  *

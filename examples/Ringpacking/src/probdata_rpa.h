@@ -13,11 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   probdata_rinpacking.h
+/**@file   probdata_rpa.h
  * @brief  Problem data for ringpacking problem
  * @author Benjamin Mueller
  *
- * This file handles the main problem data used in that project. For more details see \ref PROBLEMDATA page.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

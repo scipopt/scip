@@ -17,6 +17,9 @@
  * @brief  constraint handler for recursive circle packing
  * @author Benjamin Mueller
  *
+ * This constraint handler is used to store information about which (not verified) rectangular patterns have been locked
+ * and which circular patterns have not been tried to be verified yet.
+ *
  * @todo Is it enough the lock the unverified circular pattern variables only in the positive direction?
  * @todo remove all unnecessary callbacks and defines
  */
