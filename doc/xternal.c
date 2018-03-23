@@ -158,6 +158,15 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  \ref RINGPACKING_MAIN "Ringpacking"
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the ringpacking problem. It includes a customized reader,
+ *  (global) problem data, variable data, and constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>
  *  </td>
  *  <td>

@@ -810,6 +810,8 @@ INPUT                  = . \
                          ../examples/GMI/doc/xternal_gmi.c \
                          ../examples/Relaxator/src/ \
                          ../examples/Relaxator/doc/xternal_relaxator.c \
+                         ../examples/Ringpacking/src/ \
+                         ../examples/Ringpacking/doc/xternal_ringpacking.c \
                          ../examples/TSP/src/ \
                          ../examples/TSP/doc/xternal_tsp.c
 
