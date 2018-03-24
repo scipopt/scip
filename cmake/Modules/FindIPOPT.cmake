@@ -83,6 +83,18 @@ if(NOT WIN32)
     find_library(IPOPT_LIBRARIES ipopt ${IPOPT_DIR}/lib
                                      ${IPOPT_DIR}/lib/coin
                                      NO_DEFAULT_PATH)
+    if(IPOPT_LIBRARIES)
+      find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin/Ipopt
+         ${IPOPT_DIR}/share/coin/doc/Ipopt
+         NO_DEFAULT_PATH)
+
+      if(IPOPT_DEP_FILE)
+        # add libraries from ipopt_addlibs_cpp.txt
+        file(READ ${IPOPT_DEP_FILE} IPOPT_DEP)
+        string(STRIP ${IPOPT_DEP} IPOPT_DEP)
+        set(IPOPT_LIBRARIES ${IPOPT_LIBRARIES} ${IPOPT_DEP})
+      endif()
+    endif()
 
     set(IPOPT_DEFINITIONS "")
     set(IPOPT_LINK_FLAGS "")
