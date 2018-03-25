@@ -282,7 +282,15 @@ SCIP_RETCODE solveTest(
       if ( SCIPlpiHasDualRay(lpi) )
       {
          SCIP_Real scalingfactor = 1.0;
+         SCIP_Real* lhs;
+         SCIP_Real* rhs;
 
+         /* get lhs/rhs for check of dual ray */
+         BMSallocMemoryArray(&lhs, nrows);
+         BMSallocMemoryArray(&rhs, nrows);
+         SCIP_CALL( SCIPlpiGetSides(lpi, 0, nrows-1, lhs, rhs) );
+
+         /* get dual ray */
          SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualsol) );
 
          /* loop until scaling factor can be determined */
@@ -301,7 +309,12 @@ SCIP_RETCODE solveTest(
          for (i = 0; i < nrows; ++i)
          {
             cr_assert_float_eq(dualsol[i], scalingfactor * exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], scalingfactor * exp_dualsol[i]);
+            cr_assert( ! SCIPlpiIsInfinity(lpi, -lhs[i]) || dualsol[i] <= -EPS );
+            cr_assert( ! SCIPlpiIsInfinity(lpi, rhs[i]) || dualsol[i] >= EPS );
          }
+
+         BMSfreeMemoryArray(&rhs);
+         BMSfreeMemoryArray(&lhs);
       }
    }
 
