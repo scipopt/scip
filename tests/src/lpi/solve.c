@@ -933,3 +933,59 @@ Test(solve, test6)
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, 8, lhs, rhs, 30, beg, ind, val) );
 }
+
+
+/** Test 7
+ *
+ *  min 10 x1 + 15 x2
+ *       2 x1 +   x2 >= 3
+ *         x1 + 3 x2 <= 1
+ *         x1,    x2 >= 0
+ *
+ *  which is dual unbounded (this is a variant of Test 3 in which the equations have been replaced by inequalities).
+ *
+ *  The dual is:
+ *  max  3 y1 +   y2
+ *       2 y1 +   y2 <= 10
+ *         y1 + 3 y2 <= 15
+ *         y1 >= 0, y2 <= 0
+ */
+Test(solve, test7)
+{
+   /* data with fixed values: */
+   SCIP_Real obj[2] = {10, 15};
+   SCIP_Real lb[2] = {0, 0};
+   SCIP_Real lhs[2] = {3, 1};
+   SCIP_Real rhs[2] = {3, 1};
+   int beg[2] = {0, 2};
+   int ind[4] = {0, 1, 0, 1};
+   SCIP_Real val[4] = {2, 1, 1, 3};
+
+   /* data to be filled */
+   SCIP_Real ub[2];
+
+   /* expected ray */
+   SCIP_Real exp_dualray[2] = {0.5, -1};
+
+   /* fill data */
+   rhs[0] = SCIPlpiInfinity(lpi);
+   lhs[1] = -SCIPlpiInfinity(lpi);
+   ub[0] = SCIPlpiInfinity(lpi);
+   ub[1] = SCIPlpiInfinity(lpi);
+
+   /* check problem with primal simplex */
+   SCIP_CALL( performTest(TRUE, SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
+         SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
+
+   /* check that data stored in lpi is still the same */
+   SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+
+   /* clear basis status */
+   SCIP_CALL( SCIPlpiClearState(lpi) );
+
+   /* check problem with dual simplex */
+   SCIP_CALL( solveTest(FALSE, 2, 2, SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
+
+   /* check that data stored in lpi is still the same */
+   SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+}
