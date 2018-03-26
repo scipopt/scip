@@ -1,10 +1,9 @@
-\documentclass[english]{article}
-\usepackage{babel}
+\documentclass{article}
 
 \input{packages}
 \input{defines}
 
-% defines and packages that are not compatible with the journal style
+\pagestyle{empty}
 
 % environments
 \newtheorem{definition}{Definition}
@@ -13,10 +12,10 @@
 
 \begin{document}
 
-\centering
-\begin{minipage}{0.30\textwidth}
+
+\begin{minipage}{0.05\textwidth}
   \centering
-  \begin{tikzpicture}[scale=0.4]
+  \begin{tikzpicture}[scale=0.1]
     \draw[thick] (0,0) -- (8.0,0) -- (8.0,7.0) -- (0, 7.0) -- cycle;
     \foreach \id/\x/\y/\R/\r in
              {
@@ -44,9 +43,9 @@
              \draw[fill=black,even odd rule] (\x,\y) circle (\R) circle (\r);
   \end{tikzpicture}
 \end{minipage}
-\begin{minipage}{0.30\textwidth}
+\begin{minipage}{0.05\textwidth}
   \centering
-  \begin{tikzpicture}[scale=0.4]
+  \begin{tikzpicture}[scale=0.1]
     \draw[thick] (0,0) -- (8.0,0) -- (8.0,7.0) -- (0, 7.0) -- cycle;
     \foreach \id/\x/\y/\R/\r in
              {

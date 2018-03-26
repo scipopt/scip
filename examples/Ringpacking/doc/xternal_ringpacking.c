@@ -50,7 +50,7 @@
  * following picture gives two examples of such packings:
  *
  * <CENTER>
- * \image html RCPP_feassol.png
+ * \image html ringpacking.png
  * </CENTER>
  *
  * This problem can be formulated as a noncovex MINLP. We use the formulation presented in [TODO:insert Bennys Paper here]
