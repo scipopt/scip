@@ -105,8 +105,8 @@ echo set save $SETFILE                 >> $TMPFILE
 if test "$VISUALIZE" = true
 then
     BAKFILENAME="`basename $TMPFILE .tmp`.dat"
-    echo ALNS reward file name set to "$BAKFILENAME"
-    echo set heuristics alns advanced rewardfilename "${CLIENTTMPDIR}/${USER}-tmpdir/${BAKFILENAME}" >> $TMPFILE
+    echo visualization output set to "$BAKFILENAME"
+    echo set visual bakfilename "$OUTPUTDIR/${BAKFILENAME}" >> $TMPFILE
 fi
 
 if test "$REOPT" = false
