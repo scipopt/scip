@@ -209,8 +209,9 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
             break;
       }
 
-      /* in the case of multiple Benders' decompositions, all subproblems are checked for a given decomposition until a
-       * constraint is added */
+      /* The decompositions are checked until one is found that is not feasible. Not being feasible could mean that
+       * infeasibility of the original problem has been proven or a constraint has been added. If the result
+       * SCIP_DIDNOTRUN is returned, then the next decomposition is checked */
       if( (*result) != SCIP_FEASIBLE )
          break;
    }
@@ -223,6 +224,11 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
       if( (*result) == SCIP_FEASIBLE && infeasible )
          (*result) = SCIP_INFEASIBLE;
    }
+
+   /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result
+    * indicates that no subproblems were checked */
+   if( (*result) == SCIP_DIDNOTRUN )
+      (*result) = SCIP_FEASIBLE;
 
    conshdlrdata->ncalls++;
 
@@ -409,6 +415,11 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
             (*result) = SCIP_INFEASIBLE;
          }
       }
+
+      /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result
+       * indicates that no subproblems were checked */
+      if( (*result) == SCIP_DIDNOTRUN )
+         (*result) = SCIP_FEASIBLE;
    }
 
 
