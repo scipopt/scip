@@ -181,7 +181,7 @@ extern
 SCIP_RETCODE SCIPbendersFreeSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   probnum             /**< the subproblem number */
+   int                   probnumber          /**< the subproblem number */
    );
 
 /** compares the subproblem objective value with the auxiliary variable value for optimality */
@@ -190,7 +190,7 @@ SCIP_RETCODE SCIPbendersCheckSubprobOptimality(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnumber,         /**< the number of the pricing problem */
+   int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
    );
 
@@ -200,7 +200,7 @@ SCIP_Real SCIPbendersGetAuxiliaryVarVal(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnumber          /**< the number of the pricing problem */
+   int                   probnumber          /**< the subproblem number */
    );
 
 /** sets priority of Benders' decomposition */

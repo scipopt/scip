@@ -53,14 +53,15 @@ typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition 
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */
 
 
-/** copy method for Benders' decomposition plugins (called when SCIP copies plugins)
+/** copy method for Benders' decomposition plugins (called when SCIP copies plugins). If there is an active Benders'
+ *  decomposition, all copies are not valid. As such, there is no valid parameter that is passed to the callback
+ *  function
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the Benders' decomposition itself
- *  - valid           : was the copying process valid?
+ *  - benders         : the Benders' decomposition itself
  */
-#define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_Bool* valid)
+#define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
 /** destructor of Benders' decomposition to free user data (called when SCIP is exiting)
  *

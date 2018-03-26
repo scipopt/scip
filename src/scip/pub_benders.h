@@ -161,8 +161,8 @@ SCIP_VAR** SCIPbendersGetAuxiliaryVars(
 EXTERN
 void SCIPbendersSetSubprobObjval(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_Real             objval,             /**< the objective function value for the subproblem */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Real             objval              /**< the objective function value for the subproblem */
    );
 
 /** returns the objective function value of the subproblem for use in cut generation */
