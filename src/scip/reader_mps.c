@@ -1786,6 +1786,13 @@ SCIP_RETCODE readSOS(
          else
          {
             /* get weight */
+            if( NULL == mpsinputField2(mpsi)  )
+            {
+               SCIPerrorMessage("weight for variable <%s> not specified.\n", mpsinputField1(mpsi));
+               mpsinputSyntaxerror(mpsi);
+               return SCIP_OKAY;
+            }
+
             weight = strtod(mpsinputField2(mpsi), &endptr);
             if( endptr == mpsinputField2(mpsi) || *endptr != '\0' )
             {
@@ -1923,6 +1930,16 @@ SCIP_RETCODE readQMatrix(
 
                /* get coefficient */
                field = (k == 1 ? mpsinputField3(mpsi) :  mpsinputField5(mpsi));
+               if( NULL == field )
+               {
+                  SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
+                  mpsinputSyntaxerror(mpsi);
+                  SCIPfreeBufferArray(scip, &quadvars1);
+                  SCIPfreeBufferArray(scip, &quadvars2);
+                  SCIPfreeBufferArray(scip, &quadcoefs);
+                  return SCIP_OKAY;
+               }
+
                coef = strtod(field, &endptr);
                if( endptr == field || *endptr != '\0' )
                {
@@ -2135,6 +2152,14 @@ SCIP_RETCODE readQCMatrix(
          else
          {
             char* endptr;
+            if( mpsinputField3(mpsi) ==  NULL )
+            {
+               SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", mpsinputField1(mpsi), mpsinputField2(mpsi));
+               mpsinputSyntaxerror(mpsi);
+
+               goto TERMINATE;
+            }
+
             /* get coefficient */
             coef = strtod(mpsinputField3(mpsi), &endptr);
             if( endptr == mpsinputField3(mpsi) || *endptr != '\0' )
