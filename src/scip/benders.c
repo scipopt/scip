@@ -1021,7 +1021,7 @@ SCIP_RETCODE SCIPbendersCheckSubprobOptimality(
    SCIPsetDebugMsg(set, "Subproblem %d - Auxiliary Variable: %g Subproblem Objective: %g\n", probnumber, auxiliaryvarval,
       SCIPbendersGetSubprobObjval(benders, probnumber));
 
-   if( SCIPsetIsFeasGE(set, auxiliaryvarval + soltol, SCIPbendersGetSubprobObjval(benders, probnumber)) )
+   if( SCIPrelDiff(SCIPbendersGetSubprobObjval(benders, probnumber), auxiliaryvarval) < soltol )
       (*optimal) = TRUE;
 
    return SCIP_OKAY;
