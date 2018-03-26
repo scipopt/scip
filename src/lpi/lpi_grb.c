@@ -4113,6 +4113,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    )
 {
    int nrows;
+   int i;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4125,6 +4126,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIPdebugMessage("calling Gurobi dual Farkas: %d rows\n", nrows);
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_FARKASDUAL, 0, nrows, dualfarkas) );
+
+   /* correct sign of ray */
+   for (i = 0; i < nrows; ++i)
+      dualfarkas[i] *= -1.0;
 
    return SCIP_OKAY;
 }
