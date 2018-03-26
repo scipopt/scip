@@ -647,8 +647,7 @@ void decreaseMinimumImprovement(
 static
 void updateMinimumImprovement(
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_STATUS           subscipstatus,      /**< status of the sub-SCIP run */
-   NH_STATS*             runstats            /**< run statistics for this run */
+   SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP run */
    )
 {
    assert(heurdata != NULL);
@@ -2598,7 +2597,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       if( heurdata->adjustminimprove )
       {
          SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f\n", heurdata->minimprove);
-         updateMinimumImprovement(heurdata, subscipstatus[banditidx], &runstats[banditidx]);
+         updateMinimumImprovement(heurdata, subscipstatus[banditidx]);
          SCIPdebugMsg(scip, "--> %.4f\n", heurdata->minimprove);
       }
 
