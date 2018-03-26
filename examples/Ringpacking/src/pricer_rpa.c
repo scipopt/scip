@@ -18,9 +18,35 @@
  * @author Benjamin Mueller
  *
  * This file implements the variable pricer which check if variables exist with negative reduced cost. See
- * @ref PRICER for more details.
+ * @ref RINGPACKING_PRICER for more details.
  *
- * @page PRICER Pricing new variables
+ * @page RINGPACKING_PRICER Pricing new variables
+ *
+ * The task of the pricer is to search for new variables with negative reduced costs. For this, the following non-linear
+ * program is solved:
+ *
+ * \f[
+ *  \begin{equation}
+ *    \min_{P \in \mathcal{RP}} \left\{1 - \sum_{t \in \mathcal{T}} \lambda_t P_t\right\},
+ *  \end{equation}
+ * \f]
+ *
+ * where \f$\lambda\f$ is given by the dual solution of the restricted master problem. See the
+ * \ref RINGPACKING_PROBLEM "problem description" for more details.
+ *
+ * This problem is very hard, but can be modeled as a weighted circle packing problem for a single rectangle. Therefore,
+ * we first use a simple greedy heuristic to solve the problem. If the heuristic fails, the MINLP is solved with
+ * conventional methods on a new SCIP instance and a given time limit. If the problem can be solved and the optimal
+ * value is non-negative, the LP relaxation has been solved to optimality and what remains is ensuring integrality of
+ * the solution by the normal SCIP framework. If, on the other hand, the best solution found by both methods is negative,
+ * we have found an improving pattern, whose corresponding variable needs to be added to the restricted master problem.
+ * It is possible (and not unlikely) that neither method succeeds in finding a pattern with negative solution value. In
+ * that case, we also exit the pricing loop, just as if we had found an optimal solution, and proceed with enforcing
+ * integrality resulting in a feasible primal solution to the whole problem.
+ *
+ * In case that the pricing problem cannot be solved to optimality, we cannot directly deduce a lower bound for the
+ * master problem. However, the following theorem by Farley shows how a valid dual bound can be computed from the
+ * LP solution and the pricing solution. [TODO:insert ref and maybe the theorem too?]
  *
  */
 
@@ -70,7 +96,7 @@ struct SCIP_PricerData
  * @{
  */
 
-/** returns an upper bound on the denity for n equal circles in a square (holds also for rectangles); this is a result
+/** returns an upper bound on the density for n equal circles in a square (holds also for rectangles); this is a result
  * of Groemer's formula (see, 'Ueber die Einlagerung von Kreisen in einen konvexen Bereich')
  */
 static
@@ -213,7 +239,7 @@ SCIP_RETCODE extractVariablesMINLP(
    SCIP_VAR**            w,                  /**< w variables of sub-SCIP */
    int*                  types,              /**< type corresponding to each variable */
    int                   nvars,              /**< number of variables */
-   SCIP_Bool*            success             /**< pointer to store if we could add at least one variable with reduced costs */
+   SCIP_Bool*            success             /**< pointer to store if we could add at least one variable with negative reduced costs */
    )
 {
    SCIP_SOL* sol;
