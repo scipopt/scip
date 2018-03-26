@@ -17,3 +17,6 @@ unmatchedSuppression
 ConfigurationNotChecked
 missingInclude
 toomanyconfigs
+
+// third-party code
+*:src/cppad/*
