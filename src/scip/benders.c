@@ -309,7 +309,6 @@ SCIP_RETCODE updateEventhdlrUpperbound(
    assert(eventhdlrdata != NULL);
 
    eventhdlrdata->upperbound = upperbound;
-   SCIPeventhdlrSetData(eventhdlr, eventhdlrdata);
 
    return SCIP_OKAY;
 }
@@ -541,8 +540,41 @@ SCIP_RETCODE SCIPbendersFree(
    return SCIP_OKAY;
 }
 
+/** initialises a MIP subproblem by putting the problem into SCIP_STAGE_SOLVING. This is achieved by calling SCIPsolve
+ *  and then interrupting the solve in a node focus event handler.
+ *  The LP subproblem is also initialised using this method; however, a different event handler is added. This event
+ *  handler will put the LP subproblem into probing mode.
+ */
+static
+SCIP_RETCODE initialiseSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   SCIP* subproblem;
+   SCIP_Bool infeasible;
+   SCIP_Bool cutoff;
 
-/** initialises an LP subproblem by putting the problem into probing mode */
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+   assert(subproblem != NULL);
+
+   /* Getting the problem into the right SCIP stage for solving */
+   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, TRUE, FALSE) );
+
+   /* Constructing the LP that can be solved in later iterations */
+   SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
+
+   assert(SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialises an LP subproblem by putting the problem into probing mode. The probing mode is envoked in a node focus
+ *  event handler. This event handler is added just prior to calling the initialise subproblem function. */
 static
 SCIP_RETCODE initialiseLPSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -567,42 +599,8 @@ SCIP_RETCODE initialiseLPSubproblem(
    SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersNodefocus) );
    assert(eventhdlr != NULL);
 
-   /* Getting the problem into the right SCIP stage for solving */
-   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, TRUE, FALSE) );
-
-   /* Constructing the LP that can be solved in later iterations */
-   SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
-
-   assert(SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING);
-
-   return SCIP_OKAY;
-}
-
-
-/** initialises a MIP subproblem by putting the problem into SCIP_STAGE_SOLVING */
-static
-SCIP_RETCODE initialiseMIPSubproblem(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber          /**< the subproblem number */
-   )
-{
-   SCIP* subproblem;
-   SCIP_Bool infeasible;
-   SCIP_Bool cutoff;
-
-   assert(benders != NULL);
-   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
-
-   subproblem = SCIPbendersSubproblem(benders, probnumber);
-   assert(subproblem != NULL);
-
-   /* Getting the problem into the right SCIP stage for solving */
-   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, TRUE, FALSE) );
-
-   /* Constructing the LP that can be solved in later iterations */
-   SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
-
-   assert(SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING);
+   /* calling an initial solve to put the problem into probing mode */
+   SCIP_CALL( initialiseSubproblem(benders, probnumber) );
 
    return SCIP_OKAY;
 }
@@ -665,6 +663,8 @@ SCIP_RETCODE createSubproblems(
       {
          SCIP_EVENTHDLRDATA* eventhdlrdata_mipnodefocus;
          SCIP_EVENTHDLRDATA* eventhdlrdata_upperbound;
+
+         SCIPbendersSetSubprobIsLP(benders, i, FALSE);
 
          /* because the subproblems could be reused in the copy, the event handler is not created again.
           * NOTE: This currently works with the benders_default implementation. It may not be very general. */
