@@ -49,7 +49,9 @@
  * internal and an external radius. Rings can be put recursively into larger ones or directly into a rectangle. The
  * following picture gives two examples of such packings:
  *
- * TODO: insert example picture here
+ * <CENTER>
+ * \image html RCPP_feassol.png
+ * </CENTER>
  *
  * This problem can be formulated as a noncovex MINLP. We use the formulation presented in [TODO:insert Bennys Paper here]
  * which  is based on a Dantzig-Wolfe decomposition that can be solved by a branch-and-price algorithm. The first step

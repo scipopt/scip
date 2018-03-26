@@ -1,0 +1,193 @@
+% names
+\newcommand{\name}[1]{\mbox{#1}\xspace}
+\newcommand{\ringpacking}{\name{Ring-Packing}}
+\newcommand{\circlepacking}{\name{Circle-Packing}}
+\newcommand{\scip}{\name{SCIP}}
+\newcommand{\baron}{\name{BARON}}
+\newcommand{\soplex}{\name{SoPlex}}
+\newcommand{\cplex}{\name{CPLEX}}
+\newcommand{\cppad}{\name{CppAD}}
+\newcommand{\ipopt}{\name{Ipopt}}
+\newcommand{\mumps}{\name{MUMPS}}
+\newcommand{\randset}{\name{\textsc{rand}}}
+\newcommand{\realset}{\name{\textsc{real}}}
+
+\newcommand{\MINLP}{\name{MINLP}}
+\newcommand{\MINLPs}{\name{MINLPs}}
+\newcommand{\MILP}{\name{MILP}}
+\newcommand{\MILPs}{\name{MILPs}}
+\newcommand{\NLP}{\name{NLP}}
+\newcommand{\NLPs}{\name{NLPs}}
+\newcommand{\CIP}{\name{CIP}}
+\newcommand{\CIPs}{\name{CIPs}}
+\newcommand{\IP}{\name{IP}}
+\newcommand{\IPs}{\name{IPs}}
+\newcommand{\LP}{\name{LP}}
+\newcommand{\LPs}{\name{LPs}}
+\newcommand{\SDP}{\name{SDP}}
+\newcommand{\SDPs}{\name{SDPs}}
+
+% notation
+\newcommand{\rcpp}{\name{RCPP}}
+\newcommand{\rcpps}{\name{RCPPs}}
+\newcommand{\cpp}{\name{CPP}}
+\newcommand{\cpps}{\name{CPPs}}
+\newcommand{\grasp}{\name{GRASP}}
+\newcommand{\ringset}{\mathcal{R}}
+\newcommand{\nrings}{n}
+\newcommand{\ntypes}{T}
+\newcommand{\typeset}{\mathcal{T}}
+\newcommand{\type}{\tau}
+\newcommand{\primalbound}{z_p}
+\newcommand{\dualbound}{z_d}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\Fprime}{\mathcal{F'}}
+\newcommand{\DW}{DW}
+\newcommand{\PDW}{PDW}
+\newcommand{\timenlp}{t_{NLP}}
+\newcommand{\timecpp}{t_{CPP}}
+\newcommand{\redcosts}{red}
+
+% circular patterns
+\newcommand{\cp}{\mathcal{CP}}
+\newcommand{\cpdom}{\mathcal{CP}^{*}}
+\newcommand{\cpfeas}{\mathcal{CP}_{feas}}
+\newcommand{\cpinfeas}{\mathcal{CP}_{infeas}}
+\newcommand{\cpunknown}{\mathcal{CP}_{unknown}}
+
+% rectangular patterns
+\newcommand{\rp}{\mathcal{RP}}
+\newcommand{\patternset}{\mathcal{P}}
+\newcommand{\patternmaxset}{\mathcal{P}_{max}}
+\newcommand{\patternlbset}{\mathcal{P}_{lb}}
+\newcommand{\patternubset}{\mathcal{P}_{ub}}
+\newcommand{\rectangleset}{\Psi}
+\newcommand{\rext}{R}
+\newcommand{\rint}{r}
+\newcommand{\demand}{D}
+\newcommand{\width}{W}
+\newcommand{\height}{H}
+
+% math symbols
+\newcommand{\mvec}[2]{\begin{pmatrix}#1\\#2\end{pmatrix}}
+\newcommand{\mvecthree}[3]{\begin{pmatrix}#1\\#2\\#3\end{pmatrix}}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\openset}[1]{\accentset{\circ}{#1}}
+\newcommand{\floor}[1]{\left\lfloor{#1}\right\rfloor}
+\newcommand{\ceil}[1]{\left\lceil{#1}\right\rceil}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+
+% general symbols
+\newcommand{\dash}{---}
+\newcommand{\fa}{\text{ for all }}
+
+% colors
+\definecolor{c1}{HTML}{01DF01}
+\definecolor{c2}{HTML}{F7FE2E}
+\definecolor{c3}{HTML}{DBA901}
+\definecolor{c4}{HTML}{B45F04}
+\definecolor{c5}{HTML}{DF3A01}
+
+% macro for bar diagram
+\newcommand{\bardiagram}[2]{
+  \def\yscale{2.0 / 30.0}
+  \begin{tikzpicture}[scale=1]
+
+    \draw[->] (0,0) -- (0,55 * \yscale) node[above]{\# instances};
+    \draw[->] (0,0) -- (6.0,0) node[right]{#1};
+
+    \draw[] (0.0,0 * \yscale) -- (-0.2,0 * \yscale) node[left]{0\%};
+    \draw[] (0.0,25 * \yscale) -- (-0.2,25 * \yscale) node[left]{25\%};
+    \draw[] (0.0,50 * \yscale) -- (-0.2,50 * \yscale) node[left]{50\%};
+
+    \foreach \idx\desc\a\b\c\d\e in {#2}
+    {
+      \def\startx{0.2 + \idx * 1.5};
+      \def\rectwidth{0.2};
+      \draw (\startx + 0.5, -0.1) -- (\startx + 0.5,-0.1) node[below]{$\desc$};
+
+      \draw[fill=c1] (\startx,       0) rectangle (\startx       + \rectwidth,\a * \yscale);
+      \draw[fill=c2] (\startx + 0.2, 0) rectangle (\startx + 0.2 + \rectwidth,\b * \yscale);
+      \draw[fill=c3] (\startx + 0.4, 0) rectangle (\startx + 0.4 + \rectwidth,\c * \yscale);
+      \draw[fill=c4] (\startx + 0.6, 0) rectangle (\startx + 0.6 + \rectwidth,\d * \yscale);
+      \draw[fill=c5] (\startx + 0.8, 0) rectangle (\startx + 0.8 + \rectwidth,\e * \yscale);
+    }
+
+  \end{tikzpicture}
+}
+
+% tables
+\newcommand{\tabledefline}[2]{\multicolumn{1}{l}{\rlap{#1\ \dash\ #2}}\\}
+
+\newcommand{\ntypescol}{$n$}
+\newcommand{\nringscol}{$\sum \demand_i$}
+\newcommand{\rmincol}{$R_{min}$}
+\newcommand{\rmaxcol}{$R_{max}$}
+\newcommand{\volume}{$V$}
+\newcommand{\solgreedycol}{$S_{greedy}$}
+\newcommand{\lbcol}{LB}
+\newcommand{\ubcol}{UB}
+\newcommand{\allpatternscol}{all}
+
+% todo notes
+\definecolor{plum}{rgb}{0.8, 0.6, 0.8}
+\definecolor{applegreen}{rgb}{0.55, 0.71, 0.0}
+\definecolor{apricot}{rgb}{0.98, 0.81, 0.69}
+\definecolor{amber}{rgb}{1.0, 0.49, 0.0}
+\definecolor{americanrose}{rgb}{1.0, 0.01, 0.24}
+
+\newcommandx{\change}[2][1=]{\todo[linecolor=americanrose,backgroundcolor=americanrose!25,bordercolor=americanrose,#1]{#2}\,}
+\newcommandx{\improvement}[2][1=]{\todo[linecolor=amber,backgroundcolor=amber!25,bordercolor=amber,#1]{#2}\,}
+\newcommandx{\unsure}[2][1=]{\todo[linecolor=apricot,backgroundcolor=apricot!25,bordercolor=apricot,#1]{#2}\,}
+\newcommandx{\info}[2][1=]{\todo[linecolor=applegreen,backgroundcolor=applegreen!25,bordercolor=applegreen,#1]{#2}\,}
+\newcommandx{\missing}[2][1=]{\todo[linecolor=blue,backgroundcolor=blue!25,bordercolor=blue,#1]{#2}\,}
+
+% pie chart
+\tikzstyle{chart}=[
+    legend label/.style={font={\scriptsize},anchor=west,align=left},
+    legend box/.style={rectangle, draw, minimum size=5pt},
+    axis/.style={black,semithick,->},
+    axis label/.style={anchor=east,font={\tiny}},
+]
+
+\tikzstyle{pie chart}=[
+    chart,
+    slice/.style={line cap=round, line join=round, draw=black},
+    pie title/.style={font={\bf}},
+    slice type/.style 2 args={
+        ##1/.style={fill=##2},
+        values of ##1/.style={}
+    }
+]
+
+\pgfdeclarelayer{background}
+\pgfdeclarelayer{foreground}
+\pgfsetlayers{background,main,foreground}
+
+\newcommand{\pie}[3][]{
+    \begin{scope}[#1]
+    \pgfmathsetmacro{\curA}{90}
+    \pgfmathsetmacro{\r}{1}
+    \def\c{(0,0)}
+    \node[pie title] at (90:1.3) {#2};
+    \foreach \v/\s in{#3}{
+        \pgfmathsetmacro{\deltaA}{\v/100*360}
+        \pgfmathsetmacro{\nextA}{\curA + \deltaA}
+        \pgfmathsetmacro{\midA}{(\curA+\nextA)/2}
+
+        \path[slice,\s] \c
+            -- +(\curA:\r)
+            arc (\curA:\nextA:\r)
+            -- cycle;
+        \pgfmathsetmacro{\d}{max((\deltaA * -(.5/50) + 1) , .5)}
+
+        \begin{pgfonlayer}{foreground}
+        \path \c -- node[pos=\d,pie values,values of \s]{$\v\%$} +(\midA:\r);
+        \end{pgfonlayer}
+
+        \global\let\curA\nextA
+    }
+    \end{scope}
+}
