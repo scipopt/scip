@@ -259,8 +259,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    nlocksup = SCIPvarGetNLocksUp(cand);
    nlocksdown = SCIPvarGetNLocksDown(cand);
 
-   nconflictlocksup = SCIPvarGetNConflictLocksUp(cand);
-   nconflictlocksdown = SCIPvarGetNConflictLocksDown(cand);
+   nconflictlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_CONFLICT);
+   nconflictlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_CONFLICT);
 
    conflictlocksum = nconflictlocksup + nconflictlocksdown;
    locksum = nlocksdown + nlocksup;

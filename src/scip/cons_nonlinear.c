@@ -346,7 +346,7 @@ SCIP_RETCODE unlockLinearVariable(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(!SCIPconsIsConflictLocked(cons));
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
    assert(var != NULL);
    assert(coef != 0.0);
 
@@ -816,7 +816,7 @@ SCIP_DECL_EXPRGRAPHVARADDED( exprgraphVarAdded )
       );
    SCIPexprgraphSetVarNodeBounds(exprgraph, varnode, varbounds);
 
-   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, 1, 1) );
+   SCIP_CALL( SCIPaddVarLocksType(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, 1, 1) );
    SCIPdebugMessage("increased up- and downlocks of variable <%s>\n", SCIPvarGetName(var_));
 
    SCIP_CALL( SCIPcaptureVar(conshdlrdata->scip, var_) );
@@ -848,7 +848,7 @@ SCIP_DECL_EXPRGRAPHVARREMOVE( exprgraphVarRemove )
    SCIP_CALL( SCIPdropVarEvent(conshdlrdata->scip, var_, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, conshdlrdata->nonlinvareventhdlr, (SCIP_EVENTDATA*)varnode, -1) );
    SCIPdebugMessage("drop boundchange events on expression graph variable <%s>\n", SCIPvarGetName(var_));
 
-   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, -1, -1) );
+   SCIP_CALL( SCIPaddVarLocksType(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, -1, -1) );
    SCIPdebugMessage("decreased up- and downlocks of variable <%s>\n", SCIPvarGetName(var_));
 
    SCIPdebugMessage("release variable <%s>\n", SCIPvarGetName(var_));
@@ -8360,22 +8360,22 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
       {
          if( havelhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
          if( haverhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( havelhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
          if( haverhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
       }
    }

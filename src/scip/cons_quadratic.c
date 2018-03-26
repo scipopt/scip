@@ -2024,7 +2024,7 @@ SCIP_RETCODE chgLinearCoefPos(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(!SCIPconsIsConflictLocked(cons));
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
    assert(!SCIPisZero(scip, newcoef));
 
    conshdlrdata = NULL;
@@ -13300,22 +13300,22 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
       }
    }
@@ -13323,7 +13323,7 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       /* @todo try to be more clever, but variable locks that depend on the bounds of other variables are not trival to maintain */
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->quadvarterms[i].var, SCIP_LOCKTYPE_MODEL, nlockspos+nlocksneg, nlockspos+nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->quadvarterms[i].var, SCIP_LOCKTYPE_MODEL, nlockspos+nlocksneg, nlockspos+nlocksneg) );
    }
 
    return SCIP_OKAY;

@@ -1636,8 +1636,8 @@ SCIP_DECL_CONSLOCK(consLockOrbisack)
 
    for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, vars1[i], locktype, nlockspos, nlocksneg) );
-      SCIP_CALL( SCIPaddVarLocks(scip, vars2[i], locktype, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars1[i], locktype, nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars2[i], locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

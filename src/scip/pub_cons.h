@@ -745,34 +745,39 @@ int SCIPconsGetNLocksNeg(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff conflict roundings for variables in constraint are locked */
+/** returns TRUE iff roundings of the given locktype for variables in constraint are locked */
 EXTERN
-SCIP_Bool SCIPconsIsConflictLockedPos(
-   SCIP_CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsLockedTypePos(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
    );
 
-/** returns TRUE iff conflict roundings for variables in constraint's negation are locked */
+/** returns TRUE iff roundings of the given locktype for variables in constraint are locked */
 EXTERN
-SCIP_Bool SCIPconsIsConflictLockedNeg(
-   SCIP_CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsLockedTypeNeg(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
    );
 
-/** returns TRUE iff conflict roundings for variables in constraint or in constraint's negation are locked */
+/** returns TRUE iff roundings of the given locktype for variables in constraint or in constraint's negation are locked */
 EXTERN
-SCIP_Bool SCIPconsIsConflictLocked(
-   SCIP_CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsLockedType(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
    );
 
-/** get number of times the conflict roundings for variables in constraint are locked */
+/** get number of times the roundings of given locktype for variables in constraint are locked */
 EXTERN
-int SCIPconsGetNConflictLocksPos(
-   SCIP_CONS*            cons                /**< constraint */
+int SCIPconsGetNLocksTypePos(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
    );
 
-/** get number of times the conflict roundings for variables in constraint's negation are locked */
+/** get number of times the roundings of given locktype for variables in constraint's negation are locked */
 EXTERN
-int SCIPconsGetNConflictLocksNeg(
-   SCIP_CONS*            cons                /**< constraint */
+int SCIPconsGetNLocksTypeNeg(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
    );
 
 /** returns if the constraint was already added to a SCIP instance */
@@ -835,16 +840,16 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsIsInProb(cons)          ((cons)->addconssetchg == NULL && (cons)->addarraypos >= 0)
 #define SCIPconsIsOriginal(cons)        (cons)->original
 #define SCIPconsIsTransformed(cons)     !(cons)->original
-#define SCIPconsIsLockedPos(cons)       ((cons)->nlockspos > 0)
-#define SCIPconsIsLockedNeg(cons)       ((cons)->nlocksneg > 0)
-#define SCIPconsIsLocked(cons)          ((cons)->nlockspos > 0 || (cons)->nlocksneg > 0)
-#define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos)
-#define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg)
-#define SCIPconsIsConflictLockedPos(cons)  ((cons)->nconflictlockspos > 0)
-#define SCIPconsIsConflictLockedNeg(cons)  ((cons)->nconflictlocksneg > 0)
-#define SCIPconsIsConflictLocked(cons)     ((cons)->nconflictlockspos > 0 || (cons)->nconflictlocksneg > 0)
-#define SCIPconsGetNConflictLocksPos(cons) ((cons)->nconflictlockspos)
-#define SCIPconsGetNConflictLocksNeg(cons) ((cons)->nconflictlocksneg)
+#define SCIPconsIsLockedPos(cons)       ((cons)->nlockspos[SCIP_LOCKTYPE_MODEL] > 0)
+#define SCIPconsIsLockedNeg(cons)       ((cons)->nlocksneg[SCIP_LOCKTYPE_MODEL] > 0)
+#define SCIPconsIsLocked(cons)          ((cons)->nlockspos[SCIP_LOCKTYPE_MODEL] > 0 || (cons)->nlocksneg[SCIP_LOCKTYPE_MODEL] > 0)
+#define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos[SCIP_LOCKTYPE_MODEL])
+#define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg[SCIP_LOCKTYPE_MODEL])
+#define SCIPconsIsLockedTypePos(cons, locktype)  ((cons)->nlockspos[locktype] > 0)
+#define SCIPconsIsLockedTypeNeg(cons, locktype)  ((cons)->nlocksneg[locktype] > 0)
+#define SCIPconsIsLockedType(cons, locktype)     ((cons)->nlockspos[locktype] > 0 || (cons)->nlocksneg[locktype] > 0)
+#define SCIPconsGetNLocksTypePos(cons, locktype) ((cons)->nlockspos[locktype])
+#define SCIPconsGetNLocksTypeNeg(cons, locktype) ((cons)->nlocksneg[locktype])
 #define SCIPconsIsAdded(cons)           ((cons)->addarraypos >= 0)
 #define SCIPconsGetNUpgradeLocks(cons)  ((cons)->nupgradelocks)
 

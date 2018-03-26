@@ -1970,11 +1970,11 @@ SCIP_DECL_CONSLOCK(consLockSOS2)
 
       /* if lower bound is negative, rounding down may violate constraint */
       if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
-         SCIP_CALL( SCIPaddVarLocks(scip, var, locktype, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
       if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
-         SCIP_CALL( SCIPaddVarLocks(scip, var, locktype, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

@@ -672,7 +672,7 @@ SCIP_RETCODE freeGenVBounds(
       /* release the cutoffboundvar and undo the locks */
       if( propdata->cutoffboundvar != NULL )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
          SCIP_CALL( SCIPreleaseVar(scip, &(propdata->cutoffboundvar)) );
          propdata->cutoffboundvar = NULL;
          SCIPdebugMsg(scip, "release cutoffboundvar!\n");
@@ -1952,7 +1952,7 @@ SCIP_RETCODE createConstraints(
        * linear constraints as non-check constraints, the cutoffboundvar will not be locked by the linear constraint
        * handler
        */
-      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, 1, 1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, 1, 1) );
    }
 
    assert(propdata->cutoffboundvar != NULL);
@@ -2342,7 +2342,7 @@ SCIP_DECL_PROPINITPRE(propInitpreGenvbounds)
          SCIPgetProbName(scip), SCIPvarGetNLocksDown(propdata->cutoffboundvar),
          SCIPvarGetNLocksUp(propdata->cutoffboundvar));
 
-      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, 1, 1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, 1, 1) );
    }
 
    return SCIP_OKAY;

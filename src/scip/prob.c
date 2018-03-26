@@ -1321,7 +1321,7 @@ SCIP_RETCODE SCIPprobAddCons(
       /* if constraint is a check-constraint, lock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
       {
-         SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
+         SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, +1, 0) );
       }
    }
 
@@ -1355,7 +1355,7 @@ SCIP_RETCODE SCIPprobDelCons(
       /* if constraint is a check-constraint, unlock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
       {
-         SCIP_CALL( SCIPconsAddLocks(cons, set, -1, 0) );
+         SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, -1, 0) );
       }
 
       /* deactivate constraint, if it is currently active */

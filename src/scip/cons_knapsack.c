@@ -486,7 +486,7 @@ SCIP_RETCODE lockRounding(
    {
       SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
    }
-   if( SCIPconsIsConflictLocked(cons) )
+   if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
    {
       SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
    }
@@ -506,7 +506,7 @@ SCIP_RETCODE unlockRounding(
    {
       SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
    }
-   if( SCIPconsIsConflictLocked(cons) )
+   if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
    {
       SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
    }
@@ -13019,7 +13019,7 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

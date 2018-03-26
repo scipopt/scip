@@ -2087,11 +2087,11 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 
       if ( perm[i] > i )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[i], locktype, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[i], locktype, nlockspos, nlocksneg) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[i], locktype, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[i], locktype, nlocksneg, nlockspos) );
       }
    }
 
