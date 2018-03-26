@@ -831,7 +831,7 @@ SCIP_RETCODE SCIPbendersExec(
                   {
                      SCIP_Bool subproboptimal;
 
-                     SCIP_CALL( SCIPbendersCheckAuxiliaryVar(benders, set, sol, i, &subproboptimal) );
+                     SCIP_CALL( SCIPbendersCheckSubprobOptimality(benders, set, sol, i, &subproboptimal) );
 
                      if( lpsub || onlylpcheck
                         || solveloop == SCIP_BENDERSSOLVELOOP_USER || solveloop == SCIP_BENDERSSOLVELOOP_CIP )
@@ -998,8 +998,8 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
    return SCIP_OKAY;
 }
 
-/** checks the auxiliary variable value for optimality */
-SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
+/** compares the subproblem objective value with the auxiliary variable value for optimality */
+SCIP_RETCODE SCIPbendersCheckSubprobOptimality(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */

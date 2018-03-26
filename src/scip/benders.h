@@ -184,9 +184,9 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
    int                   probnum             /**< the subproblem number */
    );
 
-/** checks the auxiliary variable value for optimality */
+/** compares the subproblem objective value with the auxiliary variable value for optimality */
 extern
-SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
+SCIP_RETCODE SCIPbendersCheckSubprobOptimality(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
