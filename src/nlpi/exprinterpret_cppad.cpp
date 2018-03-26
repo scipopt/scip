@@ -943,7 +943,7 @@ template<>
 class atomic_signpower<SCIPInterval> : public CppAD::atomic_base<SCIPInterval>
 {
 public:
-   atomic_signpower()
+   atomic_signpower<SCIPInterval>()
    : CppAD::atomic_base<SCIPInterval>("signpowerint"),
      exponent(0.0)
    {
@@ -2499,7 +2499,7 @@ SCIP_RETCODE SCIPexprintGradInt(
 {
    assert(exprint  != NULL);
    assert(tree     != NULL);
-   assert(varvals  != NULL || new_varvals == false);
+   assert(varvals  != NULL || new_varvals == FALSE);
    assert(val      != NULL);
    assert(gradient != NULL);
 
