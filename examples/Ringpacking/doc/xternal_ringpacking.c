@@ -63,7 +63,7 @@
  * variable \f$z_{C}\f$ for each circular pattern \f$C\f$. A vector \f$P \in \Z_{+}^\mathcal{T}\f$, where \f$T\f$ is the
  * total number of ringtypes, is a rectangular pattern if and only if \f$P_t\f$ many circles with radius \f$\rext_t\f$
  * for each \f$t \in \mathcal{T}\f$ can be packed together into a rectangle. Similarly, a tuple
- * \f$(t,P)\in \mathcal{T} \times \Z_{+}^\ntypes\f$ is a circular pattern if it is possible to pack \f$P_1\f$ many
+ * \f$(t,P)\in \mathcal{T} \times \Z_{+}^T\f$ is a circular pattern if it is possible to pack \f$P_1\f$ many
  * circles of type \f$1\f$, \f$P_2\f$ many circles of type \f$2\f$, \f$\ldots\f$, \f$P_T\f$ many circles of type \f$T\f$
  * into a larger ring of type \f$t\f$. Let \f$\mathcal{RP}\f$ and \f$\mathcal{CP}\f$ be the set of all rectangular or
  * circular patterns, respectively, and let \f$D_t\f$ denote the demand of ringtype \f$t\f$.
