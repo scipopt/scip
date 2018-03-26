@@ -29,6 +29,7 @@
 #include "scip/scipdefplugins.h"
 
 #include "reader_stp.h"
+#include "reader_gr.h"
 #include "cons_stp.h"
 #include "heur_tm.h"
 #include "heur_local.h"
@@ -70,6 +71,7 @@ SCIP_RETCODE runShell(
 
    /* include Steiner tree reader */
    SCIP_CALL( SCIPincludeReaderStp(scip) );
+   SCIP_CALL( SCIPincludeReaderGr(scip) );
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );

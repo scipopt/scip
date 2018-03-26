@@ -421,7 +421,7 @@ static int get_arguments(
          {
             s++;
          }
-         /* Someting left ?
+         /* Something left ?
           */
          if (*s != '\0')
          {

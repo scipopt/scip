@@ -55,6 +55,7 @@ CMAINOBJ	=	cmain.o \
 			event_bestsol.o \
 			dialog_stp.o \
 			reader_stp.o \
+			reader_gr.o \
 			pricer_stp.o \
 			reduce.o \
 			reduce_alt.o \

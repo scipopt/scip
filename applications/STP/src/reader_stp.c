@@ -136,25 +136,11 @@ SCIP_DECL_READERWRITE(readerWriteStp)
  * @{
  */
 
-/** includes the stp file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderStp(
+/** include user parameters */
+SCIP_RETCODE SCIPStpReaderIncludeParams(
    SCIP*                 scip                /**< SCIP data structure */
-   )
+)
 {
-   SCIP_READERDATA* readerdata;
-   SCIP_READER* reader;
-
-   /* create reader data */
-   readerdata = NULL;
-
-   /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
-   assert(reader != NULL);
-
-   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyStp) );
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadStp) );
-   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteStp) );
-
    /* include user parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/compcentral",
@@ -205,7 +191,7 @@ SCIP_RETCODE SCIPincludeReaderStp(
          "print the graph before and after the presolving", NULL, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip,
-	 "stp/mode",
+    "stp/mode",
          "Solving mode: 'c'ut, 'f'low ,'p'rice",
          NULL, FALSE, 'c', STP_MODES, NULL, NULL) );
 
@@ -221,7 +207,30 @@ SCIP_RETCODE SCIPincludeReaderStp(
          NULL, FALSE, "",
          NULL, NULL) );
 
+   return SCIP_OKAY;
+}
 
+
+/** includes the stp file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderStp(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
+
+   /* create reader data */
+   readerdata = NULL;
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   assert(reader != NULL);
+
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyStp) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadStp) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteStp) );
+
+   SCIP_CALL( SCIPStpReaderIncludeParams(scip) );
 
    return SCIP_OKAY;
 }
