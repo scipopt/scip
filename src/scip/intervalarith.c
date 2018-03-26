@@ -3002,14 +3002,15 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
 
 /** solves a quadratic equation with interval coefficients
  *
- * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$
+ * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ within xbnds
  */
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
-   SCIP_INTERVAL         rhs                 /**< right hand side of equation */
+   SCIP_INTERVAL         rhs,                /**< right hand side of equation */
+   SCIP_INTERVAL         xbnds               /**< bounds on x */
    )
 {
    SCIP_Real tmp;
@@ -3028,35 +3029,53 @@ void SCIPintervalSolveUnivariateQuadExpression(
             SCIPintervalSetEmpty(resultant);
       }
       else
-         SCIPintervalDiv(infinity, resultant, rhs, lincoeff);
+         SCIPintervalDiv(infinity, resultant, rhs, lincoeff); /* TODO div should take xbnds into account? */
       SCIPdebugMessage("  solving [%g,%g]*x in [%g,%g] gives [%g,%g]\n", SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs), SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
+      /* TODO intersect with xbnds */
       return;
    }
 
    if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 )
    { /* easy case: x \in +/- sqrt(rhs/a) */
       SCIPintervalDiv(infinity, resultant, rhs, sqrcoeff);
+      /* TODO consider xbnds */
       SCIPintervalSquareRoot(infinity, resultant, *resultant);
       resultant->inf = -resultant->sup;
       return;
    }
 
    /* find all x>=0 such that a*x^2+b*x = c */
-   SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xpos, sqrcoeff, lincoeff, rhs);
-   SCIPdebugMessage("  positive solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] are [%g,%g]\n",
-      sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xpos.inf, xpos.sup);
-
-   tmp = lincoeff.inf;
-   lincoeff.inf = -lincoeff.sup;
-   lincoeff.sup = -tmp;
+   if( xbnds.sup >= 0 )
+   {
+      SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xpos, sqrcoeff, lincoeff, rhs);
+      SCIPintervalIntersect(&xpos, xpos, xbnds);
+      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%g,%g]\n",
+         sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, MAX(xbnds.inf, 0.0), xbnds.sup, xpos.inf, xpos.sup);
+   }
+   else
+   {
+      SCIPintervalSetEmpty(&xpos);
+   }
 
    /* find all x>=0 such that a*x^2-b*x = c */
-   SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xneg, sqrcoeff, lincoeff, rhs);
-   tmp = xneg.inf;
-   xneg.inf = -xneg.sup;
-   xneg.sup = -tmp;
-   SCIPdebugMessage("  negative solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] are [%g,%g]\n",
-      sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xneg.inf, xneg.sup);
+   if( xbnds.inf <= 0.0 )
+   {
+      tmp = lincoeff.inf;
+      lincoeff.inf = -lincoeff.sup;
+      lincoeff.sup = -tmp;
+
+      SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xneg, sqrcoeff, lincoeff, rhs);
+      tmp = xneg.inf;
+      xneg.inf = -xneg.sup;
+      xneg.sup = -tmp;
+      SCIPintervalIntersect(&xneg, xneg, xbnds);
+      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%g,%g]\n",
+         sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, MIN(xbnds.sup, 0.0), xneg.inf, xneg.sup);
+   }
+   else
+   {
+      SCIPintervalSetEmpty(&xneg);
+   }
 
    SCIPintervalUnify(resultant, xpos, xneg);
    SCIPdebugMessage("  unify gives [%g,%g]\n", SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));

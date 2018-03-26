@@ -643,7 +643,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
 
 /** solves a quadratic equation with interval coefficients
  *
- * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$
+ * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ within xbnds
  */
 extern
 void SCIPintervalSolveUnivariateQuadExpression(
@@ -651,7 +651,8 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
-   SCIP_INTERVAL         rhs                 /**< right hand side of equation */
+   SCIP_INTERVAL         rhs,                /**< right hand side of equation */
+   SCIP_INTERVAL         xbnds               /**< bounds on x */
    );
 
 /** stores range of bivariate quadratic term in resultant

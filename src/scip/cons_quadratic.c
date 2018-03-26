@@ -10405,8 +10405,10 @@ SCIP_RETCODE propagateBoundsQuadVar(
    {
       /* need both positive and negative solution */
       SCIP_INTERVAL a_;
+      SCIP_INTERVAL entire;
       SCIPintervalSet(&a_, a);
-      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs);
+      SCIPintervalSetEntire(intervalinfty, &entire);
+      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs, entire);
    }
 
    /* SCIPdebugMsg(scip, "%g x^2 + [%g, %g] x in [%g, %g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, newrange.inf, newrange.sup); */
