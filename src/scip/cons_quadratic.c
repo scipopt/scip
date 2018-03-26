@@ -10376,42 +10376,17 @@ SCIP_RETCODE propagateBoundsQuadVar(
       }
       return SCIP_OKAY;
    }
-   else if( SCIPvarGetLbLocal(var) >= 0.0 )
-   {
-      SCIP_INTERVAL a_;
-
-      /* need only positive solutions */
-      SCIPintervalSet(&a_, a);
-      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &newrange, a_, b, rhs);
-   }
-   else if( SCIPvarGetUbLocal(var) <= 0.0 )
-   {
-      /* need only negative solutions */
-      SCIP_INTERVAL a_;
-      SCIP_INTERVAL tmp;
-      SCIPintervalSet(&a_, a);
-      SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
-      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &tmp, a_, tmp, rhs);
-      if( SCIPintervalIsEmpty(intervalinfty, tmp) )
-      {
-         SCIPdebugMsg(scip, "found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
-         *result = SCIP_CUTOFF;
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         return SCIP_OKAY;
-      }
-      SCIPintervalSetBounds(&newrange, -SCIPintervalGetSup(tmp), -SCIPintervalGetInf(tmp));
-   }
    else
    {
-      /* need both positive and negative solution */
       SCIP_INTERVAL a_;
-      SCIP_INTERVAL entire;
+      SCIP_INTERVAL xbnds;
+
       SCIPintervalSet(&a_, a);
-      SCIPintervalSetEntire(intervalinfty, &entire);
-      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs, entire);
+      SCIPintervalSetBounds(&xbnds, -infty2infty(SCIPinfinity(scip), intervalinfty, -SCIPvarGetLbLocal(var)), infty2infty(SCIPinfinity(scip), intervalinfty, SCIPvarGetUbLocal(var)));
+      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs, xbnds);
    }
 
-   /* SCIPdebugMsg(scip, "%g x^2 + [%g, %g] x in [%g, %g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, newrange.inf, newrange.sup); */
+   /* SCIPdebugMsg(scip, "%g x^2 + [%g, %g] x in [%g, %g] and x in [%g,%g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), newrange.inf, newrange.sup); */
 
    if( SCIPisInfinity(scip, SCIPintervalGetInf(newrange)) || SCIPisInfinity(scip, -SCIPintervalGetSup(newrange)) )
    {
