@@ -854,7 +854,12 @@ SCIP_RETCODE SCIPbendersExec(
 #endif
 
                      /* only increment the checked count if the subproblem is not an LP, or the solve loop is the MIP
-                      * solving loop. Hence, the LP are solved once and the MIPs are solved twice */
+                      * solving loop. Hence, the LP are solved once and the MIPs are solved twice, one for the LP
+                      * relaxation of the MIP and the other to solve the MIP itself.
+                      * If the user has implemented a solving function, then it is expected that the user has
+                      * completely checked a subproblem in the solving callback. So in this case, the check count is
+                      * increased.
+                      */
                      if( (solveloop == SCIP_BENDERSSOLVELOOP_LP && lpsub)
                         || (solveloop == SCIP_BENDERSSOLVELOOP_CIP && !lpsub)
                         || solveloop == SCIP_BENDERSSOLVELOOP_USER || onlylpcheck )
