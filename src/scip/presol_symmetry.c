@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,6 +41,7 @@
 #include <scip/cons_logicor.h>
 #include <scip/cons_or.h>
 #include <scip/cons_xor.h>
+#include <scip/cons_linking.h>
 
 #include <scip/presol_symmetry.h>
 #include <symmetry/compute_symmetry.h>
@@ -58,6 +59,7 @@
 #define DEFAULT_MAXGENERATORS      1500      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
 #define DEFAULT_COMPUTEPRESOLVED   TRUE      /**< Should the symmetry be computed after presolving (otherwise before presol)? */
 #define DEFAULT_CHECKSYMMETRIES   FALSE      /**< Should all symmetries be checked after computation? */
+#define DEFAULT_DISPLAYNORBITVARS FALSE      /**< Should the number of variables affected by some symmetry be displayed? */
 
 /* other defines */
 #define MAXGENNUMERATOR        64000000      /**< determine maximal number of generators by dividing this number by the number of variables */
@@ -69,6 +71,7 @@ struct SCIP_PresolData
    SCIP_Bool             computepresolved;   /**< Should the symmetry be computed afer presolving (otherwise before presol)? */
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
+   SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
    SYM_HANDLETYPE        symtype;            /**< type of symmetry of registered calling function */
    SYM_SPEC              symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
    SYM_SPEC              symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
@@ -79,6 +82,8 @@ struct SCIP_PresolData
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
+   int                   norbitvars;         /**< number of vars that are contained in a non-trivial orbit */
+   SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
    int                   oldmaxpreroundscomponents; /**< original value of parameter constraints/components/maxprerounds */
@@ -619,6 +624,8 @@ int getNSymhandableConss(
 
    conshdlr = SCIPfindConshdlr(scip, "linear");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "linking");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "setppc");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "xor");
@@ -638,7 +645,6 @@ int getNSymhandableConss(
 
    return nhandleconss;
 }
-
 
 /** compute symmetry group of MIP */
 static
@@ -799,6 +805,34 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_CALL( collectCoefficients(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
                SCIPgetNVarsLinear(scip, cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons),
                SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+      }
+      else if ( strcmp(conshdlrname, "linking") == 0 )
+      {
+         SCIP_VAR** curconsvars;
+         int* curconsvals;
+         int i;
+
+         /* get constraint variables and their amount */
+         curconsvals = SCIPgetValsLinking(scip, cons);
+         SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
+         /* SCIPgetBinVarsLinking returns the number of binary variables, but we also need the integer variable */
+         nconsvars++;
+
+         /* copy vars and vals for binary variables */
+         for( i = 0; i < nconsvars - 1; i++ )
+         {
+            consvars[i] = curconsvars[i];
+            consvals[i] = (SCIP_Real) curconsvals[i];
+         }
+
+         /* set final entry of vars and vals to the linking variable and its coefficient, respectively */
+         consvars[nconsvars - 1] = SCIPgetIntvarLinking(scip, cons);
+         consvals[nconsvars - 1] = -1;
+
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
+                        SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+         SCIP_CALL( collectCoefficients(scip, consvars, NULL, nconsvars - 1, 1.0, 1.0,
+                        SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "setppc") == 0 )
       {
@@ -1149,6 +1183,67 @@ SCIP_RETCODE computeSymmetryGroup(
 }
 
 
+/* compute number of variables that are contained in a non-trivial orbit */
+static
+SCIP_RETCODE computeNOrbitVars(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
+   SCIP_Bool             completestatistic   /**< whether a complete statistic on affected vars should be computed */
+   )
+{
+   int** perms;
+   int nperms;
+   int nvars;
+   SCIP_Shortbool* affected;
+   int i;
+   int p;
+   int naffected = 0;
+
+   assert( scip != NULL );
+   assert( presoldata != NULL );
+   assert( presoldata->perms != NULL );
+   assert( presoldata->nperms > 0 );
+   assert( presoldata->npermvars > 0 );
+
+   perms = presoldata->perms;
+   nperms = presoldata->nperms;
+   nvars = presoldata->npermvars;
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &affected, nvars) );
+
+   /* iterate over permutations and check which variables are affected by some symmetry */
+   for (p = 0; p < nperms && (completestatistic || ! presoldata->binvaraffected); ++p)
+   {
+      for (i = 0; i < nvars; ++i)
+      {
+         if ( affected[i] )
+            continue;
+
+         if ( perms[p][i] != i )
+         {
+            if ( SCIPvarIsBinary(presoldata->permvars[i]) )
+            {
+               presoldata->binvaraffected = TRUE;
+
+               if ( ! completestatistic )
+                  break;
+            }
+
+            affected[i] = TRUE;
+            ++naffected;
+         }
+      }
+   }
+
+   if ( completestatistic )
+      presoldata->norbitvars = naffected;
+
+   SCIPfreeBufferArray(scip, &affected);
+
+   return SCIP_OKAY;
+}
+
+
 /** determine symmetry */
 static
 SCIP_RETCODE determineSymmetry(
@@ -1266,19 +1361,47 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
    else
    {
+      int usesymmetry;
+
       assert( presoldata->nperms > 0 );
 
-      if ( maxgenerators == 0 )
+      SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+
+      if ( presoldata->displaynorbitvars )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-            "   (%.1fs) symmetry computation finished: %d generators found (max: -, log10 of symmetry group size: %.1f)\n",
-            SCIPgetSolvingTime(scip), presoldata->nperms, presoldata->log10groupsize);
+         SCIP_CALL( computeNOrbitVars(scip, presoldata, TRUE) );
       }
-      else
+      else if ( usesymmetry == 1 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-            "   (%.1fs) symmetry computation finished: %d generators found (max: %u, log10 of symmetry group size: %.1f)\n",
-            SCIPgetSolvingTime(scip), presoldata->nperms, maxgenerators, presoldata->log10groupsize);
+         SCIP_CALL( computeNOrbitVars(scip, presoldata, FALSE) );
+      }
+
+      /* display statistics: number of generators */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "   (%.1fs) symmetry computation finished: %d generators found (max: ",
+         SCIPgetSolvingTime(scip), presoldata->nperms);
+
+      /* display statistics: maximum number of generators*/
+      if ( maxgenerators == 0 )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "-");
+      else
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%u", maxgenerators);
+
+      /* display statistics: log10 group size, number of affected vars*/
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", presoldata->log10groupsize);
+
+      /* display statistics: number of affected vars*/
+      if ( presoldata->displaynorbitvars )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", presoldata->norbitvars);
+      else
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
+
+      /* do not deactivate components if no binary variables are affected in the polyhedral setting */
+      if ( ! presoldata->binvaraffected && usesymmetry == 1 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present\n", SCIPgetSolvingTime(scip));
+
+         return SCIP_OKAY;
       }
 
       /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
@@ -1301,7 +1424,6 @@ SCIP_RETCODE determineSymmetry(
 
    return SCIP_OKAY;
 }
-
 
 
 /*
@@ -1387,6 +1509,8 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    presoldata->npermvars = 0;
    presoldata->nperms = 0;
    presoldata->nmaxperms = 0;
+   presoldata->norbitvars = 0;
+   presoldata->binvaraffected = FALSE;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
 
@@ -1504,6 +1628,8 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->perms = NULL;
    presoldata->nperms = 0;
    presoldata->nmaxperms = 0;
+   presoldata->norbitvars = 0;
+   presoldata->binvaraffected = FALSE;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
    presoldata->changeddefaultparams = FALSE;
@@ -1530,10 +1656,15 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
          "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
          &presoldata->maxgenerators, TRUE, DEFAULT_MAXGENERATORS, 0, INT_MAX, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/checksymmetries",
          "Should all symmetries be checked after computation?",
          &presoldata->checksymmetries, TRUE, DEFAULT_CHECKSYMMETRIES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/displaynorbitvars",
+         "Should the number of variables affected by some symmetry be displayed?",
+         &presoldata->displaynorbitvars, TRUE, DEFAULT_DISPLAYNORBITVARS, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
@@ -1552,7 +1683,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store log10 of group size (or NULL) */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of group size (or NULL) */
+   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -1596,6 +1728,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    *perms = presoldata->perms;
    if ( log10groupsize != NULL )
       *log10groupsize = presoldata->log10groupsize;
+   if ( binvaraffected != NULL )
+      *binvaraffected = presoldata->binvaraffected;
 
    return SCIP_OKAY;
 }

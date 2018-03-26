@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -9994,7 +9994,7 @@ void exprgraphPrintNodeExpression(
       break;
 
    default:
-      SCIPmessageFPrintInfo(messagehdlr, file, SCIPexpropGetName(node->op));
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s", SCIPexpropGetName(node->op));
       break;
    } /*lint !e788*/
 }

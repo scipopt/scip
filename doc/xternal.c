@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -119,6 +119,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG11        "Interface changes between version 5.0 and 5.1"
  * - \ref CHG10        "Interface changes between version 4.0 and 5.0"
  * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
@@ -133,7 +134,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  5.0.0
+ * @version  5.0.1.4
  *
  * \image html scippy.png
  *
@@ -7435,6 +7436,28 @@
   */
 
  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG11 Interface changes between SCIP 5.0 and SCIP 5.1
+  *
+  *
+  * @section CHGCALLBACKS11 New and changed callbacks
+  *
+  *
+  * <br>
+  * @section CHGINTERFUNC11 Changed interface methods
+  *
+  * <br>
+  *   <b>SCIP Status</b>
+  *   - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and
+  *     SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
+  *
+  * <br>
+  * @section CHGPARAMS11 Changed parameters
+  *
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -7564,6 +7587,8 @@
 /**@page RELEASENOTES Release notes
  *
  * Please consult the <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6629">release report</a> for version 5.0 that explains many of the new features in detail.
+ *
+ * \verbinclude SCIP-release-notes-5.0.1
  *
  * \verbinclude SCIP-release-notes-5.0
  *

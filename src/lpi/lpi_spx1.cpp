@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1662,7 +1662,7 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
-   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {
 #if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
@@ -1673,6 +1673,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 #endif
+}
+
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return FALSE;
 }
 
 /**@} */
@@ -1696,6 +1720,7 @@ SCIP_RETCODE SCIPlpiCreate(
    )
 {
    assert(lpi != NULL);
+   assert(name != NULL);
 
    /* create SoPlex object */
    SCIP_ALLOC( BMSallocMemory(lpi) );
@@ -1791,6 +1816,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(lpi->spx != NULL);
    assert(lhs != NULL);
    assert(rhs != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(beg != NULL);
+   assert(ind != NULL);
+   assert(val != NULL);
 
    invalidateSolution(lpi);
    assert( lpi->spx->preStrongbranchingBasisFreed() );
@@ -1844,14 +1875,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
    assert(lpi != NULL);
@@ -1875,7 +1898,10 @@ SCIP_RETCODE SCIPlpiAddCols(
       /* perform check that no new rows are added - this is likely to be a mistake */
       int nrows = lpi->spx->nRows();
       for (int j = 0; j < nnonz; ++j)
+      {
          assert( 0 <= ind[j] && ind[j] < nrows );
+         assert( val[j] != 0.0 );
+      }
    }
 #endif
 
@@ -1954,6 +1980,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(dstat != NULL);
 
    invalidateSolution(lpi);
 
@@ -1983,14 +2010,6 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
-   }
-#endif
-
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
    assert(lpi != NULL);
@@ -2011,7 +2030,10 @@ SCIP_RETCODE SCIPlpiAddRows(
       /* perform check that no new columns are added - this is likely to be a mistake */
       int ncols = lpi->spx->nCols();
       for (int j = 0; j < nnonz; ++j)
+      {
          assert( 0 <= ind[j] && ind[j] < ncols );
+         assert( val[j] != 0.0 );
+      }
    }
 #endif
 
@@ -2128,9 +2150,9 @@ SCIP_RETCODE SCIPlpiClear(
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
-   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {
    int i;
@@ -2139,9 +2161,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(ind != NULL);
-   assert(lb != NULL);
-   assert(ub != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
+   if( ncols <= 0 )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -2201,6 +2223,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(ind != NULL);
    assert(lhs != NULL);
    assert(rhs != NULL);
+   if( nrows <= 0 )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -2561,11 +2585,11 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    if( lb != NULL )
    {
-      assert(ub != NULL);
-
       const Vector& lbvec = lpi->spx->lower();
       const Vector& ubvec = lpi->spx->upper();
       for( i = firstcol; i <= lastcol; ++i )
@@ -2574,8 +2598,6 @@ SCIP_RETCODE SCIPlpiGetCols(
          ub[i-firstcol] = ubvec[i];
       }
    }
-   else
-      assert(ub == NULL);
 
    if( nnonz != NULL )
    {
@@ -2591,12 +2613,6 @@ SCIP_RETCODE SCIPlpiGetCols(
             (*nnonz)++;
          }
       }
-   }
-   else
-   {
-      assert(beg == NULL);
-      assert(ind == NULL);
-      assert(val == NULL);
    }
 
    return SCIP_OKAY;
@@ -2626,11 +2642,11 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    if( lhs != NULL )
    {
-      assert(rhs != NULL);
-
       const Vector& lhsvec = lpi->spx->lhs();
       const Vector& rhsvec = lpi->spx->rhs();
       for( i = firstrow; i <= lastrow; ++i )
@@ -2639,8 +2655,6 @@ SCIP_RETCODE SCIPlpiGetRows(
          rhs[i-firstrow] = rhsvec[i];
       }
    }
-   else
-      assert(rhs == NULL);
 
    if( nnonz != NULL )
    {
@@ -2657,12 +2671,6 @@ SCIP_RETCODE SCIPlpiGetRows(
          }
       }
    }
-   else
-   {
-      assert(beg == NULL);
-      assert(ind == NULL);
-      assert(val == NULL);
-   }
 
    return SCIP_OKAY;
 }
@@ -2672,10 +2680,10 @@ SCIP_RETCODE SCIPlpiGetColNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get name from LP */
    int                   lastcol,            /**< last column to get name from LP */
-   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
-   char*                 namestorage,        /**< storage for col names */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for col names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
    assert( lpi != NULL );
@@ -2698,10 +2706,10 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get name from LP */
    int                   lastrow,            /**< last row to get name from LP */
-   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
-   char*                 namestorage,        /**< storage for row names */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for row names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
    assert( lpi != NULL );
@@ -2991,6 +2999,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover           /**< perform crossover */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
 
    /* SoPlex does not support barrier (yet) */
@@ -3003,6 +3014,9 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    lpi->spx->savePreStrongbranchingBasis();
 
@@ -3014,6 +3028,9 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
    assert( ! lpi->spx->preStrongbranchingBasisFreed() );
    lpi->spx->restorePreStrongbranchingBasis();
    lpi->spx->freePreStrongbranchingBasis();
@@ -3603,6 +3620,7 @@ SCIP_Bool SCIPlpiIsOptimal(
    SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
 
    assert(lpi != NULL);
+   assert(lpi->spx != NULL);
    assert((lpi->spx->basis().status() == SPxBasis::OPTIMAL)
       == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
@@ -3710,6 +3728,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(success != NULL);
 
    /* instable situations cannot be ignored */
    *success = FALSE;
@@ -3800,6 +3819,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(ray != NULL);
 
 #if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    try
@@ -3836,6 +3856,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(dualfarkas != NULL);
 
    try
    {
@@ -3867,6 +3888,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(iterations != NULL);
 
    *iterations = lpi->spx->iterations();
 
@@ -3892,9 +3914,6 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 #if ((SOPLEX_VERSION == 172 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 172)
    int maxiter;
    Real tolerance;
-
-   assert(lpi != NULL);
-   assert(quality != NULL);
 
    SCIPdebugMessage("requesting solution quality from SoPlex: quality %d\n", qualityindicator);
 
@@ -4085,15 +4104,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    )
 {
    int i;
-   int nCols = lpi->spx->nCols();
-   int nRows = lpi->spx->nRows();
+   int ncols;
+   int nrows;
 
    SCIPdebugMessage("calling SCIPlpiSetBase()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(cstat != NULL || nCols == 0);
-   assert(rstat != NULL || nRows == 0);
+
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
@@ -4101,10 +4124,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    DataArray<SPxSolver::VarStatus>& m_colstat = lpi->spx->colStat();
    DataArray<SPxSolver::VarStatus>& m_rowstat = lpi->spx->rowStat();
 
-   m_colstat.reSize(nCols);
-   m_rowstat.reSize(nRows);
+   m_colstat.reSize(ncols);
+   m_rowstat.reSize(nrows);
 
-   for( i = 0; i < nRows; ++i )
+   for( i = 0; i < nrows; ++i )
    {
       assert( rstat != 0 ); /* for lint */
       switch( rstat[i] )
@@ -4128,7 +4151,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   for( i = 0; i < nCols; ++i )
+   for( i = 0; i < ncols; ++i )
    {
       assert( cstat != 0 ); /* for lint */
       switch( cstat[i] )
@@ -4172,6 +4195,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(bind != NULL);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
@@ -4301,7 +4325,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
@@ -4309,6 +4333,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+   assert(coef != NULL);
 
    int nCols = lpi->spx->nCols();
    int nRows = lpi->spx->nRows();
@@ -4604,7 +4629,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
@@ -4612,6 +4637,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+   assert(coef != NULL);
 
    /* mark sparsity pattern as invalid */
    if( ninds != NULL )
@@ -4645,7 +4671,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {
    SCIP_Real* buf;
@@ -4659,6 +4685,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+   assert(coef != NULL);
 
    nrows = lpi->spx->nRows();
    ncols = lpi->spx->nCols();
@@ -4703,7 +4730,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
    DVector col(lpi->spx->nRows());
@@ -4713,6 +4740,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+   assert(coef != NULL);
 
    /* extract column c of A */
    assert(c >= 0);
@@ -4792,7 +4820,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           /*blkmem*/,         /**< block memory */
-   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information), or NULL */
    )
 {
    int lpncols;
@@ -4804,6 +4832,7 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
+   /* assert(blkmem != NULL); */
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
@@ -4885,6 +4914,7 @@ SCIP_RETCODE SCIPlpiFreeState(
 
    assert(lpi != NULL);
    assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    if ( *lpistate != NULL )
       lpistateFree(lpistate, blkmem);
@@ -4895,9 +4925,10 @@ SCIP_RETCODE SCIPlpiFreeState(
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return TRUE;
 }
 
@@ -4908,6 +4939,9 @@ SCIP_RETCODE SCIPlpiReadState(
    )
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(fname != NULL);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
@@ -4917,12 +4951,15 @@ SCIP_RETCODE SCIPlpiReadState(
    return success ? SCIP_OKAY : SCIP_LPERROR;
 }
 
-/** writes LP state (like basis information) to a file */
+/** writes LPi state (i.e. basis information) to a file */
 SCIP_RETCODE SCIPlpiWriteState(
    SCIP_LPI*             lpi,            /**< LP interface structure */
    const char*           fname           /**< file name */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(fname != NULL);
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
@@ -5009,7 +5046,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 {
 #if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
@@ -5041,7 +5078,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 {
 #if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
@@ -5369,6 +5406,7 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(fname != NULL);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
@@ -5405,6 +5443,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(fname != NULL);
 
    try
    {

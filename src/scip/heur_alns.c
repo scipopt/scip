@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -521,6 +521,7 @@ void updateFixingRate(
          break;
       case SCIP_STATUS_STALLNODELIMIT:
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
       case SCIP_STATUS_NODELIMIT:
          /* increase the fixing rate (make the subproblem easier) only if no solution was found */
          if( runstats->nbestsolsfound <= 0 )
@@ -586,6 +587,7 @@ void updateTargetNodeLimit(
       case SCIP_STATUS_BESTSOLLIMIT:
          break;
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
       case SCIP_STATUS_UNKNOWN:
       case SCIP_STATUS_TOTALNODELIMIT:
       case SCIP_STATUS_TIMELIMIT:
@@ -680,6 +682,7 @@ void updateMinimumImprovement(
       case SCIP_STATUS_MEMLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_UNBOUNDED:
+      case SCIP_STATUS_TERMINATE:
       default:
          break;
    }
@@ -1768,6 +1771,7 @@ SCIP_RETCODE neighborhoodFixVariables(
    *nfixings = 0;
 
    *result = SCIP_DIDNOTRUN;
+   ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
 
    if( neighborhood->varfixings != NULL )
    {
@@ -1775,6 +1779,12 @@ SCIP_RETCODE neighborhoodFixVariables(
 
       if( *result != SCIP_SUCCESS )
          return SCIP_OKAY;
+   }
+   else if( ntargetfixings == 0 )
+   {
+      *result = SCIP_SUCCESS;
+
+      return SCIP_OKAY;
    }
 
    /* compute upper and lower target fixing limits using tolerance parameters */
@@ -1999,16 +2009,21 @@ SCIP_RETCODE getReward(
 {
    SCIP_Real reward = 0.0;
    SCIP_Real effort;
+   int ndiscretevars;
 
    assert(rewardptr != NULL);
    assert(runstats->usednodes >= 0);
    assert(runstats->nfixings >= 0);
 
-   /* just add one node to avoid division by zero */
    effort = runstats->usednodes / 100.0;
 
+   ndiscretevars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    /* assume that every fixed variable linearly reduces the subproblem complexity */
-   effort = (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)))) * effort;
+   if( ndiscretevars > 0 )
+   {
+      effort = (1.0 - (runstats->nfixings / (SCIP_Real)ndiscretevars)) * effort;
+   }
+   assert(rewardptr != NULL);
 
    /* a positive reward is only assigned if a new incumbent solution was found */
    if( runstats->nbestsolsfound > 0 )
@@ -2053,7 +2068,10 @@ SCIP_RETCODE getReward(
       SCIP_Real maxeffort = heurdata->targetnodes;
       SCIP_Real usednodes = runstats->usednodes;
 
-      usednodes *= (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip))));
+      if( ndiscretevars > 0 )
+      {
+         usednodes *= (1.0 - (runstats->nfixings / (SCIP_Real)ndiscretevars));
+      }
 
       reward = heurdata->rewardbaseline - (usednodes) * heurdata->rewardbaseline / maxeffort;
 
@@ -2380,7 +2398,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       /* determine variable fixings and objective coefficients of this neighborhood */
       SCIP_CALL( neighborhoodFixVariables(scip, heurdata, neighborhood, varbuf, valbuf, &nfixings, &fixresult) );
 
-      SCIPdebugMsg(scip, "Fix %d/%d variables\n", nfixings, nvars);
+      SCIPdebugMsg(scip, "Fix %d/%d variables, result code %d\n", nfixings, nvars,fixresult);
 
       /* Fixing was not successful, either because the fixing rate was not reached (and no additional variable
        * prioritization was used), or the neighborhood requested a delay, e.g., because no LP relaxation solution exists

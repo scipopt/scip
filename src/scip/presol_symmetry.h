@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store log10 of group size (or NULL) */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of group size (or NULL) */
+   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
    );
 
 /** return objective coefficients of permuted variables at time of symmetry computation */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -329,7 +329,7 @@ void incrementalStatsUpdate(
    *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
 
    /* it may happen that *sumvarptr is slightly negative, especially after a series of add/removal operations */
-   assert(*sumvarptr >= -1e-6);
+   assert(*sumvarptr >= -1e-4);
    *sumvarptr = MAX(0.0, *sumvarptr);
 }
 

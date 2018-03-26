@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -931,6 +931,9 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    if( !debugSolutionAvailable(scip->set) )
       return SCIP_OKAY;
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+      return SCIP_OKAY;
+
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
    if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
@@ -967,6 +970,9 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
 
    /* check whether a debug solution is available */
    if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */

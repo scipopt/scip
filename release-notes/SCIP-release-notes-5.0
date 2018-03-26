@@ -52,7 +52,7 @@ Performance Improvements
 
 - improved dual ray analysis
 
-- use disjoint set to reduce peak memory usage and time to compute clique table connectedness information
+- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 
 - revised disaggregation of quadratic constraints: the number of created constraints can now be controlled and the
   disaggregated constraints are scaled in order to increase numerical accuracy

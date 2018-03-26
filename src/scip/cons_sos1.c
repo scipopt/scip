@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2474,6 +2474,9 @@ SCIP_RETCODE updateImplicationGraphSOS1(
 
             newbound = implbound / coef;
 
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
+
             /* check if an implication can be added/updated or assumption x_v != 0 is infeasible */
             if ( lower )
             {
@@ -3059,6 +3062,9 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                newbound = MIN(0, newboundnonzero);
             newbound /= linval;
 
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
+
             /* check if new bound is tighter than the old one or problem is infeasible */
             if ( SCIPisFeasPositive(scip, linval) && SCIPisFeasLT(scip, lb, newbound) )
             {
@@ -3244,7 +3250,6 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          }
          assert( ninftynonzero == 0 || inftynores );
 
-
          /* if computed bound is not infinity and variable is contained in linear constraint */
          if ( ninftynonzero == 0 && v < ntrafolinvars )
          {
@@ -3259,6 +3264,9 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             else
                newbound = MAX(0, newboundnonzero);
             newbound /= linval;
+
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
 
             /* check if new bound is tighter than the old one or problem is infeasible */
             if ( SCIPisFeasPositive(scip, linval) && SCIPisFeasGT(scip, ub, newbound) )
