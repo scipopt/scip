@@ -159,4 +159,20 @@ Test(intervalarith, solveuniquad)
          }
       }
    }
+
+   /* 0.5x^2-x has a minimum at x=1 (value -0.5) and maxima at the bounds of x
+    * further, {x : 0.5x^2-x >= 0} = [-infty,0] v [2,infty]
+    * further, {x : 0.5x^2-x in [0,1.5]} = [-1,0] v [2,3]
+    */
+   SCIPintervalSet(&sqrcoef, 0.5);
+   SCIPintervalSet(&lincoef, -1.0);
+   SCIPintervalSetBounds(&rhs, 0.0, SCIP_DEFAULT_INFINITY);
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs);
+   cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+   cr_assert_eq(resultant.sup, +SCIP_DEFAULT_INFINITY);
+
+   SCIPintervalSetBounds(&rhs, 0.0, 1.5);
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs);
+   cr_assert_float_eq(resultant.inf, -1.0, 1e-12);
+   cr_assert_float_eq(resultant.sup,  3.0, 1e-12);
 }
