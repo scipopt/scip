@@ -27,33 +27,33 @@
  * problem data structure SCIP_ProbData is shown below.
  *
  * \code
- *  /** @brief Problem data which is accessible in all places
+ *  ** @brief Problem data which is accessible in all places
  *
  * This problem data is used to store the input of the ringpacking, all variables which are created, and all
  * constraints.
  * struct SCIP_ProbData
  * {
- *    int*                  demands;            /**< array of demands *
- *    SCIP_Real*            rints;              /**< internal radii of each ring *
- *    SCIP_Real*            rexts;              /**< external radii of each ring *
- *    int                   ntypes;             /**< number of different types *
+ *    int*                  demands;            **< array of demands *
+ *    SCIP_Real*            rints;              **< internal radii of each ring *
+ *    SCIP_Real*            rexts;              **< external radii of each ring *
+ *    int                   ntypes;             **< number of different types *
  *
- *    SCIP_Real             width;              /**< height of each rectangle *
- *    SCIP_Real             height;             /**< width of each rectangle *
+ *    SCIP_Real             width;              **< height of each rectangle *
+ *    SCIP_Real             height;             **< width of each rectangle *
  *
- *    SCIP_CONS**           patternconss;       /**< pattern constraints for each type *
+ *    SCIP_CONS**           patternconss;       **< pattern constraints for each type *
  *
- * /* circular pattern data *
- *    SCIP_PATTERN**        cpatterns;          /**< array containing all circular patterns *
- *    SCIP_VAR**            cvars;              /**< variables corresponding to circular patterns *
- *    int                   ncpatterns;         /**< total number of circular patterns *
- *    int                   cpatternsize;       /**< size of cpatterns and cvars array *
+ * * circular pattern data *
+ *    SCIP_PATTERN**        cpatterns;          **< array containing all circular patterns *
+ *    SCIP_VAR**            cvars;              **< variables corresponding to circular patterns *
+ *    int                   ncpatterns;         **< total number of circular patterns *
+ *    int                   cpatternsize;       **< size of cpatterns and cvars array *
  *
- * /* rectangular pattern data *
- *    SCIP_PATTERN**        rpatterns;          /**< array containing all rectangular patterns *
- *    SCIP_VAR**            rvars;              /**< variables corresponding to rectangular patterns *
- *    int                   nrpatterns;         /**< total number of rectangular patterns *
- *    int                   rpatternsize;       /**< size of rpatterns and rvars array *
+ * * rectangular pattern data *
+ *    SCIP_PATTERN**        rpatterns;          **< array containing all rectangular patterns *
+ *    SCIP_VAR**            rvars;              **< variables corresponding to rectangular patterns *
+ *    int                   nrpatterns;         **< total number of rectangular patterns *
+ *    int                   rpatternsize;       **< size of rpatterns and rvars array *
  *
  * };
  * \endcode
