@@ -754,9 +754,10 @@ SCIP_RETCODE SCIPbendersExec(
 
    *result = SCIP_DIDNOTRUN;
 
-   /* by default the number of solve loops is 1. This is the case is all subproblems are LP or the user has defined a
+   /* by default the number of solve loops is 1. This is the case if all subproblems are LP or the user has defined a
     * benderssolvesub callback. If there is a subproblem that is not an LP, then 2 solve loops are performed. The first
-    * loop is the LP solving loop, the second solves the subproblem to integer optimality. */
+    * loop is the LP solving loop, the second solves the subproblem to integer optimality.
+    */
    nsolveloops = 1;
 
    /* the result flag is set to FEASIBLE as default. If a cut is added, then this is changed to CONS_ADDED. If the
@@ -765,14 +766,20 @@ SCIP_RETCODE SCIPbendersExec(
 
    for( l = 0; l < nsolveloops; l++ )
    {
-      SCIPdebugMessage("Benders' decomposition - solve loop %d\n", l);
+      SCIP_BENDERSOLVELOOP solveloop;    /* identifies what problem type is solve in this solve loop */
+
+      if( benders->benderssolvesub != NULL )
+         solveloop = SCIP_BENDERSSOLVELOOP_USER;
+      else
+         solveloop = l;
+
+      SCIPdebugMessage("Benders' decomposition - solve loop %d\n", solveloop);
       numnotopt = 0;
       subproblemcount = 0;
 
       if( type == SCIP_BENDERSENFOTYPE_CHECK && sol == NULL )
       {
-         /* This if statement doesn't make sense to me. Need to determine what happens in the cut generation stage if
-          * this is true */
+         /* TODO: Check whether this is absolutely necessary. I think that this if statment can be removed. */
          (*infeasible) = TRUE;
       }
       else
@@ -790,20 +797,20 @@ SCIP_RETCODE SCIPbendersExec(
             /* for the second solving loop, if the problem is an LP, it is not solved again. If the problem is a MIP,
              * then the subproblem objective function value is set to infinity. However, if the subproblem is proven
              * infeasible from the LP, then the IP loop is not performed. */
-            if( l > 0 )
+            if( solveloop >= SCIP_BENDERSSOLVELOOP_CIP )
             {
                if( lpsub || subisinfeas[i] )
                   solvesub = FALSE;
                else
-                  SCIPbendersSetSubprobObjval(benders, SCIPinfinity(SCIPbendersSubproblem(benders, i)), i);
+                  SCIPbendersSetSubprobObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
             }
 
             if( solvesub )
             {
-               SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, l, FALSE, &subinfeas, type) );
+               SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, solveloop, FALSE, &subinfeas, type) );
 
 #ifdef SCIP_DEBUG
-               if( type == LP )
+               if( type == SCIP_BENDERSENFOTYPE_LP )
                {
                   SCIPdebugMessage("LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
                      SCIPbendersGetSubprobObjval(benders, i));
@@ -813,22 +820,25 @@ SCIP_RETCODE SCIPbendersExec(
                subisinfeas[i] = subinfeas;
 
                /* if the subproblems are being solved as part of the conscheck, then we break once an infeasibility is found.
-                * The result pointer is set to (*infeasible) and the execution is halted. */
+                * The result pointer is set to (*infeasible) and the execution is halted.
+                */
                if( checkint )
                {
                   /* if the subproblem is feasible, then it is necessary to update the value of the auxiliary variable to the
-                   * objective function value of the subproblem. */
+                   * objective function value of the subproblem.
+                   */
                   if( !subinfeas )
                   {
                      SCIP_Bool subproboptimal;
 
                      SCIP_CALL( SCIPbendersCheckAuxiliaryVar(benders, set, sol, i, &subproboptimal) );
 
-                     if( lpsub || benders->benderssolvesub != NULL || l > 0 || onlylpcheck )
+                     if( lpsub || onlylpcheck
+                        || solveloop == SCIP_BENDERSSOLVELOOP_USER || solveloop == SCIP_BENDERSSOLVELOOP_CIP )
                         optimal = optimal && subproboptimal;
 
 #ifdef SCIP_DEBUG
-                     if( lpsub || l > 0 )
+                     if( lpsub || solveloop >= SCIP_BENDERSSOLVELOOP_CIP )
                      {
                         if( subproboptimal )
                         {
@@ -845,7 +855,9 @@ SCIP_RETCODE SCIPbendersExec(
 
                      /* only increment the checked count if the subproblem is not an LP, or the solve loop is the MIP
                       * solving loop. Hence, the LP are solved once and the MIPs are solved twice */
-                     if( (l == 0 && lpsub) || (l > 0 && !lpsub) || onlylpcheck )
+                     if( (solveloop == SCIP_BENDERSSOLVELOOP_LP && lpsub)
+                        || (solveloop == SCIP_BENDERSSOLVELOOP_CIP && !lpsub)
+                        || solveloop == SCIP_BENDERSSOLVELOOP_USER || onlylpcheck )
                         nchecked++;
 
 
@@ -954,7 +966,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnum,            /**< the subproblem number */
-   int                   solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
+   SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */

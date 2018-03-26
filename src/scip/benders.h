@@ -170,8 +170,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnum,            /**< the subproblem number */
-   int                   solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
-   SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
+   SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
+   SCIP_Bool             enhancement,        /**< is the solve performed as part of an enhancement? */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
