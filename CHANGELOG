@@ -20,6 +20,10 @@ fixed bugs:
 - fixed wrong propagation in optcumulative constraint handler
 - fixed non-deterministic behavior in OBBT propagator
 - don't disable LP presolving when using Xpress as LP solver
+- fixed possible NULL pointer usage in cons_pseudoboolean
+
+data structures:
+- expression interpreter objects are now stored in the block memory
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP

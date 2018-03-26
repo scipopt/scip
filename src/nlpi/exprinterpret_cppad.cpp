@@ -2176,7 +2176,7 @@ SCIP_RETCODE SCIPexprintCreate(
    assert(blkmem  != NULL);
    assert(exprint != NULL);
 
-   if( BMSallocMemory(exprint) == NULL )
+   if( BMSallocBlockMemory(blkmem, exprint) == NULL )
       return SCIP_NOMEMORY;
 
    (*exprint)->blkmem = blkmem;
@@ -2192,7 +2192,7 @@ SCIP_RETCODE SCIPexprintFree(
    assert( exprint != NULL);
    assert(*exprint != NULL);
 
-   BMSfreeMemory(exprint);
+   BMSfreeBlockMemory((*exprint)->blkmem, exprint);
 
    return SCIP_OKAY;
 }
