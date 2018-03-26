@@ -820,8 +820,16 @@ SCIP_RETCODE SCIPbendersExec(
 
                      SCIP_CALL( SCIPbendersCheckSubprobOptimality(benders, set, sol, i, &subproboptimal) );
 
+                     /* It is only possible to determine the optimality of a solution within a given subproblem in four
+                      * different cases:
+                      * i) loop 0 and the subproblem is an LP.
+                      * ii) loop 0 and only the LP relaxations will be checked.
+                      * iii) loop 0 and the user has defined benderssolvesub (there is only one solve loop in this case)
+                      * iv) loop 1 and the MIP for the subproblem has been solved.
+                      */
                      if( lpsub || onlylpcheck
-                        || solveloop == SCIP_BENDERSSOLVELOOP_USER || solveloop == SCIP_BENDERSSOLVELOOP_CIP )
+                        || solveloop == SCIP_BENDERSSOLVELOOP_CIP
+                        || solveloop == SCIP_BENDERSSOLVELOOP_USER )
                         optimal = optimal && subproboptimal;
 
 #ifdef SCIP_DEBUG
