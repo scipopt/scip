@@ -67,3 +67,96 @@ Test(intervalarith, issue1861)
       ybnds               /**< bounds on y */
       );
  }
+
+/** some tests for SCIPintervalSolveUnivariateQuadExpression */
+Test(intervalarith, solveuniquad)
+{
+   SCIP_INTERVAL resultant;
+   SCIP_INTERVAL expect;
+   SCIP_INTERVAL sqrcoef;
+   SCIP_INTERVAL lincoef;
+   SCIP_INTERVAL rhs;
+
+   // test with lincoef = 0
+   SCIPintervalSet(&lincoef, 0.0);
+   for( sqrcoef.inf = -2.0; sqrcoef.inf <= 2.0; ++sqrcoef.inf )
+   {
+      sqrcoef.sup = sqrcoef.inf;
+
+      for( rhs.inf = -2.0; rhs.inf <= 2.0; rhs.inf += 2.0 )
+      {
+         for( rhs.sup = rhs.inf + 1.0; rhs.sup <= 3.0; rhs.sup += 1.0 )
+         {
+            /* sqrcoef * x^2 = rhs -> x^2 = rhs/sqrcoef */
+            SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs);
+
+            if( sqrcoef.inf != 0.0 )
+            {
+               SCIPintervalDivScalar(SCIP_DEFAULT_INFINITY, &expect, rhs, sqrcoef.inf);
+               SCIPintervalSquareRoot(SCIP_DEFAULT_INFINITY, &expect, expect);
+               if( !SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, expect) )
+                  expect.inf = -expect.sup;
+            }
+            else if( rhs.inf <= 0.0 && rhs.sup >= 0.0 )
+            {
+               SCIPintervalSetEntire(SCIP_DEFAULT_INFINITY, &expect);
+            }
+            else
+               SCIPintervalSetEmpty(&expect);
+            /* printf("%g*x^2 = [%g,%g]; expect [%g,%g], got [%g,%g]\n", sqrcoef.inf, rhs.inf, rhs.sup, expect.inf, expect.sup, resultant.inf, resultant.sup); */
+
+            cr_assert(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant) == SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, expect));
+            cr_assert(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant) == SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, expect));
+            if( !SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, expect) && !SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, expect) )
+            {
+               cr_assert_float_eq(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for %g*x^2=[%g,%g], expected %g", resultant.inf, sqrcoef.inf, rhs.inf, rhs.sup, expect.inf);
+               cr_assert_float_eq(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for %g*x^2=[%g,%g], expected %g", resultant.sup, sqrcoef.inf, rhs.inf, rhs.sup, expect.sup);
+            }
+         }
+      }
+   }
+
+   // test with lincoef != 0
+   for( lincoef.inf = -6.0; lincoef.inf <= 6.0; lincoef.inf += 3.0 )
+   {
+      lincoef.sup = lincoef.inf;
+
+      for( rhs.sup = -2.0; rhs.sup <= 2.0; rhs.sup += 2.0 )
+      {
+         rhs.inf = rhs.sup-1.0;
+         SCIPintervalSet(&sqrcoef, 0.5);
+         /* 0.5*x^2 + lincoef * x = rhs -> x = -lincoef +- sqrt(2*rhs + lincoef^2)
+          * thus: empty for 2*rhs+lincoef^2 < 0
+          */
+
+         SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs);
+
+         if( 2.0*rhs.sup + lincoef.inf * lincoef.inf < 0.0 )
+            cr_assert(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant));
+         else
+         {
+            expect.inf = -lincoef.inf - sqrt(2.0*rhs.sup + lincoef.inf*lincoef.inf);
+            expect.sup = -lincoef.inf + sqrt(2.0*rhs.sup + lincoef.inf*lincoef.inf);
+            cr_assert_float_eq(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for 0.5*x^2%+g*x=[%g,%g], expected %g", resultant.inf, lincoef.inf, rhs.inf, rhs.sup, expect.inf);
+            cr_assert_float_eq(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for 0.5*x^2%+g*x=[%g,%g], expected %g", resultant.sup, lincoef.inf, rhs.inf, rhs.sup, expect.sup);
+         }
+
+         SCIPintervalSet(&sqrcoef, -0.5);
+         /* -0.5*x^2 + lincoef * x = rhs -> x = lincoef +- sqrt(-2*rhs + lincoef^2)
+          * thus: empty for -2*rhs+lincoef^2 < 0
+          */
+
+         SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs);
+
+         if( -2.0*rhs.inf + lincoef.inf * lincoef.inf < 0.0 )
+            cr_assert(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant));
+         else
+         {
+            expect.inf = lincoef.inf - sqrt(-2.0*rhs.inf + lincoef.inf*lincoef.inf);
+            expect.sup = lincoef.inf + sqrt(-2.0*rhs.inf + lincoef.inf*lincoef.inf);
+            cr_assert_float_eq(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for -0.5*x^2%+g*x=[%g,%g], expected %g", resultant.inf, lincoef.inf, rhs.inf, rhs.sup, expect.inf);
+            cr_assert_float_eq(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for -0.5*x^2%+g*x=[%g,%g], expected %g", resultant.sup, lincoef.inf, rhs.inf, rhs.sup, expect.sup);
+         }
+      }
+   }
+}
