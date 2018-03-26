@@ -60,24 +60,24 @@
  * same internal and external radius in each rectangle.
  *
  * More precisely, we introduce an integral variable \f$z_{P}\f$ for each rectangular pattern \f$P\f$ and an integral
- * variable \f$z_{C}\f$ for each circular pattern \f$C\f$. A vector \f$P \in \Z_{+}^\typeset\f$ is a
- * rectangular pattern if and only if $P_t$ many circles with radius \f$\rext_t\f$ for each \f$t \in \typeset\f$ can be
- * packed together into a rectangle. Similarly, a tuple \f$(t,P)\in \typeset \times \Z_{+}^\ntypes\f$ is a
- * circular pattern if it is possible to pack \f$P_1\f$ many circles of type \f$1\f$, \f$P_2\f$ many circles of type
- * \f$2\f$, \f$\ldots\f$, \f$P_\ntypes\f$ many circles of type \f$\ntypes\f$ into a larger ring of type \f$t\f$. Let
- * \f$\mathcal{RP}\f$ and \f$\mathcal{CP}\f$ be the set of all rectangular or circular patterns, respectively, and let
- * \f$D_t\f$ denote the demand of ringtype \f$t\f$.
+ * variable \f$z_{C}\f$ for each circular pattern \f$C\f$. A vector \f$P \in \Z_{+}^\mathcal{T}\f$, where \f$T\f$ is the
+ * total number of ringtypes, is a rectangular pattern if and only if \f$P_t\f$ many circles with radius \f$\rext_t\f$
+ * for each \f$t \in \mathcal{T}\f$ can be packed together into a rectangle. Similarly, a tuple
+ * \f$(t,P)\in \mathcal{T} \times \Z_{+}^\ntypes\f$ is a circular pattern if it is possible to pack \f$P_1\f$ many
+ * circles of type \f$1\f$, \f$P_2\f$ many circles of type \f$2\f$, \f$\ldots\f$, \f$P_T\f$ many circles of type \f$T\f$
+ * into a larger ring of type \f$t\f$. Let \f$\mathcal{RP}\f$ and \f$\mathcal{CP}\f$ be the set of all rectangular or
+ * circular patterns, respectively, and let \f$D_t\f$ denote the demand of ringtype \f$t\f$.
  *
  * Then the problem can be formulated as follows:
  *
  * \f[
  *  \begin{subequations}
  *  \begin{align}
- *   && \min \sum_{P \in \rp} z_P \quad\,\\
- *   && \text{s.t.} \sum_{C = (t,P) \in \cp} z_C &\ge \demand_t && \fa t \in \typeset \\
- *   && \sum_{C = (t,P) \in \cp} z_C &\le \sum_{P \in \rp} P_t \cdot z_P + \sum_{C = (t',P) \in \cp} P_t \cdot z_C && \fa t \in \typeset \\
- *   && z_C & \in \Z_{+} && \fa C \in \cp \\
- *   && z_P & \in \Z_{+} && \fa P \in \rp
+ *   && \min \sum_{P \in \mathcal{RP}} z_P \quad\,\\
+ *   && \text{s.t.} \sum_{C = (t,P) \in \mathcal{CP}} z_C &\ge \demand_t && \text{ for all } t \in \mathcal{T} \\
+ *   && \sum_{C = (t,P) \in \mathcal{CP}} z_C &\le \sum_{P \in \mathcal{RP}} P_t \cdot z_P + \sum_{C = (t',P) \in \mathcal{CP}} P_t \cdot z_C && \text{ for all } t \in \mathcal{T} \\
+ *   && z_C & \in \Z_{+} && \text{ for all } C \in \mathcal{CP} \\
+ *   && z_P & \in \Z_{+} && \text{ for all } P \in \mathcal{RP}
  *  \end{align}
  *  \end{subequations}
  * \f]
@@ -91,13 +91,13 @@
  * Since \f$\mathcal{RP}\f$ can be of exponential size, we are using a column generation approach to solve this
  * problem. We initialize the (master) problem with a set of variables representing a selection of rectangular patterns
  * that are easy to verify. Now, we have to iteratively search for variables representing "better" patterns, i.e.,
- * a pattern which reduces the overall cost. Let \f$\lambda f$ be the non-negative vector of dual multipliers for
+ * a pattern which reduces the overall cost. Let \f$\lambda\f$ be the non-negative vector of dual multipliers for
  * the recursive constraints after solving the LP relaxation of the restricted master problem for the
  * current set of rectangular patterns. To compute a rectangular pattern with negative reduced cost we solve
  *
  * \f[
  *  \begin{equation}
- *    \min_{P \in \rp} \left\{1 - \sum_{t \in \typeset} \lambda_t P_t\right\},
+ *    \min_{P \in \mathcal{RP}} \left\{1 - \sum_{t \in \mathcal{T}} \lambda_t P_t\right\},
  *  \end{equation}
  * \f]
  *
