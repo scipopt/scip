@@ -262,7 +262,7 @@ static struct section section_table[] =
       /*
        * *** The section names MUST be sorted alphabetically ! ***
        */
-      { "comment",     NULL,  FLAG_REQUIRED, SECTION_MISSING },
+      { "comment",     NULL,  FLAG_OPTIONAL, SECTION_MISSING },
       { "coordinates", "crd", FLAG_OPTIONAL, SECTION_MISSING },
       { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
       { "maximumdegrees", "mdg", FLAG_OPTIONAL, SECTION_MISSING },
@@ -501,7 +501,9 @@ static int get_arguments(
 /*---            or < 0 for failure.                                      ---*/
 /*---------------------------------------------------------------------------*/
 static int open_file(
-   CURF* curf)
+   CURF* curf,
+   unsigned char main_file
+)
 {
    const char* err_cantopen_s   = "%s.";
    const char* err_noheader_v   = "Wrong file header.";
@@ -524,9 +526,39 @@ static int open_file(
    curf->line = 1;
    curf->fp   = NULL;
 
+   /* reading in the main file? */
+   if( main_file )
+   {
+      char fillname_gr[MAX_STRING_LEN];
+
+      (void)sprintf(fillname_gr, "%s.%s",
+            curf->filename, "gr");
+
+      /* try to open .gr */
+      if ((curf->fp = fopen(fillname_gr, "r")) != NULL)
+      {
+         (void)sprintf(curf->filename, "%s", fillname_gr);
+         return(SUCCESS);
+      }
+      else
+      {
+         /* try to open .stp */
+         char fillname_stp[MAX_STRING_LEN];
+         (void) sprintf(fillname_stp, "%s.%s", curf->filename, "stp");
+
+         if ((curf->fp = fopen(fillname_stp, "r")) == NULL)
+         {
+            message(MSG_FATAL, curf, err_cantopen_s, strerror(errno));
+            return result;
+         }
+         (void)sprintf(curf->filename, "%s", fillname_stp);
+      }
+   }
+
+
    /* Try to open the file...
     */
-   if ((curf->fp = fopen(curf->filename, "r")) == NULL)
+   if (!main_file && (curf->fp = fopen(curf->filename, "r")) == NULL)
       message(MSG_FATAL, curf, err_cantopen_s, strerror(errno));
 
    /* Read Header...
@@ -650,7 +682,7 @@ static int start_section(
             }
             else
             {
-               if (!open_file(&temp))
+               if (!open_file(&temp, FALSE) )
                {
                   *save                = *curf;
                   *curf                = temp;
@@ -888,14 +920,13 @@ SCIP_RETCODE graph_load(
    curf.section     = &section_table[0];
    save             = curf_null;
 
-   (void)sprintf(curf.filename, "%s%s.%s",
+   (void)sprintf(curf.filename, "%s%s",
       pathname,
-      basename,
-      curf.section->extension);
+      basename);
 
    /* Open the file...
     */
-   if (!open_file(&curf))
+   if (!open_file(&curf, TRUE))
    {
       /* We read while a file is open...
        */
