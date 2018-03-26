@@ -32,9 +32,7 @@
  * - a \ref cons_rpa.c "constraint handler" which stores information about which patterns have been verified
  * - a \ref pattern.c "variable data structure" which provides fundamental functions for handling patterns
  *
- * In the following we introduce the problem, explain the use of the reader plugin and pricer plugin. Finally, we
- * introduce the Ryan/Foster branching rule and briefly discuss how that specific branching rule is realized within
- * the framework \SCIP.
+ * In the following we introduce the problem, explain the use of the reader plugin and pricer plugin.
  *
  * -# \ref RINGPACKING_PROBLEM "Problem description"
  * -# \ref RINGPACKING_READER "Parsing the input format and creating the problem"
@@ -98,14 +96,14 @@
  * current set of rectangular patterns. To compute a rectangular pattern with negative reduced cost we solve
  *
  * \f[
- *  \begin{equation} \label{eq:pdwmodel:pricing}
+ *  \begin{equation}
  *    \min_{P \in \rp} \left\{1 - \sum_{t \in \typeset} \lambda_t P_t\right\},
  *  \end{equation}
  * \f]
  *
- * which can be modeled as a weighted circle packing problem for a single rectangle. This problem is NP-hard and can be
- * difficult to solve, but even if it cannot be solved to optimality within the given time limit, a dual bound of the LP
- * relaxation can be turned into a valid dual bound of the complete master problem by using a theorem by Farley [TODO:insert ref here].
+ * This problem is NP-hard and can be difficult to solve, but even if it cannot be solved to optimality within the
+ * given time limit, a dual bound of the LP relaxation can be turned into a valid dual bound of the complete master
+ * problem by using a theorem by Farley [TODO:insert ref here].
  *
  */
 
