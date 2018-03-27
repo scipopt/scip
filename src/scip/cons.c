@@ -7197,10 +7197,7 @@ SCIP_RETCODE SCIPconsAddLocks(
    updlockpos = (int)(cons->nlockspos[locktype] > 0) - (int)(oldnlockspos > 0);
    updlockneg = (int)(cons->nlocksneg[locktype] > 0) - (int)(oldnlocksneg > 0);
 
-   /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked
-    *
-    * TODO: why only if the status changes?
-    */
+   /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked */
    if( updlockpos != 0 || updlockneg != 0 )
    {
       SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, locktype, updlockpos, updlockneg) );

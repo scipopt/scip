@@ -13301,8 +13301,7 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
    SCIP_VAR** vars;
    int v;
 
-   SCIPdebugMsg(scip, "lock cumulative constraint <%s> with nlockspos = %d, nlocksneg = %d (type: %u)\n",
-         SCIPconsGetName(cons), nlockspos, nlocksneg, locktype);
+   SCIPdebugMsg(scip, "lock cumulative constraint <%s> with nlockspos = %d, nlocksneg = %d\n", SCIPconsGetName(cons), nlockspos, nlocksneg);
 
    assert(scip != NULL);
    assert(cons != NULL);
