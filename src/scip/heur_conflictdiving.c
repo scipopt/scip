@@ -58,7 +58,7 @@
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
 #define DEFAULT_MAXNNZOBJ           0.1 /**< maximal portion of nonzero objective coeffcients */
-#define DEFAULT_MAXVARSFAC           -1 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
+#define DEFAULT_MAXVARSFAC         -1.0 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
 #define DEFAULT_MINMAXVARS           -1 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
 #define DEFAULT_MINCONFLICTLOCKS      0 /**< threshold for penalizing the score */
 
@@ -420,6 +420,11 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxvarsfac",
          "maximal fraction of variables involved in a conflict constraint (< 0: auto)",
          &heurdata->maxvarsfac, TRUE, DEFAULT_MAXVARSFAC, -1.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxnnzobj",
+         "maximal portion of nonzero objective coeffcients.",
+         &heurdata->maxnnzobj, TRUE, DEFAULT_MAXNNZOBJ, 0.0, 1.0, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
