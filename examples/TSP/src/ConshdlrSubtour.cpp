@@ -552,7 +552,7 @@ SCIP_DECL_CONSLOCK(ConshdlrSubtour::scip_lock)
 
    for( int i = 0; i < g->nedges; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, g->edges[i].var, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, g->edges[i].var, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;
