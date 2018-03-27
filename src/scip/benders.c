@@ -781,9 +781,6 @@ SCIP_RETCODE createSubproblems(
          {
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
-            eventhdlrdata_mipnodefocus->numruns = 0;
-            eventhdlrdata_mipnodefocus->solvemip = FALSE;
-            eventhdlrdata_upperbound->upperbound = -SCIPinfinity(subproblem);
 
             /* include the first LP solved event handler into the subproblem */
             SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, MIPNODEFOCUS_EVENTHDLR_NAME,
@@ -1274,9 +1271,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
 
    (*infeasible) = FALSE;
 
-
-   /* TODO: This should be solved just as an LP, so as a MIP. There is too much overhead with the MIP.
-    * Need to change status check for checking the LP. */
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    /* allocating memory for the parameter storage */
