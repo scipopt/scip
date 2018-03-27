@@ -53,17 +53,111 @@
 #define NODEFOCUS_EVENTHDLR_NAME         "bendersnodefocus"
 #define NODEFOCUS_EVENTHDLR_DESC         "node focus event handler for Benders' decomposition"
 #define MIPNODEFOCUS_EVENTHDLR_NAME      "bendersmipsolvenodefocus"
-#define MIPNODEFOCUS_EVENTHDLR_DESC      "node focus event handler the MIP solve method for Benders' decomposition"
+#define MIPNODEFOCUS_EVENTHDLR_DESC      "node focus event handler for the MIP solve method for Benders' decomposition"
 #define UPPERBOUND_EVENTHDLR_NAME        "bendersupperbound"
 #define UPPERBOUND_EVENTHDLR_DESC        "found solution event handler to terminate subproblem solve for a given upper bound"
 
 
 struct SCIP_EventhdlrData
 {
+   int                   filterpos;          /**< the event filter entry */
    int                   numruns;            /**< the number of times that the problem has been solved */
    SCIP_Real             upperbound;         /**< an upper bound for the problem */
    SCIP_Bool             solvemip;           /**< is the event called from a MIP subproblem solve*/
 };
+
+
+/* ---------------- Local methods for event handlers ---------------- */
+/** init method for the event handlers */
+static
+SCIP_RETCODE initEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the event handlers data structure */
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   eventhdlrdata->filterpos = -1;
+   eventhdlrdata->numruns = 0;
+   eventhdlrdata->upperbound = -SCIPinfinity(scip);
+   eventhdlrdata->solvemip = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+/** initsol method for the event handlers */
+static
+SCIP_RETCODE initsolEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< the event handlers data structure */
+   SCIP_EVENTTYPE        eventtype           /**< event type mask to select events to catch */
+   )
+{
+   SCIP_EVENTHDLRDATA eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+   SCIP_CALL(SCIPcatchEvent(scip, eventtype, eventhdlr, NULL, &eventhdlrdata->filterpos));
+
+   return SCIP_OKAY;
+}
+
+/** the exit method for the event handlers */
+static
+SCIP_RETCODE exitsolEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< the event handlers data structure */
+   SCIP_EVENTTYPE        eventtype           /**< event type mask to select events to catch */
+   )
+{
+   SCIP_EVENTHDLRDATA eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+   if( eventhdlrdata->filterpos >= 0 )
+   {
+      SCIP_CALL(SCIPdropEvent(scip, eventtype, eventhdlr, NULL, eventhdlrdata->filterpos));
+      eventhdlrdata->filterpos = -1;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** free method for the event handler */
+static
+SCIP_RETCODE freeEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the event handlers data structure */
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
+
+   return SCIP_OKAY;
+}
+
+
 
 /* ---------------- Callback methods of node focus event handler ---------------- */
 
@@ -71,16 +165,33 @@ struct SCIP_EventhdlrData
 static
 SCIP_DECL_EVENTEXEC(eventExecBendersNodefocus)
 {  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA eventhdlrdata;
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
 
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
    /* sending an interrupt solve signal to return the control back to the Benders' decomposition plugin.
     * This will ensure the SCIP stage is SCIP_STAGE_SOLVING, allowing the use of probing mode. */
    SCIP_CALL( SCIPinterruptSolve(scip) );
 
-   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
+   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos));
+   eventhdlrdata->filterpos = -1;
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of event handler (called after problem was transformed) */
+static
+SCIP_DECL_EVENTINIT(eventInitBendersNodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( initEventhandler(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -93,7 +204,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersNodefocus)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
 
-   SCIP_CALL(SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, NULL));
+   SCIP_CALL( initsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
 
    return SCIP_OKAY;
 }
@@ -103,13 +214,23 @@ static
 SCIP_DECL_EVENTEXITSOL(eventExitsolBendersNodefocus)
 {
    assert(scip != NULL);
-
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
 
-#if 0 /* not sure whether this is actually needed */
-   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
-#endif
+   SCIP_CALL( exitsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
+SCIP_DECL_EVENTFREE(eventFreeBendersNodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( freeEventhandler(scip, eventhandler) );
 
    return SCIP_OKAY;
 }
@@ -133,7 +254,8 @@ SCIP_DECL_EVENTEXEC(eventExecBendersMipnodefocus)
    if( eventhdlrdata->numruns == 0 && !eventhdlrdata->solvemip )
       SCIP_CALL( SCIPinterruptSolve(scip) );
 
-   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
+   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos));
+   eventhdlrdata->filterpos = -1;
 
    eventhdlrdata->numruns++;
 
@@ -144,16 +266,11 @@ SCIP_DECL_EVENTEXEC(eventExecBendersMipnodefocus)
 static
 SCIP_DECL_EVENTINIT(eventInitBendersMipnodefocus)
 {
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
 
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   assert(eventhdlrdata != NULL);
-
-   eventhdlrdata->numruns = 0;
+   SCIP_CALL( initEventhandler(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -166,7 +283,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersMipnodefocus)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
 
-   SCIP_CALL(SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, NULL));
+   SCIP_CALL( initsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
 
    return SCIP_OKAY;
 }
@@ -176,11 +293,10 @@ static
 SCIP_DECL_EVENTEXITSOL(eventExitsolBendersMipnodefocus)
 {
    assert(scip != NULL);
-
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
 
-   //SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
+   SCIP_CALL( exitEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
 
    return SCIP_OKAY;
 }
@@ -189,15 +305,11 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersMipnodefocus)
 static
 SCIP_DECL_EVENTFREE(eventFreeBendersMipnodefocus)
 {
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
 
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   assert(eventhdlrdata != NULL);
-
-   SCIPfreeBlockMemory(scip, &eventhdlrdata);
+   SCIP_CALL( freeEventhandler(scip, eventhandler) );
 
    return SCIP_OKAY;
 }
@@ -230,16 +342,11 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
 static
 SCIP_DECL_EVENTINIT(eventInitBendersUpperbound)
 {
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
 
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   assert(eventhdlrdata != NULL);
-
-   eventhdlrdata->upperbound = -SCIPinfinity(scip);
+   SCIP_CALL( initEventhandler(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -252,7 +359,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersUpperbound)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
 
-   SCIP_CALL(SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL));
+   SCIP_CALL( initsolEventhdlr(scip, eventhdlr, SCIP_EVENTTYPE_BESTSOLFOUND) );
 
    return SCIP_OKAY;
 }
@@ -262,11 +369,10 @@ static
 SCIP_DECL_EVENTEXITSOL(eventExitsolBendersUpperbound)
 {
    assert(scip != NULL);
-
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
 
-   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1));
+   SCIP_CALL( exitsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_BESTSOLFOUND) );
 
    return SCIP_OKAY;
 }
@@ -275,15 +381,11 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersUpperbound)
 static
 SCIP_DECL_EVENTFREE(eventFreeBendersUpperbound)
 {
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
 
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   assert(eventhdlrdata != NULL);
-
-   SCIPfreeBlockMemory(scip, &eventhdlrdata);
+   SCIP_CALL( freeEventhandler(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -583,6 +685,7 @@ SCIP_RETCODE initialiseLPSubproblem(
 {
    SCIP* subproblem;
    SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_Bool infeasible;
    SCIP_Bool cutoff;
 
@@ -593,10 +696,13 @@ SCIP_RETCODE initialiseLPSubproblem(
    assert(subproblem != NULL);
 
    /* include event handler into SCIP */
+   SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata) );
    SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, NODEFOCUS_EVENTHDLR_NAME, NODEFOCUS_EVENTHDLR_DESC,
-         eventExecBendersNodefocus, NULL) );
+         eventExecBendersNodefocus, eventhdlrdata) );
+   SCIP_CALL( SCIPsetEventhdlrInit(subproblem, eventhdlr, eventInitBendersNodefocus) );
    SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersNodefocus) );
    SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersNodefocus) );
+   SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersNodefocus) );
    assert(eventhdlr != NULL);
 
    /* calling an initial solve to put the problem into probing mode */
