@@ -3177,7 +3177,8 @@ int SCIPvarGetNLocksDownType(
    int i;
 
    assert(var != NULL);
-   assert(locktype < NLOCKTYPES);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
    assert(var->nlocksdown[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -3234,6 +3235,8 @@ int SCIPvarGetNLocksUpType(
    int i;
 
    assert(var != NULL);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
    assert(var->nlocksup[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )

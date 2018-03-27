@@ -7176,8 +7176,8 @@ SCIP_RETCODE SCIPconsAddLocks(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert(locktype >= 0);
-   assert(locktype < NLOCKTYPES);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
    assert(cons->nlockspos[locktype] >= 0);
    assert(cons->nlocksneg[locktype] >= 0);
    assert(-2 <= nlockspos && nlockspos <= 2);
@@ -8370,8 +8370,8 @@ SCIP_Bool SCIPconsIsLockedTypePos(
    )
 {
    assert(cons != NULL);
-   assert(locktype >= 0);
-   assert(locktype < NLOCKTYPES);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
 
    return (cons->nlockspos[locktype] > 0);
 }
@@ -8383,8 +8383,8 @@ SCIP_Bool SCIPconsIsLockedTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert(locktype >= 0);
-   assert(locktype < NLOCKTYPES);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
 
    return (cons->nlocksneg[locktype] > 0);
 }
@@ -8396,8 +8396,8 @@ SCIP_Bool SCIPconsIsLockedType(
    )
 {
    assert(cons != NULL);
-   assert(locktype >= 0);
-   assert(locktype < NLOCKTYPES);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
 
    return (cons->nlockspos[locktype] > 0 || cons->nlocksneg[locktype] > 0);
 }
@@ -8409,8 +8409,8 @@ int SCIPconsGetNLocksTypePos(
    )
 {
    assert(cons != NULL);
-   assert(locktype >= 0);
-   assert(locktype < NLOCKTYPES);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
 
    return cons->nlockspos[locktype];
 }
@@ -8422,8 +8422,8 @@ int SCIPconsGetNLocksTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert(locktype >= 0);
-   assert(locktype < NLOCKTYPES);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
 
    return cons->nlocksneg[locktype];
 }
