@@ -1240,10 +1240,6 @@ static
 SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
-   int noldfixedvars = *nfixedvars;
-   int noldaggrvars = *naggrvars;
-   int noldbdchgs = *nchgbds;
-   int noldaddconss = *naddconss;
    int noldngenconns;
    int i;
 
