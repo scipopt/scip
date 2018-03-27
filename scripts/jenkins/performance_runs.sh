@@ -80,6 +80,7 @@ RANDOMSEED=`date +%Y%m%d`
 # use associative arrays, this requires bash4
 # declaration
 declare -A JOBS
+declare -A TRIGGER
 
 # jobs running on saturday
 JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
@@ -108,10 +109,6 @@ for i in `seq 1 10`; do
   fi
   TODAYS_N_JOBS=$i
 done
-if [ "${TODAYS_N_JOBS}" == "0" ]; then
-  echo "No schedules for today! Exiting."
-  exit 0
-fi
 
 declare -A TODAYS_JOBS
 
@@ -136,52 +133,62 @@ for i in `seq 1 10`; do
   TODAYS_N_TRIGGERS=$i
 done
 
-###################
-### Compilation ###
-###################
+# exit if nothing to do
+if [ "${TODAYS_N_JOBS}" == "0" -a "${TODAYS_N_TRIGGERS}" == "0" ]; then
+  echo "No schedules for today! Exiting."
+  exit 0
+fi
 
-# build with soplex only if today we have some soplex runs scheduled
-BUILD_DIR=scipoptspx
-mkdir -p ${BUILD_DIR}
-cd ${BUILD_DIR}
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
-make -j4
-cd ..
+if [ "${TODAYS_N_JOBS}" != "0" ]; then
+  ###################
+  ### Compilation ###
+  ###################
 
-######################
-### Setup testruns ###
-######################
+  # build with soplex only if today we have some soplex runs scheduled
+  BUILD_DIR=scipoptspx
+  mkdir -p ${BUILD_DIR}
+  cd ${BUILD_DIR}
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
+  make -j4
+  cd ..
 
-SCIP_BINARY=${BUILD_DIR}/bin/scip
+  ######################
+  ### Setup testruns ###
+  ######################
 
-# NOTES:
-#  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
+  SCIP_BINARY=${BUILD_DIR}/bin/scip
 
-# MIP settings
+  # NOTES:
+  #  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
 
-# MINLP settings
-${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
+  # MIP settings
 
-# create more required symlinks
-ln -fs /optimi/kombadon/IP check/
-ln -fs /optimi/kombadon/MINLP check/
+  # MINLP settings
+  ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
 
-#######################
-### Submit Testruns ###
-#######################
+  # create more required symlinks
+  ln -fs /optimi/kombadon/IP check/
+  ln -fs /optimi/kombadon/MINLP check/
 
-for i in `seq 1 ${TODAYS_N_JOBS}`; do
-  FLAGS=${TODAYS_JOBS[$i]}
-  for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
-    unset $j
+  #######################
+  ### Submit Testruns ###
+  #######################
+
+  for i in `seq 1 ${TODAYS_N_JOBS}`; do
+    FLAGS=${TODAYS_JOBS[$i]}
+    for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+      unset $j
+    done
+    export ${FLAGS}
+    echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
+    make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
   done
-  export ${FLAGS}
-  echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
-  make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
-done
+fi
 
-# NOTE: only check up to 10 triggers. If there are more there is something wrong...
-echo "Triggering the following jobs:"
-for i in `seq 1 ${TODAYS_N_TRIGGERS}`; do
-  curl -f -I "${TRIGGER[${DAY_OF_WEEK},$i]}"
-done
+if [ "${TODAYS_N_TRIGGERS}" != "0" ]; then
+  # NOTE: only check up to 10 triggers. If there are more there is something wrong...
+  echo "Will trigger the following jobs:"
+  for i in `seq 1 ${TODAYS_N_TRIGGERS}`; do
+    curl -f -I "${TRIGGER[${DAY_OF_WEEK},$i]}"
+  done
+fi

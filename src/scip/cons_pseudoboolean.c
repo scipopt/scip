@@ -3970,23 +3970,27 @@ SCIP_RETCODE copyConsPseudoboolean(
             assert(!(*valid) || intvar != NULL);
          }
 
-         if( name != NULL )
-            consname = name;
-         else
-            consname = SCIPconsGetName(sourcecons);
+         if( *valid )
+         {
+            if( name != NULL )
+               consname = name;
+            else
+               consname = SCIPconsGetName(sourcecons);
 
-         /* get new left and right hand sides of copied linear constraint since
-          * they might have changed if compressed copying is used
-          */
-         SCIP_CALL( getLinearConsSides(targetscip, targetlincons, targetlinconstype, &targetlhs, &targetrhs) );
+            /* get new left and right hand sides of copied linear constraint since
+             * they might have changed if compressed copying is used
+             */
+            SCIP_CALL( getLinearConsSides(targetscip, targetlincons, targetlinconstype, &targetlhs, &targetrhs) );
 
-         /* create new pseudoboolean constraint */
-         SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
-               targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
-               indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            /* create new pseudoboolean constraint */
+            SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
+                  targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
+                  indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         }
       }
-      else if( !SCIPisConsCompressionEnabled(sourcescip) )
+
+      if( !(*valid) && !SCIPisConsCompressionEnabled(sourcescip) )
       {
          SCIPverbMessage(sourcescip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy constraint <%s>\n", SCIPconsGetName(sourcecons));
       }
