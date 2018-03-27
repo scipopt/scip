@@ -646,6 +646,8 @@ SCIP_RETCODE SCIPbendersFree(
  *  and then interrupting the solve in a node focus event handler.
  *  The LP subproblem is also initialised using this method; however, a different event handler is added. This event
  *  handler will put the LP subproblem into probing mode.
+ *  The MIP solving function is called to initialise the subproblem because this function calls SCIPsolve with the
+ *  appropriate parameter settings for Benders' decomposition.
  */
 static
 SCIP_RETCODE initialiseSubproblem(
@@ -664,19 +666,20 @@ SCIP_RETCODE initialiseSubproblem(
    assert(subproblem != NULL);
 
    /* Getting the problem into the right SCIP stage for solving */
-   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, TRUE, FALSE) );
+   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, FALSE) );
+
+   assert(SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING);
 
    /* Constructing the LP that can be solved in later iterations */
    SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
-
-   assert(SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING);
 
    return SCIP_OKAY;
 }
 
 
 /** initialises an LP subproblem by putting the problem into probing mode. The probing mode is envoked in a node focus
- *  event handler. This event handler is added just prior to calling the initialise subproblem function. */
+ *  event handler. This event handler is added just prior to calling the initialise subproblem function.
+ */
 static
 SCIP_RETCODE initialiseLPSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
