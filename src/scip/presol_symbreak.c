@@ -977,6 +977,14 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
+   /* symmetries have already been computed */
+   if ( presoldata->addedconss )
+   {
+      assert( presoldata->nperms > 0 );
+
+      return SCIP_OKAY;
+   }
+
    /* get symmetry information, if not already computed */
    if ( ! presoldata->computedsymmetry )
    {
@@ -989,9 +997,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
       presoldata->computedsymmetry = TRUE;
 
-      if ( presoldata->nperms <= 0 )
+      if ( presoldata->nperms <= 0 || ! presoldata->binvaraffected )
       {
-         SCIPdebugMsg(scip, "Symmetry breaking presolver: no symmetry has been found, turning presolver off.\n");
+         SCIPdebugMsg(scip, "Symmetry breaking presolver: no symmetry on binary variables has been found, turning presolver off.\n");
          presoldata->enabled = FALSE;
          return SCIP_OKAY;
       }
@@ -1026,11 +1034,10 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   /* if not already done, add symmetry breaking constraints */
-   if ( ! presoldata->addedconss )
-   {
-      SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
-   }
+   /* add symmetry breaking constraints */
+   assert( ! presoldata->addedconss );
+
+   SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
 
    return SCIP_OKAY;
 }
