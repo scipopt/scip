@@ -56,12 +56,11 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
-
-#define DEFAULT_MINCONFLICTLOCKS      0 /**< threshold for penalizing the score */
+#define DEFAULT_MAXNNZOBJ           0.1 /**< maximal portion of nonzero objective coeffcients */
 #define DEFAULT_MAXVARSFAC           -1 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
 #define DEFAULT_MINMAXVARS           -1 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
+#define DEFAULT_MINCONFLICTLOCKS      0 /**< threshold for penalizing the score */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -70,10 +69,9 @@ struct SCIP_HeurData
 
    SCIP_Bool             maxviol;            /**< rounding into potentially infeasible or feasible direction */
    SCIP_Real             maxvarsfac;         /**< maximal fraction of variables involved in a conflict constraint */
+   SCIP_Real             maxnnzobj;          /**< maximal portion of nonzero objective coeffcients */
    int                   minmaxvars;         /**< minimal absolute maximum of variables involved in a conflict constraint */
    int                   minconflictlocks;   /**< threshold for penalizing the score */
-
-   SCIP_Longint          nconflictsfound;    /**< number of conflict found */
 };
 
 /*
@@ -131,8 +129,6 @@ SCIP_DECL_HEURINIT(heurInitConflictdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
-   heurdata->nconflictsfound = 0LL;
-
    return SCIP_OKAY;
 }
 
@@ -153,8 +149,6 @@ SCIP_DECL_HEUREXIT(heurExitConflictdiving) /*lint --e{715}*/
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
-   SCIPdebugMsg(scip, "conflictdiving found %lld new conflicts\n", heurdata->nconflictsfound);
-
    return SCIP_OKAY;
 }
 
@@ -164,7 +158,6 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
-   SCIP_Longint nconflictsfound;
    SCIP_Real maxvarsfac;
    int minmaxvars;
 
@@ -175,6 +168,12 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    assert(SCIPheurGetDivesets(heur) != NULL);
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* don't run if to many nonzero objective coefficients are present */
+   if( SCIPgetNObjVars(scip) > heurdata->maxnnzobj * SCIPgetNVars(scip) )
+      return SCIP_OKAY;
 
    *result = SCIP_DELAYED;
    maxvarsfac = SCIP_INVALID;
@@ -198,16 +197,7 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
       SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", heurdata->minmaxvars) );
    }
 
-   nconflictsfound = SCIPgetNConflictConssFound(scip);
-
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
-
-   heurdata->nconflictsfound += (SCIPgetNConflictConssFound(scip) - nconflictsfound);
-
-#ifdef SCIP_DEBUG
-   if( *result != SCIP_DELAYED )
-      SCIPdebugMsg(scip, "found %lld (%lld) new conflicts\n", SCIPgetNConflictConssFound(scip) - nconflictsfound, heurdata->nconflictsfound);
-#endif
 
    if( heurdata->maxvarsfac >= 0.0 && !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
    {
@@ -290,9 +280,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
             *roundup = !(*roundup);
       }
       else if( !SCIPisEQ(scip, candsfrac, 0.5) )
-         *roundup = (candsfrac < 0.5);
+      {
+         *roundup = (heurdata->maxviol ? candsfrac < 0.5 : candsfrac > 0.5);
+      }
       else
+      {
          *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
+      }
    }
    /* the variable is not locked by conflict constraints */
    else
@@ -302,18 +296,19 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
       if( nlocksup != nlocksdown )
       {
          *roundup = (nconflictlocksup > nconflictlocksdown);
+
+         if( !heurdata->maxviol )
+            *roundup = !(*roundup);
+
       }
       else if( !SCIPisEQ(scip, candsfrac, 0.5) )
       {
-         *roundup = (candsfrac < 0.5);
+         *roundup = (heurdata->maxviol ? candsfrac < 0.5 : candsfrac > 0.5);
       }
       else
       {
          *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
       }
-
-      if( !heurdata->maxviol )
-         *roundup = !(*roundup);
    }
 
    if( *roundup )
