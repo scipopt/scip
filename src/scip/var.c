@@ -3167,117 +3167,6 @@ SCIP_RETCODE SCIPvarAddLocks(
    }
 }
 
-/** gets number of locks for rounding down */
-int SCIPvarGetNLocksDown(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   int nlocks;
-   int i;
-
-   assert(var != NULL);
-   assert(var->nlocksdown[SCIP_LOCKTYPE_MODEL] >= 0);
-
-   switch( SCIPvarGetStatus(var) )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar != NULL )
-         return SCIPvarGetNLocksDown(var->data.original.transvar);
-      else
-         return var->nlocksdown[SCIP_LOCKTYPE_MODEL];
-
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      return var->nlocksdown[SCIP_LOCKTYPE_MODEL];
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNLocksDown(var->data.aggregate.var);
-      else
-         return SCIPvarGetNLocksUp(var->data.aggregate.var);
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      assert(!var->donotmultaggr);
-      nlocks = 0;
-      for( i = 0; i < var->data.multaggr.nvars; ++i )
-      {
-         if( var->data.multaggr.scalars[i] > 0.0 )
-            nlocks += SCIPvarGetNLocksDown(var->data.multaggr.vars[i]);
-         else
-            nlocks += SCIPvarGetNLocksUp(var->data.multaggr.vars[i]);
-      }
-      return nlocks;
-
-   case SCIP_VARSTATUS_NEGATED:
-      assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
-      assert(var->negatedvar->negatedvar == var);
-      return SCIPvarGetNLocksUp(var->negatedvar);
-
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      SCIPABORT();
-      return INT_MAX; /*lint !e527*/
-   }
-}
-
-
-/** gets number of locks for rounding up */
-int SCIPvarGetNLocksUp(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   int nlocks;
-   int i;
-
-   assert(var != NULL);
-   assert(var->nlocksup[SCIP_LOCKTYPE_MODEL] >= 0);
-
-   switch( SCIPvarGetStatus(var) )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar != NULL )
-         return SCIPvarGetNLocksUp(var->data.original.transvar);
-      else
-         return var->nlocksup[SCIP_LOCKTYPE_MODEL];
-
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      return var->nlocksup[SCIP_LOCKTYPE_MODEL];
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNLocksUp(var->data.aggregate.var);
-      else
-         return SCIPvarGetNLocksDown(var->data.aggregate.var);
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      assert(!var->donotmultaggr);
-      nlocks = 0;
-      for( i = 0; i < var->data.multaggr.nvars; ++i )
-      {
-         if( var->data.multaggr.scalars[i] > 0.0 )
-            nlocks += SCIPvarGetNLocksUp(var->data.multaggr.vars[i]);
-         else
-            nlocks += SCIPvarGetNLocksDown(var->data.multaggr.vars[i]);
-      }
-      return nlocks;
-
-   case SCIP_VARSTATUS_NEGATED:
-      assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
-      assert(var->negatedvar->negatedvar == var);
-      return SCIPvarGetNLocksDown(var->negatedvar);
-
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      SCIPABORT();
-      return INT_MAX; /*lint !e527*/
-   }
-}
-
 /** gets number of locks for rounding down of a special type */
 int SCIPvarGetNLocksDownType(
    SCIP_VAR*             var,                /**< problem variable */
@@ -3389,6 +3278,22 @@ int SCIPvarGetNLocksUpType(
       SCIPABORT();
       return INT_MAX; /*lint !e527*/
    }
+}
+
+/** gets number of locks for rounding down */
+int SCIPvarGetNLocksDown(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   return SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
+}
+
+/** gets number of locks for rounding up */
+int SCIPvarGetNLocksUp(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   return SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 }
 
 /** is it possible, to round variable down and stay feasible? */
