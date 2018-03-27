@@ -4656,7 +4656,7 @@ SCIP_RETCODE SCIPvarAggregate(
    obj = var->obj;
    SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lp, eventqueue, 0.0) );
 
-   /* unlock all rounding locks */
+   /* unlock all locks */
    for( i = 0; i < NLOCKTYPES; i++ )
    {
       nlocksdown[i] = var->nlocksdown[i];

@@ -414,15 +414,17 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/maxviol", "try to maximize the violation",
          &heurdata->maxviol, TRUE, DEFAULT_MAXVIOL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minconflictlocks", "minimal number of softlocks per variable",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minconflictlocks",
+         "minimal number of conflict locks per variable",
          &heurdata->minconflictlocks, TRUE, DEFAULT_MINCONFLICTLOCKS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minmaxvars", "minimal absolute maximum of variables involved in a conflict constraint (-1: auto)",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minmaxvars",
+         "minimal absolute maximum of variables involved in a conflict constraint (-1: auto)",
          &heurdata->minmaxvars, TRUE, DEFAULT_MINMAXVARS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxvarsfac", "maximal fraction of variables involved in a conflict constraint (< 0: auto)",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxvarsfac",
+         "maximal fraction of variables involved in a conflict constraint (< 0: auto)",
          &heurdata->maxvarsfac, TRUE, DEFAULT_MAXVARSFAC, -1.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
-
