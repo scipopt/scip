@@ -927,6 +927,9 @@ SCIP_RETCODE addSymresackConss(
       }
    }
 
+   if ( nsymresackcons > 0 )
+      presoldata->addedconss = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -963,9 +966,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
 static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOL*          presol,             /**< data of presolver */
-   SCIP_Bool*            addedconss          /**< pointer to store if symmetry handling constraints have been added
-                                              *   or NULL if not needed */
+   SCIP_PRESOL*          presol              /**< data of presolver */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -975,9 +976,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
-
-   if ( addedconss != NULL )
-      *addedconss = FALSE;
 
    /* get symmetry information, if not already computed */
    if ( ! presoldata->computedsymmetry )
@@ -1018,7 +1016,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
          }
       }
    }
-   else if ( presoldata->nperms <= 0 )
+   else if ( presoldata->nperms <= 0 || ! presoldata->binvaraffected )
       return SCIP_OKAY;
 
    /* at this point, the symmetry group should be computed and nontrivial */
@@ -1031,13 +1029,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    /* if not already done, add symmetry breaking constraints */
    if ( ! presoldata->addedconss )
    {
-      /* add symmetry breaking constraints */
       SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
-
-      presoldata->addedconss = TRUE;
-
-      if ( addedconss != NULL )
-         *addedconss = TRUE;
    }
 
    return SCIP_OKAY;
@@ -1234,10 +1226,10 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreSymbreak)
    assert( presoldata != NULL );
 
    /* guarantee that symmetries are computed (and handled) even if presolving is disabled */
-   if ( ! presoldata->enabled || presoldata->nperms >= 0 )
+   if ( ! presoldata->enabled || presoldata->addedconss )
       return SCIP_OKAY;
 
-   SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol, NULL) );
+   SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
 
    return SCIP_OKAY;
 }
@@ -1248,7 +1240,6 @@ static
 SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
-   SCIP_Bool addedconss;
    int noldfixedvars = *nfixedvars;
    int noldaggrvars = *naggrvars;
    int noldbdchgs = *nchgbds;
@@ -1267,7 +1258,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
    assert( presoldata != NULL );
 
    /* possibly skip presolver */
-   if ( ! presoldata->enabled )
+   if ( ! presoldata->enabled || presoldata->addedconss )
       return SCIP_OKAY;
 
    /* skip presolving if we are not at the end if addconsstiming == 2 */
@@ -1280,13 +1271,14 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
    noldngenconns = presoldata->ngenconss;
 
-   SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol, &addedconss) );
+   SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
 
-   if ( ! addedconss )
+   if ( ! presoldata->addedconss )
       return SCIP_OKAY;
 
    /* at this point, the symmetry group should be computed and nontrivial */
    assert( presoldata->nperms > 0 );
+   assert( presoldata->ngenconss > 0 );
 
    *result = SCIP_DIDNOTFIND;
 
