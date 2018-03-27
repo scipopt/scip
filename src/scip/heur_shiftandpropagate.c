@@ -1012,7 +1012,7 @@ SCIP_RETCODE getOptimalShiftingValue(
             slacksurplus -= val;
 
          /* check if the least violating shift lies within variable bounds and set corresponding array values */
-         if( SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
+         if( !SCIPisInfinity(scip, maxfeasshift) && SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
          {
             steps[i] = maxfeasshift + 1.0;
             violationchange[i] = rowweight;
@@ -1063,7 +1063,11 @@ SCIP_RETCODE getOptimalShiftingValue(
     */
    if( allzero )
    {
-      *beststep = SCIPisFeasGT(scip, slacksurplus, 0.0) ? direction * upperbound : 0.0;
+      if( ! SCIPisInfinity(scip, upperbound) && SCIPisGT(scip, slacksurplus, 0.0) )
+         *beststep = direction * upperbound;
+      else
+         *beststep = 0.0;
+
       return SCIP_OKAY;
    }
 
@@ -1306,12 +1310,12 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
       SCIPstatisticMessage(
-         "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
+         "  DETAILS                    :  %d violations left, %d probing status\n",
          heurdata->nremainingviols,
          heurdata->lpsolstat
          );
@@ -1340,8 +1344,8 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;

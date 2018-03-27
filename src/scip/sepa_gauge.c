@@ -261,6 +261,7 @@ SCIP_RETCODE computeInteriorPoint(
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
    SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) ); /*lint !e666*/
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute interior point */
@@ -273,14 +274,14 @@ SCIP_RETCODE computeInteriorPoint(
       SCIP_NLPSTATISTICS* nlpstatistics;
 
       /* get statistics */
-      SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+      SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
       SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, nlpstatistics) );
 
       SCIPdebugMsg(scip, "nlpi took iters %d, time %g searching for an find interior point: solstat %d\n",
             SCIPnlpStatisticsGetNIterations(nlpstatistics), SCIPnlpStatisticsGetTotalTime(nlpstatistics),
             SCIPnlpiGetSolstat(nlpi, nlpiprob));
 
-      SCIPnlpStatisticsFree(&nlpstatistics);
+      SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
    }
 #endif
 
@@ -288,7 +289,7 @@ SCIP_RETCODE computeInteriorPoint(
    {
       SCIP_Real* nlpisol;
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
 
       assert(nlpisol != NULL);
       SCIPdebugMsg(scip, "NLP solved: sol found has objvalue = %g\n", nlpisol[objvaridx]);
@@ -814,7 +815,7 @@ SCIP_RETCODE separateCuts(
          SCIP_Bool infeasible;
 
          SCIPdebugMsg(scip, "adding cut\n");
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
          if( infeasible )
          {

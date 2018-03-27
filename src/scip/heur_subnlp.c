@@ -169,6 +169,7 @@ SCIP_RETCODE createSubSCIP(
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
          FALSE,  /* branchrules */
          copydisplays, /* displays */
+         FALSE, /* tables */
          FALSE, /* dialogs */
          TRUE,  /* nlpis */
          TRUE,  /* message handler */
@@ -195,6 +196,7 @@ SCIP_RETCODE createSubSCIP(
    /* get name of the original problem and add "subnlp" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subnlp", SCIPgetProbName(scip));
    SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIPsetSubscipDepth(heurdata->subscip, SCIPgetSubscipDepth(scip) + 1);
 
    /* copy all variables */
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
@@ -279,7 +281,7 @@ SCIP_RETCODE createSubSCIP(
    SCIPhashmapFree(&varsmap);
 
    /* initialize data structure for NLP solve statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(&heurdata->nlpstatistics) );
+   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &heurdata->nlpstatistics) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "misc/catchctrlc", FALSE) );
@@ -344,7 +346,7 @@ SCIP_RETCODE freeSubSCIP(
 
    /* free NLP statistics */
    if( heurdata->nlpstatistics != NULL )
-      SCIPnlpStatisticsFree(&heurdata->nlpstatistics);
+      SCIPnlpStatisticsFree(SCIPblkmem(scip), &heurdata->nlpstatistics);
    assert(heurdata->nlpstatistics == NULL);
 
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, NULL, NULL, NULL, NULL) );

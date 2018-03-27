@@ -327,6 +327,20 @@ SECTION: General Questions about SCIP
         <code>display/primalgap/active = 2</code>
     </p>
 
+    QUESTION: SCIP crashes during symmetry detection with bliss. What can I do?
+    LABEL:scipblisscrash
+    ANSWER:
+    <p>
+        The bliss library can be compiled with or without GMP support. If bliss is compiled with GMP the macro defininiton
+        <code>BLISS_USE_GMP</code> must be added, otherwise the headers do not match the library which produces the crash.
+        If bliss is compiled as shared library, the CMake system should be able to detect this automatically.
+        In case you do not need symmetry handling, the easiest way to resolve the problem is to just disable
+        symmetry handling during compilation (see <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a> or <a href="PATHTODOC/CMAKE.LINKEXT">CMake</a>)
+        or with the SCIP parameter <code>misc/usesymmetry = 0</code>.
+        Otherwise it can be resolved by either adding the macro definition with the compile flag <code>-DBLISS_USE_GMP</code>
+        or by compiling bliss differently, i.e. without GMP support.
+    </p>
+
 SECTION: Using SCIP as a standalone solver
 
     QUESTION: The output is too wide for my terminal window. What can I do?

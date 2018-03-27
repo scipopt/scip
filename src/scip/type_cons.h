@@ -49,6 +49,32 @@ typedef struct SCIP_Cons SCIP_CONS;               /**< constraint data structure
 typedef struct SCIP_ConshdlrData SCIP_CONSHDLRDATA; /**< constraint handler data */
 typedef struct SCIP_ConsData SCIP_CONSDATA;       /**< locally defined constraint type specific data */
 typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
+typedef struct SCIP_LinConsStats SCIP_LINCONSSTATS; /**< linear constraint classification statistics used for MIPLIB */
+
+/** linear constraint types recognizable */
+enum SCIP_LinConstype
+{
+   SCIP_LINCONSTYPE_EMPTY         =  0,         /**< linear constraints with no variables */
+   SCIP_LINCONSTYPE_FREE          =  1,         /**< linear constraints with no finite side */
+   SCIP_LINCONSTYPE_SINGLETON     =  2,         /**< linear constraints with a single variable */
+   SCIP_LINCONSTYPE_AGGREGATION   =  3,         /**< linear constraints of the type \f$ ax + by = c\f$ */
+   SCIP_LINCONSTYPE_PRECEDENCE    =  4,         /**< linear constraints of the type \f$ a x - a y \leq b\f$ where \f$x\f$ and \f$y\f$ must have the same type */
+   SCIP_LINCONSTYPE_VARBOUND      =  5,         /**< linear constraints of the form \f$ ax + by \leq c \, x \in \{0,1\} \f$ */
+   SCIP_LINCONSTYPE_SETPARTITION  =  6,         /**< linear constraints of the form \f$ \sum x_i = 1\, x_i \in \{0,1\} \forall i \f$ */
+   SCIP_LINCONSTYPE_SETPACKING    =  7,         /**< linear constraints of the form \f$ \sum x_i \leq 1\, x_i \in \{0,1\} \forall i \f$ */
+   SCIP_LINCONSTYPE_SETCOVERING   =  8,         /**< linear constraints of the form \f$ \sum x_i \geq 1\, x_i \in \{0,1\} \forall i \f$ */
+   SCIP_LINCONSTYPE_CARDINALITY   =  9,         /**< linear constraints of the form \f$ \sum x_i = k\, x_i \in \{0,1\} \forall i, \, k\geq 2 \f$ */
+   SCIP_LINCONSTYPE_INVKNAPSACK   = 10,         /**< linear constraints of the form \f$ \sum x_i \leq b\, x_i \in \{0,1\} \forall i, \, b\in \mathbb{n} \geq 2 \f$ */
+   SCIP_LINCONSTYPE_EQKNAPSACK    = 11,         /**< linear constraints of the form \f$ \sum a_i x_i = b\, x_i \in \{0,1\} \forall i, \, b\in \mathbb{n} \geq 2 \f$ */
+   SCIP_LINCONSTYPE_BINPACKING    = 12,         /**< linear constraints of the form \f$ \sum a_i x_i + a x \leq a\, x, x_i \in \{0,1\} \forall i, \, a\in \mathbb{n} \geq 2 \f$ */
+   SCIP_LINCONSTYPE_KNAPSACK      = 13,         /**< linear constraints of the form \f$ \sum a_k x_k \leq b\, x_i \in \{0,1\} \forall i, \, b\in \mathbb{n} \geq 2 \f$ */
+   SCIP_LINCONSTYPE_INTKNAPSACK   = 14,         /**< linear constraints of the form \f$ \sum a_k x_k \leq b\, x_i \in \mathbb{Z} \forall i, \, b\in \mathbb{n} \f$ */
+   SCIP_LINCONSTYPE_MIXEDBINARY   = 15,         /**< linear constraints of the form \f$ \sum a_k x_k + \sum p_j s_j \leq/= b\, x_i \in \{0,1\} \forall i, s_j \in \text{ cont. } \forall j\f$ */
+   SCIP_LINCONSTYPE_GENERAL       = 16          /**< general linear constraints with no special structure */
+};
+typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
+
+#define SCIP_NLINCONSTYPES ((int)SCIP_LINCONSTYPE_GENERAL+1)
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins)
  *
@@ -199,7 +225,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
  *
  *  Puts the LP relaxations of all "initial" constraints into the LP. The method should put a canonic LP relaxation
- *  of all given constraints to the LP with calls to SCIPaddCut().
+ *  of all given constraints to the LP with calls to SCIPaddRow().
  *
  *  @warning It is not guaranteed that the problem is going to be declared infeasible if the infeasible pointer is set
  *           to TRUE. Therefore, it is recommended that users do not end this method prematurely when an infeasiblity
@@ -405,6 +431,13 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  In some cases, integrality conditions or rows of the current LP don't have to be checked, because their
  *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
  *  'checklprows' is FALSE.
+ *
+ *  If the solution is not NULL, SCIP should also be informed about the constraint violation with a call to
+ *  SCIPupdateSolConsViolation() and additionally SCIPupdateSolLPRowViolation() for every row of the constraint's current
+ *  representation in the LP relaxation, if any such rows exist.
+ *  As a convenience method, SCIPupdateSolLPConsViolation() can be used if the constraint
+ *  is represented completely by a set of LP rows, meaning that the current constraint violation is equal to the maximum
+ *  of the contraint violations of the corresponding LP rows.
  *
  *  input:
  *  - scip            : SCIP main data structure

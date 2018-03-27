@@ -510,8 +510,8 @@ SCIP_RETCODE checkParameterValues(
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
    {
-#if (CPX_VERSION == 12070000)
-      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+#if (CPX_VERSION == 12070100 || CPX_VERSION == 12070000)
+      /* due to a bug in CPLEX 12.7.0 and CPLEX 12.7.1, we need to disable scaling for these versions */
       if ( intparam[i] != CPX_PARAM_SCAIND )
 #endif
          assert(lpi->curparam.intparval[i] == par.intparval[i]
@@ -756,13 +756,11 @@ void convertSides(
       }
       else if( lhs[i] <= -CPX_INFBOUND )
       {
-         assert(-CPX_INFBOUND < rhs[i] && rhs[i] < CPX_INFBOUND);
          lpi->senarray[i] = 'L';
          lpi->rhsarray[i] = rhs[i];
       }
       else if( rhs[i] >= CPX_INFBOUND )
       {
-         assert(-CPX_INFBOUND < lhs[i] && lhs[i] < CPX_INFBOUND);
          lpi->senarray[i] = 'G';
          lpi->rhsarray[i] = lhs[i];
       }
@@ -1043,7 +1041,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1214,6 +1212,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    int rngcount;
    int c;
 
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -1265,6 +1271,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -1359,6 +1374,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    )
 {
    int rngcount;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -1847,7 +1870,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -1903,7 +1926,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -2212,7 +2235,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
    {
       CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_PREIND, &presolving) );
-      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON);
+      CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON) );
    }
 #endif
 
@@ -2224,7 +2247,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    /* restore previous value for presolving */
    if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
    {
-      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving);
+      CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving) ); /*lint !e644*/
    }
 #endif
 
@@ -3568,7 +3591,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix B^-1
+/** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -3639,7 +3662,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix B^-1
+/** get column of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -3712,7 +3735,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+/** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -3784,7 +3807,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4411,11 +4434,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       *dval = getDblParam(lpi, CPX_PARAM_BAREPCOMP);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+   case SCIP_LPPAR_OBJLIM:
+      if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
+         *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+      else
+         *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = getDblParam(lpi, CPX_PARAM_TILIM);
@@ -4457,11 +4480,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
+         setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+      else
+         setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       setDblParam(lpi, CPX_PARAM_TILIM, dval);

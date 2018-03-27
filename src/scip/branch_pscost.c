@@ -514,13 +514,12 @@ SCIP_RETCODE selectBranchVar(
    }
 
    /* there were candidates, but no variable was selected; this can only happen if the branching points are huge values
-    * for all variables on which we cannot branch
+    * for all non-continuous variables on which we cannot branch
     * @todo delay the node?
     */
    if( (*brvar) == NULL )
    {
       SCIPerrorMessage("no branching could be created: all external candidates have huge bounds\n");
-      SCIPABORT();
       return SCIP_BRANCHERROR; /*lint !e527*/
    }
 
@@ -559,6 +558,9 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
+   /* free random number generator */
+   SCIPfreeRandom(scip, &branchruledata->randnumgen);
+
    /* free branching rule data */
    SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
@@ -576,25 +578,7 @@ SCIP_DECL_BRANCHINIT(branchInitPscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT)) );
-
-   return SCIP_OKAY;
-}
-
-/** deinitialization method of branching rule */
-static
-SCIP_DECL_BRANCHEXIT(branchExitPscost)
-{  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
-
-   /* get branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
-
-   /* free random number generator */
-   SCIPrandomFree(&branchruledata->randnumgen);
+   SCIPsetRandomSeed(scip, branchruledata->randnumgen, BRANCHRULE_RANDSEED_DEFAULT);
 
    return SCIP_OKAY;
 }
@@ -695,8 +679,8 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 
    if( brvar == NULL )
    {
-      SCIPerrorMessage("branchExecextPscost failed to select a branching variable from %d candidates\n", nprioexterncands);
-      *result = SCIP_DIDNOTRUN;
+      /* can happen if all candidates were non-continous variables with huge bounds */
+      *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
 
@@ -757,12 +741,14 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
 
    assert(branchrule != NULL);
+   /* create a random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
+         BRANCHRULE_RANDSEED_DEFAULT) );
 
    /* set non-fundamental callbacks via specific setter functions*/
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreePscost) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitPscost) );
-   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitPscost) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 

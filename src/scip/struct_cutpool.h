@@ -55,6 +55,8 @@ struct SCIP_Cutpool
    SCIP_CUT**            cuts;               /**< stored cuts of the pool */
    SCIP_Longint          processedlp;        /**< last LP that has been processed for separating the LP */
    SCIP_Longint          processedlpsol;     /**< last LP that has been processed for separating other solutions */
+   SCIP_Real             processedlpefficacy;/**< minimal efficacy used in last processed LP */
+   SCIP_Real             processedlpsolefficacy;/**< minimal efficacy used in last processed LP for separating other solutions */
    int                   cutssize;           /**< size of cuts array */
    int                   ncuts;              /**< number of cuts stored in the pool */
    int                   nremovablecuts;     /**< number of cuts stored in the pool that are marked to be removable */

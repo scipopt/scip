@@ -3775,7 +3775,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          int firstcons;
 
          /* check, if the current domains were already propagated */
-         if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount )
+         if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount && conshdlr->nmarkedpropconss == 0 )
          {
             /* all constraints that were not yet propagated on the new domains must be useful constraints, which means,
              * that the new constraints are the last constraints of the useful ones
@@ -3795,7 +3795,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          assert(firstcons + nconss <= conshdlr->npropconss);
          assert(nusefulconss <= nconss);
 
-         nmarkedpropconss = conshdlr->nmarkedpropconss - firstcons;
+         nmarkedpropconss = conshdlr->nmarkedpropconss;
 
          /* constraint handlers without constraints should only be called once */
          if( nconss > 0 || fullpropagation
@@ -6272,6 +6272,9 @@ SCIP_RETCODE SCIPconsDelete(
    SCIPsetDebugMsg(set, "globally deleting constraint <%s> (delay updates: %d)\n",
       cons->name, cons->conshdlr->delayupdatecount);
 
+   /* mark constraint deleted */
+   cons->deleted = TRUE;
+
    /* deactivate constraint, if it is currently active */
    if( cons->active && !cons->updatedeactivate )
    {
@@ -6285,9 +6288,6 @@ SCIP_RETCODE SCIPconsDelete(
 
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
-
-   /* mark constraint deleted */
-   cons->deleted = TRUE;
 
    /* remove formerly active constraint from the conssetchg's addedconss / prob's conss array */
    if( cons->addarraypos >= 0 )
@@ -7822,6 +7822,111 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
    }
 
    return SCIP_OKAY;
+}
+
+/** create linear constraint statistics */
+SCIP_RETCODE SCIPlinConsStatsCreate(
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_LINCONSSTATS**   linconsstats        /**< pointer to linear constraint classification statistics */
+   )
+{
+   assert(linconsstats != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, linconsstats) );
+
+   return SCIP_OKAY;
+}
+
+/** free linear constraint statistics */
+void SCIPlinConsStatsFree(
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_LINCONSSTATS**   linconsstats        /**< pointer to linear constraint classification statistics */
+   )
+{
+   assert(linconsstats != NULL);
+   assert(*linconsstats != NULL);
+
+   SCIPfreeBlockMemory(scip, linconsstats);
+}
+
+/** resets linear constraint statistics */
+void SCIPlinConsStatsReset(
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
+   )
+{
+   BMSclearMemoryArray(linconsstats->counter, SCIP_NLINCONSTYPES);
+   linconsstats->sum = 0;
+}
+
+/** returns the number of occurrences of a specific type of linear constraint */
+int SCIPlinConsStatsGetTypeCount(
+   SCIP_LINCONSSTATS*    linconsstats,       /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE      linconstype         /**< linear constraint type */
+   )
+{
+   assert(linconsstats != NULL);
+   assert((int)linconstype < SCIP_NLINCONSTYPES);
+
+   return linconsstats->counter[(int)linconstype];
+}
+
+/** returns the total number of classified constraints */
+int SCIPlinConsStatsGetSum(
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
+   )
+{
+   assert(linconsstats != NULL);
+
+   return linconsstats->sum;
+}
+
+/** increases the number of occurrences of a specific type of linear constraint */
+void SCIPlinConsStatsIncTypeCount(
+   SCIP_LINCONSSTATS*    linconsstats,       /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE      linconstype,        /**< linear constraint type */
+   int                   increment           /**< positive increment */
+   )
+{
+   assert(linconsstats != NULL);
+   assert(increment >= 1);
+   assert((int)linconstype < SCIP_NLINCONSTYPES);
+
+   linconsstats->counter[(int)linconstype] += increment;
+   linconsstats->sum += increment;
+}
+
+/** print linear constraint classification statistics */
+void SCIPprintLinConsStats(
+   SCIP*                 scip,               /**< scip data structure */
+   FILE*                 file,               /**< file handle or NULL to print to standard out */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
+   )
+{
+   assert(scip != NULL);
+   assert(linconsstats != NULL);
+
+   /* print statistics */
+   SCIPinfoMessage(scip, file, "\n");
+   SCIPinfoMessage(scip, file, "%-19s : %10s\n", "Linear cons types", "count");
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "total", SCIPlinConsStatsGetSum(linconsstats));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "empty",        SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_EMPTY));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "free",         SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_FREE));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "singleton",    SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SINGLETON));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "aggregation",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_AGGREGATION));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "precedence",   SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_PRECEDENCE));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "varbound",     SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_VARBOUND));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "setpartition", SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETPARTITION));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "setpacking",   SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETPACKING));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "setcovering",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETCOVERING));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "cardinality",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_CARDINALITY));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "invknapsack",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_INVKNAPSACK));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "eqknapsack",   SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_EQKNAPSACK));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "binpacking",   SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_BINPACKING));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "knapsack",     SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_KNAPSACK));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "intknapsack",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_INTKNAPSACK));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "mixedbinary",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_MIXEDBINARY));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "general",      SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_GENERAL));
+   SCIPinfoMessage(scip, file, "\n");
 }
 
 /*

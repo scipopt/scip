@@ -156,8 +156,13 @@ SCIP_RETCODE setupSCIPparamsFP2(
    SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
 #endif
 
-   /* disable expensive and useless stuff */
+   /* do not multiaggregate variables, because otherwise they have to be skipped in the fix-and-propagate loop */
+   SCIP_CALL( SCIPsetBoolParam(probingscip, "presolving/donotmultaggr", TRUE) );
+
+   /* limit to root node solving */
    SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) );
+
+   /* disable LP solving and expensive techniques */
    if( SCIPisParamFixed(probingscip, "lp/solvefreq") )
    {
       SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in probingscip of " HEUR_NAME " heuristic to speed up propagation\n");
@@ -169,6 +174,7 @@ SCIP_RETCODE setupSCIPparamsFP2(
    SCIP_CALL( SCIPsetBoolParam(probingscip, "constraints/knapsack/negatedclique", FALSE) );
    SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(probingscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
    return SCIP_OKAY;
 }
 
@@ -288,6 +294,48 @@ void insertFlipCand(
    (*nflipcands)++;
 }
 
+/** set solution value in rounded solution and update objective coefficient accordingly */
+static
+SCIP_RETCODE updateVariableRounding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             solval,             /**< solution value for this variable */
+   SCIP_Real             alpha,              /**< weight of original objective function */
+   SCIP_Real             scalingfactor       /**< factor to scale the original objective function with */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real newobjcoeff;
+   SCIP_Real orgobjcoeff;
+
+   assert(heurdata != NULL);
+   assert(var != NULL);
+
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+
+   /* update rounded solution */
+   assert(SCIPisFeasLE(scip, lb, solval) && SCIPisFeasLE(scip, solval, ub));
+   assert(SCIPisIntegral(scip,solval));
+   SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
+
+   /* modify objective towards rounded solution value if it is at one of the variable bounds */
+   orgobjcoeff = SCIPvarGetObj(var);
+   if( SCIPisEQ(scip, solval, lb) )
+      newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
+   else if( SCIPisEQ(scip, solval, ub) )
+      newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
+   else
+      newobjcoeff = alpha * orgobjcoeff;
+
+   SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
+
+   return SCIP_OKAY;
+}
+
+
 /** flips the roundings of the most fractional variables, if a 1-cycle was found */
 static
 SCIP_RETCODE handle1Cycle(
@@ -295,46 +343,39 @@ SCIP_RETCODE handle1Cycle(
    SCIP_HEURDATA*        heurdata,           /**< data of this special heuristic */
    SCIP_VAR**            mostfracvars,       /**< sorted array of the currently most fractional variables */
    int                   nflipcands,         /**< number of variables to flip */
-   SCIP_Real             alpha               /**< factor how much the original objective is regarded */
+   SCIP_Real             alpha,              /**< factor how much the original objective is regarded */
+   SCIP_Real             scalingfactor       /**< factor to scale the original objective function with */
    )
 {
-   SCIP_VAR* var;
-   SCIP_Real solval;
-   SCIP_Real frac;
-   SCIP_Real newobjcoeff;
-   SCIP_Real orgobjcoeff;
    int       i;
 
-   /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
+   /* flip rounding to the opposite side */
    for( i = 0; i < nflipcands; i++ )
    {
-      SCIP_Real sign = 1.0;
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Real roundedsolval;
 
       var = mostfracvars[i];
       solval = SCIPvarGetLPSol(var);
-      orgobjcoeff = SCIPvarGetObj(var);
-      frac = SCIPfeasFrac(scip, solval);
+      roundedsolval = SCIPgetSolVal(scip, heurdata->roundedsol, var);
 
-      if( SCIPisEQ(scip, frac, 0.5) )
-      {
-         if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
-         {
-            sign = -1.0;
-            solval = SCIPfeasCeil(scip, solval);
-         }
-      }
-      else if( frac > 0.5 )
+      assert(! SCIPisFeasIntegral(scip, solval));
+      assert(SCIPisFeasIntegral(scip, roundedsolval));
+
+      /* flip to the opposite rounded solution value */
+      if( roundedsolval > solval )
          solval = SCIPfeasFloor(scip, solval);
       else
       {
-         sign = -1.0;
          solval = SCIPfeasCeil(scip, solval);
       }
-      newobjcoeff = sign * (1.0 - alpha) + alpha * orgobjcoeff;
 
-      /* updating the rounded solution and the objective */
-      SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
-      SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
+      SCIPdebugMsg(scip, "1-cycle flip: variable <%s> [%g,%g] LP sol %.15g sol %.15g -> %.15g\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            SCIPvarGetLPSol(var), SCIPgetSolVal(scip, heurdata->roundedsol, var), solval);
+
+      SCIP_CALL( updateVariableRounding(scip, heurdata, var, solval, alpha, scalingfactor) );
    }
    return SCIP_OKAY;
 }
@@ -348,52 +389,45 @@ SCIP_RETCODE handleCycle(
    SCIP_HEURDATA*        heurdata,           /**< data of this special heuristic */
    SCIP_VAR**            vars,               /**< array of all variables */
    int                   nbinandintvars,     /**< number of general integer and 0-1 variables */
-   SCIP_Real             alpha               /**< factor how much the original objective is regarded */
+   SCIP_Real             alpha,              /**< factor how much the original objective is regarded */
+   SCIP_Real             scalingfactor       /**< factor to scale the original objective function with */
    )
 {
-   SCIP_VAR* var;
-   SCIP_Real solval;
-   SCIP_Real frac;
-   SCIP_Real newobjcoeff;
-   SCIP_Real orgobjcoeff;
-   SCIP_Real flipprob;
    int i;
 
-   /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
+   /* flip variables randomized biased on their fractionality */
    for( i = 0; i < nbinandintvars; i++ )
    {
-      SCIP_Real sign = 1.0;
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Real frac;
+      SCIP_Real flipprob;
+      SCIP_Real roundedsolval;
 
-      /* decide arbitrarily whether the variable will be flipped or not */
       var = vars[i];
       solval = SCIPvarGetLPSol(var);
-      orgobjcoeff = SCIPvarGetObj(var);
+
+      /* skip variables with integral solution values */
+      if( SCIPisFeasIntegral(scip, solval) )
+         continue;
+
       frac = SCIPfeasFrac(scip, solval);
-      flipprob = -0.3 + SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
+      flipprob = SCIPrandomGetReal(heurdata->randnumgen, -0.3, 0.7);
 
       /* flip, iff the sum of the randomized number and the fractionality is big enough */
-      if( MIN(frac, 1.0-frac) + MAX(flipprob, 0.0) > 0.5 )
+      if( MIN(frac, 1.0 - frac) + MAX(flipprob, 0.0) > 0.5 )
       {
-         if( SCIPisEQ(scip, frac, 0.5) )
-         {
-            if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
-            {
-               sign = -1.0;
-               solval = SCIPfeasCeil(scip, solval);
-            }
-         }
-         if( frac > 0.5 )
-            solval = SCIPfeasFloor(scip, solval);
+         roundedsolval = SCIPgetSolVal(scip, heurdata->roundedsol, var);
+         assert(SCIPisFeasIntegral(scip, roundedsolval));
+
+         /* flip the solution to the opposite side */
+         if( roundedsolval > solval )
+            solval = SCIPfloor(scip, solval);
          else
-         {
-            sign = -1.0;
-            solval = SCIPfeasCeil(scip, solval);
-         }
+            solval = SCIPceil(scip, solval);
 
-         newobjcoeff = sign * (1.0 - alpha) + alpha * orgobjcoeff;
-
-         SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
-         SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
+         /* update rounded solution value and objective coefficient */
+         SCIP_CALL( updateVariableRounding(scip, heurdata, var, solval, alpha, scalingfactor) );
       }
    }
 
@@ -584,8 +618,8 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    heurdata->nsuccess = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -608,7 +642,7 @@ SCIP_DECL_HEUREXIT(heurExitFeaspump)
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->roundedsol) );
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -681,8 +715,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP_VAR* var;
 
    SCIP_Real* mostfracvals;   /* the values of the variables above */
-   SCIP_Real newobjcoeff;     /* used for changing the objective */
-   SCIP_Real orgobjcoeff;     /* used for regarding the original objective */
    SCIP_Real oldsolval;       /* one value of the last solution */
    SCIP_Real solval;          /* one value of the actual solution */
    SCIP_Real frac;            /* the fractional part of the value above */
@@ -811,9 +843,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    if( heurdata->usefp20 )
    {
-      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &success) );
+      SCIP_Bool valid;
 
-      if( success )
+      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &valid) );
+
+      if( probingscip != NULL )
       {
          SCIP_CALL( setupSCIPparamsFP2(scip, probingscip) );
 
@@ -862,6 +896,13 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPnewProbingNode(probingscip) );
 
          SCIPdebugMsg(scip, "successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
+      }
+      else
+      {
+         assert(varmapfw == NULL);
+
+         SCIPdebugMsg(scip, "SCIP reached the depth limit -> skip heuristic\n");
+         return SCIP_OKAY;
       }
    }
 
@@ -930,19 +971,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       success = FALSE;
 
-      /* create solution from diving LP and try to round it */
-      SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
-
-      /* if the rounded solution is feasible and better, add it to SCIP */
-      /*if( success )
-      {
-         SCIPdebugMsg(scip, "feasibility pump trying rounded solution\n");
-         SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
-         if( success )
-            *result = SCIP_FOUNDSOL;
-      }*/
-
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->roundedsol) );
 
       /* randomly choose maximum number of variables to flip in current pumping round in case of a 1-cycle */
@@ -978,33 +1006,40 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_Longint ndomreds;
 
          var = pseudocands[i];
-         orgobjcoeff = SCIPvarGetObj(var);
 
          /* round the LP solution */
          solval = SCIPvarGetLPSol(var);
          frac = SCIPfeasFrac(scip, solval);
 
-         solval = SCIPfloor(scip, solval+0.5);
+         /* round randomly if the value is close to 0.5 */
+         if( SCIPisEQ(scip, frac, 0.5) )
+         {
+            if( SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0) <= 0.5 )
+               solval = SCIPfloor(scip, solval);
+            else
+               solval = SCIPceil(scip, solval);
+         }
+         else
+            solval = SCIPfloor(scip, solval + 0.5);
 
          /* ensure, that the fixing value is inside the local domains */
          if( heurdata->usefp20 )
          {
-            SCIP_Real lb;
-            SCIP_Real ub;
+            SCIP_Real lbprobing;
+            SCIP_Real ubprobing;
 
             probingvar = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, var);
-            lb = SCIPvarGetLbLocal(probingvar);
-            ub = SCIPvarGetUbLocal(probingvar);
+            lbprobing = SCIPvarGetLbLocal(probingvar);
+            ubprobing = SCIPvarGetUbLocal(probingvar);
 
-            solval = MAX(solval, lb);
-            solval = MIN(solval, ub);
+            solval = MAX(solval, lbprobing);
+            solval = MIN(solval, ubprobing);
 
             /* fix the variable and propagate the domain change */
-            if( !SCIPisFeasEQ(probingscip, lb, ub) )
+            if( !SCIPisFeasEQ(probingscip, lbprobing, ubprobing) && SCIPvarIsActive(SCIPvarGetTransVar(probingvar)) )
             {
-               assert(SCIPisFeasLE(probingscip, lb, ub));
-               /* SCIP_CALL( SCIPnewProbingNode(probingscip) ); */
-               SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
+               assert(SCIPisFeasLE(probingscip, lbprobing, ubprobing));
+               SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n", SCIPvarGetName(probingvar), lbprobing, ubprobing,
                   solval);
                SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
                SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
@@ -1013,56 +1048,20 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                if( infeasible )
                {
                   SCIPdebugMsg(scip, "  -> infeasible!\n");
-                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0/*SCIPgetProbingDepth(probingscip)-1*/) );
+                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0) );
                }
             }
             else
             {
-               SCIPdebugMsg(scip, "variable <%s> is already fixed to %f\n",SCIPvarGetName(probingvar), solval);
+               SCIPdebugMsg(scip, "variable <%s> is already fixed to %f\n", SCIPvarGetName(probingvar), solval);
             }
          }
 
-         assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), solval) && SCIPisFeasLE(scip, solval, SCIPvarGetUbLocal(var)));
-         assert(SCIPisIntegral(scip,solval));
-         SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
+         SCIP_CALL( updateVariableRounding(scip, heurdata, var, solval, alpha, scalingfactor) );
 
-         /* variables which are already integral, are treated separately */
-         if( SCIPisFeasZero(scip, frac) )
-         {
-            SCIP_Real lb;
-            SCIP_Real ub;
-
-            /* variables at their bounds should be kept there */
-            lb = SCIPvarGetLbLocal(var);
-            ub = SCIPvarGetUbLocal(var);
-            if( SCIPisFeasEQ(scip, solval, lb) )
-               newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-            else if( SCIPisFeasEQ(scip, solval, ub) )
-               newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-            else
-               newobjcoeff = alpha * orgobjcoeff;
-         }
-         else
-         {
-            SCIP_Real scale = 1.0;
-
-            /* check whether the variable is one of the most fractionals and label if so */
+         /* check whether the variable is one of the most fractionals and label if so */
+         if( SCIPisFeasPositive(scip, frac) )
             insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
-
-            /* try to avoid variability; decide randomly if the LP solution can contain some noise. */
-            if( SCIPisEQ(scip, frac, 0.5) )
-            {
-               if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
-                  scale = -1.0;
-            }
-            else if( frac > 0.5 )
-               scale = -1.0;
-
-            newobjcoeff = scale * (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-         }
-
-         /* change one coefficient of the objective */
-         SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
 
       }
 
@@ -1104,7 +1103,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( nloops % heurdata->perturbfreq == 0 || (heurdata->pertsolfound && SCIPgetNBestSolsFound(scip) > nbestsolsfound) )
       {
          SCIPdebugMsg(scip, " -> random perturbation\n");
-         SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
+         SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha, scalingfactor) );
          nbestsolsfound = SCIPgetNBestSolsFound(scip);
       }
       else
@@ -1120,12 +1119,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                if( j == 0 )
                {
                   SCIPdebugMsg(scip, " -> avoiding 1-cycle: flipping %d candidates\n", nflipcands);
-                  SCIP_CALL( handle1Cycle(scip, heurdata, mostfracvars, nflipcands, alpha) );
+                  SCIP_CALL( handle1Cycle(scip, heurdata, mostfracvars, nflipcands, alpha, scalingfactor) );
                }
                else
                {
                   SCIPdebugMsg(scip, " -> avoiding %d-cycle by random flip\n", j+1);
-                  SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
+                  SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha, scalingfactor) );
                }
                break;
             }
@@ -1246,11 +1245,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    {
       SCIP_CALL( SCIPendProbing(probingscip) );
    }
-
-   /*if( heurdata->usefp20 )
-   {
-         SCIP_CALL( SCIPprintStatistics(probingscip, NULL) );
-   }*/
 
    /* only do stage 3 if we have not found a solution yet */
    /* only do stage 3 if the distance of the closest infeasible solution to the polyhedron is below a certain threshold */

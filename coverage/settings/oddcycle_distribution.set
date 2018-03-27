@@ -1,0 +1,12 @@
+# SCIP version 4.0.0.2
+
+# priority of branching rule <distribution>
+# [type: int, advanced: FALSE, range: [-536870912,536870911], default: 0]
+branching/distribution/priority = 500000
+
+# SCIP version 2.1.1.6
+
+# frequency for calling separator <oddcycle> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/oddcycle/freq = 0
+

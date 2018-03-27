@@ -36,7 +36,7 @@
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
-#define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* default values for heuristic plugins */
@@ -56,6 +56,9 @@
 #define DEFAULT_IGNORECONT  FALSE       /**< should solution values for continuous variables be ignored? */
 #define DEFAULT_BESTSOLS        5       /**< heuristic stops, if the given number of improving solutions were found (-1: no limit) */
 #define DEFAULT_MAXPROPROUNDS  10       /**< maximal number of iterations in propagation (-1: no limit) */
+#define DEFAULT_MAXLPITER      -1LL     /**< maximal number of LP iterations (-1: no limit) */
+#define DEFAULT_MAXCONTVARS    -1       /**< maximal number of continuous variables after presolving (-1: no limit) */
+#define DEFAULT_BEFOREPRESOL  TRUE      /**< should the heuristic run before presolving? */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Completesol"
@@ -65,11 +68,11 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Real             maxunknownrate;     /**< maximal rate of changed coefficients in the objective function */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
-   SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP? */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
+   SCIP_Longint          maxlpiter;          /**< maximal number of LP iterations (-1: no limit) */
+   SCIP_Real             maxunknownrate;     /**< maximal rate of changed coefficients in the objective function */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
@@ -78,8 +81,11 @@ struct SCIP_HeurData
                                               *   (0: fix variables to given solution values, 1: relax to global bounds)
                                               */
    SCIP_Real             minimprove;         /**< factor by which the incumbent should be improved at least */
+   SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP? */
    SCIP_Bool             ignorecont;         /**< should solution values for continuous variables be ignored? */
+   SCIP_Bool             beforepresol;       /**< should the heuristic run before presolving? */
    int                   bestsols;           /**< heuristic stops, if the given number of improving solutions were found (-1: no limit) */
+   int                   maxcontvars;        /**< maximal number of continuous variables after presolving (-1: no limit) */
    int                   maxproprounds;      /**< maximal number of iterations in propagation (-1: no limit) */
 };
 
@@ -412,7 +418,8 @@ SCIP_RETCODE tightenVariables(
    SCIP_VAR**            vars,               /**< problem variables */
    int                   nvars,              /**< number of problem variables */
    SCIP_SOL*             sol,                /**< solution to guide the bound changes */
-   SCIP_Bool*            tightened           /**< array to store if variable bound could be tightened */
+   SCIP_Bool*            tightened,          /**< array to store if variable bound could be tightened */
+   SCIP_Bool*            success             /**< pointer to store the success */
    )
 {
 #ifndef NDEBUG
@@ -420,7 +427,7 @@ SCIP_RETCODE tightenVariables(
 #endif
    SCIP_Bool abortearly;
    SCIP_Bool cutoff;
-   SCIP_Bool success;
+   SCIP_Bool probingsuccess;
    SCIP_Longint ndomreds;
    SCIP_Longint ndomredssum;
    int nbndtightenings;
@@ -437,6 +444,7 @@ SCIP_RETCODE tightenVariables(
 
    SCIPdebugMsg(scip, "> start probing along the solution values\n");
 
+   *success = TRUE;
    abortearly = FALSE;
    nbndtightenings = 0;
    ndomredssum = 0;
@@ -464,10 +472,6 @@ SCIP_RETCODE tightenVariables(
       assert(!incontsection || !SCIPvarIsIntegral(vars[v]));
 #endif
 
-      /* return if continuous variables should ignored */
-      if( heurdata->ignorecont && SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-         break;
-
       /* return if we have found enough domain reductions tightenings */
       if( ndomredssum > 0.3*nvars )
          break;
@@ -485,7 +489,7 @@ SCIP_RETCODE tightenVariables(
          /* the solution value is integral, try to fix them */
          if( SCIPisIntegral(scip, solval) )
          {
-            SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED, &success) );
+            SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED, &probingsuccess) );
             tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
             ++nbndtightenings;
 
@@ -502,7 +506,7 @@ SCIP_RETCODE tightenVariables(
             /* try tightening of upper bound */
             if( SCIPisLT(scip, ub, SCIPvarGetUbLocal(vars[v])) )
             {
-               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_DOWNWARDS, &success) );
+               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_DOWNWARDS, &probingsuccess) );
                tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
                ++nbndtightenings;
 
@@ -515,7 +519,7 @@ SCIP_RETCODE tightenVariables(
             /* try tightening of lower bound */
             if( SCIPisGT(scip, lb, SCIPvarGetLbLocal(vars[v])) )
             {
-               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_UPWARDS, &success) );
+               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_UPWARDS, &probingsuccess) );
                tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
                ++nbndtightenings;
 
@@ -537,12 +541,12 @@ SCIP_RETCODE tightenVariables(
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
 
-               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED, &success) );
+               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED, &probingsuccess) );
 
                /* skip propagation if the bound could not be changed, e.g., already tightened due to previous
                 * domain propagation
                 */
-               if( success )
+               if( probingsuccess )
                {
                   SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
                }
@@ -599,12 +603,12 @@ SCIP_RETCODE tightenVariables(
                if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH-10 )
                {
                   SCIP_CALL( SCIPnewProbingNode(scip) );
-                  SCIP_CALL( chgProbingBound(scip, vars[v], newub, SCIP_BRANCHDIR_DOWNWARDS, &success) );
+                  SCIP_CALL( chgProbingBound(scip, vars[v], newub, SCIP_BRANCHDIR_DOWNWARDS, &probingsuccess) );
 
                   /* skip propagation if the bound could not be changed, e.g., already tightened due to previous
                    * domain propagation
                    */
-                  if( success )
+                  if( probingsuccess )
                   {
                      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
                   }
@@ -617,7 +621,18 @@ SCIP_RETCODE tightenVariables(
                      SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
 
                      /* we can tighten the lower bound by newub */
-                     SCIP_CALL( chgProbingBound(scip, vars[v], newub, SCIP_BRANCHDIR_UPWARDS, &success) );
+                     SCIP_CALL( chgProbingBound(scip, vars[v], newub, SCIP_BRANCHDIR_UPWARDS, &probingsuccess) );
+
+                     /* propagate the new bound */
+                     SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
+
+                     /* there is no feasible solution w.r.t. the current bounds */
+                     if( cutoff )
+                     {
+                        SCIPdebugMsg(scip, "> subproblem is infeasible within the local bounds\n");
+                        *success = FALSE;
+                        return SCIP_OKAY;
+                     }
 #ifdef SCIP_MORE_DEBUG
                      SCIPdebugMsg(scip, "> tighten lower bound of variable <%s>: %g to %g\n",
                            SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]), newub);
@@ -646,12 +661,12 @@ SCIP_RETCODE tightenVariables(
                if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH-10 )
                {
                   SCIP_CALL( SCIPnewProbingNode(scip) );
-                  SCIP_CALL( chgProbingBound(scip, vars[v], newlb, SCIP_BRANCHDIR_UPWARDS, &success) );
+                  SCIP_CALL( chgProbingBound(scip, vars[v], newlb, SCIP_BRANCHDIR_UPWARDS, &probingsuccess) );
 
                   /* skip propagation if the bound could not be changed, e.g., already tightened due to previous
                    * domain propagation
                    */
-                  if( success )
+                  if( probingsuccess )
                   {
                      SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, &ndomreds) );
                   }
@@ -664,7 +679,18 @@ SCIP_RETCODE tightenVariables(
                      SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
 
                      /* we can tighten the upper bound by newlb */
-                     SCIP_CALL( chgProbingBound(scip, vars[v], newlb, SCIP_BRANCHDIR_DOWNWARDS, &success) );
+                     SCIP_CALL( chgProbingBound(scip, vars[v], newlb, SCIP_BRANCHDIR_DOWNWARDS, &probingsuccess) );
+
+                     /* propagate the new bound */
+                     SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
+
+                     /* there is no feasible solution w.r.t. the current bounds */
+                     if( cutoff )
+                     {
+                        SCIPdebugMsg(scip, "> subproblem is infeasible within the local bounds\n");
+                        *success = FALSE;
+                        return SCIP_OKAY;
+                     }
 #ifdef SCIP_MORE_DEBUG
                      SCIPdebugMsg(scip, "> tighten upper bound of variable <%s>: %g to %g\n",
                            SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]), newlb);
@@ -697,22 +723,22 @@ SCIP_RETCODE tightenVariables(
    return SCIP_OKAY;
 }
 
-/** main procedure of the completesol heuristic, creates and solves a sub-SCIP */
+/* setup and solve the sub-SCIP */
 static
-SCIP_RETCODE applyCompletesol(
+SCIP_RETCODE setupAndSolve(
    SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic's private data structure */
    SCIP_RESULT*          result,             /**< result data structure */
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
-   SCIP_SOL*             partialsol          /**< partial solutions */
+   SCIP_SOL*             partialsol,         /**< partial solution */
+   SCIP_Bool*            tightened           /**< array to store whether a variable was already tightened */
    )
 {
-   SCIP* subscip;
    SCIP_HASHMAP* varmapf;
    SCIP_VAR** vars;
    SCIP_VAR** subvars = NULL;
-   SCIP_Bool* tightened;
    SCIP_EVENTHDLR* eventhdlr;
    int nvars;
    int i;
@@ -722,51 +748,27 @@ SCIP_RETCODE applyCompletesol(
 
    SCIP_Bool valid;
    SCIP_Bool success;
+   SCIP_RETCODE retcode;
 
    assert(scip != NULL);
+   assert(subscip != NULL);
    assert(heur != NULL);
    assert(heurdata != NULL);
    assert(result != NULL);
    assert(partialsol != NULL);
 
-   *result = SCIP_DIDNOTRUN;
-
-   SCIPdebugMsg(scip, "+---+ Start Completesol heuristic +---+\n");
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &valid) );
-
-   if( ! valid )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* get variable data */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
-   /* get buffer memory and initialize it to FALSE */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &tightened, nvars) );
-
-   SCIP_CALL( SCIPstartProbing(scip) );
-
-   SCIP_CALL( tightenVariables(scip, heurdata, vars, nvars, partialsol, tightened) );
-
-   /* initialize the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
-
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(subscip), nvars) );
-
-   /* allocate memory to align the SCIP and the sub-SCIP variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    eventhdlr = NULL;
    valid = FALSE;
 
    /* copy complete SCIP instance */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapf, NULL, "completesol", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
-   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+   SCIPdebugMsg(scip, "Copying the SCIP instance returned with valid=%d.\n", valid);
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecCompletesol, NULL) );
@@ -775,6 +777,9 @@ SCIP_RETCODE applyCompletesol(
       SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
+
+   /* allocate memory to align the SCIP and the sub-SCIP variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* map all variables */
    for( i = 0; i < nvars; i++ )
@@ -815,6 +820,10 @@ SCIP_RETCODE applyCompletesol(
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsols) );
 
+   /* limit the number of LP iterations */
+   SCIP_CALL( SCIPsetLongintParam(subscip, "lp/iterlim", heurdata->maxlpiter) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "lp/rootiterlim", heurdata->maxlpiter) );
+
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
@@ -854,7 +863,55 @@ SCIP_RETCODE applyCompletesol(
    /* errors in solving the subproblem should not kill the overall solving process;
     * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
-   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+   retcode = SCIPpresolve(subscip);
+
+   /* errors in presolving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPwarningMessage(scip, "Error while presolving subproblem in %s heuristic; sub-SCIP terminated with code <%d>\n", HEUR_NAME, retcode);
+
+      SCIPABORT(); /*lint --e{527}*/
+
+      goto TERMINATE;
+   }
+
+   if( SCIPgetStage(subscip) == SCIP_STAGE_PRESOLVED )
+   {
+      SCIPdebugMsg(scip, "presolved instance has bin=%d, int=%d, cont=%d variables\n",
+            SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip));
+
+      /* check whether the presolved instance is small enough */
+      if( heurdata->maxcontvars >= 0 && SCIPgetNContVars(subscip) > heurdata->maxcontvars )
+      {
+         SCIPdebugMsg(scip, "presolved instance has too many continuous variables (maxcontvars: %d)\n", heurdata->maxcontvars);
+         goto TERMINATE;
+      }
+
+      /* set node limit of 1 if the presolved problem is an LP, otherwise we would start branching if an LP iteration
+       * limit was set by the user.
+       */
+      if( !SCIPisNLPEnabled(subscip) && SCIPgetNContVars(subscip) == SCIPgetNVars(subscip) )
+      {
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
+      }
+
+      retcode = SCIPsolve(subscip);
+
+      /* errors in solving the subproblem should not kill the overall solving process;
+       * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+       */
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPwarningMessage(scip, "Error while solving subproblem in %s heuristic; sub-SCIP terminated with code <%d>\n", HEUR_NAME, retcode);
+
+         SCIPABORT(); /*lint --e{527}*/
+
+         goto TERMINATE;
+      }
+   }
 
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
@@ -879,12 +936,76 @@ SCIP_RETCODE applyCompletesol(
       nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
 
   TERMINATE:
-   /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
-   SCIPfreeBufferArray(scip, &tightened);
+
+   return SCIP_OKAY;
+}
+
+/** main procedure of the completesol heuristic, creates and solves a sub-SCIP */
+static
+SCIP_RETCODE applyCompletesol(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic's private data structure */
+   SCIP_RESULT*          result,             /**< result data structure */
+   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
+   SCIP_SOL*             partialsol          /**< partial solution */
+   )
+{
+   SCIP* subscip;
+   SCIP_VAR** vars;
+   SCIP_Bool* tightened;
+   SCIP_Bool success;
+   SCIP_RETCODE retcode;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(heurdata != NULL);
+   assert(result != NULL);
+   assert(partialsol != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   SCIPdebugMsg(scip, "+---+ Start Completesol heuristic +---+\n");
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   if( !success )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* get variable data */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* get buffer memory and initialize it to FALSE */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &tightened, nvars) );
+
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   SCIP_CALL( tightenVariables(scip, heurdata, vars, nvars, partialsol, tightened, &success) );
+
+   if( !success )
+      goto ENDPROBING;
+
+   /* initialize the subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = setupAndSolve(scip, subscip, heur, heurdata, result, nstallnodes, partialsol, tightened);
+
+   /* free subproblem */
    SCIP_CALL( SCIPfree(&subscip) );
 
+   SCIP_CALL( retcode );
+
+  ENDPROBING:
+   SCIPfreeBufferArray(scip, &tightened);
    SCIP_CALL( SCIPendProbing(scip) );
+
+
 
    return SCIP_OKAY;
 }
@@ -964,6 +1085,14 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
 
    /* do not run after restart */
    if( SCIPgetNRuns(scip) > 1 )
+      return SCIP_OKAY;
+
+   /* check whether we want to run before presolving */
+   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL && !heurdata->beforepresol )
+      return SCIP_OKAY;
+
+   /* only run before root node */
+   if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPgetCurrentNode(scip) != SCIPgetRootNode(scip) )
       return SCIP_OKAY;
 
    /* get variable data and return of no variables are left in the problem */
@@ -1148,7 +1277,7 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/ignorecont",
-         "should solution values for continuous variables be ignored?",
+         "should number of continuous variables be ignored?",
          &heurdata->ignorecont, FALSE, DEFAULT_IGNORECONT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/solutions",
@@ -1158,6 +1287,19 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxproprounds",
          "maximal number of iterations in propagation (-1: no limit)",
          &heurdata->maxproprounds, FALSE, DEFAULT_MAXPROPROUNDS, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/beforepresol",
+         "should the heuristic run before presolving?",
+         &heurdata->beforepresol, FALSE, DEFAULT_BEFOREPRESOL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxlpiter",
+         "maximal number of LP iterations (-1: no limit)",
+         &heurdata->maxlpiter, FALSE, DEFAULT_MAXLPITER, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcontvars",
+         "maximal number of continuous variables after presolving",
+         &heurdata->maxcontvars, FALSE, DEFAULT_MAXCONTVARS, -1, INT_MAX, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

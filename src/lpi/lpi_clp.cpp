@@ -204,9 +204,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != 0);
@@ -220,9 +220,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != 0);
@@ -310,7 +310,7 @@ void setFastmipClpParameters(
 {
    lpi->fastmip = TRUE;
 
-   /** Perturbation:
+   /* Perturbation:
     *  50  - switch on perturbation
     *  100 - auto perturb if takes too long (1.0e-6 largest nonzero)
     *  101 - we are perturbed
@@ -322,7 +322,7 @@ void setFastmipClpParameters(
     */
    lpi->clp->setPerturbation(50);
 
-   /** Special options description from ClpModell.hpp:
+   /* Special options description from ClpModell.hpp:
     *       1 - Don't keep changing infeasibility weight
     *       2 - Keep nonLinearCost round solves
     *       4 - Force outgoing variables to exact bound (primal)
@@ -598,6 +598,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
 
    assert(lpi != 0);
@@ -659,6 +667,14 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or 0 if nnonz == 0 */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
    assert(lpi != 0);
@@ -802,6 +818,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or 0 if nnonz == 0 */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
    assert(lpi != 0);
@@ -820,8 +844,16 @@ SCIP_RETCODE SCIPlpiAddRows(
    int* mybeg = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &mybeg, nrows + 1) );
 
-   if ( nnonz != 0 )
+   if ( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      int ncols = lpi->clp->getNumCols();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+#endif
+
+
       // copy beg-array
       BMScopyMemoryArray( mybeg, beg, nrows);
       mybeg[nrows] = nnonz;   // add additional entry at end
@@ -1338,7 +1370,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or 0 */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or 0 */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or 0 */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or 0 */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or 0 */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or 0 */
    )
 {
@@ -1405,7 +1437,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or 0 */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or 0 */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or 0 */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or 0 */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or 0 */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or 0 */
    )
 {
@@ -1679,7 +1711,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       lpi->validFactorization = false;
    }
 
-   /** startFinishOptions - bits
+   /*  startFinishOptions - bits
     *  1 - do not delete work areas and factorization at end
     *  2 - use old factorization if same number of rows
     *  4 - skip as much initialization of work areas as possible (work in progress)
@@ -1690,7 +1722,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    if ( lpi->validFactorization )
       startFinishOptions = startFinishOptions | 2;
 
-   /** Primal algorithm */
+   /* Primal algorithm */
    int status = lpi->clp->primal(0, startFinishOptions);
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
@@ -1754,7 +1786,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       lpi->validFactorization = false;
    }
 
-   /** startFinishOptions - bits
+   /*  startFinishOptions - bits
     *  1 - do not delete work areas and factorization at end
     *  2 - use old factorization if same number of rows
     *  4 - skip as much initialization of work areas as possible (work in progress)
@@ -1765,7 +1797,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    if ( lpi->validFactorization )
       startFinishOptions = startFinishOptions | 2;
 
-   /** Dual algorithm */
+   /* Dual algorithm */
    int status = lpi->clp->dual(0, startFinishOptions);
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
@@ -1799,8 +1831,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
-   SCIP_LPI*             lpi,                 /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {
    assert(lpi != 0);
@@ -1907,7 +1939,7 @@ SCIP_RETCODE lpiStrongbranch(
    // store special options for later reset
    int specialoptions = clp->specialOptions();
 
-   /** Clp special options:
+   /* Clp special options:
     *       1 - Don't keep changing infeasibility weight
     *       2 - Keep nonLinearCost round solves
     *       4 - Force outgoing variables to exact bound (primal)
@@ -1965,7 +1997,7 @@ SCIP_RETCODE lpiStrongbranch(
    *down = EPSCEIL(psol - 1.0, 1e-06);
    *up   = EPSFLOOR(psol + 1.0, 1e-06);
 
-   /** For strong branching.  On input lower and upper are new bounds while
+   /*  For strong branching.  On input lower and upper are new bounds while
     *  on output they are change in objective function values (>1.0e50
     *  infeasible).  Return code is
     *   0 if nothing interesting,
@@ -2071,7 +2103,7 @@ SCIP_RETCODE lpiStrongbranches(
    // store special options for later reset
    int specialoptions = clp->specialOptions();
 
-   /** Clp special options:
+   /* Clp special options:
     *       1 - Don't keep changing infeasibility weight
     *       2 - Keep nonLinearCost round solves
     *       4 - Force outgoing variables to exact bound (primal)
@@ -2137,7 +2169,7 @@ SCIP_RETCODE lpiStrongbranches(
       upvalid[j] = TRUE;
    }
 
-   /** For strong branching.  On input lower and upper are new bounds while
+   /*  For strong branching.  On input lower and upper are new bounds while
     *  on output they are change in objective function values (>1.0e50
     *  infeasible).  Return code is
     *   0 if nothing interesting,
@@ -2723,7 +2755,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(lpi->clp != 0);
    assert(ray != 0);
 
-   /** Unbounded ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
+   /* Unbounded ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
    const double* clpray = lpi->clp->unboundedRay();
 
    if ( clpray == 0 )
@@ -2748,7 +2780,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(lpi->clp != 0);
    assert(dualfarkas != 0);
 
-   /** Infeasibility ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
+   /* Infeasibility ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
    const double* dualray = lpi->clp->infeasibilityRay();
 
    if ( dualray == 0 )
@@ -2996,7 +3028,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   /** Whats changed since last solve.
+   /* Whats changed since last solve.
     *  Is only used when startFinishOptions used in dual or primal.
     * Bit 1 - number of rows/columns has not changed (so work arrays valid)
     *     2 - matrix has not changed
@@ -3062,7 +3094,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 }
 
 
-/** get dense row of inverse basis matrix B^-1
+/** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -3097,7 +3129,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 }
 
 
-/** get dense column of inverse basis matrix B^-1
+/** get column of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -3135,7 +3167,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+/** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -3170,7 +3202,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -3260,10 +3292,10 @@ SCIP_RETCODE SCIPlpiGetState(
  */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   BMS_BLKMEM*           /*blkmem*/,         /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
-{
+{  /* lint --e{715} */
    int lpncols;
    int lpnrows;
    int i;
@@ -3356,13 +3388,13 @@ SCIP_Bool SCIPlpiHasStateBasis(
 
 /** reads LP state (like basis information) from a file */
 SCIP_RETCODE SCIPlpiReadState(
-   SCIP_LPI*             lpi,            /**< LP interface structure */
-   const char*           fname           /**< file name */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
 
-   /** Read a basis from the given filename,
+   /*  Read a basis from the given filename,
     *  returns -1 on file error, 0 if no values, 1 if values
     */
    if ( lpi->clp->readBasis(fname) < 0 )
@@ -3373,13 +3405,13 @@ SCIP_RETCODE SCIPlpiReadState(
 
 /** writes LP state (like basis information) to a file */
 SCIP_RETCODE SCIPlpiWriteState(
-   SCIP_LPI*             lpi,            /**< LP interface structure */
-   const char*           fname           /**< file name */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
 
-   /** Write the basis in MPS format to the specified file.
+   /*  Write the basis in MPS format to the specified file.
     *  If writeValues true, writes values of structurals
     *  (and adds VALUES to end of NAME card)
     *
@@ -3577,7 +3609,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       return SCIP_LPERROR; /*lint !e527*/
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
-      /** Amount of print out:
+      /*  Amount of print out:
        *  0 - none
        *  1 - just final
        *  2 - just factorizations
@@ -3630,19 +3662,13 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = lpi->clp->dualTolerance();
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
-      /**@todo add BARRIERCONVTOL parameter */
+      /* @todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 *dval = lpi->clp->primalObjectiveLimit();
+   case SCIP_LPPAR_OBJLIM:
+      if ( lpi->clp->optimizationDirection() > 0 )
+	 *dval = lpi->clp->primalObjectiveLimit();   // minimization
       else
-	 *dval = lpi->clp->dualObjectiveLimit();
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 *dval = lpi->clp->dualObjectiveLimit();
-      else
-	 *dval = lpi->clp->primalObjectiveLimit();
+	 *dval = lpi->clp->dualObjectiveLimit();     // maximization
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->clp->maximumSeconds();
@@ -3675,19 +3701,13 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->clp->setDualTolerance(dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
-      /**@todo add BARRIERCONVTOL parameter */
+      /* @todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 lpi->clp->setPrimalObjectiveLimit(dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( lpi->clp->optimizationDirection() > 0 )
+	 lpi->clp->setPrimalObjectiveLimit(dval);   // minimization
       else
-	 lpi->clp->setDualObjectiveLimit(dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 lpi->clp->setDualObjectiveLimit(dval);
-      else
-	 lpi->clp->setPrimalObjectiveLimit(dval);
+	 lpi->clp->setDualObjectiveLimit(dval);     // maximization
       break;
    case SCIP_LPPAR_LPTILIM:
       lpi->clp->setMaximumSeconds(dval);
@@ -3713,9 +3733,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 
 /** returns value treated as infinity in the LP solver */
 SCIP_Real SCIPlpiInfinity(
-   SCIP_LPI*             /*lpi*/             /**< LP interface structure */
+   SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{  /* lint --e{715} */
    SCIPdebugMessage("calling SCIPlpiInfinity()\n");
 
    return COIN_DBL_MAX;
@@ -3724,10 +3744,10 @@ SCIP_Real SCIPlpiInfinity(
 
 /** checks if given value is treated as infinity in the LP solver */
 SCIP_Bool SCIPlpiIsInfinity(
-   SCIP_LPI*             /*lpi*/,            /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Real             val                 /**< value to check */
    )
-{
+{  /* lint --e{715} */
    SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
 
    return (val >= COIN_DBL_MAX);
@@ -3778,7 +3798,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    if ( !fileExists(fname) )
       return SCIP_NOFILE;
 
-   /** read file in MPS format
+   /* read file in MPS format
     * parameters:
     * filename
     * bool keepNames
@@ -3801,7 +3821,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   /** write file in MPS format
+   /*  write file in MPS format
     *  parameters:
     *  filename
     *  int formatType  (0 - normal, 1 - extra accuracy, 2 - IEEE hex)

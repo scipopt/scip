@@ -210,9 +210,9 @@ SCIP_RETCODE addNodesInformation(
          /* allocate additional memory to hold new node */
          if( depthinfo->nminnodes == depthinfo->minnodescapacity )
          {
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &depthinfo->minnodes, depthinfo->minnodescapacity, \
-                  2 * depthinfo->minnodescapacity) ); /*lint !e647*/
+            int oldcapacity = depthinfo->minnodescapacity;
             depthinfo->minnodescapacity *= 2;
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &depthinfo->minnodes, oldcapacity, depthinfo->minnodescapacity) );
          }
 
          /* find correct insert position */
@@ -876,8 +876,7 @@ SCIP_RETCODE changeParametersUsingSettingsFiles(
       case SOLVINGPHASE_UNINITIALIZED:
       default:
          SCIPdebugMsg(scip, "Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
-         SCIPABORT();
-         break;
+         return SCIP_INVALIDCALL;
    }
 
    assert(paramfilename != NULL);

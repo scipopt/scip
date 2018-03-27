@@ -232,6 +232,7 @@ struct SCIP_Row
    int                   lpdepth;            /**< depth level at which row entered the LP, or -1 if not in current LP */
    int                   minidx;             /**< minimal column index of row entries */
    int                   maxidx;             /**< maximal column index of row entries */
+   int                   numintcols;         /**< number of integral columns */
    int                   nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
@@ -271,7 +272,7 @@ struct SCIP_Lp
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
-   SCIP_Real             lpiuobjlim;         /**< current upper objective limit in LPI */
+   SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
@@ -293,6 +294,7 @@ struct SCIP_Lp
    SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
    SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
+   SCIP_Longint          divenolddomchgs;    /**< number of domain changes before diving has started */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
@@ -327,6 +329,7 @@ struct SCIP_Lp
    int                   lpitiming;          /**< current timing type in LPI */
    int                   lpirandomseed;      /**< current initial random seed in LPI */
    int                   lpiscaling;         /**< current SCALING setting in LPI */
+   int                   lpirefactorinterval;/**< current refactorization interval */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
@@ -371,6 +374,7 @@ struct SCIP_Lp
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
    SCIP_Bool             lpihaspolishing;    /**< does the LPI support solution polishing? */
+   SCIP_Bool             lpihasrefactor;     /**< does the LPI support changing the refactorization interval? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */

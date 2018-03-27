@@ -39,13 +39,18 @@
  * - a problem reader, which parses the problem out of a .stp file
  *   (reader_stp.c)
  * - a (global) problem data structure, containing all necessary information including the graph, which creates the model within \SCIP (probdata_stp.c)
- * - a construction heuristic (heur_tm.c)
- * - an improvment heuristic (heur_local.c)
+ * - shortest path based construction heuristics (heur_tm.c)
+ * - reduction based construction heuristics (heur_prune.c, heur_ascendprune, heur_slackprune)
+ * - improvment heuristics (heur_local.c)
  * - a recombination heuristic (heur_rec.c)
- * - a, by default deactivated, pricer, which generates new variables/columns during the search (pricer_stp.c)
+ * - basic reduction techniques (reduce_simple.c)
+ * - alternative-based reduction techniques (reduce_alt.c)
+ * - bound-based reduction techniques (reduce_bnd.c)
  * - a constraint handler, which checks solutions for feasibility and separates any violated model constraints (cons_stp.c)
  * - a propagator, which attempts to fix (edge) variables to zero utilizing their reduced costs (prop_stp.c)
  * - an event handler, which simply writes each incumbent solution to a file -- if activated (event_bestsol.c)
+ *
+ *
  *
  * In the following the problem is introduced and the solving process is delineated. Furthermore, the two main plugins are
  * sketched.
@@ -55,6 +60,10 @@
  * -# \ref CONS "Separating violated constraints"
  * -# \ref MAKEFILE "The Makefile"
  *
+ * Compiling the STP application
+ * -----------------------------
+ *
+ * See the @ref INSTALL "Install file"
  */
 
 /**@page PROBLEM Problem description and solving approach
@@ -139,8 +148,8 @@
  *
  * -hop-honstrained directed Steiner tree problems.
  *
- * A far more intricate description of SCIP-Jack and its various components can be found in
- * "A generic approach to solving the Steiner tree problem and variants" by D. Rehfeldt.
+ * A more detailed description of SCIP-Jack and its various components can be found in
+ * "SCIP-Jack – A solver for STP and variants with parallelization extensions" by Gerald Gamrath et. al.
  */
 
 

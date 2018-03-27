@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_stuffing.h
+ * @ingroup PRESOLVERS
  * @brief  fix singleton continuous variables
  * @author Dieter Weninger
  *

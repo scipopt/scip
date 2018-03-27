@@ -71,7 +71,7 @@ BEGIN {
    printrounded = 0;             # output rounded average values for integral values
    printmediantime = 0;          # output median time
    printstdtime = 0;             # output standard devation time
-   namelength = 18;              # maximal length of instance names (can be increased)
+   namelength = 35;              # maximal length of instance names (can be increased)
 
    skipfails = 0;                # if true: the script will proceed, even if some permutations failed
 				 # if false: if one permutation failed, the whole instance will be ignored

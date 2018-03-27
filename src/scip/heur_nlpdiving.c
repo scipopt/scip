@@ -1237,32 +1237,25 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-
-/** solves subproblem and passes best feasible solution to original SCIP instance */
+/** todo setup and solve the subMIP */
 static
-SCIP_RETCODE solveSubMIP(
-   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+SCIP_RETCODE doSolveSubMIP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< NLP diving subscip */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_VAR**            covervars,          /**< variables in the cover, should be fixed locally */
    int                   ncovervars,         /**< number of variables in the cover */
    SCIP_Bool*            success             /**< pointer to store whether a solution was found */
    )
 {
-   SCIP* subscip;
    SCIP_HASHMAP* varmap;
    SCIP_SOL** subsols;
-   SCIP_RETCODE retcode;
    int c;
    int nsubsols;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
-
-   if( !(*success) )
-      return SCIP_OKAY;
-
-   /* create subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
+   assert(subscip != NULL);
+   assert(scip != NULL);
+   assert(heur != NULL);
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPgetNVars(scip)) );
@@ -1321,10 +1314,14 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* enable conflict analysis and restrict conflict pool */
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
@@ -1357,18 +1354,7 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( SCIPsetObjlimit(subscip, cutoffbound) );
    }
 
-   retcode = SCIPsolve(subscip);
-
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in " HEUR_NAME " heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-   }
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* check, whether a solution was found;
     * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
@@ -1380,9 +1366,42 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( createNewSol(scip, subscip, heur, varmap, subsols[c], success) );
    }
 
-   /* free sub-SCIP and hash map */
-   SCIP_CALL( SCIPfree(&subscip) );
    SCIPhashmapFree(&varmap);
+
+   return SCIP_OKAY;
+}
+
+
+/** solves subproblem and passes best feasible solution to original SCIP instance */
+static
+SCIP_RETCODE solveSubMIP(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_VAR**            covervars,          /**< variables in the cover, should be fixed locally */
+   int                   ncovervars,         /**< number of variables in the cover */
+   SCIP_Bool*            success             /**< pointer to store whether a solution was found */
+   )
+{
+   SCIP* subscip;
+
+   SCIP_RETCODE retcode;
+
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
+
+   if( !(*success) )
+      return SCIP_OKAY;
+
+   /* create subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = doSolveSubMIP(scip, subscip, heur, covervars, ncovervars, success);
+
+   /* free sub-SCIP even if an error occurred during the subscip solve */
+   SCIP_CALL( SCIPfree(&subscip) );
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -1508,7 +1527,7 @@ SCIP_DECL_HEURINIT(heurInitNlpdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
 
    /* initialize data */
    heurdata->nnlpiterations = 0;
@@ -1539,7 +1558,7 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -1604,6 +1623,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    SCIP_Real oldobjval;
    SCIP_Real fixquot;
    SCIP_Real bestboundval;
+   SCIP_Real timelim;
    SCIP_Bool bestcandmayround;
    SCIP_Bool bestcandroundup;
    SCIP_Bool nlperror;
@@ -1720,6 +1740,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, &origiterlim) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, maxnnlpiterations - heurdata->nnlpiterations) );
 
+   /* set time limit for NLP solver */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
+   if( !SCIPisInfinity(scip, timelim) )
+      timelim -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
+
    /* set whether NLP solver should fail fast */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, &origfastfail) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, (int)heurdata->nlpfastfail) );
@@ -1739,10 +1765,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       /* update iteration count */
       if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
       {
-         SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+         SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
          SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
          heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-         SCIPnlpStatisticsFree(&nlpstatistics);
+         SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
       }
 
       nlpsolstat = SCIPgetNLPSolstat(scip);
@@ -1809,6 +1835,16 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
       return SCIP_OKAY;
    }
+
+   /* for guided diving: don't dive, if no feasible solutions exist */
+   if( heurdata->varselrule == 'g' && SCIPgetNSols(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* for guided diving: get best solution that should guide the search; if this solution lives in the original variable space,
+    * we cannot use it since it might violate the global bounds of the current problem
+    */
+   if( heurdata->varselrule == 'g' && SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
+      return SCIP_OKAY;
 
    nlpstartsol = NULL;
    assert(nlpcandsfrac != NULL);
@@ -1883,7 +1919,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       /* compute cover */
       ncovervars = -1;
       SCIP_CALL( SCIPallocBufferArray(scip, &covervars, SCIPgetNVars(scip)) );
-      if( memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 && timelimit > 0.0 )
+      if( memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 && timelimit > 0.05 )
       {
          SCIP_CALL( SCIPcomputeCoverUndercover(scip, &ncovervars, covervars, timelimit, memorylimit, SCIPinfinity(scip), FALSE, FALSE, FALSE, 'u', &covercomputed) );
       }
@@ -1935,15 +1971,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    /* store a copy of the best solution, if guided diving should be used */
    if( heurdata->varselrule == 'g' )
    {
-      /* don't dive, if no feasible solutions exist */
-      if( SCIPgetNSols(scip) == 0 )
-         return SCIP_OKAY;
-
-      /* get best solution that should guide the search; if this solution lives in the original variable space,
-       * we cannot use it since it might violate the global bounds of the current problem
-       */
-      if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
-         return SCIP_OKAY;
+      assert(SCIPgetNSols(scip) > 0);
+      assert(!SCIPsolIsOriginal(SCIPgetBestSol(scip)));
 
       SCIP_CALL( SCIPcreateSolCopy(scip, &bestsol, SCIPgetBestSol(scip)) );
    }
@@ -2404,6 +2433,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             /* set iteration limit, allow at least MINNLPITER many iterations */
             SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER)) );
 
+            /* set time limit for NLP solver */
+            SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
+            if( !SCIPisInfinity(scip, timelim) )
+               timelim = MAX(0.0, timelim-SCIPgetSolvingTime(scip));/*lint !e666*/
+            SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
+
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
             if( heurdata->nlpstart != 'n' && backtracked )
             {
@@ -2430,10 +2465,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             }
 
             /* update iteration count */
-            SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+            SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
             SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
             heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-            SCIPnlpStatisticsFree(&nlpstatistics);
+            SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
 
             /* get NLP solution status, objective value, and fractional variables, that should be integral */
             nlpsolstat = SCIPgetNLPSolstat(scip);

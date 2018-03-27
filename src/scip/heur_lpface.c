@@ -454,6 +454,8 @@ SCIP_RETCODE setSubscipLimits(
    SCIP_Real memorylimit;
    SCIP_Longint nodelimit;
 
+   *success = TRUE;
+
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
@@ -545,10 +547,14 @@ SCIP_RETCODE setSubscipParameters(
       SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
 
-   /* enable conflict analysis and restrict conflict pool */
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
@@ -747,6 +753,225 @@ SCIP_DECL_EVENTEXEC(eventExecLpface)
    return SCIP_OKAY;
 }
 
+/** setup and solve the subproblem and catch the return code */
+static
+SCIP_RETCODE setupSubscipLpface(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristics data */
+   SCIP_VAR**            subvars,            /**< subproblem's variables */
+   SCIP_VAR**            vars,               /**< original problem's variables */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   SCIP_Bool*            keepthisscip,       /**< should the subscip be kept or deleted? */
+   int                   nvars               /**< number of original problem's variables */
+   )
+{
+   SCIP_HASHMAP* varmapfw = NULL;            /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_Bool success;
+   int i;
+
+   assert( subscip != NULL );
+   assert( heurdata!= NULL );
+   assert( vars != NULL );
+
+   /* create the variable hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
+   success = FALSE;
+
+   if( heurdata->uselprows )
+   {
+      char probname[SCIP_MAXSTRLEN];
+
+      /* copy all plugins */
+      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+      /* get name of the original problem and add the string "_lpfacesub" */
+      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
+
+      /* create the subproblem */
+      SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
+
+      /* copy all variables */
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
+
+      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, TRUE, &success) );
+
+      if( heurdata->copycuts )
+      {
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
+      }
+   }
+
+   /* fill subvars array with mapping from original variables and set the objective coefficient to the desired value */
+   for( i = 0; i < nvars; i++ )
+   {
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+      SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
+
+   }
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
+
+   success = FALSE;
+
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+   /* fix variables that are at their bounds and have nonzero reduced costs  */
+   SCIP_CALL( setupSubproblem(scip, subscip, subvars, heurdata, &success) );
+
+   /* if creation of sub-SCIP was aborted (e.g. due to number of fixings), free sub-SCIP and abort */
+   if( ! success )
+   {
+      *result = SCIP_DIDNOTRUN;
+
+      /* this run will be counted as a failure since no new solution tuple could be generated or the neighborhood of the
+       * solution was not fruitful in the sense that it was too big
+       */
+      updateFailureStatistic(scip, heurdata);
+
+      /* we do not want to keep this SCIP */
+      *keepthisscip = FALSE;
+
+      return SCIP_OKAY;
+   }
+   /* set up sub-SCIP parameters */
+   SCIP_CALL( setSubscipParameters(scip, subscip) );
+
+   return SCIP_OKAY;
+}
+
+/** setup and solve the subproblem and catch the return code */
+static
+SCIP_RETCODE solveSubscipLpface(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SCIP_HEUR*            heur,               /**< mutation heuristic */
+   SCIP_HEURDATA*        heurdata,           /**< heuristics data */
+   SCIP_VAR**            subvars,            /**< subproblem's variables */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   SCIP_Real             focusnodelb,        /**< lower bound of the focus node */
+   SCIP_Bool*            keepthisscip        /**< should the subscip be kept or deleted? */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_Bool success;
+   int i;
+
+   assert( scip != NULL );
+   assert( subscip != NULL );
+   assert( heur != NULL );
+   assert( heurdata != NULL );
+   assert( subvars != NULL );
+
+   /* create event handler for LP events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLpface, NULL) );
+   if( eventhdlr == NULL )
+   {
+      SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* determine node, memory, and time limits for the sub-SCIP. Both node and time limit change with every call to
+    * the heuristic
+    */
+   SCIP_CALL( setSubscipLimits(scip, subscip, heur, heurdata, &success) );
+
+   /* if we did not succeed to set the limits of the subscip to let it run, we won't keep it any longer */
+   if( !success )
+   {
+      *keepthisscip = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+   /* catch LP events of sub-SCIP */
+   SCIP_CALL( SCIPtransformProb(subscip) );
+   SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
+
+#ifdef WRITELPFACEPROB
+   {
+      char probfilename[] = "./lpface_prob.mps";
+      char paramfilename[] = "./lpface_prob.set";
+      SCIPinfoMessage(scip, NULL, "Writing problem and parameters to file: <%s> <%s>\n", probfilename, paramfilename);
+      SCIP_CALL( SCIPwriteOrigProblem(subscip, probfilename, NULL, FALSE) );
+      SCIP_CALL( SCIPwriteParams(subscip, paramfilename, TRUE, TRUE) );
+   }
+#endif
+
+   /* we must not be infeasible at this stage */
+   assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE);
+
+   /* solve the subproblem */
+   SCIPdebugMsg(scip, "Solve Lpface subMIP\n");
+   SCIPdebug(
+      SCIP_CALL( subscipGetInfo(scip, subscip) );
+   )
+
+   /* Errors in solving the subproblem should not kill the overall solving process.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+
+   /* save useful information regarding the subscip runs */
+   heurdata->usednodes += SCIPgetNNodes(subscip);
+   heurdata->submipnlpiters += SCIPgetNLPIterations(subscip);
+   heurdata->submippresoltime += SCIPgetPresolvingTime(subscip);
+   heurdata->submipstatus = SCIPgetStatus(subscip);
+
+   /* store the focus node lower bound as infeasible to avoid running on this face again */
+   if( heurdata->submipstatus == SCIP_STATUS_INFEASIBLE )
+   {
+      heurdata->lastlpobjinfeas = focusnodelb;
+      *keepthisscip = FALSE;
+   }
+   else if( SCIPgetNSols(subscip) > 0 )
+   {
+      SCIP_SOL** subsols;
+      int nsubsols;
+      int solindex;
+
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one is accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      success = FALSE;
+      solindex = -1;
+      for( i = 0; i < nsubsols && !success; ++i )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &solindex, &success) );
+      }
+
+      /* we found an optimal solution and are done. Thus, we free the subscip immediately */
+      if( success )
+      {
+         *keepthisscip = FALSE;
+         *result = SCIP_FOUNDSOL;
+      }
+
+      /* if solution could not be added to problem => run is counted as a failure */
+      if( ! success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
+         updateFailureStatistic(scip, heurdata);
+   }
+   else
+   {
+      /* if no new solution was found, run was a failure */
+      updateFailureStatistic(scip, heurdata);
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of primal heuristic
  */
@@ -892,25 +1117,18 @@ SCIP_DECL_HEUREXIT(heurExitLpface)
 static
 SCIP_DECL_HEUREXEC(heurExecLpface)
 {  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;                  /* primal heuristic data */
-   SCIP* subscip = NULL;                     /* the subproblem created by lpface */
-   SCIP_HASHMAP* varmapfw = NULL;            /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_EVENTHDLR* eventhdlr = NULL;         /* event handler for LP events */
-
-   SCIP_VAR** vars;                          /* original problem's variables */
-   SCIP_VAR** subvars;                      /* subproblem's variables */
-
+   SCIP* subscip;                            /* the subproblem created by lpface       */
+   SCIP_HEURDATA* heurdata;                  /* primal heuristic data                  */
+   SCIP_VAR** vars;                          /* original problem's variables           */
+   SCIP_VAR** subvars;                       /* subproblem's variables                 */
+   SCIP_RETCODE retcode;
+   SCIP_Bool keepthisscip;
    SCIP_Real focusnodelb;
    SCIP_Real rootlb;
-   SCIP_Bool success;
-   SCIP_Bool keepthisscip;
-
-   SCIP_Longint nodelimit;                   /* node limit for the subproblem */
-
+   SCIP_Longint nodelimit;                   /* node limit for the subproblem          */
    int nvars;                                /* number of original problem's variables */
    int nbinvars;
    int nintvars;
-   int i;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -1042,6 +1260,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
    }
 
+
    /* retrieve the sub-SCIP from the heuristic data structure */
    if( heurdata->subscipdata->subscip != NULL )
    {
@@ -1059,184 +1278,26 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       assert(heurdata->subscipdata->subscip == NULL);
       SCIPdebugMsg(scip, "Creating new sub-Problem for LP face heuristic\n");
 
-      /* initialize the subproblem */
-      SCIP_CALL( SCIPcreate(&subscip) );
-
-      /* create the variable hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
-      success = FALSE;
-
-      eventhdlr = NULL;
-
-      if( heurdata->uselprows )
-      {
-         char probname[SCIP_MAXSTRLEN];
-
-         /* copy all plugins */
-         SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-         /* get name of the original problem and add the string "_lpfacesub" */
-         (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
-
-         /* create the subproblem */
-         SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
-
-         /* copy all variables */
-         SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
-
-         SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, TRUE, &success) );
-
-         if( heurdata->copycuts )
-         {
-            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
-         }
-      }
-
       /* allocate memory to hold sub-SCIP variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
-      /* fill subvars array with mapping from original variables and set the objective coefficient to the desired value */
-      for( i = 0; i < nvars; i++ )
-      {
-         subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      /* initialize the subproblem */
+      SCIP_CALL( SCIPcreate(&subscip) );
 
-         SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
+      retcode = setupSubscipLpface(scip, subscip, heurdata, subvars, vars, result, &keepthisscip, nvars);
 
-      }
-      /* free hash map */
-      SCIPhashmapFree(&varmapfw);
+      SCIP_CALL( retcode );
 
-      success = FALSE;
-
-      /* disable output to console */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-      /* create event handler for LP events */
-      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLpface, NULL) );
-      if( eventhdlr == NULL )
-      {
-         SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
-
-      /* fix variables that are at their bounds and have nonzero reduced costs  */
-      SCIP_CALL( setupSubproblem(scip, subscip, subvars, heurdata, &success) );
-
-      /* if creation of sub-SCIP was aborted (e.g. due to number of fixings), free sub-SCIP and abort */
-      if( ! success )
-      {
-         *result = SCIP_DIDNOTRUN;
-
-         /* this run will be counted as a failure since no new solution tuple could be generated or the neighborhood of the
-          * solution was not fruitful in the sense that it was too big
-          */
-         updateFailureStatistic(scip, heurdata);
-
-         /* we do not want to keep this SCIP */
-         keepthisscip = FALSE;
-
+      if( *result == SCIP_DIDNOTRUN )
          goto TERMINATE;
-      }
-
-      /* set up sub-SCIP parameters */
-      SCIP_CALL( setSubscipParameters(scip, subscip) );
    }
 
-   /* determine node, memory, and time limits for the sub-SCIP. Both node and time limit change with every call to
-    * the heuristic
-    */
-   SCIP_CALL( setSubscipLimits(scip, subscip, heur, heurdata, &success) );
+   retcode = solveSubscipLpface(scip, subscip, heur, heurdata, subvars, result, focusnodelb, &keepthisscip);
 
-   /* if we did not succeed to set the limits of the subscip to let it run, we won't keep it any longer */
-   if( !success )
-   {
-      keepthisscip = FALSE;
-      goto TERMINATE;
-   }
+   SCIP_CALL( retcode );
 
-   /* catch LP events of sub-SCIP */
-   SCIP_CALL( SCIPtransformProb(subscip) );
-   SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
-
-#ifdef WRITELPFACEPROB
-   {
-      char probfilename[] = "./lpface_prob.mps";
-      char paramfilename[] = "./lpface_prob.set";
-      SCIPinfoMessage(scip, NULL, "Writing problem and parameters to file: <%s> <%s>\n", probfilename, paramfilename);
-      SCIP_CALL( SCIPwriteOrigProblem(subscip, probfilename, NULL, FALSE) );
-      SCIP_CALL( SCIPwriteParams(subscip, paramfilename, TRUE, TRUE) );
-   }
-#endif
-
-   /* we must not be infeasible at this stage */
-   assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE);
-
-   /* solve the subproblem */
-   SCIPdebugMsg(scip, "Solve Lpface subMIP\n");
-   SCIPdebug(
-      SCIP_CALL( subscipGetInfo(scip, subscip) );
-   )
-
-   /* Errors in solving the subproblem should not kill the overall solving process.
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
-   SCIP_CALL_ABORT( SCIPsolve(subscip) );
-
-   /* print solving statistics of subproblem if we are in SCIP's debug mode */
-   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
-
-   /* save useful information regarding the subscip runs */
-   heurdata->usednodes += SCIPgetNNodes(subscip);
-   heurdata->submipnlpiters += SCIPgetNLPIterations(subscip);
-   heurdata->submippresoltime += SCIPgetPresolvingTime(subscip);
-   heurdata->submipstatus = SCIPgetStatus(subscip);
-
-   /* store the focus node lower bound as infeasible to avoid running on this face again */
-   if( heurdata->submipstatus == SCIP_STATUS_INFEASIBLE )
-   {
-      heurdata->lastlpobjinfeas = focusnodelb;
-      keepthisscip = FALSE;
-   }
-   else if( SCIPgetNSols(subscip) > 0 )
-   {
-      SCIP_SOL** subsols;
-      int nsubsols;
-      int solindex;
-
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one is accepted */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      solindex = -1;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &solindex, &success) );
-      }
-
-      /* we found an optimal solution and are done. Thus, we free the subscip immediately */
-      if( success )
-      {
-         keepthisscip = FALSE;
-         *result = SCIP_FOUNDSOL;
-      }
-
-      /* if solution could not be added to problem => run is counted as a failure */
-      if( ! success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
-         updateFailureStatistic(scip, heurdata);
-   }
-   else
-   {
-      /* if no new solution was found, run was a failure */
-      updateFailureStatistic(scip, heurdata);
-   }
-
- TERMINATE:
-   /* free subproblem at this point or store it for the next run of the heuristic */
+TERMINATE:
+   /* free subproblem or store it for the next run of the heuristic */
    if( ! keepthisscip )
    {
       /* we only allocated buffer memory if no previous subscip was reinstalled */
@@ -1246,9 +1307,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
          SCIP_CALL( SCIPfree(&subscip) );
       }
       else
-      {
          SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
-      }
 
       subscipdataReset(heurdata->subscipdata);
    }

@@ -576,7 +576,8 @@ SCIP_RETCODE applyProbing(
 
          if( localnfixedvars > 0 || localnaggrvars > 0 )
          {
-            SCIPdebugMsg(scip, "probing on <%s> led to %d fixed and %d aggregated variables\n", SCIPvarGetName(vars[i]), localnfixedvars, localnaggrvars);
+            SCIPdebugMsg(scip, "probing on <%s> led to %d fixed and %d aggregated variables\n", SCIPvarGetName(vars[i]),
+               localnfixedvars, localnaggrvars);
             propdata->nuseless = 0;
             propdata->ntotaluseless = 0;
          }
@@ -595,6 +596,7 @@ SCIP_RETCODE applyProbing(
 
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
+            SCIP_VAR** newvars;
             int nnewvars;
             int nnewbinvars;
             int nnewintvars;
@@ -616,7 +618,8 @@ SCIP_RETCODE applyProbing(
 
             /* get new variables */
             nnewvars = SCIPgetNVars(scip);
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &(propdata->sortedvars), SCIPgetVars(scip), nnewvars) );
+            newvars = SCIPgetVars(scip);
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &(propdata->sortedvars), newvars, nnewvars) ); /*lint !e666*/
             propdata->nsortedvars = nnewvars;
 
             nnewbinvars = SCIPgetNBinVars(scip);
@@ -746,8 +749,8 @@ SCIP_DECL_PROPINIT(propInitProbing)
    SCIP_CALL( initPropdata(scip, propdata) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
-      SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
+      DEFAULT_RANDSEED) );
 
 
    return SCIP_OKAY;
@@ -769,7 +772,7 @@ SCIP_DECL_PROPEXIT(propExitProbing)
    assert(propdata->nsortedbinvars == 0);
 
    /* free random number generator */
-   SCIPrandomFree(&propdata->randnumgen);
+   SCIPfreeRandom(scip, &propdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -882,6 +885,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    /* get variable data */
    if( propdata->sortedvars == NULL )
    {
+      SCIP_VAR** vars = SCIPgetVars(scip);
       int lastidx;
       int v;
 
@@ -889,7 +893,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
 
       nvars = SCIPgetNVars(scip);
 
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(propdata->sortedvars), SCIPgetVars(scip), nvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(propdata->sortedvars), vars, nvars) );
       propdata->nsortedvars = nvars;
 
       /* determine implicit binary variables */

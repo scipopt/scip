@@ -373,7 +373,8 @@ SCIP_RETCODE selectShifting(
             continue;
 
          deltaobj = SCIPvarGetObj(var) * (shiftval - solval);
-         if( shiftscore < bestshiftscore || deltaobj < bestdeltaobj )
+         if( (shiftscore < bestshiftscore || deltaobj < bestdeltaobj)
+            && !SCIPisHugeValue(scip, REALABS(shiftval)) ) /* ignore candidates for which shiftval is too large */
          {
             bestshiftscore = shiftscore;
             bestdeltaobj = deltaobj;
@@ -595,8 +596,8 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIPheurSetData(heur, heurdata);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -615,7 +616,7 @@ SCIP_DECL_HEUREXIT(heurExitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);

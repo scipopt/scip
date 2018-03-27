@@ -49,8 +49,7 @@
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
 
-#include <unistd.h>
-
+#define STP_AGG_SYM
 #define CENTER_OK    0           /**< do nothing */
 #define CENTER_DEG   1           /**< find maximum degree */
 #define CENTER_SUM   2           /**< find the minimum distance sum */
@@ -114,7 +113,7 @@ struct SCIP_ProbData
    int                   minelims;           /**< minimal number of eliminations per reduction method */
    SCIP_Bool             emitgraph;          /**< emitgraph */
    SCIP_Bool             copy;               /**< is this the problem data of a copy/sub-MIP? */
-   SCIP_Bool             usecyclecons;        /**< use 2-cycle inequalities for (R)PCSPG? */
+   SCIP_Bool             usecyclecons;       /**< use 2-cycle inequalities for (R)PCSPG? */
    SCIP_Bool             usesymcons;         /**< use symmetry inequalities for PCSPG and MWCSP? */
    FILE*                 logfile;            /**< logfile for DIMACS challenge */
    FILE**                origlogfile;        /**< pointer to original problem data logfile pointer */
@@ -137,8 +136,8 @@ static
 void updateorgsol(
    GRAPH*                graph,              /**< graph data structure */
    IDX*                  curr,               /**< head of solution edge list */
-   char*                 orgnodes,           /**< array to mark whether a node is part of the original solution */
-   char*                 orgedges,           /**< array to mark whether an edge is part of the original solution */
+   STP_Bool*             orgnodes,           /**< array to mark whether a node is part of the original solution */
+   STP_Bool*             orgedges,           /**< array to mark whether an edge is part of the original solution */
    int*                  nsolnodes,          /**< pointer to store the number of nodes in the original solution */
    int*                  nsoledges           /**< pointer to store the number of edges in the original solution */
 )
@@ -207,7 +206,7 @@ SCIP_RETCODE central_terminal(
    assert(g         != NULL);
    assert(g->layers == 1);
 
-   *central_term = g->source[0];
+   *central_term = g->source;
 
    if( centertype == CENTER_OK )
       return SCIP_OKAY;
@@ -278,7 +277,7 @@ SCIP_RETCODE central_terminal(
          if( sum > maximum )
             maximum = sum;
 
-         if( i == g->source[0] )
+         if( i == g->source )
             oldval = sum;
       }
       else
@@ -298,7 +297,7 @@ SCIP_RETCODE central_terminal(
          if( max > maximum )
             maximum = max;
 
-         if( i == g->source[0] )
+         if( i == g->source )
             oldval = max;
       }
    }
@@ -412,10 +411,15 @@ SCIP_RETCODE probdataFree(
       {
          if( (*probdata)->usesymcons )
          {
-            e = (((*probdata)->realnterms - 1) * (*probdata)->realnterms) / 2;
-            /* release degree constraints */
-            for( t = 0; t < e; ++t)
+#ifdef STP_AGG_SYM
+            e = (*probdata)->realnterms - 1;
+            for( t = 0; t < e; ++t )
                SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizesymcons[t])) );
+#else
+            e = (((*probdata)->realnterms - 1) * (*probdata)->realnterms) / 2;
+            for( t = 0; t < e; ++t )
+               SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizesymcons[t])) );
+#endif
 
             SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizesymcons));
          }
@@ -509,7 +513,7 @@ SCIP_RETCODE probdataPrintGraph(
    for( n = 0; n < graph->knots; n++ )
    {
 
-      if( n == graph->source[0] )
+      if( n == graph->source )
       {
          (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
          SCIPgmlWriteNode(file, (unsigned int) n, label, "rectangle", "#666666", NULL);
@@ -633,15 +637,20 @@ SCIP_RETCODE createPrizeConstraints(
 
    assert(graph != NULL);
 
-   root = graph->source[0];
+   root = graph->source;
    nedges = graph->edges;
 
    SCIPdebugMessage("createPrizeConstraints \n");
 
    if( probdata->usesymcons && graph->stp_type != STP_RPCSPG )
    {
+#ifdef STP_AGG_SYM
+      ro2 = realnterms - 1;
+#else
       ro2 = (realnterms * (realnterms - 1)) / 2;
+#endif
       SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizesymcons), ro2) );
+
       for( r = 0; r < ro2; r++ )
       {
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeSymConstraint%d", r);
@@ -651,7 +660,6 @@ SCIP_RETCODE createPrizeConstraints(
          SCIP_CALL(SCIPaddCons(scip, probdata->prizesymcons[r]));
       }
    }
-
 
    if( graph->stp_type != STP_RPCSPG )
    {
@@ -831,7 +839,7 @@ SCIP_RETCODE createConstraints(
             for( k = 0; k < nnodes; ++k )
             {
                /* if node k is not the root */
-               if( k !=  graph->source[0])
+               if( k !=  graph->source)
                {
                   /* if node k is not the t-th terminal, set RHS = 0 */
                   if( k != probdata->realterms[t] )
@@ -864,7 +872,7 @@ SCIP_RETCODE createConstraints(
 	 for( k = 0; k < nnodes; ++k )
          {
             /* if node k is not the root */
-            if( k != graph->source[0])
+            if( k != graph->source)
 	    {
 	       /* if node k is not a terminal, set RHS = 0 */
 	       if( graph->term[k] != 0 )
@@ -923,7 +931,7 @@ SCIP_RETCODE createVariables(
       int nedges = probdata->nedges;
       int nvars = probdata->nvars;
       int realnterms = probdata->realnterms;
-      int root = graph->source[0];
+      int root = graph->source;
       int nnodes = graph->knots;
       SCIP_Bool objint = SCIPisIntegral(scip, offset);
 
@@ -993,14 +1001,14 @@ SCIP_RETCODE createVariables(
             }
 #endif
 
+	      /* PRIZECOLLECTING STP */
+         if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
+         {
+            int* pseudoterms;
 
-	 /* PRIZECOLLECTING STP */
-    if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RPCSPG )
-	 {
-	    int head;
-	    int* pseudoterms;
+            assert(graph->extended);
 
-	    pseudoterms = NULL;
+            pseudoterms = NULL;
 
             if( probdata->usesymcons )
             {
@@ -1013,14 +1021,14 @@ SCIP_RETCODE createVariables(
             {
                for( e = 0; e < nedges; e++ )
                {
-                  head = graph->head[e];
-                  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[e], 1.0) );
-                  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[flipedge(e)], 1.0) );
+                  const int head = graph->head[e];
+                  SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[e], 1.0));
+                  SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[flipedge(e)], 1.0));
                   if( root != head )
                   {
                      for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
                      {
-                        SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[a], -1.0) );
+                        SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[a], -1.0));
                      }
                   }
                }
@@ -1028,33 +1036,48 @@ SCIP_RETCODE createVariables(
 
             for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
             {
-               head = graph->head[e];
+               const int head = graph->head[e];
                if( !Is_term(graph->term[head]) )
                {
-                  if( graph->stp_type != STP_RPCSPG )
-                     SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0) );
+                  SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0));
+
+                  assert(graph->prize != NULL);
 
                   /* variables are preferred to be branched on */
-                  SCIP_CALL( SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10) );
+                  SCIP_CALL( SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10 + (int)(10.0 * graph->prize[head])) );
+
                   if( probdata->usesymcons )
                   {
-                     if( graph->stp_type != STP_RPCSPG )
+                     assert(pseudoterms != NULL);
+
+                     pseudoterms[t] = head;
+#ifdef STP_AGG_SYM
+                     /* skip the last term */
+                     if( t == graph->terms - 2 )
                      {
-                        assert(pseudoterms != NULL);
-
-                        pseudoterms[t] = head;
-                        for( k = 0; k < t; k++ )
-                        {
-                           for( a = graph->inpbeg[pseudoterms[k]]; a != EAT_LAST; a = graph->ieat[a] )
-                           {
-                              SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[a]) );
-                           }
-
-                           SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[e]) );
-                           k2++;
-                        }
-                        t++;
+                        assert(t == probdata->realnterms - 1);
+                        continue;
                      }
+
+                     for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
+                        SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[t], probdata->edgevars[a]) );
+
+                     for( int prev = 0; prev < t; prev++ )
+                        SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[prev], probdata->edgevars[e]) );
+
+#else
+                     for( k = 0; k < t; k++ )
+                     {
+                        for( a = graph->inpbeg[pseudoterms[k]]; a != EAT_LAST; a = graph->ieat[a] )
+                        {
+                           SCIP_CALL(SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[a]));
+                        }
+
+                        SCIP_CALL(SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[e]));
+                        k2++;
+                     }
+#endif
+                     t++;
                   }
                }
             }
@@ -1365,7 +1388,11 @@ SCIP_DECL_PROBCOPY(probcopyStp)
 
             if( sourcedata->usesymcons && sourcedata->stp_type != STP_RPCSPG )
             {
+#ifdef STP_AGG_SYM
+               v = sourcedata->realnterms - 1;
+#else
                v = ((sourcedata->realnterms - 1) * sourcedata->realnterms ) / 2;
+#endif
                SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, v) );
                for( c = v - 1; c >= 0; --c )
                {
@@ -1674,15 +1701,15 @@ SCIP_DECL_PROBTRANS(probtransStp)
       {
          (*targetdata)->edgecons = NULL;
          (*targetdata)->pathcons = NULL;
-	 if( sourcedata->stp_type == STP_DCSTP )
-	 {
-	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->degcons, sourcedata->nnodes) );
+
+	      if( sourcedata->stp_type == STP_DCSTP )
+	      {
+	         SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->degcons, sourcedata->nnodes) );
             SCIP_CALL( SCIPtransformConss(scip, sourcedata->nnodes, sourcedata->degcons, (*targetdata)->degcons) );
-	 }
+	      }
 
-	 if( sourcedata->stp_type == STP_PCSPG || sourcedata->stp_type == STP_RPCSPG || sourcedata->stp_type == STP_MWCSP )
-	 {
-
+         if( sourcedata->stp_type == STP_PCSPG || sourcedata->stp_type == STP_MWCSP )
+         {
 #if FLOWB
             SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowbcons, sourcedata->nnonterms) );
             SCIP_CALL( SCIPtransformConss(scip, sourcedata->nnonterms, sourcedata->flowbcons, (*targetdata)->flowbcons) );
@@ -1694,18 +1721,18 @@ SCIP_DECL_PROBTRANS(probtransStp)
                SCIP_CALL( SCIPtransformConss(scip, sourcedata->nedges, sourcedata->prizecyclecons, (*targetdata)->prizecyclecons) );
             }
 
-	    if( sourcedata->stp_type != STP_RPCSPG )
-	    {
-               if( sourcedata->usesymcons )
-               {
-                  i = ((sourcedata->realnterms - 1) * (sourcedata->realnterms)) / 2;
-                  SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, i) );
-                  SCIP_CALL( SCIPtransformConss(scip, i, sourcedata->prizesymcons, (*targetdata)->prizesymcons) );
-               }
-               SCIP_CALL( SCIPtransformCons(scip, sourcedata->prizecons, &(*targetdata)->prizecons) );
-	    }
-
-	 }
+            if( sourcedata->usesymcons )
+            {
+#ifdef STP_AGG_SYM
+               i = sourcedata->realnterms - 1;
+#else
+               i = ((sourcedata->realnterms - 1) * (sourcedata->realnterms)) / 2;
+#endif
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizesymcons, i) );
+               SCIP_CALL( SCIPtransformConss(scip, i, sourcedata->prizesymcons, (*targetdata)->prizesymcons) );
+            }
+            SCIP_CALL( SCIPtransformCons(scip, sourcedata->prizecons, &(*targetdata)->prizecons) );
+         }
 
       }
       /* Price or Flow mode */
@@ -1978,6 +2005,16 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/bound/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zeroobj/freq", -1) );
 
+   /* TODO for SCIP stuff should be disabled for other variants */
+   if( graph->stp_type == STP_DHCSTP )
+   {
+      SCIP_CALL(SCIPsetIntParam(scip, "constraints/knapsack/propfreq", -1));
+      SCIP_CALL(SCIPsetIntParam(scip, "constraints/logicor/propfreq", -1));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/flowcover/freq", -1));
+      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/locks/freq", -1));
+      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
+   }
+
    SCIPprobdataWriteLogLine(scip, "SECTION Comment\n");
    SCIPprobdataWriteLogLine(scip, "Name %s\n", filename);
 
@@ -2031,7 +2068,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
    SCIPprobdataWriteLogLine(scip, "Problem %s\n", probtype);
    SCIPprobdataWriteLogLine(scip, "Program SCIP-Jack\n");
-   SCIPprobdataWriteLogLine(scip, "Version 0.1\n");
+   SCIPprobdataWriteLogLine(scip, "Version %s\n", VERSION_SCIPJACK);
    SCIPprobdataWriteLogLine(scip, "End\n");
    SCIPprobdataWriteLogLine(scip, "\n");
    SCIPprobdataWriteLogLine(scip, "SECTION Solutions\n");
@@ -2061,7 +2098,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* select a root node */
    if( compcentral != CENTER_DEG && !pc && !mw && !rpc && graph->stp_type != STP_DHCSTP && graph->stp_type != STP_SAP && graph->stp_type != STP_RMWCSP )
-      SCIP_CALL( central_terminal(scip, graph, &(graph->source[0]), compcentral) );
+      SCIP_CALL( central_terminal(scip, graph, &(graph->source), compcentral) );
 
    /* print the graph */
    if( print )
@@ -2078,34 +2115,24 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 
    /* save original root */
-   graph->orgsource = graph->source[0];
+   graph->orgsource = graph->source;
 
    probdata->norgedges = graph->edges;
 
    /* presolving */
-   SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims) );
+   SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims, TRUE) );
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, TRUE) );
 
    graph = packedgraph;
    probdata->graph = graph;
    probdata->stp_type = graph->stp_type;
 
-#if 1
-   if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)  )
+   if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS) )
    {
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 1));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/flowcover/maxroundsroot", 3));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/cmir/maxroundsroot", 1));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
    }
-#else
-   SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/freq", -1));
-   SCIP_CALL(SCIPsetIntParam(scip, "separating/flowcover/freq", -1));
-   SCIP_CALL(SCIPsetIntParam(scip, "separating/cmir/freq", -1));
-   SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/freq", -1));
-#endif
-
-   SCIP_CALL(SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1));
 
    if( mw )
    {
@@ -2115,33 +2142,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* update type for MWCSP (might be RMWCSP now) */
    mw = (graph->stp_type == STP_MWCSP);
-
-#if 0 //heur info output (bad hack)
-   SCIP_Real lb;
-   FILE *fptr;
-   probdata->offset = presolinfo.fixed + offset;
-   SCIP_CALL( graph_path_init(scip, graph) );
-   if( pc || mw )
-   {
-      SCIP_CALL( SCIPdualAscentPcStp(scip, graph, NULL, &lb, FALSE, TRUE, 1) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPdualAscentStp(scip, graph, NULL, NULL, &lb, FALSE, TRUE, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
-   }
-
-   fptr=fopen("redStats.txt","a");
-
-   assert(fptr!=NULL);
-
-   if( mw )
-   fprintf(fptr,"%f  %f  %f \n", (- probdata->offset - lb), SCIPgetReadingTime(scip), SCIPgetTotalTime (scip) );
-   else
-   fprintf(fptr,"%f  %f  %f %f %s\n", lb, SCIPgetReadingTime(scip), SCIPgetTotalTime (scip), offset, filename);
-
-   fclose(fptr);
-   return SCIP_ERROR;
-#endif
 
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
 
@@ -2154,10 +2154,12 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    if( symcons == CONS_ALWAYS )
       probdata->usesymcons = TRUE;
-   else if( symcons == CONS_SPECIFIC && (0.5 * (graph->terms - 1) * graph->terms) <= SYM_CONS_LIMIT )
+   else if( symcons == CONS_SPECIFIC && graph->terms <= SYM_CONS_LIMIT )
       probdata->usesymcons = TRUE;
    else
       probdata->usesymcons = FALSE;
+
+   probdata->usesymcons = probdata->usesymcons && (mw || pc);
 
    if( probdata->usesymcons  )
       SCIPdebugMessage("USE SYM CONS: %d \n", (int) (0.5 * (graph->terms - 1) * graph->terms));
@@ -2230,7 +2232,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->nterms = graph->terms;
       probdata->nlayers = graph->layers;
 
-      assert(Is_term(graph->term[graph->source[0]]));
+      assert(Is_term(graph->term[graph->source]));
 
       /* compute the real number of terminals (nterm-1 iff root is a terminal) */
       realnterms = graph->terms - 1;
@@ -2241,7 +2243,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       t = 0;
       for( k = 0; k < nnodes; ++k )
       {
-         if( graph->term[k] == 0 && k != graph->source[0] )
+         if( graph->term[k] == 0 && k != graph->source )
          {
             probdata->realterms[t] = k;
             SCIPdebugMessage("realterms[%d] = %d \n ", t, probdata->realterms[t]);
@@ -2318,17 +2320,17 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       if( pc || mw )
       {
-         SCIP_CALL( SCIPdualAscentPcStp(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
+         SCIP_CALL( SCIPStpDualAscentPcMw(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
       }
       else
       {
          if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
          {
-            SCIP_CALL( SCIPdualAscentStp(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPdualAscentStp(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
          }
       }
    }
@@ -2476,7 +2478,7 @@ int SCIPprobdataGetRoot(
    graph = probdata->graph;
    assert(graph != NULL);
 
-   return graph->source[0];
+   return graph->source;
 }
 
 /** returns numer of original edges */
@@ -2689,7 +2691,45 @@ SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
    return SCIP_OKAY;
 }
 
+/** writes SPG (no variant!) to a file */
+void SCIPprobdataWriteStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const char*           filename            /**< file name */
+   )
+{
+   FILE *fptr;
 
+   assert(scip != NULL);
+   assert(graph != NULL);
+
+   fptr = fopen(filename, "w");
+   assert(fptr != NULL);
+
+   fprintf(fptr, "33D32945 STP File, STP Format Version 1.0\n");
+   fprintf(fptr, "SECTION Comment\n");
+   fprintf(fptr, "END\n\n");
+   fprintf(fptr, "SECTION Graph\n");
+   fprintf(fptr, "Nodes %d\n", graph->knots);
+   fprintf(fptr, "Edges %d\n", graph->edges);
+
+   for( int e = 0; e < graph->edges; e += 2 )
+      fprintf(fptr, "E %d %d %f\n", graph->tail[e] + 1, graph->head[e] + 1, graph->cost[e]);
+   fprintf(fptr, "END\n\n");
+
+   fprintf(fptr, "SECTION Terminals\n");
+   fprintf(fptr, "Terminals %d\n", graph->terms);
+
+   for( int k = 0; k < graph->knots; k++ )
+      if( Is_term(graph->term[k]) )
+         fprintf(fptr, "T %d\n", k + 1);
+
+   fprintf(fptr, "END\n\n");
+
+   fprintf(fptr, "EOF\n");
+
+   fclose(fptr);
+}
 
 /** writes the best solution to a file */
 SCIP_RETCODE SCIPprobdataWriteSolution(
@@ -2709,8 +2749,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    int  norgnodes;
    int  nsolnodes;
    int  nsoledges;
-   char* orgedges;
-   char* orgnodes;
+   STP_Bool* orgedges;
+   STP_Bool* orgnodes;
 
    assert(scip != NULL);
 
@@ -2768,7 +2808,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       SCIP_CALL( SCIPallocBufferArray(scip, &edgeancestor, 2 * nsoledges) );
 
       /* initialize new graph */
-      SCIP_CALL( graph_init(scip, &solgraph, nsolnodes, 2 * nsoledges, 1, 0) );
+      SCIP_CALL( graph_init(scip, &solgraph, nsolnodes, 2 * nsoledges, 1) );
 
       /* add vertices to new graph */
       for( k = 0; k < norgnodes; k++ )
@@ -2788,7 +2828,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       assert(nodechild[solgraph->orgsource] >= 0);
 
       /* set root of new graph */
-      solgraph->source[0] = nodechild[graph->orgsource];
+      solgraph->source = nodechild[graph->orgsource];
 
       /* add edges to new graph */
       for( e = 0; e < norgedges; e++ )
@@ -2814,8 +2854,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          orgnodes[k] = FALSE;
 
       SCIP_CALL( SCIPqueueCreate(&queue, nsolnodes, 1.1) );
-      SCIP_CALL( SCIPqueueInsert(queue, &(solgraph->source[0])) );
-      solgraph->mark[solgraph->source[0]] = FALSE;
+      SCIP_CALL( SCIPqueueInsert(queue, &(solgraph->source)) );
+      solgraph->mark[solgraph->source] = FALSE;
 
       nsolnodes = 1;
 
@@ -2967,7 +3007,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       || graph->stp_type == STP_RPCSPG )
    {
       int root;
-      root = graph->source[0];
+      root = graph->source;
       assert(root >= 0);
 
       for( e = 0; e <= graph->edges; e++ )
@@ -3172,7 +3212,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
       for( e = 0; e < graph->knots; e++ )
          graph->mark[e] = 1;
-      graph_path_exec(scip, graph, FSP_MODE, graph->source[0], edgecost, path);
+      graph_path_exec(scip, graph, FSP_MODE, graph->source, edgecost, path);
 
       /* create and add path variables (Price mode) or set the flow variables (Flow mode) */
       for( t = 0; t < realnterms; ++t )
@@ -3193,7 +3233,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          tail = probdata->realterms[t];
 
          /* walk from terminal t to the root */
-         while( tail != graph->source[0] )
+         while( tail != graph->source )
          {
             if( !probdata->bigt )
             {
@@ -3275,7 +3315,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          for( k = 0; k < graph->knots; ++k )
          {
             /* is the kth node a terminal other than the root? */
-            if( Is_term(graph->term[k]) && k != graph->source[0] )
+            if( Is_term(graph->term[k]) && k != graph->source )
             {
                int origterm;
                int edge1 = graph->inpbeg[k];
@@ -3406,7 +3446,7 @@ SCIP_RETCODE SCIPprobdataPrintGraph2(
    m = 0;
    for( n = 0; n < graph->knots; ++n )
    {
-      if( n == graph->source[0] )
+      if( n == graph->source )
       {
          (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
 	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);

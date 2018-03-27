@@ -471,7 +471,7 @@ SCIP_RETCODE execConcsolver(
 }
 
 /** start solving in parallel using the given set of concurrent solvers */
-SCIP_RETCODE SCIPsolveConcurrent(
+SCIP_RETCODE SCIPconcurrentSolve(
    SCIP*                 scip                /**< pointer to scip datastructure */
    )
 {
