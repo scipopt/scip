@@ -64,16 +64,18 @@ int SCIPvarGetNLocksUp(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets number of conflict locks for rounding down */
+/** gets number of locks for rounding up of a special type */
 EXTERN
-int SCIPvarGetNConflictLocksDown(
-   SCIP_VAR*             var                 /**< problem variable */
+int SCIPvarGetNLocksUpType(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype            /**< type of variable locks */
    );
 
-/** gets number of conflict locks for rounding up */
+/** gets number of locks for rounding down of a special type */
 EXTERN
-int SCIPvarGetNConflictLocksUp(
-   SCIP_VAR*             var                 /**< problem variable */
+int SCIPvarGetNLocksDownType(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype            /**< type of variable locks */
    );
 
 /** is it possible, to round variable down and stay feasible? */

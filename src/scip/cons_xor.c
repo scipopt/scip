@@ -151,10 +151,10 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   assert(!SCIPconsIsConflictLocked(cons));
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
 
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -167,10 +167,10 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   assert(!SCIPconsIsConflictLocked(cons));
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
 
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1180,8 +1180,8 @@ SCIP_RETCODE addExtendedFlowFormulation(
          SCIP_CALL( SCIPaddVar(scip, varns) );
 
          /* need to lock variables, because we aggregate them */
-         SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
-         SCIP_CALL( SCIPlockVarCons(scip, varns, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+         SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, TRUE, TRUE) );
+         SCIP_CALL( SCIPlockVarCons(scip, varns, cons, TRUE, TRUE) );
 
          /* aggregate ns variable with original variable */
          SCIP_CALL( SCIPaggregateVars(scip, varns, consdata->vars[0], 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
@@ -1205,8 +1205,8 @@ SCIP_RETCODE addExtendedFlowFormulation(
                SCIP_CALL( SCIPaddVar(scip, varss) );
 
                /* need to lock variables, because we aggregate them */
-               SCIP_CALL( SCIPlockVarCons(scip, varns, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
-               SCIP_CALL( SCIPlockVarCons(scip, varss, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, varns, cons, TRUE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, varss, cons, TRUE, TRUE) );
 
                /* aggregate ns variable with original variable */
                SCIP_CALL( SCIPaggregateVars(scip, varns, consdata->vars[i], 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
@@ -1226,8 +1226,8 @@ SCIP_RETCODE addExtendedFlowFormulation(
                SCIP_CALL( SCIPaddVar(scip, varsn) );
 
                /* need to lock variables, because we aggregate them */
-               SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
-               SCIP_CALL( SCIPlockVarCons(scip, varsn, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, TRUE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, varsn, cons, TRUE, TRUE) );
 
                /* aggregate sn variable with original variable */
                SCIP_CALL( SCIPaggregateVars(scip, varsn, consdata->vars[i], 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
@@ -1255,10 +1255,10 @@ SCIP_RETCODE addExtendedFlowFormulation(
             SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varss) );
 
-            SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
-            SCIP_CALL( SCIPlockVarCons(scip, varns, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
-            SCIP_CALL( SCIPlockVarCons(scip, varsn, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
-            SCIP_CALL( SCIPlockVarCons(scip, varss, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+            SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPlockVarCons(scip, varns, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPlockVarCons(scip, varsn, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPlockVarCons(scip, varss, cons, TRUE, TRUE) );
 
             /* add coupling constraint */
             cnt = 0;
@@ -1485,7 +1485,7 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "p_%s_%d", SCIPconsGetName(cons), i);
       SCIP_CALL( SCIPcreateVar(scip, &artvar, name, lb, ub, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, artvar) );
-      SCIP_CALL( SCIPlockVarCons(scip, artvar, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      SCIP_CALL( SCIPlockVarCons(scip, artvar, cons, TRUE, TRUE) );
 
       /* create constraints */
       if ( i == 0 )
@@ -5197,13 +5197,13 @@ SCIP_DECL_CONSLOCK(consLockXor)
    /* external variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    /* internal variable */
    if( consdata->intvar != NULL )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->intvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

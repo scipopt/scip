@@ -283,49 +283,20 @@ SCIP_RETCODE lockRounding(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool mlocked;
-   SCIP_Bool clocked;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   mlocked = SCIPconsIsLocked(cons);
-   clocked = SCIPconsIsConflictLocked(cons);
-
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      /* rounding in both directions may violate the constraint */
-      if( mlocked )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
-      }
-      if( clocked )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, TRUE, TRUE) );
-      }
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      /* rounding up may violate the constraint */
-      if( mlocked )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
-      }
-      if( clocked )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
-      }
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      /* rounding down may violate the constraint */
-      if( mlocked )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
-      }
-      if( clocked )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, TRUE, FALSE) );
-      }
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -344,49 +315,20 @@ SCIP_RETCODE unlockRounding(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool mlocked;
-   SCIP_Bool clocked;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   mlocked = SCIPconsIsLocked(cons);
-   clocked = SCIPconsIsConflictLocked(cons);
-
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      /* rounding in both directions may violate the constraint */
-      if( mlocked )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
-      }
-      if( clocked )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, TRUE, TRUE) );
-      }
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      /* rounding up may violate the constraint */
-      if( mlocked )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
-      }
-      if( clocked )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
-      }
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      /* rounding down may violate the constraint */
-      if( mlocked )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
-      }
-      if( clocked )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT, TRUE, FALSE) );
-      }
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -861,6 +803,8 @@ SCIP_RETCODE setSetppcType(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Bool locked;
+   int i;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -871,13 +815,15 @@ SCIP_RETCODE setSetppcType(
    SCIPdebugMsg(scip, " -> converting <%s> into setppc type %d\n", SCIPconsGetName(cons), setppctype);
 
    /* remove rounding locks */
-   if( SCIPconsIsLocked(cons) || SCIPconsIsConflictLocked(cons) )
-   {
-      int v;
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
 
-      for( v = 0; v < consdata->nvars; ++v )
+   if( locked )
+   {
+      for( i = 0; i < consdata->nvars; ++i )
       {
-         SCIP_CALL( unlockRounding(scip, cons, consdata->vars[v]) );
+         SCIP_CALL( unlockRounding(scip, cons, consdata->vars[i]) );
       }
    }
 
@@ -904,13 +850,11 @@ SCIP_RETCODE setSetppcType(
    consdata->setppctype = setppctype; /*lint !e641*/
 
    /* reinstall rounding locks again */
-   if( SCIPconsIsLocked(cons) || SCIPconsIsConflictLocked(cons) )
+   if( locked )
    {
-      int v;
-
-      for( v = 0; v < consdata->nvars; ++v )
+      for( i = 0; i < consdata->nvars; ++i )
       {
-         SCIP_CALL( lockRounding(scip, cons, consdata->vars[v]) );
+         SCIP_CALL( lockRounding(scip, cons, consdata->vars[i]) );
       }
    }
 
@@ -8453,7 +8397,7 @@ SCIP_DECL_CONSLOCK(consLockSetppc)
 
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlocksdown, nlocksup) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlocksdown, nlocksup) );
    }
 
    return SCIP_OKAY;

@@ -141,6 +141,7 @@ SECTION: General Questions about SCIP
         <li> <a href="PATHTODOC/CHG7.LINKEXT">Interface changes between SCIP 3.0 and SCIP 3.1</a></li>
         <li> <a href="PATHTODOC/CHG8.LINKEXT">Interface changes between SCIP 3.1 and SCIP 3.2</a></li>
         <li> <a href="PATHTODOC/CHG9.LINKEXT">Interface changes between SCIP 3.2 and SCIP 4.0</a></li>
+        <li> <a href="PATHTODOC/CHG10.LINKEXT">Interface changes between SCIP 4.0 and SCIP 5.0</a></li>
     </ul>
 
     QUESTION: How can I debug in SCIP?
@@ -286,16 +287,32 @@ SECTION: General Questions about SCIP
     LABEL:visualizebranchandbound
     ANSWER:
     <p>
-        Yes, currently there are three tree visualizations supported, the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>,
-        <a href="http://hydraw.zib.de/">HyDraw</a>, and <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>.
-        The first comes with a viewer that has an option to uncover the nodes one-by-one (each time you
-        hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
-        context menu. HyDraw can display a live visualization of the tree using JavaView.
-        GrUMPy is a Python tool that allows to create noninteractive visualizations of the tree in various formats.
+        Here is a list of external tools that can be used to create interactive and noninteractive visualizations in
+        various formats.
     </p>
+    <ul>
+        <li>
+            <a href="http://hydraw.zib.de/">HyDraw</a>
+            can display a live visualization of the tree using JavaView.
+        </li>
+        <li>
+            <a href="http://www.informatik.uni-koeln.de/ls_juenger/vbctool">vbctool</a>
+             comes with a viewer that has an option to uncover the nodes one-by-one (each time you
+            hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
+            context menu.
+        </li>
+        <li>
+            <a href="https://www.uni-due.de/~si203go/#vbc">Vbc2dot</a> is a script that generates a visualization of SCIP's branch-and-bound tree
+            in ps and pdf format. It is written in Ruby and requires dot (graphviz).
+        </li>
+        <li>
+            <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>
+            is a Python tool that allows to create noninteractive visualizations of the tree in various formats.
+        </li>
+    </ul>
     <p>
         For using one of these tools, SCIP lets you define file names <code>set visual vbcfilename somefilename.vbc</code>
-        and <code>set visual bakfilename somefilename.dat</code>. GrUMPy uses BAK files while the other two tools parse
+        and <code>set visual bakfilename somefilename.dat</code>. GrUMPy uses BAK files while the other tools parse
         vbc output.
     </p>
     <p>
@@ -656,6 +673,19 @@ SECTION: Using SCIP included in another source code
         <code>SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 3600) )</code>.
         In the interactive shell, you just enter <code>set limits time 3600</code>.
         For more examples, please have a look into heur_rens.c.
+    </p>
+
+    QUESTION: Is it possible to avoid that the SCIP library overrides my signal handler for interruptions?
+    LABEL: interrupthandler
+    ANSWER:
+    <p>
+        By default, the SCIP library has an internal handler for the handling of the SIGINT signal,
+        which is usually emitted when a user presses CTRL-C during the solution process.
+        In cases where this overrides the signal handling of a surrounding application,
+        this may be undesirable.
+        As a remedy, the parameter misc/catchctrlc can be set to FALSE or the SCIP library can be
+        compiled with the special C compiler flag "-DNO_SIGACTION", both disabling SCIP's internal
+        signal handling.
     </p>
 
 SECTION: Using SCIP as a Branch-Cut-And-Price-Framework

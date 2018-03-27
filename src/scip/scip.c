@@ -1002,6 +1002,9 @@ SCIP_RETCODE SCIPprintStatus(
    case SCIP_STATUS_INFORUNBD:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "infeasible or unbounded");
       break;
+   case SCIP_STATUS_TERMINATE:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "termination signal received");
+      break;
    default:
       SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
       return SCIP_INVALIDDATA;
@@ -2718,7 +2721,6 @@ SCIP_RETCODE SCIPcopyConss(
    nsourceconshdlrs = SCIPgetNConshdlrs(sourcescip);
    sourceconshdlrs = SCIPgetConshdlrs(sourcescip);
    assert(nsourceconshdlrs == 0 || sourceconshdlrs != NULL);
-   assert(SCIPisTransformed(sourcescip));
 
    *valid = TRUE;
 
@@ -3213,8 +3215,6 @@ SCIP_RETCODE SCIPcopyConflicts(
    /* get all conflicts stored in the conflict pool */
    SCIP_CALL( SCIPconflictstoreGetConflicts(sourcescip->conflictstore, sourceconfs, sourceconfssize, &nsourceconfs) );
    assert(nsourceconfs <= sourceconfssize);
-
-   assert(SCIPisTransformed(sourcescip));
 
    /* copy conflicts */
    for( c = 0; c < nsourceconfs; ++c )
@@ -13061,7 +13061,6 @@ SCIP_RETCODE SCIPaddConflict(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(scip->conflictstore != NULL);
-   assert(scip->set->conf_enable);
    assert(conftype != SCIP_CONFTYPE_UNKNOWN);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
@@ -15195,8 +15194,8 @@ SCIP_RETCODE initSolve(
 
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
-   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
-   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing) );
+   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -15350,8 +15349,8 @@ SCIP_RETCODE freeSolve(
    /* free solution process data structures */
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
-   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
-   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing, scip->mem->probmem) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close visualization output file */
@@ -15447,8 +15446,8 @@ SCIP_RETCODE freeReoptSolve(
 
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
-   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
-   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing, scip->mem->probmem) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close visualization output file */
@@ -15613,7 +15612,7 @@ SCIP_RETCODE freeTransform(
       /* unlock all variables */
       for(v = 0; v < scip->transprob->nvars; v++)
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], SCIP_LOCKTYPE_MODEL, -1, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, scip->transprob->vars[v], SCIP_LOCKTYPE_MODEL, -1, -1) );
       }
    }
 
@@ -21640,7 +21639,7 @@ int SCIPgetVarNStrongbranchs(
    return SCIPcolGetNStrongbranchs(SCIPvarGetCol(var));
 }
 
-/** adds given values to lock numbers of variable for rounding
+/** adds given values to lock numbers of type @p locktype of variable for rounding
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -21658,7 +21657,7 @@ int SCIPgetVarNStrongbranchs(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-SCIP_RETCODE SCIPaddVarLocks(
+SCIP_RETCODE SCIPaddVarLocksType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
@@ -21666,7 +21665,7 @@ SCIP_RETCODE SCIPaddVarLocks(
    int                   nlocksup            /**< modification in number of rounding up locks */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddVarLocksType", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -21694,7 +21693,42 @@ SCIP_RETCODE SCIPaddVarLocks(
    }  /*lint !e788*/
 }
 
-/** locks rounding of variable with respect to the lock status of the constraint and its negation;
+/** adds given values to lock numbers of variable for rounding
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note This method will always add variable locks of type model
+ */
+SCIP_RETCODE SCIPaddVarLocks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
+   int                   nlocksdown,         /**< modification in number of rounding down locks */
+   int                   nlocksup            /**< modification in number of rounding up locks */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksdown, nlocksup) );
+
+   return SCIP_OKAY;
+}
+
+/** add locks of variable with respect to the lock status of the constraint and its negation;
  *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
  *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
  *  added or removed
@@ -21717,35 +21751,37 @@ SCIP_RETCODE SCIPlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
    SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
    )
 {
-   int nlocksdown;
-   int nlocksup;
+   int nlocksdown[NLOCKTYPES];
+   int nlocksup[NLOCKTYPES];
+   int i;
 
    SCIP_CALL( checkStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
-   nlocksdown = 0;
-   nlocksup = 0;
-   if( (locktype == SCIP_LOCKTYPE_MODEL && SCIPconsIsLockedPos(cons))
-    || (locktype == SCIP_LOCKTYPE_CONFLICT && SCIPconsIsConflictLockedPos(cons)) )
+   for( i = 0; i < NLOCKTYPES; i++ )
    {
-      if( lockdown )
-         nlocksdown++;
-      if( lockup )
-         nlocksup++;
-   }
-   if( (locktype == SCIP_LOCKTYPE_MODEL && SCIPconsIsLockedNeg(cons))
-    || (locktype == SCIP_LOCKTYPE_CONFLICT && SCIPconsIsConflictLockedNeg(cons)) )
-   {
-      if( lockdown )
-         nlocksup++;
-      if( lockup )
-         nlocksdown++;
+      nlocksdown[i] = 0;
+      nlocksup[i] = 0;
+
+      if( SCIPconsIsLockedTypePos(cons, (SCIP_LOCKTYPE) i) )
+      {
+         if( lockdown )
+            ++nlocksdown[i];
+         if( lockup )
+            ++nlocksup[i];
+      }
+      if( SCIPconsIsLockedTypeNeg(cons, (SCIP_LOCKTYPE) i) )
+      {
+         if( lockdown )
+            ++nlocksup[i];
+         if( lockup )
+            ++nlocksdown[i];
+      }
    }
 
    switch( scip->set->stage )
@@ -21762,7 +21798,13 @@ SCIP_RETCODE SCIPlockVarCons(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, locktype, nlocksdown, nlocksup) );
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         if( nlocksdown[i] == 0 && nlocksup[i] == 0 )
+            continue;
+
+         SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
+      }
       return SCIP_OKAY;
 
    default:
@@ -21771,7 +21813,7 @@ SCIP_RETCODE SCIPlockVarCons(
    }  /*lint !e788*/
 }
 
-/** unlocks rounding of variable with respect to the lock status of the constraint and its negation;
+/** remove locks of type @p locktype of variable with respect to the lock status of the constraint and its negation;
  *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
  *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
  *  added or removed
@@ -21794,37 +21836,38 @@ SCIP_RETCODE SCIPunlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    SCIP_Bool             lockdown,           /**< should the rounding be unlocked in downwards direction? */
    SCIP_Bool             lockup              /**< should the rounding be unlocked in upwards direction? */
    )
 {
-   int nlocksdown;
-   int nlocksup;
+   int nlocksdown[NLOCKTYPES];
+   int nlocksup[NLOCKTYPES];
+   int i;
 
    SCIP_CALL( checkStage(scip, "SCIPunlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
-   nlocksdown = 0;
-   nlocksup = 0;
-   if( (locktype == SCIP_LOCKTYPE_MODEL && SCIPconsIsLockedPos(cons))
-    || (locktype == SCIP_LOCKTYPE_CONFLICT && SCIPconsIsConflictLockedPos(cons)) )
+   for( i = 0; i < NLOCKTYPES; i++ )
    {
-      if( lockdown )
-         nlocksdown++;
-      if( lockup )
-         nlocksup++;
-   }
-   if( (locktype == SCIP_LOCKTYPE_MODEL && SCIPconsIsLockedNeg(cons))
-    || (locktype == SCIP_LOCKTYPE_CONFLICT && SCIPconsIsConflictLockedNeg(cons)) )
-   {
-      if( lockdown )
-         nlocksup++;
-      if( lockup )
-         nlocksdown++;
-   }
+      nlocksdown[i] = 0;
+      nlocksup[i] = 0;
 
+      if( SCIPconsIsLockedTypePos(cons, (SCIP_LOCKTYPE) i) )
+      {
+         if( lockdown )
+            ++nlocksdown[i];
+         if( lockup )
+            ++nlocksup[i];
+      }
+      if( SCIPconsIsLockedTypeNeg(cons, (SCIP_LOCKTYPE) i) )
+      {
+         if( lockdown )
+            ++nlocksup[i];
+         if( lockup )
+            ++nlocksdown[i];
+      }
+   }
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -21838,7 +21881,13 @@ SCIP_RETCODE SCIPunlockVarCons(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, locktype, -nlocksdown, -nlocksup) );
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         if( nlocksdown[i] == 0 && nlocksup[i] == 0 )
+            continue;
+
+         SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, (SCIP_LOCKTYPE)  i, -nlocksdown[i], -nlocksup[i]) );
+      }
       return SCIP_OKAY;
 
    default:
@@ -25885,10 +25934,10 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    return scip->set->presol_donotmultaggr || SCIPvarDoNotMultaggr(var);
 }
 
-/** returns whether dual reduction are allowed during propagation and presolving
+/** returns whether dual reductions are allowed during propagation and presolving
  *
  *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
- *        intact. Often such reductions are based on analyzing the objective function, reduced costs and/or dual LPs.
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
  */
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -28649,7 +28698,7 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
    return SCIP_OKAY;
 }
 
-/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables
+/** adds given values to lock status of type @p locktype of the constraint and updates the rounding locks of the involved variables
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -28665,7 +28714,7 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-SCIP_RETCODE SCIPaddConsLocks(
+SCIP_RETCODE SCIPaddConsLocksType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
@@ -28673,19 +28722,41 @@ SCIP_RETCODE SCIPaddConsLocks(
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
+   SCIP_CALL( checkStage(scip, "SCIPaddConsLocksType", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( SCIPconsAddLocks(cons, scip->set, locktype, nlockspos, nlocksneg) );
+
+   return SCIP_OKAY;
+}
+
+/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note This methods always adds locks of type model
+ */
+SCIP_RETCODE SCIPaddConsLocks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   nlockspos,          /**< increase in number of rounding locks for constraint */
+   int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
+   )
+{
    SCIP_CALL( checkStage(scip, "SCIPaddConsLocks", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
-   switch (locktype) {
-      case SCIP_LOCKTYPE_MODEL:
-         SCIP_CALL( SCIPconsAddLocks(cons, scip->set, nlockspos, nlocksneg) );
-         break;
-      case SCIP_LOCKTYPE_CONFLICT:
-         SCIP_CALL( SCIPconsAddConflictLocks(cons, scip->set, nlockspos, nlocksneg) );
-         break;
-      default:
-         SCIPdebugMessagePrint(scip, "unknown type of rounding locks: %u\n", locktype);
-         return SCIP_INVALIDDATA;
-   }
+   SCIP_CALL( SCIPaddConsLocksType(scip, cons, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
 
    return SCIP_OKAY;
 }
@@ -39492,7 +39563,6 @@ SCIP_RETCODE SCIPprintMIPStart(
    SCIP_Real objvalue;
    SCIP_Bool oldquiet = FALSE;
 
-   assert(SCIPisTransformed(scip) || sol != NULL);
    assert(sol != NULL);
    assert(!SCIPsolIsPartial(sol));
 

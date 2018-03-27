@@ -77,7 +77,8 @@ enum SCIP_BoundchgType
 };
 typedef enum SCIP_BoundchgType SCIP_BOUNDCHGTYPE;
 
-/** bound change type */
+/** types of variable locks */
+#define NLOCKTYPES 2                    /**< number of lock types */
 enum SCIP_LockType
 {
    SCIP_LOCKTYPE_MODEL    = 0,          /**< variable locks for model and check constraints */

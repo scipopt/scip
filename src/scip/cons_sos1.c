@@ -720,7 +720,7 @@ SCIP_RETCODE lockVariableSOS1(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
 
    return SCIP_OKAY;
 }
@@ -739,7 +739,7 @@ SCIP_RETCODE unlockVariableSOS1(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
 
    return SCIP_OKAY;
 }
@@ -2474,6 +2474,9 @@ SCIP_RETCODE updateImplicationGraphSOS1(
 
             newbound = implbound / coef;
 
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
+
             /* check if an implication can be added/updated or assumption x_v != 0 is infeasible */
             if ( lower )
             {
@@ -3059,6 +3062,9 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                newbound = MIN(0, newboundnonzero);
             newbound /= linval;
 
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
+
             /* check if new bound is tighter than the old one or problem is infeasible */
             if ( SCIPisFeasPositive(scip, linval) && SCIPisFeasLT(scip, lb, newbound) )
             {
@@ -3244,7 +3250,6 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          }
          assert( ninftynonzero == 0 || inftynores );
 
-
          /* if computed bound is not infinity and variable is contained in linear constraint */
          if ( ninftynonzero == 0 && v < ntrafolinvars )
          {
@@ -3259,6 +3264,9 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             else
                newbound = MAX(0, newboundnonzero);
             newbound /= linval;
+
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
 
             /* check if new bound is tighter than the old one or problem is infeasible */
             if ( SCIPisFeasPositive(scip, linval) && SCIPisFeasGT(scip, ub, newbound) )
@@ -9760,13 +9768,13 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
       /* if lower bound is negative, rounding down may violate constraint */
       if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, locktype, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
       if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, locktype, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
    }
 

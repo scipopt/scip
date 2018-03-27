@@ -222,6 +222,7 @@
 #define SCIP_DEFAULT_LP_CONDITIONLIMIT     -1.0 /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
 #define SCIP_DEFAULT_LP_CHECKPRIMFEAS      TRUE /**< should LP solutions be checked for primal feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKDUALFEAS      TRUE /**< should LP solutions be checked for dual feasibility to resolve LP at numerical troubles? */
+#define SCIP_DEFAULT_LP_CHECKFARKAS        TRUE /**< should infeasibility proofs from the LP be checked? */
 #define SCIP_DEFAULT_LP_FASTMIP               1 /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING               1 /**< LP scaling (0: none, 1: normal, 2: aggressive) */
 #define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
@@ -394,6 +395,8 @@
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.90 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC       0.1 /**< factor to scale objective parallelism of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC  0.5 /**< factor to scale directed cutoff distance of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_EFFICACYFAC       1.0 /**< factor to scale efficacy of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_INTSUPPORTFAC     0.1 /**< factor to scale integral support of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
@@ -1669,6 +1672,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur?",
          &(*set)->lp_checkdualfeas, TRUE, SCIP_DEFAULT_LP_CHECKDUALFEAS,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "lp/checkfarkas",
+         "should infeasibility proofs from the LP be checked?",
+         &(*set)->lp_checkfarkas, TRUE, SCIP_DEFAULT_LP_CHECKFARKAS,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/fastmip",
          "which FASTMIP setting of LP solver should be used? 0: off, 1: low",
@@ -2257,6 +2265,16 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/objparalfac",
          "factor to scale objective parallelism of cut in separation score calculation",
          &(*set)->sepa_objparalfac, TRUE, SCIP_DEFAULT_SEPA_OBJPARALFAC, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/dircutoffdistfac",
+         "factor to scale directed cutoff distance of cut in score calculation",
+         &(*set)->sepa_dircutoffdistfac, TRUE, SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/efficacyfac",
+         "factor to scale directed cutoff distance of cut in score calculation",
+         &(*set)->sepa_efficacyfac, TRUE, SCIP_DEFAULT_SEPA_EFFICACYFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/intsupportfac",

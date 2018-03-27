@@ -2761,7 +2761,7 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
    for (i = 0; i < nspcons; ++i)
    {
       for (j = 0; j < nblocks; ++j)
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[i][j], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[i][j], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

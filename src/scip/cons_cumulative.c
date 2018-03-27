@@ -1352,6 +1352,7 @@ SCIP_RETCODE setupAndSolveCumulativeSubscip(
       case SCIP_STATUS_TIMELIMIT:
       case SCIP_STATUS_MEMLIMIT:
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
          /* transfer the global bound changes */
          for( v = 0; v < njobs; ++v )
          {
@@ -2148,7 +2149,7 @@ SCIP_RETCODE consdataDeletePos(
       SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[pos]));
 
    /* remove the rounding locks for the deleted variable */
-   SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, consdata->downlocks[pos], consdata->uplocks[pos]) );
+   SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, consdata->downlocks[pos], consdata->uplocks[pos]) );
 
    consdata->downlocks[pos] = FALSE;
    consdata->uplocks[pos] = FALSE;
@@ -10021,7 +10022,7 @@ SCIP_RETCODE presolveConsEst(
             SCIPdebugMsg(scip, "  remove down lock of variable <%s>[%g,%g] with duration <%d>\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration);
 
-            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
             downlocks[v] = FALSE;
             (*nchgsides)++;
 
@@ -10301,7 +10302,7 @@ SCIP_RETCODE presolveConsLct(
             SCIPdebugMsg(scip, "  remove up lock of variable <%s>[%g,%g] with duration <%d>\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration);
 
-            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
             uplocks[v] = FALSE;
             (*nchgsides)++;
 
@@ -10944,8 +10945,8 @@ SCIP_RETCODE reformulateCons(
          consdata->vars[v] = aggrvar;
 
          /* remove and add locks */
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, consdata->downlocks[v], consdata->uplocks[v]) );
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, consdata->downlocks[v], consdata->uplocks[v]) );
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, consdata->downlocks[v], consdata->uplocks[v]) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, consdata->downlocks[v], consdata->uplocks[v]) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &aggrvar) );
 
@@ -13300,8 +13301,7 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
    SCIP_VAR** vars;
    int v;
 
-   SCIPdebugMsg(scip, "lock cumulative constraint <%s> with nlockspos = %d, nlocksneg = %d (type: %u)\n",
-         SCIPconsGetName(cons), nlockspos, nlocksneg, locktype);
+   SCIPdebugMsg(scip, "lock cumulative constraint <%s> with nlockspos = %d, nlocksneg = %d\n", SCIPconsGetName(cons), nlockspos, nlocksneg);
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -13318,15 +13318,15 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
       if( consdata->downlocks[v] && consdata->uplocks[v] )
       {
          /* the integer start variable should not get rounded in both direction  */
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
       }
       else if( consdata->downlocks[v]  )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], locktype, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlockspos, nlocksneg) );
       }
       else if( consdata->uplocks[v] )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], locktype, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlocksneg, nlockspos) );
       }
    }
 

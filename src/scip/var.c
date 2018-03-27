@@ -1870,6 +1870,8 @@ SCIP_RETCODE varCreate(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
+   int i;
+
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
@@ -1950,10 +1952,6 @@ SCIP_RETCODE varCreate(
    (*var)->parentvarssize = 0;
    (*var)->nparentvars = 0;
    (*var)->nuses = 0;
-   (*var)->nlocksdown = 0;
-   (*var)->nlocksup = 0;
-   (*var)->nconflictlocksdown = 0;
-   (*var)->nconflictlocksup = 0;
    (*var)->branchpriority = 0;
    (*var)->branchdirection = SCIP_BRANCHDIR_AUTO; /*lint !e641*/
    (*var)->lbchginfossize = 0;
@@ -1974,6 +1972,12 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
+
+   for( i = 0; i < NLOCKTYPES; i++ )
+   {
+      (*var)->nlocksdown[i] = 0;
+      (*var)->nlocksup[i] = 0;
+   }
 
    stat->nvaridx++;
 
@@ -3034,7 +3038,7 @@ SCIP_RETCODE varEventVarUnlocked(
    SCIP_EVENT* event;
 
    assert(var != NULL);
-   assert(var->nlocksdown <= 1 && var->nlocksup <= 1);
+   assert(var->nlocksdown[SCIP_LOCKTYPE_MODEL] <= 1 && var->nlocksup[SCIP_LOCKTYPE_MODEL] <= 1);
    assert(var->scip == set->scip);
 
    /* issue VARUNLOCKED event on variable */
@@ -3058,10 +3062,8 @@ SCIP_RETCODE SCIPvarAddLocks(
    SCIP_VAR* lockvar;
 
    assert(var != NULL);
-   assert((locktype == SCIP_LOCKTYPE_MODEL && var->nlocksup >= 0)
-         || (locktype == SCIP_LOCKTYPE_CONFLICT && var->nconflictlocksup >= 0));
-   assert((locktype == SCIP_LOCKTYPE_MODEL && var->nlocksdown >= 0)
-         || (locktype == SCIP_LOCKTYPE_CONFLICT && var->nconflictlocksdown >= 0));
+   assert(var->nlocksup[locktype] >= 0);
+   assert(var->nlocksdown[locktype] >= 0);
    assert(var->scip == set->scip);
 
    if( addnlocksdown == 0 && addnlocksup == 0 )
@@ -3069,8 +3071,7 @@ SCIP_RETCODE SCIPvarAddLocks(
 
 #ifdef SCIP_DEBUG
    SCIPsetDebugMsg(set, "add rounding locks %d/%d to variable <%s> (locks=%d/%d, type=%u)\n",
-         addnlocksdown, addnlocksup, var->name, locktype == SCIP_LOCKTYPE_MODEL ? var->nlocksdown : var->nconflictlocksdown,
-         locktype == SCIP_LOCKTYPE_MODEL ? var->nlocksup : var->nconflictlocksup, locktype);
+         addnlocksdown, addnlocksup, var->name, var->nlocksdown[locktype], var->nlocksup[locktype], locktype);
 #endif
 
    lockvar = var;
@@ -3089,58 +3090,27 @@ SCIP_RETCODE SCIPvarAddLocks(
          }
          else
          {
-            switch (locktype) {
-               case SCIP_LOCKTYPE_MODEL:
-                  lockvar->nlocksdown += addnlocksdown;
-                  lockvar->nlocksup += addnlocksup;
+            lockvar->nlocksdown[locktype] += addnlocksdown;
+            lockvar->nlocksup[locktype] += addnlocksup;
 
-                  assert(lockvar->nlocksdown >= 0);
-                  assert(lockvar->nlocksup >= 0);
-
-                  break;
-               case SCIP_LOCKTYPE_CONFLICT:
-                  lockvar->nconflictlocksdown += addnlocksdown;
-                  lockvar->nconflictlocksup += addnlocksup;
-
-                  assert(lockvar->nconflictlocksdown >= 0);
-                  assert(lockvar->nconflictlocksup >= 0);
-
-                  break;
-               default:
-                  SCIPsetDebugMessagePrint(set, "unknown type of rounding locks: %u\n", locktype);
-                  return SCIP_INVALIDDATA;
-            }
+            assert(lockvar->nlocksdown[locktype] >= 0);
+            assert(lockvar->nlocksup[locktype] >= 0);
 
             return SCIP_OKAY;
          }
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_FIXED:
-         switch (locktype) {
-            case SCIP_LOCKTYPE_MODEL:
-               lockvar->nlocksdown += addnlocksdown;
-               lockvar->nlocksup += addnlocksup;
+         lockvar->nlocksdown[locktype] += addnlocksdown;
+         lockvar->nlocksup[locktype] += addnlocksup;
 
-               assert(lockvar->nlocksdown >= 0);
-               assert(lockvar->nlocksup >= 0);
+         assert(lockvar->nlocksdown[locktype] >= 0);
+         assert(lockvar->nlocksup[locktype] >= 0);
 
-               if( lockvar->nlocksdown <= 1 && lockvar->nlocksup <= 1 )
-               {
-                  SCIP_CALL( varEventVarUnlocked(lockvar, blkmem, set, eventqueue) );
-               }
-
-               break;
-            case SCIP_LOCKTYPE_CONFLICT:
-               lockvar->nconflictlocksdown += addnlocksdown;
-               lockvar->nconflictlocksup += addnlocksup;
-
-               assert(lockvar->nconflictlocksdown >= 0);
-               assert(lockvar->nconflictlocksup >= 0);
-
-               break;
-            default:
-               SCIPsetDebugMessagePrint(set, "unknown type of rounding locks: %u\n", locktype);
-               return SCIP_INVALIDDATA;
+         if( locktype == SCIP_LOCKTYPE_MODEL && lockvar->nlocksdown[locktype] <= 1
+            && lockvar->nlocksup[locktype] <= 1 )
+         {
+            SCIP_CALL( varEventVarUnlocked(lockvar, blkmem, set, eventqueue) );
          }
 
          return SCIP_OKAY;
@@ -3197,35 +3167,38 @@ SCIP_RETCODE SCIPvarAddLocks(
    }
 }
 
-/** gets number of locks for rounding down */
-int SCIPvarGetNLocksDown(
-   SCIP_VAR*             var                 /**< problem variable */
+/** gets number of locks for rounding down of a special type */
+int SCIPvarGetNLocksDownType(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype            /**< type of variable locks */
    )
 {
    int nlocks;
    int i;
 
    assert(var != NULL);
-   assert(var->nlocksdown >= 0);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
+   assert(var->nlocksdown[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar != NULL )
-         return SCIPvarGetNLocksDown(var->data.original.transvar);
+         return SCIPvarGetNLocksDownType(var->data.original.transvar, locktype);
       else
-         return var->nlocksdown;
+         return var->nlocksdown[locktype];
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_FIXED:
-      return var->nlocksdown;
+      return var->nlocksdown[locktype];
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNLocksDown(var->data.aggregate.var);
+         return SCIPvarGetNLocksDownType(var->data.aggregate.var, locktype);
       else
-         return SCIPvarGetNLocksUp(var->data.aggregate.var);
+         return SCIPvarGetNLocksUpType(var->data.aggregate.var, locktype);
 
    case SCIP_VARSTATUS_MULTAGGR:
       assert(!var->donotmultaggr);
@@ -3233,9 +3206,9 @@ int SCIPvarGetNLocksDown(
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
          if( var->data.multaggr.scalars[i] > 0.0 )
-            nlocks += SCIPvarGetNLocksDown(var->data.multaggr.vars[i]);
+            nlocks += SCIPvarGetNLocksDownType(var->data.multaggr.vars[i], locktype);
          else
-            nlocks += SCIPvarGetNLocksUp(var->data.multaggr.vars[i]);
+            nlocks += SCIPvarGetNLocksUpType(var->data.multaggr.vars[i], locktype);
       }
       return nlocks;
 
@@ -3243,7 +3216,7 @@ int SCIPvarGetNLocksDown(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      return SCIPvarGetNLocksUp(var->negatedvar);
+      return SCIPvarGetNLocksUpType(var->negatedvar, locktype);
 
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -3252,170 +3225,78 @@ int SCIPvarGetNLocksDown(
    }
 }
 
+/** gets number of locks for rounding up of a special type */
+int SCIPvarGetNLocksUpType(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype            /**< type of variable locks */
+   )
+{
+   int nlocks;
+   int i;
+
+   assert(var != NULL);
+   assert(locktype >= SCIP_LOCKTYPE_MODEL);
+   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
+   assert(var->nlocksup[locktype] >= 0);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar != NULL )
+         return SCIPvarGetNLocksUpType(var->data.original.transvar, locktype);
+      else
+         return var->nlocksup[locktype];
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      return var->nlocksup[locktype];
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetNLocksUpType(var->data.aggregate.var, locktype);
+      else
+         return SCIPvarGetNLocksDownType(var->data.aggregate.var, locktype);
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
+      nlocks = 0;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         if( var->data.multaggr.scalars[i] > 0.0 )
+            nlocks += SCIPvarGetNLocksUpType(var->data.multaggr.vars[i], locktype);
+         else
+            nlocks += SCIPvarGetNLocksDownType(var->data.multaggr.vars[i], locktype);
+      }
+      return nlocks;
+
+   case SCIP_VARSTATUS_NEGATED:
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return SCIPvarGetNLocksDownType(var->negatedvar, locktype);
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return INT_MAX; /*lint !e527*/
+   }
+}
+
+/** gets number of locks for rounding down */
+int SCIPvarGetNLocksDown(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   return SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
+}
 
 /** gets number of locks for rounding up */
 int SCIPvarGetNLocksUp(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   int nlocks;
-   int i;
-
-   assert(var != NULL);
-   assert(var->nlocksup >= 0);
-
-   switch( SCIPvarGetStatus(var) )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar != NULL )
-         return SCIPvarGetNLocksUp(var->data.original.transvar);
-      else
-         return var->nlocksup;
-
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      return var->nlocksup;
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNLocksUp(var->data.aggregate.var);
-      else
-         return SCIPvarGetNLocksDown(var->data.aggregate.var);
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      assert(!var->donotmultaggr);
-      nlocks = 0;
-      for( i = 0; i < var->data.multaggr.nvars; ++i )
-      {
-         if( var->data.multaggr.scalars[i] > 0.0 )
-            nlocks += SCIPvarGetNLocksUp(var->data.multaggr.vars[i]);
-         else
-            nlocks += SCIPvarGetNLocksDown(var->data.multaggr.vars[i]);
-      }
-      return nlocks;
-
-   case SCIP_VARSTATUS_NEGATED:
-      assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
-      assert(var->negatedvar->negatedvar == var);
-      return SCIPvarGetNLocksDown(var->negatedvar);
-
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      SCIPABORT();
-      return INT_MAX; /*lint !e527*/
-   }
-}
-
-/** gets number of conflict locks for rounding down */
-int SCIPvarGetNConflictLocksDown(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   int nlocks;
-   int i;
-
-   assert(var != NULL);
-   assert(var->nconflictlocksdown >= 0);
-
-   switch( SCIPvarGetStatus(var) )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar != NULL )
-         return SCIPvarGetNConflictLocksDown(var->data.original.transvar);
-      else
-         return var->nconflictlocksdown;
-
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      return var->nconflictlocksdown;
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNConflictLocksDown(var->data.aggregate.var);
-      else
-         return SCIPvarGetNConflictLocksUp(var->data.aggregate.var);
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      assert(!var->donotmultaggr);
-      nlocks = 0;
-      for( i = 0; i < var->data.multaggr.nvars; ++i )
-      {
-         if( var->data.multaggr.scalars[i] > 0.0 )
-            nlocks += SCIPvarGetNConflictLocksDown(var->data.multaggr.vars[i]);
-         else
-            nlocks += SCIPvarGetNConflictLocksUp(var->data.multaggr.vars[i]);
-      }
-      return nlocks;
-
-   case SCIP_VARSTATUS_NEGATED:
-      assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
-      assert(var->negatedvar->negatedvar == var);
-      return SCIPvarGetNConflictLocksUp(var->negatedvar);
-
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      SCIPABORT();
-      return INT_MAX; /*lint !e527*/
-   }
-}
-
-/** gets number of conflict locks for rounding up */
-int SCIPvarGetNConflictLocksUp(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   int nlocks;
-   int i;
-
-   assert(var != NULL);
-   assert(var->nconflictlocksup >= 0);
-
-   switch( SCIPvarGetStatus(var) )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar != NULL )
-         return SCIPvarGetNConflictLocksUp(var->data.original.transvar);
-      else
-         return var->nconflictlocksup;
-
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      return var->nconflictlocksup;
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNConflictLocksUp(var->data.aggregate.var);
-      else
-         return SCIPvarGetNConflictLocksDown(var->data.aggregate.var);
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      assert(!var->donotmultaggr);
-      nlocks = 0;
-      for( i = 0; i < var->data.multaggr.nvars; ++i )
-      {
-         if( var->data.multaggr.scalars[i] > 0.0 )
-            nlocks += SCIPvarGetNConflictLocksUp(var->data.multaggr.vars[i]);
-         else
-            nlocks += SCIPvarGetNConflictLocksDown(var->data.multaggr.vars[i]);
-      }
-      return nlocks;
-
-   case SCIP_VARSTATUS_NEGATED:
-      assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
-      assert(var->negatedvar->negatedvar == var);
-      return SCIPvarGetNConflictLocksDown(var->negatedvar);
-
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      SCIPABORT();
-      return INT_MAX; /*lint !e527*/
-   }
+   return SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 }
 
 /** is it possible, to round variable down and stay feasible? */
@@ -3465,6 +3346,8 @@ SCIP_RETCODE SCIPvarTransform(
    }
    else
    {
+      int i;
+
       /* create transformed variable */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "t_%s", origvar->name);
       SCIP_CALL( SCIPvarCreateTransformed(transvar, blkmem, set, stat, name,
@@ -3486,14 +3369,13 @@ SCIP_RETCODE SCIPvarTransform(
       SCIP_CALL( varAddParent(*transvar, blkmem, set, origvar) );
 
       /* copy rounding locks */
-      (*transvar)->nlocksdown = origvar->nlocksdown;
-      (*transvar)->nlocksup = origvar->nlocksup;
-      (*transvar)->nconflictlocksdown = origvar->nconflictlocksdown;
-      (*transvar)->nconflictlocksup = origvar->nconflictlocksup;
-      assert((*transvar)->nlocksdown >= 0);
-      assert((*transvar)->nlocksup >= 0);
-      assert((*transvar)->nconflictlocksdown >= 0);
-      assert((*transvar)->nconflictlocksup >= 0);
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         (*transvar)->nlocksdown[i] = origvar->nlocksdown[i];
+         (*transvar)->nlocksup[i] = origvar->nlocksup[i];
+         assert((*transvar)->nlocksdown[i] >= 0);
+         assert((*transvar)->nlocksup[i] >= 0);
+      }
 
 
       /* copy doNotMultiaggr status */
@@ -4696,10 +4578,8 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_Real branchfactor;
    SCIP_Bool fixed;
    int branchpriority;
-   int nlocksdown;
-   int nlocksup;
-   int nconflictlocksdown;
-   int nconflictlocksup;
+   int nlocksdown[NLOCKTYPES];
+   int nlocksup[NLOCKTYPES];
    int nvbds;
    int i;
    int j;
@@ -4778,14 +4658,14 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lp, eventqueue, 0.0) );
 
    /* unlock all rounding locks */
-   nlocksdown = var->nlocksdown;
-   nlocksup = var->nlocksup;
-   nconflictlocksdown = var->nconflictlocksdown;
-   nconflictlocksup = var->nconflictlocksup;
-   var->nlocksdown = 0;
-   var->nlocksup = 0;
-   var->nconflictlocksdown = 0;
-   var->nconflictlocksup = 0;
+   for( i = 0; i < NLOCKTYPES; i++ )
+   {
+      nlocksdown[i] = var->nlocksdown[i];
+      nlocksup[i] = var->nlocksup[i];
+
+      var->nlocksdown[i] = 0;
+      var->nlocksup[i] = 0;
+   }
 
    /* check, if variable should be used as NEGATED variable of the aggregation variable */
    if( SCIPvarIsBinary(var) && SCIPvarIsBinary(aggvar)
@@ -4824,11 +4704,11 @@ SCIP_RETCODE SCIPvarAggregate(
    /* make aggregated variable a parent of the aggregation variable */
    SCIP_CALL( varAddParent(aggvar, blkmem, set, var) );
 
-   /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
-   SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_MODEL, nlocksdown, nlocksup) );
-
-   /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
-   SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_CONFLICT, nconflictlocksdown, nconflictlocksup) );
+   /* relock the variable, thus increasing the locks of the aggregation variable */
+   for( i = 0; i < NLOCKTYPES; i++ )
+   {
+      SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
+   }
 
    /* move the variable bounds to the aggregation variable:
     *  - add all variable bounds again to the variable, thus adding it to the aggregation variable
@@ -5390,16 +5270,15 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_Real branchfactor;
    int branchpriority;
    SCIP_BRANCHDIR branchdirection;
-   int nlocksdown;
-   int nlocksup;
-   int nconflictlocksdown;
-   int nconflictlocksup;
+   int nlocksdown[NLOCKTYPES];
+   int nlocksup[NLOCKTYPES];
    int v;
    SCIP_Real tmpconstant;
    SCIP_Real tmpscalar;
    int ntmpvars;
    int tmpvarssize;
    int tmprequiredsize;
+   int i;
 
    assert(var != NULL);
    assert(var->scip == set->scip);
@@ -5578,14 +5457,14 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       SCIPlpDecNLoosevars(lp);
 
       /* unlock all rounding locks */
-      nlocksdown = var->nlocksdown;
-      nlocksup = var->nlocksup;
-      nconflictlocksdown = var->nconflictlocksdown;
-      nconflictlocksup = var->nconflictlocksup;
-      var->nlocksdown = 0;
-      var->nlocksup = 0;
-      var->nconflictlocksdown = 0;
-      var->nconflictlocksup = 0;
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         nlocksdown[i] = var->nlocksdown[i];
+         nlocksup[i] = var->nlocksup[i];
+
+         var->nlocksdown[i] = 0;
+         var->nlocksup[i] = 0;
+      }
 
       /* convert variable into multi-aggregated variable */
       var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
@@ -5598,11 +5477,11 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* mark variable to be non-deletable */
       SCIPvarMarkNotDeletable(var);
 
-      /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
-      SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_MODEL, nlocksdown, nlocksup) );
-
-      /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
-      SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_CONFLICT, nconflictlocksdown, nconflictlocksup) );
+      /* relock the variable, thus increasing the locks of the aggregation variables */
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
+      }
 
       /* update flags and branching factors and priorities of aggregation variables;
        * update preferred branching direction of all aggregation variables that don't have a preferred direction yet

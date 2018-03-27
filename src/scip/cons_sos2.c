@@ -223,7 +223,7 @@ SCIP_RETCODE lockVariableSOS2(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
 
    return SCIP_OKAY;
 }
@@ -242,7 +242,7 @@ SCIP_RETCODE unlockVariableSOS2(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
 
    return SCIP_OKAY;
 }
@@ -1970,11 +1970,11 @@ SCIP_DECL_CONSLOCK(consLockSOS2)
 
       /* if lower bound is negative, rounding down may violate constraint */
       if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
-         SCIP_CALL( SCIPaddVarLocks(scip, var, locktype, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
       if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
-         SCIP_CALL( SCIPaddVarLocks(scip, var, locktype, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -x
 
 #
 # Usage:
@@ -11,6 +11,8 @@
 # The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 #
 
+echo "This is jenkins_check_results_benchmark.sh running."
+
 # read from stdin
 i=0
 while read line
@@ -22,6 +24,8 @@ do
 	  ((i++))
   fi
 done < /dev/stdin
+
+export OUTPUTDIR="results/clusterbench$(date +%Y%m%d)"
 
 # build job ids string for sbatch dependency
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")

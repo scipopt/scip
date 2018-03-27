@@ -1450,7 +1450,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
             if( strncmp(SCIPvarGetName(conshdlrdata->allvars[nallvars]), "t_andresultant_", strlen("t_andresultant_")) != 0 )
             {
                /* lock variable to avoid dual reductions */
-               SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->allvars[nallvars], SCIP_LOCKTYPE_MODEL, 1, 1) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, conshdlrdata->allvars[nallvars], SCIP_LOCKTYPE_MODEL, 1, 1) );
             }
 
             nallvars++;
@@ -1503,7 +1503,7 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
          if( strncmp(SCIPvarGetName(conshdlrdata->allvars[v]), "t_andresultant_", strlen("t_andresultant_")) != 0 )
          {
             /* remove the previously added variable locks */
-            SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->allvars[v], SCIP_LOCKTYPE_MODEL, -1, -1) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, conshdlrdata->allvars[v], SCIP_LOCKTYPE_MODEL, -1, -1) );
          }
 
          SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->allvars[v]) );

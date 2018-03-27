@@ -1446,7 +1446,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       /* drop variable event and unlock and release variable */
       SCIP_CALL( dropLhsVarEvents(scip, conshdlrdata->eventhdlr, cons, i) );
-      SCIP_CALL( SCIPunlockVarCons(scip, x, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, TRUE) );
       SCIP_CALL( SCIPreleaseVar(scip, &consdata->vars[i]) );
 
       coef = 1.0;
@@ -1478,7 +1478,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       /* capture and lock new variable, catch variable events */
       SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[i]) );
-      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[i], cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[i], cons, TRUE, TRUE) );
       SCIP_CALL( catchLhsVarEvents(scip, conshdlrdata->eventhdlr, cons, i) );
    }
 
@@ -1492,7 +1492,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
       /* drop variable event and unlock and release variable */
       SCIP_CALL( dropRhsVarEvents(scip, conshdlrdata->eventhdlr, cons) );
       SCIP_CALL( SCIPreleaseVar(scip, &consdata->rhsvar) );
-      SCIP_CALL( SCIPunlockVarCons(scip, x, cons, SCIP_LOCKTYPE_MODEL, consdata->rhscoeff > 0.0, consdata->rhscoeff < 0.0) );
+      SCIP_CALL( SCIPunlockVarCons(scip, x, cons, consdata->rhscoeff > 0.0, consdata->rhscoeff < 0.0) );
 
       coef = 1.0;
       offset = 0.0;
@@ -1516,7 +1516,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
          /* capture and lock new variable, catch variable events */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->rhsvar) );
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->rhsvar, cons, SCIP_LOCKTYPE_MODEL, consdata->rhscoeff > 0.0, consdata->rhscoeff < 0.0) );
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->rhsvar, cons, consdata->rhscoeff > 0.0, consdata->rhscoeff < 0.0) );
          SCIP_CALL( catchRhsVarEvents(scip, conshdlrdata->eventhdlr, cons) );
       }
    }
@@ -4471,14 +4471,8 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       if( printreason )
       {
-         SCIP_Real unscaledviol;
-
-         unscaledviol  = consdata->lhsval;
-         if( !SCIPisInfinity(scip, unscaledviol) )
-            unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
-
          SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
-         SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
+         SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g\n", consdata->violation);
       }
 
       /* if we do linear feasibility shifting, then try to adjust solution */
@@ -4683,13 +4677,13 @@ SCIP_DECL_CONSLOCK(consLockSOC)
    /* Changing variables x_i, i <= n, in both directions can lead to an infeasible solution. */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    /* Rounding x_{n+1} up will not violate a solution. */
    if( consdata->rhsvar != NULL )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->rhsvar, locktype, consdata->rhscoeff > 0.0 ? nlockspos : nlocksneg, consdata->rhscoeff > 0.0 ? nlocksneg : nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->rhsvar, locktype, consdata->rhscoeff > 0.0 ? nlockspos : nlocksneg, consdata->rhscoeff > 0.0 ? nlocksneg : nlockspos) );
    }
 
    return SCIP_OKAY;
