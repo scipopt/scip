@@ -4,6 +4,12 @@ SCIP version NEXT
 performance improvements:
 - cuts generated from certain quadratic constraints with convex feasible region are now global
 
+new parameters:
+- "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+
+deleted files:
+- presol_implfree removed
+
 SCIP version 5.0.2
 =================
 
@@ -24,12 +30,6 @@ fixed bugs:
 
 data structures:
 - expression interpreter objects are now stored in the block memory
-
-new parameters:
-- "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
-
-deleted files:
-- presol_implfree removed
 
 SCIP version 5.0.1
 ==================
