@@ -1261,7 +1261,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             initialisation,   /**< indicates whether the MIP is solved as part of an initalisation */
    SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    )
 {
@@ -1274,7 +1273,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    assert(infeasible != NULL);
 
    (*infeasible) = FALSE;
-   mipchecksolve = FALSE;
 
 
    /* TODO: This should be solved just as an LP, so as a MIP. There is too much overhead with the MIP.
@@ -1303,21 +1301,20 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
       /* if the solve type is for CHECK, then the FEASIBILITY emphasis setting is used. */
       if( type == SCIP_BENDERSENFOTYPE_CHECK )
       {
-         //SCIP_CALL( SCIPsetEmphasis(subproblem, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
-
          SCIP_CALL( SCIPsetHeuristics(subproblem, SCIP_PARAMSETTING_FAST, TRUE) );
 
          /* the number of solution improvements is limited to try and prove feasibility quickly */
          /* NOTE: This should be a parameter */
-         //SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 5) );
+         /* SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 5) ); */
       }
 
       mipchecksolve = TRUE;
    }
    else if( solvemip )
    {
-      /* if the MIP will be solved directly, then the probing mode needs to be skipped. This is done by dropping the
-       * node focus event */
+      /* if the MIP will be solved directly, then the probing mode needs to be skipped.
+       * This is achieved by setting the solvemip flag in the event handler data to TRUE
+       */
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -1334,8 +1331,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
       /* setting the subproblem parameters */
       SCIP_CALL( setSubprobParams(subproblem) );
 
-      //if( type != CHECK )
-         //SCIP_CALL( SCIPsetIntParam(subproblem, "limits/nodes", 0) );
 #ifdef SCIP_MOREDEBUG
       SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
 #endif
@@ -1347,18 +1342,11 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
 
    SCIP_CALL( SCIPsolve(subproblem) );
 
-   /* if the problem is still in the solving stage, then this indicates that the LP needs to be solved for the Benders'
-    * cuts. */
-   assert((SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && (initialisation || mipchecksolve)) ||
-      (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVED && !initialisation));
+   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE || SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL
+      || SCIPgetStatus(subproblem) == SCIP_STATUS_USERINTERRUPT || SCIPgetStatus(subproblem) === SCIP_STATUS_BESTSOLLIMIT)
 
    if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
       (*infeasible) = TRUE;
-   else if( SCIPgetStatus(subproblem) != SCIP_STATUS_OPTIMAL && SCIPgetStatus(subproblem) != SCIP_STATUS_USERINTERRUPT
-      && SCIPgetStatus(subproblem) != SCIP_STATUS_BESTSOLLIMIT )
-      assert(FALSE);
-
-   //SCIP_CALL( SCIPprintStatistics(subprob, NULL) );
 
    /* resetting the subproblem parameters */
    SCIP_CALL( resetOrigSubprobParams(subproblem, origparams) );
