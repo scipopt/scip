@@ -655,6 +655,7 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_RESULT*          result,             /**< result of the pricing process */
    SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
+   SCIP_Bool*            auxviol,            /**< set to TRUE only if the solution is feasible but the aux vars are violated */
    SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
    SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
    )
@@ -679,6 +680,7 @@ SCIP_RETCODE SCIPbendersExec(
    /* start timing */
    SCIPclockStart(benders->bendersclock, set);
 
+   (*auxviol) = FALSE;
    (*infeasible) = FALSE;
 
    /* It is assumed that the problem is optimal, until a subproblem is found not to be optimal. However, not all
@@ -733,7 +735,7 @@ SCIP_RETCODE SCIPbendersExec(
 
    /* allocating memory for the infeasible subproblem array */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &subisinfeas, nsubproblems) );
-   SCIP_CALL( SCIPsetAllocCleanBufferArray(set, subisinfeas) );
+   SCIP_CALL( SCIPsetAllocCleanBufferArray(set, &subisinfeas, nsubproblems) );
 
    /* sets the stored objective function values of the subproblems to infinity */
    resetSubproblemObjectiveValue(benders);
@@ -753,7 +755,7 @@ SCIP_RETCODE SCIPbendersExec(
 
    for( l = 0; l < nsolveloops; l++ )
    {
-      SCIP_BENDERSOLVELOOP solveloop;    /* identifies what problem type is solve in this solve loop */
+      SCIP_BENDERSSOLVELOOP solveloop;    /* identifies what problem type is solve in this solve loop */
 
       if( benders->benderssolvesub != NULL )
          solveloop = SCIP_BENDERSSOLVELOOP_USER;
@@ -910,9 +912,11 @@ SCIP_RETCODE SCIPbendersExec(
       {
          (*result) = SCIP_FEASIBLE;
 
-         /* if the subproblems are not infeasible, but they are also not optimal, then the check return the result of
-          * feasible and the flag of infeasible. */
-         (*infeasible) = !optimal;
+         /* if the subproblems are not infeasible, but they are also not optimal. This means that there is a violation
+          * in the auxiliary variable values. In this case, a feasible result is returned with the auxviol flag set to
+          * TRUE.
+          */
+         (*auxviol) = !optimal;
       }
    }
 #if 0
