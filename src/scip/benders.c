@@ -822,10 +822,10 @@ SCIP_RETCODE SCIPbendersExec(
 
                      /* It is only possible to determine the optimality of a solution within a given subproblem in four
                       * different cases:
-                      * i) loop 0 and the subproblem is an LP.
-                      * ii) loop 0 and only the LP relaxations will be checked.
-                      * iii) loop 0 and the user has defined benderssolvesub (there is only one solve loop in this case)
-                      * iv) loop 1 and the MIP for the subproblem has been solved.
+                      * i) solveloop == SCIP_BENDERSSOLVELOOP_LP and the subproblem is an LP.
+                      * ii) solveloop == SCIP_BENDERSOLVELOOP_LP and only the LP relaxations will be checked.
+                      * iii) solveloop == SCIP_BENDERSSOLVELOOP_USER, since the user has defined a solve function
+                      * iv) solveloop == SCIP_BENDERSSOLVELOOP_CIP and the MIP for the subproblem has been solved.
                       */
                      if( lpsub || onlylpcheck
                         || solveloop == SCIP_BENDERSSOLVELOOP_CIP
