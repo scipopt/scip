@@ -21693,155 +21693,6 @@ SCIP_RETCODE SCIPaddVarLocksType(
    }  /*lint !e788*/
 }
 
-/** add locks of type @p locktype of variable with respect to the lock status of the constraint and its negation;
- *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
- *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
- *  added or removed
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_RETCODE SCIPlockVarConsType(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
-   SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
-   SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
-   )
-{
-   int nlocksdown;
-   int nlocksup;
-
-   SCIP_CALL( checkStage(scip, "SCIPlockVarConsType", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-
-   assert( var->scip == scip );
-
-   nlocksdown = 0;
-   nlocksup = 0;
-   if( SCIPconsIsLockedTypePos(cons, locktype) )
-   {
-      if( lockdown )
-         nlocksdown++;
-      if( lockup )
-         nlocksup++;
-   }
-   if( SCIPconsIsLockedTypeNeg(cons, locktype) )
-   {
-      if( lockdown )
-         nlocksup++;
-      if( lockup )
-         nlocksdown++;
-   }
-
-   switch( scip->set->stage )
-   {
-   case SCIP_STAGE_PROBLEM:
-      assert(!SCIPvarIsTransformed(var));
-      /*lint -fallthrough*/
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, locktype, nlocksdown, nlocksup) );
-      return SCIP_OKAY;
-
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_INVALIDCALL;
-   }  /*lint !e788*/
-}
-
-/** remove locks of type @p locktype of variable with respect to the lock status of the constraint and its negation;
- *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
- *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
- *  added or removed
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_RETCODE SCIPunlockVarConsType(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
-   SCIP_Bool             lockdown,           /**< should the rounding be unlocked in downwards direction? */
-   SCIP_Bool             lockup              /**< should the rounding be unlocked in upwards direction? */
-   )
-{
-   int nlocksdown;
-   int nlocksup;
-
-   SCIP_CALL( checkStage(scip, "SCIPunlockVarConsType", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-
-   assert( var->scip == scip );
-
-   nlocksdown = 0;
-   nlocksup = 0;
-   if( SCIPconsIsLockedTypePos(cons, locktype) )
-   {
-      if( lockdown )
-         nlocksdown++;
-      if( lockup )
-         nlocksup++;
-   }
-   if( SCIPconsIsLockedTypeNeg(cons, locktype) )
-   {
-      if( lockdown )
-         nlocksup++;
-      if( lockup )
-         nlocksdown++;
-   }
-
-   switch( scip->set->stage )
-   {
-   case SCIP_STAGE_PROBLEM:
-      assert(!SCIPvarIsTransformed(var));
-      /*lint -fallthrough*/
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, locktype, -nlocksdown, -nlocksup) );
-      return SCIP_OKAY;
-
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_INVALIDCALL;
-   }  /*lint !e788*/
-}
-
 /** adds given values to lock numbers of variable for rounding
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -21877,7 +21728,7 @@ SCIP_RETCODE SCIPaddVarLocks(
    return SCIP_OKAY;
 }
 
-/** locks rounding of variable with respect to the lock status of the constraint and its negation;
+/** add locks of variable with respect to the lock status of the constraint and its negation;
  *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
  *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
  *  added or removed
@@ -21895,26 +21746,74 @@ SCIP_RETCODE SCIPaddVarLocks(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
- *
- *  @note This method will always add variable locks of type model
  */
 SCIP_RETCODE SCIPlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
    SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
    )
 {
+   int nlocksdown[NLOCKTYPES];
+   int nlocksup[NLOCKTYPES];
+   int i;
+
    SCIP_CALL( checkStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( SCIPlockVarConsType(scip, var, cons, locktype, lockdown, lockup) );
+   assert( var->scip == scip );
 
-   return SCIP_OKAY;
+   for( i = 0; i < NLOCKTYPES; i++ )
+   {
+      nlocksdown[i] = 0;
+      nlocksup[i] = 0;
+
+      if( SCIPconsIsLockedTypePos(cons, (SCIP_LOCKTYPE) i) )
+      {
+         if( lockdown )
+            ++nlocksdown[i];
+         if( lockup )
+            ++nlocksup[i];
+      }
+      if( SCIPconsIsLockedTypeNeg(cons, (SCIP_LOCKTYPE) i) )
+      {
+         if( lockdown )
+            ++nlocksup[i];
+         if( lockup )
+            ++nlocksdown[i];
+      }
+   }
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      /*lint -fallthrough*/
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         if( nlocksdown[i] == 0 && nlocksup[i] == 0 )
+            continue;
+
+         SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
+      }
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
 }
 
-/** unlocks rounding of variable with respect to the lock status of the constraint and its negation;
+/** remove locks of type @p locktype of variable with respect to the lock status of the constraint and its negation;
  *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
  *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
  *  added or removed
@@ -21932,23 +21831,69 @@ SCIP_RETCODE SCIPlockVarCons(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
- *
- *  @note This method will always remove variable locks of type model
  */
 SCIP_RETCODE SCIPunlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    SCIP_Bool             lockdown,           /**< should the rounding be unlocked in downwards direction? */
    SCIP_Bool             lockup              /**< should the rounding be unlocked in upwards direction? */
    )
 {
+   int nlocksdown[NLOCKTYPES];
+   int nlocksup[NLOCKTYPES];
+   int i;
+
    SCIP_CALL( checkStage(scip, "SCIPunlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( SCIPunlockVarConsType(scip, var, cons, locktype, lockdown, lockup) );
+   assert( var->scip == scip );
 
-   return SCIP_OKAY;
+   for( i = 0; i < NLOCKTYPES; i++ )
+   {
+      nlocksdown[i] = 0;
+      nlocksup[i] = 0;
+
+      if( SCIPconsIsLockedTypePos(cons, (SCIP_LOCKTYPE) i) )
+      {
+         if( lockdown )
+            ++nlocksdown[i];
+         if( lockup )
+            ++nlocksup[i];
+      }
+      if( SCIPconsIsLockedTypeNeg(cons, (SCIP_LOCKTYPE) i) )
+      {
+         if( lockdown )
+            ++nlocksup[i];
+         if( lockup )
+            ++nlocksdown[i];
+      }
+   }
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      /*lint -fallthrough*/
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         if( nlocksdown[i] == 0 && nlocksup[i] == 0 )
+            continue;
+
+         SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, (SCIP_LOCKTYPE)  i, -nlocksdown[i], -nlocksup[i]) );
+      }
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
 }
 
 /** changes variable's objective value
@@ -28805,14 +28750,13 @@ SCIP_RETCODE SCIPaddConsLocksType(
 SCIP_RETCODE SCIPaddConsLocks(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    int                   nlockspos,          /**< increase in number of rounding locks for constraint */
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConsLocks", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( SCIPaddConsLocksType(scip, cons, locktype, nlockspos, nlocksneg) );
+   SCIP_CALL( SCIPaddConsLocksType(scip, cons, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
 
    return SCIP_OKAY;
 }

@@ -457,7 +457,7 @@ SCIP_DECL_CONSLOCK(consLockConjunction)
    /* lock sub constraints */
    for( c = 0; c < consdata->nconss; ++c )
    {
-      SCIP_CALL( SCIPaddConsLocks(scip, consdata->conss[c], locktype, nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddConsLocksType(scip, consdata->conss[c], locktype, nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;

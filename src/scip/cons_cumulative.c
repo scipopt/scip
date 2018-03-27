@@ -2149,7 +2149,7 @@ SCIP_RETCODE consdataDeletePos(
       SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[pos]));
 
    /* remove the rounding locks for the deleted variable */
-   SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, consdata->downlocks[pos], consdata->uplocks[pos]) );
+   SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, consdata->downlocks[pos], consdata->uplocks[pos]) );
 
    consdata->downlocks[pos] = FALSE;
    consdata->uplocks[pos] = FALSE;
@@ -10022,7 +10022,7 @@ SCIP_RETCODE presolveConsEst(
             SCIPdebugMsg(scip, "  remove down lock of variable <%s>[%g,%g] with duration <%d>\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration);
 
-            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
+            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
             downlocks[v] = FALSE;
             (*nchgsides)++;
 
@@ -10302,7 +10302,7 @@ SCIP_RETCODE presolveConsLct(
             SCIPdebugMsg(scip, "  remove up lock of variable <%s>[%g,%g] with duration <%d>\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration);
 
-            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
             uplocks[v] = FALSE;
             (*nchgsides)++;
 
@@ -10945,8 +10945,8 @@ SCIP_RETCODE reformulateCons(
          consdata->vars[v] = aggrvar;
 
          /* remove and add locks */
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, consdata->downlocks[v], consdata->uplocks[v]) );
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, consdata->downlocks[v], consdata->uplocks[v]) );
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, consdata->downlocks[v], consdata->uplocks[v]) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, consdata->downlocks[v], consdata->uplocks[v]) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &aggrvar) );
 

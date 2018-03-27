@@ -688,21 +688,21 @@ SCIP_RETCODE presolveFindDuplicates(
                   ( SCIPisInfinity(scip,  consdata1->rhs) && !SCIPisInfinity(scip,  consdata0->rhs)) )
                {
                   SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons1) );
-                  SCIP_CALL( SCIPunlockVarCons(scip, consdata1->x, cons1, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip, consdata1->rhs)) );
+                  SCIP_CALL( SCIPunlockVarCons(scip, consdata1->x, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip, consdata1->rhs)) );
                   if( consdata1->zcoef > 0.0 )
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
+                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
                   else
-                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
+                     SCIP_CALL( SCIPunlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
 
                   consdata1->lhs = MAX(consdata0->lhs, consdata1->lhs);
                   consdata1->rhs = MIN(consdata0->rhs, consdata1->rhs);
 
                   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons1) );
-                  SCIP_CALL( SCIPlockVarCons(scip, consdata1->x, cons1, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip, consdata1->rhs)) );
+                  SCIP_CALL( SCIPlockVarCons(scip, consdata1->x, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip, consdata1->rhs)) );
                   if( consdata1->zcoef > 0.0 )
-                     SCIP_CALL( SCIPlockVarCons(scip, consdata1->z, cons1, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
+                     SCIP_CALL( SCIPlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip, -consdata1->lhs), !SCIPisInfinity(scip,  consdata1->rhs)) );
                   else
-                     SCIP_CALL( SCIPlockVarCons(scip, consdata1->z, cons1, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
+                     SCIP_CALL( SCIPlockVarCons(scip, consdata1->z, cons1, !SCIPisInfinity(scip,  consdata1->rhs), !SCIPisInfinity(scip, -consdata1->lhs)) );
                }
                else
                {
@@ -1770,7 +1770,7 @@ SCIP_RETCODE checkFixedVariables(
       {
          /* we drop here the events for both variables, because if x is replaced by a multiaggregated variable here, then we do not need to catch bound tightenings on z anymore */
          SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
-         SCIP_CALL( SCIPunlockVarCons(scip, consdata->x, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
 
          consdata->x = var;
          if( SCIPvarIsActive(consdata->x) )
@@ -1814,7 +1814,7 @@ SCIP_RETCODE checkFixedVariables(
             /* since we flip both constraint sides and the sign of zcoef, the events catched for z remain the same, so update necessary there */
          }
 
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->x, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
          SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
 
          SCIPdebugPrintCons(scip, cons, NULL);
@@ -1908,9 +1908,9 @@ SCIP_RETCODE checkFixedVariables(
       /* we drop here the events for both variables, because if z is replaced by a multiaggregated variable here, then we do not need to catch bound tightenings on x anymore */
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
       if( consdata->zcoef > 0.0 )
-         SCIP_CALL( SCIPunlockVarCons(scip, consdata->z, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->z, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
       else
-         SCIP_CALL( SCIPunlockVarCons(scip, consdata->z, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->z, cons, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
 
       consdata->z = var;
       if( SCIPvarIsActive(consdata->z) )
@@ -1928,9 +1928,9 @@ SCIP_RETCODE checkFixedVariables(
       consdata->zcoef *= scalar;
 
       if( consdata->zcoef > 0.0 )
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->z, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->z, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip,  consdata->rhs)) );
       else
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->z, cons, SCIP_LOCKTYPE_MODEL, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->z, cons, !SCIPisInfinity(scip,  consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
 
       /* rerun constraint comparison */

@@ -623,29 +623,13 @@ SCIP_RETCODE lockRounding(
 
    if( SCIPisPositive(scip, val) )
    {
-      if( SCIPconsIsLocked(cons) )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL,
-               !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
-      }
-      if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT,
-               !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
-      }
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons,
+         !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
    }
    else
    {
-      if( SCIPconsIsLocked(cons) )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL,
-               !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
-      }
-      if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT,
-               !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
-      }
+      SCIP_CALL( SCIPlockVarCons(scip, var, cons,
+         !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -672,29 +656,13 @@ SCIP_RETCODE unlockRounding(
 
    if( SCIPisPositive(scip, val) )
    {
-      if( SCIPconsIsLocked(cons) )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL,
-               !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
-      }
-      if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT,
-               !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
-      }
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+         !SCIPisInfinity(scip, consdata->rhs)) );
    }
    else
    {
-      if( SCIPconsIsLocked(cons) )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL,
-               !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
-      }
-      if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_CONFLICT,
-               !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
-      }
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPisInfinity(scip, consdata->rhs),
+         !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -3422,77 +3390,6 @@ SCIP_RETCODE consdataSort(
  * local linear constraint handler methods
  */
 
-/** updates rounding locks */
-static
-SCIP_RETCODE updateLocks(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   SCIP_Real             side,               /**< side that should be considered */
-   SCIP_Bool             isrhs,              /**< is the side the right-hand side? */
-   SCIP_LOCKTYPE         locktype            /**< type of locks that should be updated */
-   )
-{
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(locktype == SCIP_LOCKTYPE_MODEL || locktype == SCIP_LOCKTYPE_CONFLICT);
-
-   if( (isrhs && SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, side))
-      || (!isrhs && SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -side)) )
-   {
-      SCIP_VAR** vars;
-      SCIP_Real* vals;
-      int v;
-
-      /* the right hand side switched from infinity to a non-infinite value -> install rounding locks */
-      vars = consdata->vars;
-      vals = consdata->vals;
-
-      for( v = 0; v < consdata->nvars; ++v )
-      {
-         assert(vars[v] != NULL);
-         assert(!SCIPisZero(scip, vals[v]));
-
-         if( SCIPisPositive(scip, vals[v]) )
-         {
-            SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, locktype, !isrhs, isrhs) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, locktype, isrhs, !isrhs) );
-         }
-      }
-   }
-   else if( (isrhs && !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, side))
-            || (!isrhs && !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -side)) )
-   {
-      SCIP_VAR** vars;
-      SCIP_Real* vals;
-      int v;
-
-      /* the right hand side switched from a non-infinite value to infinity -> remove rounding locks */
-      vars = consdata->vars;
-      vals = consdata->vals;
-
-      for( v = 0; v < consdata->nvars; ++v )
-      {
-         assert(vars[v] != NULL);
-         assert(!SCIPisZero(scip, vals[v]));
-
-         if( SCIPisPositive(scip, vals[v]) )
-         {
-            SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, locktype, !isrhs, isrhs) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, locktype, isrhs, !isrhs) );
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** sets left hand side of linear constraint */
 static
 SCIP_RETCODE chgLhs(
@@ -3502,6 +3399,8 @@ SCIP_RETCODE chgLhs(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool locked;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3520,21 +3419,70 @@ SCIP_RETCODE chgLhs(
    if( SCIPisEQ(scip, consdata->lhs, lhs) )
       return SCIP_OKAY;
 
-   /* ensure that rhs >= lhs is satisfied without numerical tolerance */   
+   /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPisEQ(scip, lhs, consdata->rhs) )
    {
       consdata->rhs = lhs;
       assert(consdata->row == NULL);
    }
 
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
+
    /* if necessary, update the rounding locks of variables */
-   if( SCIPconsIsLocked(cons) )
+   if( locked )
    {
-      SCIP_CALL( updateLocks(scip, cons, consdata, lhs, FALSE, SCIP_LOCKTYPE_MODEL) );
-   }
-   if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-   {
-      SCIP_CALL( updateLocks(scip, cons, consdata, lhs, FALSE, SCIP_LOCKTYPE_CONFLICT) );
+      if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -lhs) )
+      {
+         SCIP_VAR** vars;
+         SCIP_Real* vals;
+         int v;
+
+         /* the left hand side switched from -infinity to a non-infinite value -> install rounding locks */
+         vars = consdata->vars;
+         vals = consdata->vals;
+
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            assert(vars[v] != NULL);
+            assert(!SCIPisZero(scip, vals[v]));
+
+            if( SCIPisPositive(scip, vals[v]) )
+            {
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+            }
+         }
+      }
+      else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -lhs) )
+      {
+         SCIP_VAR** vars;
+         SCIP_Real* vals;
+         int v;
+
+         /* the left hand side switched from a non-infinite value to -infinity -> remove rounding locks */
+         vars = consdata->vars;
+         vals = consdata->vals;
+
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            assert(vars[v] != NULL);
+            assert(!SCIPisZero(scip, vals[v]));
+
+            if( SCIPisPositive(scip, vals[v]) )
+            {
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+            }
+         }
+      }
    }
 
    /* check whether the left hand side is increased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
@@ -3578,6 +3526,8 @@ SCIP_RETCODE chgRhs(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool locked;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3596,25 +3546,72 @@ SCIP_RETCODE chgRhs(
    if( SCIPisEQ(scip, consdata->rhs, rhs) )
       return SCIP_OKAY;
 
-   /* ensure that rhs >= lhs is satisfied without numerical tolerance */   
+   /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPisEQ(scip, rhs, consdata->lhs) )
    {
       consdata->lhs = rhs;
       assert(consdata->row == NULL);
    }
 
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
+
    /* if necessary, update the rounding locks of variables */
-   if( SCIPconsIsLocked(cons) )
+   if( locked )
    {
       assert(SCIPconsIsTransformed(cons));
 
-      SCIP_CALL( updateLocks(scip, cons, consdata, rhs, TRUE, SCIP_LOCKTYPE_MODEL) );
-   }
-   if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-   {
-      assert(SCIPconsIsTransformed(cons));
+      if( SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, rhs) )
+      {
+         SCIP_VAR** vars;
+         SCIP_Real* vals;
+         int v;
 
-      SCIP_CALL( updateLocks(scip, cons, consdata, rhs, TRUE, SCIP_LOCKTYPE_CONFLICT) );
+         /* the right hand side switched from infinity to a non-infinite value -> install rounding locks */
+         vars = consdata->vars;
+         vals = consdata->vals;
+
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            assert(vars[v] != NULL);
+            assert(!SCIPisZero(scip, vals[v]));
+
+            if( SCIPisPositive(scip, vals[v]) )
+            {
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+            }
+         }
+      }
+      else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, rhs) )
+      {
+         SCIP_VAR** vars;
+         SCIP_Real* vals;
+         int v;
+
+         /* the right hand side switched from a non-infinite value to infinity -> remove rounding locks */
+         vars = consdata->vars;
+         vals = consdata->vals;
+
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            assert(vars[v] != NULL);
+            assert(!SCIPisZero(scip, vals[v]));
+
+            if( SCIPisPositive(scip, vals[v]) )
+            {
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
+            }
+         }
+      }
    }
 
    /* check whether the right hand side is decreased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
@@ -3935,6 +3932,8 @@ SCIP_RETCODE chgCoefPos(
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    SCIP_Real val;
+   SCIP_Bool locked;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3950,8 +3949,12 @@ SCIP_RETCODE chgCoefPos(
    assert(var != NULL);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(var));
 
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
+
    /* if necessary, update the rounding locks of the variable */
-   if( (SCIPconsIsLocked(cons) || SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT)) && newval * val < 0.0 )
+   if( locked && newval * val < 0.0 )
    {
       assert(SCIPconsIsTransformed(cons));
 

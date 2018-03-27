@@ -1446,7 +1446,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       /* drop variable event and unlock and release variable */
       SCIP_CALL( dropLhsVarEvents(scip, conshdlrdata->eventhdlr, cons, i) );
-      SCIP_CALL( SCIPunlockVarCons(scip, x, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, TRUE) );
       SCIP_CALL( SCIPreleaseVar(scip, &consdata->vars[i]) );
 
       coef = 1.0;
@@ -1478,7 +1478,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       /* capture and lock new variable, catch variable events */
       SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[i]) );
-      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[i], cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[i], cons, TRUE, TRUE) );
       SCIP_CALL( catchLhsVarEvents(scip, conshdlrdata->eventhdlr, cons, i) );
    }
 
@@ -1492,7 +1492,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
       /* drop variable event and unlock and release variable */
       SCIP_CALL( dropRhsVarEvents(scip, conshdlrdata->eventhdlr, cons) );
       SCIP_CALL( SCIPreleaseVar(scip, &consdata->rhsvar) );
-      SCIP_CALL( SCIPunlockVarCons(scip, x, cons, SCIP_LOCKTYPE_MODEL, consdata->rhscoeff > 0.0, consdata->rhscoeff < 0.0) );
+      SCIP_CALL( SCIPunlockVarCons(scip, x, cons, consdata->rhscoeff > 0.0, consdata->rhscoeff < 0.0) );
 
       coef = 1.0;
       offset = 0.0;
@@ -1516,7 +1516,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
          /* capture and lock new variable, catch variable events */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->rhsvar) );
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->rhsvar, cons, SCIP_LOCKTYPE_MODEL, consdata->rhscoeff > 0.0, consdata->rhscoeff < 0.0) );
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->rhsvar, cons, consdata->rhscoeff > 0.0, consdata->rhscoeff < 0.0) );
          SCIP_CALL( catchRhsVarEvents(scip, conshdlrdata->eventhdlr, cons) );
       }
    }

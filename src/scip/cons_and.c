@@ -155,10 +155,8 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
-
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -171,10 +169,8 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
-
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }

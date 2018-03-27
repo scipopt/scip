@@ -159,27 +159,11 @@ SCIP_RETCODE lockRounding(
 
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
    {
-      /* rounding down may violate the constraint */
-      if( SCIPconsIsLocked(cons) )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
-      }
-      if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_CONFLICT, TRUE, FALSE) );
-      }
+      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, TRUE, FALSE) );
    }
    else
    {
-      /* rounding up may violate the constraint */
-      if( SCIPconsIsLocked(cons) )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
-      }
-      if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-      {
-         SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
-      }
+      SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, FALSE, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -199,27 +183,11 @@ SCIP_RETCODE unlockRounding(
 
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
    {
-      /* rounding down may violate the constraint */
-      if( SCIPconsIsLocked(cons) )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, TRUE, FALSE) );
-      }
-      if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_CONFLICT, TRUE, FALSE) );
-      }
+      SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, TRUE, FALSE) );
    }
    else
    {
-      /* rounding up may violate the constraint */
-      if( SCIPconsIsLocked(cons) )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
-      }
-      if( SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT) )
-      {
-         SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, SCIP_LOCKTYPE_CONFLICT, FALSE, TRUE) );
-      }
+      SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, FALSE, TRUE) );
    }
 
    return SCIP_OKAY;

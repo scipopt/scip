@@ -143,7 +143,7 @@ SCIP_RETCODE lockRounding(
 
    for( b = 0; b < nbinvars; ++b )
    {
-      SCIP_CALL( SCIPlockVarCons(scip, binvars[b], cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+      SCIP_CALL( SCIPlockVarCons(scip, binvars[b], cons, TRUE, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -940,7 +940,7 @@ SCIP_RETCODE delCoefPos(
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(var));
 
    /* remove the rounding locks for the deleted variable */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
 
    /* if we are in transformed problem, delete the event data of the variable */
    if( SCIPconsIsTransformed(cons) )
