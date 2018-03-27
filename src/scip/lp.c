@@ -11198,7 +11198,7 @@ SCIP_RETCODE lpAlgorithm(
       *timelimit = TRUE;
       return SCIP_OKAY;
    }
-   SCIPsetDebugMsg(set, "calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
+   SCIPsetDebugMsg(set, "calling LP algorithm <%s> with a time limit of %g seconds\n", lpalgoName(lpalgo), lptimelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
@@ -11881,6 +11881,7 @@ SCIP_RETCODE lpSolve(
    }
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
+      SCIP_CALL( SCIPlpiWriteLP(lp->lpi, "debug.lp") );
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
 
       /* The lpobjval might be infinite, e.g. if the LP solver was not able to produce a valid bound while reaching the
