@@ -23,7 +23,7 @@
  *
  * Notes on this interface:
  *
- * - Currently, Clp (Version 1.10) supports two ways of adding rows/columns from arrays: One uses a
+ * - Currently, Clp (Version 1.16) supports two ways of adding rows/columns from arrays: One uses a
  *   length array that for each row/column specifies the number of nonzeros to be added. The second
  *   uses the @p beg array that gives the starting index for each row/column. We use the latter
  *   variant. Since for LPI there should be no gaps in the corresponding arrays, i.e., every entry in
@@ -44,13 +44,13 @@
  * - In former versions Clp used an "auxiliary model" that allows to save time when the model is
  *   scaled. This is discarded from version higher than 1.8.2.
  *
- * - Clp allows the setting of several special flags. These are now set when the FASTMIP option in
- *   SCIP is true. We tried to use the best settings, while still working correctly, see
- *   setFastmipClpParameters(). These settings probably have to be adapted to future Clp
- *   versions. Maybe more possibilities will appear.
+ * - Clp needs the setting of several special flags to make sure that necessary data (e.g., rays etc.)
+ *   are available. If the FASTMIP option in SCIP is true, some settings that are supposed to be faster
+ *   are used. We tried to use the best settings, while still working correctly. These settings probably
+ *   have to be adapted to future Clp versions. Maybe more possibilities will appear.
  *
  * - At several places this interface corrects the return value of some Clp functions, e.g.,
- *   isProvenPrimalInfeasible(). Currently (version 1.10) no change in the Clp functions will be made,
+ *   isProvenPrimalInfeasible(). Currently (Version 1.16) no change in the Clp functions will be made,
  *   but this might change in the future.
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -295,6 +295,7 @@ void setFactorizationFrequency(
    )
 {
    assert(lpi != NULL);
+
    /* set the factorization frequency only once */
    if ( lpi->setFactorizationFrequency )
       return;
@@ -303,13 +304,14 @@ void setFactorizationFrequency(
    lpi->setFactorizationFrequency = true;
 }
 
-/** this methods sets parameters of Clp */
+/** set fastmip parameters of Clp */
 static
 void setFastmipClpParameters(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
+
    lpi->fastmip = TRUE;
 
    /* Perturbation:
@@ -353,27 +355,32 @@ void setFastmipClpParameters(
     *           have to re-think.  It is up to application owner to change the code
     *           if she/he needs these short cuts.  I will not debug unless in Coin
     *           repository.  See COIN_CLP_VETTED comments.
-    *  0x01000000 is Cbc (and in branch and bound)
-    *  0x02000000 is in a different branch and bound
+    * 2097152 - is Cbc (and in branch and bound) [0x01000000]
+    * 4194304 - is in a different branch and bound [0x02000000]
     *
     *  Comments:
-    *       2 - nonlinear costs are used in primal for infeasibility weight
-    *       4 - in anti-degeneracy operations can move variables just off a bound
-    *       8 - means dense nucleus in factorization - normally not safe in first factorization as
+    *       2 - Nonlinear costs are used in primal for infeasibility weight.
+    *       4 - In anti-degeneracy operations can move variables just off a bound.
+    *       8 - Means dense nucleus in factorization - normally not safe in first factorization as
     *           singularity handling is not useful. Is switched on if going from dual to primal or vv.
-    *      16 - Used for "real" column generation
+    *      16 - Used for "real" column generation.
+    *      32 - Currently unclear, does not lead to produce ray
     *      64 - Good idea, since in B&B most problems are feasible.
     *     128 - Assumes user will not create tiny or duplicate elements.
     *     256 - Normally Clp keeps a scaled row copy for speed. For very large problems you might want to turn it off.
     *     512 - Means nonbasic variables should be at bounds and basis will be reasonable.
-    *    4096 - Skip some optimality checks
+    *    2048 - Unclear.
+    *    4096 - Skip some optimality checks.
     *    8192 - If the primal has a perturbed problem and needs to clean up, it normally uses dual - but in some cases can be better to use primal.
-    *   32768 - Just switches off some messages e.g. empty problem.
-    *  131072 - used internally
+    *   16384 - Used internally.
+    *   32768 - Just switches off some messages, e.g., empty problem.
+    *   65536 - Unclear.
+    *  131072 - Used internally.
     *  262144 - Normally Clp has unscaled column copy of matrix - this makes an extra scaled copy.
-    *  524288 - used internally
-    * 1048576 - only set by fastDual
-    * 0x02000000 - main point: does allow use of disaster handler
+    *  524288 - Used internally.
+    * 1048576 - Only set by fastDual (used internally).
+    * 2097152 - main point: does allow use of disaster handler
+    * 4194304 - main point: does allow use of disaster handler
     *
     * Cbc seems to use the following special options:
     * lpi->clp->setSpecialOptions(64|128|1024|2048|4096|32768|262144|0x01000000);
@@ -396,16 +403,17 @@ void setFastmipClpParameters(
 
    // let memory grow only (do not shrink) - [needs specialOptions & 65536 != 0]
    // does not seem to work
-   //lpi->clp->setPersistenceFlag(1);
+   // lpi->clp->setPersistenceFlag(1);
 }
 
-/** this methods sets parameters of Clp */
+/** unset fastmip parameters of Clp (reset to default parameters) */
 static
 void unsetFastmipClpParameters(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
+
    lpi->fastmip = FALSE;
 
    // reset to default value:
@@ -464,8 +472,10 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {
-   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    assert(lpi != NULL);
+
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -751,6 +761,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    {
       for (int j = 0; j <= ncols; ++j)
          mybeg[j] = 0;
+
       // add empty columns
       lpi->clp->addColumns(ncols, lb, ub, obj, mybeg, 0, 0);
    }
@@ -1543,7 +1554,9 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -1565,7 +1578,9 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -1626,7 +1641,7 @@ SCIP_RETCODE SCIPlpiGetObj(
 
    const double* obj = lpi->clp->getObjCoefficients();    // Here we can use the const versions (see SCIPchgObj)
 
-   BMScopyMemoryArray( vals, obj + firstcol, (lastcol - firstcol + 1) );
+   BMScopyMemoryArray(vals, obj + firstcol, (lastcol - firstcol + 1) );
 
    return SCIP_OKAY;
 }
@@ -1794,6 +1809,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    //  5 - stopped by event handler
    assert( status != -1 );      // did not run should not occur
    assert( status != 5 );       // begin stopped by event handler should not occur
+
    if ( status == 4 || status == 5 || status == -1 )
       return SCIP_LPERROR;
 
@@ -1869,6 +1885,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    //  5 - stopped by event handler
    assert( status != -1 );      // did not run should not occur
    assert( status != 5 );       // begin stopped by event handler should not occur
+
    if ( status == 4 || status == 5 || status == -1 )
       return SCIP_LPERROR;
 
@@ -1911,6 +1928,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    //  5 - stopped by event handler
    assert( status != -1 );      // did not run should not occur
    assert( status != 5 );       // begin stopped by event handler should not occur
+
    if ( status == 4 || status == 5 || status == -1 )
       return SCIP_LPERROR;
 
@@ -1924,6 +1942,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
 {
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
+
    // currently do nothing; in the future: use code as in OSI
    return SCIP_OKAY;
 }
@@ -1935,6 +1954,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
 {
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
+
    // currently do nothing; in the future: use code as in OSI
    return SCIP_OKAY;
 }
@@ -2063,7 +2083,6 @@ SCIP_RETCODE lpiStrongbranch(
     *
     * At the moment: we need alwaysFinish to get correct bounds.
     */
-   //int res = clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, false, startFinishOptions);
    int res = clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true, startFinishOptions);
 
    // reset special options
@@ -2436,7 +2455,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
+   /* Clp usually has a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
    return ( lpi->clp->status() == 2 );
 }
@@ -2454,7 +2473,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
+   /* Clp usually has a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
    return ( lpi->clp->status() == 2 );
 }
@@ -2812,7 +2831,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    if ( clpray == NULL )
       return SCIP_LPERROR;
 
-   BMScopyMemoryArray( ray, clpray, lpi->clp->numberColumns() );
+   BMScopyMemoryArray(ray, clpray, lpi->clp->numberColumns());
 
    delete [] clpray;
 
@@ -3128,8 +3147,8 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_ALLOC( BMSallocMemoryArray(&idx, nrows) );
 
    /* If secondaryStatus == 6, clp says the LP is empty. Mose likely this happened, because the
-      matrix is empty, i.e., all rows were redundant/empty. In this case, we construct a basis
-      consisting of slack variables. */
+    * matrix is empty, i.e., all rows were redundant/empty. In this case, we construct a basis
+    * consisting of slack variables. */
    if ( clp->secondaryStatus() == 6 )
    {
       assert( clp->getNumElements() == 0 );
@@ -3586,7 +3605,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->startscratch;
       break;
    case SCIP_LPPAR_SCALING:
-      if( lpi->clp->scalingFlag() != 0 )     // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+      if( lpi->clp->scalingFlag() != 0 )  // 0 -off, 1 equilibrium, 2 geometric, 3 auto, 4 dynamic(later)
          *ival = TRUE;
       else
          *ival = FALSE;
@@ -3759,6 +3778,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 {
    SCIPdebugMessage("calling SCIPlpiSetRealpar()\n");
    SCIPdebugMessage("setting parameter %d to value %g.\n", type, dval);
+
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
