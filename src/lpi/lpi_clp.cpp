@@ -2865,13 +2865,39 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    if ( dualray == NULL )
       return SCIP_LPERROR;
 
-   BMScopyMemoryArray( dualfarkas, dualray, lpi->clp->numberRows() );
-
-   /* convert sign - this is needed for versions <= 1.10 */
-   /*
+   /* The dual ray returned by Clp sometimes contains large numbers. We try to scale the vector. First compute maximal
+    * and minimal absolute values. */
+   double minabsvalue = SCIPlpiInfinity(lpi);
+   double maxabsvalue = 0.0;
+   double feastol = lpi->clp->primalTolerance();
    for (int j = 0; j < lpi->clp->numberRows(); ++j)
-      dualfarkas[j] = -dualfarkas[j];
-   */
+   {
+      double val = fabs(dualray[j]);
+      if ( val > maxabsvalue )
+         maxabsvalue = val;
+      if ( val >= feastol && val < minabsvalue )
+         minabsvalue = val;
+   }
+   assert( minabsvalue <= maxabsvalue );
+
+   /* Possibly scale and also convert sign. */
+   if ( minabsvalue > 0.0 )
+   {
+      /* We try to make the maximum absolute value to be 1.0, but if the minimal absolute value would be less than the
+       * feasibility tolerance, we adjust the factor such that it will be equal to the feasibility tolerance */
+      double scalingfactor = maxabsvalue;
+      if ( minabsvalue / scalingfactor < feastol )
+         scalingfactor = minabsvalue * feastol;
+
+      for (int j = 0; j < lpi->clp->numberRows(); ++j)
+         dualfarkas[j] = -dualray[j]/maxabsvalue;
+   }
+   else
+   {
+      /* convert sign */
+      for (int j = 0; j < lpi->clp->numberRows(); ++j)
+         dualfarkas[j] = -dualray[j];
+   }
 
    delete [] dualray;
 
