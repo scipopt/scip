@@ -108,9 +108,9 @@ static const char* dblparam[NUMDBLPARAM] =
 /** default values for double parameters */
 static const double dblparammin[NUMDBLPARAM] =
 {
-   +1e-06,               /* GRB_DBL_PAR_FEASIBILITYTOL */
-   +1e-06,               /* GRB_DBL_PAR_OPTIMALITYTOL */
-   +1e-08,               /* GRB_DBL_PAR_BARCONVTOL */
+   +1e-09,               /* GRB_DBL_PAR_FEASIBILITYTOL */
+   +1e-09,               /* GRB_DBL_PAR_OPTIMALITYTOL */
+   0.0,                  /* GRB_DBL_PAR_BARCONVTOL */
    -GRB_INFINITY,        /* GRB_DBL_PAR_CUTOFF */
    0,                    /* GRB_DBL_PAR_TIMELIMIT */
    0,                    /* GRB_DBL_PAR_ITERATIONLIMIT */
