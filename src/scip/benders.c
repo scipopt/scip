@@ -934,7 +934,9 @@ SCIP_RETCODE SCIPbendersExec(
    /* calling the post-solve call back for the Benders' decomposition algorithm. This allows the user to work directly
     * with the solved subproblems and the master problem */
    if( benders->benderspostsolve != NULL )
+   {
       SCIP_CALL( benders->benderspostsolve(set->scip, benders, sol, (*infeasible)) );
+   }
 
    /* freeing the subproblems after the cuts are generated */
    i = benders->firstchecked;
