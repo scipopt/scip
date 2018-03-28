@@ -2481,7 +2481,11 @@ SCIP_Bool SCIPlpiHasPrimalRay(
 
    /* Clp usually has a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
-   return ( lpi->clp->status() == 2 );
+   if ( lpi->clp->rayExists() )
+   {
+      return ( lpi->clp->status() == 2 );
+   }
+   return FALSE;
 }
 
 
@@ -2544,9 +2548,9 @@ SCIP_Bool SCIPlpiExistsDualRay(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
-    * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->algorithm() < 0 );
+   /* Clp usually has a dual ray whenever it concludes "primal infeasible", (but is not necessarily dual feasible),
+    * see ClpModel::infeasibilityRay */
+   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
 }
 
 
@@ -2562,21 +2566,15 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
-    * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
+   /* Clp usually has a dual ray whenever it concludes "primal infeasible", (but is not necessarily dual feasible),
+    * see ClpModel::infeasibilityRay */
    if ( lpi->clp->rayExists() )
    {
-      if ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->algorithm() < 0)
+      if ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 )
          return TRUE;
-      else
-      {
-         if ( lpi->clp->status() != 2 || lpi->clp->algorithm() <= 0 )
-            lpi->clp->deleteRay();
-         return FALSE;
-      }
    }
-   else
-      return FALSE;
+
+   return FALSE;
 }
 
 
