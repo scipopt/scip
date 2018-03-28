@@ -2675,6 +2675,11 @@ SCIP_Bool SCIPlpiIsStable(
     */
    SCIPdebugMessage("status: %d   secondary: %d\n", lpi->clp->status(), lpi->clp->secondaryStatus());
    assert( 0 <= lpi->clp->status() && lpi->clp->status() <= 5 );
+
+   /* return false if infeasible, but dual ray is not present */
+   if ( lpi->clp->status() == 1 && ! lpi->clp->rayExists() )
+      return FALSE;
+
    return( (lpi->clp->status() <= 3) && (lpi->clp->secondaryStatus() <= 1 || lpi->clp->secondaryStatus() == 6 || lpi->clp->secondaryStatus() == 9) );
 }
 
