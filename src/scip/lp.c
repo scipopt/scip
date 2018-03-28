@@ -11801,7 +11801,6 @@ SCIP_RETCODE lpSolve(
    }
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
-      SCIP_CALL( SCIPlpiWriteLP(lp->lpi, "debug.lp") );
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
       adjustLPobjval(lp, set, messagehdlr);
       lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
