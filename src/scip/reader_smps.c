@@ -205,7 +205,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
    fromlastslash = (char*) strrchr(filename, '/');
 
    if( fromlastslash == NULL )
-      parentlen = strlen(filename);
+      parentlen = 0;
    else
       parentlen = strlen(filename) - (strlen(fromlastslash) - 1);
 
