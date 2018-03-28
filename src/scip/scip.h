@@ -3007,6 +3007,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
    SCIP_RESULT*          result,             /**< result of the pricing process */
    SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
+   SCIP_Bool*            auxviol,            /**< set to TRUE only if the solution is feasible but the aux vars are violated */
    SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
    SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
    );
