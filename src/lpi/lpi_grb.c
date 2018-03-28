@@ -3882,7 +3882,9 @@ SCIP_Bool SCIPlpiIsStable(
 {
    double consviol;
    double boundviol;
+   double dualviol;
    double feastol;
+   double optimalitytol;
    int res;
 
    assert(lpi != NULL);
@@ -3913,15 +3915,21 @@ SCIP_Bool SCIPlpiIsStable(
    /* test whether we have unscaled infeasibilities */
    if ( SCIPlpiIsOptimal(lpi) )
    {
-      /* first get tolerance */
+      /* first get tolerances */
       res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &feastol);
       if ( res != 0 )
       {
          SCIPABORT();
          return FALSE; /*lint !e527*/
       }
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &optimalitytol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
 
-      /* next get constraint and bound violations */
+      /* next get constraint, bound, and reduced cost violations */
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
       if ( res != 0 )
       {
@@ -3934,7 +3942,14 @@ SCIP_Bool SCIPlpiIsStable(
          SCIPABORT();
          return FALSE; /*lint !e527*/
       }
-      return ( consviol <= feastol && boundviol <= feastol );
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_DUAL_VIO, &dualviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      return ( consviol <= feastol && boundviol <= feastol && dualviol <= optimalitytol );
    }
 
    return (lpi->solstat != GRB_NUMERIC);
