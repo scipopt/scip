@@ -3058,27 +3058,34 @@ void SCIPintervalSolveUnivariateQuadExpression(
    assert(resultant != NULL);
 
    if( sqrcoeff.inf == 0.0 && sqrcoeff.sup == 0.0 )
-   { /* relatively easy case: x \in rhs / lincoeff */
+   {
+      /* relatively easy case: x \in rhs / lincoeff */
       if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 )
-      { /* equation became 0.0 \in rhs */
+      {
+         /* equation became 0.0 \in rhs */
          if( rhs.inf <= 0.0 && rhs.sup >= 0.0 )
-            SCIPintervalSetEntire(infinity, resultant);
+            *resultant = xbnds;
          else
             SCIPintervalSetEmpty(resultant);
       }
       else
-         SCIPintervalDiv(infinity, resultant, rhs, lincoeff); /* TODO div should take xbnds into account? */
+      {
+         SCIPintervalDiv(infinity, resultant, rhs, lincoeff);
+         SCIPintervalIntersect(resultant, *resultant, xbnds);
+      }
       SCIPdebugMessage("  solving [%g,%g]*x in [%g,%g] gives [%g,%g]\n", SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs), SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
-      /* TODO intersect with xbnds */
+
       return;
    }
 
    if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 )
-   { /* easy case: x \in +/- sqrt(rhs/a) */
+   {
+      /* easy case: x \in +/- sqrt(rhs/a) */
       SCIPintervalDiv(infinity, resultant, rhs, sqrcoeff);
       /* TODO consider xbnds */
       SCIPintervalSquareRoot(infinity, resultant, *resultant);
       resultant->inf = -resultant->sup;
+      SCIPintervalIntersect(resultant, *resultant, xbnds);
       return;
    }
 
