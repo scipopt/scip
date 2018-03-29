@@ -27,10 +27,10 @@
  * problem data structure SCIP_ProbData is shown below.
  *
  * \code
- *  ** @brief Problem data which is accessible in all places
+ *  @brief Problem data which is accessible in all places
  *
- * This problem data is used to store the input of the ringpacking, all variables which are created, and all
- * constraints.
+ * This problem data is used to store the input of the ringpacking, all variables which are created, and all constraints.
+ *
  * struct SCIP_ProbData
  * {
  *    int*                  demands;            **< array of demands *
