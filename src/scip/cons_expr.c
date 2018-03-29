@@ -6935,32 +6935,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
    SCIP_CONSEXPR_EXPR**    children          /**< children (can be NULL if nchildren is 0) */
    )
 {
-   int c;
-
-   assert(expr != NULL);
-   assert(exprhdlr != NULL);
-   assert(children != NULL || nchildren == 0);
-
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, expr) );
-
-   (*expr)->exprhdlr = exprhdlr;
-   (*expr)->exprdata = exprdata;
-   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
-
-   /* initialize an empty interval for interval evaluation */
-   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->interval);
-
-   if( nchildren > 0 )
-   {
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*expr)->children, children, nchildren) );
-      (*expr)->nchildren = nchildren;
-      (*expr)->childrensize = nchildren;
-
-      for( c = 0; c < nchildren; ++c )
-         SCIPcaptureConsExprExpr((*expr)->children[c]);
-   }
-
-   SCIPcaptureConsExprExpr(*expr);
+   SCIP_CALL( createExpr(scip, expr, exprhdlr, exprdata, nchildren, children) );
 
    return SCIP_OKAY;
 }
