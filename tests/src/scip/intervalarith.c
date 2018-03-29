@@ -215,7 +215,6 @@ Test(intervalarith, solveuniquad)
     */
    SCIPintervalSetBounds(&xbnds, 1.0, SCIP_DEFAULT_INFINITY);
 
-/* for these to work, we need to pass xbnds into SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar
    SCIPintervalSetBounds(&rhs, 0.0, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
    cr_assert_float_eq(resultant.inf, 2.0, 1e-12);
@@ -225,7 +224,6 @@ Test(intervalarith, solveuniquad)
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
    cr_assert_float_eq(resultant.inf, 2.0, 1e-12);
    cr_assert_float_eq(resultant.sup, 3.0, 1e-12);
-*/
 
    SCIPintervalSetBounds(&rhs, 1.5, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);

@@ -2989,6 +2989,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
          delta = b*b + sqrcoeff * rhs;
          if( delta >= 0.0 )
          {
+            /* let resultant = [0,-c/z] for now */
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
             z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
             SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
@@ -2998,14 +2999,35 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
             if( sqrcoeff > 0.0 )
             {
                /* for a > 0, the result is [0,-c/z] \vee [z/a,infinity]
-                * @todo thus, depending on xbnds, we may not have to use [0,infinity]
+                * currently, resultant = [0,-c/z]
                 */
+               SCIP_Real zdiva;
 
-               resultant->sup = infinity;
+               SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+               zdiva = z/sqrcoeff;
+
+               if( xbnds.sup < zdiva )
+               {
+                  /* after intersecting with xbnds, result is [0,-c/z], so we are done */
+               }
+               else if( xbnds.inf > resultant->sup )
+               {
+                  /* after intersecting with xbnds, result is [z/a,infinity] */
+                  resultant->inf = zdiva;
+                  resultant->sup = infinity;
+               }
+               else
+               {
+                  /* after intersecting with xbnds we can neither exclude [0,-c/z] nor [z/a,infinity],
+                   * so put resultant = [0,infinity] (intersection with xbnds happens below)
+                   * @todo we could create a hole here
+                   */
+                  resultant->sup = infinity;
+               }
             }
             else
             {
-               /* for a < 0, the result is [0,-c/z] */
+               /* for a < 0, the result is [0,-c/z], so we are done */
             }
          }
       }
