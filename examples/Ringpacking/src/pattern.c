@@ -19,7 +19,7 @@
  *
  *
  * This file implements the handling of patterns. Each pattern has a <code>SCIP_PATTERNTYPE</code>, accessible by
- * <code>SCIPpatternGetPatternType</code>, which indicates whether it is a circular or rectangular pattern.
+ * <code>SCIPpatternGetPatternType()</code>, which indicates whether it is a circular or rectangular pattern.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

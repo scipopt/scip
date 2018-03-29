@@ -64,9 +64,9 @@
  * same internal and external radius in each rectangle.
  *
  * More precisely, we introduce an integral variable \f$z_{P}\f$ for each rectangular pattern \f$P\f$ and an integral
- * variable \f$z_{C}\f$ for each circular pattern \f$C\f$. A vector \f$P \in \mathbb{Z}_{+}^\mathcal{T}\f$, where \f$T\f$ is
+ * variable \f$z_{C}\f$ for each circular pattern \f$C\f$. A vector \f$P \in \mathbb{Z}_{+}^T\f$, where \f$T\f$ is
  * the total number of ringtypes, is a <b>rectangular pattern</b> if and only if \f$P_t\f$ many circles with external radius
- * \f$\R_t\f$ for each \f$t \in \mathcal{T}\f$ can be packed together into a rectangle. Similarly, a tuple
+ * \f$R_t\f$ for each \f$t \in \mathcal{T}\f$ (the set of types) can be packed together into a rectangle. Similarly, a tuple
  * \f$(t,P)\in \mathcal{T} \times \mathbb{Z}_{+}^T\f$ is a <b>circular pattern</b> if it is possible to pack \f$P_1\f$ many
  * circles of type \f$1\f$, \f$P_2\f$ many circles of type \f$2\f$, \f$\ldots\f$, \f$P_T\f$ many circles of type \f$T\f$
  * into a larger ring of type \f$t\f$. Let \f$\mathcal{RP}\f$ and \f$\mathcal{CP}\f$ be the set of all rectangular or
@@ -77,7 +77,7 @@
  * \f[
  *  \begin{align}
  *   && \min \sum_{P \in \mathcal{RP}} z_P \quad\,\\
- *   && \text{s.t.} \sum_{C = (t,P) \in \mathcal{CP}} z_C &\ge \demand_t && \text{ for all } t \in \mathcal{T} \\
+ *   && \text{s.t.} \sum_{C = (t,P) \in \mathcal{CP}} z_C &\ge D_t && \text{ for all } t \in \mathcal{T} \\
  *   && \sum_{C = (t,P) \in \mathcal{CP}} z_C &\le \sum_{P \in \mathcal{RP}} P_t \cdot z_P + \sum_{C = (t',P) \in \mathcal{CP}} P_t \cdot z_C && \text{ for all } t \in \mathcal{T} \\
  *   && z_C & \in \mathbb{Z}_{+} && \text{ for all } C \in \mathcal{CP} \\
  *   && z_P & \in \mathbb{Z}_{+} && \text{ for all } P \in \mathcal{RP}

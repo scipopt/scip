@@ -36,9 +36,9 @@
  *
  * This problem is very hard, but can be modeled as a weighted circle packing problem for a single rectangle. Therefore,
  * we first use a simple greedy heuristic to solve the problem. If the heuristic fails, the MINLP is solved with
- * conventional methods on a new /SCIP instance and a given time limit. If the problem can be solved and the optimal
+ * conventional methods on a new \SCIP instance and a given time limit. If the problem can be solved and the optimal
  * value is non-negative, the LP relaxation has been solved to optimality and what remains is ensuring integrality of
- * the solution by the normal /SCIP framework. If, on the other hand, the best solution found by both methods is negative,
+ * the solution by the normal \SCIP framework. If, on the other hand, the best solution found by both methods is negative,
  * we have found an improving pattern, whose corresponding variable needs to be added to the restricted master problem.
  * It is possible (and not unlikely) that neither method succeeds in finding a pattern with negative solution value. In
  * that case, we also exit the pricing loop, just as if we had found an optimal solution, and proceed with enforcing
