@@ -105,7 +105,7 @@ static const char* dblparam[NUMDBLPARAM] =
    GRB_DBL_PAR_MARKOWITZTOL
 };
 
-/** default values for double parameters */
+/** minimal values for double parameters */
 static const double dblparammin[NUMDBLPARAM] =
 {
    +1e-09,               /* GRB_DBL_PAR_FEASIBILITYTOL */

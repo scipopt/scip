@@ -11881,7 +11881,6 @@ SCIP_RETCODE lpSolve(
    }
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
-      SCIP_CALL( SCIPlpiWriteLP(lp->lpi, "debug.lp") );
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
 
       /* The lpobjval might be infinite, e.g. if the LP solver was not able to produce a valid bound while reaching the
