@@ -17,8 +17,8 @@
  * @brief  Ringpacking variable pricer
  * @author Benjamin Mueller
  *
- * This file implements the variable pricer which checks if variables negative reduced cost exist. See
- * @ref RINGPACKING_PRICER for more details.
+ * This file implements the variable pricer which checks if variables negative reduced cost exist.
+ * See @ref RINGPACKING_PRICER for more details.
  *
  * @page RINGPACKING_PRICER Pricing new variables
  *
