@@ -283,12 +283,78 @@ typedef struct
  * Local methods
  */
 
+/** creates an expression */
+static
+SCIP_RETCODE createExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data (expression assumes ownership) */
+   int                     nchildren,        /**< number of children */
+   SCIP_CONSEXPR_EXPR**    children          /**< children (can be NULL if nchildren is 0) */
+   )
+{
+   int c;
+
+   assert(expr != NULL);
+   assert(exprhdlr != NULL);
+   assert(children != NULL || nchildren == 0);
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, expr) );
+
+   (*expr)->exprhdlr = exprhdlr;
+   (*expr)->exprdata = exprdata;
+   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   /* initialize an empty interval for interval evaluation */
+   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->interval);
+
+   if( nchildren > 0 )
+   {
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*expr)->children, children, nchildren) );
+      (*expr)->nchildren = nchildren;
+      (*expr)->childrensize = nchildren;
+
+      for( c = 0; c < nchildren; ++c )
+         SCIPcaptureConsExprExpr((*expr)->children[c]);
+   }
+
+   SCIPcaptureConsExprExpr(*expr);
+
+   return SCIP_OKAY;
+}
+
+/** frees an expression */
+static
+SCIP_RETCODE freeExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR**  expr                /**< pointer to free the expression */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(*expr != NULL);
+   assert((*expr)->nuses == 1);
+
+   /* free children array, if any */
+   SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);
+
+   /* expression should not be locked anymore */
+   assert((*expr)->nlockspos == 0);
+   assert((*expr)->nlocksneg == 0);
+
+   SCIPfreeBlockMemory(scip, expr);
+   assert(*expr == NULL);
+
+   return SCIP_OKAY;
+}
+
 /** frees auxiliary variables of expression, if any */
 static
 SCIP_RETCODE freeAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression which auxvar to free, if any */
-)
+   )
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -812,7 +878,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
 
 /** expression walk callback to free an expression including its children (if not used anywhere else) */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExprWalk)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -879,15 +945,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          /* child should have no data associated */
          assert(child->exprdata == NULL);
 
-         /* free child's children array, if any */
-         SCIPfreeBlockMemoryArrayNull(scip, &child->children, child->childrensize);
-
-         /* expression should not be locked anymore */
-         assert(child->nlockspos == 0);
-         assert(child->nlocksneg == 0);
-
-         SCIPfreeBlockMemory(scip, &child);
-         assert(child == NULL);
+         /* free child expression */
+         SCIP_CALL( freeExpr(scip, &child) );
          expr->children[expr->walkcurrentchild] = NULL;
 
          *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -7325,20 +7384,10 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
          SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
       }
 
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, freeExpr, freeExpr, NULL,  NULL) );
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, freeExprWalk, freeExprWalk, NULL,  NULL) );
 
       /* handle the root expr separately: free its children and itself here */
-      assert((*expr)->nuses == 1);
-
-      /* free children array, if any */
-      SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);
-
-      /* expression should not be locked anymore */
-      assert((*expr)->nlockspos == 0);
-      assert((*expr)->nlocksneg == 0);
-
-      SCIPfreeBlockMemory(scip, expr);
-      assert(*expr == NULL);
+      SCIP_CALL( freeExpr(scip, expr) );
 
       return SCIP_OKAY;
    }
