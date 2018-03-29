@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -336,7 +336,7 @@ SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-LPIINSTMSG	+=	"  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
 endif
@@ -617,7 +617,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_dualcomp.o\
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
-			scip/presol_implfree.o\
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_qpkktref.o \
@@ -1522,7 +1521,7 @@ endif
 endif
 ifneq ($(WORHP),true)
 ifneq ($(WORHP),false)
-		$(error invalid WORHP flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+		$(error invalid WORHP flag selected: WORHP=$(WORHP). Possible options are: true false)
 endif
 endif
 ifneq ($(READLINE),true)

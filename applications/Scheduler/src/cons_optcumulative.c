@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2089,11 +2089,11 @@ SCIP_RETCODE fixIntegerVariable(
    {
       /* the integer start time variable has a zero objective value; if only the optcumulative constraint
        * handler has a problem with rounding it down or up, then this issue is obsolete since binary
-       * variable is fixed zero; therefore, rounding the integer down or up up is feasible dual reduction
+       * variable is fixed zero; therefore, rounding the integer down or up is a feasible dual reduction
        */
-      if( SCIPvarGetNLocksDown(var) == (int)uplock )
+      if( SCIPvarGetNLocksDown(var) == (int)downlock )
          fixvalue = SCIPvarGetLbLocal(var);
-      else if( SCIPvarGetNLocksUp(var) == (int)downlock )
+      else if( SCIPvarGetNLocksUp(var) == (int)uplock )
          fixvalue = SCIPvarGetUbLocal(var);
       else
          return SCIP_OKAY;

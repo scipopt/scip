@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -840,10 +840,8 @@ SCIP_RETCODE getLinVarsAndAndRess(
 	 }
       }
 
-      if( !hashmapentryexists && linvars != NULL )
+      if( !hashmapentryexists && linvars != NULL && nlinvars != NULL )
       {
-         assert(nlinvars != NULL);
-
          linvars[*nlinvars] = vars[v];
 	 if( lincoefs != NULL )
 	 {
@@ -3968,23 +3966,27 @@ SCIP_RETCODE copyConsPseudoboolean(
             assert(!(*valid) || intvar != NULL);
          }
 
-         if( name != NULL )
-            consname = name;
-         else
-            consname = SCIPconsGetName(sourcecons);
+         if( *valid )
+         {
+            if( name != NULL )
+               consname = name;
+            else
+               consname = SCIPconsGetName(sourcecons);
 
-         /* get new left and right hand sides of copied linear constraint since
-          * they might have changed if compressed copying is used
-          */
-         SCIP_CALL( getLinearConsSides(targetscip, targetlincons, targetlinconstype, &targetlhs, &targetrhs) );
+            /* get new left and right hand sides of copied linear constraint since
+             * they might have changed if compressed copying is used
+             */
+            SCIP_CALL( getLinearConsSides(targetscip, targetlincons, targetlinconstype, &targetlhs, &targetrhs) );
 
-         /* create new pseudoboolean constraint */
-         SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
-               targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
-               indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            /* create new pseudoboolean constraint */
+            SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
+                  targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
+                  indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         }
       }
-      else if( !SCIPisConsCompressionEnabled(sourcescip) )
+
+      if( !(*valid) && !SCIPisConsCompressionEnabled(sourcescip) )
       {
          SCIPverbMessage(sourcescip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy constraint <%s>\n", SCIPconsGetName(sourcecons));
       }

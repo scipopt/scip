@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3100,14 +3100,6 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
 #endif
    {
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/redvub/maxrounds", -1, quiet) );
-   }
-
-   /* explicitly change parameters of presolver implfree, if included */
-#ifndef NDEBUG
-   if( SCIPsetFindPresol(set, "implfree") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/implfree/maxrounds", -1, quiet) );
    }
 
    /* explicitly change parameters of probing */

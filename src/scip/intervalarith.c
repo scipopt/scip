@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2352,7 +2352,8 @@ void SCIPintervalExp(
 
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
          tmp = exp(operand.inf);
-         resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
+         resultant->inf = tmp > 0.0 ? SCIPnextafter(tmp, SCIP_REAL_MIN) : 0.0;
+         assert(resultant->inf >= 0.0);
          resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
 
          return;
@@ -2369,8 +2370,11 @@ void SCIPintervalExp(
    }
    else
    {
+      SCIP_Real tmp;
+
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      resultant->inf = SCIPnextafter(exp(operand.inf), SCIP_REAL_MIN);
+      tmp = exp(operand.inf);
+      resultant->inf = tmp > 0.0 ? SCIPnextafter(tmp, SCIP_REAL_MIN) : 0.0;
       /* make sure we do not exceed value for infinity, so interval is not declared as empty if inf and sup are both > infinity */
       if( resultant->inf >= infinity )
          resultant->inf = infinity;

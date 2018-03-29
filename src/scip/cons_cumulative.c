@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1352,6 +1352,7 @@ SCIP_RETCODE setupAndSolveCumulativeSubscip(
       case SCIP_STATUS_TIMELIMIT:
       case SCIP_STATUS_MEMLIMIT:
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
          /* transfer the global bound changes */
          for( v = 0; v < njobs; ++v )
          {
@@ -8744,9 +8745,12 @@ SCIP_RETCODE addRelaxation(
 
    if( consdata->demandrows == NULL )
    {
+      assert(consdata->ndemandrows == 0);
+
       SCIP_CALL( createRelaxation(scip, cons, cutsasconss) );
+
+      return SCIP_OKAY;
    }
-   assert(consdata->ndemandrows == 0 || consdata->demandrows != NULL);
 
    for( r = 0; r < consdata->ndemandrows && !(*infeasible); ++r )
    {
@@ -8789,9 +8793,12 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
    if( consdata->demandrows == NULL )
    {
+      assert(consdata->ndemandrows == 0);
+
       SCIP_CALL( createRelaxation(scip, cons, FALSE) );
+
+      return SCIP_OKAY;
    }
-   assert(consdata->ndemandrows == 0 || consdata->demandrows != NULL);
 
    ncuts = 0;
 

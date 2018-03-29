@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,6 +54,7 @@ public:
       SCIPintervalSetBounds(this, -SCIPInterval::infinity,SCIPInterval::infinity);
    }
 
+   // cppcheck-suppress noExplicitConstructor
    /** constructor for an SCIP_INTERVAL struct */
    SCIPInterval(
       const SCIP_INTERVAL& x                 /**< interval to copy */
@@ -71,6 +72,7 @@ public:
       SCIPintervalSetBounds(this, infinum, supremum);
    }
 
+   // cppcheck-suppress noExplicitConstructor
    /** constructor for a singleton */
    SCIPInterval(
       SCIP_Real          number              /**< number to be represented by interval */

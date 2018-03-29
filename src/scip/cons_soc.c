@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4471,14 +4471,8 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       if( printreason )
       {
-         SCIP_Real unscaledviol;
-
-         unscaledviol  = consdata->lhsval;
-         if( !SCIPisInfinity(scip, unscaledviol) )
-            unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
-
          SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
-         SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
+         SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g\n", consdata->violation);
       }
 
       /* if we do linear feasibility shifting, then try to adjust solution */
