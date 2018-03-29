@@ -116,7 +116,7 @@
  */
 
 
-/**@page RICKPACKING_ENUMERATION Enumeration of circular patterns
+/**@page RINGPACKING_ENUMERATION Enumeration of circular patterns
  *
  * Here we describe a column enumeration algorithm that is used to deal with the exponential number of circular patterns.
  *
