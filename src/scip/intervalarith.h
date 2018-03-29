@@ -616,7 +616,7 @@ void SCIPintervalQuad(
 
 /** computes interval with positive solutions of a quadratic equation with interval coefficients
  * 
- * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \in c\f$.
+ * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \in c\f$ within xbnds.
  */
 extern
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
@@ -624,12 +624,13 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
-   SCIP_INTERVAL         rhs                 /**< right hand side of equation */
+   SCIP_INTERVAL         rhs,                /**< right hand side of equation */
+   SCIP_INTERVAL         xbnds               /**< bounds on x */
    );
 
 /** computes positive solutions of a quadratic equation with scalar coefficients
  * 
- * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$.
+ * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$ within xbnds.
  * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */
 extern
@@ -638,7 +639,8 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
    SCIP_Real             lincoeff,           /**< coefficient of x */
-   SCIP_Real             rhs                 /**< right hand side of equation */
+   SCIP_Real             rhs,                /**< right hand side of equation */
+   SCIP_INTERVAL         xbnds               /**< bounds on x */
    );
 
 /** solves a quadratic equation with interval coefficients
