@@ -38,6 +38,7 @@
  * -# \ref RINGPACKING_READER "Parsing the input format and creating the problem"
  * -# \ref RINGPACKING_PROBLEMDATA "Main problem data"
  * -# \ref RINGPACKING_PRICER "Pricing new variables"
+ * -# \ref RINGPACKING_ENUMERATION "Enumerating circular patterns"
  * -# \ref RINGPACKING_MAKEFILE "The Makefile"
  *
  */
@@ -108,8 +109,40 @@
  * dual bound of the LP relaxation can also be turned into a valid dual bound of the complete master problem. See
  * @ref RINGPACKING_PRICER for more details. Also note that the dual bound is invalidated after the first branching step.
  * This means that it is not a typical branch-and-price, but rather a <b>price-and-branch</b> framework.
+ *
+ * Another issue with the above formulation is the fact that \f$\mathcal{CP}\f$ can be of exponential size, as well. We try
+ * to overcome this by using a column enumeration algorithm to compute all relevant circular patterns.
+ * See @ref RINGPACKING_ENUMERATION for details.
  */
 
+
+/**@page RICKPACKING_ENUMERATION Enumeration of circular patterns
+ *
+ * Here we describe a column enumeration algorithm that is used to deal with the exponential number of circular patterns.
+ *
+ * The main step of the algorithm is to verify whether a given tuple \f$(t,P)\in \mathcal{T} \times\mathbb{Z}_{+}^T\f$
+ * is in the set \f$\mathcal{CP}\f$ or not. A tuple can be checked by solving the following nonlinear nonconvex
+ * verification problem:
+ *
+ * \f[
+ *  \begin{align}
+ *    \norm{\mvec{x_i}{y_i} - \mvec{x_j}{y_j}}_2 \ge R_i + Rj & \text{for all} i,j \in C: i < j \\
+ *    \norm{\mvec{x_i}{y_i}}_2 \le r_t - R_i & \text{for all} i \in C \\
+ *    x_i, y_i \in \mathbb{R} & \text{for all} i \in C
+ *  \end{align}
+ * \f]
+ *
+ * Here \f$C\f$ is the index set of individual circles, and \f$R_i\f$ the corresponding external radius of a circle \f$i \in
+ * C\f$. The model checks whether all circles can be placed in a non-overlapping way into a ring of type~\f$t\in\mathcal{T}\f$.
+ * The first constraints ensure that no two circles overlap, and the second constraints guarantee that all circles are placed
+ * inside a ring of type /f$t/f$. Two more steps are taken in order to solve this problem more efficiently. Firstly, symmetry
+ * handling constraints are added to break the large amount of symmetry the formulation contains. Secondly, a dominance relation
+ * betwen circular patterns is introduced. In fact, it is easy to see that some patterns are never needed in an optimal solution,
+ * e.g. when at least one more circle fits. Therefore, some patterns don't have to be verified if certain others have already
+ * been (dis)proved to be feasible. The algorithm enumerates the circular patterns in a way that minimizes the number of
+ * verifications that have to be performed. See [TODO: insert ref to benny's paper] for more details. In addition to all this, a
+ * simple greedy heuristic is used to verify simple patterns before actually solving the NLP.
+ */
 
 
 /**@page RINGPACKING_MAKEFILE The Makefile
