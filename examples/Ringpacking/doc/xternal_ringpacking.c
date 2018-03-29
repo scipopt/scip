@@ -126,14 +126,14 @@
  *
  * \f[
  *  \begin{align}
- *    {\left\|{{\begin{pmatrix}x_i\\y_i\end{pmatrix}} - {\begin{pmatrix}x_j\\y_j\end{pmatrix}}}\right\|}_2 \ge R_i + Rj & \text{for all} i,j \in C: i < j \\
- *    {\left\|{{\begin{pmatrix}x_i\\y_i\end{pmatrix}}}\right\|}_2 \le r_t - R_i & \text{for all} i \in C \\
- *    x_i, y_i \in \mathbb{R} & \text{for all} i \in C
+ *    {\left\|{{\begin{pmatrix}x_i\\y_i\end{pmatrix}} - {\begin{pmatrix}x_j\\y_j\end{pmatrix}}}\right\|}_2 \ge R_i + Rj && \text{ for all } i,j \in C: i < j \\
+ *    {\left\|{{\begin{pmatrix}x_i\\y_i\end{pmatrix}}}\right\|}_2 \le r_t - R_i && \text{ for all } i \in C \\
+ *    x_i, y_i \in \mathbb{R} && \text{ for all } i \in C
  *  \end{align}
  * \f]
  *
  * Here \f$C\f$ is the index set of individual circles, and \f$R_i\f$ the corresponding external radius of a circle \f$i \in
- * C\f$. The model checks whether all circles can be placed in a non-overlapping way into a ring of type~\f$t\in\mathcal{T}\f$.
+ * C\f$. The model checks whether all circles can be placed in a non-overlapping way into a ring of type \f$t\in\mathcal{T}\f$.
  * The first constraints ensure that no two circles overlap, and the second constraints guarantee that all circles are placed
  * inside a ring of type \f$t\f$.
  *
@@ -142,8 +142,9 @@
  * introduced. In fact, it is easy to see that some patterns are never needed in an optimal solution, e.g. when at least one
  * more circle fits. Therefore, some patterns don't have to be verified if certain others have already been (dis)proved to be
  * feasible. The algorithm enumerates the circular patterns in a way that minimizes the number of verifications that have to
- * be performed. See [TODO: insert ref to benny's paper] for more details. In addition to all this, a simple greedy heuristic
- * is used to verify simple patterns before actually solving the NLP.
+ * be performed. See [TODO: insert ref to benny's paper] for more details.
+ *
+ * In addition to all this, a simple greedy heuristic is used to verify simple patterns before actually solving the NLP.
  */
 
 
