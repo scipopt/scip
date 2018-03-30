@@ -1499,8 +1499,8 @@ SCIP_RETCODE reduce_simple_pc(
                      /* add ancestors */
                      SCIPintListNodeFree(scip, &(g->ancestors[n1]));
                      SCIPintListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
-                     SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors, NULL) );
-                     SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors, NULL) );
+                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors, NULL) );
+                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors, NULL) );
                   }
                   (*count) += graph_pc_deleteTerm(scip, g, i);
                   (*fixed) += g->prize[i];

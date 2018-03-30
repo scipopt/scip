@@ -2208,7 +2208,7 @@ SCIP_RETCODE graph_knot_delPseudo(
          const SCIP_Real newcost = ecost[i] + ecost[j];
          const int oldedge = sparedges[replacecount];
 
-#ifndef NEDEBUG
+#ifndef NDEBUG
          int oldtail;
          int oldhead;
 #endif
@@ -2219,7 +2219,7 @@ SCIP_RETCODE graph_knot_delPseudo(
          if( SCIPisGT(scip, newcost, cutoffs[edgecount++]) )
             continue;
 
-#ifndef NEDEBUG
+#ifndef NDEBUG
          oldtail = g->tail[oldedge];
          oldhead = g->head[oldedge];
 #endif
