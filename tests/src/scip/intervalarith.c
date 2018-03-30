@@ -335,7 +335,32 @@ Test(intervalarith, solveuniquad)
   cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
   cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
 
-  /* TODO x^2 in rhs */
+  /* some more tests with lincoef=0 */
+  /* [0,1]*x^2 = 1 -> x^2 = [1,infty] -> x = [-infty,-1] v [1,infty]*/
+  SCIPintervalSetBounds(&sqrcoef, 0.0, 1.0);
+  SCIPintervalSet(&lincoef, 0.0);
+  SCIPintervalSetBounds(&rhs, 1.0, 1.0);
+  SCIPintervalSetEntire(SCIP_DEFAULT_INFINITY, &xbnds);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant));
+
+  /* [0,1]*x^2 = 1, x >= 0 -> x >= 1 */
+  SCIPintervalSetBounds(&sqrcoef, 0.0, 1.0);
+  SCIPintervalSet(&lincoef, 0.0);
+  SCIPintervalSetBounds(&rhs, 1.0, 1.0);
+  SCIPintervalSetBounds(&xbnds, 0.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
+  cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
+
+  /* [0,1]*x^2 = 1, x <= 0 -> x <= -1 */
+  SCIPintervalSetBounds(&sqrcoef, 0.0, 1.0);
+  SCIPintervalSet(&lincoef, 0.0);
+  SCIPintervalSetBounds(&rhs, 1.0, 1.0);
+  SCIPintervalSetBounds(&xbnds, -SCIP_DEFAULT_INFINITY, -1.0);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+  cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
 }
 
 /** some tests for x*y in rhs */

@@ -3059,17 +3059,6 @@ void SCIPintervalSolveUnivariateQuadExpression(
 
    SCIPdebugMessage("solving [%g,%g]*x^2 + [%g,%g]*x = [%g,%g] for x in [%g,%g]\n", sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, xbnds.sup);
 
-   if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 && (sqrcoeff.inf != 0.0 || sqrcoeff.sup != 0.0))
-   {
-      /* easy case: x \in +/- sqrt(rhs/a) */
-      SCIPintervalDiv(infinity, resultant, rhs, sqrcoeff);
-      /* TODO consider xbnds */
-      SCIPintervalSquareRoot(infinity, resultant, *resultant);
-      resultant->inf = -resultant->sup;
-      SCIPintervalIntersect(resultant, *resultant, xbnds);
-      return;
-   }
-
    /* find all x>=0 such that a*x^2+b*x = c */
    if( xbnds.sup >= 0 )
    {
