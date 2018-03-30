@@ -2096,7 +2096,6 @@ SCIP_RETCODE graph_knot_delPseudo(
   // const int*            sparedges,          /**< array of spare edges */
    const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge */
    int                   vertex,             /**< the vertex */
-   SCIP_Bool             freeancestors,      /**< free edge ancestors? */
    SCIP_Bool*            success             /**< has node been pseudo-eliminated? */
    )
 {
@@ -2241,7 +2240,7 @@ SCIP_RETCODE graph_knot_delPseudo(
    }
 
    /* delete remaining edges */
-   graph_knot_del(scip, g, vertex, freeancestors);
+   graph_knot_del(scip, g, vertex, TRUE);
 
    return SCIP_OKAY;
 }

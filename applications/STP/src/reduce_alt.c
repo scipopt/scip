@@ -3049,7 +3049,7 @@ SCIP_RETCODE reduce_sdsp(
 
 
 
-
+/** bd_k test for given sd distances */
 SCIP_RETCODE reduce_bdr(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
