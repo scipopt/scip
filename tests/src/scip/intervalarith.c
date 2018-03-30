@@ -335,4 +335,67 @@ Test(intervalarith, solveuniquad)
   cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
   cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
 
+  /* TODO x^2 in rhs */
+}
+
+/** some tests for x*y in rhs */
+Test(intervalarith, xy)
+{
+   SCIP_INTERVAL xbnds;
+   SCIP_INTERVAL ybnds;
+   SCIP_INTERVAL rhs;
+   SCIP_INTERVAL resultant;
+   SCIP_INTERVAL sqrcoef;
+
+   /* x*y == 1.0 for x,y in [-1,1] -> x = [-1,-1] v [1,1] */
+   SCIPintervalSetBounds(&xbnds, -1.0, 1.0);
+   SCIPintervalSetBounds(&ybnds, -1.0, 1.0);
+   SCIPintervalSetBounds(&rhs, 1.0, 1.0);
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
+   cr_assert_eq(resultant.inf, -1.0);
+   cr_assert_eq(resultant.sup,  1.0);
+
+   /* with x in [-1,0], this should then give x = [-1,-1] */
+   SCIPintervalSetBounds(&xbnds, -1.0, 0.0);
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
+   cr_assert_eq(resultant.inf, -1.0);
+   cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+
+   /* and with x in [0,1], this should then give x = [1,1] */
+   SCIPintervalSetBounds(&xbnds, 0.0, 1.0);
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
+   cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
+   cr_assert_eq(resultant.sup, 1.0);
+
+   /* x*y >= 1.0 for x,y in [-1,1] -> x = [-1,-1] */
+   SCIPintervalSetBounds(&xbnds, -1.0, 1.0);
+   SCIPintervalSetBounds(&ybnds, -1.0, 1.0);
+   SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
+   cr_assert_eq(resultant.inf, -1.0);
+   cr_assert_float_eq(resultant.sup,  1.0, 1e-12);
+
+   /* x*y >= 1.0 for x in [-1,1], y in [-1,0] -> x = [-1,-1] */
+   SCIPintervalSetBounds(&ybnds, -1.0, -0.0);
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
+   cr_assert_eq(resultant.inf, -1.0);
+   /* currently still gives 1 as upper bound, so cr_assert_float_eq(resultant.sup, -1.0, 1e-12); fails
+    * however, SCIPintervalSolveUnivariateQuadExpression handles this better:
+    */
+   SCIPintervalSet(&sqrcoef, 0.0);
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, ybnds, rhs, xbnds);
+   cr_assert_eq(resultant.inf, -1.0);
+   cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+
+   /* similar for x*y >= 1.0 for x in [-1,1], y in [0,1] -> x = [1,1] */
+   SCIPintervalSetBounds(&ybnds, 0, 1.0);
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
+   cr_assert_eq(resultant.sup, 1.0);
+   /* currently still gives -1 as lower bound, so cr_assert_float_eq(resultant.inf, 1.0, 1e-12); fails
+    * however, SCIPintervalSolveUnivariateQuadExpression handles this better:
+    */
+   SCIPintervalSet(&sqrcoef, 0.0);
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, ybnds, rhs, xbnds);
+   cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
+   cr_assert_eq(resultant.sup, 1.0);
 }
