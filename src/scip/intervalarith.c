@@ -3919,12 +3919,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          {
             SCIP_INTERVAL yneg;
 
-            /* find all y >= 0 such that -rcoef_y * y + rcoef_yy * y^2 in -rhs2 and then negate y */
-            SCIPintervalSet(&rcoef_y_int, -(SCIP_Real)rcoef_y);
-            SCIPintervalSetBounds(&yneg, -yneg.sup, -yneg.inf);
-            SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &yneg, rcoef_yy_int, rcoef_y_int, rhs2, yneg);
-            if( !SCIPintervalIsEmpty(infinity, yneg) )
-               SCIPintervalSetBounds(&yneg, -yneg.sup, -yneg.inf);
+            SCIPintervalSolveUnivariateQuadExpressionNegative(infinity, &yneg, rcoef_yy_int, rcoef_y_int, rhs2, ybnds);
             if( !SCIPintervalIsEmpty(infinity, yneg) )
             {
                if( yneg.inf > -infinity )
