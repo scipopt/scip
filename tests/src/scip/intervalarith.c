@@ -252,4 +252,86 @@ Test(intervalarith, solveuniquad)
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
   cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
   cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+
+
+  /* a linear equation with interval coefficients should be solved well:
+   * {x : [-1,1]*x >= 1.0} = [-infty,-1] v [1,infty]
+   * {x : [-1,1]*x <= 1.0} = [-infty,infty]
+   * {x : [-1,1]*x <=-1.0} = [-infty,-1] v [1,infty]
+   * {x : [-1,1]*x >=-1.0} = [-infty,infty]
+   *
+   * {x : [0,1]*x >= 1.0} = [1,infty]
+   * {x : [-1,0]*x >= 1.0} = [-infty,-1]
+   * {x : [0,1]*x >= 0.0} = [-infty,infty]
+   */
+  SCIPintervalSetEntire(SCIP_DEFAULT_INFINITY, &xbnds);
+  SCIPintervalSet(&sqrcoef, 0.0);
+  SCIPintervalSetBounds(&lincoef, -1.0, 1.0);
+  SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+  cr_assert_eq(resultant.sup,  SCIP_DEFAULT_INFINITY);
+
+  SCIPintervalSetBounds(&rhs, -SCIP_DEFAULT_INFINITY, 1.0);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+  cr_assert_eq(resultant.sup,  SCIP_DEFAULT_INFINITY);
+
+  SCIPintervalSetBounds(&rhs, -SCIP_DEFAULT_INFINITY, -1.0);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+  cr_assert_eq(resultant.sup,  SCIP_DEFAULT_INFINITY);
+
+  SCIPintervalSetBounds(&rhs, -1.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+  cr_assert_eq(resultant.sup,  SCIP_DEFAULT_INFINITY);
+
+  SCIPintervalSetBounds(&lincoef, 0.0, 1.0);
+  SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  /*TODO cr_assert_eq(resultant.inf, 1.0); */
+  cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
+
+  SCIPintervalSetBounds(&lincoef, -1.0, 0.0);
+  SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+  /* TODO cr_assert_eq(resultant.sup, -1.0); */
+
+  SCIPintervalSetBounds(&lincoef, 0.0, 1.0);
+  SCIPintervalSetBounds(&rhs, 0.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant));
+
+  /* providing bounds on x should result in better results:
+   * {x in [-infty,0]: [-1,1]*x >= 1.0} = [-infty,-1]
+   * {x in [0,+infty]: [-1,1]*x >= 1.0} = [1,infty]
+   * {x in [-infty,0]: [-1,1]*x <=-1.0} = [-infty,-1]
+   * {x in [0,+infty]: [-1,1]*x <=-1.0} = [1,infty]
+   */
+
+  SCIPintervalSetBounds(&lincoef, -1.0, 1.0);
+  SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSetBounds(&xbnds, -SCIP_DEFAULT_INFINITY, 0.0);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+  /*TODO cr_assert_eq(resultant.sup, -1.0); */
+
+  SCIPintervalSetBounds(&xbnds, 0.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  /*TODO cr_assert_eq(resultant.inf, 1.0); */
+  cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
+
+  SCIPintervalSetBounds(&rhs, -SCIP_DEFAULT_INFINITY, -1.0);
+  SCIPintervalSetBounds(&xbnds, -SCIP_DEFAULT_INFINITY, 0.0);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
+  /*TODO cr_assert_eq(resultant.sup, -1.0); */
+
+  SCIPintervalSetBounds(&xbnds, 0.0, SCIP_DEFAULT_INFINITY);
+  SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
+  /*TODO cr_assert_eq(resultant.inf, 1.0); */
+  cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
+
 }
