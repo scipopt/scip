@@ -3071,11 +3071,7 @@ SCIP_RETCODE reduce_bdr(
    SCIP_Real cutoffs[STP_BDR_MAXDNEDGES];
    SCIP_Real sd[STP_BDR_MAXDEGREE];
    SCIP_Real ecost[STP_BDR_MAXDEGREE];
-   IDX* ancestors[STP_BDR_MAXDEGREE];
-   IDX* revancestors[STP_BDR_MAXDEGREE];
    int adjvert[STP_BDR_MAXDEGREE];
-   int incedge[STP_BDR_MAXDEGREE];
-   int reinsert[STP_BDR_MAXDEGREE];
    GRAPH* auxg;
    PATH* mst;
    SCIP_Real csum;
@@ -3095,7 +3091,7 @@ SCIP_RETCODE reduce_bdr(
       graph_knot_add(auxg, -1);
 
    for( int k = 0; k < STP_BDR_MAXDEGREE - 1; k++ )
-      for( int k2 = k + 1; k2 < STP_BDR_MAXDEGREE; k2++ )
+      for( int k2 = STP_BDR_MAXDEGREE - 1; k2 >= k + 1; k2-- )
          graph_edge_add(scip, auxg, k, k2, 1.0, 1.0);
 
    assert(auxg->edges == 2 * STP_BDR_MAXDNEDGES);
@@ -3106,11 +3102,8 @@ SCIP_RETCODE reduce_bdr(
    SCIPdebugMessage("BD3-R Reduction: ");
 
    for( int i = 0; i < STP_BDR_MAXDEGREE; i++ )
-   {
       sd[i] = 0.0;
-      ancestors[i] = NULL;
-      revancestors[i] = NULL;
-   }
+
    if( !pc )
       for( int i = 0; i < nnodes; i++ )
          g->mark[i] = (g->grad[i] > 0);
@@ -3122,10 +3115,11 @@ SCIP_RETCODE reduce_bdr(
       if( Is_term(g->term[i]) || g->grad[i] < 3 || g->grad[i] > STP_BDR_MAXDEGREE )
          continue;
 
+      assert(g->mark[i]);
+
       k = 0;
       for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
-         incedge[k] = e;
          ecost[k] = g->cost[e];
          adjvert[k++] = g->head[e];
          assert(k <= STP_BDR_MAXDEGREE);
@@ -3148,28 +3142,6 @@ SCIP_RETCODE reduce_bdr(
          {
             SCIP_Bool success;
 
-/*
-            for( k = 0; k < 3; k++ )
-            {
-               SCIPintListNodeFree(scip, &(ancestors[k]));
-               SCIPintListNodeFree(scip, &(revancestors[k]));
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[k]), g->ancestors[incedge[k]], NULL) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[k]), g->ancestors[Edge_anti(incedge[k])], NULL) );
-            }
-
-            for( k = 0; k < 3; k++ )
-            {
-               const  int k2 = (k + 1) % 3;
-
-               if( SCIPisLT(scip, sd[k], ecost[k] + ecost[k2]) )
-               {
-                  graph_edge_del(scip, g, incedge[k], TRUE);
-               }
-               else
-                  SCIP_CALL( graph_edge_reinsert(scip, g, incedge[k], adjvert[k], adjvert[k2], ecost[k] + ecost[k2], ancestors[k], ancestors[k2], revancestors[k], revancestors[k2]) );
-            }
-
-*/
             cutoffs[0] = sd[0];
             cutoffs[1] = sd[2];
             cutoffs[2] = sd[1];
@@ -3254,6 +3226,27 @@ SCIP_RETCODE reduce_bdr(
 
          if( k == 4 )
          {
+
+            int edgecount = 0;
+            SCIP_Bool success;
+            for( k = 0; k < 3; k++ )
+            {
+               for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
+               {
+                  const int k2 = auxg->head[e];
+                  if( k2 > k )
+                     cutoffs[edgecount++] = auxg->cost[e];
+               }
+            }
+
+            SCIP_CALL( graph_knot_delPseudo(scip, g, cutoffs, i, &success) );
+
+            if( success )
+               (*nelims)++;
+
+            /* todo deleteme*/
+#if 0
+
             int l = 0;
             for( k = 0; k < 4; k++ )
             {
@@ -3271,28 +3264,6 @@ SCIP_RETCODE reduce_bdr(
                   }
                }
             }
-
-            int todo;
-#if 0
-            int l = 0;
-            for( k = 0; k < 4; k++ )
-                 {
-                    for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
-                    {
-                       const int k2 = auxg->head[e];
-                       if( k2 > k )
-                       {
-                          assert(l < 6);
-
-                             cutoffs[l++] = auxg->cost[e];
-                       }
-
-                    }
-                 }
-
-#endif
-            // SCIP_CALL( graph_knot_delPseudo(scip, g, cutoffs, i, &success) );
-
 
             if( k == 4  )
             {
@@ -3319,16 +3290,11 @@ SCIP_RETCODE reduce_bdr(
                while( g->outbeg[i] >= 0 )
                   graph_edge_del(scip, g, g->outbeg[i], TRUE);
             }
+#endif
             assert(g->grad[i] == 0);
          }
 
       }
-   }
-
-   for( int k = 0; k < 4; k++ )
-   {
-      SCIPintListNodeFree(scip, &(ancestors[k]));
-      SCIPintListNodeFree(scip, &(revancestors[k]));
    }
 
    graph_path_exit(scip, auxg);
