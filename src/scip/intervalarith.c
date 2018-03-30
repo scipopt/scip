@@ -3057,28 +3057,9 @@ void SCIPintervalSolveUnivariateQuadExpression(
 
    assert(resultant != NULL);
 
-   if( sqrcoeff.inf == 0.0 && sqrcoeff.sup == 0.0 )
-   {
-      /* relatively easy case: x \in rhs / lincoeff */
-      if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 )
-      {
-         /* equation became 0.0 \in rhs */
-         if( rhs.inf <= 0.0 && rhs.sup >= 0.0 )
-            *resultant = xbnds;
-         else
-            SCIPintervalSetEmpty(resultant);
-      }
-      else
-      {
-         SCIPintervalDiv(infinity, resultant, rhs, lincoeff);
-         SCIPintervalIntersect(resultant, *resultant, xbnds);
-      }
-      SCIPdebugMessage("  solving [%g,%g]*x in [%g,%g] gives [%g,%g]\n", SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs), SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
+   SCIPdebugMessage("solving [%g,%g]*x^2 + [%g,%g]*x = [%g,%g] for x in [%g,%g]\n", sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, xbnds.sup);
 
-      return;
-   }
-
-   if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 )
+   if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 && (sqrcoeff.inf != 0.0 || sqrcoeff.sup != 0.0))
    {
       /* easy case: x \in +/- sqrt(rhs/a) */
       SCIPintervalDiv(infinity, resultant, rhs, sqrcoeff);
