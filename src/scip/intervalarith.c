@@ -2899,6 +2899,41 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    }
 }
 
+/** computes interval with negative solutions of a quadratic equation with interval coefficients
+ *
+ * Given intervals a, b, and c, this function computes an interval that contains all negative solutions of \f$ a x^2 + b x \in c\f$ within xbnds.
+ */
+void SCIPintervalSolveUnivariateQuadExpressionNegative(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
+   SCIP_INTERVAL         rhs,                /**< right hand side of equation */
+   SCIP_INTERVAL         xbnds               /**< bounds on x */
+   )
+{
+   SCIP_Real tmp;
+
+   /* change in variables y = -x, thus get all positive solutions of
+    * a * y^2 + (-b) * y in c with -xbnds as bounds on y
+    */
+
+   tmp = lincoeff.inf;
+   lincoeff.inf = -lincoeff.sup;
+   lincoeff.sup = -tmp;
+
+   tmp = xbnds.inf;
+   xbnds.inf = -xbnds.sup;
+   xbnds.sup = -tmp;
+
+   SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, resultant, sqrcoeff, lincoeff, rhs, xbnds);
+
+   tmp = resultant->inf;
+   resultant->inf = -resultant->sup;
+   resultant->sup = -tmp;
+}
+
+
 /** computes positive solutions of a quadratic equation with scalar coefficients
  * 
  * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$ within xbnds.
@@ -3051,7 +3086,6 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL         xbnds               /**< bounds on x */
    )
 {
-   SCIP_Real tmp;
    SCIP_INTERVAL xpos;
    SCIP_INTERVAL xneg;
 
@@ -3074,17 +3108,7 @@ void SCIPintervalSolveUnivariateQuadExpression(
    /* find all x<=0 such that a*x^2-b*x = c */
    if( xbnds.inf <= 0.0 )
    {
-      SCIP_INTERVAL xbndsneg;
-
-      tmp = lincoeff.inf;
-      lincoeff.inf = -lincoeff.sup;
-      lincoeff.sup = -tmp;
-      SCIPintervalSetBounds(&xbndsneg, -xbnds.sup, -xbnds.inf);
-
-      SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xneg, sqrcoeff, lincoeff, rhs, xbndsneg);
-      tmp = xneg.inf;
-      xneg.inf = -xneg.sup;
-      xneg.sup = -tmp;
+      SCIPintervalSolveUnivariateQuadExpressionNegative(infinity, &xneg, sqrcoeff, lincoeff, rhs, xbnds);
       SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%g,%g]\n",
          sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, MIN(xbnds.sup, 0.0), xneg.inf, xneg.sup);
    }
