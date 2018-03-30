@@ -3720,6 +3720,7 @@ SCIP_RETCODE reduce_bound(
 
          if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
          {
+            int todo;
             tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
             if( SCIPisGT(scip, tmpcost, obj) )
             {

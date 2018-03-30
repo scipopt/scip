@@ -218,6 +218,7 @@ extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
 extern SCIP_RETCODE   graph_sol_reroot(SCIP*, GRAPH*, int*, int);
 extern SCIP_RETCODE   graph_sol_getOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
 extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, IDX*, IDX*, IDX*, IDX*);
+extern SCIP_RETCODE   graph_knot_delPseudo(SCIP*, GRAPH*, const SCIP_Real*, int, SCIP_Bool, SCIP_Bool*);
 extern SCIP_RETCODE   graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
 extern SCIP_RETCODE   graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, int, int, int);
 extern SCIP_RETCODE   graph_grid_coordinates(SCIP*, int**, int**, int*, int, int);
