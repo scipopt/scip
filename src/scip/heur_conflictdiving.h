@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,11 +15,11 @@
 
 /**@file   heur_conflictdiving.h
  * @ingroup PRIMALHEURISTICS
- * @brief  LP diving heuristic that chooses fixings w.r.t. soft locks
+ * @brief  LP diving heuristic that chooses fixings w.r.t. conflict locks
  * @author Jakob Witzig
  *
  * Diving heuristic: Iteratively fixes some fractional variable and resolves the LP-relaxation, thereby simulating a
- * depth-first-search in the tree. Conflict Diving chooses the variable with the fewest soft locking number in any
+ * depth-first-search in the tree. Conflict Diving chooses the variable with the fewest conflict locking number in any
  * direction and rounds it into this direction.
  */
 

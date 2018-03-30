@@ -3062,6 +3062,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    SCIP_VAR* lockvar;
 
    assert(var != NULL);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
    assert(var->nlocksup[locktype] >= 0);
    assert(var->nlocksdown[locktype] >= 0);
    assert(var->scip == set->scip);
@@ -3177,8 +3178,7 @@ int SCIPvarGetNLocksDownType(
    int i;
 
    assert(var != NULL);
-   assert(locktype >= SCIP_LOCKTYPE_MODEL);
-   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
    assert(var->nlocksdown[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -3235,8 +3235,7 @@ int SCIPvarGetNLocksUpType(
    int i;
 
    assert(var != NULL);
-   assert(locktype >= SCIP_LOCKTYPE_MODEL);
-   assert(locktype <= SCIP_LOCKTYPE_CONFLICT);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
    assert(var->nlocksup[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -4657,7 +4656,7 @@ SCIP_RETCODE SCIPvarAggregate(
    obj = var->obj;
    SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lp, eventqueue, 0.0) );
 
-   /* unlock all rounding locks */
+   /* unlock all locks */
    for( i = 0; i < NLOCKTYPES; i++ )
    {
       nlocksdown[i] = var->nlocksdown[i];
