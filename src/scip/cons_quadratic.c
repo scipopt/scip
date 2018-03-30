@@ -10382,7 +10382,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       SCIP_INTERVAL xbnds;
 
       SCIPintervalSet(&a_, a);
-      SCIPintervalSetBounds(&xbnds, -infty2infty(SCIPinfinity(scip), intervalinfty, -SCIPvarGetLbLocal(var)), infty2infty(SCIPinfinity(scip), intervalinfty, SCIPvarGetUbLocal(var)));
+      SCIPintervalSetBounds(&xbnds, -infty2infty(SCIPinfinity(scip), intervalinfty, -SCIPvarGetLbLocal(var)), infty2infty(SCIPinfinity(scip), intervalinfty, SCIPvarGetUbLocal(var))); /*lint !e666*/
       SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs, xbnds);
    }
 
