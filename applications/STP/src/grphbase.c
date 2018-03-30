@@ -1022,7 +1022,7 @@ SCIP_RETCODE graph_pc_getSap(
       head = (*newgraph)->head[e];
       if( Is_term((*newgraph)->term[head]) )
       {
-         (void) graph_edge_redirect(scip, (*newgraph), e, pseudoroot, head, graph->cost[e]);
+         (void) graph_edge_redirect(scip, (*newgraph), e, pseudoroot, head, graph->cost[e], TRUE);
          (*newgraph)->cost[flipedge(e)] = FARAWAY;
          assert((*newgraph)->head[e] == head);
          assert((*newgraph)->tail[e] == pseudoroot);
@@ -1187,7 +1187,7 @@ SCIP_RETCODE graph_pc_getSapShift(
 
       if( Is_term(newg->term[head]) )
       {
-         (void) graph_edge_redirect(scip, newg, e, pseudoroot, head, graph->cost[e]);
+         (void) graph_edge_redirect(scip, newg, e, pseudoroot, head, graph->cost[e], TRUE);
          newg->cost[flipedge(e)] = FARAWAY;
          assert(newg->head[e] == head);
          assert(newg->tail[e] == pseudoroot);
@@ -1280,7 +1280,7 @@ SCIP_RETCODE graph_pc_getRsap(
       {
          assert(Is_term(p->term[head]));
 
-         (void) graph_edge_redirect(scip, p, e, root, head, graph->cost[e]);
+         (void) graph_edge_redirect(scip, p, e, root, head, graph->cost[e], TRUE);
          p->cost[flipedge(e)] = FARAWAY;
 
          for( e2 = p->outbeg[head]; e2 != EAT_LAST; e2 = p->oeat[e2] )
@@ -1764,7 +1764,7 @@ SCIP_RETCODE graph_pc_mw2rmw(
          const int k = graph->head[e];
          if( Is_term(graph->term[k]) && !SCIPisZero(scip, graph->cost[e]) )
          {
-            (void) graph_edge_redirect(scip, graph, e, newroot, k, graph->cost[e]);
+            (void) graph_edge_redirect(scip, graph, e, newroot, k, graph->cost[e], TRUE);
             graph->cost[flipedge(e)] = FARAWAY;
          }
          e = enext;
@@ -2135,7 +2135,7 @@ SCIP_RETCODE graph_knot_delPseudo(
 
    edgecount = 0;
 
-   for( int i = 1; i < STP_DELPSEUDO_MAXNEDGES; i++ )
+   for( int i = 0; i < STP_DELPSEUDO_MAXNEDGES; i++ )
       neigbedge[i] = -1;
 
    /* save old edges */
@@ -2224,7 +2224,7 @@ SCIP_RETCODE graph_knot_delPseudo(
          oldhead = g->head[oldedge];
 #endif
 
-         SCIP_CALL( graph_edge_reinsert(scip, g, oldedge, adjvert[i], adjvert[j], newcost, ancestors[i], ancestors[j], revancestors[i], revancestors[j]) );
+         SCIP_CALL( graph_edge_reinsert(scip, g, oldedge, adjvert[i], adjvert[j], newcost, ancestors[i], ancestors[j], revancestors[i], revancestors[j], FALSE) );
 
          /* does no edge exist? */
          if( neigbedge[edgecount - 1] < 0 )
@@ -2241,6 +2241,12 @@ SCIP_RETCODE graph_knot_delPseudo(
 
    /* delete remaining edges */
    graph_knot_del(scip, g, vertex, TRUE);
+
+   for( int i = 0; i < degree; i++ )
+   {
+      SCIPintListNodeFree(scip, &(ancestors[i]));
+      SCIPintListNodeFree(scip, &(revancestors[i]));
+   }
 
    return SCIP_OKAY;
 }
@@ -2499,12 +2505,14 @@ int graph_edge_redirect(
    int                   eki,                /**< the edge */
    int                   k,                  /**< new tail */
    int                   j,                  /**< new head */
-   SCIP_Real             cost                /**< new cost */
+   SCIP_Real             cost,               /**< new cost */
+   SCIP_Bool             forcedelete         /**< delete edge eki if it is not used? */
    )
 {
    int e;
 
-   graph_edge_del(NULL, g, eki, FALSE);
+   if( forcedelete )
+      graph_edge_del(NULL, g, eki, FALSE);
 
    for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
    {
@@ -2530,6 +2538,9 @@ int graph_edge_redirect(
    }
    else
    {
+      if( !forcedelete )
+         graph_edge_del(NULL, g, eki, FALSE);
+
       assert(g->oeat[eki] == EAT_FREE);
 
       e = eki;
@@ -2570,11 +2581,12 @@ SCIP_RETCODE graph_edge_reinsert(
    IDX*                  ancestors0,         /**< ancestors of first edge */
    IDX*                  ancestors1,         /**< ancestors of second edge */
    IDX*                  revancestors0,      /**< reverse ancestors of first edge */
-   IDX*                  revancestors1       /**< reverse ancestors of first edge */
+   IDX*                  revancestors1,      /**< reverse ancestors of first edge */
+   SCIP_Bool             forcedelete         /**< delete edge e1 if it is not used? */
    )
 {
    /* redirect; store new edge in n1 */
-   const int n1 = graph_edge_redirect(scip, g, e1, k1, k2, cost);
+   const int n1 = graph_edge_redirect(scip, g, e1, k1, k2, cost, forcedelete);
 
    if( n1 >= 0 )
    {

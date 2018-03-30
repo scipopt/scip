@@ -347,7 +347,7 @@ SCIP_RETCODE traverseChain(
       graph_edge_del(scip, g, e, TRUE);
 
       g->prize[i] += sum;
-      ne = graph_edge_redirect(scip, g, e1, i, k, 1.0);
+      ne = graph_edge_redirect(scip, g, e1, i, k, 1.0, TRUE);
 
       if( ne != -1 )
       {
@@ -1491,7 +1491,7 @@ SCIP_RETCODE reduce_simple_pc(
                   SCIPdebugMessage("delete - term - %d\n ", i);
 
                   /* contract edge */
-                  n1 = graph_edge_redirect(scip, g, e, nodes2[1], nodes2[0], g->cost[e] + g->cost[e1] - g->prize[i]);
+                  n1 = graph_edge_redirect(scip, g, e, nodes2[1], nodes2[0], g->cost[e] + g->cost[e1] - g->prize[i], TRUE);
 
                   /* new edge inserted? */
                   if( n1 >= 0)
