@@ -11643,7 +11643,7 @@ SCIP_RETCODE lpSolveStable(
    return SCIP_OKAY;
 }
 
-/** adjust the LP objective value if its greater/less than +/- SCIPsetInfinity() */
+/** adjust the LP objective value if it is greater/less than +/- SCIPsetInfinity() */
 static
 void adjustLPobjval(
    SCIP_LP*              lp,                 /**< current LP data */
