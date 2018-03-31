@@ -211,7 +211,7 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 
    *result = SCIP_DELAYED;
 
-   if( !shouldRun() )
+   if( !shouldRun(scip, heurdata) )
       return SCIP_OKAY;
 
    maxvarsfac = SCIP_INVALID;
