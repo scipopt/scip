@@ -97,7 +97,7 @@ SCIP_Bool shouldRun(
    firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
 
    /* check whether the dual bound has not changed too much at the root node */
-   if( !SCIPisInfinity(scip, REALABs(firstdualboundroot)) )
+   if( !SCIPisInfinity(scip, REALABS(firstdualboundroot)) )
    {
       if( SCIPisPositive(scip, dualboundroot) == SCIPisPositive(scip, firstdualboundroot) )
       {
