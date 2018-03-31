@@ -69,7 +69,7 @@ struct SCIP_HeurData
 
    SCIP_Bool             maxviol;            /**< rounding into potentially infeasible or feasible direction */
    SCIP_Real             maxvarsfac;         /**< maximal fraction of variables involved in a conflict constraint */
-   SCIP_Real             maxnnzobj;          /**< maximal portion of nonzero objective coeffcients */
+   SCIP_Real             maxnnzobjfac;       /**< maximal portion of nonzero objective coeffcients */
    int                   minmaxvars;         /**< minimal absolute maximum of variables involved in a conflict constraint */
    int                   minconflictlocks;   /**< threshold for penalizing the score */
 };
