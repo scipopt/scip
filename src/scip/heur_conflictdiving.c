@@ -57,7 +57,7 @@
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
-#define DEFAULT_MAXNNZOBJ           0.1 /**< maximal portion of nonzero objective coeffcients */
+#define DEFAULT_MAXNNZOBJFAC      0.025 /**< maximal portion of nonzero objective coeffcients */
 #define DEFAULT_MAXVARSFAC         -1.0 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
 #define DEFAULT_MINMAXVARS           -1 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
 #define DEFAULT_MINCONFLICTLOCKS      0 /**< threshold for penalizing the score */
@@ -73,6 +73,46 @@ struct SCIP_HeurData
    int                   minmaxvars;         /**< minimal absolute maximum of variables involved in a conflict constraint */
    int                   minconflictlocks;   /**< threshold for penalizing the score */
 };
+
+static
+SCIP_Bool shouldRun(
+   SCIP*                 scip,
+   SCIP_HEURDATA*        heurdata
+   )
+{
+   SCIP_Real dualboundroot;
+   SCIP_Real firstdualboundroot;
+
+   assert(heurdata != NULL);
+
+   /* don't run if no conflict constraints where found */
+   if( SCIPgetNConflictConssFound(scip) == 0 )
+      return FALSE;
+
+   /* don't run if to many nonzero objective coefficients are present */
+   if( SCIPgetNObjVars(scip) < SCIPceil(scip, heurdata->maxnnzobjfac * SCIPgetNVars(scip)) )
+      return TRUE;
+
+   dualboundroot = SCIPgetDualboundRoot(scip);
+   firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
+
+   /* check whether the dual bound has not changed too much at the root node */
+   if( !SCIPisInfinity(scip, REALABs(firstdualboundroot)) )
+   {
+      if( SCIPisPositive(scip, dualboundroot) == SCIPisPositive(scip, firstdualboundroot) )
+      {
+         if( SCIPisZero(scip, dualboundroot) )
+         {
+            if( SCIPisZero(scip, firstdualboundroot) )
+               return TRUE;
+         }
+         else if( firstdualboundroot / dualboundroot < 1.005 && firstdualboundroot / dualboundroot > 0.995 )
+            return TRUE;
+      }
+   }
+
+   return FALSE;
+}
 
 /*
  * Callback methods
@@ -169,19 +209,13 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DELAYED;
 
-   /* don't run if to many nonzero objective coefficients are present */
-   if( SCIPgetNObjVars(scip) > heurdata->maxnnzobj * SCIPgetNVars(scip) )
+   if( !shouldRun() )
       return SCIP_OKAY;
 
-   *result = SCIP_DELAYED;
    maxvarsfac = SCIP_INVALID;
    minmaxvars = INT_MAX;
-
-   /* don't run if no conflict constraints where found */
-   if( SCIPgetNConflictConssFound(scip) == 0 )
-      return SCIP_OKAY;
 
    if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetDepth(scip) != 0 )
       return SCIP_OKAY;
@@ -421,9 +455,10 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
          "maximal fraction of variables involved in a conflict constraint (< 0: auto)",
          &heurdata->maxvarsfac, TRUE, DEFAULT_MAXVARSFAC, -1.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxnnzobj",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxnnzobjfac",
          "maximal portion of nonzero objective coeffcients.",
-         &heurdata->maxnnzobj, TRUE, DEFAULT_MAXNNZOBJ, 0.0, 1.0, NULL, NULL) );
+         &heurdata->maxnnzobjfac, TRUE, DEFAULT_MAXNNZOBJFAC
+      , 0.0, 1.0, NULL, NULL) );
 
 
    return SCIP_OKAY;
