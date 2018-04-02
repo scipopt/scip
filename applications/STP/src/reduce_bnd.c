@@ -290,9 +290,6 @@ int reduceWithNodeReplaceBounds(
                cutoffs[edgecount] = upperbound - lpobjval - (pathdist[vert] + vnoi[vert2].dist);
                cutoffsrev[edgecount] = upperbound - lpobjval - (pathdist[vert2] + vnoi[vert].dist);
 
-              cutoffs[edgecount] = FARAWAY;
-
-
                assert(cutoffs[edgecount] >= 0.0);
                assert(cutoffsrev[edgecount] >= 0.0);
 
@@ -304,7 +301,6 @@ int reduceWithNodeReplaceBounds(
 
          SCIP_CALL_ABORT( graph_knot_delPseudo(scip, graph, cost, cutoffs, cutoffsrev, k, &success) );
 
-         printf("killed %d \n", k);
          if( success )
             nfixed++;
       }

@@ -59,7 +59,7 @@ SCIP_Bool cutoffEdge(
    int                   cutoffidx           /**< index for cutoff array */
    )
 {
-   const SCIP_Real newcost = ecost[edgeidx1] + ecost[edgeidx2];
+   const SCIP_Real newcost = ecostrev[edgeidx1] + ecost[edgeidx2];
 
    assert(edgeidx1 != edgeidx2);
 
@@ -68,7 +68,7 @@ SCIP_Bool cutoffEdge(
 
    if( cutoffsrev != NULL )
    {
-      const SCIP_Real newcostrev = ecostrev[edgeidx1] + ecostrev[edgeidx2];
+      const SCIP_Real newcostrev = ecost[edgeidx1] + ecostrev[edgeidx2];
 
       if( !SCIPisGT(scip, newcostrev, cutoffsrev[cutoffidx]) )
          return FALSE;
@@ -2144,7 +2144,6 @@ SCIP_RETCODE graph_knot_delPseudo(
    int nspareedges;
    int replacecount;
    const int degree = g->grad[vertex];
-   const SCIP_Bool directed = (cutoffsrev != NULL);
 
    assert(scip != NULL);
    assert(cutoffs != NULL);
@@ -2184,8 +2183,7 @@ SCIP_RETCODE graph_knot_delPseudo(
       sparedges[edgecount] = e;
       ecostreal[edgecount] = g->cost[e];
       ecost[edgecount] = edgecosts[e];
-      if( directed )
-         ecostrev[edgecount] = edgecosts[flipedge(e)];
+      ecostrev[edgecount] = edgecosts[flipedge(e)];
 
       adjvert[edgecount++] = g->head[e];
 
