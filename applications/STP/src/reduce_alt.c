@@ -3146,7 +3146,7 @@ SCIP_RETCODE reduce_bdr(
             cutoffs[1] = sd[2];
             cutoffs[2] = sd[1];
 
-            SCIP_CALL( graph_knot_delPseudo(scip, g, cutoffs, i, &success) );
+            SCIP_CALL( graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success) );
 
             assert(success);
             assert(g->grad[i] == 0);
@@ -3239,7 +3239,7 @@ SCIP_RETCODE reduce_bdr(
                }
             }
 
-            SCIP_CALL( graph_knot_delPseudo(scip, g, cutoffs, i, &success) );
+            SCIP_CALL( graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success) );
 
             if( success )
                (*nelims)++;
@@ -3438,7 +3438,7 @@ SCIP_RETCODE reduce_bd34(
             cutoffs[1] = sd[2];
             cutoffs[2] = sd[1];
 
-            SCIP_CALL(graph_knot_delPseudo(scip, g, cutoffs, i, &success));
+            SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
             assert(success);
             assert(g->grad[i] == 0);
 
@@ -3535,7 +3535,7 @@ SCIP_RETCODE reduce_bd34(
                }
             }
 
-            SCIP_CALL( graph_knot_delPseudo(scip, g, cutoffs, i, &success) );
+            SCIP_CALL( graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success) );
 
             if( success )
                (*nelims)++;

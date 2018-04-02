@@ -236,15 +236,21 @@ int reduceWithNodeReplaceBounds(
    GRAPH*                graph,              /**< graph data structure */
    const PATH*           vnoi,               /**< Voronoi data structure */
    const SCIP_Real*      pathdist,           /**< distance array from shortest path calculations */
+   const SCIP_Real*      cost,               /**< dual ascent costs */
    const SCIP_Real*      replacebounds,      /**< replacement bounds */
+   STP_Bool*             nodetouched,        /**< STP_Bool node array for internal computations */
    SCIP_Real             lpobjval,           /**< lower bound corresponding to pathdist and vnoi */
    SCIP_Real             upperbound          /**< best upperbound */
 )
 {
    int adjvert[STP_DABD_MAXDEGREE];
    SCIP_Real cutoffs[STP_DABD_MAXDNEDGES];
+   SCIP_Real cutoffsrev[STP_DABD_MAXDNEDGES];
    int nfixed = 0;
    const int nnodes = graph->knots;
+
+   for( int k = 0; k < nnodes; k++ )
+      nodetouched[k] = FALSE;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -256,10 +262,13 @@ int reduceWithNodeReplaceBounds(
       if( !graph->mark[k] || Is_gterm(graph->term[k]) )
          continue;
 
-      if( SCIPisLT(scip, upperbound, replacebounds[k]) )
+      if( SCIPisLT(scip, upperbound, replacebounds[k]) && !nodetouched[k] )
       {
          int edgecount = 0;
          SCIP_Bool success;
+
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            nodetouched[graph->head[e]] = TRUE;
 
          /* fill cutoff */
 
@@ -276,17 +285,24 @@ int reduceWithNodeReplaceBounds(
             {
                const int vert2 = adjvert[i2];
 
-               const SCIP_Real mindist = MIN(pathdist[vert] + vnoi[vert2].dist, pathdist[vert2] + vnoi[vert].dist);
                assert(edgecount < STP_DABD_MAXDNEDGES);
 
-               cutoffs[edgecount++] = upperbound - mindist - lpobjval;
-               assert(cutoffs[edgecount - 1] >= 0.0);
+               cutoffs[edgecount] = upperbound - lpobjval - (pathdist[vert] + vnoi[vert2].dist);
+               cutoffsrev[edgecount] = upperbound - lpobjval - (pathdist[vert2] + vnoi[vert].dist);
+
+              cutoffs[edgecount] = FARAWAY;
+
+
+               assert(cutoffs[edgecount] >= 0.0);
+               assert(cutoffsrev[edgecount] >= 0.0);
+
+               edgecount++;
             }
          }
 
          /* try to eliminate */
 
-         SCIP_CALL_ABORT( graph_knot_delPseudo(scip, graph, cutoffs, k, &success) );
+         SCIP_CALL_ABORT( graph_knot_delPseudo(scip, graph, cost, cutoffs, cutoffsrev, k, &success) );
 
          printf("killed %d \n", k);
          if( success )
@@ -1795,7 +1811,7 @@ SCIP_RETCODE reduce_da(
    } /* root loop */
 
    if( !directed && !SCIPisZero(scip, minpathcost) )
-      nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, nodereplacebounds, lpobjval, upperbound);
+      nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrchar, lpobjval, upperbound);
 
 TERMINATE:
    *nelims = nfixed;
@@ -1812,6 +1828,8 @@ TERMINATE:
    SCIPfreeBufferArray(scip, &edgefixingbounds);
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &result);
+
+   assert(graph_valid(graph));
 
    return SCIP_OKAY;
 }
@@ -3708,7 +3726,7 @@ SCIP_RETCODE reduce_bound(
             tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
             if( SCIPisGT(scip, tmpcost, obj) )
             {
-               SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoffs, k, &success) );
+               SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, cutoffs, NULL, k, &success) );
 
                assert(graph->grad[k] == 0);
             }

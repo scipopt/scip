@@ -46,6 +46,37 @@
  * local functions
  */
 
+/** can edge in pseudo-elimination method be cut off? */
+inline static
+SCIP_Bool cutoffEdge(
+   SCIP*                 scip,               /**< SCIP data */
+   const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge */
+   const SCIP_Real*      cutoffsrev,         /**< revere cutoff values (or NULL if undirected) */
+   const SCIP_Real*      ecost,              /**< edge cost*/
+   const SCIP_Real*      ecostrev,           /**< reverse edge cost */
+   int                   edgeidx1,           /**< index of first edge to be checked (wrt provided arrays) */
+   int                   edgeidx2,           /**< index of second edge to be checked (wrt provided arrays) */
+   int                   cutoffidx           /**< index for cutoff array */
+   )
+{
+   const SCIP_Real newcost = ecost[edgeidx1] + ecost[edgeidx2];
+
+   assert(edgeidx1 != edgeidx2);
+
+   if( !SCIPisGT(scip, newcost, cutoffs[cutoffidx]) )
+      return FALSE;
+
+   if( cutoffsrev != NULL )
+   {
+      const SCIP_Real newcostrev = ecostrev[edgeidx1] + ecostrev[edgeidx2];
+
+      if( !SCIPisGT(scip, newcostrev, cutoffsrev[cutoffidx]) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
 
 inline static
 void removeEdge(
@@ -2093,8 +2124,9 @@ void graph_knot_del(
 SCIP_RETCODE graph_knot_delPseudo(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-  // const int*            sparedges,          /**< array of spare edges */
+   const SCIP_Real*      edgecosts,          /**< edge costs for cutoff */
    const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge */
+   const SCIP_Real*      cutoffsrev,         /**< revere cutoff values (or NULL if undirected) */
    int                   vertex,             /**< the vertex */
    SCIP_Bool*            success             /**< has node been pseudo-eliminated? */
    )
@@ -2102,6 +2134,8 @@ SCIP_RETCODE graph_knot_delPseudo(
    IDX* ancestors[STP_DELPSEUDO_MAXGRAD];
    IDX* revancestors[STP_DELPSEUDO_MAXGRAD];
    SCIP_Real ecost[STP_DELPSEUDO_MAXGRAD];
+   SCIP_Real ecostrev[STP_DELPSEUDO_MAXGRAD];
+   SCIP_Real ecostreal[STP_DELPSEUDO_MAXGRAD];
    int incedge[STP_DELPSEUDO_MAXGRAD];
    int adjvert[STP_DELPSEUDO_MAXGRAD];
    int neigbedge[STP_DELPSEUDO_MAXNEDGES];
@@ -2110,6 +2144,7 @@ SCIP_RETCODE graph_knot_delPseudo(
    int nspareedges;
    int replacecount;
    const int degree = g->grad[vertex];
+   const SCIP_Bool directed = (cutoffsrev != NULL);
 
    assert(scip != NULL);
    assert(cutoffs != NULL);
@@ -2147,7 +2182,11 @@ SCIP_RETCODE graph_knot_delPseudo(
 
       incedge[edgecount] = e;
       sparedges[edgecount] = e;
-      ecost[edgecount] = g->cost[e];
+      ecostreal[edgecount] = g->cost[e];
+      ecost[edgecount] = edgecosts[e];
+      if( directed )
+         ecostrev[edgecount] = edgecosts[flipedge(e)];
+
       adjvert[edgecount++] = g->head[e];
 
       assert(edgecount <= STP_DELPSEUDO_MAXGRAD);
@@ -2164,12 +2203,14 @@ SCIP_RETCODE graph_knot_delPseudo(
       for( int j = i + 1; j < degree; j++ )
       {
          int e;
-         const SCIP_Real newcost = ecost[i] + ecost[j];
+         const SCIP_Bool cutoff = cutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, i, j, edgecount);
 
          assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
 
-         /* do we need to insert edge at all? */
-         if( SCIPisGT(scip, newcost, cutoffs[edgecount++]) )
+         edgecount++;
+
+         /* can edge be discarded? */
+         if( cutoff )
             continue;
 
          /* check whether edge already exists */
@@ -2209,13 +2250,16 @@ SCIP_RETCODE graph_knot_delPseudo(
    {
       for( int j = i + 1; j < degree; j++ )
       {
-         const SCIP_Real newcost = ecost[i] + ecost[j];
+         const SCIP_Bool cutoff = cutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, i, j, edgecount);
 
          assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
 
+         edgecount++;
+
          /* do we need to insert edge at all? */
-         if( !SCIPisGT(scip, newcost, cutoffs[edgecount++]) )
+         if( !cutoff )
          {
+            const SCIP_Real newcost = ecostreal[i] + ecostreal[j];
             const int oldedge = sparedges[(replacecount == nspareedges) ? replacecount - 1 : replacecount];
 #ifndef NDEBUG
             const int oldtail = g->tail[oldedge];
