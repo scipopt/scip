@@ -1600,78 +1600,6 @@ SCIP_Bool SCIPbendersIsActive(
    return benders->active;
 }
 
-/** updates the auxiliary variable bound. This can only be performed if the enforcement type is SCIP_BENDERSENFOTYPE_LP */
-void updateAuxiliaryVarBound(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
-   )
-{
-   SCIP_Real auxvarbound;
-   int nsubproblems;
-   int i;
-
-   assert(benders != NULL);
-   assert(set != NULL);
-
-   if( type == SCIP_BENDERSENFOTYPE_LP )
-   {
-      nsubproblems = SCIPbendersGetNSubproblems(benders);
-
-      /* computing the auxiliary variable bound from the current solution */
-      auxvarbound = 0;
-      for( i = 0; i < nsubproblems; i++ )
-         auxvarbound += SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i);
-
-      if( SCIPsetIsLT(set, auxvarbound, SCIPsetInfinity(set)) && SCIPsetIsGT(set, auxvarbound, benders->bestauxvarbound) )
-         benders->bestauxvarbound = auxvarbound;
-   }
-}
-
-/** updates the subproblem bound. This can only be performed if the enforcement type is SCIP_BENDERSENFOTYPE_LP */
-void updateSubproblemBound(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
-   )
-{
-   SCIP_Real subprobbound;
-   int nsubproblems;
-   int i;
-
-   assert(benders != NULL);
-   assert(set != NULL);
-
-   if( type == SCIP_BENDERSENFOTYPE_LP )
-   {
-      nsubproblems = SCIPbendersGetNSubproblems(benders);
-
-      /* computing the auxiliary variable bound from the current solution */
-      subprobbound = 0;
-      for( i = 0; i < nsubproblems; i++ )
-         subprobbound += SCIPbendersGetSubprobObjval(benders, i);
-
-      if( SCIPsetIsGT(set, subprobbound, -SCIPsetInfinity(set)) && SCIPsetIsLT(set, subprobbound, benders->bestsubprobbound) )
-         benders->bestsubprobbound = subprobbound;
-   }
-}
-
-/** checks whether the auxiliary variable bound is greater than or equal to the best subproblem bound */
-SCIP_Bool isAuxiliaryVarBoundOptimal(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(benders != NULL);
-   assert(set != NULL);
-
-   if( SCIPsetIsGE(set, benders->bestauxvarbound, benders->bestsubprobbound) )
-      return TRUE;
-   else
-      return FALSE;
-}
-
 /** solves the subproblem using the current master problem solution. */
 /*  TODO: consider allowing the possibility to pass solution information back from the subproblems instead of the scip
  *  instance. This would allow the use of different solvers for the subproblems, more importantly allowing the use of an
@@ -1737,20 +1665,6 @@ SCIP_RETCODE SCIPbendersExec(
     * the Benders' decomposition subproblems.
     * TODO: Add a parameter to control this behaviour.*/
    if( checkint && SCIPsetIsFeasLE(set, SCIPgetPrimalbound(set->scip), SCIPgetSolOrigObj(set->scip, sol)) )
-   {
-      (*result) = SCIP_FEASIBLE;
-      return SCIP_OKAY;
-   }
-
-   /* updating the auxiliary variable bound. This is used to terminate the check if the bound is already optimal.
-    * The bound will only be updated if the enfo type is LP
-    */
-   updateAuxiliaryVarBound(benders, set, sol, type);
-
-   /* checking whether the auxiliary variable bound is already optimal. If it is optimal, then there is no need to
-    * perform the subproblem check. The solution should be returned as FEASIBLE.
-    */
-   if( isAuxiliaryVarBoundOptimal(benders, set) )
    {
       (*result) = SCIP_FEASIBLE;
       return SCIP_OKAY;
@@ -2050,11 +1964,6 @@ SCIP_RETCODE SCIPbendersExec(
       if( i >= nsubproblems )
          i = 0;
    }
-
-   /* updating the subproblem bound. This is used to check whether the auxiliary variable bound is already optimal
-    * before the subproblem solve. This can only be performed when the enfo type is LP.
-    */
-   updateSubproblemBound(benders, set, type);
 
    /* increment the number of calls to the Benders' decomposition subproblem solve */
    benders->ncalls++;
