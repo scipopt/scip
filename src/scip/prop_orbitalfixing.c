@@ -489,19 +489,11 @@ SCIP_RETCODE propagateOrbitalFixing(
             assert( SCIPvarGetType(varv) == SCIPvarGetType(varimg) ||
                (SCIPvarIsBinary(varv) && SCIPvarIsBinary(varimg)) ||
                (SCIPvarGetType(varv) == SCIP_VARTYPE_IMPLINT && SCIPvarGetType(varimg) == SCIP_VARTYPE_CONTINUOUS &&
-<<<<<<< HEAD
                   SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
                   SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) ||
                (SCIPvarGetType(varv) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(varimg) == SCIP_VARTYPE_IMPLINT &&
                   SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
                   SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) );
-=======
-                  SCIPisEQ(scip, SCIPvarGetLbLocal(varv), SCIPvarGetLbLocal(varimg)) &&
-                  SCIPisEQ(scip, SCIPvarGetUbLocal(varv), SCIPvarGetUbLocal(varimg))) ||
-               (SCIPvarGetType(varv) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(varimg) == SCIP_VARTYPE_IMPLINT &&
-                  SCIPisEQ(scip, SCIPvarGetLbLocal(varv), SCIPvarGetLbLocal(varimg)) &&
-                  SCIPisEQ(scip, SCIPvarGetUbLocal(varv), SCIPvarGetUbLocal(varimg))) );
->>>>>>> dec32b3e347404aff1bb9c5632e0676e9f33aab0
             assert( SCIPisEQ(scip, permvarsobj[v], permvarsobj[img]) );
 
             /* we are moving a variable branched to 1 to another variable */
