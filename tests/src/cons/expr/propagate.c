@@ -732,6 +732,70 @@ Test(propagate, infeas_after_backwardprop)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
 }
 
+/** tests whether forward propagation handles common subexpressions correctly
+ *
+ * the test creates x^2 >= 0.5 and x^2 * y <= 1 with x in [0,1] and y in [1,3] and checks whether the
+ * infimum of x^2 * y is 0.5
+ */
+Test(propagate, forwardprop_common_subexpressions)
+{
+   SCIP_CONSEXPR_EXPR* xexpr;
+   SCIP_CONSEXPR_EXPR* yexpr;
+   SCIP_CONSEXPR_EXPR* sqrexpr;
+   SCIP_CONSEXPR_EXPR* prodexpr;
+   SCIP_CONS* cons1;
+   SCIP_CONS* cons2;
+   SCIP_INTERVAL interval;
+   SCIP_Bool infeasible;
+   SCIP_Bool redundant;
+   int ntightenings;
+
+   /* change bounds of vars */
+   SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) ); SCIP_CALL( SCIPchgVarUb(scip, y, 3.0) );
+
+   /* create expressions */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &sqrexpr, xexpr, 2.0) );
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexpr, 0, NULL, 1.0) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, prodexpr, sqrexpr) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, prodexpr, yexpr) );
+
+   /* create constraints */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, "cons1", sqrexpr, 0.5, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons1) );
+   cr_assert(SCIPconsIsActive(cons1));
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, "cons2", prodexpr, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons2) );
+   cr_assert(SCIPconsIsActive(cons2));
+
+   /* call forward propagation */
+   /* apply forward propagation for both constraints */
+   SCIP_CALL( forwardPropCons(scip, conshdlr, cons1, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
+   cr_expect_not(infeasible);
+   cr_expect_not(redundant);
+   SCIP_CALL( forwardPropCons(scip, conshdlr, cons2, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
+   cr_expect_not(infeasible);
+   cr_expect_not(redundant);
+
+   /* check resulting intervals */
+   interval = SCIPgetConsExprExprInterval(sqrexpr);
+   cr_expect_float_eq(SCIPintervalGetInf(interval), 0.5, 1e-6, "expected: 0.5 got: %g\n", SCIPintervalGetInf(interval));
+   cr_expect_float_eq(SCIPintervalGetSup(interval), 1.0, 1e-6, "expected: 1.0 got: %g\n", SCIPintervalGetSup(interval));
+   interval = SCIPgetConsExprExprInterval(prodexpr);
+   cr_expect_float_eq(SCIPintervalGetInf(interval), 0.5, 1e-6, "expected: 0.5 got: %g\n", SCIPintervalGetInf(interval));
+   cr_expect_float_eq(SCIPintervalGetSup(interval), 1.0, 1e-6, "expected: 1.0 got: %g\n", SCIPintervalGetSup(interval));
+
+   /* release memory */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sqrexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+}
+
 struct expr_results
 {
    const char* cons1;
