@@ -482,6 +482,7 @@ SCIP_RETCODE propagateOrbitalFixing(
 
          if ( img != v )
          {
+#ifndef NDEBUG
             SCIP_VAR* varv = permvars[v];
             SCIP_VAR* varimg = permvars[img];
 
@@ -494,6 +495,7 @@ SCIP_RETCODE propagateOrbitalFixing(
                (SCIPvarGetType(varv) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(varimg) == SCIP_VARTYPE_IMPLINT &&
                   SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
                   SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) );
+#endif
             assert( SCIPisEQ(scip, permvarsobj[v], permvarsobj[img]) );
 
             /* we are moving a variable branched to 1 to another variable */
