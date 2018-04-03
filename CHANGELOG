@@ -3,6 +3,14 @@ SCIP version NEXT
 
 performance improvements:
 - cuts generated from certain quadratic constraints with convex feasible region are now global
+- performance improvements for Adaptive Large Neighborhood Search heur_alns.c:
+    - all neighborhoods now start conservatively from maximum fixing rate
+    - new default parameter settings for bandit selection parameters
+    - no adjustment of minimum improvement by default
+
+interface changes:
+- additional argument "preferrecent" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations.
+
 
 SCIP version 5.0.2
 =================
@@ -23,6 +31,7 @@ fixed bugs:
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+- "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
 
 deleted files:
 - presol_implfree removed

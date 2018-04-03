@@ -7445,7 +7445,10 @@
   * <br>
   * @section CHGINTERFUNC11 Changed interface methods
   *
+  *   <b>Data structures</b>
+  *    - additional argument "preferrecent" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations.
   * <br>
+  *
   *   <b>SCIP Status</b>
   *   - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and
   *     SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
