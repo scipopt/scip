@@ -7445,6 +7445,10 @@
   * <br>
   * @section CHGINTERFUNC11 Changed interface methods
   *
+  * - Functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  *   and SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() require additional argument to specify already
+  *   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+  *
   * <br>
   *   <b>SCIP Status</b>
   *   - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and

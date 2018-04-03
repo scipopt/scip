@@ -3,6 +3,13 @@ SCIP version NEXT
 
 performance improvements:
 - cuts generated from certain quadratic constraints with convex feasible region are now global
+- improved bound tightening for some quadratic equations
+
+interface changes:
+- functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
+  existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+- added function SCIPintervalSolveUnivariateQuadExpressionNegative()
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
