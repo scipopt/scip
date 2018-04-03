@@ -164,7 +164,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   # MIP settings
 
   # MINLP settings
-  ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
+  ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set limits gap 1e-4 set diffsave settings/minlp_default.set q"
 
   # create more required symlinks
   ln -fs /optimi/kombadon/IP check/

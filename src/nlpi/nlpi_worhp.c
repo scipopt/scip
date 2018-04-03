@@ -31,6 +31,7 @@
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/misc.h"
+#include "scip/pub_message.h"
 
 #include <stdio.h>
 #include <stdlib.h>
