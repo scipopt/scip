@@ -88,6 +88,8 @@ struct SCIP_ConshdlrData
    SCIP_Real             coeffbound;         /**< maximum size of coefficients in orbisack inequalities */
    SCIP_Bool             checkpporbisack;    /**< whether we allow upgrading to packing/partitioning orbisacks */
    SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
+   int                   maxnrows;           /**< maximal number of rows in an orbisack constraint */
+
 };
 
 /** constraint data for orbisack constraints */
@@ -1133,7 +1135,19 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
    /* if solution is not integer */
    if ( SCIPgetNLPBranchCands(scip) > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int nvals;
+
       *result = SCIP_DIDNOTFIND;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      nvals = conshdlrdata->maxnrows;
+      assert( nvals > 0 );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
       /* loop through constraints */
       for (c = 0; c < nconss; ++c)
@@ -1143,9 +1157,6 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
          consdata = SCIPconsGetData(conss[c]);
 
          /* get solution */
-         SCIP_CALL( SCIPallocBufferArray(scip, &vals1, consdata->nrows) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &vals2, consdata->nrows) );
-
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, vals1) );
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, vals2) );
 
@@ -1153,12 +1164,12 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
 
          SCIP_CALL( separateInequalities(scip, result, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2) );
 
-         SCIPfreeBufferArray(scip, &vals2);
-         SCIPfreeBufferArray(scip, &vals1);
-
          if ( *result == SCIP_CUTOFF )
             break;
       }
+
+      SCIPfreeBufferArray(scip, &vals2);
+      SCIPfreeBufferArray(scip, &vals1);
    }
 
    return SCIP_OKAY;
@@ -1185,9 +1196,15 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbisack)
 
    if ( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       int nvals;
 
-      nvals = SCIPgetNVars(scip)/2;
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      nvals = conshdlrdata->maxnrows;
+      assert( nvals > 0 );
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
@@ -1246,9 +1263,15 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
 
    if ( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       int nvals;
 
-      nvals = SCIPgetNVars(scip)/2;
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      nvals = conshdlrdata->maxnrows;
+      assert( nvals > 0 );
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
@@ -1360,9 +1383,15 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
 
    if ( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       int nvals;
 
-      nvals = SCIPgetNVars(scip)/2;
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      nvals = conshdlrdata->maxnrows;
+      assert( nvals > 0 );
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
@@ -1953,6 +1982,9 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
          "Whether check routine returns always SCIP_FEASIBLE.",
          &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
+   /* initialize maximum number of rows */
+   conshdlrdata->maxnrows = 0;
+
    return SCIP_OKAY;
 }
 
@@ -2058,6 +2090,10 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
 
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
+
+      /* possibly update conshdlr data */
+      if ( conshdlrdata->maxnrows < nrows )
+         conshdlrdata->maxnrows = nrows;
    }
 
    return SCIP_OKAY;

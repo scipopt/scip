@@ -89,6 +89,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkppsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
    SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
+   int                   maxnvars;           /**< maximal number of variables in a symresack constraint */
 };
 
 
@@ -1498,9 +1499,10 @@ SCIP_DECL_CONSINITLP(consInitlpSymresack)
 static
 SCIP_DECL_CONSSEPALP(consSepalpSymresack)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real* vals;
-   int ntotalvars;
+   int maxnvars;
    int c;
 
    assert( scip != NULL );
@@ -1519,8 +1521,13 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
    if ( nconss == 0 )
       return SCIP_OKAY;
 
-   ntotalvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   maxnvars = conshdlrdata->maxnvars;
+   assert( maxnvars > 0 );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, maxnvars) );
 
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
@@ -1535,7 +1542,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
       consdata = SCIPconsGetData(conss[c]);
 
       /* get solution */
-      assert( consdata->nvars <= ntotalvars );
+      assert( consdata->nvars <= maxnvars );
       SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
       SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
 
@@ -1563,9 +1570,10 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real* vals;
-   int ntotalvars;
+   int maxnvars;
    int c;
 
    assert( scip != NULL );
@@ -1580,8 +1588,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
    if ( nconss == 0 )
       return SCIP_OKAY;
 
-   ntotalvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   maxnvars = conshdlrdata->maxnvars;
+   assert( maxnvars > 0 );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, maxnvars) );
 
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
@@ -1596,7 +1609,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
       consdata = SCIPconsGetData(conss[c]);
 
       /* get solution */
-      assert( consdata->nvars <= ntotalvars );
+      assert( consdata->nvars <= maxnvars );
       SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, vals) );
       SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
 
@@ -1647,11 +1660,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
 
    if ( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Real* vals;
-      int ntotalvars;
+      int maxnvars;
 
-      ntotalvars = SCIPgetNVars(scip);
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      maxnvars = conshdlrdata->maxnvars;
+      assert( maxnvars > 0 );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, maxnvars) );
 
       /* loop through constraints */
       for (c = 0; c < nconss; ++c)
@@ -1666,7 +1685,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
          consdata = SCIPconsGetData(conss[c]);
 
          /* get solution */
-         assert( consdata->nvars <= ntotalvars );
+         assert( consdata->nvars <= maxnvars );
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
          SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
 
@@ -1746,11 +1765,17 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
 
    if ( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Real* vals;
-      int ntotalvars;
+      int maxnvars;
 
-      ntotalvars = SCIPgetNVars(scip);
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      maxnvars = conshdlrdata->maxnvars;
+      assert( maxnvars > 0 );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, maxnvars) );
 
       /* loop through constraints */
       for (c = 0; c < nconss; ++c)
@@ -1765,7 +1790,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
          consdata = SCIPconsGetData(conss[c]);
 
           /* get solution */
-         assert( consdata->nvars <= ntotalvars );
+         assert( consdata->nvars <= maxnvars );
          SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, vals) );
          SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
 
@@ -2262,6 +2287,9 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
          "Whether check routine returns always SCIP_FEASIBLE.",
          &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
+   /* initialize maximum number of variables */
+   conshdlrdata->maxnvars = 0;
+
    return SCIP_OKAY;
 }
 
@@ -2310,6 +2338,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    )
 {
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
@@ -2329,6 +2358,13 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   /* possibly update conshdlr data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->maxnvars < nvars )
+      conshdlrdata->maxnvars = nvars;
 
    return SCIP_OKAY;
 }
