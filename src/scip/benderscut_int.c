@@ -420,7 +420,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
     * objective value of the subproblem */
 
    optimal = FALSE;
-   SCIP_CALL( SCIPcheckBendersAuxiliaryVar(masterprob, benders, sol, probnumber, &optimal) );
+   SCIP_CALL( SCIPcheckBendersSubprobOptimality(masterprob, benders, sol, probnumber, &optimal) );
 
    if( optimal )
    {

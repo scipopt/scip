@@ -165,6 +165,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_BENDERS** benders;
    SCIP_Bool infeasible;
+   SCIP_Bool auxviol;
    int nactivebenders;
    int i;
 
@@ -174,6 +175,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
 
    (*result) = SCIP_FEASIBLE;
    infeasible = FALSE;
+   auxviol = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -187,19 +189,19 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
          case SCIP_BENDERSENFOTYPE_LP:
             if( SCIPbendersCutLP(benders[i]) )
             {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type, checkint) );
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, &auxviol, type, checkint) );
             }
             break;
          case SCIP_BENDERSENFOTYPE_RELAX:
             if( SCIPbendersCutRelaxation(benders[i]) )
             {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, type, checkint) );
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol, type, checkint) );
             }
             break;
          case SCIP_BENDERSENFOTYPE_PSEUDO:
             if( SCIPbendersCutPseudo(benders[i]) )
             {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type, checkint) );
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, &auxviol, type, checkint) );
             }
             break;
          case SCIP_BENDERSENFOTYPE_CHECK:
@@ -221,7 +223,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    {
       /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
        * still need to be updated. This is done by constructing a valid solution. */
-      if( (*result) == SCIP_FEASIBLE && infeasible )
+      if( (*result) == SCIP_FEASIBLE && auxviol )
          (*result) = SCIP_INFEASIBLE;
    }
 
@@ -357,6 +359,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    int i;
    SCIP_Bool performcheck;
    SCIP_Bool infeasible;
+   SCIP_Bool auxviol;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -365,6 +368,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    (*result) = SCIP_FEASIBLE;
    performcheck = TRUE;
    infeasible = FALSE;
+   auxviol = FALSE;
 
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -392,7 +396,8 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    {
       for( i = 0; i < nactivebenders; i++ )
       {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
+         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol,
+               SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
 
          /* in the case of multiple Benders' decompositions, the subproblems are solved until a constriant is added or
           * infeasibility is proven. So if the result is not SCIP_FEASIBLE, then the loop is exited */
@@ -404,7 +409,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
        * still need to be updated. This is done by constructing a valid solution. */
       if( (*result) == SCIP_FEASIBLE )
       {
-         if( infeasible )
+         if( auxviol )
          {
             if( !SCIPsolIsOriginal(sol) )
                SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );

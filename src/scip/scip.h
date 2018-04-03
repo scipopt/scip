@@ -3079,7 +3079,7 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
 /** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
  * value of the corresponding auxiliary variable */
 EXTERN
-SCIP_RETCODE SCIPcheckBendersAuxiliaryVar(
+SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */

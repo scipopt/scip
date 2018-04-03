@@ -6449,7 +6449,7 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
 
 /** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
  * value of the corresponding auxiliary variable */
-SCIP_RETCODE SCIPcheckBendersAuxiliaryVar(
+SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
@@ -6461,7 +6461,7 @@ SCIP_RETCODE SCIPcheckBendersAuxiliaryVar(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
-   SCIP_CALL( SCIPbendersCheckAuxiliaryVar(benders, scip->set, sol, probnumber, optimal) );
+   SCIP_CALL( SCIPbendersCheckSubprobOptimality(benders, scip->set, sol, probnumber, optimal) );
 
    return SCIP_OKAY;
 }

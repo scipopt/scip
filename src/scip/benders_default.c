@@ -198,8 +198,6 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
    if( SCIPbendersIsActive(benders) )
       SCIP_CALL( SCIPcreateBendersDefault(scip, bendersdata->subproblems, bendersdata->nsubproblems) );
 
-   (*valid) = TRUE;
-
    return SCIP_OKAY;
 }
 

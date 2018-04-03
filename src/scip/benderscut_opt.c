@@ -297,7 +297,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
     * objective value of the subproblem */
-   SCIP_CALL( SCIPcheckBendersAuxiliaryVar(masterprob, benders, sol, probnumber, &optimal) );
+   SCIP_CALL( SCIPcheckBendersSubprobOptimality(masterprob, benders, sol, probnumber, &optimal) );
 
    if( optimal )
    {

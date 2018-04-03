@@ -64,7 +64,7 @@ SCIP_DECL_BENDERSCOPY(bendersCopyObj)
    if( bendersdata->objbenders->iscloneable() )
    {
       scip::ObjBenders* newobjbenders;
-      newobjbenders = dynamic_cast<scip::ObjBenders*> (bendersdata->objbenders->clone(scip, valid));
+      newobjbenders = dynamic_cast<scip::ObjBenders*> (bendersdata->objbenders->clone(scip));
 
       /* call include method of Benders' decomposition object */
       SCIP_CALL( SCIPincludeObjBenders(scip, newobjbenders, TRUE) );

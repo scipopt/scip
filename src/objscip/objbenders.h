@@ -28,7 +28,7 @@
 #include <cstring>
 
 #include "scip/scip.h"
-#include "objscip/objprobcloneable.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
@@ -44,7 +44,7 @@ namespace scip
  *  - \ref BENDERSDECOMP "List of available Benders' decomposition plugins"
  *  - \ref type_benders.h "Corresponding C interface"
  */
-class ObjBenders : public ObjProbCloneable
+class ObjBenders : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
