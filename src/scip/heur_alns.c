@@ -367,8 +367,6 @@ struct SCIP_HeurData
    SCIP_Real             rewardbaseline;     /**< the reward baseline to separate successful and failed calls */
    SCIP_Real             fixtol;             /**< tolerance by which the fixing rate may be missed without generic fixing */
    SCIP_Real             unfixtol;           /**< tolerance by which the fixing rate may be exceeded without generic unfixing */
-   SCIP_Real             minimprovlearnrate; /**< current learning rate for minimum improvement (decreases over time) */
-   SCIP_Real             minimprovexponent;  /**< exponent for minimum improvement base factor that varies based on learning rates */
    int                   nneighborhoods;     /**< number of neighborhoods */
    int                   nactiveneighborhoods;/**< number of active neighborhoods */
    int                   ninitneighborhoods; /**< neighborhoods that were used at least one time */
@@ -609,8 +607,6 @@ void resetMinimumImprovement(
 {
    assert(heurdata != NULL);
    heurdata->minimprove = heurdata->startminimprove;
-   heurdata->minimprovexponent = 0.0;
-   heurdata->minimprovlearnrate = 1.0;
 }
 
 /** increase minimum improvement for the sub-SCIPs */
@@ -619,13 +615,10 @@ void increaseMinimumImprovement(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   SCIP_Real maxexponent = 1.0 + log2((SCIP_Real)heurdata->minimprovehigh / heurdata->startminimprove) / log2(MINIMPROVEFAC);
    assert(heurdata != NULL);
 
-   heurdata->minimprovexponent += heurdata->minimprovlearnrate;
-   heurdata->minimprovexponent = MIN(heurdata->minimprovexponent, maxexponent);
-
-   heurdata->minimprove = heurdata->startminimprove * pow(MINIMPROVEFAC, heurdata->minimprovexponent);
+   heurdata->minimprove *= MINIMPROVEFAC;
+   heurdata->minimprove = MIN(heurdata->minimprove, heurdata->minimprovehigh);
 }
 
 /** decrease the minimum improvement for the sub-SCIPs */
@@ -634,20 +627,19 @@ void decreaseMinimumImprovement(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   SCIP_Real minexponent = -1.0 + log2((SCIP_Real)heurdata->minimprovelow / heurdata->startminimprove) / log2(MINIMPROVEFAC);
    assert(heurdata != NULL);
 
-   heurdata->minimprovexponent -= heurdata->minimprovlearnrate;
-   heurdata->minimprovexponent = MAX(heurdata->minimprovexponent, minexponent);
-
-   heurdata->minimprove = heurdata->startminimprove * pow(MINIMPROVEFAC, heurdata->minimprovexponent);
+   heurdata->minimprove /= MINIMPROVEFAC;
+   SCIPdebugMessage("%.4f", heurdata->minimprovelow);
+   heurdata->minimprove = MAX(heurdata->minimprove, heurdata->minimprovelow);
 }
 
 /** update the minimum improvement based on the status of the sub-SCIP */
 static
 void updateMinimumImprovement(
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP run */
+   SCIP_STATUS           subscipstatus,      /**< status of the sub-SCIP run */
+   NH_STATS*             runstats            /**< run statistics for this run */
    )
 {
    assert(heurdata != NULL);
@@ -666,35 +658,28 @@ void updateMinimumImprovement(
          break;
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_BESTSOLLIMIT:
+      case SCIP_STATUS_OPTIMAL:
+         /* subproblem could be optimally solved -> try higher minimum improvement */
+         increaseMinimumImprovement(heurdata);
+         break;
       case SCIP_STATUS_NODELIMIT:
       case SCIP_STATUS_STALLNODELIMIT:
       case SCIP_STATUS_USERINTERRUPT:
-      case SCIP_STATUS_TOTALNODELIMIT:
-         /* try higher minimum improvement if a limit was reached to restrict search space further */
-         increaseMinimumImprovement(heurdata);
+         /* subproblem was too hard, decrease minimum improvement */
+         if( runstats->nbestsolsfound <= 0 )
+            decreaseMinimumImprovement(heurdata);
          break;
-      case SCIP_STATUS_OPTIMAL:
-         /* do not change the minimum improvement if the problem was solved to optimality */
-      case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_UNKNOWN:
+      case SCIP_STATUS_TOTALNODELIMIT:
       case SCIP_STATUS_TIMELIMIT:
       case SCIP_STATUS_MEMLIMIT:
+      case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_UNBOUNDED:
       case SCIP_STATUS_TERMINATE:
       default:
          break;
    }
-
-   /* respect bounds on minimum improvement */
-   if( heurdata->minimprove > heurdata->minimprovehigh )
-      heurdata->minimprove = heurdata->minimprovehigh;
-   else if( heurdata->minimprove < heurdata->minimprovelow )
-      heurdata->minimprove = heurdata->minimprovelow;
-
-   /* adjust learning rate for minimum improvement */
-   if( heurdata->minimprovlearnrate > LRATEMIN )
-      heurdata->minimprovlearnrate = MAX(heurdata->minimprovlearnrate * LRATE, LRATEMIN);
 }
 
 /** Reset neighborhood statistics */
@@ -2597,7 +2582,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       if( heurdata->adjustminimprove )
       {
          SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f\n", heurdata->minimprove);
-         updateMinimumImprovement(heurdata, subscipstatus[banditidx]);
+         updateMinimumImprovement(heurdata, subscipstatus[banditidx], &runstats[banditidx]);
          SCIPdebugMsg(scip, "--> %.4f\n", heurdata->minimprove);
       }
 
