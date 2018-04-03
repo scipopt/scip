@@ -46,7 +46,7 @@
  */
 #define DEFAULT_NODESQUOT        0.1
 #define DEFAULT_NODESOFFSET      500LL
-#define DEFAULT_NSOLSLIM         -1
+#define DEFAULT_NSOLSLIM         3
 #define DEFAULT_MINNODES         50LL
 #define DEFAULT_MAXNODES         5000LL
 #define DEFAULT_WAITINGNODES     25LL  /**< number of nodes since last incumbent solution that the heuristic should wait */
@@ -59,31 +59,35 @@
 /*
  * parameters for the minimum improvement
  */
-#define DEFAULT_MINIMPROVELOW    0.0001
-#define DEFAULT_MINIMPROVEHIGH   0.6
+#define DEFAULT_MINIMPROVELOW    0.01
+#define DEFAULT_MINIMPROVEHIGH   0.01
 #define MINIMPROVEFAC            1.5
-#define DEFAULT_STARTMINIMPROVE  0.05
-#define DEFAULT_ADJUSTMINIMPROVE TRUE
-#define DEFAULT_ADJUSTTARGETNODES FALSE /**< should the target nodes be dynamically adjusted? */
+#define DEFAULT_STARTMINIMPROVE  0.01
+#define DEFAULT_ADJUSTMINIMPROVE FALSE
+#define DEFAULT_ADJUSTTARGETNODES TRUE /**< should the target nodes be dynamically adjusted? */
 
 /*
  * bandit algorithm parameters
  */
 #define DEFAULT_BESTSOLWEIGHT  1
 #define DEFAULT_BANDITALGO     'u'  /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
-#define DEFAULT_GAMMA          0.2  /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
-#define DEFAULT_BETA           0.0  /**< default reward offset between 0 and 1 at every observation for exp3 */
 #define DEFAULT_REWARDCONTROL  0.8  /**< reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward */
 #define DEFAULT_SCALEBYEFFORT  TRUE /**< should the reward be scaled by the effort? */
-#define DEFAULT_EPS            0.5  /**< increase exploration in epsilon-greedy bandit algorithm */
 #define DEFAULT_RESETWEIGHTS   TRUE /**< should the bandit algorithms be reset when a new problem is read? */
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
-#define DEFAULT_ALPHA          0.2  /**< parameter to increase the confidence width in UCB */
 #define DEFAULT_REWARDBASELINE 0.5  /**< the reward baseline to separate successful and failed calls */
 #define DEFAULT_FIXTOL         0.1  /**< tolerance by which the fixing rate may be missed without generic fixing */
 #define DEFAULT_UNFIXTOL       0.1  /**< tolerance by which the fixing rate may be exceeded without generic unfixing */
 #define DEFAULT_USELOCALREDCOST FALSE /**< should local reduced costs be used for generic (un)fixing? */
+#define DEFAULT_BETA           0.0  /**< default reward offset between 0 and 1 at every observation for exp3 */
 
+/*
+ * the following 3 parameters have been tuned by a simulation experiment
+ * as described in the paper.
+ */
+#define DEFAULT_EPS            0.4685844   /**< increase exploration in epsilon-greedy bandit algorithm */
+#define DEFAULT_ALPHA          0.0016      /**< parameter to increase the confidence width in UCB */
+#define DEFAULT_GAMMA          0.07041455  /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
 /*
  * parameters to control variable fixing
  */
@@ -106,42 +110,42 @@
 
 /* individual neighborhood parameters */
 #define DEFAULT_MINFIXINGRATE_RENS 0.3
-#define DEFAULT_MAXFIXINGRATE_RENS 0.7
+#define DEFAULT_MAXFIXINGRATE_RENS 0.9
 #define DEFAULT_ACTIVE_RENS TRUE
 #define DEFAULT_PRIORITY_RENS 1.0
 
-#define DEFAULT_MINFIXINGRATE_RINS 0.2
-#define DEFAULT_MAXFIXINGRATE_RINS 0.6
+#define DEFAULT_MINFIXINGRATE_RINS 0.3
+#define DEFAULT_MAXFIXINGRATE_RINS 0.9
 #define DEFAULT_ACTIVE_RINS TRUE
 #define DEFAULT_PRIORITY_RINS 1.0
 
-#define DEFAULT_MINFIXINGRATE_MUTATION 0.4
+#define DEFAULT_MINFIXINGRATE_MUTATION 0.3
 #define DEFAULT_MAXFIXINGRATE_MUTATION 0.9
 #define DEFAULT_ACTIVE_MUTATION TRUE
 #define DEFAULT_PRIORITY_MUTATION 1.0
 
-#define DEFAULT_MINFIXINGRATE_LOCALBRANCHING 0.0
+#define DEFAULT_MINFIXINGRATE_LOCALBRANCHING 0.3
 #define DEFAULT_MAXFIXINGRATE_LOCALBRANCHING 0.9
 #define DEFAULT_ACTIVE_LOCALBRANCHING TRUE
 #define DEFAULT_PRIORITY_LOCALBRANCHING 1.0
 
-#define DEFAULT_MINFIXINGRATE_PROXIMITY 0.0
+#define DEFAULT_MINFIXINGRATE_PROXIMITY 0.3
 #define DEFAULT_MAXFIXINGRATE_PROXIMITY 0.9
 #define DEFAULT_ACTIVE_PROXIMITY TRUE
 #define DEFAULT_PRIORITY_PROXIMITY 1.0
 
-#define DEFAULT_MINFIXINGRATE_CROSSOVER 0.4
+#define DEFAULT_MINFIXINGRATE_CROSSOVER 0.3
 #define DEFAULT_MAXFIXINGRATE_CROSSOVER 0.9
 #define DEFAULT_ACTIVE_CROSSOVER TRUE
 #define DEFAULT_PRIORITY_CROSSOVER 1.0
 
-#define DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE 0.0
+#define DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE 0.3
 #define DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE 0.9
 #define DEFAULT_ACTIVE_ZEROOBJECTIVE TRUE
 #define DEFAULT_PRIORITY_ZEROOBJECTIVE 1.0
 
-#define DEFAULT_MINFIXINGRATE_DINS 0.1
-#define DEFAULT_MAXFIXINGRATE_DINS 0.5
+#define DEFAULT_MINFIXINGRATE_DINS 0.3
+#define DEFAULT_MAXFIXINGRATE_DINS 0.9
 #define DEFAULT_ACTIVE_DINS TRUE
 #define DEFAULT_PRIORITY_DINS 1.0
 
