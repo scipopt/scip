@@ -482,7 +482,18 @@ SCIP_RETCODE propagateOrbitalFixing(
 
          if ( img != v )
          {
-            assert( SCIPvarGetType(permvars[v]) == SCIPvarGetType(permvars[img]) );
+            SCIP_VAR* varv = permvars[v];
+            SCIP_VAR* varimg = permvars[img];
+
+            /* check whether moved variables have the same type (might have been aggregated in the meanwhile) */
+            assert( SCIPvarGetType(varv) == SCIPvarGetType(varimg) ||
+               (SCIPvarIsBinary(varv) && SCIPvarIsBinary(varimg)) ||
+               (SCIPvarGetType(varv) == SCIP_VARTYPE_IMPLINT && SCIPvarGetType(varimg) == SCIP_VARTYPE_CONTINUOUS &&
+                  SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
+                  SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) ||
+               (SCIPvarGetType(varv) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(varimg) == SCIP_VARTYPE_IMPLINT &&
+                  SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
+                  SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) );
             assert( SCIPisEQ(scip, permvarsobj[v], permvarsobj[img]) );
 
             /* we are moving a variable branched to 1 to another variable */
