@@ -1342,7 +1342,12 @@ SCIP_Real SCIPsolGetVal(
          return 0.0;
       }
       assert(!SCIPvarIsTransformed(origvar));
-      return scalar * SCIPsolGetVal(sol, set, stat, origvar) + constant;
+
+      solval = SCIPsolGetVal(sol, set, stat, origvar);
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+         return SCIP_UNKNOWN;
+      else
+         return scalar * solval + constant;
    }
 
    /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */

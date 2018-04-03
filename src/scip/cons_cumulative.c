@@ -8745,9 +8745,12 @@ SCIP_RETCODE addRelaxation(
 
    if( consdata->demandrows == NULL )
    {
+      assert(consdata->ndemandrows == 0);
+
       SCIP_CALL( createRelaxation(scip, cons, cutsasconss) );
+
+      return SCIP_OKAY;
    }
-   assert(consdata->ndemandrows == 0 || consdata->demandrows != NULL);
 
    for( r = 0; r < consdata->ndemandrows && !(*infeasible); ++r )
    {
@@ -8790,9 +8793,12 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
    if( consdata->demandrows == NULL )
    {
+      assert(consdata->ndemandrows == 0);
+
       SCIP_CALL( createRelaxation(scip, cons, FALSE) );
+
+      return SCIP_OKAY;
    }
-   assert(consdata->ndemandrows == 0 || consdata->demandrows != NULL);
 
    ncuts = 0;
 
