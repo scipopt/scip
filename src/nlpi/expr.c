@@ -10903,7 +10903,6 @@ void exprgraphNodePropagateBounds(
       SCIP_INTERVAL a;
       SCIP_INTERVAL b;
       SCIP_INTERVAL c;
-      SCIP_INTERVAL entire;
       SCIP_QUADELEM* quadelems;
       int nquadelems;
       SCIP_Real* lincoefs;
@@ -10994,7 +10993,6 @@ void exprgraphNodePropagateBounds(
          break;
       }
 
-      SCIPintervalSetEntire(infinity, &entire);
       for( i = 0; i < node->nchildren && !*cutoff; ++i )
       {
          SCIPintervalSet(&a, 0.0);
@@ -11045,7 +11043,7 @@ void exprgraphNodePropagateBounds(
 
          SCIPdebugMessage("solve %gc%d^2 + [%10g,%10g]c%d = [%10g,%10g]\n",
             a.inf, i, b.inf, b.sup, i, c.inf, c.sup);
-         SCIPintervalSolveUnivariateQuadExpression(infinity, &childbounds, a, b, c, entire);
+         SCIPintervalSolveUnivariateQuadExpression(infinity, &childbounds, a, b, c, node->children[i]->bounds);
          if( SCIPintervalIsEmpty(infinity, childbounds) )
             *cutoff = TRUE;
          else
@@ -11073,7 +11071,7 @@ void exprgraphNodePropagateBounds(
       SCIP_INTERVAL a;
       SCIP_INTERVAL b;
       SCIP_INTERVAL c;
-      SCIP_INTERVAL entire;
+      SCIP_INTERVAL childpowbounds;
 
       /* f = constant + sum_i coef_i prod_j c_{i_j}^e_{i_j}
        * for each child x, write as a*x^(2n) + b*x^n = c for some n!=0
@@ -11090,7 +11088,6 @@ void exprgraphNodePropagateBounds(
       if( SCIPintervalIsEntire(infinity, node->bounds) )
          break;
 
-      SCIPintervalSetEntire(infinity, &entire);
       for( i = 0; i < node->nchildren && !*cutoff; ++i )
       {
          n = 0.0;
@@ -11230,11 +11227,12 @@ void exprgraphNodePropagateBounds(
             continue;
 
          /* now have equation a*child^(2n) + b*child^n = c
-          * solve a*y^2 + b*y = c, then child^n = y
+          * solve a*y^2 + b*y = c (for y in childbounds^n), then child^n = y
           */
-         SCIPdebugMessage("solve [%10g,%10g]c%d^%g + [%10g,%10g]c%d^%g = [%10g,%10g]",
-            a.inf, a.sup, i, 2*n, b.inf, b.sup, i, n, c.inf, c.sup);
-         SCIPintervalSolveUnivariateQuadExpression(infinity, &tmp, a, b, c, entire);
+         SCIPintervalPowerScalar(infinity, &childpowbounds, node->children[i]->bounds, n);
+         SCIPdebugMessage("solve [%10g,%10g]c%d^%g + [%10g,%10g]c%d^%g = [%10g,%10g] for c%d^%g in [%10g,%10g]",
+            a.inf, a.sup, i, 2*n, b.inf, b.sup, i, n, c.inf, c.sup, i, n,childpowbounds.inf, childpowbounds.sup);
+         SCIPintervalSolveUnivariateQuadExpression(infinity, &tmp, a, b, c, childpowbounds);
          SCIPdebugPrintf(" -> c%d^%g = [%10g, %10g]", i, n, tmp.inf, tmp.sup);
 
          if( SCIPintervalIsEmpty(infinity, tmp) )
