@@ -100,7 +100,7 @@
 
 
 #include "scip/type_retcode.h"
-#include "scip/pub_message.h"
+#include "scip/type_message.h"
 
 #ifdef __cplusplus
 extern "C" {

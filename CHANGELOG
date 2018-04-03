@@ -12,6 +12,13 @@ interface changes:
 - additional argument "preferrecent" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations.
 
 
+new parameters:
+- "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+- "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
+
+deleted files:
+- presol_implfree removed
+
 SCIP version 5.0.2
 =================
 
@@ -28,13 +35,11 @@ fixed bugs:
 - fixed wrong propagation in optcumulative constraint handler
 - fixed non-deterministic behavior in OBBT propagator
 - don't disable LP presolving when using Xpress as LP solver
+- fixed possible NULL pointer usage in cons_pseudoboolean
 
-new parameters:
-- "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
-- "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
+data structures:
+- expression interpreter objects are now stored in the block memory
 
-deleted files:
-- presol_implfree removed
 
 SCIP version 5.0.1
 ==================

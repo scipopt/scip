@@ -105,12 +105,12 @@ static const char* dblparam[NUMDBLPARAM] =
    GRB_DBL_PAR_MARKOWITZTOL
 };
 
-/** default values for double parameters */
+/** minimal values for double parameters */
 static const double dblparammin[NUMDBLPARAM] =
 {
-   +1e-06,               /* GRB_DBL_PAR_FEASIBILITYTOL */
-   +1e-06,               /* GRB_DBL_PAR_OPTIMALITYTOL */
-   +1e-08,               /* GRB_DBL_PAR_BARCONVTOL */
+   +1e-09,               /* GRB_DBL_PAR_FEASIBILITYTOL */
+   +1e-09,               /* GRB_DBL_PAR_OPTIMALITYTOL */
+   0.0,                  /* GRB_DBL_PAR_BARCONVTOL */
    -GRB_INFINITY,        /* GRB_DBL_PAR_CUTOFF */
    0,                    /* GRB_DBL_PAR_TIMELIMIT */
    0,                    /* GRB_DBL_PAR_ITERATIONLIMIT */
@@ -3882,7 +3882,9 @@ SCIP_Bool SCIPlpiIsStable(
 {
    double consviol;
    double boundviol;
+   double dualviol;
    double feastol;
+   double optimalitytol;
    int res;
 
    assert(lpi != NULL);
@@ -3913,15 +3915,21 @@ SCIP_Bool SCIPlpiIsStable(
    /* test whether we have unscaled infeasibilities */
    if ( SCIPlpiIsOptimal(lpi) )
    {
-      /* first get tolerance */
+      /* first get tolerances */
       res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &feastol);
       if ( res != 0 )
       {
          SCIPABORT();
          return FALSE; /*lint !e527*/
       }
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &optimalitytol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
 
-      /* next get constraint and bound violations */
+      /* next get constraint, bound, and reduced cost violations */
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
       if ( res != 0 )
       {
@@ -3934,7 +3942,14 @@ SCIP_Bool SCIPlpiIsStable(
          SCIPABORT();
          return FALSE; /*lint !e527*/
       }
-      return ( consviol <= feastol && boundviol <= feastol );
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_DUAL_VIO, &dualviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      return ( consviol <= feastol && boundviol <= feastol && dualviol <= optimalitytol );
    }
 
    return (lpi->solstat != GRB_NUMERIC);
@@ -4180,6 +4195,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    )
 {
    int nrows;
+   int i;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4192,6 +4208,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIPdebugMessage("calling Gurobi dual Farkas: %d rows\n", nrows);
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_FARKASDUAL, 0, nrows, dualfarkas) );
+
+   /* correct sign of ray */
+   for (i = 0; i < nrows; ++i)
+      dualfarkas[i] *= -1.0;
 
    return SCIP_OKAY;
 }
