@@ -668,6 +668,16 @@ int SCIProwGetNumIntCols(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** returns row's cutoff distance in the direction of the given primal solution */
+extern
+SCIP_Real SCIProwGetLPSolCutoffDistance(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SOL*             sol,                /**< solution to compute direction for cutoff distance; must not be NULL */
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */
 extern
 SCIP_Real SCIProwGetLPEfficacy(
@@ -1351,12 +1361,17 @@ SCIP_RETCODE SCIPlpGetPrimalRay(
                                               *   (all entries have to be initialized to 0 before) */
    );
 
-/** stores the dual Farkas multipliers for infeasibility proof in rows */
+/** stores the dual Farkas multipliers for infeasibility proof in rows. besides, the proof is checked for validity if
+ *  lp/checkfarkas = TRUE.
+ *
+ *  @note the check will not be performed if @p valid is NULL.
+ */
 extern
 SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
    );
 
 /** get number of iterations used in last LP solve */

@@ -1,7 +1,7 @@
 #! /bin/bash -x
 
 # Usage:
-# make testcluster | TESTSET=testset SETTING=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERF=performance check/jenkins_check_results_cmake.sh
+# make testcluster | TESTSET=testset SETTINGS=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERF=performance check/jenkins_check_results_cmake.sh
 # or export the above mentioned variables and simply run
 # make testcluster | check/jenkins_check_results_cmake.sh
 
@@ -15,6 +15,7 @@
 echo "This is jenkins_check_results_cmake.sh running."
 
 # set up environment for jenkins_failcheck_cmake.sh
+TESTSET=${TEST}
 if [ "${TESTSET}" == "" ]; then
   TESTSET=short
   echo "No testset provided, defaulting to '${TESTSET}'."
@@ -23,9 +24,9 @@ if [ "${OUTPUTDIR}" == "" ]; then
   OUTPUTDIR=results
   echo "No no outputdir provided, defaulting to '${OUTPUTDIR}'."
 fi
-if [ "${SETTING}" == "" ]; then
-  SETTING=default
-  echo "No setting provided, defaulting to '${SETTING}'."
+if [ "${SETTINGS}" == "" ]; then
+  SETTINGS=default
+  echo "No setting provided, defaulting to '${SETTINGS}'."
 fi
 if [ "${EXECUTABLE}" == "" ]; then
   EXECUTABLE=bin/scip
@@ -36,9 +37,10 @@ echo "Using executable '${EXECUTABLE}'."
 # exporting the variables to the environment for check/jenkins_failcheck_cmake.sh to use
 export TESTSET
 export OUTPUTDIR
-export SETTING
+export SETTINGS
 export EXECUTABLE
 export GITBRANCH
+export MODE
 
 # get some relevant information
 # process optional variables
@@ -71,7 +73,7 @@ done < /dev/stdin
 
 echo "To cancel the jobs run"
 echo 'for jobid in `cat '$CANCEL_FILE'`; do scancel $jobid; done'
-echo "This is an experimental feature, use with caution. In particular, make sure no two jobs have the same TESTSET, SETTING and LPS combination!"
+echo "This is an experimental feature, use with caution. In particular, make sure no two jobs have the same TESTSET, SETTINGS and LPS combination!"
 
 env
 
@@ -80,4 +82,4 @@ jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute checker after all jobs completed
-sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=100 --partition=mip-dbg --account=mip check/jenkins_failcheck_cmake.sh
+sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=mip-dbg --account=mip check/jenkins_failcheck_cmake.sh

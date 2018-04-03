@@ -32,6 +32,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <scip/scip.h>
+#include <scip/message_default.h>
 #include <lpi/lpi.h>
 
 #include <signal.h>
@@ -41,19 +42,12 @@
 
 /* GLOBAL VARIABLES */
 static SCIP_LPI* lpi = NULL;
+static SCIP_MESSAGEHDLR* messagehdlr = NULL;
 
 /** write ncols, nrows and objsen into variables to check later */
 static
 SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* objsen)
 {
-   /* this is necessary because the theories don't setup and teardown after each call, but once before and after */
-   if ( lpi != NULL )
-   {
-      SCIP_CALL( SCIPlpiFree(&lpi) );
-   }
-   /* This name is necessary because if CPLEX reads a problem from a file its problemname will be the filename. */
-   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "lpi_change_test_problem.lp", SCIP_OBJSEN_MAXIMIZE) );
-
    SCIP_Real obj[100] = { 1.0, 1.0 };
    SCIP_Real  lb[100] = { 0.0, 0.0 };
    SCIP_Real  ub[100] = { SCIPlpiInfinity(lpi),  SCIPlpiInfinity(lpi) };
@@ -62,6 +56,22 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    SCIP_Real val[100] = { 1.0, 1.0 };
    int beg[100] = { 0, 1 };
    int ind[100] = { 0, 1 };
+
+   /* this is necessary because the theories don't setup and teardown after each call, but once before and after */
+   if ( lpi != NULL )
+   {
+      SCIP_CALL( SCIPlpiFree(&lpi) );
+   }
+
+   /* create message handler if necessary */
+   if ( messagehdlr == NULL )
+   {
+      /* create default message handler */
+      SCIP_CALL( SCIPcreateMessagehdlrDefault(&messagehdlr, TRUE, NULL, FALSE) );
+   }
+
+   /* This name is necessary because if CPLEX reads a problem from a file its problemname will be the filename. */
+   SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "lpi_change_test_problem.lp", SCIP_OBJSEN_MAXIMIZE) );
 
    /* maximization problems, ncols is 1, nrows is 1*/
    switch ( pos )
@@ -250,8 +260,12 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
 static
 void setup(void)
 {
+   /* create default message handler */
+   assert( messagehdlr == NULL );
+   SCIP_CALL( SCIPcreateMessagehdlrDefault(&messagehdlr, TRUE, NULL, FALSE) );
+
    /* create LPI */
-   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "prob", SCIP_OBJSEN_MAXIMIZE) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
 }
 
@@ -260,6 +274,12 @@ void teardown(void)
 {
    cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiFree(&lpi) );
+
+   if ( messagehdlr != NULL )
+   {
+      SCIP_CALL( SCIPmessagehdlrRelease(&messagehdlr) );
+   }
+
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
@@ -283,10 +303,11 @@ SCIP_Real substituteInfinity(SCIP_Real inf)
 static
 void checkChgCoef(int row, int col, SCIP_Real newval)
 {
+   SCIP_Real val;
+
    SCIP_CALL( SCIPlpiChgCoef(lpi, row, col, newval) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
 
-   SCIP_Real val;
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
    cr_assert_float_eq(newval, val, EPS);
 }
@@ -303,6 +324,7 @@ Theory((int row, int col, SCIP_Real newval, int prob), change, testchgcoef)
 {
    int nrows, ncols, nnonz;
    SCIP_OBJSEN sense;
+
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
    cr_assume_lt( row, nrows );
    cr_assume_lt( col, ncols );
@@ -310,13 +332,13 @@ Theory((int row, int col, SCIP_Real newval, int prob), change, testchgcoef)
    checkChgCoef( row, col, newval );
 }
 
-/* Test SCIPlpiChgObj */
-
+/** Test SCIPlpiChgObj */
 static
 void checkChgObj(int dim, int* ind, SCIP_Real* setobj)
 {
-   SCIP_Real obj[dim];
+   SCIP_Real obj[100];
 
+   assert( dim < 100 );
    SCIP_CALL( SCIPlpiChgObj(lpi, dim, ind, setobj) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetObj(lpi, 0, dim-1, obj) );
@@ -333,25 +355,28 @@ TheoryDataPoints(change, testchgobjectives) =
 
 Theory((SCIP_Real first, SCIP_Real second, int prob), change, testchgobjectives)
 {
-   first = substituteInfinity( first );
-   second = substituteInfinity( second );
    int nrows, ncols, nnonz;
    SCIP_OBJSEN sense;
+   int ind[2] = { 0, 1 };
+   SCIP_Real setobj[2];
+
+   first = substituteInfinity( first );
+   second = substituteInfinity( second );
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
 
-   int ind[2] = { 0, 1 };
-   SCIP_Real setobj[2] = {first, second};
+   setobj[0] = first;
+   setobj[1] = second;
    checkChgObj(ncols, ind, setobj);
 }
 
-/* Test SCIPlpiChgBounds */
-
+/** Test SCIPlpiChgBounds */
 static
 void checkChgBounds(int dim, int* ind, SCIP_Real* setlb, SCIP_Real* setub)
 {
    SCIP_Real ub[100];
    SCIP_Real lb[100];
 
+   assert( dim < 100 );
    SCIP_CALL( SCIPlpiChgBounds(lpi, dim, ind, setlb, setub) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, dim - 1, lb, ub) );
@@ -371,6 +396,12 @@ TheoryDataPoints(change, testchgbounds) =
 
 Theory((SCIP_Real upper1, SCIP_Real upper2, SCIP_Real lower1, SCIP_Real lower2, int prob), change, testchgbounds)
 {
+   int nrows, ncols, nnonz;
+   int ind[2] = {0, 1};
+   SCIP_OBJSEN sense;
+   SCIP_Real setub[2];
+   SCIP_Real setlb[2];
+
    lower1 = substituteInfinity( lower1 );
    lower2 = substituteInfinity( lower2 );
    upper1 = substituteInfinity( upper1 );
@@ -378,26 +409,24 @@ Theory((SCIP_Real upper1, SCIP_Real upper2, SCIP_Real lower1, SCIP_Real lower2, 
    cr_assume_lt(lower1, upper1);
    cr_assume_lt(lower2, upper2);
 
-   int nrows, ncols, nnonz;
-   SCIP_OBJSEN sense;
-
-   SCIP_Real setub[2] = { upper1, upper2 };
-   SCIP_Real setlb[2] = { lower1, lower2 };
-   int ind[2] = {0, 1};
+   setub[0] = upper1;
+   setub[1] = upper2;
+   setlb[0] = lower1;
+   setlb[1] = lower2;
 
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
 
    checkChgBounds(ncols, ind, setlb, setub);
 }
 
-/* Test SCIPlpiChgSides */
-
+/** Test SCIPlpiChgSides */
 static
 void checkChgSides(int dim, int* ind, SCIP_Real* setls, SCIP_Real* setrs)
 {
    SCIP_Real ls[100];
    SCIP_Real rs[100];
 
+   assert( dim < 100 );
    SCIP_CALL( SCIPlpiChgSides(lpi, dim, ind, setls, setrs) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetSides(lpi, 0, dim - 1, ls, rs) );
@@ -417,25 +446,31 @@ TheoryDataPoints(change, testchgsides) =
 
 Theory((SCIP_Real left1, SCIP_Real left2, SCIP_Real right1, SCIP_Real right2, int prob), change, testchgsides)
 {
+   int nrows, ncols, nnonz;
+   SCIP_OBJSEN sense;
+   SCIP_Real setrhs[2];
+   SCIP_Real setlhs[2];
+   int ind[2] = { 0, 1 };
+
    left1 = substituteInfinity( left1 );
    left2 = substituteInfinity( left2 );
    right1 = substituteInfinity( right1 );
    right2 = substituteInfinity( right2 );
-   SCIP_Real setrs[2] = { left1, left2 };
-   SCIP_Real setls[2] = { right1, right2 };
-   int ind[2] = { 0, 1 };
+
+   setrhs[0] = left1;
+   setrhs[1] = left2;
+   setlhs[0] = right1;
+   setlhs[1] = right2;
+
    cr_assume_lt(right1, left1);
    cr_assume_lt(right2, left2);
 
-   int nrows, ncols, nnonz;
-   SCIP_OBJSEN sense;
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
 
-   checkChgSides(nrows, ind, setls, setrs);
+   checkChgSides(nrows, ind, setlhs, setrhs);
 }
 
-/* Test SCIPlpiChgObjsen */
-
+/** Test SCIPlpiChgObjsen */
 TheoryDataPoints(change, testchgobjsen) =
 {
    DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE),
@@ -446,19 +481,19 @@ Theory((SCIP_OBJSEN newsense, int prob), change, testchgobjsen)
 {
    int nrows, ncols, nnonz;
    SCIP_OBJSEN sense;
+   SCIP_OBJSEN probsense;
+
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiChgObjsen(lpi, newsense) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
 
-   SCIP_OBJSEN probsense;
    SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
 
    cr_assert_eq( newsense, probsense, "Expected: %d, got %d\n", newsense, probsense );
 }
 
-/* Test SCIPlpiScaleCol */
-
+/** Test SCIPlpiScaleCol */
 TheoryDataPoints(change, testscalecol) =
 {
    DataPoints(SCIP_Real, 1e10, 1e-10, 1, -1, 2, -2),
@@ -469,18 +504,20 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
 {
    int nrows, ncols, cols, rows, nnonz;
    SCIP_OBJSEN sense;
+   int col;
+   int i;
+
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiGetNCols(lpi, &cols) );
    SCIP_CALL( SCIPlpiGetNRows(lpi, &rows) );
    cr_assert_eq(ncols, cols);
    cr_assert_eq(nrows, rows);
-   int col;
-   int i;
 
+   assert( nrows < 100 );
    for( col = 0; col < ncols; col++ )
    {
-      SCIP_Real colbefore[100], colafter;
+      SCIP_Real colbefore[100];
 
       for( i = 0; i < nrows; i++ )
       {
@@ -493,15 +530,17 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
       SCIP_CALL( SCIPlpiScaleCol(lpi, col, scale) );
       for( i = 0; i < nrows; i++ )
       {
+         SCIP_Real colafter;
+
          SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &colafter) );
-         cr_assert_float_eq( colbefore[i] * scale, colafter, EPS, "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n",
+         cr_assert_float_eq( colbefore[i] * scale, colafter, EPS,
+            "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n",
             scale, colbefore[i], colafter, i );
       }
    }
 }
 
-/* Test SCIPlpiScaleRow */
-
+/** Test SCIPlpiScaleRow */
 TheoryDataPoints(change, testscalerow) =
 {
    DataPoints(SCIP_Real, 1e10, 1e-10, 1, -1, 2, -2),
@@ -512,27 +551,35 @@ Theory((SCIP_Real scale, int prob), change, testscalerow)
 {
    int ncols, nrows, rows, cols, nnonz;
    SCIP_OBJSEN sense;
+   int row;
+   int i;
+
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiGetNRows(lpi, &rows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &cols) );
    cr_assert_eq(nrows, rows);
    cr_assert_eq(ncols, cols);
-   int row;
-   int i;
 
+   assert( nrows < 100 );
    for( row = 0; row < nrows; row++ )
    {
-      SCIP_Real rowbefore[100], rowafter[100];
+      SCIP_Real rowbefore[100];
+
       for( i = 0; i < ncols; i++ )
       {
          SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowbefore[i]) );
       }
       SCIP_CALL( SCIPlpiScaleRow(lpi, row, scale) );
+
       for( i = 0; i < ncols; i++ )
       {
-         SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowafter[i]) );
-         cr_assert_float_eq( rowbefore[i] * scale, rowafter[i], EPS, "Found values: scale %.20f, rowbefore[i] %.20f, rowafter %.20f, i %d\n", scale, rowbefore[i], rowafter[i], i );
+         SCIP_Real rowafter;
+
+         SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowafter) );
+         cr_assert_float_eq( rowbefore[i] * scale, rowafter, EPS,
+            "Found values: scale %.20f, rowbefore[i] %.20f, rowafter %.20f, i %d\n",
+            scale, rowbefore[i], rowafter, i );
       }
    }
 }
@@ -566,8 +613,11 @@ Test(change, testrowmethods)
    for( i = 0; i < iterations; i++ )
    {
       /* setup row values */
-      int nrows = k[i];
-      int nnonzsbefore, nnonzsafter;
+      int nrows;
+      int nnonzsbefore;
+      int nnonzsafter;
+
+      nrows = k[i];
 
       /* get data before modification */
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsbefore) );
@@ -593,7 +643,10 @@ Test(change, testrowmethods)
          int newbeg[100];
          int newind[100];
          int newnnonz;
+         int indold;
+         int indnew;
 
+         assert( nrows < 100 );
          for( j = 0; j < nrows; j++ )
          {
             lhs[j] = lhsvals[j];
@@ -601,6 +654,7 @@ Test(change, testrowmethods)
             beg[j] = begvals[j];
          }
 
+         assert( nnonz < 100 );
          for( j = 0; j < nnonz; j++ )
          {
             ind[j] = indvals[j];
@@ -617,7 +671,6 @@ Test(change, testrowmethods)
          beg[nrows] = nnonz;
          newbeg[nrows] = newnnonz;
 
-         int occurrences, indold, indnew;
          /* check each row seperately */
          for( j = 0; j < nrows; j++ )
          {
@@ -628,7 +681,8 @@ Test(change, testrowmethods)
              * Therefore we cannot simply assert the ind and val arrays to be equal, but have to search for and check each value individually. */
             for( indold = beg[j]; indold < beg[j+1]; indold++ )
             {
-               occurrences = 0;
+               int occurrences = 0;
+
                /* for each value ind associated to the current row search for it in the newind array */
                for( indnew = beg[j]; indnew < beg[j+1]; indnew++ )
                {
@@ -705,8 +759,11 @@ Test(change, testcolmethods)
    for( i = 0; i < iterations; i++ )
    {
       /* setup col values */
-      int ncols = k[i];
-      int nnonzsbefore, nnonzsafter;
+      int ncols;
+      int nnonzsbefore;
+      int nnonzsafter;
+
+      ncols = k[i];
 
       /* get data before modification */
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsbefore) );
@@ -733,6 +790,7 @@ Test(change, testcolmethods)
          int newind[100];
          int newnnonz;
 
+         assert( ncols < 100 );
          for( j = 0; j < ncols; j++ )
          {
             lb[j] = lbvals[j];
@@ -740,6 +798,7 @@ Test(change, testcolmethods)
             beg[j] = begvals[j];
          }
 
+         assert( nnonz < 100 );
          for( j = 0; j < nnonz; j++ )
          {
             ind[j] = indvals[j];
@@ -793,20 +852,21 @@ Test(change, testcolmethods)
 /** Test adding zero coeffs cols */
 Test(change, testzerosincols, .signal = SIGABRT)
 {
-   int nrows, ncols, nnonz;
+   int nrows;
+   int ncols;
+   int nnonz = 2;
    SCIP_OBJSEN sense;
-   /* 2x2 problem */
-   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
-   cr_assume_eq( 2, nrows );
-   cr_assume_eq( 2, ncols );
-
    SCIP_Real lb[100] = { 0 };
    SCIP_Real ub[100] = { 20 };
-   nnonz = 2;
    int beg[1]  = { 0 };
    int ind[2] = { 0, 1 };
    SCIP_Real val[2] = { 0, 3 };
    SCIP_Real obj[1] = { 1 };
+
+   /* 2x2 problem */
+   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
+   cr_assume_eq( 2, nrows );
+   cr_assume_eq( 2, ncols );
 
    SCIP_CALL( SCIPlpiAddCols(lpi, 1, obj, lb, ub, NULL, nnonz, beg, ind, val) );
 
@@ -814,26 +874,28 @@ Test(change, testzerosincols, .signal = SIGABRT)
 #ifdef NDEBUG
    abort(); /* return SIGABORT */
 #endif
-
 }
 
-/** Test adding zero coeffs in rows, expecting an assert in debug mode */
-/* This test should fail with an assert from the LPI, which causes SIGABRT to be issued. Thus, this test should pass. */
+/** Test adding zero coeffs in rows, expecting an assert in debug mode
+ *
+ *  This test should fail with an assert from the LPI, which causes SIGABRT to be issued. Thus, this test should pass.
+ */
 Test(change, testzerosinrows, .signal = SIGABRT)
 {
-   int nrows, ncols, nnonz;
+   int nrows;
+   int ncols;
+   int nnonz = 2;
    SCIP_OBJSEN sense;
+   SCIP_Real lhs[100] = { 0 };
+   SCIP_Real rhs[100] = { 20 };
+   int beg[1]  = { 0 };
+   int ind[2] = { 0, 1 };
+   SCIP_Real val[2] = { 0, 3 };
+
    /* 2x2 problem */
    cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
    cr_assume_eq( 2, nrows );
    cr_assume_eq( 2, ncols );
-
-   SCIP_Real lhs[100] = { 0 };
-   SCIP_Real rhs[100] = { 20 };
-   nnonz = 2;
-   int beg[1]  = { 0 };
-   int ind[2] = { 0, 1 };
-   SCIP_Real val[2] = { 0, 3 };
 
    SCIP_CALL( SCIPlpiAddRows(lpi, 1, lhs, rhs, NULL, nnonz, beg, ind, val) );
 
@@ -841,7 +903,6 @@ Test(change, testzerosinrows, .signal = SIGABRT)
 #ifdef NDEBUG
    abort(); /* return SIGABORT */
 #endif
-
 }
 
 /** test SCIPlpiWriteState, SCIPlpiClearState */
@@ -850,9 +911,8 @@ Test(change, testlpiwritestatemethods)
    int nrows, ncols, nnonz;
    int cstat[2];
    int rstat[2];
-   int cstat2[2];
-   int rstat2[2];
    SCIP_OBJSEN sense;
+
    /* 2x2 problem */
    cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
 
@@ -881,8 +941,10 @@ Test(change, testlpiwritereadlpmethods)
    SCIP_Real dualsol2[2];
    SCIP_Real activity2[2];
    SCIP_Real redcost2[2];
-
    SCIP_OBJSEN sense;
+   FILE* file;
+   FILE* file2;
+
    /* 2x2 problem */
    cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
 
@@ -905,8 +967,7 @@ Test(change, testlpiwritereadlpmethods)
    SCIP_CALL( SCIPlpiWriteLP(lpi, "lpi_change_test_problem2.lp") );
    SCIP_CALL( SCIPlpiClear(lpi) );
 
-   FILE *file = fopen("lpi_change_test_problem.lp", "r");
-   FILE *file2 = fopen("lpi_change_test_problem2.lp", "r");
+   file = fopen("lpi_change_test_problem.lp", "r");
+   file2 = fopen("lpi_change_test_problem2.lp", "r");
    cr_assert_file_contents_eq(file, file2);
-
 }

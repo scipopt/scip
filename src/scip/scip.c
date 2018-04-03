@@ -1004,6 +1004,9 @@ SCIP_RETCODE SCIPprintStatus(
    case SCIP_STATUS_INFORUNBD:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "infeasible or unbounded");
       break;
+   case SCIP_STATUS_TERMINATE:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "termination signal received");
+      break;
    default:
       SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
       return SCIP_INVALIDDATA;
@@ -2722,7 +2725,6 @@ SCIP_RETCODE SCIPcopyConss(
    nsourceconshdlrs = SCIPgetNConshdlrs(sourcescip);
    sourceconshdlrs = SCIPgetConshdlrs(sourcescip);
    assert(nsourceconshdlrs == 0 || sourceconshdlrs != NULL);
-   assert(SCIPisTransformed(sourcescip));
 
    *valid = TRUE;
 
@@ -3217,8 +3219,6 @@ SCIP_RETCODE SCIPcopyConflicts(
    /* get all conflicts stored in the conflict pool */
    SCIP_CALL( SCIPconflictstoreGetConflicts(sourcescip->conflictstore, sourceconfs, sourceconfssize, &nsourceconfs) );
    assert(nsourceconfs <= sourceconfssize);
-
-   assert(SCIPisTransformed(sourcescip));
 
    /* copy conflicts */
    for( c = 0; c < nsourceconfs; ++c )
@@ -14074,7 +14074,6 @@ SCIP_RETCODE SCIPaddConflict(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(scip->conflictstore != NULL);
-   assert(scip->set->conf_enable);
    assert(conftype != SCIP_CONFTYPE_UNKNOWN);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
@@ -16208,8 +16207,8 @@ SCIP_RETCODE initSolve(
 
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
-   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
-   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing) );
+   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -16363,8 +16362,8 @@ SCIP_RETCODE freeSolve(
    /* free solution process data structures */
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
-   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
-   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing, scip->mem->probmem) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close visualization output file */
@@ -16460,8 +16459,8 @@ SCIP_RETCODE freeReoptSolve(
 
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
-   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
-   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing, scip->mem->probmem) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close visualization output file */
@@ -40487,7 +40486,6 @@ SCIP_RETCODE SCIPprintMIPStart(
    SCIP_Real objvalue;
    SCIP_Bool oldquiet = FALSE;
 
-   assert(SCIPisTransformed(scip) || sol != NULL);
    assert(sol != NULL);
    assert(!SCIPsolIsPartial(sol));
 

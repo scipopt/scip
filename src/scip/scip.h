@@ -5162,7 +5162,9 @@ SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@addtogroup PublicBanditAlgorithms
+/* @} */
+
+/**@addtogroup PublicBanditMethods
  *
  * @{
  */
@@ -5201,10 +5203,6 @@ SCIP_RETCODE SCIPresetBandit(
    SCIP_Real*            priorities,         /**< priorities for every action, or NULL if not needed */
    unsigned int          seed                /**< initial random seed for bandit selection */
    );
-
-/* @} */
-
-
 
 /* @} */
 
