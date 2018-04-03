@@ -28,7 +28,7 @@
 #define HEUR_NAME                    "conflictdiving"
 #define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. conflict locks"
 #define HEUR_DISPCHAR                '~'
-#define HEUR_PRIORITY                -1000250
+#define HEUR_PRIORITY                1
 #define HEUR_FREQ                    10
 #define HEUR_FREQOFS                 0
 #define HEUR_MAXDEPTH                -1
@@ -43,7 +43,7 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.15 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed (0.0: no limit) */
@@ -77,7 +77,8 @@ struct SCIP_HeurData
 static
 SCIP_Bool shouldRun(
    SCIP*                 scip,
-   SCIP_HEURDATA*        heurdata
+   SCIP_HEURDATA*        heurdata,
+   SCIP_RESULT*          result
    )
 {
    SCIP_Real dualboundroot;
@@ -85,9 +86,13 @@ SCIP_Bool shouldRun(
 
    assert(heurdata != NULL);
 
+   *result = SCIP_DELAYED;
+
    /* don't run if no conflict constraints where found */
    if( SCIPgetNConflictConssFound(scip) == 0 )
       return FALSE;
+
+   *result = SCIP_DIDNOTRUN;
 
    /* don't run if to many nonzero objective coefficients are present */
    if( SCIPgetNObjVars(scip) < SCIPceil(scip, heurdata->maxnnzobjfac * SCIPgetNVars(scip)) )
@@ -209,9 +214,7 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
-   *result = SCIP_DELAYED;
-
-   if( !shouldRun(scip, heurdata) )
+   if( !shouldRun(scip, heurdata, result) )
       return SCIP_OKAY;
 
    maxvarsfac = SCIP_INVALID;
@@ -366,10 +369,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 
       scalefactor = (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND));
 
-      *score = 0.0;
+      *score = candsfrac;
 
       if( nconflictlocksup > 0 )
-         *score += nconflictlocksup;
+         *score += 10 * nconflictlocksup / conflictlocksum;
 
       *score += (scalefactor * nlocksup / MAX(1.0, locksum));
    }
@@ -382,10 +385,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 
       scalefactor = (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND));
 
-      *score = 0.0;
+      *score = candsfrac;
 
       if( nconflictlocksdown > 0 )
-         *score += nconflictlocksdown;
+         *score += 10 * nconflictlocksdown / conflictlocksum;
 
       *score += (scalefactor * nlocksdown / MAX(1.0, locksum));
    }
@@ -393,6 +396,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    /* penalize too less conflict locks */
    if( conflictlocksum < heurdata->minconflictlocks )
       (*score) *= 0.1;
+
+   if( conflictlocksum == 0 )
+      (*score) *= 0.01;
 
    /* penalize too small fractions */
    if( candsfrac < 0.01 )
