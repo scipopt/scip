@@ -63,7 +63,7 @@
 /* Try to get the maximum length of a path.
  *
  * WARNING: if a path found or build during the scanning process is
- *          longer than defined below, the programm will probably
+ *          longer than defined below, the program will probably
  *          crash, because scanf() will overwrite some memory.
  */
 #if defined(PATH_MAX)                     /* Found this on SCO UNIX */
@@ -159,7 +159,7 @@ struct key
 #define KEY_HOPCONS_LIM          10000
 #define KEY_HOPCONS_FACTOR       10001
 
-#define KEY_PRIZECOLL_E          11000
+#define KEY_TREE_S               11000
 
 static const struct key keyword_table[] =
    {
@@ -219,8 +219,6 @@ static const struct key keyword_table[] =
       {  "presolve.time",            KEY_PRESOLVE_TIME,          "n"         },
       {  "presolve.upper",           KEY_PRESOLVE_UPPER,         "n"         },
 
-      {  "prizecollect.edges",       KEY_PRIZECOLL_E,            "n"         },
-
       {  "solution.date",            KEY_SOLUTION_DATE,          "s"         },
       {  "solution.end",             KEY_END,                    NULL        },
       {  "solution.s",               KEY_SOLUTION_S,             "n"         },
@@ -237,6 +235,8 @@ static const struct key keyword_table[] =
       {  "terminals.tg",             KEY_TERMINALS_TG,           "nn"        },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
       {  "terminals.tr",             KEY_TERMINALS_TR,           "nn"        },
+
+      {  "tree.s",                   KEY_TREE_S,                 NULL        },
    };
 
 struct section
@@ -271,6 +271,7 @@ static struct section section_table[] =
       { "presolve",    "prs", FLAG_OPTIONAL, SECTION_MISSING },
       { "solution",    "slt", FLAG_OPTIONAL, SECTION_MISSING },
       { "terminals",   "trm", FLAG_OPTIONAL, SECTION_MISSING },
+      { "tree",        "tre", FLAG_OPTIONAL, SECTION_MISSING },
    };
 
 typedef struct current_file
@@ -999,6 +1000,9 @@ SCIP_RETCODE graph_load(
             sizeof(keyword_table) / sizeof(struct key),
             sizeof(struct key), key_cmp);
 
+         int todo;
+         //printf("curf.section->name %s \n", curf.section->name);
+
          if (p == NULL)
             message(MSG_ERROR, &curf, err_unknown_s, keyword);
          else
@@ -1031,13 +1035,12 @@ SCIP_RETCODE graph_load(
                      stop_input = TRUE;
                   }
                   if (!stop_input)
-                     message(MSG_INFO, &curf, msg_newsect_s,
-                        curf.section->name);
-
+                     message(MSG_INFO, &curf, msg_newsect_s, curf.section->name);
                   break;
                case KEY_END : /* END found. */
                   curf.section = &section_table[0];
                   break;
+               case KEY_TREE_S : /* fall through */
                case KEY_EOF : /* EOF found */
                   ret        = SUCCESS;
                   stop_input = TRUE;

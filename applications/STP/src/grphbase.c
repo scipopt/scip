@@ -2139,7 +2139,6 @@ SCIP_RETCODE graph_knot_delPseudo(
    int incedge[STP_DELPSEUDO_MAXGRAD];
    int adjvert[STP_DELPSEUDO_MAXGRAD];
    int neigbedge[STP_DELPSEUDO_MAXNEDGES];
-   int sparedges[STP_DELPSEUDO_MAXGRAD];  /* todo */
    int edgecount;
    int nspareedges;
    int replacecount;
@@ -2180,7 +2179,6 @@ SCIP_RETCODE graph_knot_delPseudo(
       assert(e >= 0);
 
       incedge[edgecount] = e;
-      sparedges[edgecount] = e;
       ecostreal[edgecount] = g->cost[e];
       ecost[edgecount] = edgecosts[e];
       ecostrev[edgecount] = edgecosts[flipedge(e)];
@@ -2258,7 +2256,7 @@ SCIP_RETCODE graph_knot_delPseudo(
          if( !cutoff )
          {
             const SCIP_Real newcost = ecostreal[i] + ecostreal[j];
-            const int oldedge = sparedges[(replacecount == nspareedges) ? replacecount - 1 : replacecount];
+            const int oldedge = incedge[(replacecount == nspareedges) ? replacecount - 1 : replacecount];
 #ifndef NDEBUG
             const int oldtail = g->tail[oldedge];
             const int oldhead = g->head[oldedge];

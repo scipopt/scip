@@ -48,7 +48,8 @@
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
 #define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
 #define STP_RED_MINBNDTERMS   500
-#define STP_RED_DAMAXREPLACE 4
+#define STP_DABD_MAXDEGREE 4
+#define STP_DABD_MAXDNEDGES 6
 
 /** updates node bounds for reduced cost fixings */
 static
@@ -58,7 +59,7 @@ void updateNodeFixingBounds(
    const SCIP_Real*      cost,               /**< reduced costs */
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
-   SCIP_Real             lpobjal,            /**< LP objective  */
+   SCIP_Real             lpobjval,            /**< LP objective  */
    SCIP_Bool             initialize          /**< initialize fixing bounds? */
 )
 {
@@ -79,7 +80,7 @@ void updateNodeFixingBounds(
 
       assert(!Is_pterm(graph->term[k]));
 
-      fixbnd = pathdist[k] + vnoi[k].dist + lpobjal;
+      fixbnd = pathdist[k] + vnoi[k].dist + lpobjval;
 
       if( fixbnd > fixingbounds[k] )
          fixingbounds[k] = fixbnd;
@@ -89,15 +90,19 @@ void updateNodeFixingBounds(
 /** updates node bounds for reduced cost replacement */
 static
 void updateNodeReplaceBounds(
+   SCIP*                 scip,               /**< SCIP */
    SCIP_Real*            replacebounds,      /**< replacement bounds */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< reduced costs */
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
-   SCIP_Real             lpobjal,            /**< LP objective  */
+   const int*            vbase,              /**< bases to Voronoi paths */
+   SCIP_Real             lpobjval,            /**< LP objective  */
+   int                   root,               /**< DA root */
    SCIP_Bool             initialize          /**< initialize fixing bounds? */
 )
 {
+   int outedges[STP_DABD_MAXDEGREE];
    const int nnodes = graph->knots;
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
@@ -106,19 +111,127 @@ void updateNodeReplaceBounds(
       for( int k = 0; k < nnodes; k++ )
          replacebounds[k] = -FARAWAY;
 
-   for( int k = 0; k < nnodes; k++ )
+   for( int node = 0; node < nnodes; node++ )
    {
-      SCIP_Real fixbnd;
+      const int degree = graph->grad[node];
 
-      if( !graph->mark[k] )
-         continue;
+      if( degree >= 3 && !Is_gterm(graph->term[node]) )
+      {
+         SCIP_Real fixbnd;
 
-      assert(!Is_pterm(graph->term[k]));
+         assert(!Is_pterm(graph->term[node]));
 
-      fixbnd = pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist + lpobjal;
+         /* Y-test for small degrees */
+         if( degree == 3 )
+         {
+#ifdef PPP
 
-      if( fixbnd > replacebounds[k] )
-         replacebounds[k] = fixbnd;
+            printf("\ncheck node %d \n\n", node);
+#endif
+            int edgecount = 0;
+
+            fixbnd = FARAWAY;
+            for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
+               outedges[edgecount++] = e;
+
+            assert(edgecount == degree);
+
+            /* compute cost for each root and save minimum */
+            for( int i = 0; i < degree; i++ )
+            {
+               const int tmproot = graph->head[outedges[i]];
+               const int rootedge = flipedge(outedges[i]);
+
+               /* loop over all combinations of Y with root tmproot */
+               for( int j = i + 1; j <= i + degree - 2; j++ )
+               {
+                  for( int k = j + 1; k <= i + degree - 1; k++ )
+                  {
+                     const int outedge1 = outedges[j % degree];
+                     const int outedge2 = outedges[k % degree];
+                     const int leaf1 = graph->head[outedge1];
+                     const int leaf2 = graph->head[outedge2];
+
+                     SCIP_Real tmpcostY;
+
+                     assert(leaf1 != leaf2 && tmproot != leaf1 && tmproot != leaf2);
+                     assert(vbase[leaf1] >= 0 || vnoi[leaf1].dist >= FARAWAY);
+                     assert(vbase[leaf2] >= 0 || vnoi[leaf2].dist >= FARAWAY);
+
+                     if( leaf1 == root || leaf2 == root )
+                        continue;
+
+                     tmpcostY = pathdist[tmproot] + cost[rootedge] + cost[outedge1] + cost[outedge2];
+
+                     if( vbase[leaf1] != vbase[leaf2] )
+                     {
+                        tmpcostY += vnoi[leaf1].dist + vnoi[leaf2].dist;
+#ifdef PPP
+
+                        printf("(1. case) head1 %d head2: %d \n", vbase[leaf1], vbase[leaf2]);
+#endif
+                     }
+                     else
+                     {
+                        /* also covers the case that leaf is a terminal */
+                        const SCIP_Real leaf1far = vnoi[leaf1 + nnodes].dist;
+                        const SCIP_Real leaf2far = vnoi[leaf2 + nnodes].dist;
+
+                        assert(vbase[leaf1 + nnodes] >= 0 || leaf1far == FARAWAY);
+                        assert(vbase[leaf2 + nnodes] >= 0 || leaf2far == FARAWAY);
+#ifdef PPP
+
+                        printf("(2. case) \n");
+#endif
+                        tmpcostY += MIN(leaf1far + vnoi[leaf2].dist, vnoi[leaf1].dist + leaf2far);
+                     }
+
+                     if( tmpcostY < fixbnd )
+                     {
+                        fixbnd = tmpcostY;
+#ifdef PPP
+                        printf("update to : %f \n", tmpcost);
+                        printf("   rootcost %f \n", pathdist[tmproot] + cost[rootedge]);
+                        printf("   leaf1cost %f \n", vnoi[leaf1].dist + cost[outedge1]);
+                        printf("   leaf2cost %f \n", vnoi[leaf2].dist + cost[outedge2]);
+                        printf("   root %d \n", tmproot);
+                        printf("   leaf1 %d (cost %f) \n", leaf1, graph->cost[outedge1]);
+                        printf("   leaf2 %d \n", leaf2);
+                        printf(" %d \n", Is_term(graph->term[leaf1]));
+                        printf(" %d \n", Is_term(graph->term[leaf2]));
+#endif
+                     }
+                  }
+               } /* Y loop */
+            } /* root loop */
+
+            fixbnd += lpobjval;
+#ifdef PPP
+
+            printf("fixbnd %f \n", fixbnd);
+            printf("(old) head1 %d head2 %d\n", vbase[node], vbase[node + nnodes]);
+            printf("  old rootcost %f \n", pathdist[node]);
+            printf("  old leaf1cost %f \n", vnoi[node].dist);
+            printf("  old leaf2cost %f \n", vnoi[node + nnodes].dist);
+            printf("  old leaf1 %d \n", graph->tail[vnoi[node].edge]);
+            printf("  old leaf2 %d \n", graph->tail[vnoi[node + nnodes].edge]);
+
+            printf("old %f \n", pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist);
+            printf("real root %d \n", graph->source);
+#endif
+
+            assert(SCIPisGE(scip, fixbnd, pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval)
+                  || fixbnd >= FARAWAY);
+         }
+         /* high degree */
+         else
+         {
+            fixbnd = pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval;
+         }
+
+         if( fixbnd > replacebounds[node] )
+            replacebounds[node] = fixbnd;
+      }
    }
 }
 
@@ -130,7 +243,7 @@ void updateEdgeFixingBounds(
    const SCIP_Real*      cost,               /**< reduced costs */
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
-   SCIP_Real             lpobjal,            /**< LP objective  */
+   SCIP_Real             lpobjval,            /**< LP objective  */
    int                   extnedges,          /**< number of edges for extended problem */
    SCIP_Bool             initialize,         /**< initialize fixing bounds? */
    SCIP_Bool             undirected          /**< only consider undirected edges */
@@ -161,8 +274,8 @@ void updateEdgeFixingBounds(
             if( graph->mark[head] )
             {
                const int erev = flipedge(e);
-               const SCIP_Real fixbnd = pathdist[k] + cost[e] + vnoi[head].dist + lpobjal;
-               const SCIP_Real fixbndrev = pathdist[head] + cost[erev] + vnoi[k].dist + lpobjal;
+               const SCIP_Real fixbnd = pathdist[k] + cost[e] + vnoi[head].dist + lpobjval;
+               const SCIP_Real fixbndrev = pathdist[head] + cost[erev] + vnoi[k].dist + lpobjval;
                const SCIP_Real minbnd = MIN(fixbnd, fixbndrev);
 
                assert(fixingbounds[e] == fixingbounds[erev]);
@@ -183,7 +296,7 @@ void updateEdgeFixingBounds(
 
             if( graph->mark[head] )
             {
-               const SCIP_Real fixbnd = pathdist[k] + cost[e] + vnoi[head].dist + lpobjal;
+               const SCIP_Real fixbnd = pathdist[k] + cost[e] + vnoi[head].dist + lpobjval;
 
                if( fixbnd > fixingbounds[e] )
                   fixingbounds[e] = fixbnd;
@@ -226,9 +339,6 @@ int reduceWithNodeFixingBounds(
    }
    return nfixed;
 }
-
-#define STP_DABD_MAXDEGREE 4
-#define STP_DABD_MAXDNEDGES 6
 
 static
 int reduceWithNodeReplaceBounds(
@@ -289,9 +399,6 @@ int reduceWithNodeReplaceBounds(
 
                cutoffs[edgecount] = upperbound - lpobjval - (pathdist[vert] + vnoi[vert2].dist);
                cutoffsrev[edgecount] = upperbound - lpobjval - (pathdist[vert2] + vnoi[vert].dist);
-
-               assert(cutoffs[edgecount] >= 0.0);
-               assert(cutoffsrev[edgecount] >= 0.0);
 
                edgecount++;
             }
@@ -1778,8 +1885,19 @@ SCIP_RETCODE reduce_da(
       else
       {
          graph_get4nextTerms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
+
+#ifndef NDEBUG
+         for( int i = 0; i < nnodes; i++ )
+            if( !Is_term(graph->term[i]) )
+            {
+               assert(vbase[i] != root || vnoi[i].dist >= FARAWAY);
+               assert(vbase[i + nnodes] != root || vnoi[i + nnodes].dist >= FARAWAY);
+            }
+            else
+               assert(vbase[i] == i);
+#endif
          updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, (run == 0));
-         updateNodeReplaceBounds(nodereplacebounds, graph, cost, pathdist, vnoi, lpobjval, (run == 0));
+         updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, lpobjval, root, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
       }
 
@@ -3724,7 +3842,7 @@ SCIP_RETCODE reduce_bound(
             {
                SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, cutoffs, NULL, k, &success) );
 
-               assert(graph->grad[k] == 0);
+               assert(graph->grad[k] == 0 || (graph->grad[k] == 4 && !success));
             }
          }
       }
