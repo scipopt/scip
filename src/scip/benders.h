@@ -305,6 +305,16 @@ SCIP_RETCODE SCIPbendersGetVar(
    int                   probnumber          /**< the problem number for the desired variable, -1 for the master problem */
    );
 
+/** sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
+ *  process. One example is when the three-phase method is employed, where the first phase solves the of both the master
+ *  and subproblems and by the third phase the integer subproblem is solved. */
+extern
+void SCIPbendersSetSubprobIsLP(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
+   );
+
 #ifdef __cplusplus
 }
 #endif
