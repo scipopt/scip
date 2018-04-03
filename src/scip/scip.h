@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -5178,6 +5178,7 @@ SCIP_RETCODE SCIPcreateProbBasic(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
+EXTERN
 SCIP_RETCODE SCIPsetProbDelorig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
@@ -10117,10 +10118,10 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP_VAR*             var                 /**< variable x to aggregate */
    );
 
-/** returns whether dual reduction are allowed during propagation and presolving
+/** returns whether dual reductions are allowed during propagation and presolving
  *
  *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
- *        intact. Often such reductions are based on analyzing the objective function, reduced costs and/or dual LPs.
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
  */
 EXTERN
 SCIP_Bool SCIPallowDualReds(
@@ -15203,6 +15204,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
    );
 
 /** adds linear rows to the NLP relaxation */
+EXTERN
 SCIP_RETCODE SCIPaddNlpiProbRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
@@ -15309,7 +15311,7 @@ SCIP_Bool SCIPisCutApplicable(
  *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut and it might be useful to keep it for future use,
  *  consider adding it to the global cutpool with SCIPaddPoolCut().
  */
-EXTERN
+EXTERN SCIP_DEPRECATED
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
@@ -16368,6 +16370,7 @@ void SCIPupdateDivesetStats(
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
    SCIP_Longint          nsolsfound,         /**< the number of solutions found */
    SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
+   SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
    SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
    );
 
@@ -21920,7 +21923,7 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
  *
  * @pre The value of relaxfeastol is reset to SCIP_INVALID when initializing the solve (INITSOL).
  * Therefore, this method can only be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOL
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
  * @return previous value of relaxfeastol
@@ -23187,7 +23190,7 @@ int SCIPgetPtrarrayMaxIdx(
  */
 
 /** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
@@ -23195,7 +23198,7 @@ SCIP_RETCODE SCIPcreateDisjointset(
    );
 
 /** frees the disjoint set (union find) data structure */
-extern
+EXTERN
 void SCIPfreeDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DISJOINTSET**    djset               /**< pointer to disjoint set (union find) data structure */

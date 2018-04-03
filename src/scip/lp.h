@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -666,6 +666,16 @@ extern
 int SCIProwGetNumIntCols(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns row's cutoff distance in the direction of the given primal solution */
+extern
+SCIP_Real SCIProwGetLPSolCutoffDistance(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SOL*             sol,                /**< solution to compute direction for cutoff distance; must not be NULL */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */

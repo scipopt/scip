@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -394,6 +394,8 @@
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.90 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC       0.1 /**< factor to scale objective parallelism of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC  0.0 /**< factor to scale directed cutoff distance of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_EFFICACYFAC       1.0 /**< factor to scale efficacy of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_INTSUPPORTFAC     0.1 /**< factor to scale integral support of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
@@ -407,9 +409,9 @@
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
                                                  *   price-and-cut loops (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT 10 /**< maximal number of consecutive separation rounds without objective
-                                                 *   or integrality improvement (-1: no additional restriction) */
+                                                 *   or integrality improvement in the root node (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      1 /**< maximal number of consecutive separation rounds without objective
-                                                 *   or integrality improvement (-1: no additional restriction) */
+                                                 *   or integrality improvement in local nodes (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXINCROUNDS       20 /**< maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
@@ -460,6 +462,7 @@
 #define SCIP_DEFAULT_VISUAL_BAKFILENAME     "-" /**< name of the BAK tool output file, or "-" if no BAK tool output should be created */
 #define SCIP_DEFAULT_VISUAL_REALTIME       TRUE /**< should the real solving time be used instead of a time step counter in visualization? */
 #define SCIP_DEFAULT_VISUAL_DISPSOLS      FALSE /**< should the node where solutions are found be visualized? */
+#define SCIP_DEFAULT_VISUAL_DISPLB        FALSE /**< should lower bound information be visualized? */
 #define SCIP_DEFAULT_VISUAL_OBJEXTERN      TRUE /**< should be output the external value of the objective? */
 
 
@@ -2258,6 +2261,16 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->sepa_objparalfac, TRUE, SCIP_DEFAULT_SEPA_OBJPARALFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/dircutoffdistfac",
+         "factor to scale directed cutoff distance of cut in score calculation",
+         &(*set)->sepa_dircutoffdistfac, TRUE, SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/efficacyfac",
+         "factor to scale directed cutoff distance of cut in score calculation",
+         &(*set)->sepa_efficacyfac, TRUE, SCIP_DEFAULT_SEPA_EFFICACYFAC, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/intsupportfac",
          "factor to scale integral support of cut in separation score calculation",
          &(*set)->sepa_intsupportfac, TRUE, SCIP_DEFAULT_SEPA_INTSUPPORTFAC, 0.0, SCIP_INVALID/10.0,
@@ -2314,12 +2327,12 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxstallrounds",
-         "maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)",
+         "maximal number of consecutive separation rounds without objective or integrality improvement in local nodes (-1: no additional restriction)",
          &(*set)->sepa_maxstallrounds, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxstallroundsroot",
-         "maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)",
+         "maximal number of consecutive separation rounds without objective or integrality improvement in the root node (-1: no additional restriction)",
          &(*set)->sepa_maxstallroundsroot, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2485,6 +2498,11 @@ SCIP_RETCODE SCIPsetCreate(
          "visual/dispsols",
          "should the node where solutions are found be visualized?",
          &(*set)->visual_dispsols, FALSE, SCIP_DEFAULT_VISUAL_DISPSOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "visual/displb",
+         "should lower bound information be visualized?",
+         &(*set)->visual_displb, FALSE, SCIP_DEFAULT_VISUAL_DISPLB,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "visual/objextern",

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1001,6 +1001,9 @@ SCIP_RETCODE SCIPprintStatus(
       break;
    case SCIP_STATUS_INFORUNBD:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "infeasible or unbounded");
+      break;
+   case SCIP_STATUS_TERMINATE:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "termination signal received");
       break;
    default:
       SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
@@ -10528,6 +10531,12 @@ SCIP_RETCODE SCIPfreeProb(
    transsolorig = scip->set->misc_transsolsorig;
    scip->set->misc_transsolsorig = FALSE;
 
+   /* release variables and constraints captured by reoptimization */
+   if( scip->set->reopt_enable || scip->reopt != NULL)
+   {
+      SCIP_CALL( SCIPreoptReleaseData(scip->reopt, scip->set, scip->mem->probmem) );
+   }
+
    SCIP_CALL( SCIPfreeTransform(scip) );
    /* for some reason the free transform can generate events caught in the globalbnd eventhander
     * which requires the concurrent so it must be freed afterwards this happened o instance fiber
@@ -13054,7 +13063,6 @@ SCIP_RETCODE SCIPaddConflict(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(scip->conflictstore != NULL);
-   assert(scip->set->conf_enable);
    assert(conftype != SCIP_CONFTYPE_UNKNOWN);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
@@ -25937,10 +25945,10 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    return scip->set->presol_donotmultaggr || SCIPvarDoNotMultaggr(var);
 }
 
-/** returns whether dual reduction are allowed during propagation and presolving
+/** returns whether dual reductions are allowed during propagation and presolving
  *
  *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
- *        intact. Often such reductions are based on analyzing the objective function, reduced costs and/or dual LPs.
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
  */
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -34695,6 +34703,7 @@ SCIP_Bool SCIPisCutApplicable(
  *
  *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut, add it only to the global cutpool.
  */
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
@@ -36877,6 +36886,7 @@ void SCIPupdateDivesetStats(
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
    SCIP_Longint          nsolsfound,         /**< the number of solutions found */
    SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
+   SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
    SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
    )
 {
@@ -36884,7 +36894,8 @@ void SCIPupdateDivesetStats(
    assert(diveset != NULL);
    assert(SCIPinProbing(scip));
 
-   SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks, nsolsfound, nbestsolsfound, leavewassol);
+   SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks, nsolsfound,
+         nbestsolsfound, nconflictsfound, leavewassol);
 }
 
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings
@@ -43034,7 +43045,9 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNStrongbranchConflictConss(scip->conflict)
       + SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict)
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
-      + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict);
+      + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
+      + SCIPconflictGetNDualrayInfSuccess(scip->conflict)
+      + SCIPconflictGetNDualrayBndSuccess(scip->conflict);
 }
 
 /** get number of conflict constraints found so far at the current node
@@ -45048,7 +45061,7 @@ void SCIPprintHeuristicStatistics(
 
    if ( ndivesets > 0 )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
       for( i = 0; i < scip->set->nheurs; ++i )
       {
          int s;
@@ -45058,10 +45071,11 @@ void SCIPprintHeuristicStatistics(
             SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
             if( SCIPdivesetGetNCalls(diveset) > 0 )
             {
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
                   SCIPdivesetGetNProbingNodes(diveset),
                   SCIPdivesetGetNLPIterations(diveset),
                   SCIPdivesetGetNBacktracks(diveset),
+                  SCIPdivesetGetNConflicts(diveset),
                   SCIPdivesetGetMinDepth(diveset),
                   SCIPdivesetGetMaxDepth(diveset),
                   SCIPdivesetGetAvgDepth(diveset),
@@ -45079,7 +45093,7 @@ void SCIPprintHeuristicStatistics(
                   SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
             }
             else
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -\n");
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -          -\n");
          }
       }
    }
@@ -46683,7 +46697,7 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
  *
  * @pre The value of relaxfeastol is reset to SCIP_INVALID when initializing the solve (INITSOL).
  * Therefore, this method can only be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOL
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
  * @return previous value of relaxfeastol

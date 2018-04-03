@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -103,6 +103,7 @@ SCIP_RETCODE SCIPdivesetReset(
    diveset->nlps = 0;
    diveset->nsolsfound = 0;
    diveset->nbestsolsfound = 0;
+   diveset->nconflictsfound = 0;
    diveset->ncalls = 0;
    diveset->nsolcalls = 0;
 
@@ -121,6 +122,7 @@ void SCIPdivesetUpdateStats(
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
    SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
    SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
    SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    )
 {
@@ -144,6 +146,7 @@ void SCIPdivesetUpdateStats(
 
    diveset->nsolsfound += nsolsfound;
    diveset->nbestsolsfound += nbestsolsfound;
+   diveset->nconflictsfound += nconflictsfound;
 
    stat->totaldivesetdepth += depth;
    stat->ndivesetcalls++;
@@ -489,6 +492,16 @@ SCIP_Longint SCIPdivesetGetNBacktracks(
    assert(diveset != NULL);
 
    return diveset->totalnbacktracks;
+}
+
+/** get the total number of conflicts found by this dive set */
+SCIP_Longint SCIPdivesetGetNConflicts(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->nconflictsfound;
 }
 
 /** get the total number of solutions (leaf and rounded solutions) found by the dive set */

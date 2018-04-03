@@ -424,6 +424,7 @@ set(scipheaders
     scip/cons_xor.h
     scip/cutpool.h
     scip/cuts.h
+    scip/dbldblarith.h
     scip/debug.h
     scip/def.h
     scip/dialog_default.h
@@ -537,6 +538,7 @@ set(scipheaders
     scip/prop.h
     scip/prop_nlobbt.h
     scip/prop_obbt.h
+    scip/prop_orbitalfixing.h
     scip/prop_probing.h
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
@@ -642,6 +644,7 @@ set(scipheaders
     scip/struct_conflictstore.h
     scip/struct_cons.h
     scip/struct_cutpool.h
+    scip/struct_cuts.h
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
@@ -690,6 +693,7 @@ set(scipheaders
     scip/type_conflictstore.h
     scip/type_cons.h
     scip/type_cutpool.h
+    scip/type_cuts.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
@@ -814,7 +818,7 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE EQUAL "Debug")
     find_package(Sanitizers)
     add_sanitizers(scip)
 endif()
@@ -829,10 +833,13 @@ add_dependencies(scip scip_update_githash)
 
 set_target_properties(libscip PROPERTIES
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
-    SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR})
+    SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
+    INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # set the install rpath to the installed destination
-set_target_properties(scip PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set_target_properties(scip PROPERTIES
+    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
+    INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)

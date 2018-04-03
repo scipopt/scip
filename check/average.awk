@@ -5,7 +5,7 @@
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -281,11 +281,12 @@ END {
 	 }
 
 	 # compare statistics to first instance
-	 if ( type[s,pidx] != typefirst )
-	 {
-	    printf("Error: Problem <%s> type not equal between runs.\n", prob);
-	    exit 1;
-	 }
+	 # problem types are a bit fuzzy and dervided from presolve instance, so they can change from one permutation to another
+	 #if ( type[s,pidx] != typefirst )
+	 #{
+	 #   printf("Warning: Problem <%s> type not equal between runs.\n", prob);
+	 #   exit 1;
+	 #}
 	 if ( origconss[s,pidx] != origconssfirst )
 	 {
 	    printf("Error: Problem <%s> number of constraints not equal between runs (%d != %d (%d)).\n", prob, conssfirst, conss[s,pidx], s);

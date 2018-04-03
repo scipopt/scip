@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,6 +25,8 @@
  * SCIPlpiChgObjsen, SCIPlpiGetObjsen,
  * SCIPlpiGetNCols, SCIPlpiGetNRows, SCIPlpiGetNNonz,
  * SCIPlpiGetCols, SCIPlpiGetRows,
+ * SCIPlpiWriteState, SCIPlpiClearState,
+ * SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -49,7 +51,8 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    {
       SCIP_CALL( SCIPlpiFree(&lpi) );
    }
-   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
+   /* This name is necessary because if CPLEX reads a problem from a file its problemname will be the filename. */
+   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "lpi_change_test_problem.lp", SCIP_OBJSEN_MAXIMIZE) );
 
    SCIP_Real obj[100] = { 1.0, 1.0 };
    SCIP_Real  lb[100] = { 0.0, 0.0 };
@@ -236,6 +239,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
    SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, NULL, *nnonz, beg, ind, val) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+   cr_assert( SCIPlpiWasSolved(lpi) );
 
    return TRUE;
 }
@@ -246,11 +252,13 @@ void setup(void)
 {
    /* create LPI */
    SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
 }
 
 static
 void teardown(void)
 {
+   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiFree(&lpi) );
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
@@ -276,10 +284,11 @@ static
 void checkChgCoef(int row, int col, SCIP_Real newval)
 {
    SCIP_CALL( SCIPlpiChgCoef(lpi, row, col, newval) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
 
    SCIP_Real val;
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
-   cr_assert_eq(newval, val);
+   cr_assert_float_eq(newval, val, EPS);
 }
 
 TheoryDataPoints(change, testchgcoef) =
@@ -309,9 +318,10 @@ void checkChgObj(int dim, int* ind, SCIP_Real* setobj)
    SCIP_Real obj[dim];
 
    SCIP_CALL( SCIPlpiChgObj(lpi, dim, ind, setobj) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetObj(lpi, 0, dim-1, obj) );
 
-   cr_assert_arr_eq(obj, setobj, dim);
+   cr_assert_arr_eq(obj, setobj, dim*sizeof(SCIP_Real));
 }
 
 TheoryDataPoints(change, testchgobjectives) =
@@ -343,10 +353,11 @@ void checkChgBounds(int dim, int* ind, SCIP_Real* setlb, SCIP_Real* setub)
    SCIP_Real lb[100];
 
    SCIP_CALL( SCIPlpiChgBounds(lpi, dim, ind, setlb, setub) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, dim - 1, lb, ub) );
 
-   cr_assert_arr_eq(ub, setub, dim);
-   cr_assert_arr_eq(lb, setlb, dim);
+   cr_assert_arr_eq(ub, setub, dim*sizeof(SCIP_Real));
+   cr_assert_arr_eq(lb, setlb, dim*sizeof(SCIP_Real));
 }
 
 TheoryDataPoints(change, testchgbounds) =
@@ -388,10 +399,11 @@ void checkChgSides(int dim, int* ind, SCIP_Real* setls, SCIP_Real* setrs)
    SCIP_Real rs[100];
 
    SCIP_CALL( SCIPlpiChgSides(lpi, dim, ind, setls, setrs) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetSides(lpi, 0, dim - 1, ls, rs) );
 
-   cr_assert_arr_eq(ls, setls, dim);
-   cr_assert_arr_eq(rs, setrs, dim);
+   cr_assert_arr_eq(ls, setls, dim*sizeof(SCIP_Real));
+   cr_assert_arr_eq(rs, setrs, dim*sizeof(SCIP_Real));
 }
 
 TheoryDataPoints(change, testchgsides) =
@@ -437,6 +449,7 @@ Theory((SCIP_OBJSEN newsense, int prob), change, testchgobjsen)
    cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiChgObjsen(lpi, newsense) );
+   cr_assert( !SCIPlpiWasSolved(lpi) );
 
    SCIP_OBJSEN probsense;
    SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
@@ -599,11 +612,36 @@ Test(change, testrowmethods)
          SCIP_CALL( SCIPlpiGetRows(lpi, nrowsbefore, nrowsbefore - 1 + nrows, newlhs, newrhs, &newnnonz, newbeg, newind, newval) );
          cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
 
-         cr_assert_arr_eq(lhs, newlhs, nrows);
-         cr_assert_arr_eq(rhs, newrhs, nrows);
-         cr_assert_arr_eq(beg, newbeg, nrows);
-         cr_assert_arr_eq(ind, newind, nnonz);
-         cr_assert_arr_eq(val, newval, nnonz);
+         cr_assert_arr_eq(beg, newbeg, nrows*sizeof(int));
+
+         beg[nrows] = nnonz;
+         newbeg[nrows] = newnnonz;
+
+         int occurrences, indold, indnew;
+         /* check each row seperately */
+         for( j = 0; j < nrows; j++ )
+         {
+            cr_assert_float_eq(lhs[j], newlhs[j], 1e-16);
+            cr_assert_float_eq(rhs[j], newrhs[j], 1e-16);
+
+            /* We add a row where the indices are not sorted, some lp solvers give them back sorted (e.g. soplex), some others don't (e.g. cplex).
+             * Therefore we cannot simply assert the ind and val arrays to be equal, but have to search for and check each value individually. */
+            for( indold = beg[j]; indold < beg[j+1]; indold++ )
+            {
+               occurrences = 0;
+               /* for each value ind associated to the current row search for it in the newind array */
+               for( indnew = beg[j]; indnew < beg[j+1]; indnew++ )
+               {
+                  if( ind[indold] == newind[indnew] )
+                  {
+                     occurrences = occurrences + 1;
+                     cr_assert_float_eq( val[indold], newval[indnew], 1e-16, "expected %g got %g\n", val[indold], newval[indnew] );
+                  }
+               }
+               /* assert that we found only one occurrence in the current row */
+               cr_assert_eq(occurrences, 1);
+            }
+         }
       }
 
       /* checks */
@@ -713,11 +751,11 @@ Test(change, testcolmethods)
          SCIP_CALL( SCIPlpiGetCols(lpi, ncolsbefore, ncolsbefore-1+ncols, newlb, newub, &newnnonz, newbeg, newind, newval) );
          cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
 
-         cr_assert_arr_eq(lb, newlb, ncols);
-         cr_assert_arr_eq(ub, newub, ncols);
-         cr_assert_arr_eq(beg, newbeg, ncols);
-         cr_assert_arr_eq(ind, newind, nnonz);
-         cr_assert_arr_eq(val, newval, nnonz);
+         cr_assert_arr_eq(lb, newlb, ncols*sizeof(SCIP_Real));
+         cr_assert_arr_eq(ub, newub, ncols*sizeof(SCIP_Real));
+         cr_assert_arr_eq(beg, newbeg, ncols*sizeof(int));
+         cr_assert_arr_eq(ind, newind, nnonz*sizeof(int));
+         cr_assert_arr_eq(val, newval, nnonz*sizeof(SCIP_Real));
       }
 
       /* checks */
@@ -803,5 +841,70 @@ Test(change, testzerosinrows, .signal = SIGABRT)
 #ifdef NDEBUG
    abort(); /* return SIGABORT */
 #endif
+
+}
+
+/** test SCIPlpiWriteState, SCIPlpiClearState */
+Test(change, testlpiwritestatemethods)
+{
+   int nrows, ncols, nnonz;
+   int cstat[2];
+   int rstat[2];
+   SCIP_OBJSEN sense;
+   /* 2x2 problem */
+   cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
+
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+
+   SCIP_CALL( SCIPlpiWriteState(lpi, "testlpiwriteandreadstate.bas") );
+   SCIP_CALL( SCIPlpiGetBase(lpi, cstat, rstat) );
+   SCIP_CALL( SCIPlpiClearState(lpi) );
+
+   /* Ideally we want to check in the same matter as in testlpiwritereadlpmethods, but this is
+    * not possible at the moment because we have no names for columns and rows. */
+   SCIP_CALL( SCIPlpiClear(lpi) );
+}
+
+/** test SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear */
+Test(change, testlpiwritereadlpmethods)
+{
+   int nrows, ncols, nnonz;
+   SCIP_Real objval;
+   SCIP_Real primsol[2];
+   SCIP_Real dualsol[2];
+   SCIP_Real activity[2];
+   SCIP_Real redcost[2];
+   SCIP_Real objval2;
+   SCIP_Real primsol2[2];
+   SCIP_Real dualsol2[2];
+   SCIP_Real activity2[2];
+   SCIP_Real redcost2[2];
+
+   SCIP_OBJSEN sense;
+   /* 2x2 problem */
+   cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
+
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+   SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primsol, dualsol, activity, redcost) );
+
+   SCIP_CALL( SCIPlpiWriteLP(lpi, "lpi_change_test_problem.lp") );
+   SCIP_CALL( SCIPlpiClear(lpi) );
+
+   SCIP_CALL( SCIPlpiReadLP(lpi, "lpi_change_test_problem.lp") );
+
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+   SCIP_CALL( SCIPlpiGetSol(lpi, &objval2, primsol2, dualsol2, activity2, redcost2) );
+   cr_assert_float_eq( objval, objval2, EPS );
+   cr_assert_arr_eq( primsol, primsol2, 2*sizeof(SCIP_Real) );
+   cr_assert_arr_eq( dualsol, dualsol2, 2*sizeof(SCIP_Real) );
+   cr_assert_arr_eq( activity, activity2, 2*sizeof(SCIP_Real) );
+   cr_assert_arr_eq( redcost, redcost2, 2*sizeof(SCIP_Real) );
+
+   SCIP_CALL( SCIPlpiWriteLP(lpi, "lpi_change_test_problem2.lp") );
+   SCIP_CALL( SCIPlpiClear(lpi) );
+
+   FILE *file = fopen("lpi_change_test_problem.lp", "r");
+   FILE *file2 = fopen("lpi_change_test_problem2.lp", "r");
+   cr_assert_file_contents_eq(file, file2);
 
 }

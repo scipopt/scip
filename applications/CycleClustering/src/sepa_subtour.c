@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,7 +28,6 @@
 #include "probdata_cyc.h"
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
-#include "scip/misc.h"
 
 #define SEPA_NAME              "subtour"
 #define SEPA_DESC              "separator that elininates subtours of length smaller than |NCluster| in cycle-clusterign application"
@@ -383,7 +382,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    /*Create Digraph from the current LP-Solution */
    for( a = 0; a < nbins; ++a )
    {
-      SCIP_CALL( SCIPdigraphCreate(&capgraph, SCIPblkmem(scip), nbins) );
+      SCIP_CALL( SCIPcreateDigraph(scip, &capgraph, nbins) );
 
       for( i = 0; i < nbins; ++i )
       {

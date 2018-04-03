@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,12 +13,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reduce.c
+/**@file   grphload.c
  * @brief  Methods for loading Steiner problems in .stp format
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  *
- * This file includes methods for reading a Steiner problem in .stp format
+ * This file includes methods for reading a Steiner problem in .stp format.
  *
  * A list of all interface methods can be found in grph.h.
  *

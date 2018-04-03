@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_STATISTIC
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -2960,7 +2960,7 @@ SCIP_RETCODE getFSBResult(
    config->forcebranching = TRUE;
 
    /* use the FSB scoring function */
-   config->scoringfunction = 'f';
+   config->scoringfunction = 'd';
 
 #ifdef SCIP_STATISTIC
    /* we need to allocate enough space for all possible depths, as there is currently a problem with setting the FSB stats.

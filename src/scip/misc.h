@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -341,7 +341,7 @@ void SCIPdisjointsetFree(
 
 /** SCIP digraph functions
  *
- * internal digraph functions (see \ref DigraphMethods for public digraph methods)
+ * internal digraph functions (see \ref DirectedGraph for public digraph methods)
  */
 
 /** creates directed graph structure */

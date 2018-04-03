@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,8 +102,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
    if ( tabledata->propdata->enabled )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Orbital fixing     :\n");
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :\t%7d\n", tabledata->propdata->nfixedzero);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :\t%7d\n", tabledata->propdata->nfixedone);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :%11d\n", tabledata->propdata->nfixedzero);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :%11d\n", tabledata->propdata->nfixedone);
    }
 
    return SCIP_OKAY;
@@ -594,7 +594,7 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    /* possibly get symmetries */
    if ( propdata->npermvars < 0 )
    {
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL) );
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
 
       if ( propdata->nperms <= 0 )
       {

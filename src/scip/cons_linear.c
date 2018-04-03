@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1316,7 +1316,8 @@ void consdataRecomputeGlbMinactivity(
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
       bound = (consdata->vals[i] > 0.0 ) ? SCIPvarGetLbGlobal(consdata->vars[i]) : SCIPvarGetUbGlobal(consdata->vars[i]);
-      if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound) )
+      if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
+         && !SCIPisHugeValue(scip, consdata->vals[i] * bound) && !SCIPisHugeValue(scip, -consdata->vals[i] * bound) )
          consdata->glbminactivity += consdata->vals[i] * bound;
    }
 
@@ -1342,7 +1343,8 @@ void consdataRecomputeGlbMaxactivity(
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
       bound = (consdata->vals[i] > 0.0 ) ? SCIPvarGetUbGlobal(consdata->vars[i]) : SCIPvarGetLbGlobal(consdata->vars[i]);
-      if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound) )
+      if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
+         && !SCIPisHugeValue(scip, consdata->vals[i] * bound) && !SCIPisHugeValue(scip, -consdata->vals[i] * bound) )
          consdata->glbmaxactivity += consdata->vals[i] * bound;
    }
 

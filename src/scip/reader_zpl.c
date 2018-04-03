@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "scip/cons_linear.h"
 #include "scip/cons_sos1.h"
@@ -43,7 +44,6 @@ extern "C" {
 
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
-#include "zimpl/bool.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
 
@@ -118,7 +118,7 @@ SCIP_RETCODE createProb(
  */
 Lps* xlp_alloc(
    const char*           name,               /**< name of the problem */
-   Bool                  need_startval,      /**< does ZIMPL provides a primal solution candidate */
+   bool                  need_startval,      /**< does ZIMPL provides a primal solution candidate */
    void*                 user_data           /**< user data which was previously passed to ZIMPL */
    )
 {  /*lint --e{715}*/
@@ -148,7 +148,7 @@ void xlp_free(
 }
 
 /** does there already exists a constraint with the given name? */ 
-Bool xlp_conname_exists(
+bool xlp_conname_exists(
    const Lps*            data,               /**< pointer to reader data */
    const char*           name                /**< constraint name to check */
    )
@@ -264,8 +264,8 @@ SCIP_RETCODE addConsTerm(
       /* if the constraint gives an indicator constraint */
       if ( flags & LP_FLAG_CON_INDIC )
       {
-         Bool lhsIndCons = FALSE;  /* generate lhs form for indicator constraints */
-         Bool rhsIndCons = FALSE;  /* generate rhs form for indicator constraints */
+         bool lhsIndCons = FALSE;  /* generate lhs form for indicator constraints */
+         bool rhsIndCons = FALSE;  /* generate rhs form for indicator constraints */
 
          /* currently indicator constraints can only handle "<=" constraints */
          switch( type )
@@ -802,7 +802,7 @@ SCIP_RETCODE addConsTerm(
  *
  *  @note this method is used by ZIMPL beginning from version 3.00
  */
-Bool xlp_addcon_term(
+bool xlp_addcon_term(
    Lps*                  data,               /**< pointer to reader data */
    const char*           name,               /**< constraint name */
    ConType               type,               /**< constraint type (LHS, RHS, EQUAL, RANGE, etc) */
@@ -1075,7 +1075,7 @@ SCIP_RETCODE addSOS(
 }
 
 /** add a SOS constraint. Add a given a Zimpl term as an SOS constraint to the mathematical program */
-Bool xlp_addsos_term(
+int xlp_addsos_term(
    Lps*                  data,               /**< pointer to reader data */
    const char*           name,               /**< constraint name */
    SosType               type,               /**< SOS type */
@@ -1098,7 +1098,7 @@ Bool xlp_addsos_term(
 
    readerdata->retcode = addSOS(scip, readerdata, name, type, term);
 
-   return FALSE;
+   return 0;
 }
 
 /** returns the variable name */
@@ -1252,19 +1252,13 @@ Bound* xlp_getupper(
    return bound;
 }
 
-/* set the name of the objective function */
-void xlp_objname(
+/** Set the name and direction of the objective function, i.e. minimization or maximization
+ *  Coefficents of the objective function will be set to all zero.
+ */
+bool xlp_setobj(
    Lps*                  data,               /**< pointer to reader data */
-   const char*           name                /**< name of the objective function */
-   )
-{  /*lint --e{715}*/
-   /* nothing to be done */
-}
-
-/* set the name of the objective function */
-void xlp_setdir(
-   Lps*                  data,               /**< pointer to reader data */
-   Bool                  minimize            /**<True if the problem should be minimized, False if it should be maximized  */
+   const char*           name,               /**< name of the objective function */
+   bool                  minimize            /**< True if the problem should be minimized, False if it should be maximized  */
    )
 {
    SCIP* scip;
@@ -1278,10 +1272,12 @@ void xlp_setdir(
    assert(scip != NULL);
 
    if( readerdata->retcode != SCIP_OKAY || readerdata->readerror )
-      return;
+      return FALSE;
 
    objsense = (minimize ? SCIP_OBJSENSE_MINIMIZE : SCIP_OBJSENSE_MAXIMIZE);
    readerdata->retcode = SCIPsetObjsense(scip, objsense);
+
+   return FALSE;
 }
 
 /** changes objective coefficient of a variable */

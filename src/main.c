@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,9 +31,19 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
+#include <signal.h>
 
 #include "scip/scip.h"
 #include "scip/scipshell.h"
+#include "scip/interrupt.h"
+
+static
+void handleSigterm(
+   int                   signum              /**< signal code */
+   )
+{ /*lint --e{715}*/
+   SCIPtryTerminate();
+}
 
 /** main method starting SCIP */
 int main(
@@ -43,6 +53,7 @@ int main(
 {
    SCIP_RETCODE retcode;
 
+   (void)signal(SIGTERM, handleSigterm);
    /* run interactive shell */
    retcode = SCIPrunShell(argc, argv, "scip.set");
 

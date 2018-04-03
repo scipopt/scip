@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -85,7 +85,7 @@ namespace polyscip {
     /**
      * Ostream operator
      * @param os Output stream
-     * @param proj Projection to write to stream
+     * @param p Projection to write to stream
      * @return Output stream
      */
     ostream& operator<<(ostream& os, const TwoDProj& p) {
@@ -96,7 +96,7 @@ namespace polyscip {
     /**
      * Ostream operator
      * @param os Output stream
-     * @param nd_proj Non-dominated projections to write to stream
+     * @param nd Non-dominated projections to write to stream
      * @return Output stream
      */
     ostream& operator<<(ostream& os, const NondomProjections& nd) {

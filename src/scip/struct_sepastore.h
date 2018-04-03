@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,7 +38,6 @@ extern "C" {
 struct SCIP_SepaStore
 {
    SCIP_ROW**            cuts;               /**< array with separated cuts sorted by score */
-   SCIP_Real*            scores;             /**< score for each separated cut: weighted sum of efficacy and objective parallelism and integral support */
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
    int                   nforcedcuts;        /**< number of forced separated cuts (first positions in cuts array) */

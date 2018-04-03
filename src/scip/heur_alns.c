@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -514,6 +514,7 @@ void updateFixingRate(
          break;
       case SCIP_STATUS_STALLNODELIMIT:
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
       case SCIP_STATUS_NODELIMIT:
          /* increase the fixing rate (make the subproblem easier) only if no solution was found */
          if( runstats->nbestsolsfound <= 0 )
@@ -586,6 +587,7 @@ void updateTargetNodeLimit(
             increaseTargetNodeLimit(heurdata);
          break;
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_TERMINATE:
       case SCIP_STATUS_UNKNOWN:
       case SCIP_STATUS_TOTALNODELIMIT:
       case SCIP_STATUS_TIMELIMIT:
@@ -676,6 +678,7 @@ void updateMinimumImprovement(
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_UNBOUNDED:
+      case SCIP_STATUS_TERMINATE:
       default:
          break;
    }
@@ -1559,19 +1562,18 @@ SCIP_RETCODE createBandit(
  */
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-#if 0
 static
 SCIP_DECL_HEURCOPY(heurCopyAlns)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of alns primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurAlns(scip) );
 
    return SCIP_OKAY;
 }
-#else
-#define heurCopyAlns NULL
-#endif
 
 /** unfix some of the variables because there are too many fixed
  *

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -267,6 +267,19 @@ int SCIPaggrRowGetNRows(
     SCIP_AGGRROW*          aggrrow              /**< aggregation row */
    );
 
+/** perform a cut selection algorithm for the given array of cuts; the array is partitioned
+ *  so that the selected cuts come first and the remaining ones are at the end of the array
+ */
+EXTERN
+SCIP_RETCODE SCIPselectCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   int                   ncuts,              /**< number of cuts in given array */
+   int                   nforcedcuts,        /**< number of forced cuts at start of given array */
+   int                   maxselectedcuts,    /**< maximal number of cuts to select */
+   int*                  nselectedcuts       /**< pointer to return number of selected cuts */
+   );
+
 /** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
  *  participate in an MIR cut.
@@ -279,6 +292,7 @@ int SCIPaggrRowGetNRows(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
+EXTERN
 SCIP_RETCODE SCIPcalcMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
@@ -408,7 +422,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute a flow cover cut for */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute a strong CG cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
    SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */

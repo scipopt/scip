@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13989,7 +13989,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxdisaggrsize",
          "maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)",
-         &conshdlrdata->maxdisaggrsize, FALSE, 127, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxdisaggrsize, FALSE, 1, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/disaggrmergemethod",
          "strategy how to merge independent blocks to reach maxdisaggrsize limit (keep 'b'iggest blocks and merge others; keep 's'mallest blocks and merge other; merge small blocks into bigger blocks to reach 'm'ean sizes)",
@@ -15936,10 +15936,10 @@ void SCIPprintRowprep(
 
    for( i = 0; i < rowprep->nvars; ++i )
    {
-      SCIPinfoMessage(scip, file, "%+g*<%s> ", rowprep->coefs[i], SCIPvarGetName(rowprep->vars[i]));
+      SCIPinfoMessage(scip, file, "%+.15g*<%s> ", rowprep->coefs[i], SCIPvarGetName(rowprep->vars[i]));
    }
 
-   SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %g\n" : "<= %g\n", rowprep->side);
+   SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %.15g\n" : "<= %.15g\n", rowprep->side);
 }
 
 /** adds a term coef*var to a rowprep */
@@ -16035,7 +16035,7 @@ SCIP_Real SCIPgetRowprepViolation(
    SCIP_Real activity;
    int i;
 
-   activity = -rowprep->side;
+   activity = 0.0;
    for( i = 0; i < rowprep->nvars; ++i )
    {
       /* Loose variable have the best bound as LP solution value.
@@ -16048,11 +16048,11 @@ SCIP_Real SCIPgetRowprepViolation(
    }
 
    if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-      /* cut is activity <= 0.0 -> violation is activity, if positive */
-      return MAX(activity, 0.0);
+      /* cut is activity <= side -> violation is activity - side, if positive */
+      return MAX(activity - rowprep->side, 0.0);
    else
-      /* cut is activity >= 0.0 -> violation is -activity, if positive */
-      return MAX(-activity, 0.0);
+      /* cut is activity >= side -> violation is side - activity, if positive */
+      return MAX(rowprep->side - activity, 0.0);
 }
 
 /** Merge terms that use same variable and eliminate zero coefficients.

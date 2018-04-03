@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="5.0.0.1"
+VERSION="5.0.1.4"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -20,7 +20,7 @@ echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
-chmod 750 bin/* scripts/* interfaces/ampl/get.ASL check/cmpres.awk
+chmod 750 bin/* scripts/* interfaces/ampl/get.ASL check/cmpres.awk cmake/Modules/asan-wrapper applications/PolySCIP/mult_zimpl/mult_zimpl_to_mop.py
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*~" \
@@ -71,14 +71,13 @@ $NAME/applications/Coloring/check/CMakeLists.txt \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
 $NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
-$NAME/applications/CMakeLists.txt \
 $NAME/applications/CycleClustering/* $NAME/applications/CycleClustering/doc/* $NAME/applications/CycleClustering/instances/Pot/3Cycle/* \
 $NAME/applications/CycleClustering/instances/Pot/4Cycle/*                 $NAME/applications/CycleClustering/instances/Pot/6Cycle/* \
 $NAME/applications/CycleClustering/check/CMakeLists.txt $NAME/applications/CycleClustering/settings/* \
 $NAME/applications/CycleClustering/check/testset/short.test \
 $NAME/applications/CycleClustering/src/*.c $NAME/applications/CycleClustering/src/*.h \
-$NAME/applications/Coloring/src/*.h \
 $NAME/applications/Scheduler/doc/* \
+$NAME/applications/Scheduler/INSTALL.md \
 $NAME/applications/Scheduler/check/CMakeLists.txt \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
 $NAME/applications/Scheduler/src/depend.* \
@@ -94,6 +93,7 @@ $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
 $NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh \
 $NAME/applications/MinIISC/check/testset/short.* \
+$NAME/applications/PolySCIP/INSTALL.md \
 $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
 $NAME/applications/PolySCIP/src/tclap/* \
