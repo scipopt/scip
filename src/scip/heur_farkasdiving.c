@@ -28,8 +28,8 @@
 #define HEUR_NAME             "farkasdiving"
 #define HEUR_DESC             "LP diving heuristic that tries to construct a Farkas-proof"
 #define HEUR_DISPCHAR         'u'
-#define HEUR_PRIORITY         -1001250
-#define HEUR_FREQ             10
+#define HEUR_PRIORITY         -900000
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
@@ -59,6 +59,7 @@
 #define DEFAULT_RANDSEED            151 /**< initial seed for random number generation */
 
 #define DEFAULT_DIFFOBJFAC         0.15
+#define DEFAULT_MINOBJDYN           0.1
 #define DEFAULT_CHECKOBJ          FALSE
 #define DEFAULT_CHECKOBJGLB        TRUE
 #define DEFAULT_SCALESCORE         TRUE
@@ -67,18 +68,13 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_Real             diffobjfac;         /**< fraction of absolute different objective coefficients */
+   SCIP_Real             diffobjfac;         /**< fraction of different objective coefficients in absolute value */
    SCIP_Bool             disabled;           /**< remember if the heuristic should not run at all */
    SCIP_Bool             checkobj;           /**< should objective function be checked before running? */
    SCIP_Bool             checkobjglb;        /**< check objective function only once w.r.t to the global problem */
    SCIP_Bool             objchecked;         /**< remember whether objection function was already checked */
-   SCIP_Bool             scalescore;
+   SCIP_Bool             scalescore;         /**< should score be scaled by fractionality= */
 };
-
-
-/*
- * local methods
- */
 
 /*
  * Callback methods
@@ -279,6 +275,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
       lastobjcoef = objcoefs[0];
       ndiffnnzobjs = 1;
 
+      /* count number of different absolute objective values*/
       for( i = 1; i < nnzobjcoefs; i++ )
       {
          if( SCIPisGT(scip, objcoefs[i], lastobjcoef) )
@@ -290,10 +287,9 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
 
       SCIPfreeBufferArray(scip, &objcoefs);
 
-      SCIPdebugMsg(scip, "%d divecands; %d nnzobjs; %d diffnnzobjs", ndivecands, nnzobjcoefs, ndiffnnzobjs);
+      SCIPdebugMsg(scip, "%d divecands; %d nnzobjs; %d diffnnzobjs\n", ndivecands, nnzobjcoefs, ndiffnnzobjs);
 
-//      if( nnzobjcoefs == 0 || ndiffnnzobjs / (SCIP_Real)ndivecands < heurdata->diffobjfac )
-      if( nnzobjcoefs == 0 || nnzobjcoefs / (SCIP_Real)ndivecands < heurdata->diffobjfac )
+      if( nnzobjcoefs == 0 || nnzobjcoefs < heurdata->diffobjfac * (SCIP_Real)ndivecands )
       {
          SCIPdebugMsg(scip, " ---> disable farkasdiving%s\n", heurdata->checkobjglb ? "" : " locally");
 
@@ -305,7 +301,6 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
       }
       else
       {
-         SCIPdebugMsg(scip, "\n");
          heurdata->objchecked = TRUE;
       }
    }
@@ -374,7 +369,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
       *score = -1.0 / *score;
 
    return SCIP_OKAY;
-
 }
 
 /*
@@ -417,7 +411,7 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          &heurdata->checkobj, TRUE, DEFAULT_CHECKOBJ, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkobjglb",
-         "should objective function be check globally or locally?",
+         "should objective function be check globally (locally otherwise)?",
          &heurdata->checkobjglb, TRUE, DEFAULT_CHECKOBJGLB, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scalescore",
@@ -425,7 +419,7 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          &heurdata->scalescore, TRUE, DEFAULT_SCALESCORE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/diffobjfac",
-         "fraction of absolute different objective coefficients",
+         "fraction of different objective coefficients in absolute value",
          &heurdata->diffobjfac, TRUE, DEFAULT_DIFFOBJFAC, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
