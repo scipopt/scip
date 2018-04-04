@@ -144,17 +144,26 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy)
    banditdata = SCIPbanditGetData(bandit);
    assert(banditdata != NULL);
 
-   /* use geometrically decreasing weights for older observations */
+   /* increase the selection count */
+   ++banditdata->sels[selection];
+
+   /* use exponentially decreasing weights for older observations */
    if( banditdata->preferrecent )
    {
-      banditdata->weights[selection] *= 0.9;
-      banditdata->weights[selection] += 0.1 * score;
+      /* the very first observation is directly stored as weight */
+      if( banditdata->sels[selection] == 1 )
+         banditdata->weights[selection] = score;
+      else
+      {
+         /* decrease old weights */
+         banditdata->weights[selection] *= 0.9;
+         banditdata->weights[selection] += 0.1 * score;
+      }
    }
    else
    {
       /* update average score */
       SCIP_Real diff = score - banditdata->weights[selection];
-      ++banditdata->sels[selection];
       banditdata->weights[selection] += diff / (SCIP_Real)(banditdata->sels[selection]);
    }
 
