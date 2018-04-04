@@ -15,7 +15,7 @@ set(instances
   "test_ring1\;1"
   )
 
-add_test(NAME examples-ringpacking-build
+add_test(NAME applications-ringpacking-build
   COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ringpacking
   )
 
@@ -23,7 +23,7 @@ add_test(NAME examples-ringpacking-build
 # avoid that several build jobs try to concurrently build the SCIP library
 # note that this ressource lock name is not the actual libscip target
 #
-set_tests_properties(examples-ringpacking-build
+set_tests_properties(applications-ringpacking-build
   PROPERTIES
   RESOURCE_LOCK libscip
   )
@@ -39,12 +39,12 @@ foreach(instance ${instances})
   #
   # call the Ringpacking binary and validate the solve with the given objective value
   #
-  add_test(NAME "examples-ringpacking-${basename}"
+  add_test(NAME "applications-ringpacking-${basename}"
     COMMAND $<TARGET_FILE:ringpacking> -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/test/${basename}.rpa -o ${optval} ${optval}
     )
-  set_tests_properties("examples-ringpacking-${basename}"
+  set_tests_properties("applications-ringpacking-${basename}"
     PROPERTIES
     PASS_REGULAR_EXPRESSION "Validation         : Success"
-    DEPENDS examples-ringpacking-build
+    DEPENDS applications-ringpacking-build
     )
 endforeach()

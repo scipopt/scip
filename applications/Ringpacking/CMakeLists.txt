@@ -20,8 +20,8 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(ringpacking ${SCIP_LIBRARIES} ${LIBM})
-if( TARGET examples )
-    add_dependencies( examples ringpacking )
+if( TARGET applications )
+    add_dependencies( applications ringpacking )
 endif()
 
 #
