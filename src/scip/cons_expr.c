@@ -2434,7 +2434,7 @@ SCIP_RETCODE forwardPropExpr(
       *ntightenings = 0;
 
    /* if value is up-to-date, then nothing to do */
-   if( boxtag != 0 && expr->intevaltag == boxtag )
+   if( boxtag != 0 && expr->intevaltag == boxtag && !expr->hastightened )
       return SCIP_OKAY;
 
    propdata.aborted = FALSE;
