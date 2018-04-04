@@ -7447,6 +7447,10 @@
   *
   *   <b>Data structures</b>
   *    - additional argument "preferrecent" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations.
+  * - Functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  *   and SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() require additional argument to specify already
+  *   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+  *
   * <br>
   *
   *   <b>SCIP Status</b>
