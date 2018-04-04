@@ -3108,192 +3108,192 @@ SCIP_RETCODE reduce_bdr(
       for( int i = 0; i < nnodes; i++ )
          g->mark[i] = (g->grad[i] > 0);
 
-   for( int i = 0; i < nnodes; i++ )
+   for( int degree = 3; degree <= STP_BDR_MAXDEGREE; degree ++ )
    {
-      int k;
-
-      if( Is_term(g->term[i]) || g->grad[i] < 3 || g->grad[i] > STP_BDR_MAXDEGREE )
-         continue;
-
-      assert(g->mark[i]);
-
-      k = 0;
-      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      for( int i = 0; i < nnodes; i++ )
       {
-         ecost[k] = g->cost[e];
-         adjvert[k++] = g->head[e];
-         assert(k <= STP_BDR_MAXDEGREE);
-      }
+         int k;
 
-      assert(k == g->grad[i]);
+         if( Is_term(g->term[i]) || g->grad[i] != degree )
+            continue;
 
-      /* vertex of degree 3? */
-      if( g->grad[i] == 3 )
-      {
-         assert(k == 3);
+         assert(g->mark[i]);
 
-         csum = ecost[0] + ecost[1] + ecost[2];
-
-         sd[0] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[0], adjvert[1], 300);
-         sd[1] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[1], adjvert[2], 300);
-         sd[2] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[2], adjvert[0], 300);
-
-         if( SCIPisLE(scip, sd[0] + sd[1], csum) || SCIPisLE(scip, sd[0] + sd[2], csum) || SCIPisLE(scip, sd[1] + sd[2], csum) )
+         k = 0;
+         for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
          {
-            SCIP_Bool success;
-
-            cutoffs[0] = sd[0];
-            cutoffs[1] = sd[2];
-            cutoffs[2] = sd[1];
-
-            SCIP_CALL( graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success) );
-
-            assert(success);
-            assert(g->grad[i] == 0);
-
-            SCIPdebugMessage("BD3-R Reduction: %f %f %f csum: %f\n ", sd[0], sd[1], sd[2], csum);
-            (*nelims)++;
-         }
-      }
-      /* vertex of degree 4? */
-      else if( g->grad[i] == 4 )
-      {
-         assert(k == 4);
-
-         for( k = 0; k < 4; k++ )
-         {
-            auxg->mark[k] = TRUE;
-            for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
-            {
-               const int k2 = auxg->head[e];
-               if( k2 > k )
-               {
-                  auxg->cost[e] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[k], adjvert[k2], 200);
-                  auxg->cost[flipedge(e)] = auxg->cost[e];
-               }
-            }
+            ecost[k] = g->cost[e];
+            adjvert[k++] = g->head[e];
          }
 
-         for( int l = 0; l < 4; l++ )
-            mst[l].dist = UNKNOWN;
+         assert(k == degree);
 
-         /* compute mst on all neighbours */
-         graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-         mstcost = 0.0;
-
-#ifndef NDEBUG
-         for( int l = 1; l < 4; l++ )
-            assert(mst[l].dist != UNKNOWN);
-#endif
-
-         for( int l = 1; l < 4; l++ )
-            mstcost += mst[l].dist;
-
-         k = UNKNOWN;
-         csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
-
-         if( SCIPisGE(scip, csum, mstcost) )
+         /* vertex of degree 3? */
+         if( degree == 3 )
          {
-            /* compute mst on all 3-subsets of all neigbours */
-            for( k = 0; k < 4; k++ )
+            csum = ecost[0] + ecost[1] + ecost[2];
+
+            sd[0] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[0],
+                  adjvert[1], 300);
+            sd[1] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[1],
+                  adjvert[2], 300);
+            sd[2] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[2],
+                  adjvert[0], 300);
+
+            if( SCIPisLE(scip, sd[0] + sd[1], csum) || SCIPisLE(scip, sd[0] + sd[2], csum) || SCIPisLE(scip, sd[1] + sd[2], csum) )
             {
-               auxg->mark[k] = FALSE;
-               mstcost = 0.0;
+               SCIP_Bool success;
 
-               if( k != 0 )
-               {
-                  graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-                  for( int l = 1; l < 4; l++ )
-                     if( auxg->mark[l] )
-                        mstcost += mst[l].dist;
-               }
-               else
-               {
-                  graph_path_exec(scip, auxg, MST_MODE, 1, auxg->cost, mst);
-                  for( int l = 2; l < 4; l++ )
-                     mstcost += mst[l].dist;
-               }
+               cutoffs[0] = sd[0];
+               cutoffs[1] = sd[2];
+               cutoffs[2] = sd[1];
 
-               auxg->mark[k] = TRUE;
-               csum -= ecost[k];
+               SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
 
-               if( SCIPisLT(scip, csum, mstcost) )
-                  break;
+               assert(success);
+               assert(g->grad[i] == 0);
 
-               csum += ecost[k];
-            }
-         }
-
-         if( k == 4 )
-         {
-
-            int edgecount = 0;
-            SCIP_Bool success;
-            for( k = 0; k < 3; k++ )
-            {
-               for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
-               {
-                  const int k2 = auxg->head[e];
-                  if( k2 > k )
-                     cutoffs[edgecount++] = auxg->cost[e];
-               }
-            }
-
-            SCIP_CALL( graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success) );
-
-            if( success )
+               SCIPdebugMessage("BD3-R Reduction: %f %f %f csum: %f\n ", sd[0], sd[1], sd[2], csum);
                (*nelims)++;
-
-            /* todo deleteme*/
-#if 0
-
-            int l = 0;
+            }
+         }
+         /* vertex of degree 4? */
+         else if( degree == 4 )
+         {
             for( k = 0; k < 4; k++ )
             {
+               auxg->mark[k] = TRUE;
                for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
                {
                   const int k2 = auxg->head[e];
                   if( k2 > k )
                   {
-                     if( SCIPisGE(scip, auxg->cost[e], ecost[k] + ecost[k2]) )
-                     {
-                        if( l >= 4 )
-                           break;
-                        reinsert[l++] = e;
-                     }
+                     auxg->cost[e] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1,
+                           neighbterms2, adjvert[k], adjvert[k2], 200);
+                     auxg->cost[flipedge(e)] = auxg->cost[e];
                   }
                }
             }
 
-            if( k == 4  )
-            {
-               (*nelims) += g->grad[i] - l;
+            for( int l = 0; l < 4; l++ )
+               mst[l].dist = UNKNOWN;
 
-               /* save ancestors */
+            /* compute mst on all neighbours */
+            graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
+            mstcost = 0.0;
+
+#ifndef NDEBUG
+            for( int l = 1; l < 4; l++ )
+               assert(mst[l].dist != UNKNOWN);
+#endif
+
+            for( int l = 1; l < 4; l++ )
+               mstcost += mst[l].dist;
+
+            k = UNKNOWN;
+            csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
+
+            if( SCIPisGE(scip, csum, mstcost) )
+            {
+               /* compute mst on all 3-subsets of all neigbours */
                for( k = 0; k < 4; k++ )
                {
-                  SCIPintListNodeFree(scip, &(ancestors[k]));
-                  SCIPintListNodeFree(scip, &(revancestors[k]));
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[k]), g->ancestors[incedge[k]], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[k]), g->ancestors[Edge_anti(incedge[k])], NULL) );
-               }
+                  auxg->mark[k] = FALSE;
+                  mstcost = 0.0;
 
-               for( k = 0; k < l; k++ )
-               {
-                  const int e = reinsert[k];
-                  const int tail = auxg->tail[e];
-                  const int head = auxg->head[e];
-                  SCIP_CALL( graph_edge_reinsert(scip, g, incedge[k], adjvert[tail], adjvert[head], ecost[tail] + ecost[head], ancestors[tail], ancestors[head], revancestors[tail], revancestors[head], TRUE) );
-               }
+                  if( k != 0 )
+                  {
+                     graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
+                     for( int l = 1; l < 4; l++ )
+                        if( auxg->mark[l] )
+                           mstcost += mst[l].dist;
+                  }
+                  else
+                  {
+                     graph_path_exec(scip, auxg, MST_MODE, 1, auxg->cost, mst);
+                     for( int l = 2; l < 4; l++ )
+                        mstcost += mst[l].dist;
+                  }
 
-               /* delete remaining edges */
-               while( g->outbeg[i] >= 0 )
-                  graph_edge_del(scip, g, g->outbeg[i], TRUE);
+                  auxg->mark[k] = TRUE;
+                  csum -= ecost[k];
+
+                  if( SCIPisLT(scip, csum, mstcost) )
+                     break;
+
+                  csum += ecost[k];
+               }
             }
-#endif
-            assert(g->grad[i] == 0);
-         }
 
+            if( k == 4 )
+            {
+
+               int edgecount = 0;
+               SCIP_Bool success;
+               for( k = 0; k < 3; k++ )
+               {
+                  for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
+                  {
+                     const int k2 = auxg->head[e];
+                     if( k2 > k )
+                        cutoffs[edgecount++] = auxg->cost[e];
+                  }
+               }
+
+               SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
+
+               if( success )
+                  (*nelims)++;
+
+               /* todo deleteme*/
+#if 0
+
+               int l = 0;
+               for( k = 0; k < 4; k++ )
+               {
+                  for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
+                  {
+                     const int k2 = auxg->head[e];
+                     if( k2 > k )
+                     {
+                        if( SCIPisGE(scip, auxg->cost[e], ecost[k] + ecost[k2]) )
+                        {
+                           if( l >= 4 )
+                           break;
+                           reinsert[l++] = e;
+                        }
+                     }
+                  }
+               }
+
+               if( k == 4 )
+               {
+                  (*nelims) += g->grad[i] - l;
+
+                  /* save ancestors */
+                  for( k = 0; k < 4; k++ )
+                  {
+                     SCIPintListNodeFree(scip, &(ancestors[k]));
+                     SCIPintListNodeFree(scip, &(revancestors[k]));
+                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[k]), g->ancestors[incedge[k]], NULL) );
+                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[k]), g->ancestors[Edge_anti(incedge[k])], NULL) );
+                  }
+
+                  for( k = 0; k < l; k++ )
+                  {
+                     const int e = reinsert[k];
+                     const int tail = auxg->tail[e];
+                     const int head = auxg->head[e];
+                     SCIP_CALL( graph_edge_reinsert(scip, g, incedge[k], adjvert[tail], adjvert[head], ecost[tail] + ecost[head], ancestors[tail], ancestors[head], revancestors[tail], revancestors[head], TRUE) );
+                  }
+
+                  /* delete remaining edges */
+                  while( g->outbeg[i] >= 0 )
+                  graph_edge_del(scip, g, g->outbeg[i], TRUE);
+               }
+#endif
+            }
+         }
       }
    }
 
@@ -3393,154 +3393,162 @@ SCIP_RETCODE reduce_bd34(
       }
    }
 
-   for( int i = 0; i < nnodes; i++ )
+   for( int degree = 3; degree <= STP_BD_MAXDEGREE; degree++ )
    {
-      int edgecount;
-      if( Is_term(g->term[i]) || g->grad[i] < 3 || g->grad[i] > STP_BD_MAXDEGREE )
-         continue;
-
-      edgecount = 0;
-      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      for( int i = 0; i < nnodes; i++ )
       {
-         ecost[edgecount] = g->cost[e];
-         adjvert[edgecount++] = g->head[e];
-         assert(edgecount <= 4);
-      }
+         int edgecount;
+         if( Is_term(g->term[i]) || g->grad[i] != degree )
+            continue;
 
-      /* vertex of degree 3? */
-      if( g->grad[i] == 3 )
-      {
-         const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2];
-
-         assert(edgecount == 3);
-
-         if( pc )
+         edgecount = 0;
+         for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
          {
-            SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                        pathmaxnodetail, pathmaxnodehead, adjvert[0], adjvert[1], limit));
-            SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                        pathmaxnodetail, pathmaxnodehead, adjvert[1], adjvert[2], limit));
-            SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                        pathmaxnodetail, pathmaxnodehead, adjvert[2], adjvert[0], limit));
-         }
-         else
-         {
-            SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[0], adjvert[1], limit, pc, FALSE));
-            SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[1], adjvert[2], limit, pc, FALSE));
-            SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[2], adjvert[0], limit, pc, FALSE));
+            ecost[edgecount] = g->cost[e];
+            adjvert[edgecount++] = g->head[e];
          }
 
-         if( SCIPisLE(scip, sd[0] + sd[1], csum) || SCIPisLE(scip, sd[0] + sd[2], csum) || SCIPisLE(scip, sd[1] + sd[2], csum) )
+         /* vertex of degree 3? */
+         if( degree == 3 )
          {
-            SCIP_Bool success;
+            const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2];
 
-            cutoffs[0] = sd[0];
-            cutoffs[1] = sd[2];
-            cutoffs[2] = sd[1];
+            assert(edgecount == 3);
 
-            SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
-            assert(success);
-            assert(g->grad[i] == 0);
-
-            SCIPdebugMessage("BD3 Reduction: %f %f %f csum: %f\n ", sd[0], sd[1], sd[2], csum);
-            (*nelims)++;
-         }
-      }
-      /* vertex of degree 4? */
-      else if( g->grad[i] == 4 )
-      {
-         int k;
-         SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
-         SCIP_Real mstcost;
-
-         assert(edgecount == 4);
-
-         for( k = 0; k < 4; k++ )
-         {
-            auxg->mark[k] = TRUE;
-            for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
+            if( pc )
             {
-               const int  k2 = auxg->head[e];
-               if( k2 > k )
-               {
-                  SCIP_Real s1 = -1.0;
-                  if( pc )
-                     SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                                 pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit));
-                  else
-                     SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[k], adjvert[k2], limit, pc, FALSE) );
-                  assert(s1 >= 0);
-                  auxg->cost[e] = s1;
-                  auxg->cost[flipedge(e)] = s1;
-               }
+               SCIP_CALL(
+                     reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead,
+                           pathmaxnodetail, pathmaxnodehead, adjvert[0], adjvert[1], limit));
+               SCIP_CALL(
+                     reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead,
+                           pathmaxnodetail, pathmaxnodehead, adjvert[1], adjvert[2], limit));
+               SCIP_CALL(
+                     reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead,
+                           pathmaxnodetail, pathmaxnodehead, adjvert[2], adjvert[0], limit));
+            }
+            else
+            {
+               SCIP_CALL(
+                     reduce_getSd(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[0], adjvert[1], limit, pc, FALSE));
+               SCIP_CALL(
+                     reduce_getSd(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[1], adjvert[2], limit, pc, FALSE));
+               SCIP_CALL(
+                     reduce_getSd(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[2], adjvert[0], limit, pc, FALSE));
+            }
+
+            if( SCIPisLE(scip, sd[0] + sd[1], csum) || SCIPisLE(scip, sd[0] + sd[2], csum) || SCIPisLE(scip, sd[1] + sd[2], csum) )
+            {
+               SCIP_Bool success;
+
+               cutoffs[0] = sd[0];
+               cutoffs[1] = sd[2];
+               cutoffs[2] = sd[1];
+
+               SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
+               assert(success);
+               assert(g->grad[i] == 0);
+
+               SCIPdebugMessage("BD3 Reduction: %f %f %f csum: %f\n ", sd[0], sd[1], sd[2], csum);
+               (*nelims)++;
             }
          }
-
-         for( int l = 0; l < 4; l++ )
-            mst[l].dist = UNKNOWN;
-
-         /* compute mst on all neighbours */
-         graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-         mstcost = 0.0;
-
-         /* sum cost of (root == 0) */
-         for( int l = 1; l < 4; l++ )
+         /* vertex of degree 4? */
+         else if( degree == 4 )
          {
-            assert(mst[l].dist != UNKNOWN);
-            mstcost += mst[l].dist;
-         }
+            int k;
+            SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
+            SCIP_Real mstcost;
 
-         k = 0;
-         if( SCIPisGE(scip, csum, mstcost) )
-         {
-            /* compute mst on all 3-subsets of all neigbours */
+            assert(edgecount == 4);
+
             for( k = 0; k < 4; k++ )
             {
-               auxg->mark[k] = FALSE;
-               mstcost = 0.0;
-
-               if( k != 0 )
-               {
-                  graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-                  for( int l = 1; l < 4; l++ )
-                     if( auxg->mark[l] )
-                        mstcost += mst[l].dist;
-               }
-               else
-               {
-                  graph_path_exec(scip, auxg, MST_MODE, 1, auxg->cost, mst);
-                  for( int l = 2; l < 4; l++ )
-                     mstcost += mst[l].dist;
-               }
-
                auxg->mark[k] = TRUE;
-
-               if( SCIPisLT(scip, csum - ecost[k], mstcost) )
-                  break;
-            }
-         }
-
-         if( k == 4 )
-         {
-            SCIP_Bool success;
-            edgecount = 0;
-
-            for( k = 0; k < 3; k++ )
-            {
                for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
                {
                   const int k2 = auxg->head[e];
                   if( k2 > k )
-                     cutoffs[edgecount++] = auxg->cost[e];
+                  {
+                     SCIP_Real s1 = -1.0;
+                     if( pc )
+                        SCIP_CALL(
+                              reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
+                                    pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit));
+                     else
+                        SCIP_CALL(
+                              reduce_getSd(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[k], adjvert[k2], limit, pc, FALSE));
+                     assert(s1 >= 0);
+                     auxg->cost[e] = s1;
+                     auxg->cost[flipedge(e)] = s1;
+                  }
                }
             }
 
-            SCIP_CALL( graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success) );
+            for( int l = 0; l < 4; l++ )
+               mst[l].dist = UNKNOWN;
 
-            if( success )
-               (*nelims)++;
+            /* compute mst on all neighbours */
+            graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
+            mstcost = 0.0;
 
-            assert(g->grad[i] == 0);
+            /* sum cost of (root == 0) */
+            for( int l = 1; l < 4; l++ )
+            {
+               assert(mst[l].dist != UNKNOWN);
+               mstcost += mst[l].dist;
+            }
+
+            k = 0;
+            if( SCIPisGE(scip, csum, mstcost) )
+            {
+               /* compute mst on all 3-subsets of all neigbours */
+               for( k = 0; k < 4; k++ )
+               {
+                  auxg->mark[k] = FALSE;
+                  mstcost = 0.0;
+
+                  if( k != 0 )
+                  {
+                     graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
+                     for( int l = 1; l < 4; l++ )
+                        if( auxg->mark[l] )
+                           mstcost += mst[l].dist;
+                  }
+                  else
+                  {
+                     graph_path_exec(scip, auxg, MST_MODE, 1, auxg->cost, mst);
+                     for( int l = 2; l < 4; l++ )
+                        mstcost += mst[l].dist;
+                  }
+
+                  auxg->mark[k] = TRUE;
+
+                  if( SCIPisLT(scip, csum - ecost[k], mstcost) )
+                     break;
+               }
+            }
+
+            if( k == 4 )
+            {
+               SCIP_Bool success;
+               edgecount = 0;
+
+               for( k = 0; k < 3; k++ )
+               {
+                  for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
+                  {
+                     const int k2 = auxg->head[e];
+                     if( k2 > k )
+                        cutoffs[edgecount++] = auxg->cost[e];
+                  }
+               }
+
+               SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
+
+               if( success )
+                  (*nelims)++;
+            }
          }
       }
    }

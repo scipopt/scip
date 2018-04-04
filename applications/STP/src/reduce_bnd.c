@@ -362,62 +362,61 @@ int reduceWithNodeReplaceBounds(
    for( int k = 0; k < nnodes; k++ )
       nodetouched[k] = 0;
 
-   for( int k = 0; k < nnodes; k++ )
+   /* main loop */
+   for( int degree = 3; degree <= STP_DABD_MAXDEGREE; degree++ )
    {
-      const int degree = graph->grad[k];
-
-      if( degree < 3 || degree > STP_DABD_MAXDEGREE )
-         continue;
-
-      if( !graph->mark[k] || Is_gterm(graph->term[k]) )
-         continue;
-
-      if( SCIPisLT(scip, upperbound, replacebounds[k]) && nodetouched[k] == 0 )
+      for( int k = 0; k < nnodes; k++ )
       {
-         int edgecount = 0;
-         SCIP_Bool success;
+         if( degree != graph->grad[k] || Is_gterm(graph->term[k]) )
+            continue;
 
-         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-            nodetouched[graph->head[e]]++;
-
-         /* fill cutoff */
-
-         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-            adjvert[edgecount++] = graph->head[e];
-
-         assert(edgecount == degree);
-
-         edgecount = 0;
-         for( int i = 0; i < degree - 1; i++ )
+         if( SCIPisLT(scip, upperbound, replacebounds[k]) && nodetouched[k] == 0 )
          {
-            const int vert = adjvert[i];
-            for( int i2 = i + 1; i2 < degree; i2++ )
-            {
-               const int vert2 = adjvert[i2];
-
-               assert(edgecount < STP_DABD_MAXDNEDGES);
-
-               cutoffs[edgecount] = upperbound - lpobjval - (pathdist[vert] + vnoi[vert2].dist);
-               cutoffsrev[edgecount] = upperbound - lpobjval - (pathdist[vert2] + vnoi[vert].dist);
-
-               edgecount++;
-            }
-         }
-
-         /* try to eliminate */
-
-         SCIP_CALL_ABORT( graph_knot_delPseudo(scip, graph, cost, cutoffs, cutoffsrev, k, &success) );
-
-         if( success )
-            nfixed++;
-         else
-         {
-            assert(graph->grad[k] == degree);
+            int edgecount = 0;
+            SCIP_Bool success;
 
             for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+               nodetouched[graph->head[e]]++;
+
+            /* fill cutoff */
+
+            for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+               adjvert[edgecount++] = graph->head[e];
+
+            assert(edgecount == degree);
+
+            edgecount = 0;
+            for( int i = 0; i < degree - 1; i++ )
             {
-               nodetouched[graph->head[e]]--;
-               assert(nodetouched[graph->head[e]] >= 0);
+               const int vert = adjvert[i];
+               for( int i2 = i + 1; i2 < degree; i2++ )
+               {
+                  const int vert2 = adjvert[i2];
+
+                  assert(edgecount < STP_DABD_MAXDNEDGES);
+
+                  cutoffs[edgecount] = upperbound - lpobjval - (pathdist[vert] + vnoi[vert2].dist);
+                  cutoffsrev[edgecount] = upperbound - lpobjval - (pathdist[vert2] + vnoi[vert].dist);
+
+                  edgecount++;
+               }
+            }
+
+            /* try to eliminate */
+
+            SCIP_CALL_ABORT(graph_knot_delPseudo(scip, graph, cost, cutoffs, cutoffsrev, k, &success));
+
+            if( success )
+               nfixed++;
+            else
+            {
+               assert(graph->grad[k] == degree);
+
+               for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+               {
+                  nodetouched[graph->head[e]]--;
+                  assert(nodetouched[graph->head[e]] >= 0);
+               }
             }
          }
       }
