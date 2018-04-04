@@ -122,7 +122,7 @@ void updateNodeReplaceBounds(
          assert(!Is_pterm(graph->term[node]));
 
          /* Y-test for small degrees */
-         if( degree == 3 )
+         if( degree <= STP_DABD_MAXDEGREE )
          {
 #ifdef PPP
 
@@ -348,7 +348,7 @@ int reduceWithNodeReplaceBounds(
    const SCIP_Real*      pathdist,           /**< distance array from shortest path calculations */
    const SCIP_Real*      cost,               /**< dual ascent costs */
    const SCIP_Real*      replacebounds,      /**< replacement bounds */
-   STP_Bool*             nodetouched,        /**< STP_Bool node array for internal computations */
+   int*                  nodetouched,        /**< node array for internal computations */
    SCIP_Real             lpobjval,           /**< lower bound corresponding to pathdist and vnoi */
    SCIP_Real             upperbound          /**< best upperbound */
 )
@@ -360,7 +360,7 @@ int reduceWithNodeReplaceBounds(
    const int nnodes = graph->knots;
 
    for( int k = 0; k < nnodes; k++ )
-      nodetouched[k] = FALSE;
+      nodetouched[k] = 0;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -372,13 +372,13 @@ int reduceWithNodeReplaceBounds(
       if( !graph->mark[k] || Is_gterm(graph->term[k]) )
          continue;
 
-      if( SCIPisLT(scip, upperbound, replacebounds[k]) && !nodetouched[k] )
+      if( SCIPisLT(scip, upperbound, replacebounds[k]) && nodetouched[k] == 0 )
       {
          int edgecount = 0;
          SCIP_Bool success;
 
          for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-            nodetouched[graph->head[e]] = TRUE;
+            nodetouched[graph->head[e]]++;
 
          /* fill cutoff */
 
@@ -410,6 +410,16 @@ int reduceWithNodeReplaceBounds(
 
          if( success )
             nfixed++;
+         else
+         {
+            assert(graph->grad[k] == degree);
+
+            for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               nodetouched[graph->head[e]]--;
+               assert(nodetouched[graph->head[e]] >= 0);
+            }
+         }
       }
    }
 
@@ -1925,7 +1935,7 @@ SCIP_RETCODE reduce_da(
    } /* root loop */
 
    if( !directed && !SCIPisZero(scip, minpathcost) )
-      nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrchar, lpobjval, upperbound);
+      nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
 
 TERMINATE:
    *nelims = nfixed;

@@ -650,7 +650,7 @@ static int start_section(
 #endif
          /* Is this section in a separate file ?
           */
-         if( tokens == 1 )
+         if( tokens == 1 || (tokens == 2 && strcmp(strlower(sectname),"tree") == 0) )
          {
             curf->section        = temp.section;
             curf->section->mark |= SECTION_EXISTEND;
@@ -999,9 +999,6 @@ SCIP_RETCODE graph_load(
          p = (struct key*)bsearch(keyword, keyword_table,
             sizeof(keyword_table) / sizeof(struct key),
             sizeof(struct key), key_cmp);
-
-         int todo;
-         //printf("curf.section->name %s \n", curf.section->name);
 
          if (p == NULL)
             message(MSG_ERROR, &curf, err_unknown_s, keyword);
