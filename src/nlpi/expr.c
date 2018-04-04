@@ -11231,7 +11231,7 @@ void exprgraphNodePropagateBounds(
           */
          SCIPintervalPowerScalar(infinity, &childpowbounds, node->children[i]->bounds, n);
          SCIPdebugMessage("solve [%10g,%10g]c%d^%g + [%10g,%10g]c%d^%g = [%10g,%10g] for c%d^%g in [%10g,%10g]",
-            a.inf, a.sup, i, 2*n, b.inf, b.sup, i, n, c.inf, c.sup, i, n,childpowbounds.inf, childpowbounds.sup);
+            a.inf, a.sup, i, 2*n, b.inf, b.sup, i, n, c.inf, c.sup, i, n, childpowbounds.inf, childpowbounds.sup);
          SCIPintervalSolveUnivariateQuadExpression(infinity, &tmp, a, b, c, childpowbounds);
          SCIPdebugPrintf(" -> c%d^%g = [%10g, %10g]", i, n, tmp.inf, tmp.sup);
 
