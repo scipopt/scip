@@ -205,7 +205,6 @@ typedef struct
 {
    unsigned int          boxtag;             /**< box tag */
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an empty interval */
-   SCIP_Bool             intersect;          /**< should the computed expression interval be intersected with the existing one? */
    SCIP_Bool             force;              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool             tightenauxvars;     /**< should the bounds of auxiliary variables be tightened? */
    SCIP_Real             varboundrelax;      /**< by how much to relax variable bounds (at most) */
