@@ -503,7 +503,6 @@ EXTERN
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
-   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_Real               varboundrelax     /**< amount by which variable bounds should be relaxed (at most) */
    );

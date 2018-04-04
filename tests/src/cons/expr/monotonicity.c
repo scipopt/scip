@@ -139,7 +139,7 @@ SCIP_RETCODE testMonotonicity(
    cr_assert(i < SCIPgetConsExprExprNChildren(expr));
 
    /* evaluate all subexpressions */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0, 0.0) );
 
    /* check curvature */
    cr_expect(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres, "expect %d, got %d",
