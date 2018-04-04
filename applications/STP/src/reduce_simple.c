@@ -569,10 +569,23 @@ SCIP_RETCODE reduce_simple(
 
                if( !Is_term(g->term[i]) )
                {
+                  SCIP_Bool conflict;
+
                   assert(EQ(g->cost[e2], g->cost[Edge_anti(e2)]));
 
                   g->cost[e1]            += g->cost[e2];
                   g->cost[Edge_anti(e1)] += g->cost[e2];
+
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], &conflict) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], &conflict) );
+
+                  if( conflict )
+                  {
+                     int todo;
+                     assert(0);
+                     printf("conflict found %d \n", 0);
+                  }
+
                   SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
                   count++;
 
@@ -749,11 +762,17 @@ SCIP_RETCODE reduce_simple_sap(
                {
                   g->cost[e1] += g->cost[Edge_anti(e2)];
                   g->cost[Edge_anti(e1)] += g->cost[e2];
+
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[Edge_anti(e2)], NULL) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(e1)]), g->ancestors[e2], NULL) );
+
                   if( SCIPisGT(scip, g->cost[e1], FARAWAY) )
                      g->cost[e1] = FARAWAY;
                   if( SCIPisGT(scip, g->cost[Edge_anti(e1)], FARAWAY) )
                      g->cost[Edge_anti(e1)] = FARAWAY;
+
                   SCIP_CALL( graph_knot_contract(scip, g, NULL, i2, i) );
+
                   (*count)++;
                   if( ((i1 < i) && (g->grad[i1] < 3))
                      || ((i2 < i) && (g->grad[i2] < 3)) )
@@ -896,30 +915,30 @@ SCIP_RETCODE reduce_rpt(
    {
       if( Is_term(g->term[i]) && i != root && g->grad[i] > 0 )
       {
-	 e1 = dijkedge[i];
-	 pathcost = dijkdist[i];
+         e1 = dijkedge[i];
+         pathcost = dijkdist[i];
 
-	 for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
-	 {
-	    if( e == e1 )
+         for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            if( e == e1 )
                continue;
 
-	    if( SCIPisGT(scip, pathcost, g->cost[e]) )
+            if( SCIPisGT(scip, pathcost, g->cost[e]) )
                break;
-	 }
-	 if( e == EAT_LAST )
-	 {
+         }
+         if( e == EAT_LAST )
+         {
             i1 = g->tail[e1];
             old = g->grad[i] + g->grad[i1] - 1;
 
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL) );
+            SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL));
             *fixed += g->cost[e1];
-            SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
+            SCIP_CALL(graph_knot_contract(scip, g, NULL, i1, i));
 
             assert(old - g->grad[i1] > 0);
             *count += old - g->grad[i1];
             SCIPdebugMessage("contract %d\n", old - g->grad[i] - g->grad[i1]);
-	 }
+         }
 
       }
    }

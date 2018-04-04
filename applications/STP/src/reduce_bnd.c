@@ -48,8 +48,8 @@
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
 #define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
 #define STP_RED_MINBNDTERMS   500
-#define STP_DABD_MAXDEGREE 4
-#define STP_DABD_MAXDNEDGES 6
+#define STP_DABD_MAXDEGREE 5
+#define STP_DABD_MAXDNEDGES 10
 
 /** updates node bounds for reduced cost fixings */
 static

@@ -121,12 +121,13 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallroundsroot", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcutsroot", 100000) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxincrounds", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcuts", 1000) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcuts", 1000) );   // todo tune
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxincrounds", -1) ); // todo tune
    SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.3) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.1) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/intsupportfac", 0.0) ); // todo tune
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.3) ); // todo tune >
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune >
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.1) ); // todo tune <
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/intsupportfac", 0.0) );
 
    SCIP_CALL( SCIPsetIntParam(scip, "branching/relpscost/maxproprounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/alns/freq", -1) );

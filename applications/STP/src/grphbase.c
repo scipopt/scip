@@ -2117,8 +2117,8 @@ void graph_knot_del(
       graph_edge_del(scip, g, g->outbeg[k], freeancestors);
 }
 
-#define STP_DELPSEUDO_MAXGRAD 4
-#define STP_DELPSEUDO_MAXNEDGES 6
+#define STP_DELPSEUDO_MAXGRAD 5
+#define STP_DELPSEUDO_MAXNEDGES 10
 
 /** pseudo delete node, i.e. reconnect neighbors; maximum degree of 4! */
 SCIP_RETCODE graph_knot_delPseudo(
@@ -2316,11 +2316,10 @@ SCIP_RETCODE graph_knot_contract(
    int    et;
    int    anti;
    int    es;
-   int    cedgeout = UNKNOWN;
    int    head;
    int    tail;
    int    sgrad;
-   SCIP_Bool conflict;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(p);
 
    assert(p          != NULL);
    assert(t          >= 0);
@@ -2390,17 +2389,17 @@ SCIP_RETCODE graph_knot_contract(
 
          assert(slc < sgrad);
       }
-      else
+      else if( pcmw )
       {
-         cedgeout = Edge_anti(es); /* The edge out of t and into s. */
+         const int cedgeout = Edge_anti(es); /* The edge out of t and into s. */
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &stancestors, p->ancestors[es], NULL) );
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &tsancestors, p->ancestors[cedgeout], NULL) );
       }
    }
 
    assert(slc == sgrad - 1);
-   assert(tsancestors != NULL);
-   assert(stancestors != NULL);
+   assert(!pcmw || tsancestors != NULL);
+   assert(!pcmw || stancestors != NULL);
 
    /* traverse edges */
    for( i = 0; i < slc; i++ )
@@ -2429,7 +2428,11 @@ SCIP_RETCODE graph_knot_contract(
             SCIPintListNodeFree(scip, &((p->ancestors)[et]));
             assert(ancestors != NULL);
             SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((p->ancestors)[et]), ancestors[i], NULL) );
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((p->ancestors)[et]), tsancestors, NULL) );
+
+            /* todo: move this into node ancestors */
+            if( pcmw )
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((p->ancestors)[et]), tsancestors, NULL) );
+
             p->cost[et] = outcost[i];
          }
          if( SCIPisGT(scip, p->cost[Edge_anti(et)], incost[i]) )
@@ -2439,7 +2442,8 @@ SCIP_RETCODE graph_knot_contract(
             assert(revancestors != NULL);
             assert(incost != NULL);
             SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((p->ancestors)[anti]), revancestors[i], NULL) );
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((p->ancestors)[anti]), stancestors, NULL) );
+            if( pcmw )
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((p->ancestors)[anti]), stancestors, NULL) );
             p->cost[anti] = incost[i];
          }
       }
@@ -2463,18 +2467,11 @@ SCIP_RETCODE graph_knot_contract(
          assert(incost != NULL);
          SCIPintListNodeFree(scip, &(p->ancestors[es]));
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(p->ancestors[es]), ancestors[i], NULL) );
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(p->ancestors[es]), tsancestors, &conflict) );
 
-         if( conflict && 0 ) /* todo */
-         {
-            graph_edge_del(scip, p, es, TRUE);
-            printf("conflict %d \n", es);
-            continue;
-         }
-         else
-         {
-            graph_edge_del(scip, p, es, FALSE);
-         }
+         if( pcmw )
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(p->ancestors[es]), tsancestors, NULL) );
+
+         graph_edge_del(scip, p, es, FALSE);
 
          head = knot[i];
          tail = t;
@@ -2494,7 +2491,10 @@ SCIP_RETCODE graph_knot_contract(
          SCIPintListNodeFree(scip, &(p->ancestors[es]));
 
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(p->ancestors[es]), revancestors[i], NULL) );
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(p->ancestors[es]), stancestors, NULL) );
+
+         if( pcmw )
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(p->ancestors[es]), stancestors, NULL) );
+
          p->cost[es]     = incost[i];
          p->tail[es]     = head;
          p->head[es]     = tail;
