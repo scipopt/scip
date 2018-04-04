@@ -3,7 +3,7 @@
 # run with bash -e makeallclean.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring CycleClustering MinIISC PolySCIP Scheduler STP)
+APPLICATIONS=(Coloring CycleClustering MinIISC PolySCIP Ringpacking Scheduler STP)
 LPSOLVERS=(spx2 cpx none)
 OPTS=(opt dbg)
 SHARED=(true false)
