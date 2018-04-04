@@ -105,12 +105,12 @@ static const char* dblparam[NUMDBLPARAM] =
    GRB_DBL_PAR_MARKOWITZTOL
 };
 
-/** default values for double parameters */
+/** minimal values for double parameters */
 static const double dblparammin[NUMDBLPARAM] =
 {
-   +1e-06,               /* GRB_DBL_PAR_FEASIBILITYTOL */
-   +1e-06,               /* GRB_DBL_PAR_OPTIMALITYTOL */
-   +1e-08,               /* GRB_DBL_PAR_BARCONVTOL */
+   +1e-09,               /* GRB_DBL_PAR_FEASIBILITYTOL */
+   +1e-09,               /* GRB_DBL_PAR_OPTIMALITYTOL */
+   0.0,                  /* GRB_DBL_PAR_BARCONVTOL */
    -GRB_INFINITY,        /* GRB_DBL_PAR_CUTOFF */
    0,                    /* GRB_DBL_PAR_TIMELIMIT */
    0,                    /* GRB_DBL_PAR_ITERATIONLIMIT */
@@ -823,7 +823,11 @@ SCIP_RETCODE setIntParam(
 
 /** gets a single double parameter value */
 static
-SCIP_RETCODE getDblParam(SCIP_LPI* lpi, const char* param, double* p)
+SCIP_RETCODE getDblParam(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           param,              /**< parameter name */
+   double*               p                   /**< value of parameter */
+   )
 {
    int i;
 
@@ -3673,6 +3677,9 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
       return FALSE; /*lint !e527*/
    }
 
+   /* GRB_UNBOUNDED means that there exists a primal ray. SCIPlpiSolvePrimal() will determine whether the problem is
+    * actually infeasible or (feasible and) unbounded. In the latter case, the status will be GRB_UNBOUNDED.
+    */
    return (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL);
 }
 
@@ -3724,7 +3731,8 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       double boundviol;
       double eps;
 
-      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &eps);
+      /* get feasibility tolerance */
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &eps);
       if ( res != 0 )
       {
          SCIPABORT();
@@ -3733,14 +3741,14 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
       if ( res != 0 )
       {
-         SCIPABORT();
-         return FALSE; /*lint !e527*/
+         /* If Gurobi cannot return the constraint violation, there is no feasible solution available. */
+         return FALSE;
       }
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
       if ( res != 0 )
       {
-         SCIPABORT();
-         return FALSE; /*lint !e527*/
+         /* If Gurobi cannot return the bound violation, there is no feasible solution available. */
+         return FALSE;
       }
 
       if ( consviol <= eps && boundviol <= eps )
@@ -3872,6 +3880,13 @@ SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   double consviol;
+   double boundviol;
+   double dualviol;
+   double feastol;
+   double optimalitytol;
+   int res;
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(lpi->solstat >= 0);
@@ -3895,6 +3910,46 @@ SCIP_Bool SCIPlpiIsStable(
       /* if the kappa could not be computed (e.g., because we do not have a basis), we cannot check the condition */
       if ( kappa != SCIP_INVALID || kappa > lpi->conditionlimit ) /*lint !e777*/
          return FALSE;
+   }
+
+   /* test whether we have unscaled infeasibilities */
+   if ( SCIPlpiIsOptimal(lpi) )
+   {
+      /* first get tolerances */
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &feastol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &optimalitytol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      /* next get constraint, bound, and reduced cost violations */
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_DUAL_VIO, &dualviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      return ( consviol <= feastol && boundviol <= feastol && dualviol <= optimalitytol );
    }
 
    return (lpi->solstat != GRB_NUMERIC);
@@ -4140,6 +4195,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    )
 {
    int nrows;
+   int i;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4152,6 +4208,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIPdebugMessage("calling Gurobi dual Farkas: %d rows\n", nrows);
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_FARKASDUAL, 0, nrows, dualfarkas) );
+
+   /* correct sign of ray */
+   for (i = 0; i < nrows; ++i)
+      dualfarkas[i] *= -1.0;
 
    return SCIP_OKAY;
 }
