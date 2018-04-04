@@ -10,7 +10,7 @@ performance improvements:
 - improved bound tightening for some quadratic equations
 
 interface changes:
-- additional argument "preferrecent" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations.
+- additional argument "preferrecent" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations (the previous default).
 - functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
   SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
