@@ -52,7 +52,6 @@
 #define DEFAULT_WAITINGNODES     25LL  /**< number of nodes since last incumbent solution that the heuristic should wait */
 #define DEFAULT_TARGETNODEFACTOR 1.05
 #define DEFAULT_STALLNODEFACTOR  0.25
-#define LRATE                    0.95  /**< learning rate for target nodes and minimum improvement */
 #define LRATEMIN                 0.01 /**<  lower bound for learning rate for target nodes and minimum improvement */
 #define LPLIMFAC                 4.0
 
