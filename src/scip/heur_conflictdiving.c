@@ -87,11 +87,11 @@ SCIP_Bool shouldRun(
    assert(heurdata != NULL);
 
    *result = SCIP_DELAYED;
-
    /* don't run if no conflict constraints where found */
    if( SCIPgetNConflictConssFound(scip) == 0 )
       return FALSE;
 
+#if 0
    *result = SCIP_DIDNOTRUN;
 
    /* don't run if to many nonzero objective coefficients are present */
@@ -117,6 +117,9 @@ SCIP_Bool shouldRun(
    }
 
    return FALSE;
+#endif
+
+   return TRUE;
 }
 
 /*
