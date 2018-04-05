@@ -391,19 +391,14 @@ void setFastmipClpParameters(
     * Sometimes 512+8192 and 8192 or 8 are used as well.
     */
 
-   // 2048 does not seem to work
-   // 65536 does not seem to work
-   // 262144 does not seem to work
+   // default settings:        32|64|128|1024|32768|262144|2097152|0x2000000
+   // Additional flags: 512, 2048, 4096 in order to speed up things.
+   // lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x2000000);
 
-#ifndef NDEBUG
-   // in debug mode: leave checks on
-   lpi->clp->setSpecialOptions(32|64|512|1024|32768);
-#else
-   lpi->clp->setSpecialOptions(32|64|128|512|1024|4096|32768);
-#endif
+   // set default options
+   lpi->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x1000000);
 
-   // 8192 bit - don't even think of using primal if user asks for dual (and vv)
-   lpi->clp->setMoreSpecialOptions(8192 | lpi->clp->moreSpecialOptions());
+   // Do not change moreSpecialOptions().
 
    // let memory grow only (do not shrink) - [needs specialOptions & 65536 != 0]
    // does not seem to work
@@ -423,8 +418,12 @@ void unsetFastmipClpParameters(
    // reset to default value:
    lpi->clp->setPerturbation(100);
 
-   // turn off special options:
-   lpi->clp->setSpecialOptions(0);
+   // set default special options (see SCIPlpiCreate())
+   // lpi->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x2000000);
+   lpi->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x1000000);
+
+   // set default more special options
+   lpi->clp->setMoreSpecialOptions(8192);
 
    // turn off memory enlargement
    lpi->clp->setPersistenceFlag(0);
@@ -581,8 +580,48 @@ SCIP_RETCODE SCIPlpiCreate(
    // turn off output by default
    (*lpi)->clp->setLogLevel(0);
 
-   // turn off scaling by default
-   (*lpi)->clp->scaling(0);
+   // turn on auto scaling by default
+   (*lpi)->clp->scaling(3);
+
+   // set default special options (similar to Cbc):
+   //        64 - good idea to be fast
+   //       128 - Assumes user will not create tiny or duplicate elements.
+   //      1024 - In branch and bound.
+   //     32768 - Just switches off some messages, e.g., empty problem.
+   //    262144 - extra copy of scaled matrix
+   // 0x2000000 - is in a different branch and bound
+   //(*lpi)->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x2000000);
+   (*lpi)->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x1000000);
+
+   /* More special options:
+    *        1 bit - if presolve says infeasible in ClpSolve return
+    *        2 bit - if presolved problem infeasible return
+    *        4 bit - keep arrays like upper_ around
+    *        8 bit - no free or superBasic variables
+    *       16 bit - if checking replaceColumn accuracy before updating
+    *       32 bit - say optimal if primal feasible!
+    *       64 bit - give up easily in dual (and say infeasible)
+    *      128 bit - no objective, 0-1 and in B&B
+    *      256 bit - in primal from dual or vice versa
+    *      512 bit - alternative use of solveType_
+    *     1024 bit - don't do row copy of factorization
+    *     2048 bit - perturb in complete fathoming
+    *     4096 bit - try more for complete fathoming
+    *     8192 bit - don't even think of using primal if user asks for dual (and vv)
+    *    16384 bit - in initialSolve so be more flexible
+    *    32768 bit - don't swap algorithms from dual if small infeasibility
+    *    65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
+    *   131072 bit - initial stateDualColumn
+    *   524288 bit - stop when primal feasible
+    *  1048576 bit - don't perturb even if long time
+    *  2097152 bit - no primal in fastDual2 if feasible
+    *  4194304 bit - tolerances have been changed by code
+    *  8388608 bit - tolerances are dynamic (at first)
+    * 16777216 bit - if factorization kept can still declare optimal at once
+    */
+
+   // set default more special options:
+   (*lpi)->clp->setMoreSpecialOptions(8192);
 
    // set default pricing
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
@@ -1791,7 +1830,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       startFinishOptions = startFinishOptions | 2;
 
    /* make sure that more special options are clean (Clp sometimes seems to keep flag 8) */
-   lpi->clp->setMoreSpecialOptions(8192);
+   // lpi->clp->setMoreSpecialOptions(8192);
 
    /* Primal algorithm */
    int status = lpi->clp->primal(0, startFinishOptions);
@@ -1871,7 +1910,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       startFinishOptions = startFinishOptions | 2;
 
    /* make sure that more special options are clean (Clp sometimes seems to keep 8) */
-   lpi->clp->setMoreSpecialOptions(8192);
+   // lpi->clp->setMoreSpecialOptions(8192);
 
    /* Dual algorithm */
    int status = lpi->clp->dual(0, startFinishOptions);
@@ -2026,47 +2065,10 @@ SCIP_RETCODE lpiStrongbranch(
    // store special options for later reset
    int specialoptions = clp->specialOptions();
 
-   /* Clp special options:
-    *       1 - Don't keep changing infeasibility weight
-    *       2 - Keep nonLinearCost round solves
-    *       4 - Force outgoing variables to exact bound (primal)
-    *       8 - Safe to use dense initial factorization
-    *      16 - Just use basic variables for operation if column generation
-    *      32 - Create ray even in BAB
-    *      64 - Treat problem as feasible until last minute (i.e. minimize infeasibilities)
-    *     128 - Switch off all matrix sanity checks
-    *     256 - No row copy
-    *     512 - If not in values pass, solution guaranteed, skip as much as possible
-    *    1024 - In branch and bound
-    *    2048 - Don't bother to re-factorize if < 20 iterations
-    *    4096 - Skip some optimality checks
-    *    8192 - Do Primal when cleaning up primal
-    *   16384 - In fast dual (so we can switch off things)
-    *   32768 - called from Osi
-    *   65536 - keep arrays around as much as possible (also use maximumR/C)
-    *  131072 - transposeTimes is -1.0 and can skip basic and fixed
-    *  262144 - extra copy of scaled matrix
-    *  524288 - Clp fast dual
-    * 1048576 - don't need to finish dual (can return 3)
-    *  NOTE   - many applications can call Clp but there may be some short cuts
-    *           which are taken which are not guaranteed safe from all applications.
-    *           Vetted applications will have a bit set and the code may test this
-    *           At present I expect a few such applications - if too many I will
-    *           have to re-think.  It is up to application owner to change the code
-    *           if she/he needs these short cuts.  I will not debug unless in Coin
-    *           repository.  See COIN_CLP_VETTED comments.
-    *  0x01000000 is Cbc (and in branch and bound)
-    *  0x02000000 is in a different branch and bound
-    *
-    *  2048 does not seem to work
-    *  262144 does not seem to work
-    */
-#ifndef NDEBUG
-   // in debug mode: leave checks on
-   clp->setSpecialOptions(64|512|1024);
-#else
-   clp->setSpecialOptions(64|128|512|1024|4096);
-#endif
+   // lpi->clp->setSpecialOptions(64|128|512|1024|2048|4096|32768|262144|0x02000000);
+   // use default settings:
+   // lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x2000000);
+   lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x1000000);
 
    /* 'startfinish' options for strong branching:
     *  1 - do not delete work areas and factorization at end
@@ -2189,47 +2191,10 @@ SCIP_RETCODE lpiStrongbranches(
    // store special options for later reset
    int specialoptions = clp->specialOptions();
 
-   /* Clp special options:
-    *       1 - Don't keep changing infeasibility weight
-    *       2 - Keep nonLinearCost round solves
-    *       4 - Force outgoing variables to exact bound (primal)
-    *       8 - Safe to use dense initial factorization
-    *      16 - Just use basic variables for operation if column generation
-    *      32 - Create ray even in BAB
-    *      64 - Treat problem as feasible until last minute (i.e. minimize infeasibilities)
-    *     128 - Switch off all matrix sanity checks
-    *     256 - No row copy
-    *     512 - If not in values pass, solution guaranteed, skip as much as possible
-    *    1024 - In branch and bound
-    *    2048 - Don't bother to re-factorize if < 20 iterations
-    *    4096 - Skip some optimality checks
-    *    8192 - Do Primal when cleaning up primal
-    *   16384 - In fast dual (so we can switch off things)
-    *   32768 - called from Osi
-    *   65536 - keep arrays around as much as possible (also use maximumR/C)
-    *  131072 - transposeTimes is -1.0 and can skip basic and fixed
-    *  262144 - extra copy of scaled matrix
-    *  524288 - Clp fast dual
-    * 1048576 - don't need to finish dual (can return 3)
-    *  NOTE   - many applications can call Clp but there may be some short cuts
-    *           which are taken which are not guaranteed safe from all applications.
-    *           Vetted applications will have a bit set and the code may test this
-    *           At present I expect a few such applications - if too many I will
-    *           have to re-think.  It is up to application owner to change the code
-    *           if she/he needs these short cuts.  I will not debug unless in Coin
-    *           repository.  See COIN_CLP_VETTED comments.
-    *  0x01000000 is Cbc (and in branch and bound)
-    *  0x02000000 is in a different branch and bound
-    *
-    *  2048 does not seem to work
-    *  262144 does not seem to work
-    */
-#ifndef NDEBUG
-   // in debug mode: leave checks on
-   clp->setSpecialOptions(64|512|1024);
-#else
-   clp->setSpecialOptions(64|128|512|1024|4096);
-#endif
+   // lpi->clp->setSpecialOptions(64|128|512|1024|2048|4096|32768|262144|0x02000000);
+   // use default settings:
+   // lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x2000000);
+   lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x1000000);
 
    /* 'startfinish' options for strong branching:
     *  1 - do not delete work areas and factorization at end
