@@ -1397,6 +1397,8 @@ SCIP_RETCODE redLoopPc(
    return SCIP_OKAY;
 }
 
+#define STP_PRINT_STATS
+
 /** STP loop */
 SCIP_RETCODE redLoopStp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1438,6 +1440,9 @@ SCIP_RETCODE redLoopStp(
    int i = 0;
    int rounds = 0;
    SCIP_RANDNUMGEN* randnumgen;
+#ifdef STP_PRINT_STATS
+   const SCIP_Bool orgred = (da && userec);
+#endif
 
    assert(graph_valid(g));
 
@@ -1476,6 +1481,10 @@ SCIP_RETCODE redLoopStp(
             le = FALSE;
          else
             SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
+#ifdef STP_PRINT_STATS
+         if( orgred)
+            printf("le: %d \n", lenelims);
+#endif
 
          SCIPdebugMessage("le: %d \n", lenelims);
          if( SCIPgetTotalTime(scip) > timelimit )
@@ -1488,6 +1497,10 @@ SCIP_RETCODE redLoopStp(
 
          if( sdnelims <= reductbound )
             sd = FALSE;
+#ifdef STP_PRINT_STATS
+         if( orgred)
+            printf("sd: %d, \n", sdnelims);
+#endif
 
          SCIPdebugMessage("sd: %d, \n", sdnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
@@ -1501,6 +1514,11 @@ SCIP_RETCODE redLoopStp(
 
          if( sdcnelims <= reductbound )
             sdc = FALSE;
+
+#ifdef STP_PRINT_STATS
+         if( orgred)
+            printf("sdsp: %d \n", sdcnelims);
+#endif
 
          SCIPdebugMessage("sdsp: %d \n", sdcnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
@@ -1516,9 +1534,12 @@ SCIP_RETCODE redLoopStp(
          if( bd3nelims <= reductbound )
             bd3 = FALSE;
          else
-         {
             SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
-         }
+
+#ifdef STP_PRINT_STATS
+         if( orgred)
+            printf("bd3: %d \n", bd3nelims);
+#endif
 
          SCIPdebugMessage("bd3: %d \n", bd3nelims);
          if( SCIPgetTotalTime(scip) > timelimit )
@@ -1533,6 +1554,12 @@ SCIP_RETCODE redLoopStp(
             nvsl = FALSE;
 
          SCIPdebugMessage("nvsl: %d \n", nvslnelims);
+
+#ifdef STP_PRINT_STATS
+         if( orgred)
+            printf("nvsl: %d \n", nvslnelims);
+#endif
+
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1547,6 +1574,11 @@ SCIP_RETCODE redLoopStp(
          if( danelims <= 3 * reductbound )
             da = FALSE;
 
+#ifdef STP_PRINT_STATS
+         if( orgred)
+            printf("da: %d \n", danelims);
+#endif
+
          SCIPdebugMessage("da: %d \n", danelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
@@ -1560,6 +1592,11 @@ SCIP_RETCODE redLoopStp(
 
          if( brednelims <= 2 * reductbound )
             bred = FALSE;
+
+#ifdef STP_PRINT_STATS
+         if( orgred)
+            printf("bnd: %d \n\n", brednelims);
+#endif
 
          SCIPdebugMessage("bnd: %d \n\n", brednelims);
          if( SCIPgetTotalTime(scip) > timelimit )
