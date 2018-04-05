@@ -7958,16 +7958,16 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
          else
             bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
-         /* bound may have changed in propagation; ensure that fracval <= 1 */
-         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-            bound = solval;
-
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
          fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
          assert( ! SCIPisInfinity(scip, bound) );
          assert( ! SCIPisInfinity(scip, fracval) );
          assert( SCIPisPositive(scip, bound) );
+
+         /* bound may have changed in propagation; ensure that fracval <= 1 */
+         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
+            bound = solval;
 
          /* get fractionality of candidate */
          fracval /= (bound + SCIPsumepsilon(scip));
