@@ -34,10 +34,14 @@
 /** private data structure of epsilon greedy bandit algorithm */
 struct SCIP_BanditData
 {
-   SCIP_Real             eps;                /**< epsilon parameter (between 0 and 1) to control epsilon greedy */
    SCIP_Real*            weights;            /**< weights for every action */
    SCIP_Real*            priorities;         /**< saved priorities for tie breaking */
    int*                  sels;               /**< individual number of selections per action */
+   SCIP_Real             eps;                /**< epsilon parameter (between 0 and 1) to control epsilon greedy */
+   SCIP_Real             decayfactor;        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
+   int                   avglim;             /**< nonnegative limit on observation number before the exponential decay starts,
+                                               *  only relevant if exponential decay is enabled
+                                               */
    int                   nselections;        /**< counter for the number of selection calls */
    SCIP_Bool             preferrecent;       /**< should the weights be updated in an exponentially decaying way? */
 };
@@ -148,7 +152,7 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy)
    ++banditdata->sels[selection];
 
    /* use exponentially decreasing weights for older observations */
-   if( banditdata->preferrecent )
+   if( banditdata->preferrecent && banditdata->sels[selection] > banditdata->avglim )
    {
       /* the very first observation is directly stored as weight */
       if( banditdata->sels[selection] == 1 )
@@ -156,8 +160,8 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy)
       else
       {
          /* decrease old weights */
-         banditdata->weights[selection] *= 0.9;
-         banditdata->weights[selection] += 0.1 * score;
+         banditdata->weights[selection] *= banditdata->decayfactor;
+         banditdata->weights[selection] += (1.0 - banditdata->decayfactor) * score;
       }
    }
    else
@@ -231,6 +235,10 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
    SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
+   SCIP_Real             decayfactor,        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
+   int                   avglim,             /**< nonnegative limit on observation number before the exponential decay starts,
+                                               *  only relevant if exponential decay is enabled
+                                               */
    int                   nactions,           /**< the positive number of possible actions */
    unsigned int          initseed            /**< initial random seed */
    )
@@ -260,6 +268,10 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
    SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
+   SCIP_Real             decayfactor,        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
+   int                   avglim,             /**< nonnegative limit on observation number before the exponential decay starts,
+                                               *  only relevant if exponential decay is enabled
+                                               */
    int                   nactions,           /**< the positive number of possible actions */
    unsigned int          initseed            /**< initial seed for random number generation */
    )
@@ -276,7 +288,7 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    }
 
    SCIP_CALL( SCIPbanditCreateEpsgreedy(SCIPblkmem(scip), SCIPbuffer(scip), vtable, epsgreedy,
-         priorities, eps, preferrecent, nactions, SCIPinitializeRandomSeed(scip, (int)(initseed % INT_MAX))) );
+         priorities, eps, preferrecent, decayfactor, avglim, nactions, SCIPinitializeRandomSeed(scip, (int)(initseed % INT_MAX))) );
 
    return SCIP_OKAY;
 }

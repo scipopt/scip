@@ -7446,7 +7446,8 @@
   * @section CHGINTERFUNC11 Changed interface methods
   *
   *   <b>Data structures</b>
-  *    - additional argument "preferrecent" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations (the previous default).
+  *    - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations (the previous default).
+  *      The last two parameters are used for a finer control of the exponential decay.
   * - Functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
   *   and SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() require additional argument to specify already
   *   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior

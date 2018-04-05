@@ -1549,7 +1549,7 @@ SCIP_RETCODE createBandit(
 
       case 'g':
          SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->bandit, priorities,
-               heurdata->epsgreedy_eps, FALSE, heurdata->nactiveneighborhoods, initseed) );
+               heurdata->epsgreedy_eps, FALSE, 0.9, 0, heurdata->nactiveneighborhoods, initseed) );
          break;
 
       default:
