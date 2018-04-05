@@ -492,8 +492,8 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    SCIP_Bool             force               /**< to force tightening */
    )
 {
+   SCIP_INTERVAL a;
    SCIP_INTERVAL newrange;
-   SCIP_INTERVAL entire;
 
    assert(scip != NULL);
    assert(infeasible != NULL);
@@ -509,43 +509,10 @@ SCIP_RETCODE propagateBoundsQuadExpr(
          rhs.inf, rhs.sup);
 #endif
 
-   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &entire);
-
    /* compute solution of a*x^2 + b*x \in rhs */
-   if( quadexpr.sqrcoef == 0.0 && SCIPintervalGetInf(b) == 0.0 && SCIPintervalGetSup(b) == 0.0 )
-   {
-      /* relatively easy case: 0.0 \in rhs, thus check if infeasible or just redundant */
-      if( SCIPintervalGetInf(rhs) > 0.0 || SCIPintervalGetSup(rhs) < 0.0 )
-         SCIPintervalSetEmpty(&newrange);
-      else
-         return SCIP_OKAY;
-   }
-   else if( SCIPintervalGetInf(SCIPgetConsExprExprInterval(quadexpr.expr)) >= 0.0 )
-   {
-      SCIP_INTERVAL a;
+   SCIPintervalSet(&a, quadexpr.sqrcoef);
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, SCIPgetConsExprExprInterval(quadexpr.expr));
 
-      /* need only positive solutions */
-      SCIPintervalSet(&a, quadexpr.sqrcoef);
-      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, entire);
-   }
-   else if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(quadexpr.expr)) <= 0.0 )
-   {
-      /* need only negative solutions */
-      SCIP_INTERVAL a;
-      SCIP_INTERVAL tmp;
-      SCIPintervalSet(&a, quadexpr.sqrcoef);
-      SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
-      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIP_INTERVAL_INFINITY, &tmp, a, tmp, rhs, entire);
-
-      SCIPintervalSetBounds(&newrange, -SCIPintervalGetSup(tmp), -SCIPintervalGetInf(tmp));
-   }
-   else
-   {
-      /* need both positive and negative solution */
-      SCIP_INTERVAL a;
-      SCIPintervalSet(&a, quadexpr.sqrcoef);
-      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, entire);
-   }
 #ifdef DEBUG_PROP
    SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
 #endif

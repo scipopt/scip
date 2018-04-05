@@ -500,7 +500,7 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
  * BACKWARDS see mathematica code below. Now that we use the intervals of qx, qy, qz, qw
  * as computed by the forward propagation and not just doing the interval evaluation!
  *
- * Mathetmaticas code to generate answer
+ * Mathematicas code to generate answer
  *
 Ix = Interval[{-1.01,1.01}]; Iy = Interval[{0.07, 0.09}]; Iz = Interval[{-0.9, 0.7}]; Iw = Interval[{1.49, 1.51}];
 q[x_,y_,z_,w_] = x^2 - 3.1*x*y + 12.2*z*w + w^2 + 1.3*z*x - 4.8754*z^2 - 0.5*y^2 - 17.1*x + 22.02*y + 5*z - w;
@@ -596,10 +596,10 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
-      cr_expect_eq(nreductions, 1); /* should actually be 2 if the propagation gets improved */
+      cr_expect_eq(nreductions, 2);
       cr_expect_not(infeasible);
       cr_expect_float_eq(SCIPvarGetLbLocal(z), -0.0741996, 1e-7);
-      /* cr_expect_float_eq(SCIPvarGetUbLocal(x), -0.928007, 1e-6); TODO: uncomment when propagation improves */
+      cr_expect_float_eq(SCIPvarGetUbLocal(x), -0.928007, 1e-6);
       SCIPqueueFree(&queue);
    }
 
