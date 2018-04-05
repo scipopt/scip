@@ -515,6 +515,7 @@ void updateFixingRate(
       case SCIP_STATUS_INFEASIBLE:
       case SCIP_STATUS_INFORUNBD:
       case SCIP_STATUS_SOLLIMIT:
+      case SCIP_STATUS_BESTSOLLIMIT:
          /* decrease the fixing rate (make subproblem harder) */
          decreaseFixingRate(fx);
          break;
@@ -532,7 +533,6 @@ void updateFixingRate(
       case SCIP_STATUS_TIMELIMIT:
       case SCIP_STATUS_MEMLIMIT:
       case SCIP_STATUS_GAPLIMIT:
-      case SCIP_STATUS_BESTSOLLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_UNBOUNDED:
       default:
@@ -1015,6 +1015,7 @@ int getHistIndex(
       case SCIP_STATUS_STALLNODELIMIT:
          return (int)HIDX_STALLNODE;
       case SCIP_STATUS_SOLLIMIT:
+      case SCIP_STATUS_BESTSOLLIMIT:
          return (int)HIDX_SOLLIM;
       case SCIP_STATUS_USERINTERRUPT:
          return (int)HIDX_USR;
