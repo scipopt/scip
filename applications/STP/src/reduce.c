@@ -1419,8 +1419,8 @@ SCIP_RETCODE redLoopStp(
    STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    SCIP_Real             upperbound,         /**< upper bound */
-   SCIP_Bool             da,                 /**< do dual-ascent reduction? */
-   SCIP_Bool             bred,               /**< do bound-based reduction? */
+   SCIP_Bool             dualascent,         /**< do dual-ascent reduction? */
+   SCIP_Bool             boundreduce,        /**< do bound-based reduction? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
@@ -1432,17 +1432,18 @@ SCIP_RETCODE redLoopStp(
    SCIP_Real    timelimit;
    SCIP_Bool    le = TRUE;
    SCIP_Bool    sd = TRUE;
+   SCIP_Bool    da = dualascent;
    SCIP_Bool    sdc = TRUE;
    SCIP_Bool    bd3 = nodereplacing;
+   SCIP_Bool    bred = boundreduce;
    SCIP_Bool    nvsl = nodereplacing;
    SCIP_Bool    rerun = TRUE;
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    int i = 0;
    int rounds = 0;
+   int restarts = 0;
    SCIP_RANDNUMGEN* randnumgen;
-#ifdef STP_PRINT_STATS
-   const SCIP_Bool orgred = (da && userec);
-#endif
+   const SCIP_Bool fullreduce = (da && userec);
 
    assert(graph_valid(g));
 
@@ -1453,7 +1454,6 @@ SCIP_RETCODE redLoopStp(
    fix = 0.0;
 
    SCIP_CALL( reduce_contractZeroEdges(scip, g, TRUE) );
-
    SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &i, edgestate) );
 
    /* get timelimit parameter */
@@ -1482,7 +1482,7 @@ SCIP_RETCODE redLoopStp(
          else
             SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
 #ifdef STP_PRINT_STATS
-         if( orgred)
+         if( fullreduce)
             printf("le: %d \n", lenelims);
 #endif
 
@@ -1498,7 +1498,7 @@ SCIP_RETCODE redLoopStp(
          if( sdnelims <= reductbound )
             sd = FALSE;
 #ifdef STP_PRINT_STATS
-         if( orgred)
+         if( fullreduce)
             printf("sd: %d, \n", sdnelims);
 #endif
 
@@ -1516,7 +1516,7 @@ SCIP_RETCODE redLoopStp(
             sdc = FALSE;
 
 #ifdef STP_PRINT_STATS
-         if( orgred)
+         if( fullreduce)
             printf("sdsp: %d \n", sdcnelims);
 #endif
 
@@ -1537,7 +1537,7 @@ SCIP_RETCODE redLoopStp(
             SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
 
 #ifdef STP_PRINT_STATS
-         if( orgred)
+         if( fullreduce)
             printf("bd3: %d \n", bd3nelims);
 #endif
 
@@ -1556,7 +1556,7 @@ SCIP_RETCODE redLoopStp(
          SCIPdebugMessage("nvsl: %d \n", nvslnelims);
 
 #ifdef STP_PRINT_STATS
-         if( orgred)
+         if( fullreduce)
             printf("nvsl: %d \n", nvslnelims);
 #endif
 
@@ -1575,7 +1575,7 @@ SCIP_RETCODE redLoopStp(
             da = FALSE;
 
 #ifdef STP_PRINT_STATS
-         if( orgred)
+         if( fullreduce)
             printf("da: %d \n", danelims);
 #endif
 
@@ -1594,7 +1594,7 @@ SCIP_RETCODE redLoopStp(
             bred = FALSE;
 
 #ifdef STP_PRINT_STATS
-         if( orgred)
+         if( fullreduce)
             printf("bnd: %d \n\n", brednelims);
 #endif
 
@@ -1606,7 +1606,25 @@ SCIP_RETCODE redLoopStp(
       SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
 
       if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) <= 2 * reductbound  )
-         rerun = FALSE;
+      {
+         // at least one successful round and full reduce and no restarts yet?
+         if( rounds > 0 && fullreduce && restarts == 0 )
+         {
+            restarts++;
+            le = TRUE;
+            sd = TRUE;
+            sdc = TRUE;
+            da = TRUE;
+            bd3 = nodereplacing;
+            nvsl = nodereplacing;
+
+#ifdef STP_PRINT_STATS
+            printf("RESTART reductions (restart %d) \n", restarts);
+#endif
+         }
+         else
+            rerun = FALSE;
+      }
 
       if( extensive && (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) > 0 )
          rerun = TRUE;
