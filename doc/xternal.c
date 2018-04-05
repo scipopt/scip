@@ -7460,6 +7460,10 @@
   * <br>
   * @section CHGPARAMS11 Changed parameters
   *
+  *   <b>Removed parameters</b>
+  *    - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  *      directly by the target node limit within the heuristic.
+  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */

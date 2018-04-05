@@ -51,7 +51,6 @@
 #define DEFAULT_MAXNODES         5000LL
 #define DEFAULT_WAITINGNODES     25LL  /**< number of nodes since last incumbent solution that the heuristic should wait */
 #define DEFAULT_TARGETNODEFACTOR 1.05
-#define DEFAULT_STALLNODEFACTOR  0.25
 #define LRATEMIN                 0.01 /**<  lower bound for learning rate for target nodes and minimum improvement */
 #define LPLIMFAC                 4.0
 
@@ -366,7 +365,6 @@ struct SCIP_HeurData
    SCIP_Real             rewardcontrol;      /**< reward control to increase the weight of the simple solution indicator
                                                *  and decrease the weight of the closed gap reward */
    SCIP_Real             targetnodefactor;   /**< factor by which target node number is eventually increased */
-   SCIP_Real             stallnodefactor;    /**< stall node limit as a fraction of total node limit */
    SCIP_Real             rewardbaseline;     /**< the reward baseline to separate successful and failed calls */
    SCIP_Real             fixtol;             /**< tolerance by which the fixing rate may be missed without generic fixing */
    SCIP_Real             unfixtol;           /**< tolerance by which the fixing rate may be exceeded without generic unfixing */
@@ -2041,10 +2039,7 @@ SCIP_RETCODE getReward(
 
       /* optionally, scale the reward by the involved effort */
       if( heurdata->scalebyeffort )
-      {
-         /* reward can be larger than 1.0 if a best solution was found within 0 nodes  */
          reward /= (effort + 1.0);
-      }
 
       /* add the baseline and rescale the reward into the interval [baseline, 1.0] */
       reward = heurdata->rewardbaseline + (1.0 - heurdata->rewardbaseline) * reward;
@@ -3886,10 +3881,6 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/targetnodefactor",
          "factor by which target node number is eventually increased",
          &heurdata->targetnodefactor, TRUE, DEFAULT_TARGETNODEFACTOR, 1.0, 1e+5, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/stallnodefactor",
-         "stall node limit as a fraction of total node limit",
-         &heurdata->stallnodefactor, TRUE, DEFAULT_STALLNODEFACTOR, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/seed",
          "initial random seed for bandit algorithms and random decisions by neighborhoods",
