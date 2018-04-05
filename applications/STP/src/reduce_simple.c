@@ -569,22 +569,13 @@ SCIP_RETCODE reduce_simple(
 
                if( !Is_term(g->term[i]) )
                {
-                  SCIP_Bool conflict;
-
                   assert(EQ(g->cost[e2], g->cost[Edge_anti(e2)]));
 
                   g->cost[e1]            += g->cost[e2];
                   g->cost[Edge_anti(e1)] += g->cost[e2];
 
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], &conflict) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], &conflict) );
-
-                  if( conflict )
-                  {
-                     int todo;
-                     assert(0);
-                     printf("conflict found %d \n", 0);
-                  }
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], NULL) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL) );
 
                   SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
                   count++;

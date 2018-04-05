@@ -131,7 +131,7 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
       int nelems = 0;
       int maxlength;
 
-      /* todo fix this hack */
+      /* todo fix this hack; don't check at all, but just add */
       maxlength = SCIPprobdataGetNorgEdges(scip);
 
       assert(maxlength > 0);
