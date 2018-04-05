@@ -105,6 +105,7 @@ struct SCIP_LPi
    SCIP_Bool             solved;                     /**< was the current LP solved? */
    bool                  setFactorizationFrequency;  /**< store whether the factorization frequency is set */
    SCIP_Bool             fastmip;                    /**< are fast mip settings turned on */
+   int                   lastalgorithm;              /**< type of last algorithm call (0 = none, 1 = primal, -1 = dual, 2 = barrier) */
 };
 
 
@@ -543,6 +544,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->validFactorization = false;
    (*lpi)->setFactorizationFrequency = false;
    (*lpi)->fastmip = FALSE;
+   (*lpi)->lastalgorithm = 0;
    invalidateSolution(*lpi);
 
    // if you want to use saveModel()
@@ -1021,6 +1023,7 @@ SCIP_RETCODE SCIPlpiClear(
    assert(lpi->clp != NULL);
 
    invalidateSolution(lpi);
+   lpi->lastalgorithm = 0;
 
    // We use the resize(0,0) to get rid of the model but keep all other settings
    lpi->clp->resize(0,0);
@@ -1801,6 +1804,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    fileNr = fileNr % 2;
 #endif
 
+   lpi->lastalgorithm = 1;
    lpi->validFactorization = true;
    lpi->solved = TRUE;
 
@@ -1880,6 +1884,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    fileNr = fileNr % 2;
 #endif
 
+   lpi->lastalgorithm = -1;
    lpi->validFactorization = true;
    lpi->solved = TRUE;
 
@@ -1922,6 +1927,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    // call barrier
    int status = lpi->clp->barrier(crossover);
+
+   lpi->lastalgorithm = 2;
    lpi->solved = TRUE;
 
    // We may need to call ClpModel::status()
@@ -2653,6 +2660,11 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
+   /* Return false if infeasible, but dual ray is not present and the algorithm type has changed. This is one of the
+    * cases in which Clp cannot produce a ray and the hope is to get a ray by rerunning. */
+   if ( lpi->clp->status() == 1 && lpi->lastalgorithm != lpi->clp->algorithm() && ! lpi->clp->rayExists() )
+      return FALSE;
+
    /*  We first check if status is ok, i.e., is one of the following:
     *   0 - optimal
     *   1 - primal infeasible
@@ -2677,10 +2689,6 @@ SCIP_Bool SCIPlpiIsStable(
     */
    SCIPdebugMessage("status: %d   secondary: %d\n", lpi->clp->status(), lpi->clp->secondaryStatus());
    assert( 0 <= lpi->clp->status() && lpi->clp->status() <= 5 );
-
-   /* return false if infeasible, but dual ray is not present */
-   if ( lpi->clp->status() == 1 && ! lpi->clp->rayExists() )
-      return FALSE;
 
    return( (lpi->clp->status() <= 3) && (lpi->clp->secondaryStatus() <= 1 || lpi->clp->secondaryStatus() == 6 || lpi->clp->secondaryStatus() == 9) );
 }
