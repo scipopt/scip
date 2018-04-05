@@ -2957,6 +2957,65 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    assert(sqrcoeff <  infinity);
    assert(sqrcoeff > -infinity);
 
+   if( sqrcoeff == 0.0 )
+   {
+      /* special handling for linear b * x >= c
+       *
+       * The non-negative solutions here are:
+       * b <  0, c <= 0 : [0, c/b]
+       * b <= 0, c >  0 : empty
+       * b >  0, c >  0 : [c/b, infty]
+       * b >= 0, c <= 0 : [0, infty]
+       *
+       * The same should have been computed below, but without the sqrcoeff, terms simplify (thus, also less rounding).
+       */
+
+      if( lincoeff <= 0.0 && rhs > 0.0 )
+      {
+         SCIPintervalSetEmpty(resultant);
+         return;
+      }
+
+      if( lincoeff >= 0.0 && rhs <= 0.0 )
+      {
+         /* [0,infty] cap xbnds */
+         resultant->inf = MAX(0.0, xbnds.inf);
+         resultant->sup = xbnds.sup;
+         return;
+      }
+
+      roundmode = SCIPintervalGetRoundingMode();
+
+      if( lincoeff < 0.0 && rhs <= 0.0 )
+      {
+         /* [0,c/b] cap xbnds */
+         resultant->inf = MAX(0.0, xbnds.inf);
+
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+         resultant->sup = rhs / lincoeff;
+         if( xbnds.sup < resultant->sup )
+            resultant->sup = xbnds.sup;
+      }
+      else
+      {
+         assert(lincoeff > 0.0);
+         assert(rhs > 0.0);
+
+         /* [c/b, infty] cap xbnds */
+
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf = rhs / lincoeff;
+         if( resultant->inf < xbnds.inf )
+            resultant->inf = xbnds.inf;
+
+         resultant->sup = xbnds.sup;
+      }
+
+      SCIPintervalSetRoundingMode(roundmode);
+
+      return;
+   }
+
    resultant->inf = 0.0;
    resultant->sup = infinity;
 
@@ -3096,6 +3155,7 @@ void SCIPintervalSolveUnivariateQuadExpression(
    /* special handling for lincoeff * x = rhs without 0 in lincoeff
     * then rhs/lincoeff is giving a good interval that we just have to intersect with xbnds
     * the code below would also work, but computed intervals are differ by an epsilon, which means more instances are affected by changing from using the div here to the general code below
+    * update: with the special treatment of sqrcoeff=0 in SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar, the results from the code below should again be as good as the div here
     */
    if( sqrcoeff.inf == 0.0 && sqrcoeff.sup == 0.0 && (lincoeff.inf > 0.0 || lincoeff.sup < 0.0) )
    {
