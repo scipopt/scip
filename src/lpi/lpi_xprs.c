@@ -29,11 +29,16 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
 #include <assert.h>
+#include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h> /*lint --e{766}*/
+#endif
 
 #include "xprs.h"
 #include "scip/bitencode.h"
+#include "scip/pub_misc.h"
 #include "lpi/lpi.h"
 
 #ifndef XPRS_LPQUICKPRESOLVE
@@ -685,6 +690,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
 /**@} */
 
 
@@ -1174,6 +1203,8 @@ SCIP_RETCODE SCIPlpiClear(
    assert(lpi->xprslp != NULL);
 
    SCIPdebugMessage("clearing Xpress LP\n");
+
+   invalidateSolution(lpi);
 
    /* create an empty LP in this */
    CHECK_ZERO( lpi->messagehdlr, XPRSloadlp(lpi->xprslp, lpi->name, 0, 0, NULL, NULL, NULL, NULL, &zero, NULL, NULL, NULL, NULL, NULL) );
@@ -1801,9 +1832,6 @@ static SCIP_RETCODE lpiSolve(
 
    invalidateSolution(lpi);
 
-   /* disable general presolving to ensure that we get dual or primal rays */
-   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
-
    /* check if the current basis should be ignored */
    if( lpi->clearstate )
    {
@@ -1853,6 +1881,59 @@ static SCIP_RETCODE lpiSolve(
    SCIPdebugMessage(" -> Xpress returned solstat=%d, pinfeas=%d, dinfeas=%d (%d iterations)\n",
       lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
 
+   /* Make sure that always a primal / dual ray exists */
+   if( lpi->solstat == XPRS_LP_INFEAS  || lpi->solstat == XPRS_LP_UNBOUNDED )
+   {
+      int hasray;
+      int presolving;
+
+      /* check whether a dual ray exists, in that case we don't need to resolve the LP w/o presolving */
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdualray(lpi->xprslp, NULL, &hasray) );
+
+      if( hasray == 1 )
+         goto TERMINATE;
+
+      /* get the current presolving setting */
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_PRESOLVE, &presolving) );
+
+      if( presolving != 0 )
+      {
+         int tmpiterations;
+
+         /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+         SCIPdebugMessage("presolver may have solved the problem -> calling Xpress %s again without presolve\n",
+               strcmp(method, "p") == 0 ? "primal simplex" : strcmp(method, "d") == 0 ? "dual simplex" : "barrier");
+
+         /* switch off preprocessing */
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
+
+         /* resolve w/o presolving */
+         CHECK_ZERO( lpi->messagehdlr, XPRSlpoptimize(lpi->xprslp, method) );
+
+         /* evaluate the result */
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_LPSTATUS, &lpi->solstat) );
+         if( lpi->solstat == XPRS_LP_UNBOUNDED || lpi->solstat == XPRS_LP_INFEAS )
+         {
+            CHECK_ZERO( lpi->messagehdlr, XPRSgetunbvec(lpi->xprslp, &lpi->unbvec) );
+         }
+         else
+            lpi->unbvec = -1;
+
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &tmpiterations) );
+         lpi->iterations += tmpiterations;
+         lpi->solisbasic = TRUE;
+
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &primalinfeasible) );
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &dualinfeasible) );
+         SCIPdebugMessage(" -> Xpress returned solstat=%d, pinfeas=%d, dinfeas=%d (%d iterations)\n",
+            lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
+
+         /* reinstall the previous setting */
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, presolving) );
+      }
+   }
+
+  TERMINATE:
    if( (lpi->solstat == XPRS_LP_OPTIMAL) && (primalinfeasible || dualinfeasible) )
       lpi->solstat = XPRS_LP_OPTIMAL_SCALEDINFEAS;
 
@@ -2771,13 +2852,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    )
 {
    int* slackstats;
+   int ncols;
    int nrows;
    int r;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   /*  get the number of rows/columns */
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
@@ -2787,9 +2874,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    invalidateSolution(lpi);
 
-   /* get the number of rows */
-   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
-
    SCIP_ALLOC( BMSallocMemoryArray(&slackstats, nrows) );
 
    /* XPRSloadbasis expects the basis status for the column and the slack column, since SCIP has the basis status for
@@ -2797,12 +2881,12 @@ SCIP_RETCODE SCIPlpiSetBase(
     */
    for( r = 0; r < nrows; ++r )
    {
-      if (rstat[r] == (int) SCIP_BASESTAT_LOWER)
+      if (rstat[r] == (int) SCIP_BASESTAT_LOWER) /*lint !e613*/
          slackstats[r] = (int) SCIP_BASESTAT_UPPER;
-      else if (rstat[r] == (int) SCIP_BASESTAT_UPPER)
+      else if (rstat[r] == (int) SCIP_BASESTAT_UPPER) /*lint !e613*/
          slackstats[r] = (int) SCIP_BASESTAT_LOWER;
       else
-         slackstats[r] = rstat[r];
+         slackstats[r] = rstat[r]; /*lint !e613*/
    }
 
    /* load basis information into Xpress
@@ -2982,8 +3066,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* get (or calculate) the row in B^-1 */
    if( binvrow == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&binvrow, nrows) );
-
       SCIP_ALLOC( BMSallocMemoryArray(&buffer, nrows) );
       SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buffer, inds, ninds) );
       binv = buffer;
@@ -3616,38 +3698,140 @@ SCIP_Bool SCIPlpiIsInfinity(
  * @{
  */
 
-/** reads LP from a file */
+/** reads LP from a file
+ *
+ * The file extension defines the format. That can be lp or mps. Any given file name needs to have one of these two
+ * extension. If not nothing is read and a SCIP_READERROR is returned.
+ */
 SCIP_RETCODE SCIPlpiReadLP(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
+   char* basename = NULL;
+   char* compression = NULL;
+   char* extension = NULL;
+   char* filename = NULL;
+   char* path = NULL;
+   char* xpressfilename = NULL;
+
+   int size;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(fname != NULL);
 
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
-   CHECK_ZERO( lpi->messagehdlr, XPRSreadprob(lpi->xprslp, fname, "") );
+   /* get the length of the file name */
+   size = (int)strlen(fname)+1;
 
-   return SCIP_OKAY;
+   /* check that the file name is longer than Xpress can handle */
+   if (size > XPRS_MAXPROBNAMELENGTH)
+     return SCIP_WRITEERROR;
+
+   /* get char array for the file name we pass to Xpress */
+   SCIP_ALLOC( BMSallocMemoryArray(&xpressfilename, size) );
+
+   /* copy filename to be able to split it into its components */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&filename, fname, size) );
+
+   /* get path, base file name, extension, and compression of the given file name */
+   SCIPsplitFilename(filename, &path, &basename, &extension, &compression);
+
+   /* construct file name without extension */
+   if (path != NULL)
+     (void) SCIPsnprintf(xpressfilename, size, "%s/%s", path, basename);
+   else
+     (void) SCIPsnprintf(xpressfilename, size, "%s", basename);
+
+   /* check that the file name did not has a compression extension, has an lp or mps extension, and actually a base name */
+   if (compression != NULL || extension == NULL || basename == NULL)
+     retcode = SCIP_READERROR;
+   if (strcasecmp(extension, "mps") == 0) {
+     CHECK_ZERO( lpi->messagehdlr, XPRSreadprob(lpi->xprslp, xpressfilename, "") );
+   }
+   else if (strcasecmp(extension, "lp") == 0) {
+     CHECK_ZERO( lpi->messagehdlr, XPRSreadprob(lpi->xprslp, xpressfilename, "l") );
+   }
+   else
+     retcode = SCIP_READERROR;
+
+   /* free array */
+   BMSfreeMemoryArrayNull(&filename);
+   BMSfreeMemoryArrayNull(&xpressfilename);
+
+   return retcode;
 }
 
-/** writes LP to a file */
+/** writes LP to a file
+ *
+ * The file extension defines the format. That can be lp or mps. Any given file name needs to have one of these two
+ * extension. If not nothing is written and a SCIP_WRITEERROR is returned.
+ */
 SCIP_RETCODE SCIPlpiWriteLP(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
+   char* basename = NULL;
+   char* compression = NULL;
+   char* extension = NULL;
+   char* filename = NULL;
+   char* path = NULL;
+   char* xpressfilename = NULL;
+
+   int size;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(fname != NULL);
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
-   CHECK_ZERO( lpi->messagehdlr, XPRSwriteprob(lpi->xprslp, fname, "p") );
+   /* get the length of the file name */
+   size = (int)strlen(fname)+1;
 
-   return SCIP_OKAY;
+   /* check that the file name is longer than Xpress can handle */
+   if (size > XPRS_MAXPROBNAMELENGTH)
+     return SCIP_WRITEERROR;
+
+   /* get char array for the file name we pass to Xpress */
+   SCIP_ALLOC( BMSallocMemoryArray(&xpressfilename, size) );
+
+   /* copy filename to be able to split it into its components */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&filename, fname, size) );
+
+   /* get path, base file name, extension, and compression of the given file name */
+   SCIPsplitFilename(filename, &path, &basename, &extension, &compression);
+
+   /* construct file name without extension */
+   if (path != NULL)
+     (void) SCIPsnprintf(xpressfilename, size, "%s/%s", path, basename);
+   else
+     (void) SCIPsnprintf(xpressfilename, size, "%s", basename);
+
+   /* check that the file name did not has a compression extension, has an lp or mps extension, and actually a base name */
+   if (compression != NULL || extension == NULL || basename == NULL)
+     retcode = SCIP_WRITEERROR;
+   if (strcasecmp(extension, "mps") == 0) {
+     CHECK_ZERO( lpi->messagehdlr, XPRSwriteprob(lpi->xprslp, xpressfilename, "p") );
+   }
+   else if (strcasecmp(extension, "lp") == 0) {
+     CHECK_ZERO( lpi->messagehdlr, XPRSwriteprob(lpi->xprslp, xpressfilename, "lp") );
+   }
+   else
+     retcode = SCIP_WRITEERROR;
+
+   /* free array */
+   BMSfreeMemoryArrayNull(&filename);
+   BMSfreeMemoryArrayNull(&xpressfilename);
+
+   return retcode;
 }
 
 /**@} */

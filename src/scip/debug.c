@@ -931,6 +931,9 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    if( !debugSolutionAvailable(scip->set) )
       return SCIP_OKAY;
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+      return SCIP_OKAY;
+
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
    if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
@@ -967,6 +970,9 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
 
    /* check whether a debug solution is available */
    if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1077,11 +1083,9 @@ SCIP_RETCODE SCIPdebugRemoveNode(
 
    /* check if a solution will be cutoff in tree */
    if( SCIPgetStage(set->scip) != SCIP_STAGE_EXITSOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_EXITPRESOLVE
-      && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+      && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE && !SCIPisInRestart(set->scip) )
    {
       SCIP_Bool solisinnode;
-
-      assert(!SCIPisInRestart(set->scip)); /* we can only be "in restart" during exitsolve, see also discussion at #1926 */
 
       solisinnode = FALSE;
 

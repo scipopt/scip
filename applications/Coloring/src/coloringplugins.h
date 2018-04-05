@@ -45,6 +45,8 @@
 #include "scip/dialog_default.h"
 #include "scip/disp_default.h"
 
+#include "scip/table_default.h"
+
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"

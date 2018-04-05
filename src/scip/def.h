@@ -100,16 +100,16 @@
 
 
 #include "scip/type_retcode.h"
-#include "scip/pub_message.h"
+#include "scip/type_message.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#define SCIP_VERSION                500 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
-#define SCIP_APIVERSION              21 /**< SCIP API version number */
+#define SCIP_VERSION                501 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
+#define SCIP_APIVERSION              25 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2018 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 

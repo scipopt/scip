@@ -493,6 +493,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    )
 {
    SCIP_INTERVAL newrange;
+   SCIP_INTERVAL entire;
 
    assert(scip != NULL);
    assert(infeasible != NULL);
@@ -507,6 +508,8 @@ SCIP_RETCODE propagateBoundsQuadExpr(
          SCIPintervalGetSup(SCIPgetConsExprExprInterval(quadexpr.expr)), quadexpr.sqrcoef, b.inf, b.sup,
          rhs.inf, rhs.sup);
 #endif
+
+   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &entire);
 
    /* compute solution of a*x^2 + b*x \in rhs */
    if( quadexpr.sqrcoef == 0.0 && SCIPintervalGetInf(b) == 0.0 && SCIPintervalGetSup(b) == 0.0 )
@@ -523,7 +526,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
 
       /* need only positive solutions */
       SCIPintervalSet(&a, quadexpr.sqrcoef);
-      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs);
+      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, entire);
    }
    else if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(quadexpr.expr)) <= 0.0 )
    {
@@ -532,7 +535,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
       SCIP_INTERVAL tmp;
       SCIPintervalSet(&a, quadexpr.sqrcoef);
       SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
-      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIP_INTERVAL_INFINITY, &tmp, a, tmp, rhs);
+      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIP_INTERVAL_INFINITY, &tmp, a, tmp, rhs, entire);
 
       SCIPintervalSetBounds(&newrange, -SCIPintervalGetSup(tmp), -SCIPintervalGetInf(tmp));
    }
@@ -541,7 +544,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
       /* need both positive and negative solution */
       SCIP_INTERVAL a;
       SCIPintervalSet(&a, quadexpr.sqrcoef);
-      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs);
+      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, entire);
    }
 #ifdef DEBUG_PROP
    SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
