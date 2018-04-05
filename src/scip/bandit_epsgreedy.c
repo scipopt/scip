@@ -255,6 +255,8 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    banditdata->eps = eps;
    banditdata->nselections = 0;
    banditdata->preferrecent = preferrecent;
+   banditdata->decayfactor = decayfactor;
+   banditdata->avglim = avglim;
 
    SCIP_CALL( SCIPbanditCreate(epsgreedy, vtable, blkmem, bufmem, priorities, nactions, initseed, banditdata) );
 
