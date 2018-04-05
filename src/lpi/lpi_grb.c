@@ -102,7 +102,7 @@ static const char* dblparam[NUMDBLPARAM] =
    GRB_DBL_PAR_MARKOWITZTOL
 };
 
-/** default values for double parameters */
+/** minimal values for double parameters */
 static const double dblparammin[NUMDBLPARAM] =
 {
    +1e-09,               /* GRB_DBL_PAR_FEASIBILITYTOL */
@@ -4113,6 +4113,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    )
 {
    int nrows;
+   int i;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4125,6 +4126,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIPdebugMessage("calling Gurobi dual Farkas: %d rows\n", nrows);
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_FARKASDUAL, 0, nrows, dualfarkas) );
+
+   /* correct sign of ray */
+   for (i = 0; i < nrows; ++i)
+      dualfarkas[i] *= -1.0;
 
    return SCIP_OKAY;
 }
@@ -5343,8 +5348,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_SCALEFLAG, &temp) );
-      assert(temp >= 0 && temp <= 2);
-      *ival = temp;
+      assert(temp >= -1 && temp <= 3);
+      if ( temp == 0 )
+         *ival = 0;
+      else
+         *ival = 1;
       break;
    case SCIP_LPPAR_PRESOLVING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &temp) );
@@ -5396,8 +5404,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      assert(ival >= 0 && ival <= 2);
-      SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, ival) );
+      assert(ival >= 0 && ival <= 1);
+      if ( ival == 0 )
+         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, 0) );
+      else
+         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, -1) );
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
