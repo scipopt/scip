@@ -181,6 +181,56 @@ Test(propagate, product)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
+Test(propagate, productwithzero)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* originalexpr;
+   SCIP_CONS* cons;
+   SCIP_Bool infeasible;
+   SCIP_Bool redundant;
+   int ntightenings;
+
+   /* change bounds of vars */
+   SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, y,  0.0) ); SCIP_CALL( SCIPchgVarUb(scip, y, 2.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, z,  0.0) ); SCIP_CALL( SCIPchgVarUb(scip, z, 3.0) );
+
+   /* create cons 1 <= x*y*z <= 8 */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>*<t_y>*<t_z>", NULL, &originalexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, originalexpr, &expr) );
+   cr_assert_eq(expr->nchildren, 3);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 8.0) );
+
+   /* forward prop only propagates active constraints and active constraint live in the transformed problem */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   cr_assert(SCIPconsIsActive(cons));
+
+   SCIP_CALL( forwardPropCons(scip, conshdlr, cons, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
+   cr_assert_not(infeasible);
+   cr_assert_not(redundant);
+
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   cr_assert_not(infeasible);
+
+   /* expression image is [-3,6], intersected with constraint sides [1,8], this should give [1,6]
+    * since consexpr relaxes bounds, we allow a large tolerance here
+    */
+   cr_assert_float_eq(expr->interval.inf, 1.0, SCIPfeastol(scip));
+   cr_assert_float_eq(expr->interval.sup, 6.0, SCIPfeastol(scip));
+
+   /* x*y*z >= 1 with x <= 1, y <= 2, z <= 3 should imply
+    * x >= 1/6, y >= 1/3, z >= 1/2
+    */
+   cr_assert_float_eq(SCIPvarGetLbGlobal(x), 1.0/6.0, SCIPfeastol(scip));
+   cr_assert_float_eq(SCIPvarGetLbGlobal(y), 1.0/3.0, SCIPfeastol(scip));
+   cr_assert_float_eq(SCIPvarGetLbGlobal(z), 1.0/2.0, SCIPfeastol(scip));
+
+   /* release conss */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
 Test(propagate, abs)
 {
    SCIP_CONSEXPR_EXPR* expr;

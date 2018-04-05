@@ -1857,6 +1857,8 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL childbounds;
+   SCIP_INTERVAL otherfactor;
+   SCIP_INTERVAL zero;
    int i;
    int j;
 
@@ -1869,7 +1871,9 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    *nreductions = 0;
    *infeasible = FALSE;
 
-   /* too expensive (runtime here is quadratic in number of children) */
+   /* too expensive (runtime here is quadratic in number of children)
+    * TODO implement something faster for larger numbers of factors, e.g., split product into smaller products
+    */
    if( SCIPgetConsExprExprNChildren(expr) > 10 )
       return SCIP_OKAY;
 
@@ -1880,10 +1884,12 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   /* f = const * prod_k c_k => c_i = f / (const * prod_{j:j!=i} c_j ) */
+   SCIPintervalSet(&zero, 0.0);
+
+   /* f = const * prod_k c_k => c_i solves c_i * (const * prod_{j:j!=i} c_j) = f */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && !(*infeasible); ++i )
    {
-      SCIPintervalSet(&childbounds, exprdata->coefficient);
+      SCIPintervalSet(&otherfactor, exprdata->coefficient);
 
       /* compute prod_{j:j!=i} c_j */
       for( j = 0; j < SCIPgetConsExprExprNChildren(expr); ++j )
@@ -1891,19 +1897,17 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
          if( i == j )
             continue;
 
-         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &childbounds, childbounds,
+         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &otherfactor, otherfactor,
                SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]));
-
-         /* if there is 0.0 in the product, then later division will hardly give useful bounds, so give up for this i */
-         if( childbounds.inf <= 0.0 && childbounds.sup >= 0.0 )
-            break;
       }
 
-      /* if the previous for finish, not because of the break */
+      /* if the previous "for" loop finished not because of the break */
       if( j == SCIPgetConsExprExprNChildren(expr) )
       {
-         /* f / (const * prod_{j:j!=i} c_j) */
-         SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
+         /* solve x*otherfactor = f for x in c_i
+          * TODO using an function to solve quad equation seems over the top, but it currently gives the best bounds as it can also handle a 0 in otherfactor well
+          */
+         SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor, SCIPgetConsExprExprInterval(expr), SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]));
 
          /* try to tighten the bounds of the expression */
          SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
