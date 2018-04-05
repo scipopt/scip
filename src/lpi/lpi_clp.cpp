@@ -330,60 +330,61 @@ void setFastmipClpParameters(
    lpi->clp->setPerturbation(50);
 
    /* Special options description from ClpModell.hpp:
-    *       1 - Don't keep changing infeasibility weight
-    *       2 - Keep nonLinearCost round solves
-    *       4 - Force outgoing variables to exact bound (primal)
-    *       8 - Safe to use dense initial factorization
-    *      16 - Just use basic variables for operation if column generation
-    *      32 - Create ray even in BAB
-    *      64 - Treat problem as feasible until last minute (i.e. minimize infeasibilities)
-    *     128 - Switch off all matrix sanity checks
-    *     256 - No row copy
-    *     512 - If not in values pass, solution guaranteed, skip as much as possible
-    *    1024 - In branch and bound
-    *    2048 - Don't bother to re-factorize if < 20 iterations
-    *    4096 - Skip some optimality checks
-    *    8192 - Do Primal when cleaning up primal
-    *   16384 - In fast dual (so we can switch off things)
-    *   32768 - called from Osi
-    *   65536 - keep arrays around as much as possible (also use maximumR/C)
-    *  131072 - transposeTimes is -1.0 and can skip basic and fixed
-    *  262144 - extra copy of scaled matrix
-    *  524288 - Clp fast dual
-    * 1048576 - don't need to finish dual (can return 3)
-    *  NOTE   - many applications can call Clp but there may be some short cuts
-    *           which are taken which are not guaranteed safe from all applications.
-    *           Vetted applications will have a bit set and the code may test this
-    *           At present I expect a few such applications - if too many I will
-    *           have to re-think.  It is up to application owner to change the code
-    *           if she/he needs these short cuts.  I will not debug unless in Coin
-    *           repository.  See COIN_CLP_VETTED comments.
-    * 2097152 - is Cbc (and in branch and bound) [0x01000000]
-    * 4194304 - is in a different branch and bound [0x02000000]
+    *         1 - Don't keep changing infeasibility weight
+    *         2 - Keep nonLinearCost round solves
+    *         4 - Force outgoing variables to exact bound (primal)
+    *         8 - Safe to use dense initial factorization
+    *        16 - Just use basic variables for operation if column generation
+    *        32 - Create ray even in BAB
+    *        64 - Treat problem as feasible until last minute (i.e. minimize infeasibilities)
+    *       128 - Switch off all matrix sanity checks
+    *       256 - No row copy
+    *       512 - If not in values pass, solution guaranteed, skip as much as possible
+    *      1024 - In branch and bound
+    *      2048 - Don't bother to re-factorize if < 20 iterations
+    *      4096 - Skip some optimality checks
+    *      8192 - Do Primal when cleaning up primal
+    *     16384 - In fast dual (so we can switch off things)
+    *     32768 - called from Osi
+    *     65536 - keep arrays around as much as possible (also use maximumR/C)
+    *    131072 - transposeTimes is -1.0 and can skip basic and fixed
+    *    262144 - extra copy of scaled matrix
+    *    524288 - Clp fast dual
+    *   1048576 - don't need to finish dual (can return 3)
+    *   2097152 - ray even if >2 pivots AND if problem is "crunched"
+    *   4194304 - don't scale integer variables
+    *   8388608 - Idiot when not really sure about it
+    *  16777216 - zero costs!
+    * 0x1000000 - is Cbc (and in branch and bound)
+    * 0x2000000 - is in a different branch and bound
     *
     *  Comments:
-    *       2 - Nonlinear costs are used in primal for infeasibility weight.
-    *       4 - In anti-degeneracy operations can move variables just off a bound.
-    *       8 - Means dense nucleus in factorization - normally not safe in first factorization as
-    *           singularity handling is not useful. Is switched on if going from dual to primal or vv.
-    *      16 - Used for "real" column generation.
-    *      32 - Currently unclear, does not lead to produce ray
-    *      64 - Good idea, since in B&B most problems are feasible.
-    *     128 - Assumes user will not create tiny or duplicate elements.
-    *     256 - Normally Clp keeps a scaled row copy for speed. For very large problems you might want to turn it off.
-    *     512 - Means nonbasic variables should be at bounds and basis will be reasonable.
-    *    2048 - Unclear.
-    *    4096 - Skip some optimality checks.
-    *    8192 - If the primal has a perturbed problem and needs to clean up, it normally uses dual - but in some cases can be better to use primal.
-    *   16384 - Used internally.
-    *   32768 - Just switches off some messages, e.g., empty problem.
-    *   65536 - Unclear.
-    *  131072 - Used internally.
-    *  262144 - Normally Clp has unscaled column copy of matrix - this makes an extra scaled copy.
-    *  524288 - Used internally.
-    * 1048576 - Only set by fastDual (used internally).
-    * 2097152 - main point: does allow use of disaster handler
-    * 4194304 - main point: does allow use of disaster handler
+    *         2 - Nonlinear costs are used in primal for infeasibility weight.
+    *         4 - In anti-degeneracy operations can move variables just off a bound.
+    *         8 - Means dense nucleus in factorization - normally not safe in first factorization as
+    *             singularity handling is not useful. Is switched on if going from dual to primal or vv.
+    *        16 - Used for "real" column generation.
+    *        32 - Currently unclear, does not lead to produce ray
+    *        64 - Good idea, since in B&B most problems are feasible.
+    *       128 - Assumes user will not create tiny or duplicate elements.
+    *       256 - Normally Clp keeps a scaled row copy for speed. For very large problems you might want to turn it off.
+    *       512 - Means nonbasic variables should be at bounds and basis will be reasonable.
+    *      1024 - In branch and bound - makes some rays available?
+    *      2048 - Unclear.
+    *      4096 - Skip some optimality checks.
+    *      8192 - If the primal has a perturbed problem and needs to clean up, it normally uses dual - but in some cases can be better to use primal.
+    *     16384 - Used internally.
+    *     32768 - Just switches off some messages, e.g., empty problem.
+    *     65536 - Unclear.
+    *    131072 - Used internally.
+    *    262144 - Normally Clp has unscaled column copy of matrix - this makes an extra scaled copy.
+    *    524288 - Used internally.
+    *   1048576 - Only set by fastDual (used internally).
+    *   2097152 - This was fixed in 03/2018 to make sure that a ray is produced.
+    *   4194304 - Not needed for us.
+    *   8388608 - Unclear.
+    * 0x1000000 - main point: does allow use of disaster handler, but also other decisions in code
+    * 0x2000000 - main point: does allow use of disaster handler, but also other decisions in code
     *
     * Cbc seems to use the following special options:
     * lpi->clp->setSpecialOptions(64|128|1024|2048|4096|32768|262144|0x01000000);
@@ -583,7 +584,7 @@ SCIP_RETCODE SCIPlpiCreate(
    // turn off scaling by default
    (*lpi)->clp->scaling(0);
 
-   /* set default pricing */
+   // set default pricing
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
 
    return SCIP_OKAY;
@@ -2672,20 +2673,19 @@ SCIP_Bool SCIPlpiIsStable(
     *   3 - stopped on iterations or time
     *   4 - stopped due to errors
     *   5 - stopped by event handler (virtual int ClpEventHandler::event())
-    */
-
-   /* Then we check the secondary status of Clp:
-    *  0 - none
-    *  1 - primal infeasible because dual limit reached OR (probably primal infeasible but can't prove it  - main status was 4)
-    *  2 - scaled problem optimal - unscaled problem has primal infeasibilities
-    *  3 - scaled problem optimal - unscaled problem has dual infeasibilities
-    *  4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
-    *  5 - giving up in primal with flagged variables
-    *  6 - failed due to empty problem check
-    *  7 - postSolve says not optimal
-    *  8 - failed due to bad element check
-    *  9 - status was 3 and stopped on time
-    *  100 up - translation of enum from ClpEventHandler
+    *
+    *  Then we check the secondary status of Clp:
+    *   0 - none
+    *   1 - primal infeasible because dual limit reached OR (probably primal infeasible but can't prove it  - main status was 4)
+    *   2 - scaled problem optimal - unscaled problem has primal infeasibilities
+    *   3 - scaled problem optimal - unscaled problem has dual infeasibilities
+    *   4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
+    *   5 - giving up in primal with flagged variables
+    *   6 - failed due to empty problem check
+    *   7 - postSolve says not optimal
+    *   8 - failed due to bad element check
+    *   9 - status was 3 and stopped on time
+    * 100 up - translation of enum from ClpEventHandler
     */
    SCIPdebugMessage("status: %d   secondary: %d\n", lpi->clp->status(), lpi->clp->secondaryStatus());
    assert( 0 <= lpi->clp->status() && lpi->clp->status() <= 5 );
