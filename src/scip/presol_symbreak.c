@@ -1208,8 +1208,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Executing presolver <%s> early, since symmetries are computed early.\n\n", SCIPpresolGetName(presol));
 
-         /* increase priority */
-         SCIP_CALL( SCIPsetIntParam(scip, "presolving/" PRESOL_NAME "/priority", 90000000) );
+         SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
       }
    }
 
