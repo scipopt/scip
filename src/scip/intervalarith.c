@@ -3030,7 +3030,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
       if( rhs > 0.0 )
       { /* b >= 0.0 and c > 0.0 */
          delta = b*b + sqrcoeff*rhs;
-         if( delta < 0.0 || (sqrcoeff == 0.0 && lincoeff == 0.0) )
+         if( delta < 0.0 )
          {
             SCIPintervalSetEmpty(resultant);
          }
