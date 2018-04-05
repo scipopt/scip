@@ -2559,7 +2559,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
 
    /* Clp usually has a dual ray whenever it concludes "primal infeasible", (but is not necessarily dual feasible),
     * see ClpModel::infeasibilityRay */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
+   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->rayExists() );
 }
 
 
