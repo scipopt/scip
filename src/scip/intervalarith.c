@@ -3150,19 +3150,19 @@ void SCIPintervalSolveUnivariateQuadExpression(
 
    assert(resultant != NULL);
 
-   SCIPdebugMessage("solving [%g,%g]*x^2 + [%g,%g]*x = [%g,%g] for x in [%g,%g]\n", sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, xbnds.sup);
-
    /* special handling for lincoeff * x = rhs without 0 in lincoeff
-    * then rhs/lincoeff is giving a good interval that we just have to intersect with xbnds
-    * the code below would also work, but computed intervals are differ by an epsilon, which means more instances are affected by changing from using the div here to the general code below
-    * update: with the special treatment of sqrcoeff=0 in SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar, the results from the code below should again be as good as the div here
+    * rhs/lincoeff gives a good interval that we just have to intersect with xbnds
+    * the code below would also work, but uses many more case distinctions to get to a result that should be the same (though epsilon differences can sometimes be observed)
     */
    if( sqrcoeff.inf == 0.0 && sqrcoeff.sup == 0.0 && (lincoeff.inf > 0.0 || lincoeff.sup < 0.0) )
    {
       SCIPintervalDiv(infinity, resultant, rhs, lincoeff);
       SCIPintervalIntersect(resultant, *resultant, xbnds);
+      SCIPdebugMessage("solving [%g,%g]*x = [%g,%g] for x in [%g,%g] gives [%g,%g]\n", lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, xbnds.sup, resultant->inf, resultant->sup);
       return;
    }
+
+   SCIPdebugMessage("solving [%g,%g]*x^2 + [%g,%g]*x = [%g,%g] for x in [%g,%g]\n", sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, xbnds.sup);
 
    /* find all x>=0 such that a*x^2+b*x = c */
    if( xbnds.sup >= 0 )
