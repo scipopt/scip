@@ -73,7 +73,7 @@ struct SCIP_HeurData
    SCIP_Bool             checkobj;           /**< should objective function be checked before running? */
    SCIP_Bool             checkobjglb;        /**< check objective function only once w.r.t to the global problem */
    SCIP_Bool             objchecked;         /**< remember whether objection function was already checked */
-   SCIP_Bool             scalescore;         /**< should score be scaled by fractionality= */
+   SCIP_Bool             scalescore;         /**< should score be scaled by fractionality */
 };
 
 /*
@@ -96,7 +96,7 @@ SCIP_DECL_HEURCOPY(heurCopyFarkasdiving)
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeFarkasdiving) /*lint --e{715}*/
+SCIP_DECL_HEURFREE(heurFreeFarkasdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -117,7 +117,7 @@ SCIP_DECL_HEURFREE(heurFreeFarkasdiving) /*lint --e{715}*/
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitFarkasdiving) /*lint --e{715}*/
+SCIP_DECL_HEURINIT(heurInitFarkasdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -140,7 +140,7 @@ SCIP_DECL_HEURINIT(heurInitFarkasdiving) /*lint --e{715}*/
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitFarkasdiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXIT(heurExitFarkasdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -178,7 +178,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolFarkasdiving)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
@@ -204,6 +204,10 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
    nnzobjvars = SCIPgetNObjVars(scip);
 
    /* terminate if at most one variable has a non-zero objective coefficient */
+   /* author gregor
+    *
+    * TODO the comment and the condition are somehow off.
+    */
    if( nnzobjvars == 0 )
    {
       heurdata->disabled = TRUE;
@@ -237,6 +241,10 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
             goto PERFORMDIVING;
          }
       }
+      /* author gregor
+       *
+       * TODO superfluous check, simply make it else, or do you mean "! heurdata->objchecked"?
+       */
       else if( !heurdata->checkobjglb )
       {
          /* we can only access the branching candidates if the LP is solved to optimality */
@@ -275,7 +283,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving) /*lint --e{715}*/
       lastobjcoef = objcoefs[0];
       ndiffnnzobjs = 1;
 
-      /* count number of different absolute objective values*/
+      /* count number of different absolute objective values */
       for( i = 1; i < nnzobjcoefs; i++ )
       {
          if( SCIPisGT(scip, objcoefs[i], lastobjcoef) )
