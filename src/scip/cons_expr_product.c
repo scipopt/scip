@@ -1904,9 +1904,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
       /* if the previous "for" loop finished not because of the break */
       if( j == SCIPgetConsExprExprNChildren(expr) )
       {
-         /* solve x*otherfactor = f for x in c_i
-          * TODO using an function to solve quad equation seems over the top, but it currently gives the best bounds as it can also handle a 0 in otherfactor well
-          */
+         /* solve x*otherfactor = f for x in c_i */
          SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor, SCIPgetConsExprExprInterval(expr), SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]));
 
          /* try to tighten the bounds of the expression */
