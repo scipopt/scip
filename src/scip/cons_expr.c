@@ -1265,10 +1265,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
       intersect = TRUE;
    }
 
-   /* mark expression as not tightened if we do not intersect expression intervals; this happens once before calling
-    * the reverse propagation
-    */
-
    if( intersect )
    {
       /* start with interval that is stored in expression */
