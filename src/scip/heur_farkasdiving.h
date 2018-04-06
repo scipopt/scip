@@ -18,12 +18,13 @@
  * @brief  LP diving heuristic that tries to construct a Farkas-proof
  * @author Jakob Witzig
  *
- * The heuristics dives into the direction of the pseudosolution, i.e., variables get rounded
- * towards there best bound w.r.t there objective coefficient. This strategy is twofold, if
+ * The heuristic dives into the direction of the pseudosolution, i.e., variables get rounded
+ * towards their best bound w.r.t there objective coefficient. This strategy is twofold, if
  * a feasible solution is found the solution has potentially a very good objective value; on the other
  * hand, the left-hand side of a potentially Farkas-proof y^Tb - y^TA{l',u'} > 0 (i.e., infeasibility proof)
- * gets increased. The contribution of each variable x_i to the Farkas-proof can be approximated
- * by c_i = y^TA_i because we only dive on basic variables with reduced costs c_i - y^TA_i = 0.
+ * gets increased, where $`l',u'`$ are the local bounds. The contribution of each variable x_i to the
+ * Farkas-proof can be approximated by c_i = y^TA_i because we only dive on basic variables with
+ * reduced costs c_i - y^TA_i = 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
