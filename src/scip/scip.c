@@ -43539,7 +43539,11 @@ SCIP_Real SCIPgetGap(
    else if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
       return 0.0;
 
-   assert(!SCIPsetIsInfinity(scip->set, getLowerbound(scip)));
+   /* the lowerbound is infinity, but SCIP may not have updated the status; in this case, the problem was already solved
+    * so we return gap = 0
+    */
+   if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
+      return 0.0;
 
    return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getPrimalbound(scip), getDualbound(scip));
 }
@@ -43569,7 +43573,11 @@ SCIP_Real SCIPgetTransGap(
    else if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
       return 0.0;
 
-   assert(!SCIPsetIsInfinity(scip->set, getLowerbound(scip)));
+   /* the lowerbound is infinity, but SCIP may not have updated the status; in this case, the problem was already solved
+    * so we return gap = 0
+    */
+   if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
+      return 0.0;
 
    return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getUpperbound(scip), getLowerbound(scip));
 }
