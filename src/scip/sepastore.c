@@ -853,6 +853,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    )
 {
    SCIP_NODE* node;
+   SCIP_Real maxparall;
+   SCIP_Real goodmaxparall;
    int maxsepacuts;
    int ncutsapplied;
    int nselectedcuts;
@@ -881,8 +883,21 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* get depth of current node */
    depth = SCIPnodeGetDepth(node);
 
+   if( root )
+   {
+      maxparall = 1.0 - set->sepa_minorthoroot;
+      goodmaxparall = MAX(0.5, 1.0 - set->sepa_minorthoroot);
+   }
+   else
+   {
+      maxparall = 1.0 - set->sepa_minortho;
+      goodmaxparall = MAX(0.5, 1.0 - set->sepa_minortho);
+   }
+
    /* call cut selection algorithm */
-   SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->randnumgen, sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
+   SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->randnumgen, 0.9, 0.0, goodmaxparall, maxparall,
+         set->sepa_dircutoffdistfac, set->sepa_efficacyfac, set->sepa_objparalfac, set->sepa_intsupportfac,
+         sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
 
    /* apply all selected cuts */
    for( i = 0; i < nselectedcuts && !(*cutoff); i++ )
@@ -908,7 +923,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          if( !applied )
          {
             /* add cut to the LP and update orthogonalities */
-            SCIPsetDebugMsg(set, " -> applying forced cut <%s>\n", SCIProwGetName(cut));
+            SCIPsetDebugMsg(set, " -> applying%s cut <%s>\n", (i < sepastore->nforcedcuts) ? " forced" : "", SCIProwGetName(cut));
             /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
             SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, depth, &ncutsapplied) );
          }

@@ -95,6 +95,24 @@ struct SCIP_Benders
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 };
 
+/** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored
+ *  and reset after the solving loop. */
+struct SCIP_SubprobParams
+{
+   int cons_linear_propfreq;
+   int lp_disablecutoff;
+   int lp_scaling;
+   int prop_maxrounds;
+   int prop_maxroundsroot;
+   char lp_initalg;
+   char lp_resolvealg;
+   SCIP_Bool conflict_enable;
+   SCIP_Bool misc_alwaysgetduals;
+   SCIP_Bool misc_catchctrlc;
+   SCIP_Bool misc_scaleobj;
+};
+typedef struct SCIP_SubprobParams SCIP_SUBPROBPARAMS;
+
 #ifdef __cplusplus
 }
 #endif

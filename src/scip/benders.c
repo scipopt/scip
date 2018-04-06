@@ -49,6 +49,372 @@
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
 
+/* event handler properties */
+#define NODEFOCUS_EVENTHDLR_NAME         "bendersnodefocus"
+#define NODEFOCUS_EVENTHDLR_DESC         "node focus event handler for Benders' decomposition"
+#define MIPNODEFOCUS_EVENTHDLR_NAME      "bendersmipsolvenodefocus"
+#define MIPNODEFOCUS_EVENTHDLR_DESC      "node focus event handler for the MIP solve method for Benders' decomposition"
+#define UPPERBOUND_EVENTHDLR_NAME        "bendersupperbound"
+#define UPPERBOUND_EVENTHDLR_DESC        "found solution event handler to terminate subproblem solve for a given upper bound"
+
+
+struct SCIP_EventhdlrData
+{
+   int                   filterpos;          /**< the event filter entry */
+   int                   numruns;            /**< the number of times that the problem has been solved */
+   SCIP_Real             upperbound;         /**< an upper bound for the problem */
+   SCIP_Bool             solvemip;           /**< is the event called from a MIP subproblem solve*/
+};
+
+
+/* ---------------- Local methods for event handlers ---------------- */
+/** init method for the event handlers */
+static
+SCIP_RETCODE initEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the event handlers data structure */
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   eventhdlrdata->filterpos = -1;
+   eventhdlrdata->numruns = 0;
+   eventhdlrdata->upperbound = -SCIPinfinity(scip);
+   eventhdlrdata->solvemip = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+/** initsol method for the event handlers */
+static
+SCIP_RETCODE initsolEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< the event handlers data structure */
+   SCIP_EVENTTYPE        eventtype           /**< event type mask to select events to catch */
+   )
+{
+   SCIP_EVENTHDLRDATA eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+   SCIP_CALL(SCIPcatchEvent(scip, eventtype, eventhdlr, NULL, &eventhdlrdata->filterpos));
+
+   return SCIP_OKAY;
+}
+
+/** the exit method for the event handlers */
+static
+SCIP_RETCODE exitsolEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< the event handlers data structure */
+   SCIP_EVENTTYPE        eventtype           /**< event type mask to select events to catch */
+   )
+{
+   SCIP_EVENTHDLRDATA eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+   if( eventhdlrdata->filterpos >= 0 )
+   {
+      SCIP_CALL(SCIPdropEvent(scip, eventtype, eventhdlr, NULL, eventhdlrdata->filterpos));
+      eventhdlrdata->filterpos = -1;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** free method for the event handler */
+static
+SCIP_RETCODE freeEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the event handlers data structure */
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
+
+   return SCIP_OKAY;
+}
+
+
+
+/* ---------------- Callback methods of node focus event handler ---------------- */
+
+/** exec the event handler */
+static
+SCIP_DECL_EVENTEXEC(eventExecBendersNodefocus)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+   /* sending an interrupt solve signal to return the control back to the Benders' decomposition plugin.
+    * This will ensure the SCIP stage is SCIP_STAGE_SOLVING, allowing the use of probing mode. */
+   SCIP_CALL( SCIPinterruptSolve(scip) );
+
+   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos));
+   eventhdlrdata->filterpos = -1;
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of event handler (called after problem was transformed) */
+static
+SCIP_DECL_EVENTINIT(eventInitBendersNodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( initEventhandler(scip, eventhdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_EVENTINITSOL(eventInitsolBendersNodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( initsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_EVENTEXITSOL(eventExitsolBendersNodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( exitsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
+SCIP_DECL_EVENTFREE(eventFreeBendersNodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( freeEventhandler(scip, eventhandler) );
+
+   return SCIP_OKAY;
+}
+
+
+/* ---------------- Callback methods of MIP solve node focus event handler ---------------- */
+
+/** exec the event handler */
+static
+SCIP_DECL_EVENTEXEC(eventExecBendersMipnodefocus)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+   /* interrupting the solve so that the control is returned back to the Benders' core. */
+   if( eventhdlrdata->numruns == 0 && !eventhdlrdata->solvemip )
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+
+   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos));
+   eventhdlrdata->filterpos = -1;
+
+   eventhdlrdata->numruns++;
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of event handler (called after problem was transformed) */
+static
+SCIP_DECL_EVENTINIT(eventInitBendersMipnodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( initEventhandler(scip, eventhdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_EVENTINITSOL(eventInitsolBendersMipnodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( initsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_EVENTEXITSOL(eventExitsolBendersMipnodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( exitEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
+SCIP_DECL_EVENTFREE(eventFreeBendersMipnodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( freeEventhandler(scip, eventhandler) );
+
+   return SCIP_OKAY;
+}
+
+/* ---------------- Callback methods of solution found event handler ---------------- */
+
+/** exec the event handler */
+static
+SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_SOL* bestsol;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   bestsol = SCIPgetBestSol(scip);
+
+   if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol), eventhdlrdata->upperbound) )
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of event handler (called after problem was transformed) */
+static
+SCIP_DECL_EVENTINIT(eventInitBendersUpperbound)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( initEventhandler(scip, eventhdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_EVENTINITSOL(eventInitsolBendersUpperbound)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( initsolEventhdlr(scip, eventhdlr, SCIP_EVENTTYPE_BESTSOLFOUND) );
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_EVENTEXITSOL(eventExitsolBendersUpperbound)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( exitsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_BESTSOLFOUND) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
+SCIP_DECL_EVENTFREE(eventFreeBendersUpperbound)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( freeEventhandler(scip, eventhdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** updates the upper bound in the event handler data */
+static
+SCIP_RETCODE updateEventhdlrUpperbound(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Real             upperbound          /**< the upper bound value */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < benders->nsubproblems);
+
+   eventhdlr = SCIPfindEventhdlr(SCIPbendersSubproblem(benders, probnumber), UPPERBOUND_EVENTHDLR_NAME);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   eventhdlrdata->upperbound = upperbound;
+
+   return SCIP_OKAY;
+}
+
 /* Local methods */
 
 /** A workaround for GCG. This is a temp vardata that is set for the auxiliary variables */
@@ -336,6 +702,78 @@ SCIP_RETCODE SCIPbendersFree(
    return SCIP_OKAY;
 }
 
+/** initialises a MIP subproblem by putting the problem into SCIP_STAGE_SOLVING. This is achieved by calling SCIPsolve
+ *  and then interrupting the solve in a node focus event handler.
+ *  The LP subproblem is also initialised using this method; however, a different event handler is added. This event
+ *  handler will put the LP subproblem into probing mode.
+ *  The MIP solving function is called to initialise the subproblem because this function calls SCIPsolve with the
+ *  appropriate parameter settings for Benders' decomposition.
+ */
+static
+SCIP_RETCODE initialiseSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   SCIP* subproblem;
+   SCIP_Bool infeasible;
+   SCIP_Bool cutoff;
+
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+   assert(subproblem != NULL);
+
+   /* Getting the problem into the right SCIP stage for solving */
+   SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, FALSE) );
+
+   assert(SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING);
+
+   /* Constructing the LP that can be solved in later iterations */
+   SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
+
+   return SCIP_OKAY;
+}
+
+
+/** initialises an LP subproblem by putting the problem into probing mode. The probing mode is envoked in a node focus
+ *  event handler. This event handler is added just prior to calling the initialise subproblem function.
+ */
+static
+SCIP_RETCODE initialiseLPSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   SCIP* subproblem;
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_Bool infeasible;
+   SCIP_Bool cutoff;
+
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+   assert(subproblem != NULL);
+
+   /* include event handler into SCIP */
+   SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, NODEFOCUS_EVENTHDLR_NAME, NODEFOCUS_EVENTHDLR_DESC,
+         eventExecBendersNodefocus, eventhdlrdata) );
+   SCIP_CALL( SCIPsetEventhdlrInit(subproblem, eventhdlr, eventInitBendersNodefocus) );
+   SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersNodefocus) );
+   SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersNodefocus) );
+   SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersNodefocus) );
+   assert(eventhdlr != NULL);
+
+   /* calling an initial solve to put the problem into probing mode */
+   SCIP_CALL( initialiseSubproblem(benders, probnumber) );
+
+   return SCIP_OKAY;
+}
+
 
 /** creates the subproblems and registers it with the Benders' decomposition struct */
 static
@@ -344,6 +782,11 @@ SCIP_RETCODE createSubproblems(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   SCIP* subproblem;
+   SCIP_EVENTHDLR* eventhdlr;
+   int nbinvars;
+   int nintvars;
+   int nimplintvars;
    int nsubproblems;
    int i;
 
@@ -363,6 +806,62 @@ SCIP_RETCODE createSubproblems(
    {
       /* calling the create subproblem call back method */
       SCIP_CALL( benders->benderscreatesub(set->scip, benders, i) );
+
+      subproblem = SCIPbendersSubproblem(benders, i);
+
+      assert(subproblem != NULL);
+
+      /* setting global limits for the subproblems. This overwrites the limits set by the user */
+      SCIP_CALL( SCIPsetIntParam(subproblem, "limits/maxorigsol", 0) );
+
+      /* getting the number of integer and binary variables to determine the problem type */
+      SCIP_CALL( SCIPgetVarsData(subproblem, NULL, NULL, &nbinvars, &nintvars, &nimplintvars, NULL) );
+
+      /* if there are no binary and integer variables, then the subproblem is an LP.
+       * In this case, the SCIP instance is put into probing mode via the use of an event handler. */
+      if( nbinvars == 0 && nintvars == 0 && nimplintvars == 0 )
+      {
+         SCIPbendersSetSubprobIsLP(benders, i, TRUE);
+
+         /* if the user has not implemented a solve subproblem callback, then the subproblem solves are performed
+          * internally. To be more efficient the subproblem is put into probing mode. */
+         if( benders->benderssolvesub == NULL && SCIPgetStage(subproblem) <= SCIP_STAGE_PROBLEM )
+            SCIP_CALL( initialiseLPSubproblem(benders, i) );
+      }
+      else
+      {
+         SCIP_EVENTHDLRDATA* eventhdlrdata_mipnodefocus;
+         SCIP_EVENTHDLRDATA* eventhdlrdata_upperbound;
+
+         SCIPbendersSetSubprobIsLP(benders, i, FALSE);
+
+         /* because the subproblems could be reused in the copy, the event handler is not created again.
+          * NOTE: This currently works with the benders_default implementation. It may not be very general. */
+         if( benders->benderssolvesub == NULL && !benders->iscopy )
+         {
+            SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
+            SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
+
+            /* include the first LP solved event handler into the subproblem */
+            SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, MIPNODEFOCUS_EVENTHDLR_NAME,
+                  MIPNODEFOCUS_EVENTHDLR_DESC, eventExecBendersMipnodefocus, eventhdlrdata_mipnodefocus) );
+            SCIP_CALL( SCIPsetEventhdlrInit(subproblem, eventhdlr, eventInitBendersMipnodefocus) );
+            SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersMipnodefocus) );
+            SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersMipnodefocus) );
+            SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersMipnodefocus) );
+            assert(eventhdlr != NULL);
+
+
+            /* include the upper bound interrupt event handler into the subproblem */
+            SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, UPPERBOUND_EVENTHDLR_NAME,
+                  UPPERBOUND_EVENTHDLR_DESC, eventExecBendersUpperbound, eventhdlrdata_upperbound) );
+            SCIP_CALL( SCIPsetEventhdlrInit(subproblem, eventhdlr, eventInitBendersUpperbound) );
+            SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersUpperbound) );
+            SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersUpperbound) );
+            SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersUpperbound) );
+            assert(eventhdlr != NULL);
+         }
+      }
    }
 
    benders->subprobscreated = TRUE;
@@ -1176,6 +1675,194 @@ void SCIPbendersSetData(
    benders->bendersdata = bendersdata;
 }
 
+/** stores the original parameters from the subproblem */
+static
+SCIP_RETCODE storeOrigSubprobParams(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
+   )
+{
+   assert(scip != NULL);
+   assert(origparams != NULL);
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &origparams->conflict_enable) );
+   SCIP_CALL( SCIPgetIntParam(scip, "lp/disablecutoff", &origparams->lp_disablecutoff) );
+   SCIP_CALL( SCIPgetIntParam(scip, "lp/scaling", &origparams->lp_scaling) );
+   SCIP_CALL( SCIPgetCharParam(scip, "lp/initalgorithm", &origparams->lp_initalg) );
+   SCIP_CALL( SCIPgetCharParam(scip, "lp/resolvealgorithm", &origparams->lp_resolvealg) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/alwaysgetduals", &origparams->misc_alwaysgetduals) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/scaleobj", &origparams->misc_scaleobj) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/catchctrlc", &origparams->misc_catchctrlc) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxrounds", &origparams->prop_maxrounds) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxroundsroot", &origparams->prop_maxroundsroot) );
+   SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/propfreq", &origparams->cons_linear_propfreq) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the parameters for the subproblem */
+static
+SCIP_RETCODE setSubprobParams(
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   /* Do we have to disable presolving? If yes, we have to store all presolving parameters. */
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* Disabling heuristics so that the problem is not trivially solved */
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* store parameters that are changed for the generation of the subproblem cuts */
+   SCIP_CALL( SCIPsetParam(scip, "conflict/enable", FALSE) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", 1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", 0) );
+
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", 'd') );
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", FALSE) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", FALSE) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", -1) );
+
+   return SCIP_OKAY;
+}
+
+/** resets the original parameters from the subproblem */
+static
+SCIP_RETCODE resetOrigSubprobParams(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
+   )
+{
+   assert(scip != NULL);
+   assert(origparams != NULL);
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", origparams->conflict_enable) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", origparams->lp_disablecutoff) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", origparams->lp_scaling) );
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", origparams->lp_initalg) );
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", origparams->lp_resolvealg) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", origparams->misc_alwaysgetduals) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", origparams->misc_scaleobj) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", origparams->misc_catchctrlc) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", origparams->prop_maxrounds) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", origparams->prop_maxroundsroot) );
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", origparams->cons_linear_propfreq) );
+
+   return SCIP_OKAY;
+}
+
+/** solves the Benders' decomposition subproblem. */
+SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   )
+{
+   SCIP* subproblem;
+   SCIP_SUBPROBPARAMS* origparams;
+   SCIP_Bool mipchecksolve;         /* flag to indicate whether the MIP problem is solved during the CHECK.
+                                       In this case, the subproblems may be interrupted because of the upper bound. */
+
+   assert(benders != NULL);
+   assert(infeasible != NULL);
+
+   (*infeasible) = FALSE;
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   /* allocating memory for the parameter storage */
+   SCIP_CALL( SCIPallocBlockMemory(subproblem, &origparams) );
+
+   /* store the original parameters of the subproblem */
+   SCIP_CALL( storeOrigSubprobParams(subproblem, origparams) );
+
+   /* If the solve has been stopped for the subproblem, then we need to restart it to complete the solve. The subproblem
+    * is stopped when it is a MIP so that LP cuts and IP cuts can be generated. */
+   if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING )
+   {
+      /* the subproblem should be in probing mode. Otherwise, the eventhandler did not work correctly */
+      assert( SCIPinProbing(subproblem) );
+
+      /* the probing mode needs to be stopped so that the MIP can be solved */
+      SCIP_CALL( SCIPendProbing(subproblem) );
+
+      /* the problem was interrupted in the event handler, so SCIP needs to be informed that the problem is to be restarted */
+      SCIP_CALL( SCIPrestartSolve(subproblem) );
+
+      /* if the solve type is for CHECK, then the FEASIBILITY emphasis setting is used. */
+      if( type == SCIP_BENDERSENFOTYPE_CHECK )
+      {
+         SCIP_CALL( SCIPsetHeuristics(subproblem, SCIP_PARAMSETTING_FAST, TRUE) );
+
+         /* the number of solution improvements is limited to try and prove feasibility quickly */
+         /* NOTE: This should be a parameter */
+         /* SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 5) ); */
+      }
+
+      mipchecksolve = TRUE;
+   }
+   else if( solvemip )
+   {
+      /* if the MIP will be solved directly, then the probing mode needs to be skipped.
+       * This is achieved by setting the solvemip flag in the event handler data to TRUE
+       */
+      SCIP_EVENTHDLR* eventhdlr;
+      SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+      eventhdlr = SCIPfindEventhdlr(subproblem, MIPNODEFOCUS_EVENTHDLR_NAME);
+      eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+      eventhdlrdata->solvemip = TRUE;
+   }
+   else
+   {
+      /* if the problem is not in probing mode, then we need to solve the LP. That requires all methods that will
+       * modify the structure of the problem need to be deactivated */
+
+      /* setting the subproblem parameters */
+      SCIP_CALL( setSubprobParams(subproblem) );
+
+#ifdef SCIP_MOREDEBUG
+      SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
+#endif
+   }
+
+#ifdef SCIP_MOREDEBUG
+      SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_FULL) );
+#endif
+
+   SCIP_CALL( SCIPsolve(subproblem) );
+
+   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE || SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL
+      || SCIPgetStatus(subproblem) == SCIP_STATUS_USERINTERRUPT || SCIPgetStatus(subproblem) === SCIP_STATUS_BESTSOLLIMIT)
+
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
+      (*infeasible) = TRUE;
+
+   /* resetting the subproblem parameters */
+   SCIP_CALL( resetOrigSubprobParams(subproblem, origparams) );
+
+   /* freeing the parameter storage */
+   SCIPfreeBlockMemory(subproblem, &origparams);
+
+   return SCIP_OKAY;
+}
+
 /** sets copy callback of benders */
 void SCIPbendersSetCopy(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -1466,6 +2153,7 @@ SCIP_Bool SCIPbendersCutRelaxation(
    return benders->cutrelax;
 }
 
+
 /** returns the auxiliary variable for the given subproblem */
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -1526,4 +2214,26 @@ SCIP_Bool SCIPbendersSubprobIsLP(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    return benders->subprobislp[probnumber];
+}
+
+/* sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
+ * process. One example is when the three-phase method is employed, where the first phase solves the of both the master
+ * and subproblems and by the third phase the integer subproblem is solved. */
+void SCIPbendersSetSubprobIsLP(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   if( islp && !benders->subprobislp[probnumber] )
+      benders->nlpsubprobs++;
+   else if( !islp && benders->subprobislp[probnumber] )
+      benders->nlpsubprobs--;
+
+   benders->subprobislp[probnumber] = islp;
+
+   assert(benders->nlpsubprobs >= 0 && benders->nlpsubprobs <= benders->nsubproblems);
 }
