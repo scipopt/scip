@@ -43,7 +43,7 @@
 #define DEFAULT_FALLBACKNOPRIM 'r'      /**< which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio) */
 #define DEFAULT_SMALLPSCOST    0.1      /**< threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching */
 
-/** Parameters required by the Treemodel branching rules */
+/** parameters required by the Treemodel branching rules */
 struct SCIP_BranchTreemodel
 {
    SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel rule? */
@@ -59,7 +59,7 @@ struct SCIP_BranchTreemodel
    SCIP_Real            smallpscost;         /**< threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching [ADVANCED] */
 };
 
-/** Branching encoding of a variable's ratio
+/** branching encoding of a variable's ratio
  * A variable's ratio is defined based upon its left and right LP gains, as the unique root > 1 of
  * the polynomial x^r - x^(r-l) -1, where l and r are the left and right LP gains.
  * We store the root as upratio^(invleft), with invleft = 1/l. An extra boolean stores whether
@@ -68,11 +68,11 @@ struct SCIP_BranchRatio
 {
    SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomia with gains (1, rightgain/leftgain) */
    SCIP_Real             invleft;           /**< "INVverse left gain, i.e. 1/leftgain */
-   SCIP_Bool             valid;             /**< True iff the ratio computed is valid */
+   SCIP_Bool             valid;             /**< TRUE iff the ratio computed is valid */
 };
 typedef struct SCIP_BranchRatio SCIP_BRANCHRATIO;
 
-/** A comparison method for the next method. It simply compares two SCIP_Real */
+/** a comparison method for the next method. It simply compares two SCIP_Real */
 static
 SCIP_DECL_SORTINDCOMP(sciprealcomp)
 {
@@ -91,7 +91,7 @@ SCIP_DECL_SORTINDCOMP(sciprealcomp)
       return 0;
 }
 
-/** Given a pair of arrays of real non-negative values (a,b), with a <= b, computes
+/** given a pair of arrays of real non-negative values (a,b), with a <= b, computes
  * the pairs that belong to the pareto front (with a tolerance).
  * In other words, we are looking for non-dominated pairs of values.
  * One value and one array are computed after this method.
@@ -107,7 +107,7 @@ SCIP_RETCODE findNonDominatedVars(
    int                   size,               /**< the size of array a (and b) */
    int*                  ndominated,         /**< returns the number of dominated elements */
    SCIP_Bool*            dominated           /**< returns the array of booleans that determine if an element is dominated */
-)
+   )
 {
    int* permb;
    int* bestcurrents;
@@ -130,11 +130,17 @@ SCIP_RETCODE findNonDominatedVars(
 
    /* we first find the permutation of indices of array b that corresponds to the array of a non-decreasing sort of its values */
    SCIP_CALL( SCIPallocBufferArray(scip, &permb, size) );
-   for( origindex=0; origindex<size; ++origindex )
+   for (origindex = 0; origindex < size; ++origindex)
       permb[origindex] = origindex;
+
+   /* author gregor
+    *
+    * TODO here you claim that you sort non-decreasingly, but you actually sort the index set non-increasingly.
+    * I suggest to use SCIPsortDownInd instead (and modifying the method sciprealcomp accordingly)
+    */
    SCIPsortInd(permb, sciprealcomp, (void*)b, size);
 
-   *ndominated=0;
+   *ndominated = 0;
    /* Now we will traverse the pair of arrays a and b by non-decreasing order of values of b *
     * and mark the (non) dominated pairs */
 
@@ -148,9 +154,9 @@ SCIP_RETCODE findNonDominatedVars(
    nbestcurrent = 1;
    /* the value a to "beat" to be non-dominated */
    besta = -1;
-   for( indexinpermb=1; indexinpermb<size; ++indexinpermb )
+   for( indexinpermb = 1; indexinpermb < size; ++indexinpermb )
    {
-      origindex=permb[indexinpermb];
+      origindex = permb[indexinpermb];
       assert(b[origindex] <= currentb);
       if( SCIPisLT(scip, b[origindex], currentb) )
       {
@@ -159,14 +165,14 @@ SCIP_RETCODE findNonDominatedVars(
           * than the previous best besta */
          if ( bestcurrenta > besta )
          {
-            for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+            for( iterbestcurrent = 0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
                dominated[bestcurrents[iterbestcurrent]] = FALSE;
 
             besta = bestcurrenta;
          }
          else
          {
-            for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+            for( iterbestcurrent = 0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
             {
                dominated[bestcurrents[iterbestcurrent]] = TRUE;
                ++(*ndominated);
@@ -183,7 +189,7 @@ SCIP_RETCODE findNonDominatedVars(
          if( SCIPisGT(scip, a[origindex], bestcurrenta) )
          {
             /* Then the new value is better than the old one(s) */
-            for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+            for( iterbestcurrent = 0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
             {
                dominated[bestcurrents[iterbestcurrent]] = TRUE;
                ++(*ndominated);
@@ -212,12 +218,12 @@ SCIP_RETCODE findNonDominatedVars(
    /* Finally, we have to look at the last best variable */
    if ( bestcurrenta > besta )
    {
-      for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+      for( iterbestcurrent = 0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
          dominated[bestcurrents[iterbestcurrent]] = FALSE;
    }
    else
    {
-      for( iterbestcurrent=0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
+      for( iterbestcurrent = 0; iterbestcurrent < nbestcurrent; ++iterbestcurrent )
       {
          dominated[bestcurrents[iterbestcurrent]] = TRUE;
          ++(*ndominated);
@@ -226,16 +232,17 @@ SCIP_RETCODE findNonDominatedVars(
 
    SCIPfreeBufferArray(scip, &bestcurrents);
    SCIPfreeBufferArray(scip, &permb);
+
    return SCIP_OKAY;
 }
 
-/** Returns true iff the variable with given gains has a ratio better (i.e smaller) than the given one */
+/** returns true iff the variable with given gains has a ratio better (i.e smaller) than the given one */
 static
 SCIP_Bool hasBetterRatio(
-   SCIP_BRANCHRATIO *branchratio,         /**< The variable's ratio to compare against */
-   SCIP_Real leftgain,                    /**< the left gain of a variable */
-   SCIP_Real rightgain                    /**< the right gain of a variable */
-)
+   SCIP_BRANCHRATIO*      branchratio,       /**< The variable's ratio to compare against */
+   SCIP_Real              leftgain,          /**< the left gain of a variable */
+   SCIP_Real              rightgain          /**< the right gain of a variable */
+   )
 {
    SCIP_Real result = -1;
 
@@ -251,7 +258,7 @@ SCIP_Bool hasBetterRatio(
    return (result > 0);
 }
 
-/** Computes the variable ratio corresponding to the left and right gains */
+/** computes the variable ratio corresponding to the left and right gains */
 static
 void computeVarRatio(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -260,7 +267,7 @@ void computeVarRatio(
    SCIP_Real               leftgain,         /**< the left gain of the variable */
    SCIP_Real               rightgain,        /**< the right gain of the variable */
    SCIP_BRANCHRATIO*       branchratio       /**< storage for the computed ratio */
-)
+   )
 {
    SCIP_Real ratio = 1;
    SCIP_Real newratio;
@@ -275,11 +282,12 @@ void computeVarRatio(
       return;
    }
 
-   /* We scale left and right gains by dividing both by left*/
+   /* We scale left and right gains by dividing both by left */
    r = rightgain / leftgain;
 
    /* In the case where l and r are very close r may become < 1 */
-   if( r <= 1 ) {
+   if( r <= 1 )
+   {
       branchratio->valid = TRUE;
       branchratio->upratio = 2;
       branchratio->invleft = 1.0 / leftgain;
@@ -287,7 +295,8 @@ void computeVarRatio(
    }
 
    /* Check if this ratio has already been computed */
-   if( SCIPhistoryIsRatioValid(var->history) && SCIPisEQ(scip, SCIPhistoryGetLastBalance(var->history), r) ) {
+   if( SCIPhistoryIsRatioValid(var->history) && SCIPisEQ(scip, SCIPhistoryGetLastBalance(var->history), r) )
+   {
       branchratio->valid = TRUE;
       branchratio->upratio = SCIPhistoryGetLastRatio(var->history);
       branchratio->invleft = 1.0 / leftgain;
@@ -310,7 +319,8 @@ void computeVarRatio(
     */
 
    /* Use Laguerre's method */
-   if( r <= LAGUERRE_THRESHOLD ) {
+   if( r <= LAGUERRE_THRESHOLD )
+   {
       /* We relax the epsilon after 5 iterations since we may not have enough precision to achieve any better convergence */
       for( iters = 0; ((iters <= 5 && !SCIPisEQ(scip, ratio, newratio)) || (iters > 5 && !SCIPisSumEQ(scip, ratio, newratio))) && iters < treemodel->maxfpiter && newratio > 1; iters++ ) {
          double G, H, a, p, p1, p2, phi_r;
@@ -328,7 +338,8 @@ void computeVarRatio(
       }
    }
    /* Use fixed point method */
-   else {
+   else
+   {
       /* We relax the epsilon after 10 iterations since we may not have enough precision to achieve any better convergence */
       for( iters = 0; ((iters <= 10 && !SCIPisEQ(scip, ratio, newratio)) || (iters > 10 && !SCIPisSumEQ(scip, ratio, newratio))) && iters < treemodel->maxfpiter && newratio > 1; iters++ ) {
          ratio = newratio;
@@ -337,13 +348,15 @@ void computeVarRatio(
    }
 
    /* We think that everything worked */
-   if( iters < treemodel->maxfpiter && newratio > 1 ) {
+   if( iters < treemodel->maxfpiter && newratio > 1 )
+   {
       branchratio->valid = TRUE;
       branchratio->upratio = (ratio + newratio) / 2.0;
       branchratio->invleft = 1.0 / leftgain;
    }
    /* We (hopefully) make finding bugs easier by setting these values */
-   else {
+   else
+   {
       branchratio->valid = FALSE;
       branchratio->upratio = -1;
       branchratio->invleft = -1;
@@ -353,7 +366,7 @@ void computeVarRatio(
    SCIPhistorySetRatioHistory(var->history, branchratio->valid, branchratio->upratio, r);
 }
 
-/** Use the Ratio scoring function to select a branching candidate */
+/** use the Ratio scoring function to select a branching candidate */
 static
 SCIP_RETCODE selectCandidateUsingRatio(
    SCIP*                   scip,               /**< SCIP data structure */
@@ -366,7 +379,7 @@ SCIP_RETCODE selectCandidateUsingRatio(
    int                     nbranchcands,       /**< the number of branching candidates */
    int                     ndominated,         /**< the number of dominated candidates */
    int*                    bestcand            /**< the best branching candidate found by SCIP */
-)
+   )
 {
    int c;
    SCIP_BRANCHRATIO branchratio;
@@ -396,7 +409,7 @@ SCIP_RETCODE selectCandidateUsingRatio(
    return SCIP_OKAY;
 }
 
-/** Returns the predicted treesize for the gap and given up and down gains */
+/** returns the predicted treesize for the gap and given up and down gains */
 static
 SCIP_Real computeSVTS(
    SCIP*                    scip,               /**< SCIP data structure */
@@ -405,7 +418,7 @@ SCIP_Real computeSVTS(
    SCIP_Real                absgap,             /**< the absolute gap to close (typically the local gap at the current node) */
    SCIP_Real                mingain,            /**< prediction of smaller objective gain of downwards/upwards */
    SCIP_Real                maxgain             /**< prediction of larger objective gain of downwards/upwards */
-)
+   )
 {
    SCIP_Real prediction = SCIP_REAL_MAX;
 
@@ -424,6 +437,10 @@ SCIP_Real computeSVTS(
       scaledgain = maxgain / mingain;
       scaledgap = absgap / mingain;
 
+      /* author gregor
+       *
+       * TODO better use wrapper functions SCIPceil() and SCIPfloor()
+       */
       mindepth = ceil(scaledgap / scaledgain);
 
       /* In the following case we compute the treesize for a smaller gap
@@ -455,7 +472,7 @@ SCIP_Real computeSVTS(
          treesize += binomcoeff;
       }
 
-      treesize = 2 * treesize -1;
+      treesize = 2 * treesize - 1;
 
       assert(treesize >= 3);
 
@@ -482,7 +499,7 @@ SCIP_Real computeSVTS(
    return prediction;
 }
 
-/** Use the SVTS scoring function to select a branching candidate */
+/** use the SVTS scoring function to select a branching candidate */
 static
 SCIP_RETCODE selectCandidateUsingSVTS(
    SCIP*                   scip,               /**< SCIP data structure */
@@ -497,7 +514,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    int                     nbranchcands,       /**< the number of branching candidates */
    int                     ndominated,         /**< the number of dominated candidates */
    int*                    bestcand            /**< the best branching candidate found by SCIP */
-)
+   )
 {
    int c;
    SCIP_Real referencetreesize;
@@ -566,7 +583,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    return SCIP_OKAY;
 }
 
-/** Computes a^b for integer b */
+/** computes a^b for integer b */
 static
 SCIP_Real integerpow(SCIP_Real a, int b) {
    SCIP_Real ans = 1.0;
@@ -577,7 +594,7 @@ SCIP_Real integerpow(SCIP_Real a, int b) {
    return ans;
 }
 
-/** Returns the sampled tree size for the given lp gains and dual gap */
+/** returns the sampled tree size for the given lp gains and dual gap */
 static
 SCIP_Real computeSampleTreesize(
    SCIP*                   scip,               /**< SCIP data structure */
@@ -586,7 +603,7 @@ SCIP_Real computeSampleTreesize(
    SCIP_Real               absgap,             /**< the absolute gap to close (typically the local at the current node) */
    SCIP_Real               leftgain,           /**< The minimum gain from branching on this variable */
    SCIP_Real               rightgain           /**< The maximum gain from branching on this variable */
-)
+   )
 {
    SCIP_BRANCHRATIO branchratio;
    SCIP_Real prediction;
@@ -620,7 +637,7 @@ SCIP_Real computeSampleTreesize(
    return prediction;
 }
 
-/** Use the Tree Sampling scoring function to select a branching candidate */
+/** use the Tree Sampling scoring function to select a branching candidate */
 static
 SCIP_RETCODE selectCandidateUsingSampling(
    SCIP*                   scip,               /**< SCIP data structure */
@@ -635,7 +652,7 @@ SCIP_RETCODE selectCandidateUsingSampling(
    int                     nbranchcands,       /**< the number of branching candidates */
    int                     ndominated,         /**< the number of dominated candidates */
    int*                    bestcand            /**< the best branching candidate found by SCIP */
-)
+   )
 {
    int c;
    SCIP_Real referencetreesize;
@@ -705,7 +722,7 @@ SCIP_RETCODE selectCandidateUsingSampling(
    return SCIP_OKAY;
 }
 
-/** Initialises the Treemodel parameter data structure */
+/** initialises the Treemodel parameter data structure */
 SCIP_RETCODE SCIPtreemodelInit(
    SCIP*                   scip,       /**< SCIP data structure */
    SCIP_BRANCHTREEMODEL**  treemodel   /**< Treemodel parameter data structure */
@@ -716,43 +733,54 @@ SCIP_RETCODE SCIPtreemodelInit(
    assert(*treemodel != NULL);
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/treemodel/enable",
-         "should candidate branching variables be scored using the Treemodel branching rules?", &(*treemodel)->enabled, FALSE, DEFAULT_ENABLE,
+         "should candidate branching variables be scored using the Treemodel branching rules?",
+         &(*treemodel)->enabled, FALSE, DEFAULT_ENABLE,
          NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "branching/treemodel/highrule",
-         "scoring function to use at nodes predicted to be high in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample)", &(*treemodel)->highrule, FALSE, DEFAULT_HIGHRULE, "dsrt",
+         "scoring function to use at nodes predicted to be high in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample)",
+         &(*treemodel)->highrule, FALSE, DEFAULT_HIGHRULE, "dsrt",
          NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "branching/treemodel/lowrule",
-         "scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample)", &(*treemodel)->lowrule, FALSE, DEFAULT_LOWRULE, "dsrt",
+         "scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample)",
+         &(*treemodel)->lowrule, FALSE, DEFAULT_LOWRULE, "dsrt",
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/treemodel/height",
-         "estimated tree height at which we switch from using the low rule to the high rule", &(*treemodel)->height, FALSE, DEFAULT_HEIGHT, 0, INT_MAX,
+         "estimated tree height at which we switch from using the low rule to the high rule",
+         &(*treemodel)->height, FALSE, DEFAULT_HEIGHT, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "branching/treemodel/filterhigh",
-         "should dominated candidates be filtered before using the high scoring function? ('a'uto, 't'rue, 'f'alse)", &(*treemodel)->filterhigh, TRUE, DEFAULT_FILTERHIGH, "atf",
+         "should dominated candidates be filtered before using the high scoring function? ('a'uto, 't'rue, 'f'alse)",
+         &(*treemodel)->filterhigh, TRUE, DEFAULT_FILTERHIGH, "atf",
          NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "branching/treemodel/filterlow",
-         "should dominated candidates be filtered before using the low scoring function? ('a'uto, 't'rue, 'f'alse)", &(*treemodel)->filterlow, TRUE, DEFAULT_FILTERLOW, "atf",
+         "should dominated candidates be filtered before using the low scoring function? ('a'uto, 't'rue, 'f'alse)",
+         &(*treemodel)->filterlow, TRUE, DEFAULT_FILTERLOW, "atf",
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/treemodel/maxfpiter",
-         "maximum number of fixed-point iterations when computing the ratio", &(*treemodel)->maxfpiter, TRUE, DEFAULT_MAXFPITER, 1, INT_MAX,
+         "maximum number of fixed-point iterations when computing the ratio",
+         &(*treemodel)->maxfpiter, TRUE, DEFAULT_MAXFPITER, 1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/treemodel/maxsvtsheight",
-         "maximum height to compute the SVTS score exactly before approximating", &(*treemodel)->maxsvtsheight, TRUE, DEFAULT_MAXSVTSHEIGHT, 0, INT_MAX,
+         "maximum height to compute the SVTS score exactly before approximating",
+         &(*treemodel)->maxsvtsheight, TRUE, DEFAULT_MAXSVTSHEIGHT, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "branching/treemodel/fallbackinf",
-         "which method should be used as a fallback if the tree size estimates are infinite? ('d'efault, 'r'atio)", &(*treemodel)->fallbackinf, TRUE, DEFAULT_FALLBACKINF, "dr",
+         "which method should be used as a fallback if the tree size estimates are infinite? ('d'efault, 'r'atio)",
+         &(*treemodel)->fallbackinf, TRUE, DEFAULT_FALLBACKINF, "dr",
          NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "branching/treemodel/fallbacknoprim",
-         "which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio)", &(*treemodel)->fallbacknoprim, TRUE, DEFAULT_FALLBACKNOPRIM, "dr",
+         "which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio)",
+         &(*treemodel)->fallbacknoprim, TRUE, DEFAULT_FALLBACKNOPRIM, "dr",
          NULL, NULL) );
    SCIP_CALL ( SCIPaddRealParam(scip, "branching/treemodel/smallpscost",
-          "threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching", &(*treemodel)->smallpscost, TRUE, DEFAULT_SMALLPSCOST,
+          "threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching",
+          &(*treemodel)->smallpscost, TRUE, DEFAULT_SMALLPSCOST,
           0.0, SCIP_REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }
 
-/** Frees the Treemodel parameter data structure */
+/** frees the Treemodel parameter data structure */
 SCIP_RETCODE SCIPtreemodelFree(
    SCIP*                   scip,       /**< SCIP data structure */
    SCIP_BRANCHTREEMODEL**  treemodel   /**< Treemodel parameter data structure */
@@ -768,16 +796,16 @@ SCIP_RETCODE SCIPtreemodelFree(
    return SCIP_OKAY;
 }
 
-/** Returns TRUE if the Treemodel branching rules are enabled */
+/** returns TRUE if the Treemodel branching rules are enabled */
 SCIP_Bool SCIPtreemodelIsEnabled(
    SCIP*                   scip,               /**< SCIP data structure */
    SCIP_BRANCHTREEMODEL*   treemodel           /**< Treemodel parameter data structure */
-)
+   )
 {
    return treemodel->enabled;
 }
 
-/** Apply the Treemodel branching rules to attempt to select a better
+/** apply the Treemodel branching rules to attempt to select a better
  *  branching candidate than the one selected by pseudocost branching
  */
 SCIP_RETCODE SCIPtreemodelSelectCandidate(
@@ -791,7 +819,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real               avgpscostscore,     /**< average pseudocost score of branching candidates */
    int                     nbranchcands,       /**< the number of branching candidates */
    int*                    bestcand            /**< the best branching candidate found by SCIP */
-)
+   )
 {
    SCIP_Real localabsgap;           /* The gap at the current node */
    int bestcandheight;              /* The height of the best candidate according to SCIP */
