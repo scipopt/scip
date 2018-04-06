@@ -64,6 +64,7 @@ struct SCIP_Benders
    SCIP_Bool             cutlp;              /**< should Benders' cuts be generated for LP solutions? */
    SCIP_Bool             cutpseudo;          /**< should Benders' cuts be generated for pseudo solutions? */
    SCIP_Bool             cutrelax;           /**< should Benders' cuts be generated for relaxation solutions? */
+   SCIP_Bool             shareauxvars;       /**< should this Benders' share the highest priority Benders' auxiliary vars */
 
    /* additional Benders' decomposition parameters */
    SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
@@ -91,6 +92,7 @@ struct SCIP_Benders
                                                   This flag is used when retransforming the problem.*/
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
                                                to continuous variables. */
+   SCIP_Bool*            subprobsetup;       /**< flag to indicate whether the subproblem has been set up. */
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 };

@@ -63,6 +63,7 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_Bool             cutlp,              /**< should Benders' cuts be generated for LP solutions */
    SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
    SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
+   SCIP_Bool             shareauxvars,       /**< should this Benders' use the highest priority Benders aux vars */
    SCIP_DECL_BENDERSCOPY ((*benderscopy)),   /**< copy method of benders or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSFREE ((*bendersfree)),   /**< destructor of Benders' decomposition */
    SCIP_DECL_BENDERSINIT ((*bendersinit)),   /**< initialize Benders' decomposition */
@@ -175,6 +176,28 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_Bool             enhancement,        /**< is the solve performed as part of an enhancement? */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
+   );
+
+/** sets up the subproblem using the solution to the master problem  */
+extern
+SCIP_RETCODE SCIPbendersSetupSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   probnum             /**< the subproblem number */
+   );
+
+/** Solve a Benders' decomposition subproblems. This will either call the user defined method or the generic solving
+ * methods. If the generic method is called, then the subproblem must be set up before calling this method. */
+extern
+SCIP_RETCODE SCIPbendersSolveSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    );
 
 /** frees the subproblems. */
@@ -305,6 +328,18 @@ SCIP_RETCODE SCIPbendersGetVar(
    int                   probnumber          /**< the problem number for the desired variable, -1 for the master problem */
    );
 
+/** Adds a subproblem to the Benders' decomposition data */
+extern
+SCIP_RETCODE SCIPbendersAddSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP*                 subproblem          /**< subproblem to be added to the data storage */
+   );
+
+/** Removes the subproblems from the Benders' decomposition data */
+SCIP_RETCODE SCIPbendersRemoveSubproblems(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
  *  process. One example is when the three-phase method is employed, where the first phase solves the of both the master
  *  and subproblems and by the third phase the integer subproblem is solved. */
@@ -313,6 +348,44 @@ void SCIPbendersSetSubprobIsLP(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
+   );
+
+/** sets the subproblem setup flag */
+extern
+void SCIPbendersSetSubprobIsSetup(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             issetup             /**< flag to indicate whether the subproblem has been setup */
+   );
+
+/** returns the subproblem setup flag */
+extern
+SCIP_Bool SCIPbendersSubprobIsSetup(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
+/** changes all of the master problem variables in the given subproblem to continuous */
+extern
+SCIP_RETCODE SCIPbendersChgMastervarsToCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   probnumber          /**< the subproblem number */
+   );
+
+/** sets a flag to indicate whether the master variables are all set to continuous */
+extern
+SCIP_RETCODE SCIPbendersSetMastervarsCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             arecont             /**< flag to indicate whether the master problem variables are continuous */
+   );
+
+/** returns whether the master variables are all set to continuous */
+extern
+SCIP_Bool SCIPbendersGetMastervarsCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
    );
 
 #ifdef __cplusplus

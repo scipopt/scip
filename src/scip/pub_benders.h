@@ -144,6 +144,12 @@ SCIP_Bool SCIPbendersCutRelaxation(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** should this Benders' use the auxiliary variables from the highest priority Benders' */
+EXTERN
+SCIP_Bool SCIPbendersShareAuxVars(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** returns the auxiliary variable for the given subproblem */
 EXTERN
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(
@@ -200,7 +206,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             initialisation,     /**< indicates whether the MIP is solved as part of an initalisation */
    SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    );
 
