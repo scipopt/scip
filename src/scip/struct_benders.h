@@ -103,6 +103,24 @@ struct SCIP_Benders
    SCIP_Bool             benderscutsnamessorted;/**< are the Benders' cuts algorithms sorted by name */
 };
 
+/** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored
+ *  and reset after the solving loop. */
+struct SCIP_SubprobParams
+{
+   int cons_linear_propfreq;
+   int lp_disablecutoff;
+   int lp_scaling;
+   int prop_maxrounds;
+   int prop_maxroundsroot;
+   char lp_initalg;
+   char lp_resolvealg;
+   SCIP_Bool conflict_enable;
+   SCIP_Bool misc_alwaysgetduals;
+   SCIP_Bool misc_catchctrlc;
+   SCIP_Bool misc_scaleobj;
+};
+typedef struct SCIP_SubprobParams SCIP_SUBPROBPARAMS;
+
 #ifdef __cplusplus
 }
 #endif

@@ -161,8 +161,8 @@ SCIP_VAR** SCIPbendersGetAuxiliaryVars(
 EXTERN
 void SCIPbendersSetSubprobObjval(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_Real             objval,             /**< the objective function value for the subproblem */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Real             objval              /**< the objective function value for the subproblem */
    );
 
 /** returns the objective function value of the subproblem for use in cut generation */
@@ -231,7 +231,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             initialisation,     /**< indicates whether the MIP is solved as part of an initalisation */
    SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    );
 

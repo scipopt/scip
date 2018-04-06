@@ -41,18 +41,27 @@ enum SCIP_BendersEnfoType
 };
 typedef enum SCIP_BendersEnfoType SCIP_BENDERSENFOTYPE;  /**< indicates the callback in cons_benders and cons_benderslp that triggered the subproblem solve */
 
+enum SCIP_BendersSolveLoop
+{
+   SCIP_BENDERSSOLVELOOP_LP      = 0,        /**< the linear programming relaxation is solved in this iteration of the loop */
+   SCIP_BENDERSSOLVELOOP_CIP     = 1,        /**< the CIP is solved in this iteration of the loop */
+   SCIP_BENDERSSOLVELOOP_USER    = 2         /**< the user defined solve function is called */
+};
+typedef enum SCIP_BendersSolveLoop SCIP_BENDERSSOLVELOOP;   /**< identifies the type of problem solved in each solve loop */
+
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */
 
 
-/** copy method for Benders' decomposition plugins (called when SCIP copies plugins)
+/** copy method for Benders' decomposition plugins (called when SCIP copies plugins). If there is an active Benders'
+ *  decomposition, all copies are not valid. As such, there is no valid parameter that is passed to the callback
+ *  function
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - benders          : the Benders' decomposition itself
- *  - valid           : was the copying process valid?
+ *  - benders         : the Benders' decomposition itself
  */
-#define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_Bool* valid)
+#define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
 /** destructor of Benders' decomposition to free user data (called when SCIP is exiting)
  *
