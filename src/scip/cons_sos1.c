@@ -7966,8 +7966,8 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
          assert( SCIPisPositive(scip, bound) );
 
          /* bound may have changed in propagation; ensure that fracval <= 1 */
-         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-            bound = solval;
+         if ( SCIPisFeasLT(scip, bound, fracval) )
+            bound = fracval;
 
          /* get fractionality of candidate */
          fracval /= (bound + SCIPsumepsilon(scip));
