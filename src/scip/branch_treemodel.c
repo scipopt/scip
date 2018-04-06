@@ -130,7 +130,7 @@ SCIP_RETCODE findNonDominatedVars(
 
    /* we first find the permutation of indices of array b that corresponds to the array of a non-decreasing sort of its values */
    SCIP_CALL( SCIPallocBufferArray(scip, &permb, size) );
-   for (origindex = 0; origindex < size; ++origindex)
+   for( origindex = 0; origindex < size; ++origindex )
       permb[origindex] = origindex;
 
    /* author gregor
