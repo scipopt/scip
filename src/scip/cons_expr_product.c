@@ -1901,16 +1901,13 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
                SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]));
       }
 
-      /* if the previous "for" loop finished not because of the break */
-      if( j == SCIPgetConsExprExprNChildren(expr) )
-      {
-         /* solve x*otherfactor = f for x in c_i */
-         SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor, SCIPgetConsExprExprInterval(expr), SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]));
+      /* solve x*otherfactor = f for x in c_i */
+      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor,
+         SCIPgetConsExprExprInterval(expr), SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]));
 
-         /* try to tighten the bounds of the expression */
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
-               infeasible, nreductions) );
-      }
+      /* try to tighten the bounds of the expression */
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
+         infeasible, nreductions) );
    }
 
    return SCIP_OKAY;
