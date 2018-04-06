@@ -2848,16 +2848,21 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    for (int j = 0; j < lpi->clp->numberRows(); ++j)
    {
       double val = fabs(dualray[j]);
-      if ( val > maxabsvalue )
-         maxabsvalue = val;
-      if ( val >= feastol && val < minabsvalue )
-         minabsvalue = val;
+      /* only consider nonzero entries */
+      if ( val >= feastol )
+      {
+         if ( val > maxabsvalue )
+            maxabsvalue = val;
+         if ( val < minabsvalue )
+            minabsvalue = val;
+      }
    }
-   assert( minabsvalue <= maxabsvalue );
 
    /* Possibly scale and also convert sign. */
-   if ( minabsvalue > 0.0 )
+   if ( maxabsvalue > 0.0 )
    {
+      assert( minabsvalue <= maxabsvalue );
+
       /* We try to make the maximum absolute value to be 1.0, but if the minimal absolute value would be less than the
        * feasibility tolerance, we adjust the factor such that it will be equal to the feasibility tolerance */
       double scalingfactor = maxabsvalue;
