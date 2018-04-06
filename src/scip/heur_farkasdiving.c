@@ -66,7 +66,6 @@
 #define DEFAULT_RANDSEED            151 /**< initial seed for random number generation */
 
 #define DEFAULT_DIFFOBJFAC         0.15
-#define DEFAULT_MINOBJDYN           0.1
 #define DEFAULT_CHECKOBJ          FALSE
 #define DEFAULT_CHECKOBJGLB        TRUE
 #define DEFAULT_SCALESCORE         TRUE
@@ -324,7 +323,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 /** calculate score and preferred rounding direction for the candidate variable */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
-{
+{  /*lint --e{715}*/
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;
    SCIP_RANDNUMGEN* randnumgen;
