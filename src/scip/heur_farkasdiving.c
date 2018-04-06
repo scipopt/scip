@@ -16,6 +16,13 @@
 /**@file   heur_farkasdiving.c
  * @brief  LP diving heuristic that tries to construct a Farkas-proof
  * @author Jakob Witzig
+ *
+ * The heuristics dives into the direction of the pseudosolution, i.e., variables get rounded
+ * towards there best bound w.r.t there objective coefficient. This strategy is twofold, if
+ * a feasible solution is found the solution has potentially a very good objective value; on the other
+ * hand, the left-hand side of a potentially Farkas-proof y^Tb - y^TA{l',u'} > 0 (i.e., infeasibility proof)
+ * gets increased. The contribution of each variable x_i to the Farkas-proof can be approximated
+ * by c_i = y^TA_i because we only dive on basic variables with reduced costs c_i - y^TA_i = 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -203,11 +210,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 
    nnzobjvars = SCIPgetNObjVars(scip);
 
-   /* terminate if at most one variable has a non-zero objective coefficient */
-   /* author gregor
-    *
-    * TODO the comment and the condition are somehow off.
-    */
+   /* don't run if all variables has zero objective coefficient */
    if( nnzobjvars == 0 )
    {
       heurdata->disabled = TRUE;
@@ -241,11 +244,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
             goto PERFORMDIVING;
          }
       }
-      /* author gregor
-       *
-       * TODO superfluous check, simply make it else, or do you mean "! heurdata->objchecked"?
-       */
-      else if( !heurdata->checkobjglb )
+      else
       {
          /* we can only access the branching candidates if the LP is solved to optimality */
          if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
@@ -342,8 +341,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
 
    obj = SCIPvarGetObj(cand);
 
-   /* for the reduced costs of a basic variable it holds c_i - y^TA_i = 0, so we approximate the reduced costs
-    * within an infeasibility proof by r_i := -y^TA_i = -c_i.
+   /* dive towards the pseudosolution, at the same time approximate the contribution to
+    * a potentially Farkas-proof (infeasibility proof) by y^TA_i = c_i.
     */
    if( SCIPisNegative(scip, obj) )
    {
