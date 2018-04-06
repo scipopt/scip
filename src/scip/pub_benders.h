@@ -200,7 +200,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             initialisation,     /**< indicates whether the MIP is solved as part of an initalisation */
    SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    );
 
