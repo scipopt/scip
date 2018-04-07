@@ -1915,11 +1915,7 @@ SCIP_RETCODE SCIPStpDualAscent(
             assert(currscore <= nedges);
 
             if( nsolarcs > 1 )
-#if 1
-              currscore += (SCIP_Real) ((nsolarcs - 1) * (g->knots * 0.5));
-#else
-            currscore *= 1.0 + (nsolarcs - 1) * (nsolarcs - 1) * (0.2);
-#endif
+              currscore += (SCIP_Real) ((nsolarcs - 1) * (g->knots * 2.0));
          }
          else
          {
