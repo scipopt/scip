@@ -1632,13 +1632,6 @@ SCIP_RETCODE redLoopStp(
       rounds++;
    }
 
-   if( fullreduce )
-   {
-      int ntselims;
-      SCIP_CALL( reduce_nts(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &ntselims, STP_RED_BD3BOUND) );
-   }
-
-
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
 

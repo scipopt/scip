@@ -3454,7 +3454,7 @@ SCIP_RETCODE reduce_bd34(
             k = 0;
             if( SCIPisGE(scip, csum, mstcost) )
             {
-               /* compute mst on all 3-subsets of all neigbours */
+               /* compute mst on all 3-subsets of all neighbors */
                for( k = 0; k < 4; k++ )
                {
                   auxg->mark[k] = FALSE;
@@ -3608,7 +3608,6 @@ SCIP_RETCODE reduce_nts(
          /* edge not deleted? */
          if( g->oeat[edge] != EAT_FREE )
          {
-            continue;
             SCIP_Real csum;
             SCIP_Real mstcost;
             const SCIP_Real edgecost = g->cost[edge];
@@ -3627,6 +3626,8 @@ SCIP_RETCODE reduce_nts(
 
             if( Is_term(g->term[tail]) || Is_term(g->term[head]) )
                continue;
+
+            printf("check %d %d \n", tail, head);
 
             edgecount = 0;
             for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
@@ -3653,7 +3654,7 @@ SCIP_RETCODE reduce_nts(
 
             /* check for shared neighbor */
             for( int i = 0; i < degree - 1; i++ )
-               for( int j = i + 1; i < degree; j++ )
+               for( int j = i + 1; j < degree; j++ )
                   if( adjvert[i] == adjvert[j] && adjvert[j] >= 0 )
                   {
                      adjvert[j] = -adjvert[j] - 1;
@@ -3683,10 +3684,6 @@ SCIP_RETCODE reduce_nts(
                   if( k2 > k )
                   {
                      SCIP_Real s1 = -1.0;
-                     SCIP_Real innercost = ecost[k] + ecost[k2];
-
-                     if( g->tail[outedge[k]] != g->tail[outedge[k2]] )
-                        innercost += edgecost;
 
                      if( pc )
                         SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
@@ -3697,10 +3694,16 @@ SCIP_RETCODE reduce_nts(
 
                      assert(s1 >= 0);
 
-                     if( SCIPisGT(scip, s1, innercost) )
+                     if( g->tail[outedge[k]] != g->tail[outedge[k2]] )
                      {
-                        success = FALSE;
-                        break;
+                        const SCIP_Real innercost = ecost[k] + ecost[k2] + edgecost;
+
+                        if( SCIPisGT(scip, s1, innercost) )
+                        {
+                           printf("fail for %d (%f > %f)\n", k, s1, innercost);
+          //                 success = FALSE;
+            //               break;
+                        }
                      }
 
                      auxg->cost[e] = s1;
@@ -3728,7 +3731,10 @@ SCIP_RETCODE reduce_nts(
 
             success = (success && SCIPisGE(scip, csum, mstcost));
 
-            if( success )
+            if( !SCIPisGE(scip, csum, mstcost) )
+               printf("4 fail %f > %f \n", mstcost, csum);
+
+            if( success && 0)
             {
                /* compute MST on all 3-subsets of all neighbors */
                for( int k = 0; k < degree; k++ )
@@ -3756,6 +3762,7 @@ SCIP_RETCODE reduce_nts(
 
                   if( SCIPisLT(scip, csum - ecost[k], mstcost) )
                   {
+                     printf("3-fail %f > %f \n", mstcost, csum - ecost[k]);
                      success = FALSE;
                      break;
                   }
@@ -3764,11 +3771,10 @@ SCIP_RETCODE reduce_nts(
 
             if( success )
             {
-               /* delete subgraph */
-               graph_knot_del(scip, g, tail, TRUE);
-               graph_knot_del(scip, g, head, TRUE);
+               printf("nts: delete %d -> %d \n", tail, head);
+             //  graph_edge_del(scip, g, edge, TRUE);
 
-               (*nelims) += degree + 1;
+               (*nelims)++;
             }
          } /* check single edge */
       } /* for all edges */
@@ -3783,7 +3789,7 @@ SCIP_RETCODE reduce_nts(
    graph_path_exit(scip, auxg);
    graph_free(scip, &auxg, TRUE);
 
-   SCIPdebugMessage("nts: %d nodes deleted\n", *nelims);
+   printf("nts: %d nodes deleted\n", *nelims);
 
    assert(graph_valid(g));
 
