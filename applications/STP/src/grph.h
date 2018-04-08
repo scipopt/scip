@@ -226,6 +226,7 @@ extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Bool);
 extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int);
+extern SCIP_RETCODE   graph_get_edgeConflicts(SCIP*, const GRAPH*);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);

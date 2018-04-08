@@ -3223,7 +3223,50 @@ void graph_get_csr(
    start[nnodes] = i;
 }
 
+/* gets edge conflicts */
+SCIP_RETCODE graph_get_edgeConflicts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< the graph */
+      )
+{
+   int* childcount;
+   int nconflicts;
+   const int nedges = g->edges;
+   const int nedgesorg = g->orgedges;
 
+   assert(scip != NULL && g != NULL);
+   assert(g->ancestors != NULL);
+   assert(nedgesorg % 2 == 0);
+
+   printf("orgedes %d \n", nedgesorg);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcount, nedgesorg / 2) );
+
+   for( int e = 0; e < nedgesorg / 2; e++ )
+      childcount[e] = 0;
+
+   for( int e = 0; e < nedges; e += 2 )
+      for( IDX* curr = g->ancestors[e]; curr != NULL; curr = curr->parent )
+      {
+         assert(curr->index >= 0 && curr->index < nedgesorg / 2);
+         childcount[curr->index / 2]++;
+      }
+
+   nconflicts = 0;
+
+   for( int e = 0; e < nedgesorg / 2; e++ )
+      if( childcount[e] > 1 )
+      {
+         printf("%d children: %d \n", e, childcount[e]);
+         nconflicts++;
+      }
+
+   printf("nconflicts %d \n", nconflicts);
+
+   SCIPfreeBufferArray(scip, &childcount);
+
+   return SCIP_OKAY;
+}
 
 
 /** initialize graph */
