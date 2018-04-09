@@ -817,6 +817,7 @@ SCIP_RETCODE detectOrbitopes(
          ++presoldata->ngenconss;
          ++presoldata->norbitopes;
          presoldata->componentblocked[i] = TRUE;
+         presoldata->addedconss = TRUE;
       }
 
       /* free data structures */
@@ -1035,7 +1036,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
 
    /* add symmetry breaking constraints */
-   assert( ! presoldata->addedconss );
+   assert( ! presoldata->addedconss || (presoldata->addedconss && presoldata->norbitopes > 0) );
 
    SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
 
