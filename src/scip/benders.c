@@ -458,7 +458,11 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       /* if the auxiliary variables are shared, then a pointer to the variable is retrieved from topbenders,
        * otherwise the auxiliaryvariable is created. */
       if( shareauxvars )
+      {
          auxiliaryvar = SCIPbendersGetAuxiliaryVar(topbenders, i);
+
+         SCIP_CALL( SCIPcaptureVar(scip, auxiliaryvar) );
+      }
       else
       {
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
@@ -471,11 +475,6 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
 
       benders->auxiliaryvars[i] = auxiliaryvar;
-
-      SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
-
-      if( !shareauxvars )
-         SCIP_CALL( SCIPreleaseVar(scip, &auxiliaryvar) );
    }
 
    SCIPfreeBlockMemory(scip, &vardata);
