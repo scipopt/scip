@@ -1036,7 +1036,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
 
    /* add symmetry breaking constraints */
-   assert( ! presoldata->addedconss || (presoldata->addedconss && presoldata->norbitopes > 0) );
+   assert( ! presoldata->addedconss || presoldata->norbitopes > 0 );
 
    SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
 
