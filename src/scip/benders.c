@@ -521,6 +521,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
 
       /* finding the variable in the copied problem that has the same name as the auxiliary variable */
       targetvar = SCIPfindVar(scip, varname);
+      assert(targetvar != NULL);
 
       SCIPvarSetData(targetvar, vardata);
 
@@ -1670,27 +1671,54 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
 
    if( !enhancement )
    {
+      /* TODO: The following handles the cases when the subproblem is OPTIMAL and INFEASIBLE. There is no handling of
+       * the case when the subproblem is UNBOUNDED. Currently, for the default set of Benders cuts, an unbounded
+       * subproblem will not generate any cut. However, in the standard use of Benders' decomposition, the dual of the
+       * subproblem can not be infeasible. As such, it is an error if the primal subproblem is unbounded.
+       * Must work out the best way to handle the unbounded primal subproblem.
+       */
       if( solveloop == SCIP_BENDERSSOLVELOOP_LP )
       {
          if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
             SCIPbendersSetSubprobObjval(benders, probnum, SCIPgetSolOrigObj(subproblem, NULL));
          else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
             SCIPbendersSetSubprobObjval(benders, probnum, SCIPinfinity(set->scip));
+         else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         {
+            SCIPerrorMessage("The LP of Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
+               probnumber);
+            SCIPABORT();
+         }
          else
-            assert(FALSE);
+         {
+            SCIPerrorMessage("Invalid status returned from solving the LP of Benders' decomposition subproblem %d. LP status: %d\n",
+               probnumber, SCIPgetLPSolstat(subproblem));
+            SCIPABORT();
+         }
       }
       else
       {
          assert(solveloop == SCIP_BENDERSSOLVELOOP_CIP || solveloop == SCIP_BENDERSSOLVELOOP_USER);
 
+         /* TODO: Consider whether other solutions status should be handled */
          if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
             SCIPbendersSetSubprobObjval(benders, probnum, SCIPgetSolOrigObj(subproblem, bestsol));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
             SCIPbendersSetSubprobObjval(benders, probnum, SCIPinfinity(set->scip));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_USERINTERRUPT || SCIPgetStatus(subproblem) == SCIP_STATUS_BESTSOLLIMIT )
             SCIPbendersSetSubprobObjval(benders, probnum, SCIPgetSolOrigObj(subproblem, bestsol));
+         else if( SCIPgetStatus(subproblem) == SCIP_STATUS_UNBOUNDED )
+         {
+            SCIPerrorMessage("The Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
+               probnumber);
+            SCIPABORT();
+         }
          else
-            assert(FALSE);
+         {
+            SCIPerrorMessage("Invalid status returned from solving Benders' decomposition subproblem %d. Solution status: %d\n",
+               probnumber, SCIPgetStatus(subproblem));
+            SCIPABORT();
+         }
       }
    }
 
