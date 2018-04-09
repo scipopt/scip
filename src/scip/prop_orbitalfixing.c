@@ -53,7 +53,7 @@
 #define PROP_PRESOL_MAXROUNDS        -1           /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 
 /* parameters */
-#define DEFAULT_OFTIMING              1           /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
+#define DEFAULT_OFTIMING              2           /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING     FALSE       /**< Run orbital fixing during presolving? */
 
 

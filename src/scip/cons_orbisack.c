@@ -72,7 +72,7 @@
 /* default parameters for constraints */
 #define DEFAULT_COEFFBOUND               1000000.0     /**< maximum size of coefficients in orbisack inequalities */
 
-#define DEFAULT_PPORBISACK        TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
+#define DEFAULT_PPORBISACK         TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
 #define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 
 

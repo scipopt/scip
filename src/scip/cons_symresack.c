@@ -72,7 +72,7 @@
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
 
-#define DEFAULT_PPSYMRESACK       FALSE /**< whether we allow upgrading to packing/partitioning symresacks */
+#define DEFAULT_PPSYMRESACK        TRUE /**< whether we allow upgrading to packing/partitioning symresacks */
 #define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 
 /* macros for getting bounds of pseudo solutions in propagation */

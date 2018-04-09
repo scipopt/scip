@@ -59,8 +59,8 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_COMPUTEORBITS       FALSE    /**< Should the orbits of the symmetry group be computed? */
-#define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
-#define DEFAULT_ADDCONSSTIMING          1    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
+#define DEFAULT_DETECTORBITOPES     FALSE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+#define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 /*
  * Data structures
