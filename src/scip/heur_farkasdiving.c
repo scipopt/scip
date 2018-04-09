@@ -78,7 +78,7 @@ struct SCIP_HeurData
    SCIP_Real             diffobjfac;         /**< fraction of different objective coefficients in absolute value */
    SCIP_Bool             disabled;           /**< remember if the heuristic should not run at all */
    SCIP_Bool             checkobj;           /**< should objective function be checked before running? */
-   SCIP_Bool             checkobjglb;        /**< check objective function only once w.r.t to the global problem */
+   SCIP_Bool             checkobjglb;        /**< check objective function only once w.r.t the global problem (only if checkobj=TRUE) */
    SCIP_Bool             objchecked;         /**< remember whether objection function was already checked */
    SCIP_Bool             scalescore;         /**< should score be scaled by fractionality */
 };
@@ -253,7 +253,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
          }
          else
          {
-            goto PERFORMDIVING;
+            return SCIP_OKAY;
          }
       }
 
@@ -418,7 +418,7 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          &heurdata->checkobj, TRUE, DEFAULT_CHECKOBJ, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkobjglb",
-         "should objective function be check globally (locally otherwise)?",
+         "should objective function be check globally (only if checkobj=TRUE)?",
          &heurdata->checkobjglb, TRUE, DEFAULT_CHECKOBJGLB, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scalescore",
