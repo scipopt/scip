@@ -2209,7 +2209,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          getScenarioNum(scenarioscip, scenario));
       cons = SCIPfindCons(scenarioscip, name);
 
-      if( strcmp(getScenarioEntryCol(scenario, i), RHS) == 0 || strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
+      if( strncmp(getScenarioEntryCol(scenario, i), RHS, 3) == 0 || strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
       {
          /* if the constraint is an equality constraint, then the LHS must also be changed */
          if( SCIPgetLhsLinear(scenarioscip, cons) >= SCIPgetRhsLinear(scenarioscip, cons) )
