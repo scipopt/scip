@@ -97,7 +97,8 @@ void updateNodeReplaceBounds(
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
    const int*            vbase,              /**< bases to Voronoi paths */
-   SCIP_Real             lpobjval,            /**< LP objective  */
+   SCIP_Real             lpobjval,           /**< LP objective  */
+   SCIP_Real             upperbound,         /**< upper bound */
    int                   root,               /**< DA root */
    SCIP_Bool             initialize          /**< initialize fixing bounds? */
 )
@@ -119,10 +120,16 @@ void updateNodeReplaceBounds(
       {
          SCIP_Real fixbnd;
 
+         /* bound already good enough? */
+         if( SCIPisLT(scip, upperbound, replacebounds[node]) )
+               continue;
+
+         fixbnd = pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval;
+
          assert(!Is_pterm(graph->term[node]));
 
          /* Y-test for small degrees */
-         if( degree <= STP_DABD_MAXDEGREE )
+         if( degree <= STP_DABD_MAXDEGREE && !SCIPisLT(scip, upperbound, fixbnd) )
          {
 #ifdef PPP
 
@@ -222,11 +229,6 @@ void updateNodeReplaceBounds(
 
             assert(SCIPisGE(scip, fixbnd, pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval)
                   || fixbnd >= FARAWAY);
-         }
-         /* high degree */
-         else
-         {
-            fixbnd = pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval;
          }
 
          if( fixbnd > replacebounds[node] )
@@ -1579,6 +1581,135 @@ int reducePcMwTryBest(
    return 0;
 }
 
+/** check 3-tree */
+SCIP_RETCODE reduce_check3Tree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   SCIP_Real             cutoff,             /**< cutoff value */
+   const int*            outedges,           /**< two outgoing edge */
+   int                   inedge,             /**< incoming edge */
+   int*                  edgestack,          /**< array of size nodes for internal computations */
+   SCIP_Bool*            ruleout             /**< could tree be ruled out? */
+)
+{
+   const SCIP_Real basecost = redcost[inedge] + redcost[outedges[1]] + redcost[outedges[2]];
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(redcost != NULL);
+   assert(ruleout != NULL);
+   assert(outedges != NULL);
+   assert(inedge >= 0 && outedges[2] >= 0 && outedges[1] >= 0);
+   assert(inedge < graph->edges && outedges[1] < graph->edges && outedges[2] < graph->edges);
+
+   /* trivial rule-out? */
+   if( SCIPisGT(scip, basecost, cutoff) )
+   {
+      *ruleout = TRUE;
+   }
+   else
+   {
+      const int nnodes = graph->knots;
+      const int basenode = graph->head[inedge];
+      const int maxdfsdepth = 3;
+      const int maxgrad = 6;
+      int* nodemark;
+
+      assert(basenode == graph->tail[outedges[1]] && basenode == graph->tail[outedges[2]]);
+
+      /* allocate clean array */
+      SCIP_CALL(SCIPallocCleanBufferArray(scip, &nodemark, nnodes));
+
+      for( int i = 0; i < nnodes; i++ )
+         assert(nodemark[i] == FALSE);
+
+      nodemark[basenode] = TRUE;
+      nodemark[graph->tail[inedge]] = TRUE;
+
+      for( int i = 0; i < 2; i++ )
+         nodemark[graph->head[outedges[i]]] = TRUE;
+
+      *ruleout = FALSE;
+
+      /* main loop: extend tree and try to rule it out */
+      for( int i = 0; i < 2 && !(*ruleout); i++ )
+      {
+         const int startnode = graph->head[outedges[i]];
+         int dfsdepth = 0;
+         int nadded_edges = 0;
+         SCIP_Real treecost = basecost; // todo recompute from time to time?
+
+         assert(nodemark[startnode]);
+
+         for( int e = graph->outbeg[startnode]; e != EAT_LAST; e = graph->oeat[e] )
+            if( !nodemark[graph->head[e]] )
+               edgestack[nadded_edges++] = e;
+
+         /* limited DFS starting from outedge[i] */
+         while( dfsdepth <= maxdfsdepth )
+         {
+            const int curredge = edgestack[--nadded_edges];
+            const int currhead = graph->head[curredge];
+
+            /*  subtree already processed? */
+            if( nodemark[currhead] )
+            {
+               nodemark[currhead] = FALSE;
+               treecost -= redcost[curredge];
+               dfsdepth--;
+            }
+            /* cannot rule out subtree? */
+            else if( !SCIPisGT(scip, treecost + redcost[curredge], cutoff) )
+            {
+               /* cannot extend over terminals or vertices of high degree  */
+               if( Is_term(graph->term[currhead]) || graph->grad[currhead] > maxgrad )
+               {
+                  /* clean and break */
+                  for( int estack = 0; estack <= nadded_edges; estack++ )
+                  {
+                     const int head = graph->head[estack];
+                     assert(nodemark[head]);
+                     nodemark[head] = FALSE;
+                  }
+                  break;
+               }
+
+               nodemark[currhead] = TRUE;
+               treecost += redcost[curredge];
+               nadded_edges++;
+
+               dfsdepth++;
+               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
+                  if( !nodemark[graph->head[e]] )
+                     edgestack[nadded_edges++] = e;
+            }
+
+            /* whole subtree processed without abort?*/
+            if( nadded_edges == 0 )
+            {
+               assert(dfsdepth == 0);
+               *ruleout = TRUE;
+               break;
+            }
+         }
+      } /* main loop */
+
+      /* clean nodemark array */
+      nodemark[basenode] = FALSE;
+      nodemark[graph->tail[inedge]] = FALSE;
+
+      for( int i = 0; i < 2; i++ )
+         nodemark[graph->head[outedges[i]]] = FALSE;
+
+      for( int i = 0; i < nnodes; i++ )
+         assert(nodemark[i] == FALSE);
+
+      SCIPfreeCleanBufferArray(scip, &nodemark);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** dual ascent based reductions */
 SCIP_RETCODE reduce_da(
@@ -1906,7 +2037,7 @@ SCIP_RETCODE reduce_da(
                assert(vbase[i] == i);
 #endif
          updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, (run == 0));
-         updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, lpobjval, root, (run == 0));
+         updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, lpobjval, upperbound, root, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
       }
 
