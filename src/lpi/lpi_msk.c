@@ -27,6 +27,7 @@
 
 #include "lpi/lpi.h"
 #include "scip/bitencode.h"
+#include "scip/pub_message.h"
 #include <string.h>
 
 /* do defines for windows directly here to make the lpi more independent */
