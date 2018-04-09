@@ -783,6 +783,7 @@ SCIP_RETCODE buildScenariosFromBlocks(
    int                   blocknum            /**< the block number */
    )
 {
+   SCIP_Bool processed;
    int i;
    int j;
 
@@ -791,10 +792,13 @@ SCIP_RETCODE buildScenariosFromBlocks(
    assert(scenarios != NULL);
    assert(blocksforscen != NULL);
 
+   processed = FALSE;
    for( i = blocknum + 1; i < numblocks; i++ )
    {
       /* it is only necessary to process the next block in the list the belongs to the given stage. */
-      if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) != 0 )
+      if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) == 0 )
+         processed = TRUE;
+      else
          continue;
 
       for( j = 0; j < numblocksperblock[i]; j++ )
@@ -808,6 +812,9 @@ SCIP_RETCODE buildScenariosFromBlocks(
          /* the last block needs to be removed so that a new block can be used in its place */
          (*numblocksforscen)--;
       }
+
+      if( processed )
+         break;
    }
 
    /* when all blocks have been inspected, then it is possible to build the scenario */
