@@ -152,7 +152,7 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy)
    ++banditdata->sels[selection];
 
    /* use exponentially decreasing weights for older observations */
-   if( banditdata->preferrecent && banditdata->sels[selection] > banditdata->avglim )
+   if( banditdata->preferrecent && banditdata->sels[selection] >= banditdata->avglim )
    {
       /* the very first observation is directly stored as weight */
       if( banditdata->sels[selection] == 1 )
