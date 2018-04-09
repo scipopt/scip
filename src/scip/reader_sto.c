@@ -93,10 +93,23 @@ enum StoSection
 };
 typedef enum StoSection STOSECTION;
 
+/** enum containing the types of stochastic information */
+enum StoStochInfo
+{
+   STO_STOCHINFO_NONE         = -1,
+   STO_STOCHINFO_DISCRETE     = 0,
+   STO_STOCHINFO_UNIFORM      = 1,
+   STO_STOCHINFO_NORMAL       = 2,
+   STO_STOCHINFO_SUB          = 3,
+   STO_STOCHINFO_LINTR        = 4
+};
+typedef enum StoStochInfo STOSTOCHINFO;
+
 /** sto input structure */
 struct StoInput
 {
    STOSECTION            section;
+   STOSTOCHINFO          stochinfotype;
    SCIP_FILE*            fp;
    int                   lineno;
    SCIP_Bool             haserror;
@@ -971,6 +984,7 @@ SCIP_RETCODE stoinputCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, stoi) );
 
    (*stoi)->section     = STO_STOCH;
+   (*stoi)->stochinfotype = STO_STOCHINFO_NONE;
    (*stoi)->fp          = fp;
    (*stoi)->lineno      = 0;
    (*stoi)->haserror    = FALSE;
@@ -1006,6 +1020,17 @@ STOSECTION stoinputSection(
    assert(stoi != NULL);
 
    return stoi->section;
+}
+
+/** returns the stochastic information type */
+static
+STOSECTION stoinputStochInfoType(
+   const STOINPUT*       stoi                /**< sto input structure */
+   )
+{
+   assert(stoi != NULL);
+
+   return stoi->stochinfotype;
 }
 
 /** return the current value of field 0 */
@@ -1095,6 +1120,18 @@ void stoinputSetSection(
    assert(stoi != NULL);
 
    stoi->section = section;
+}
+
+/** set the stochastic info type in the sto input structure */
+static
+void stoinputSetStochInfoType(
+   STOINPUT*             stoi,               /**< sto input structure */
+   STOSTOCHINFO          stochinfotype       /**< the stochastic infomation type */
+   )
+{
+   assert(stoi != NULL);
+
+   stoi->stochinfotype = stochinfotype;
 }
 
 /** set the problem name in the sto input structure to given problem name */
@@ -1280,6 +1317,7 @@ SCIP_RETCODE readStoch(
       return SCIP_OKAY;
    }
 
+   /* setting the stochatic information section */
    if( !strncmp(stoinputField0(stoi), "BLOCKS", 6) )
       stoinputSetSection(stoi, STO_BLOCKS);
    else if( !strncmp(stoinputField0(stoi), "SCENARIOS", 9) )
@@ -1291,6 +1329,24 @@ SCIP_RETCODE readStoch(
       stoinputSyntaxerror(stoi);
       return SCIP_OKAY;
    }
+
+   /* setting the stochastic information type */
+   if( !strncmp(stoinputField1(stoi), "DISCRETE", 8) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_DISCRETE);
+   else if( !strncmp(stoinputField1(stoi), "UNIFORM", 7) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_UNIFORM);
+   else if( !strncmp(stoinputField1(stoi), "NORMAL", 6) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_NORMAL);
+   else if( !strncmp(stoinputField1(stoi), "SUB", 3) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_SUB);
+   else if( !strncmp(stoinputField1(stoi), "LINTR", 5) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_LINTR);
+   else
+   {
+      stoinputSyntaxerror(stoi);
+      return SCIP_OKAY;
+   }
+
 
    return SCIP_OKAY;
 }
@@ -1639,13 +1695,6 @@ SCIP_RETCODE readIndep(
          if( !strcmp(stoinputField0(stoi), "INDEP") )
          {
             stoinputSetSection(stoi, STO_INDEP);
-
-            if( strcmp(stoinputField1(stoi), "DISCRETE") )
-            {
-               SCIPerrorMessage("Sorry, %s independent scenarios is not currently supported.\n", stoinputField1(stoi));
-               SCIPerrorMessage("Only DISCRETE independent scenarios are supported.\n");
-               goto TERMINATE;
-            }
          }
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
          {
@@ -2349,32 +2398,42 @@ SCIP_RETCODE readSto(
    SCIP_CALL( stoinputCreate(scip, &stoi, fp) );
    SCIP_CALL( createReaderdata(scip, readerdata) );
 
-   SCIP_CALL_TERMINATE( retcode, readStoch(scip, readerdata, stoi), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, readStoch(scip, stoi), TERMINATE );
 
-   if( stoinputSection(stoi) == STO_BLOCKS )
+   /* checking for supported stochastic information types */
+   if( stoinputStochInfoType(stoi) != STO_STOCHINFO_DISCRETE )
    {
-      SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
-   }
-
-   if( stoinputSection(stoi) == STO_SCENARIOS )
-   {
-      /* if the number of stages exceeds 1, i.e. more than two stages, then the sto file is not read. */
-      if( SCIPtimGetNStages(scip) > 2 )
-      {
-         SCIPinfoMessage(scip, NULL, "\nThe scenarios for the stochastic programs are defined in <%s> as SCENARIOS\n", filename);
-         SCIPinfoMessage(scip, NULL, "Sorry, currently only two-stage stochastic programs are supported when scenarios are defined as SCENARIOS.\n\n");
+         SCIPinfoMessage(scip, NULL, "\nSorry, currently only STO files with the stochastic information as DISCRETE are supported.\n\n");
          SCIPinfoMessage(scip, NULL, "NOTE: The problem provided by the COR file is loaded without stochastic information.\n\n");
          unsupported = TRUE;
-      }
-      else
-      {
-         SCIP_CALL_TERMINATE( retcode, readScenarios(stoi, scip, readerdata), TERMINATE );
-      }
    }
-
-   if( stoinputSection(stoi) == STO_INDEP )
+   else
    {
-      SCIP_CALL_TERMINATE( retcode, readIndep(stoi, scip, readerdata), TERMINATE );
+      if( stoinputSection(stoi) == STO_BLOCKS )
+      {
+         SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
+      }
+
+      if( stoinputSection(stoi) == STO_SCENARIOS )
+      {
+         /* if the number of stages exceeds 1, i.e. more than two stages, then the sto file is not read. */
+         if( SCIPtimGetNStages(scip) > 2 )
+         {
+            SCIPinfoMessage(scip, NULL, "\nThe scenarios for the stochastic programs are defined in <%s> as SCENARIOS\n", filename);
+            SCIPinfoMessage(scip, NULL, "Sorry, currently only two-stage stochastic programs are supported when scenarios are defined as SCENARIOS.\n\n");
+            SCIPinfoMessage(scip, NULL, "NOTE: The problem provided by the COR file is loaded without stochastic information.\n\n");
+            unsupported = TRUE;
+         }
+         else
+         {
+            SCIP_CALL_TERMINATE( retcode, readScenarios(stoi, scip, readerdata), TERMINATE );
+         }
+      }
+
+      if( stoinputSection(stoi) == STO_INDEP )
+      {
+         SCIP_CALL_TERMINATE( retcode, readIndep(stoi, scip, readerdata), TERMINATE );
+      }
    }
 
    if( !unsupported && stoinputSection(stoi) != STO_ENDATA )
