@@ -1,0 +1,5 @@
+TIME          4NODECARGO
+PERIODS
+    X0.0      MLA                      PERIOD1
+    D0.A.B    CBAB                     PERIOD2
+ENDATA
