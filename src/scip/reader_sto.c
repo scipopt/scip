@@ -1672,6 +1672,9 @@ SCIP_RETCODE readIndep(
    int numstages;
    SCIP_Bool foundblock;
 
+   SCIP_Real probability;
+   char currstagename[SCIP_MAXSTRLEN];
+
    SCIPdebugMsg(scip, "read Indep\n");
 
    /* This has to be the Line with the name. */
@@ -1714,11 +1717,27 @@ SCIP_RETCODE readIndep(
          goto TERMINATE;
       }
 
+      /* if the 5th input is NULL, then the 4th input is the probability. Otherwise, the 4th input is the stage name and
+       * the 5th input is the probability. The stage name is redundant information, but sometimes included for more
+       * information.
+       */
+      if( stoinputField5(stoi) == NULL )
+      {
+         probability = atof(stoinputField4(stoi));
+         (void) SCIPsnprintf(currstagename, SCIP_MAXSTRLEN, "%s", SCIPtimConsGetStageName(scip, stoinputField2(stoi)));
+      }
+      else
+      {
+         probability = atof(stoinputField5(stoi));
+         (void) SCIPsnprintf(currstagename, SCIP_MAXSTRLEN, "%s", stoinputField4(stoi));
+      }
+
       /* checking whether the stage has been added previously */
-      if( strstr(stagenames, stoinputField4(stoi)) == NULL )
+      if( strstr(stagenames, currstagename) == NULL )
       {
          /* recording the stage name as processed */
-         (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "%s_%s", stagenames, stoinputField4(stoi));
+         (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "%s_%s", stagenames, currstagename);
+
          numstages++;
       }
 
@@ -1772,8 +1791,8 @@ SCIP_RETCODE readIndep(
       SCIP_CALL( createScenarioData(scip, &blocks[blocknum][blockindex]) );
 
       SCIP_CALL( setScenarioName(scip, blocks[blocknum][blockindex], stoinputField2(stoi)) );
-      SCIP_CALL( setScenarioStageName(scip, blocks[blocknum][blockindex], stoinputField4(stoi)) );
-      SCIP_CALL( setScenarioProbability(scip, blocks[blocknum][blockindex], atof(stoinputField5(stoi))) );
+      SCIP_CALL( setScenarioStageName(scip, blocks[blocknum][blockindex], currstagename) );
+      SCIP_CALL( setScenarioProbability(scip, blocks[blocknum][blockindex], probability) );
       numblocksperblock[blocknum]++;
 
       if( !foundblock )
