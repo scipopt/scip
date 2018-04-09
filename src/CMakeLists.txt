@@ -587,6 +587,7 @@ set(scipheaders
     scip/reader_ccg.h
     scip/reader_cip.h
     scip/reader_cnf.h
+    scip/reader_cor.h
     scip/reader_diff.h
     scip/reader_fix.h
     scip/reader_fzn.h
@@ -602,6 +603,9 @@ set(scipheaders
     scip/reader_ppm.h
     scip/reader_rlp.h
     scip/reader_sol.h
+    scip/reader_smps.h
+    scip/reader_sto.h
+    scip/reader_tim.h
     scip/reader_wbo.h
     scip/reader_zpl.h
     scip/relax.h

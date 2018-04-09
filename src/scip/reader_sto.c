@@ -1568,7 +1568,7 @@ SCIP_RETCODE readScenarios(
          SCIP_CALL( setScenarioName(scip, scenario, stoinputField2(stoi)) );
          SCIP_CALL( setScenarioStageName(scip, scenario, stoinputField5(stoi)) );
          SCIP_CALL( setScenarioNum(scip, scenario, numscenarios) );
-         SCIP_CALL( setScenarioStageNum(scip, scenario, -1) );
+         SCIP_CALL( setScenarioStageNum(scip, scenario, SCIPtimFindStage(scip, stoinputField5(stoi))) );
          SCIP_CALL( setScenarioProbability(scip, scenario, atof(stoinputField4(stoi))) );
 
          numscenarios++;
@@ -1814,6 +1814,9 @@ SCIP_RETCODE addScenarioVarsToProb(
       SCIP_Real obj;
       SCIP_VARTYPE vartype;
 
+      SCIPdebugMessage("Original problem variable <%s> is being duplicated for scenario %d\n", SCIPvarGetName(vars[i]),
+         getScenarioNum(scip, scenario));
+
       if( SCIPvarIsDeleted(vars[i]) )
          continue;
 
@@ -1832,6 +1835,8 @@ SCIP_RETCODE addScenarioVarsToProb(
       SCIP_CALL( SCIPcreateVar(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
             obj, vartype, SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,
             NULL, NULL) );
+
+      SCIPdebugMessage("Adding variable <%s>\n", name);
 
       SCIP_CALL( SCIPaddVar(scip, var) );
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
@@ -2121,7 +2126,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       char RHS[] = "RHS";
       char RIGHT[] = "RIGHT";
       char MINI[] = "MINI";
-      char OBJ[] = "obj";
+      char obj[] = "obj";
+      char OBJ[] = "OBJ";
 
       /* finding the constraint associated with the row */
       getScenarioEntityName(name, getScenarioEntryRow(scenario, i), getScenarioStageNum(scenarioscip, scenario),
@@ -2142,6 +2148,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
             SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
       }
       else if( strstr(getScenarioEntryRow(scenario, i), MINI) != NULL ||
+         strstr(getScenarioEntryRow(scenario, i), obj) != NULL ||
          strstr(getScenarioEntryRow(scenario, i), OBJ) != NULL )
       {
          /* finding the variable associated with the column */
@@ -2326,6 +2333,7 @@ SCIP_RETCODE readSto(
    STOINPUT* stoi;
    SCIP_RETCODE retcode;
    SCIP_Bool error = TRUE;
+   SCIP_Bool unsupported = FALSE;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -2341,28 +2349,42 @@ SCIP_RETCODE readSto(
    SCIP_CALL( stoinputCreate(scip, &stoi, fp) );
    SCIP_CALL( createReaderdata(scip, readerdata) );
 
-   SCIP_CALL_TERMINATE( retcode, readStoch(scip, stoi), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, readStoch(scip, readerdata, stoi), TERMINATE );
 
    if( stoinputSection(stoi) == STO_BLOCKS )
    {
       SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
    }
+
    if( stoinputSection(stoi) == STO_SCENARIOS )
    {
-      SCIP_CALL_TERMINATE( retcode, readScenarios(stoi, scip, readerdata), TERMINATE );
+      /* if the number of stages exceeds 1, i.e. more than two stages, then the sto file is not read. */
+      if( SCIPtimGetNStages(scip) > 2 )
+      {
+         SCIPinfoMessage(scip, NULL, "\nThe scenarios for the stochastic programs are defined in <%s> as SCENARIOS\n", filename);
+         SCIPinfoMessage(scip, NULL, "Sorry, currently only two-stage stochastic programs are supported when scenarios are defined as SCENARIOS.\n\n");
+         SCIPinfoMessage(scip, NULL, "NOTE: The problem provided by the COR file is loaded without stochastic information.\n\n");
+         unsupported = TRUE;
+      }
+      else
+      {
+         SCIP_CALL_TERMINATE( retcode, readScenarios(stoi, scip, readerdata), TERMINATE );
+      }
    }
+
    if( stoinputSection(stoi) == STO_INDEP )
    {
       SCIP_CALL_TERMINATE( retcode, readIndep(stoi, scip, readerdata), TERMINATE );
    }
-   if( stoinputSection(stoi) != STO_ENDATA )
+
+   if( !unsupported && stoinputSection(stoi) != STO_ENDATA )
       stoinputSyntaxerror(stoi);
 
    SCIPfclose(fp);
 
    error = stoinputHasError(stoi);
 
-   if( !error )
+   if( !error && !unsupported )
    {
 #ifdef BENDERSBRANCH
       if( readerdata->usebenders )
