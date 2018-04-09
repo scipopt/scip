@@ -20,10 +20,10 @@
  * The heuristic dives into the direction of the pseudosolution, i.e., variables get rounded
  * towards their best bound w.r.t there objective coefficient. This strategy is twofold, if
  * a feasible solution is found the solution has potentially a very good objective value; on the other
- * hand, the left-hand side of a potentially Farkas-proof y^Tb - y^TA{l',u'} > 0 (i.e., infeasibility proof)
- * gets increased, where $`l',u'`$ are the local bounds. The contribution of each variable x_i to the
- * Farkas-proof can be approximated by c_i = y^TA_i because we only dive on basic variables with
- * reduced costs c_i - y^TA_i = 0.
+ * hand, the left-hand side of a potential Farkas-proof \f$y^Tb - y^TA{l',u'} > 0\f$ (i.e., infeasibility proof)
+ * gets increased, where \f$l',u'\f$ are the local bounds. The contribution of each variable \f$x_i\f$ to the
+ * Farkas-proof can be approximated by \f$c_i = y^TA_i\f$ because we only dive on basic variables with
+ * reduced costs \f$c_i - y^TA_i = 0\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -210,7 +210,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 
    nnzobjvars = SCIPgetNObjVars(scip);
 
-   /* don't run if all variables has zero objective coefficient */
+   /* don't run if all variables have objective coefficient zero */
    if( nnzobjvars == 0 )
    {
       heurdata->disabled = TRUE;
