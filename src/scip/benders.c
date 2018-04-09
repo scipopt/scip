@@ -1771,6 +1771,11 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
 
       if( mastervar != NULL )
       {
+         /** It is possible due to numerics that the solution value exceeds the upper or lower bounds. When this
+          * happens, it causes an error in the LP solver as a result of inconsistent bounds. So the following statements
+          * are used to enusure that the bounds are not exceeded when applying the fixings for the Benders'
+          * decomposition subproblems
+          */
          solval = SCIPgetSolVal(set->scip, sol, mastervar);
          if( solval > SCIPvarGetUbLocal(vars[i]) )
             solval = SCIPvarGetUbLocal(vars[i]);
@@ -1818,9 +1823,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    /* the subproblem must be set up before this function is called. */
    if( SCIPbendersSubprobIsSetup(benders, probnumber) )
    {
-      SCIPinfoMessage(set->scip, NULL, "Benders subproblem %d must be set up before calling \
-         SCIPbendersSolveSubproblem(). Call SCIPsetupSubproblem() first.\n", probnumber);
-      return SCIP_OKAY;
+      SCIPerrorMessage("Benders subproblem %d must be set up before calling SCIPbendersSolveSubproblem(). Call SCIPsetupSubproblem() first.\n", probnumber);
+      return SCIP_ERROR;
    }
 
    /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
