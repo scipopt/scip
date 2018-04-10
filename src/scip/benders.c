@@ -1626,7 +1626,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnum,            /**< the subproblem number */
+   int                   probnumber,            /**< the subproblem number */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
@@ -1637,52 +1637,50 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_SOL* bestsol;
 
    assert(benders != NULL);
-   assert(probnum >= 0 && probnum < benders->nsubproblems);
+   assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
-   SCIPdebugMessage("Benders decomposition: solving subproblem %d\n", probnum);
+   SCIPdebugMessage("Benders decomposition: solving subproblem %d\n", probnumber);
 
    /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
    if( solveloop == SCIP_BENDERSSOLVELOOP_USER )
    {
       assert(benders->benderssolvesub != NULL);
-      SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnum, infeasible) );
+      SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnumber, infeasible) );
    }
    else
    {
       /* setting up the subproblem */
       if( solveloop == SCIP_BENDERSSOLVELOOP_LP )
-         SCIP_CALL( SCIPbendersSetupSubproblem(benders, set, sol, probnum) );
+         SCIP_CALL( SCIPbendersSetupSubproblem(benders, set, sol, probnumber) );
       else
-         SCIP_CALL( updateEventhdlrUpperbound(benders, probnum, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnum)) );
+         SCIP_CALL( updateEventhdlrUpperbound(benders, probnumber, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) );
 
 
       /* solving the subproblem
        * the LP of the subproblem is solved in the first solveloop.
        * In the second solve loop, the MIP problem is solved */
-      if( solveloop == SCIP_BENDERSSOLVELOOP_LP || SCIPbendersSubprobIsLP(benders, probnum) )
-         SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnum, infeasible) );
+      if( solveloop == SCIP_BENDERSSOLVELOOP_LP || SCIPbendersSubprobIsLP(benders, probnumber) )
+         SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
       else
-         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnum, infeasible, type, FALSE) );
+         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, infeasible, type, FALSE) );
    }
 
-   subproblem = SCIPbendersSubproblem(benders, probnum);
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    bestsol = SCIPgetBestSol(subproblem);
 
    if( !enhancement )
    {
-      /* TODO: The following handles the cases when the subproblem is OPTIMAL and INFEASIBLE. There is no handling of
-       * the case when the subproblem is UNBOUNDED. Currently, for the default set of Benders cuts, an unbounded
-       * subproblem will not generate any cut. However, in the standard use of Benders' decomposition, the dual of the
-       * subproblem can not be infeasible. As such, it is an error if the primal subproblem is unbounded.
-       * Must work out the best way to handle the unbounded primal subproblem.
+      /* The following handles the cases when the subproblem is OPTIMAL, INFEASIBLE and UNBOUNDED.
+       * If a subproblem is unbounded, then the auxiliary variables are set to -infinity and the unbounded flag is
+       * returned as TRUE. No cut will be generated, but the result will be set to SCIP_FEASIBLE.
        */
       if( solveloop == SCIP_BENDERSSOLVELOOP_LP )
       {
          if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
-            SCIPbendersSetSubprobObjval(benders, probnum, SCIPgetSolOrigObj(subproblem, NULL));
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, NULL));
          else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
-            SCIPbendersSetSubprobObjval(benders, probnum, SCIPinfinity(set->scip));
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPinfinity(set->scip));
          else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
          {
             SCIPerrorMessage("The LP of Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
@@ -1702,11 +1700,11 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
 
          /* TODO: Consider whether other solutions status should be handled */
          if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
-            SCIPbendersSetSubprobObjval(benders, probnum, SCIPgetSolOrigObj(subproblem, bestsol));
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, bestsol));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
-            SCIPbendersSetSubprobObjval(benders, probnum, SCIPinfinity(set->scip));
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPinfinity(set->scip));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_USERINTERRUPT || SCIPgetStatus(subproblem) == SCIP_STATUS_BESTSOLLIMIT )
-            SCIPbendersSetSubprobObjval(benders, probnum, SCIPgetSolOrigObj(subproblem, bestsol));
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, bestsol));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_UNBOUNDED )
          {
             SCIPerrorMessage("The Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
@@ -1730,7 +1728,7 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    SCIP_BENDERS*         benders,            /**< variable benders */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnum             /**< the subproblem number */
+   int                   probnumber          /**< the subproblem number */
    )
 {
    SCIP* subproblem;
@@ -1739,26 +1737,24 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    SCIP_Real solval;
    int nvars;
    int i;
-   SCIP_Bool infeasible;
-   SCIP_Bool fixed;
 
    assert(benders != NULL);
    assert(set != NULL);
-   assert(probnum >= 0 && probnum < SCIPbendersGetNSubproblems(benders));
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* changing all of the master problem variable to continuous. */
-   SCIP_CALL( SCIPbendersChgMastervarsToCont(benders, set, probnum) );
+   SCIP_CALL( SCIPbendersChgMastervarsToCont(benders, set, probnumber) );
 
-   subproblem = SCIPbendersSubproblem(benders, probnum);
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    /* if the Benders subproblem is an LP, then probing mode must be started.
     * If the subproblem is a MIP, the problem must be initialised, put into SCIP_STAGE_SOLVING to be able to change the
     * variable bounds. The probing mode is entered once the variable bounds are set.
     * In the MIP case, the transformed problem is freed after each subproblem solve round. */
-   if( SCIPbendersSubprobIsLP(benders, probnum) )
+   if( SCIPbendersSubprobIsLP(benders, probnumber) )
       SCIP_CALL( SCIPstartProbing(subproblem) );
    else
-      SCIP_CALL( initialiseSubproblem(benders, probnum) );
+      SCIP_CALL( initialiseSubproblem(benders, probnumber) );
 
    vars = SCIPgetVars(subproblem);
    nvars = SCIPgetNVars(subproblem);
@@ -1783,23 +1779,22 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
             solval = SCIPvarGetLbLocal(vars[i]);
 
          /* fixing the variable in the subproblem */
-         if( SCIPisFeasLT(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+         if( !SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
          {
-            SCIP_CALL( SCIPfixVar(subproblem, vars[i], solval, &infeasible, &fixed) );
-            assert(fixed);
-            assert(!infeasible);
+            SCIP_CALL( SCIPchgVarLb(subproblem, vars[i], solval) );
+            SCIP_CALL( SCIPchgVarUb(subproblem, vars[i], solval) );
          }
 
-         assert(SCIPisFeasEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
+         assert(SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
       }
    }
 
    /* if the subproblem is a MIP, the probing mode is entered after setting up the subproblem */
-   if( !SCIPbendersSubprobIsLP(benders, probnum) )
+   if( !SCIPbendersSubprobIsLP(benders, probnumber) )
       SCIP_CALL( SCIPstartProbing(subproblem) );
 
    /* set the flag to indicate that the subproblems have been set up */
-   SCIPbendersSetSubprobIsSetup(benders, probnum, TRUE);
+   SCIPbendersSetSubprobIsSetup(benders, probnumber, TRUE);
 
    return SCIP_OKAY;
 }
