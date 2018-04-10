@@ -18,7 +18,7 @@
  * @author Benjamin Mueller
  *
  *  This the file contains the \ref main() main function of the projects. This includes all the default plugins of
- *  \SCIP and the once which belong to that projects. After that is starts the interactive shell of \SCIP or processes
+ *  \SCIP and the ones which belong to that projects. After that is starts the interactive shell of \SCIP or processes
  *  the shell arguments if given.
  */
 #include <stdio.h>
