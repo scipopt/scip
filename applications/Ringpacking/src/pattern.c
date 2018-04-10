@@ -43,6 +43,8 @@ SCIP_RETCODE ensureElemSize(
    if( size > pattern->size )
    {
       int newsize = MAX(4, 2*size);
+      assert(newsize > size);
+
       SCIP_ALLOC( BMSreallocBlockMemoryArray(pattern->blkmem, &pattern->types, pattern->size, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(pattern->blkmem, &pattern->xs, pattern->size, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(pattern->blkmem, &pattern->ys, pattern->size, newsize) );
