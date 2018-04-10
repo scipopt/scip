@@ -476,20 +476,6 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
  * Callback methods of constraint handler
  */
 
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopyRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define conshdlrCopyRpa NULL
-#endif
-
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
@@ -522,51 +508,6 @@ SCIP_DECL_CONSINIT(consInitRpa)
 
    return SCIP_OKAY;
 }
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_CONSEXIT(consExitRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consExitRpa NULL
-#endif
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITPRE(consInitpreRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consInitpreRpa NULL
-#endif
-
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 0
-static
-SCIP_DECL_CONSEXITPRE(consExitpreRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consExitpreRpa NULL
-#endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
@@ -625,81 +566,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolRpa)
 }
 
 
-/** frees specific constraint data */
-#if 0
-static
-SCIP_DECL_CONSDELETE(consDeleteRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consDeleteRpa NULL
-#endif
-
-
-/** transforms constraint data into data belonging to the transformed problem */
-#if 0
-static
-SCIP_DECL_CONSTRANS(consTransRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consTransRpa NULL
-#endif
-
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if 0
-static
-SCIP_DECL_CONSINITLP(consInitlpRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consInitlpRpa NULL
-#endif
-
-
-/** separation method of constraint handler for LP solutions */
-#if 0
-static
-SCIP_DECL_CONSSEPALP(consSepalpRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consSepalpRpa NULL
-#endif
-
-
-/** separation method of constraint handler for arbitrary primal solutions */
-#if 0
-static
-SCIP_DECL_CONSSEPASOL(consSepasolRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consSepasolRpa NULL
-#endif
-
-
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpRpa)
@@ -738,52 +604,6 @@ SCIP_DECL_CONSCHECK(consCheckRpa)
 
    return SCIP_OKAY;
 }
-
-
-/** domain propagation method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPROP(consPropRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consPropRpa NULL
-#endif
-
-
-/** presolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPRESOL(consPresolRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consPresolRpa NULL
-#endif
-
-
-/** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consRespropRpa NULL
-#endif
-
 
 /** variable rounding lock method of constraint handler */
 static
@@ -845,171 +665,10 @@ SCIP_DECL_CONSLOCK(consLockRpa)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSACTIVE(consActiveRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consActiveRpa NULL
-#endif
-
-
-/** constraint deactivation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDEACTIVE(consDeactiveRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consDeactiveRpa NULL
-#endif
-
-
-/** constraint enabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSENABLE(consEnableRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consEnableRpa NULL
-#endif
-
-
-/** constraint disabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDISABLE(consDisableRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consDisableRpa NULL
-#endif
-
-/** variable deletion of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDELVARS(consDelvarsRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consDelvarsRpa NULL
-#endif
-
-
-/** constraint display method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPRINT(consPrintRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consPrintRpa NULL
-#endif
-
-
-/** constraint copying method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSCOPY(consCopyRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consCopyRpa NULL
-#endif
-
-
-/** constraint parsing method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPARSE(consParseRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consParseRpa NULL
-#endif
-
-
-/** constraint method of constraint handler which returns the variables (if possible) */
-#if 0
-static
-SCIP_DECL_CONSGETVARS(consGetVarsRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consGetVarsRpa NULL
-#endif
-
-/** constraint method of constraint handler which returns the number of variables (if possible) */
-#if 0
-static
-SCIP_DECL_CONSGETNVARS(consGetNVarsRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consGetNVarsRpa NULL
-#endif
-
-/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
-#if 0
-static
-SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsRpa)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rpa constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consGetDiveBdChgsRpa NULL
-#endif
-
-
 /*
  * constraint specific interface methods
  */
+
 
 /** creates the handler for ringpacking */
 SCIP_RETCODE SCIPincludeConshdlrRpa(
@@ -1030,32 +689,10 @@ SCIP_RETCODE SCIPincludeConshdlrRpa(
    assert(conshdlr != NULL);
 
    /* set non-fundamental callbacks via specific setter functions */
-   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveRpa) );
-   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyRpa, consCopyRpa) );
-   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveRpa) );
-   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteRpa) );
-   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsRpa) );
-   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableRpa) );
-   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableRpa) );
-   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitRpa) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreRpa) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolRpa) );
-   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeRpa) );
-   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsRpa) );
-   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsRpa) );
-   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsRpa) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeRpa) );;
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitRpa) );
-   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreRpa) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolRpa) );
-   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpRpa) );
-   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseRpa) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolRpa, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
-   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintRpa) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropRpa, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
-         CONSHDLR_PROP_TIMING) );
-   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropRpa) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpRpa, consSepasolRpa, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
-   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransRpa) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxRpa) );
 
    /* add event handler for new solutios */
