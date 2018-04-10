@@ -336,7 +336,7 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
    );
 
 /** Removes the subproblems from the Benders' decomposition data */
-SCIP_RETCODE SCIPbendersRemoveSubproblems(
+void SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
