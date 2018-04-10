@@ -164,9 +164,9 @@ SCIP_PATTERNTYPE SCIPpatternGetPatternType(
  * @note this function can only be called for circular patterns
  */
 extern
-int SCIPpatternGetType(
-   SCIP_PATTERN*         pattern             /**< pattern */
-   );
+int SCIPpatternGetCircleType(
+   SCIP_PATTERN *pattern             /**< pattern */
+);
 
 /** sets the type of the boundary circle
  *

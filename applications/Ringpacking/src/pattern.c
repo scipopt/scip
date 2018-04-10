@@ -297,9 +297,9 @@ SCIP_PATTERNTYPE SCIPpatternGetPatternType(
  *
  * @note this function can only be called for circular patterns
  */
-int SCIPpatternGetType(
-   SCIP_PATTERN*         pattern             /**< pattern */
-   )
+int SCIPpatternGetCircleType(
+   SCIP_PATTERN *pattern             /**< pattern */
+)
 {
    assert(pattern != NULL);
    assert(pattern->patterntype == SCIP_PATTERNTYPE_CIRCULAR);

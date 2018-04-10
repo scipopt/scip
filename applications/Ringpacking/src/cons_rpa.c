@@ -400,7 +400,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
       {
          if( SCIPpatternGetPackableStatus(patterns[p]) == SCIP_PACKABLE_YES )
          {
-            int type = SCIPpatternGetType(patterns[p]);
+            int type = SCIPpatternGetCircleType(patterns[p]);
             int i;
 
             SCIPinfoMessage(scip, file, "\\StrSubstitute{%s}{_}{-}[\\pname]\n", SCIPvarGetName(vars[p]));

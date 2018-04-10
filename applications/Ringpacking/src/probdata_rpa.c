@@ -344,7 +344,7 @@ SCIP_RETCODE createPatternVars(
       pattern = probdata->cpatterns[k];
       assert(pattern != NULL);
 
-      type = SCIPpatternGetType(pattern);
+      type = SCIPpatternGetCircleType(pattern);
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", type);
       ub = (SCIP_Real)SCIPprobdataGetDemands(probdata)[type];
 
@@ -464,7 +464,7 @@ int isPatternDominating(
    int i;
 
    /* patterns can only dominate each other if they have the same type */
-   if( SCIPpatternGetType(p) != SCIPpatternGetType(q) )
+   if(SCIPpatternGetCircleType(p) != SCIPpatternGetCircleType(q) )
       return 0;
 
    /* reset count array */
@@ -599,7 +599,7 @@ SCIP_RETCODE enumeratePatterns(
    assert(ms != NULL);
    assert(pattern != NULL);
 
-   type = SCIPpatternGetType(pattern);
+   type = SCIPpatternGetCircleType(pattern);
    assert(type >= 0 && type < SCIPprobdataGetNTypes(probdata));
 
    /* get problem data */
@@ -608,7 +608,7 @@ SCIP_RETCODE enumeratePatterns(
    ntypes = SCIPprobdataGetNTypes(probdata);
    lasttype = ntypes -1;
    volume = 0.0;
-   maxvolume = SQR(_rints[SCIPpatternGetType(pattern)]) * M_PI; /*lint !e666*/
+   maxvolume = SQR(_rints[SCIPpatternGetCircleType(pattern)]) * M_PI; /*lint !e666*/
 
    /* check whether there is enough time left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &totaltimelim) );
@@ -789,7 +789,7 @@ SCIP_RETCODE setupProblem(
          assert(var != NULL);
 
          /* add coefficient to the pattern if the pattern is of type t */
-         if( SCIPpatternGetType(pattern) == t )
+         if(SCIPpatternGetCircleType(pattern) == t )
          {
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, 1.0) );
          }
@@ -823,7 +823,7 @@ SCIP_RETCODE setupProblem(
       assert(SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR);
       assert(var != NULL);
 
-      type = SCIPpatternGetType(pattern);
+      type = SCIPpatternGetCircleType(pattern);
       assert(type >= 0 && type < ntypes);
 
       /* - z_C */
@@ -1828,7 +1828,7 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    assert(iterlim > 0);
    assert(SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR);
    assert(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
-   assert(SCIPpatternGetType(pattern) < SCIPprobdataGetNTypes(probdata));
+   assert(SCIPpatternGetCircleType(pattern) < SCIPprobdataGetNTypes(probdata));
 
    /* check whether there is any time left */
    if( timelim <= 0.0 )
@@ -1837,7 +1837,7 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    rexts = SCIPprobdataGetRexts(probdata);
    rints = SCIPprobdataGetRints(probdata);
    nelements = SCIPpatternGetNElemens(pattern);
-   type = SCIPpatternGetType(pattern);
+   type = SCIPpatternGetCircleType(pattern);
    assert(type >= 0 && type < SCIPprobdataGetNTypes(probdata));
 
    /* pattern is empty -> set status to packable */
@@ -1966,7 +1966,7 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
 
    rexts = SCIPprobdataGetRexts(probdata);
    rints = SCIPprobdataGetRints(probdata);
-   type = SCIPpatternGetType(pattern);
+   type = SCIPpatternGetCircleType(pattern);
    nelems = SCIPpatternGetNElemens(pattern);
 
    /* set up the sub-SCIP */
@@ -2186,7 +2186,7 @@ void SCIPcheckPattern(
       if( SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR )
       {
          SCIP_Real distance = SQRT(SQR(xi) + SQR(yi));
-         int patterntype = SCIPpatternGetType(pattern);
+         int patterntype = SCIPpatternGetCircleType(pattern);
 
          assert(patterntype >= 0);
          assert(patterntype < SCIPprobdataGetNTypes(probdata));
