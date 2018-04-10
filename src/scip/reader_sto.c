@@ -799,6 +799,8 @@ SCIP_RETCODE buildScenariosFromBlocks(
       /* it is only necessary to process the next block in the list the belongs to the given stage. */
       if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) == 0 )
       {
+         processed = TRUE;
+
          for( j = 0; j < numblocksperblock[i]; j++ )
          {
             /* adding the blocks that will build the scenario */
@@ -810,10 +812,14 @@ SCIP_RETCODE buildScenariosFromBlocks(
             /* the last block needs to be removed so that a new block can be used in its place */
             (*numblocksforscen)--;
          }
-         processed = TRUE;
       }
-
-      i++;
+      else
+      {
+         /* the index is only incremented if no block is processed. This is necessary because the value of i is used in
+          * the next if statement for identifying whether all blocks have been processed.
+          */
+         i++;
+      }
    }
 
    /* when all blocks have been inspected, then it is possible to build the scenario */
