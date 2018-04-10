@@ -89,7 +89,6 @@ struct TimInput
    const char*           f2;
    const char*           f3;
    char                  probname[TIM_MAX_NAMELEN];
-   char                  typename[TIM_MAX_NAMELEN];
    const char**          stagestartvars;
    const char**          stagestartcons;
    const char**          stagenames;
@@ -340,7 +339,6 @@ SCIP_RETCODE timinputCreate(
    (*timi)->haserror    = FALSE;
    (*timi)->buf     [0] = '\0';
    (*timi)->probname[0] = '\0';
-   (*timi)->typename[0] = '\0';
    (*timi)->f0          = NULL;
    (*timi)->f1          = NULL;
    (*timi)->f2          = NULL;
@@ -468,20 +466,6 @@ void timinputSetProbname(
    assert(strlen(probname) < sizeof(timi->probname));
 
    (void)SCIPmemccpy(timi->probname, probname, '\0', TIM_MAX_NAMELEN - 1);
-}
-
-/** set the problem type name in the tim input structure to given objective name */
-static
-void timinputSetTypename(
-   TIMINPUT*             timi,               /**< tim input structure */
-   const char*           typename            /**< name of the problem type to set */
-   )
-{
-   assert(timi != NULL);
-   assert(typename != NULL);
-   assert(strlen(typename) < sizeof(timi->typename));
-
-   (void)SCIPmemccpy(timi->typename, typename, '\0', TIM_MAX_NAMELEN - 1);
 }
 
 /** set the problem var name that starts a stage in the tim input structure to given objective name */
@@ -696,12 +680,6 @@ SCIP_RETCODE readPeriods(
    )
 {
    SCIPdebugMsg(scip, "read Periods\n");
-
-   /* This has to be the Line with the name. */
-   if( timinputField1(timi) == NULL )
-      timinputSetTypename(timi, "LP");
-   else
-      timinputSetTypename(timi, timinputField1(timi));
 
    while( timinputReadLine(timi) )
    {
