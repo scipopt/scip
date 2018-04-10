@@ -2130,7 +2130,7 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
    return SCIP_OKAY;
 }
 
-/** check whether a pattern for consistency */
+/** check a pattern for consistency */
 void SCIPcheckPattern(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
