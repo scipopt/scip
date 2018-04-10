@@ -13,12 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_bpa.h
- * @brief  Binpacking problem reader file reader
- * @author Timo Berthold
- * @author Stefan Heinz
+/**@file   reader_rpa.c
+ * @brief  Ringpacking problem reader
+ * @author Benjamin Mueller
  *
- * This file implements the reader/parser used to read the binpacking input data. For more details see \ref READER.
+ * This file implements the reader/parser used to read the ringpacking input data. For more details see \ref READER.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,7 +29,7 @@
 #include "scip/scip.h"
 
 
-/** includes the binpacking file reader into SCIP */
+/** includes the rpa file reader in SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderRpa(
    SCIP*                 scip                /**< SCIP data structure */

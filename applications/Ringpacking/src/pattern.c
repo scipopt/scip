@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pattern.c
- * @brief  pattern data for ringpacking problem
+ * @brief  pattern data for Ringpacking Problem
  * @author Benjamin Mueller
  *
  *
