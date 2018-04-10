@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   xternal_ringpacking.c
- * @brief  The ringpacking example of SCIP
+ * @brief  The ringpacking application of SCIP
  * @author Benjamin Mueller
  */
 
@@ -23,8 +23,8 @@
 /**@page RINGPACKING_MAIN Overview
  * @author Benjamin Mueller
  *
- * This example contains a branch-and-price approach for the ringpacking problem, also known as recursive circle packing
- * problem, which is realized with the framework \SCIP. Therefore, the following plugins are implemented:
+ * This application contains a branch-and-price approach for the Ringpacking problem, also known as recursive circle
+ * packing problem, which is realized with the framework \SCIP. Therefore, the following plugins are implemented:
  *
  * - a \ref reader_rpa.c "problem reader" which parses the problem out of a file and creates the corresponding problem within \SCIP
  * - a \ref probdata_rpa.c "(global) problem data structure" which contains all necessary information
@@ -45,7 +45,7 @@
 
 /**@page RINGPACKING_PROBLEM Problem description
  *
- * The objective of the ringpacking problem is to select a minimum number of rectangles of the same size such that a
+ * The objective of the Ringpacking Problem is to select a minimum number of rectangles of the same size such that a
  * given set of rings can be packed into these rectangles in a non-overlapping way. A ring is characterized by an
  * internal and an external radius. Rings can be put recursively into larger ones or directly into a rectangle. The
  * following picture gives two examples of such packings:
@@ -56,8 +56,9 @@
  * </CENTER>
  *
  *
- * This problem can be formulated as a noncovex MINLP. We use the formulation presented in [TODO:insert Bennys Paper here]
- * which  is based on a Dantzig-Wolfe decomposition that can be solved by a branch-and-price algorithm. The first step
+ * Instead of using a compact noncovex MINLP formulation, we utilize the results from A. Gleixner, S. Maher, B. Mueller,
+ * and J. Pedroso that have been presented in <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6449">ZIB-Report 17-07</a>.
+ * Their approach is based on a Dantzig-Wolfe decomposition that can be solved via column generation. The first step
  * is a reformulation which is similar to the classical reformulation for the Cutting Stock Problem, however, featuring
  * nonlinear and nonconvex sub-problems. The purpose of this formulation is to break the symmetry between equivalent rectangles.
  * As a second step, we combine this reformulation with an enumeration scheme for patterns that are characterized by rings
@@ -142,7 +143,8 @@
  * introduced. In fact, it is easy to see that some patterns are never needed in an optimal solution, e.g. when at least one
  * more circle fits. Therefore, some patterns don't have to be verified if certain others have already been (dis)proved to be
  * feasible. The algorithm enumerates the circular patterns in a way that minimizes the number of verifications that have to
- * be performed. See [TODO: insert ref to benny's paper] for more details.
+ * be performed. See <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6449">ZIB-Report 17-07</a>
+ * for more details.
  *
  * In addition to all this, a simple greedy heuristic is used to verify simple patterns before actually solving the NLP.
  */

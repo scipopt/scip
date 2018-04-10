@@ -46,7 +46,9 @@
  *
  * In case that the pricing problem cannot be solved to optimality, we cannot directly deduce a lower bound for the
  * master problem. However, the following theorem by Farley shows how a valid dual bound can be computed from the
- * LP solution and the pricing solution. [TODO:insert ref and maybe the theorem too?]
+ * LP solution and the pricing solution, see
+ * <a href="https://doi.org/10.1287/opre.38.5.922">A Note on Bounding a Class of Linear Programming Problems, Including
+ * Cutting Stock Problems</a> for more details.
  *
  */
 

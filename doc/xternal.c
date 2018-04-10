@@ -278,7 +278,7 @@
  *  \ref RINGPACKING_MAIN "Ringpacking"
  *  </td>
  *  <td>
- *  An implementation of the column generation approach for the ringpacking problem. It includes a customized reader,
+ *  An implementation of the column generation approach for the Ringpacking Problem. It includes a customized reader,
  *  (global) problem data, variable data, and constraint handler.
  *  </td>
  *  </tr>
