@@ -21712,6 +21712,8 @@ SCIP_RETCODE SCIPaddVarLocksType(
  *       - \ref SCIP_STAGE_FREETRANS
  *
  *  @note This method will always add variable locks of type model
+ *
+ *  @note It is recommented to use SCIPaddVarLocksType()
  */
 SCIP_RETCODE SCIPaddVarLocks(
    SCIP*                 scip,               /**< SCIP data structure */

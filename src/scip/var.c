@@ -3282,7 +3282,12 @@ int SCIPvarGetNLocksUpType(
    }
 }
 
-/** gets number of locks for rounding down */
+/** gets number of locks for rounding down
+ *
+ *  @note This method will always return variable locks of type model
+ *
+ *  @note It is recommented to use SCIPvarGetNLocksDownType()
+ */
 int SCIPvarGetNLocksDown(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -3290,7 +3295,12 @@ int SCIPvarGetNLocksDown(
    return SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
 }
 
-/** gets number of locks for rounding up */
+/** gets number of locks for rounding up
+ *
+ *  @note This method will always return variable locks of type model
+ *
+ *  @note It is recommented to use SCIPvarGetNLocksUpType()
+ */
 int SCIPvarGetNLocksUp(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -3298,20 +3308,26 @@ int SCIPvarGetNLocksUp(
    return SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 }
 
-/** is it possible, to round variable down and stay feasible? */
+/** is it possible, to round variable down and stay feasible?
+ *
+ *  @note This method will always check w.r.t variable locks of type model
+ */
 SCIP_Bool SCIPvarMayRoundDown(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   return (SCIPvarGetNLocksDown(var) == 0);
+   return (SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0);
 }
 
-/** is it possible, to round variable up and stay feasible? */
+/** is it possible, to round variable up and stay feasible?
+ *
+ *  @note This method will always check w.r.t. variable locks of type model
+ */
 SCIP_Bool SCIPvarMayRoundUp(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   return (SCIPvarGetNLocksUp(var) == 0);
+   return (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0);
 }
 
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
