@@ -73,7 +73,7 @@ mkdir -p settings
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 # FORMAT:
-#    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
+#    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx-${GITBRANCH} BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 
 RANDOMSEED=`date +%Y%m%d`
 
@@ -83,12 +83,12 @@ declare -A JOBS
 declare -A TRIGGER
 
 # jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
-JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+JOBS[6,1]="EXECUTABLE=scipoptspx-${GITBRANCH} BINID=scipoptspx-${GITBRANCH} MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
+JOBS[6,2]="EXECUTABLE=scipoptspx-${GITBRANCH} BINID=scipoptspx-${GITBRANCH} MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
 TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-next-release-pure-diff PERFORMANCE=performance"
+JOBS[7,1]="EXECUTABLE=scipoptspx-${GITBRANCH} BINID=scipoptspx-${GITBRANCH} MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-next-release-pure-diff PERFORMANCE=performance"
 
 # symlink to SAP settings for the next release settings
 ln -fs ~/sap-next-release-pure-diff.set settings/.
