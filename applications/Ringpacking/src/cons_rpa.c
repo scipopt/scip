@@ -656,6 +656,7 @@ SCIP_DECL_CONSLOCK(consLockRpa)
       }
       else if( !first && conshdlrdata->locked[p] )
       {
+         SCIP_CALL( SCIPaddVarLocks(scip, cvars[p], nlocksneg + nlockspos, nlocksneg + nlockspos) );
          conshdlrdata->locked[p] = FALSE;
          SCIPdebugMsg(scip, "unlock %s\n", SCIPvarGetName(cvars[p]));
       }
