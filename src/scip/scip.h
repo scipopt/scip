@@ -2998,7 +2998,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    );
 
 /** returns the master problem variable for the given subproblem variable.
- *  This function is used as part of the cut generation process */
+ *  This function is used as part of the cut generation process
+ */
 EXTERN
 SCIP_RETCODE SCIPgetBendersMasterVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3008,7 +3009,8 @@ SCIP_RETCODE SCIPgetBendersMasterVar(
    );
 
 /** returns the subproblem problem variable for the given master variable.
- *  This function is used as part of the cut generation process */
+ *  This function is used as part of the cut generation process
+ */
 EXTERN
 SCIP_RETCODE SCIPgetBendersSubproblemVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3050,9 +3052,10 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** the solves a single Benders' decomposition subproblem. The method either calls the users solve subproblem method or
- * calls the generic method. In the case of the generic method, the user must set up the subproblem prior to calling
- * this method. */
+/** calls the solving method for a single Benders' decomposition subproblem. The method either calls the users solve
+ *  subproblem method or calls the generic method. In the case of the generic method, the user must set up the
+ *  subproblem prior to calling this method.
+ */
 EXTERN
 SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3066,7 +3069,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
 
 /** frees the subproblem after calling the solve subproblem method. This will either call the user defined free
  *  subproblem callback for Benders' decomposition or the default freeing methods. In the default case, if the
- *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is general CIP, then SCIPfreeTransform is called. */
+ *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is general CIP, then SCIPfreeTransform is called.
+ */
 EXTERN
 SCIP_RETCODE SCIPfreeBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3074,8 +3078,9 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
- * value of the corresponding auxiliary variable */
+/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value against the
+ *  value of the corresponding auxiliary variable
+ */
 EXTERN
 SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    SCIP*                 scip,               /**< SCIP data structure */

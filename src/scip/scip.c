@@ -6284,7 +6284,8 @@ void SCIPsetBendersPriority(
 }
 
 /** calls the exec method of Benders' decomposition to solve the subproblems.
- *  This method is only called from the Benders' decomposition constraint handler */
+ *  This method is only called from the Benders' decomposition constraint handler
+ */
 SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -6306,7 +6307,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
 }
 
 /** returns the master problem variable for the given subproblem variable.
- *  This function is used as part of the cut generation process */
+ *  This function is used as part of the cut generation process
+ */
 SCIP_RETCODE SCIPgetBendersMasterVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -6326,7 +6328,8 @@ SCIP_RETCODE SCIPgetBendersMasterVar(
 }
 
 /** returns the subproblem problem variable for the given master variable.
- *  This function is used as part of the cut generation process */
+ *  This function is used as part of the cut generation process
+ */
 SCIP_RETCODE SCIPgetBendersSubproblemVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -6385,12 +6388,13 @@ SCIP_RETCODE SCIPaddBendersSubproblem(
 }
 
 /** calls the generic subproblem setup method for a Benders' decomposition subproblem. This is called if the user
- * requires to solve the Benders' decomposition subproblem separately from the main Benders' solving loop. This could be
- * in the case of enhancement techniques. */
+ *  requires to solve the Benders' decomposition subproblem separately from the main Benders' solving loop. This could be
+ *  in the case of enhancement techniques.
+ */
 SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
-   SCIP_SOL*             sol,                /**< primal solution used to setup tht problem, NULL for LP solution */
+   SCIP_SOL*             sol,                /**< primal solution used to setup the problem, NULL for LP solution */
    int                   probnumber          /**< the subproblem number */
    )
 {
@@ -6404,9 +6408,10 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    return SCIP_OKAY;
 }
 
-/** the solves a single Benders' decomposition subproblem. The method either calls the users solve subproblem method or
- * calls the generic method. In the case of the generic method, the user must set up the subproblem prior to calling
- * this method. */
+/** calls the solving method for a single Benders' decomposition subproblem. The method either calls the users solve
+ *  subproblem method or calls the generic method. In the case of the generic method, the user must set up the
+ *  subproblem prior to calling this method.
+ */
 SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< variable benders */
@@ -6429,7 +6434,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
 
 /** frees the subproblem after calling the solve subproblem method. This will either call the user defined free
  *  subproblem callback for Benders' decomposition or the default freeing methods. In the default case, if the
- *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is a MIP, then SCIPfreeTransform is called. */
+ *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is a MIP, then SCIPfreeTransform is called.
+ */
 SCIP_RETCODE SCIPfreeBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< variable benders */
@@ -6446,8 +6452,9 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
    return SCIP_OKAY;
 }
 
-/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
- * value of the corresponding auxiliary variable */
+/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value against the
+ *  value of the corresponding auxiliary variable
+ */
 SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
