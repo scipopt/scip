@@ -1377,21 +1377,6 @@ SCIP_DECL_PROBTRANS(probtransRingpacking)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of transformed data (called before the branch and bound process begins) */
-static
-SCIP_DECL_PROBINITSOL(probinitsolRingpacking)
-{  /*lint --e{715}*/
-
-   return SCIP_OKAY;
-}
-
-/** solving process deinitialization method of transformed data (called before the branch and bound data is freed) */
-static
-SCIP_DECL_PROBEXITSOL(probexitsolRingpacking)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
-
 /**@} */
 
 /**@name Interface methods
@@ -1433,8 +1418,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigRingpacking) );
    SCIP_CALL( SCIPsetProbTrans(scip, probtransRingpacking) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransRingpacking) );
-   SCIP_CALL( SCIPsetProbInitsol(scip, probinitsolRingpacking) );
-   SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolRingpacking) );
 
    /* activate pricer */
    SCIP_CALL( SCIPpricerRpaActivate(scip) );
