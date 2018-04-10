@@ -157,6 +157,8 @@ SCIP_RETCODE freeEventhandler(
 
    SCIPfreeBlockMemory(scip, &eventhdlrdata);
 
+   SCIPeventhdlrSetData(eventhdlr, NULL);
+
    return SCIP_OKAY;
 }
 
@@ -1098,8 +1100,15 @@ SCIP_RETCODE SCIPbendersExitsol(
       SCIPclockStop(benders->setuptime, set);
    }
 
-   /* calling the initsol method for the Benders' cuts */
+
+   /* sorting the Benders' decomposition cuts in order of priority. Only a single cut is generated for each subproblem
+    * per solving iteration. This is particularly important in the case of the optimality and feasibility cuts. Since
+    * these work on two different solutions to the subproblem, it is not necessary to generate both cuts. So, once the
+    * feasibility cut is generated, then no other cuts will be generated.
+    */
    SCIPbendersSortBenderscuts(benders);
+
+   /* calling the initsol method for the Benders' cuts */
    for( i = 0; i < benders->nbenderscuts; i++ )
    {
       SCIP_CALL( SCIPbenderscutInitsol(benders->benderscuts[i], set) );
