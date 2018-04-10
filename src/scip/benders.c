@@ -2556,20 +2556,15 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
 }
 
 /** Removes the subproblems from the Benders' decomposition data */
-SCIP_RETCODE SCIPbendersRemoveSubproblems(
+void SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
    assert(benders->subproblems != NULL);
 
-   while( benders->naddedsubprobs > 0 )
-   {
-      benders->naddedsubprobs--;
-      benders->subproblems[benders->naddedsubprobs] = NULL;
-   }
-
-   return SCIP_OKAY;
+   BMSclearMemoryArray(&benders->subproblems, benders->naddedsubprobs);
+   benders->naddedsubprobs = 0;
 }
 
 /** returns the auxiliary variable for the given subproblem */
@@ -2690,15 +2685,10 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    subproblem = SCIPbendersSubproblem(benders, probnumber);
    assert(subproblem != NULL);
 
-   /* if the benders is a copy, then the actions of this function should have already been performed. As such, the
-    * MastervarsCont flag is being set to TRUE */
-   //if( benders->iscopy )
-      //SCIP_CALL( SCIPbendersSetMastervarsCont(benders, probnumber, TRUE) );
-
    /* only set the master problem variable to continuous if they have not already been changed. */
    if( !SCIPbendersGetMastervarsCont(benders, probnumber) )
    {
-      /* retreiving the variable data */
+      /* retrieving the variable data */
       SCIP_CALL( SCIPgetVarsData(subproblem, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
 
       origintvars = nbinvars + nintvars + nimplvars;
