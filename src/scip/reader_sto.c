@@ -1031,7 +1031,7 @@ STOSECTION stoinputSection(
 
 /** returns the stochastic information type */
 static
-STOSECTION stoinputStochInfoType(
+STOSTOCHINFO stoinputStochInfoType(
    const STOINPUT*       stoi                /**< sto input structure */
    )
 {
