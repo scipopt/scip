@@ -640,7 +640,11 @@ SCIP_DECL_CONSLOCK(consLockRpa)
    else
       first = FALSE;
 
-   /* lock all unverified circular patterns */
+   /*
+    * A pattern might change its status during a later verification step and we only need to lock patterns with a
+    * SCIP_PACKABLE_UNKNOWN status. For this reason, we keep track of patterns that have been locked. The CONSLOCK
+    * callback should only be called twice because the constraint handler does not have constraints.
+    */
    for( p = 0; p < ncpatterns; ++p )
    {
       assert(cpatterns[p] != NULL);
@@ -649,6 +653,7 @@ SCIP_DECL_CONSLOCK(consLockRpa)
       if( first && SCIPpatternGetPackableStatus(cpatterns[p]) == SCIP_PACKABLE_UNKNOWN )
       {
          assert(!conshdlrdata->locked[p]);
+         assert(nlocksneg + nlockspos > 0);
 
          SCIP_CALL( SCIPaddVarLocks(scip, cvars[p], nlocksneg + nlockspos, nlocksneg + nlockspos) );
          conshdlrdata->locked[p] = TRUE;
@@ -656,6 +661,8 @@ SCIP_DECL_CONSLOCK(consLockRpa)
       }
       else if( !first && conshdlrdata->locked[p] )
       {
+         assert(nlocksneg + nlockspos < 0);
+
          SCIP_CALL( SCIPaddVarLocks(scip, cvars[p], nlocksneg + nlockspos, nlocksneg + nlockspos) );
          conshdlrdata->locked[p] = FALSE;
          SCIPdebugMsg(scip, "unlock %s\n", SCIPvarGetName(cvars[p]));
