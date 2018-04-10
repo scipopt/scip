@@ -73,6 +73,13 @@
 #define PRICER_PRIORITY        0
 #define PRICER_DELAY           TRUE          /* only call pricer if all problem variables have non-negative reduced costs */
 
+/* default values of pricing parameters */
+#define DEFAULT_PRICING_NLPTILIM             60.0      /**< time limit for each pricing NLP */
+#define DEFAULT_PRICING_NLPNODELIM           SCIP_LONGINT_MAX /**< node limit for each pricing NLP */
+#define DEFAULT_PRICING_HEURTILIM            60.0      /**< time limit for each heuristic pricing */
+#define DEFAULT_PRICING_HEURITERLIM          1000      /**< iteration limit for each heuristic pricing */
+#define DEFAULT_PRICING_TOTALTILIM           3600.0    /**< total time limit for all pricing NLPs and heuristic calls */
+
 /**@} */
 
 #ifndef M_PI
@@ -921,6 +928,30 @@ SCIP_RETCODE SCIPincludePricerRpa(
    SCIP_CALL( SCIPsetPricerExit(scip, pricer, pricerExitRingpacking) );
 
    /* variable pricer parameters */
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "ringpacking/pricing/nlptilim",
+         "time limit for each pricing NLP",
+         NULL, FALSE, DEFAULT_PRICING_NLPTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip,
+         "ringpacking/pricing/nlpnodelim",
+         "node limit for each pricing NLP",
+         NULL, FALSE, DEFAULT_PRICING_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "ringpacking/pricing/heurtilim",
+         "time limit for each heuristic pricing",
+         NULL, FALSE, DEFAULT_PRICING_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "ringpacking/pricing/heuriterlim",
+         "iteration limit for each heuristic pricing",
+         NULL, FALSE, DEFAULT_PRICING_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "ringpacking/pricing/totaltilim",
+         "total time limit for all pricing NLPs and heuristic calls",
+         NULL, FALSE, DEFAULT_PRICING_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
