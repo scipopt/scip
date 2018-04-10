@@ -712,7 +712,7 @@ SCIP_RETCODE setupProblem(
 {
    char name[SCIP_MAXSTRLEN];
    SCIP_Real* rexts;
-   SCIP_Real* _rints;
+   SCIP_Real* rints;
    int* demands;
    SCIP_Real heurtilim;
    SCIP_Real nlptilim;
@@ -742,7 +742,7 @@ SCIP_RETCODE setupProblem(
    /* get problem data */
    ntypes = SCIPprobdataGetNTypes(probdata);
    rexts = SCIPprobdataGetRexts(probdata);
-   _rints = SCIPprobdataGetRints(probdata);
+   rints = SCIPprobdataGetRints(probdata);
    demands = SCIPprobdataGetDemands(probdata);
 
    /* compute all non-dominated circular patterns */
@@ -871,10 +871,10 @@ SCIP_RETCODE setupProblem(
       SCIP_Real vol;
 
       /* consider ring as circle if there is no ring with a smaller radius than than inner one */
-      if( SCIPisFeasLT(scip, _rints[t], minrext) )
+      if( SCIPisFeasLT(scip, rints[t], minrext) )
          vol = M_PI * SQR(rexts[t]);
       else
-         vol = M_PI * (SQR(rexts[t]) - SQR(_rints[t]));
+         vol = M_PI * (SQR(rexts[t]) - SQR(rints[t]));
 
       volume += vol * demands[t];
    }
