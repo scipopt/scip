@@ -793,28 +793,27 @@ SCIP_RETCODE buildScenariosFromBlocks(
    assert(blocksforscen != NULL);
 
    processed = FALSE;
-   for( i = blocknum + 1; i < numblocks; i++ )
+   i = blocknum + 1;
+   for( !processed && i < numblocks )
    {
       /* it is only necessary to process the next block in the list the belongs to the given stage. */
       if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) == 0 )
-         processed = TRUE;
-      else
-         continue;
-
-      for( j = 0; j < numblocksperblock[i]; j++ )
       {
-         /* adding the blocks that will build the scenario */
-         (*blocksforscen)[(*numblocksforscen)] = blocks[i][j];
-         (*numblocksforscen)++;
-         SCIP_CALL( buildScenariosFromBlocks(scip, blocks, scenarios, blocksforscen, numblocksforscen, numblocks,
-               numblocksperblock, numscenarios, scenariossize, stage, stagenum + 1, i)  );
+         for( j = 0; j < numblocksperblock[i]; j++ )
+         {
+            /* adding the blocks that will build the scenario */
+            (*blocksforscen)[(*numblocksforscen)] = blocks[i][j];
+            (*numblocksforscen)++;
+            SCIP_CALL( buildScenariosFromBlocks(scip, blocks, scenarios, blocksforscen, numblocksforscen, numblocks,
+                  numblocksperblock, numscenarios, scenariossize, stage, stagenum + 1, i)  );
 
-         /* the last block needs to be removed so that a new block can be used in its place */
-         (*numblocksforscen)--;
+            /* the last block needs to be removed so that a new block can be used in its place */
+            (*numblocksforscen)--;
+         }
+         processed = TRUE;
       }
 
-      if( processed )
-         break;
+      i++;
    }
 
    /* when all blocks have been inspected, then it is possible to build the scenario */
