@@ -794,7 +794,7 @@ SCIP_RETCODE buildScenariosFromBlocks(
 
    processed = FALSE;
    i = blocknum + 1;
-   for( !processed && i < numblocks )
+   while( !processed && i < numblocks )
    {
       /* it is only necessary to process the next block in the list the belongs to the given stage. */
       if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) == 0 )
