@@ -75,8 +75,8 @@ mkdir -p settings
 #  - Don't add LPS=xxx and LPSOPT=xxx but instead use EXECUTABLE=[scipdbgspx|scipdbgcpx].
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 # FORMAT:
-#    JOBS[x,y]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
-#    JOBS[x,y]="EXECUTABLE=scipdbgcpx-${GITBRANCH} BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
+#    JOBS[x,y]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
+#    JOBS[x,y]="EXECUTABLE=scipdbgcpx BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 
 RANDOMSEED=`date +%Y%m%d`
 
@@ -85,30 +85,30 @@ RANDOMSEED=`date +%Y%m%d`
 declare -A JOBS
 
 # jobs running on monday
-JOBS[1,1]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
-JOBS[1,2]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
+JOBS[1,1]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
+JOBS[1,2]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
 
 # jobs running on tuesday
-JOBS[2,1]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
-JOBS[2,2]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default_${RANDOMSEED}"
+JOBS[2,1]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
+JOBS[2,2]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default_${RANDOMSEED}"
 
 # jobs running on wednesday
-JOBS[3,1]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
-JOBS[3,2]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
+JOBS[3,1]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
+JOBS[3,2]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
 
 # jobs running on thursday
-JOBS[4,1]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=heuraggr_${RANDOMSEED}"
-JOBS[4,2]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_heuraggr_${RANDOMSEED}"
+JOBS[4,1]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=heuraggr_${RANDOMSEED}"
+JOBS[4,2]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_heuraggr_${RANDOMSEED}"
 
 # jobs running on friday
-JOBS[5,1]="EXECUTABLE=scipdbgcpx-${GITBRANCH} BINID=scipdbgcpx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
-JOBS[5,2]="EXECUTABLE=scipdbgcpx-${GITBRANCH} BINID=scipdbgcpx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
+JOBS[5,1]="EXECUTABLE=scipdbgcpx BINID=scipdbgcpx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
+JOBS[5,2]="EXECUTABLE=scipdbgcpx BINID=scipdbgcpx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
 
 # jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdev-solvable TIME=7200 SETTINGS=default"
+JOBS[6,1]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=mipdev-solvable TIME=7200 SETTINGS=default"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipdbgspx-${GITBRANCH} BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=minlpdev-solvable TIME=7200 SETTINGS=minlp_default"
+JOBS[7,1]="EXECUTABLE=scipdbgspx BINID=scipdbgspx-${GITBRANCH} MEM=6000 QUEUE=opt TEST=minlpdev-solvable TIME=7200 SETTINGS=minlp_default"
 
 #########################
 ### process variables ###
@@ -205,7 +205,7 @@ ln -fs /optimi/kombadon/MINLP check/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+  for j in "EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
     unset $j
   done
   export ${FLAGS}
