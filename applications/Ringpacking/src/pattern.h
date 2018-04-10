@@ -31,9 +31,9 @@
 
 enum SCIP_Packable
 {
-   SCIP_PACKABLE_NO      = 0,
-   SCIP_PACKABLE_YES     = 1,
-   SCIP_PACKABLE_UNKNOWN = 2
+   SCIP_PACKABLE_NO      = 0,                  /**< pattern is definitely packable */
+   SCIP_PACKABLE_YES     = 1,                  /**< pattern is definitely not packable */
+   SCIP_PACKABLE_UNKNOWN = 2                   /**< it is unknown whether pattern is packable */
 };
 typedef enum SCIP_Packable SCIP_PACKABLE;
 
