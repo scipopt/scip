@@ -1593,16 +1593,6 @@ SCIP_RETCODE SCIPbendersExec(
    return SCIP_OKAY;
 }
 
-
-   /* end timing */
-   SCIPclockStop(benders->bendersclock, set);
-
-   /* freeing memory */
-   SCIPsetFreeBufferArray(set, &subisinfeas);
-
-   return SCIP_OKAY;
-}
-
 /** solves the subproblems. */
 SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
