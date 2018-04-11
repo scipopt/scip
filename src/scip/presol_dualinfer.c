@@ -1161,8 +1161,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          var = SCIPmatrixGetVar(matrix, i);
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
-            if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, i) ||
-               SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, i) )
+            if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNUplocks(matrix, i) ||
+               SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNDownlocks(matrix, i) )
             {
                locksconsistent = FALSE;
                break;
@@ -1193,8 +1193,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
                   var = SCIPmatrixGetVar(matrix, i);
 
-                  if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, i) ||
-                     SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, i) )
+                  if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNUplocks(matrix, i) ||
+                     SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNDownlocks(matrix, i) )
                   {
                      /* no fixing, locks for this variable not consistent */
                      continue;

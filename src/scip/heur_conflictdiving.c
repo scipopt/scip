@@ -279,8 +279,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   nlocksup = SCIPvarGetNLocksUp(cand);
-   nlocksdown = SCIPvarGetNLocksDown(cand);
+   nlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
+   nlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
 
    nconflictlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_CONFLICT);
    nconflictlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_CONFLICT);

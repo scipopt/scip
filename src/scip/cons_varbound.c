@@ -1554,7 +1554,8 @@ SCIP_RETCODE propagateCons(
       /* this did not seem to help but should be tested again, there might also still be a bug in there */
 #ifdef SCIP_DISABLED_CODE
       /* local duality fixing of variables in the constraint */
-      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksDown(consdata->vbdvar) == 1
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar))
+         && SCIPvarGetNLocksDownType(consdata->vbdvar, SCIP_LOCKTYPE_MODEL) == 1
          && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->vbdvar))
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
          && ((consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
@@ -1564,7 +1565,8 @@ SCIP_RETCODE propagateCons(
             SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar));
          SCIP_CALL( SCIPchgVarUb(scip, consdata->vbdvar, SCIPvarGetLbLocal(consdata->vbdvar)) );
       }
-      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksUp(consdata->vbdvar) == 1
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar))
+         && SCIPvarGetNLocksUpType(consdata->vbdvar, SCIP_LOCKTYPE_MODEL) == 1
          && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->vbdvar))
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
          && ((consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
@@ -1574,7 +1576,8 @@ SCIP_RETCODE propagateCons(
             SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
          SCIP_CALL( SCIPchgVarLb(scip, consdata->vbdvar, SCIPvarGetUbLocal(consdata->vbdvar)) );
       }
-      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksDown(consdata->var) == 1
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var))
+         && SCIPvarGetNLocksDownType(consdata->var, SCIP_LOCKTYPE_MODEL) == 1
          && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->var))
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
          && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -1583,7 +1586,8 @@ SCIP_RETCODE propagateCons(
             SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetLbLocal(consdata->var));
          SCIP_CALL( SCIPchgVarUb(scip, consdata->var, SCIPvarGetLbLocal(consdata->var)) );
       }
-      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksUp(consdata->var) == 1
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var))
+         && SCIPvarGetNLocksUpType(consdata->var, SCIP_LOCKTYPE_MODEL) == 1
          && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->var))
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
          && !SCIPisInfinity(scip, consdata->rhs) )

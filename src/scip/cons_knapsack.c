@@ -6759,7 +6759,8 @@ SCIP_RETCODE dualPresolving(
       /* the variable should not be (globally) fixed */
       assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
 
-      if( SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 1 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 0
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > 1 )
       {
          applicable = FALSE;
          break;
@@ -12789,7 +12790,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                      continue;
 
                   /* number of down locks should be one */
-                  if ( SCIPvarGetNLocksDown(vars[v]) != 1 )
+                  if ( SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL) != 1 )
                      continue;
 
                   cardvars[v] = implvars[j];
@@ -12838,7 +12839,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                for (v = 0; v < nvars; ++v)
                {
                   assert( SCIPhashmapExists(varhash, vars[v]) );
-                  if ( SCIPvarGetNLocksUp(vars[v]) != (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) )
+                  if ( SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL) != (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) )
                      break;
                }
                if ( v < nvars )

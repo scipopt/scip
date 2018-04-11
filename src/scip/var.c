@@ -11878,7 +11878,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                    */
                   assert(EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06) ?
                      ((SCIPvarGetUbGlobal((*var)->data.multaggr.vars[0]) < 0.5) ||
-                        SCIPvarGetNLocksUp((*var)->data.multaggr.vars[0]) > 0) : TRUE);
+                        SCIPvarGetNLocksUpType((*var)->data.multaggr.vars[0], SCIP_LOCKTYPE_MODEL) > 0) : TRUE);
                }
                else
                {

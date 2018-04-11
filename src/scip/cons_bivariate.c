@@ -6310,14 +6310,14 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
             neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
          }
 
-         if( SCIPvarGetNLocksDown(consdata->z) - neglock == 0 )
+         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
          {
             /* for c*z + f(x,y) \in [lhs, rhs], we can decrease z without harming other constraints */
             consdata->maydecreasez = TRUE;
             SCIPdebugMsg(scip, "may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->z));
          }
 
-         if( SCIPvarGetNLocksDown(consdata->z) - poslock == 0 )
+         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
          {
             /* for c*x + f(x,y) \in [lhs, rhs], we can increase x without harming other constraints */
             consdata->mayincreasez = TRUE;

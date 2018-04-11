@@ -4395,7 +4395,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
             assert(cnt == nvars - 1);
 
             /* check whether parity variable is present only in this constraint */
-            if ( SCIPvarGetNLocksDown(parityvar) <= 1 && SCIPvarGetNLocksUp(parityvar) <= 1 )
+            if ( SCIPvarGetNLocksDownType(parityvar, SCIP_LOCKTYPE_MODEL) <= 1
+               && SCIPvarGetNLocksUpType(parityvar, SCIP_LOCKTYPE_MODEL) <= 1 )
             {
                SCIP_VAR* intvar;
                SCIP_Bool rhsparity;

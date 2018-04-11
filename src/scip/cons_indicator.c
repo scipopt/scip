@@ -3392,7 +3392,7 @@ SCIP_RETCODE presolRoundIndicator(
                except by this indicator constraint. If more than one indicator constraint is
                effected, we have to hope that they are all fulfilled - in this case the last
                constraint will fix the binary variable to 1. */
-            if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+            if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
             {
                if ( SCIPvarGetUbGlobal(binvar) > 0.5 )
                {
@@ -3410,7 +3410,7 @@ SCIP_RETCODE presolRoundIndicator(
          {
             /* In this case we would like to fix the binary variable to 0, if it is not locked down
                (should also have been performed by other dual reductions). */
-            if ( SCIPvarGetNLocksDown(binvar) == 0 )
+            if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
             {
                if ( SCIPvarGetLbGlobal(binvar) < 0.5 )
                {
@@ -3802,7 +3802,7 @@ SCIP_RETCODE propIndicator(
                   except by this indicator constraint. If more than one indicator constraint is
                   affected, we have to hope that they are all fulfilled - in this case the last
                   constraint will fix the binary variable to 1. */
-               if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+               if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                {
                   if ( SCIPvarGetUbLocal(binvar) > 0.5 )
                   {
@@ -3820,7 +3820,7 @@ SCIP_RETCODE propIndicator(
             {
                /* In this case we would like to fix the binary variable to 0, if it is not locked down
                   (should also have been performed by other dual reductions). */
-               if ( SCIPvarGetNLocksDown(binvar) == 0 )
+               if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
                {
                   if ( SCIPvarGetLbLocal(binvar) < 0.5 )
                   {
@@ -8124,7 +8124,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
                if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
                {
                   /* check whether variable only occurs in the current constraint */
-                  if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+                  if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                   {
                      SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                      *changed = TRUE;
@@ -8142,7 +8142,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             {
                /* setting variable to 0 does not increase objective -> check whether variable only occurs in the current constraint
                 * note: binary variables are only locked up */
-               if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+               if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) <= 0
+                  && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
                {
                   SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
                   *changed = TRUE;

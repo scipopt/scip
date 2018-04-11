@@ -295,8 +295,8 @@ SCIP_RETCODE SCIPapplyLockFixings(
    for( v = 0; v < nbinvars; ++v )
    {
       var = sortvars[v];
-      nuplocks[v] = SCIPvarGetNLocksUp(var);
-      ndownlocks[v] = SCIPvarGetNLocksDown(var);
+      nuplocks[v] = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+      ndownlocks[v] = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
    }
 
    /* get activities of rows */

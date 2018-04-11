@@ -1145,10 +1145,12 @@ SCIP_RETCODE presolveDual(
    lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
    rhsexists = !SCIPisInfinity(scip,  consdata->rhs);
 
-   if( SCIPvarGetNLocksDown(consdata->x) == (lhsexists ? 1 : 0) &&
-       SCIPvarGetNLocksUp(consdata->x)   == (rhsexists ? 1 : 0) &&
-       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksDown(consdata->z) : SCIPvarGetNLocksUp(consdata->z)) == (lhsexists ? 1 : 0) &&
-       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksUp(consdata->z) : SCIPvarGetNLocksDown(consdata->z)) == (rhsexists ? 1 : 0) )
+   if( SCIPvarGetNLocksDownType(consdata->x, SCIP_LOCKTYPE_MODEL) == (lhsexists ? 1 : 0) &&
+       SCIPvarGetNLocksUpType(consdata->x, SCIP_LOCKTYPE_MODEL)   == (rhsexists ? 1 : 0) &&
+       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) :
+         SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL)) == (lhsexists ? 1 : 0) &&
+       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL) :
+         SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL)) == (rhsexists ? 1 : 0) )
    {
       /* x and z are only locked by cons, so we can fix them to an optimal solution of
        * min  xobj * x + zobj * z
