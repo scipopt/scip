@@ -372,7 +372,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
       *score = candsfrac;
 
       if( nconflictlocksup > 0 )
-         *score += 10 * nconflictlocksup / conflictlocksum;
+         *score += (10.0 * nconflictlocksup / conflictlocksum);
 
       *score += (scalefactor * nlocksup / MAX(1.0, locksum));
    }
@@ -388,7 +388,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
       *score = candsfrac;
 
       if( nconflictlocksdown > 0 )
-         *score += 10 * nconflictlocksdown / conflictlocksum;
+         *score += (10.0 * nconflictlocksdown / conflictlocksum);
 
       *score += (scalefactor * nlocksdown / MAX(1.0, locksum));
    }
