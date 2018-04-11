@@ -2580,11 +2580,9 @@ SCIP_RETCODE lpCheckRealpar(
    SCIP_LPPARAM          lpparam,            /**< LP parameter */
    SCIP_Real             value               /**< value parameter should have */
    )
-{
+{/*lint --e{715}*/
    SCIP_RETCODE retcode;
-#if SCIP_DISABLED_CODE/*lint !e553*/
    SCIP_Real lpivalue;
-#endif
 
    assert(lp != NULL);
 
