@@ -1393,12 +1393,15 @@ SCIP_RETCODE solveBendersSubproblems(
                   }
 #endif
 
-                  /* only increment the checked count if the subproblem is not an LP, or the solve loop is the MIP
-                   * solving loop. Hence, the LP are solved once and the MIPs are solved twice, one for the LP
-                   * relaxation of the MIP and the other to solve the MIP itself.
-                   * If the user has implemented a solving function, then it is expected that the user has
-                   * completely checked a subproblem in the solving callback. So in this case, the check count is
-                   * increased.
+                  /* the nchecked variable is only incremented when the original form of the subproblem has been solved.
+                   * What is meant by "original" is that the LP relaxation of CIPs are solved to generate valid cuts. So
+                   * if the subproblem is defined as a CIP, then it is only classified as checked if the CIP is solved.
+                   * There are three cases where the "original" form is solved are:
+                   * i) solveloop == SCIP_BENDERSSOLVELOOP_LP and the subproblem is an LP - the original form has been
+                   * solved.
+                   * ii) solveloop == SCIP_BENDERSSOLVELOOP_CIP and the CIP for the subproblem has been solved.
+                   * iii) solveloop == SCIP_BENDERSSOLVELOOP_USER, since the user has defined a solve function should be
+                   * the "original form".
                    */
                   if( (solveloop == SCIP_BENDERSSOLVELOOP_LP && lpsub)
                      || (solveloop == SCIP_BENDERSSOLVELOOP_CIP && !lpsub)
