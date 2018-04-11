@@ -316,7 +316,7 @@ void SCIPbendersSetSubprobIsLP(
    SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
    );
 
-/** inserts a Benders' cut into the Benders' cuts list */
+/** inserts a Benders' cut algorithm plugin into the Benders' cuts plugin list */
 extern
 SCIP_RETCODE SCIPbendersIncludeBenderscut(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
@@ -331,13 +331,13 @@ void SCIPbendersSetBenderscutsSorted(
    SCIP_Bool             sorted              /**< the value to set the sorted flag to */
    );
 
-/** sorts benders cuts by priorities */
+/** sorts Benders' cuts plugins by priorities */
 extern
 void SCIPbendersSortBenderscuts(
    SCIP_BENDERS*         benders             /**< benders */
    );
 
-/** sorts benders cuts by name */
+/** sorts Benders' cuts plugins by name */
 extern
 void SCIPbendersSortBenderscutsName(
    SCIP_BENDERS*         benders             /**< benders */
