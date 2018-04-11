@@ -551,12 +551,12 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       /* the flag is set to indicate that the Benders' decomposition is a copy */
       targetbenders->iscopy = TRUE;
 
-         /* calling the copy method for the Benders' cuts */
-         SCIPbendersSortBenderscuts(benders);
-         for( i = 0; i < benders->nbenderscuts; i++ )
-         {
-            SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], targetset) );
-         }
+      /* calling the copy method for the Benders' cuts */
+      SCIPbendersSortBenderscuts(benders);
+      for( i = 0; i < benders->nbenderscuts; i++ )
+      {
+         SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], targetset) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1593,16 +1593,6 @@ SCIP_RETCODE SCIPbendersExec(
    return SCIP_OKAY;
 }
 
-
-   /* end timing */
-   SCIPclockStop(benders->bendersclock, set);
-
-   /* freeing memory */
-   SCIPsetFreeBufferArray(set, &subisinfeas);
-
-   return SCIP_OKAY;
-}
-
 /** solves the subproblems. */
 SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -2431,3 +2421,14 @@ void SCIPbendersSortBenderscutsName(
       benders->benderscutsnamessorted = TRUE;
    }
 }
+
+/** returns the number of subproblems that are LPs */
+int SCIPbendersGetNLPSubprobs(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nlpsubprobs;
+}
+

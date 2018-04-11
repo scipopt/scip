@@ -6377,6 +6377,40 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
    return SCIP_OKAY;
 }
 
+/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
+ * value of the corresponding auxiliary variable */
+SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
+   int                   probnumber,         /**< the number of the pricing problem */
+   SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
+   )
+{
+   assert(scip != NULL);
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   SCIP_CALL( SCIPbendersCheckSubprobOptimality(benders, scip->set, sol, probnumber, optimal) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the value of the auxiliary variable for a given subproblem */
+SCIP_Real SCIPgetBendersAuxiliaryVarVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
+   int                   probnumber          /**< the number of the pricing problem */
+   )
+{
+   assert(scip != NULL);
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return SCIPbendersGetAuxiliaryVarVal(benders, scip->set, sol, probnumber);
+}
+
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
  *  to include a Benders' cut algorithm if a Benders' decomposition has already been included
@@ -6645,6 +6679,44 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    nbenders = SCIPgetNBenders(scip);
    for( i = 0; i < nbenders; i++ )
       SCIPbendersSetBenderscutsSorted(benders[i], FALSE);
+
+   return SCIP_OKAY;
+}
+
+/** adds the generated constraint to the Benders cut storage */
+SCIP_RETCODE SCIPstoreBenderscutCons(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
+   )
+{
+   assert(scip != NULL);
+   assert(benderscut != NULL);
+   assert(cons != NULL);
+
+   SCIP_CALL( SCIPbenderscutStoreCons(benderscut, scip->set, cons) );
+
+   /* capturing the stored constraint */
+   SCIP_CALL( SCIPcaptureCons(scip, cons) );
+
+   return SCIP_OKAY;
+}
+
+/** adds the generated cuts to the Benders' cut storage */
+SCIP_RETCODE SCIPstoreBenderscutCut(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
+   )
+{
+   assert(scip != NULL);
+   assert(benderscut != NULL);
+   assert(cut != NULL);
+
+   SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, cut) );
+
+   /* capturing the row */
+   SCIP_CALL( SCIPcaptureRow(scip, cut) );
 
    return SCIP_OKAY;
 }

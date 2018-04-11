@@ -2897,6 +2897,7 @@ SCIP_RETCODE SCIPsetBendersPresubsolve(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
+EXTERN
 SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< benders */
@@ -2918,24 +2919,6 @@ SCIP_RETCODE SCIPsetBendersPostsolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< benders */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization method of benders */
-   );
-
-/** sets the free subproblem method for benders
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *
- *  @note If the subproblem solving method is implemented, then the freeing subproblem method` must also be implemented
- */
-EXTERN
-SCIP_RETCODE SCIPsetBendersFreesub(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the subproblem freeing method for Benders' decomposition */
    );
 
 /** returns the Benders' decomposition of the given name, or NULL if not existing */
@@ -3052,7 +3035,24 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
    int                   probnumber          /**< the subproblem number */
    );
 
-/* @} */
+/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
+ * value of the corresponding auxiliary variable */
+EXTERN
+SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
+   int                   probnumber,         /**< the number of the pricing problem */
+   SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
+   );
+
+/** returns the value of the auxiliary variable for a given subproblem */
+SCIP_Real SCIPgetBendersAuxiliaryVarVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
+   int                   probnumber          /**< the number of the pricing problem */
+   );
 
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
@@ -3218,6 +3218,22 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
    int                   priority            /**< new priority of the Benders' decomposition */
+   );
+
+/** adds the generated constraint to the Benders cut storage */
+EXTERN
+SCIP_RETCODE SCIPstoreBenderscutCons(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
+   );
+
+/** adds the generated cuts to the Benders' cut storage */
+EXTERN
+SCIP_RETCODE SCIPstoreBenderscutCut(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
    );
 
 /* @} */
