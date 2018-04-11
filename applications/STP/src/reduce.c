@@ -1653,6 +1653,7 @@ SCIP_RETCODE redLoopStp(
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 
+         SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &extendedelims, NULL));
 
          if( extendedelims > STP_RED_EXFACTOR * reductbound )
             rerun = TRUE;

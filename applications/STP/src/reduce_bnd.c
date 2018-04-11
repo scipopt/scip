@@ -52,6 +52,124 @@
 #define STP_DABD_MAXDNEDGES 10
 #define STP_DAEX_MAXDFSDEPTH 5
 
+
+/** clean subtree if not ruled out */
+static
+void cleanSubtreeHead
+(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            treeedges,          /**< tree edges */
+   int                   dfsdepth,           /**< dfs depth */
+   SCIP_Bool             ruleout,            /**< rule out? */
+   int*                  nodemark            /**< nodes of the tree */
+)
+{
+   if( !ruleout )
+   {
+      for( int etree = 0; etree < dfsdepth; etree++ )
+      {
+         const int head = graph->head[treeedges[etree]];
+         assert(nodemark[head]);
+         nodemark[head] = FALSE;
+      }
+   }
+}
+
+/** clean subtree if not ruled out */
+static
+void cleanSubtreeTail
+(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            treeedges,          /**< tree edges */
+   int                   dfsdepth,           /**< dfs depth */
+   SCIP_Bool             ruleout,            /**< rule out? */
+   int*                  nodemark            /**< nodes of the tree */
+)
+{
+   if( !ruleout )
+   {
+      for( int etree = 0; etree < dfsdepth; etree++ )
+      {
+         const int tail = graph->tail[treeedges[etree]];
+         assert(nodemark[tail]);
+         nodemark[tail] = FALSE;
+      }
+   }
+}
+
+/** should we truncate subtree? */
+static
+SCIP_Bool truncateSubtree
+(
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real             extendedcost,       /**< cost of subtree */
+   int                   root,               /**< DA root */
+   int                   currhead,           /**< latest node */
+   int                   maxgrad,            /**< maximum allowed degree */
+   int                   dfsdepth,           /**< dfs depth */
+   int                   maxdfsdepth,        /**< max dfs depth */
+   SCIP_Real*            minbound,           /**< bound */
+   SCIP_Bool*            stopped             /**< real truncation? */
+)
+{
+   if( Is_term(graph->term[currhead]) || graph->grad[currhead] > maxgrad || dfsdepth >= maxdfsdepth )
+   {
+      /* real truncation? */
+      if( root != currhead )
+      {
+         *stopped = TRUE;
+         if( extendedcost < *minbound )
+            *minbound = extendedcost;
+#ifdef PPP
+         printf("stop  \n");
+#endif
+      }
+      return TRUE;
+   }
+   return FALSE;
+}
+
+/** can subtree be ruled out? */
+static
+SCIP_Bool ruleOutSubtree
+(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            nodemark,           /**< nodes of the tree */
+   SCIP_Real             cutoff,             /**< cut-off bound */
+   SCIP_Real             extendedcost,       /**< cost of subtree */
+   int                   curredge,           /**< latest edge */
+   int                   currhead            /**< latest node */
+)
+{
+   if( SCIPisGT(scip, extendedcost, cutoff) )
+   {
+#ifdef PPP
+printf("rule out \n");
+#endif
+      return TRUE;
+   }
+   else
+   {
+      const SCIP_Real currcost = graph->cost[curredge];
+      int e;
+
+      for( e = graph->inpbeg[currhead]; e != EAT_LAST; e = graph->ieat[e] )
+         if( nodemark[graph->tail[e]] && e != curredge && graph->cost[e] < currcost  )
+            break;
+
+      if( e != EAT_LAST )
+      {
+         assert(flipedge(e) != curredge);
+
+       //  printf("excluded %d \n", currhead);
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** updates node bounds for reduced cost fixings */
 static
 void updateNodeFixingBounds(
@@ -189,7 +307,8 @@ SCIP_RETCODE updateNodeReplaceBounds(
 
                      if( tmpcostY < fixbnd )
                      {
-                        if( extendedsearch )
+                        int todo;
+                        if( extendedsearch || 1 )
                         {
                            int tree3outedges[2];
                            SCIP_Bool ruleout;
@@ -202,9 +321,8 @@ SCIP_RETCODE updateNodeReplaceBounds(
                            tree3outedges[1] = outedge2;
 
 
-                           SCIP_CALL(
-                                 reduce_check3Tree(scip, graph, root, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint,
-                                       &tmpcostY, &ruleout));
+                           SCIP_CALL( reduce_check3Tree(scip, graph, root, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint,
+                                       &tmpcostY, &ruleout) );
 #ifndef NDEBUG
                            assert(tmpcostY >= tmpcostYorg);
 #endif
@@ -1649,6 +1767,7 @@ SCIP_RETCODE reduce_check3Tree(
          int nadded_edges = 0;
          SCIP_Bool stopped = FALSE;
 
+         int todo; // try to rule out outedges[i] (and inedgelater )!
          assert(startnode != root && costartnode != root);
 
          /* cannot extend over terminals or vertices of high degree  */
@@ -1706,8 +1825,8 @@ SCIP_RETCODE reduce_check3Tree(
 #endif
                nodemark[currhead] = FALSE;
                treecost -= redcost[curredge];
-
                dfsdepth--;
+
                assert(dfsdepth >= 0);
                assert(treeedges[dfsdepth] == curredge);
             }
@@ -1729,32 +1848,12 @@ SCIP_RETCODE reduce_check3Tree(
                   extendedcost += vnoi[costartnode].dist + vnoi[currhead].dist;
 
                /* can we rule out subtree? */
-               if( SCIPisGT(scip, extendedcost, cutoff) )
-               {
-#ifdef PPP
-      printf("rule out \n");
-#endif
+               if( ruleOutSubtree(scip, graph, nodemark, cutoff, extendedcost, curredge, currhead) )
                   continue;
-               }
 
                /* do we need to stop extension? */
-               if( Is_term(graph->term[currhead]) || graph->grad[currhead] > maxgrad || dfsdepth >= maxdfsdepth  )
-               {
-                  /* can we still rule out subtree? */
-                  if( root == currhead )
-                     continue;
-
-                  stopped = TRUE;
-
-                  if( extendedcost < minbound )
-                     minbound = extendedcost;
-#ifdef PPP
-printf("stop  \n");
-#endif
+               if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
                   continue;
-
-                  //break;
-               }
 
 #ifdef PPP
       printf("extend ...  \n");
@@ -1775,16 +1874,7 @@ printf("stop  \n");
             }
          } /* DFS loop */
 
-         if( !(*ruleout) )
-         {
-            /* clean and break */
-            for( int etree = 0; etree < dfsdepth; etree++ )
-            {
-               const int head = graph->head[treeedges[etree]];
-               assert(nodemark[head]);
-               nodemark[head] = FALSE;
-            }
-         }
+         cleanSubtreeHead(graph, treeedges, dfsdepth, *ruleout, nodemark);
 
 #ifndef NDEBUG
          assert(SCIPisGE(scip, minbound, orgtreebound));
@@ -1807,7 +1897,6 @@ printf("stop  \n");
 
          int todo; // correct?
          SCIP_Real treecost = *treebound - pathdist[innode];
-        // printf("treeound before %f \n", *treebound);
 
          assert(treecost >= 0.0);
          assert(nodemark[basenode]);
@@ -1869,29 +1958,11 @@ printf("stop  \n");
             {
                const SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               /* can we rule out subtree? */
-               if( SCIPisGT(scip, extendedcost, cutoff) )
-               {
-#ifdef PPP
-      printf("rule out \n");
-#endif
-                  continue;
-               }
-
-               /* do we need to stop extension? */
-               if( Is_term(graph->term[currtail]) || graph->grad[currtail] > maxgrad || dfsdepth >= maxdfsdepth  )
-               {
-                  stopped = TRUE;
-
-                  if( extendedcost < minbound )
-                     minbound = extendedcost;
-#ifdef PPP
-printf("stop  \n");
-#endif
+               if( ruleOutSubtree(scip, graph, nodemark, cutoff, extendedcost, flipedge((unsigned)curredge), currtail) )
                   continue;
 
-                  //break;
-               }
+               if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
+                  continue;
 
 #ifdef PPP
       printf("extend ...  \n");
@@ -1912,16 +1983,7 @@ printf("stop  \n");
             }
          } /* DFS loop */
 
-         if( !(*ruleout) )
-         {
-            /* clean and break */
-            for( int etree = 0; etree < dfsdepth; etree++ )
-            {
-               const int head = graph->tail[treeedges[etree]];
-               assert(nodemark[head]);
-               nodemark[head] = FALSE;
-            }
-         }
+         cleanSubtreeTail(graph, treeedges, dfsdepth, *ruleout, nodemark);
 
 #ifndef NDEBUG
          assert(SCIPisGE(scip, minbound, orgtreebound));
@@ -1929,9 +1991,6 @@ printf("stop  \n");
 
          if( minbound > *treebound )
             *treebound = minbound;
-
-       //  printf("*treebound after %f \n", minbound);
-
       } /* inedge */
 
 
@@ -1950,6 +2009,181 @@ printf("stop  \n");
 
    return SCIP_OKAY;
 }
+
+
+#if 0
+/** check (directed) edge */
+SCIP_RETCODE reduce_checkEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   root,               /**< graph root from dual ascent */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   const SCIP_Real*      pathdist,           /**< shortest path distances  */
+   const PATH*           vnoi,               /**< Voronoi paths  */
+   const int*            vbase,              /**< bases to Voronoi paths */
+   SCIP_Real             cutoff,             /**< cutoff value */
+   int                   edge,               /**< (directed) edge to be checked */
+   int*                  edgestack,          /**< array of size nodes for internal computations */
+   SCIP_Real*            edgebound           /**< to store a lower bound for the edge */
+)
+{
+#ifndef NDEBUG
+   const SCIP_Real orgedgebound = *edgebound;
+#endif
+   const int head = graph->head[edge];
+   const int tail = graph->tail[edge];
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(redcost != NULL);
+   assert(pathdist != NULL);
+   assert(vnoi != NULL);
+   assert(vbase != NULL);
+   assert(edge >= 0 && edge < graph->edges);
+
+   /* trivial rule-out? */
+   if( SCIPisGT(scip, redcost[edge] + pathdist[tail] + vnoi[head].dist, cutoff) || head == root )
+   {
+      *edgebound = FARAWAY;
+   }
+   else
+   {
+      int treeedges[STP_DAEX_MAXDFSDEPTH + 1];
+
+      int* nodemark;
+      const int nnodes = graph->knots;
+      const int maxdfsdepth = MIN(3, STP_DAEX_MAXDFSDEPTH);
+      const int maxgrad = 8;
+      SCIP_Bool ruleout = FALSE;
+
+#ifdef PPP
+      printf("called for %d \n", basenode);
+#endif
+
+      /* allocate clean array */
+      SCIP_CALL(SCIPallocCleanBufferArray(scip, &nodemark, nnodes));
+
+      for( int i = 0; i < nnodes; i++ )
+         assert(nodemark[i] == FALSE);
+
+      nodemark[tail] = TRUE;
+      nodemark[head] = TRUE;
+
+      /* check whether to extend from head */
+      if( !Is_term(graph->term[head]) && graph->grad[head] <= maxgrad )
+      {
+         SCIP_Real minbound = FARAWAY;
+         SCIP_Real treecost = redcost[edge] + pathdist[tail]; // todo recompute from time to time?
+         int dfsdepth = 0;
+         int nadded_edges = 0;
+         SCIP_Bool stopped = FALSE;
+
+         for( int e = graph->outbeg[head]; e != EAT_LAST; e = graph->oeat[e] )
+            if( graph->head[e] != tail )
+               edgestack[nadded_edges++] = e;
+
+         /* limited DFS */
+         for( ;; )
+         {
+            int curredge;
+            int currhead;
+
+            /* whole subtree processed? */
+            if( nadded_edges == 0 )
+            {
+#ifdef PPP
+      printf("rule out \n");
+#endif
+               assert(dfsdepth == 0);
+
+               if( !stopped )
+               {
+                  ruleout = TRUE;
+                  assert(minbound == FARAWAY);
+               }
+
+               break;
+            }
+
+            curredge = edgestack[--nadded_edges];
+            currhead = graph->head[curredge];
+
+#ifdef PPP
+      printf("check %d %d\n", graph->tail[curredge], currhead);
+#endif
+
+            /*  subtree already processed? */
+            if( nodemark[currhead] )
+            {
+#ifdef PPP
+      printf("processed already  \n");
+#endif
+               nodemark[currhead] = FALSE;
+               treecost -= redcost[curredge];
+
+               dfsdepth--;
+               assert(dfsdepth >= 0);
+               assert(treeedges[dfsdepth] == curredge);
+            }
+            else
+            {
+               SCIP_Real extendedcost = treecost + redcost[curredge] + vnoi[currhead].dist;
+
+               if( ruleOutSubtree(scip, graph, nodemark, cutoff, extendedcost, curredge, currhead) )
+                  continue;
+
+               if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
+                  continue;
+
+#ifdef PPP
+      printf("extend ...  \n");
+#endif
+               nodemark[currhead] = TRUE;
+               treecost += redcost[curredge];
+               treeedges[dfsdepth++] = curredge;
+               nadded_edges++;
+
+               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
+                  if( !nodemark[graph->head[e]] )
+                     edgestack[nadded_edges++] = e;
+#ifdef PPP
+               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
+                                 if( !nodemark[graph->head[e]] )
+                                    printf("add to heap(2) %d %d \n", graph->tail[e], graph->head[e]);
+#endif
+            }
+         } /* DFS loop */
+
+         cleanSubtreeHead(graph, nodemark, treeedges, dfsdepth, ruleout);
+
+#ifndef NDEBUG
+         assert(SCIPisGE(scip, minbound, orgedgebound));
+#endif
+
+         if( minbound > *edgebound )
+            *edgebound = minbound;
+
+      } /* extend from head */
+
+      /* check whether to extend from tail */
+      if( !ruleout && !Is_term(graph->term[tail]) && graph->grad[tail] <= maxgrad )
+      {
+// *edgebound - pathdist[tail]
+      }
+
+      /* clean nodemark array */
+      nodemark[head] = FALSE;
+      nodemark[tail] = FALSE;
+
+      for( int i = 0; i < nnodes; i++ )
+         assert(nodemark[i] == FALSE);
+
+      SCIPfreeCleanBufferArray(scip, &nodemark);
+   }
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** dual ascent based reductions */
 SCIP_RETCODE reduce_da(
