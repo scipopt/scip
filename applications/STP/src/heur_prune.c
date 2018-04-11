@@ -752,7 +752,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                vbase, nodearrint, edgearrint, nodearrint2, heap, NULL, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
       else
          SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-               vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, NULL, FALSE) );
+               vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE) );
    }
 
    /* get number of remaining nodes, edges and terminals */
@@ -846,7 +846,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                   vbase, nodearrint, edgearrint, nodearrint2, heap, solnode, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
          else
             SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state, vbase, nodearrint, edgearrint,
-                  nodearrint2, solnode, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, NULL, FALSE));
+                  nodearrint2, solnode, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE));
 
          /* delete all vertices not reachable from the root */
          SCIP_CALL( level0(scip, prunegraph) );

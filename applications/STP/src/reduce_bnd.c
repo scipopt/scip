@@ -136,10 +136,6 @@ SCIP_RETCODE updateNodeReplaceBounds(
          /* Y-test for small degrees */
          if( degree <= STP_DABD_MAXDEGREE && !SCIPisLT(scip, upperbound, fixbnd) )
          {
-#ifdef PPP
-
-            printf("\ncheck node %d \n\n", node);
-#endif
             int edgecount = 0;
 
             fixbnd = FARAWAY;
@@ -178,10 +174,6 @@ SCIP_RETCODE updateNodeReplaceBounds(
                      if( vbase[leaf1] != vbase[leaf2] )
                      {
                         tmpcostY += vnoi[leaf1].dist + vnoi[leaf2].dist;
-#ifdef PPP
-
-                        printf("(1. case) head1 %d head2: %d \n", vbase[leaf1], vbase[leaf2]);
-#endif
                      }
                      else
                      {
@@ -191,57 +183,41 @@ SCIP_RETCODE updateNodeReplaceBounds(
 
                         assert(vbase[leaf1 + nnodes] >= 0 || leaf1far == FARAWAY);
                         assert(vbase[leaf2 + nnodes] >= 0 || leaf2far == FARAWAY);
-#ifdef PPP
 
-                        printf("(2. case) \n");
-#endif
                         tmpcostY += MIN(leaf1far + vnoi[leaf2].dist, vnoi[leaf1].dist + leaf2far);
                      }
 
                      if( tmpcostY < fixbnd )
                      {
-                        int tree3outedges[2];
-                        SCIP_Bool ruleout;
-                        tree3outedges[0] = outedge1;
-                        tree3outedges[1] = outedge2;
+                        if( extendedsearch )
+                        {
+                           int tree3outedges[2];
+                           SCIP_Bool ruleout;
 
-
-                        printf("before %f \n", tmpcostY);
-                        SCIP_CALL( reduce_check3Tree(scip, graph, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint, &tmpcostY, &ruleout) );
-
-                        printf("after %f \n", tmpcostY);
-                        fixbnd = tmpcostY;
-
-#ifdef PPP
-                        printf("update to : %f \n", tmpcost);
-                        printf("   rootcost %f \n", pathdist[tmproot] + cost[rootedge]);
-                        printf("   leaf1cost %f \n", vnoi[leaf1].dist + cost[outedge1]);
-                        printf("   leaf2cost %f \n", vnoi[leaf2].dist + cost[outedge2]);
-                        printf("   root %d \n", tmproot);
-                        printf("   leaf1 %d (cost %f) \n", leaf1, graph->cost[outedge1]);
-                        printf("   leaf2 %d \n", leaf2);
-                        printf(" %d \n", Is_term(graph->term[leaf1]));
-                        printf(" %d \n", Is_term(graph->term[leaf2]));
+#ifndef NDEBUG
+                           const SCIP_Real tmpcostYorg = tmpcostY;
 #endif
+
+                           tree3outedges[0] = outedge1;
+                           tree3outedges[1] = outedge2;
+
+
+                           SCIP_CALL(
+                                 reduce_check3Tree(scip, graph, root, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint,
+                                       &tmpcostY, &ruleout));
+#ifndef NDEBUG
+                           assert(tmpcostY >= tmpcostYorg);
+#endif
+
+                        }
+
+                        fixbnd = tmpcostY;
                      }
                   }
                } /* Y loop */
             } /* root loop */
 
             fixbnd += lpobjval;
-#ifdef PPP
-
-            printf("fixbnd %f \n", fixbnd);
-            printf("(old) head1 %d head2 %d\n", vbase[node], vbase[node + nnodes]);
-            printf("  old rootcost %f \n", pathdist[node]);
-            printf("  old leaf1cost %f \n", vnoi[node].dist);
-            printf("  old leaf2cost %f \n", vnoi[node + nnodes].dist);
-            printf("  old leaf1 %d \n", graph->tail[vnoi[node].edge]);
-            printf("  old leaf2 %d \n", graph->tail[vnoi[node + nnodes].edge]);
-
-            printf("old %f \n", pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist);
-            printf("real root %d \n", graph->source);
-#endif
 
             assert(SCIPisGE(scip, fixbnd, pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval)
                   || fixbnd >= FARAWAY);
@@ -1299,7 +1275,6 @@ int reduceSPG(
    const SCIP_Real*      cost,               /**< dual ascent costs */
    const SCIP_Real*      pathdist,           /**< distance array from shortest path calculations */
    const int*            result,             /**< sol int array */
-   const int*            edgestate,          /**< indicates whether edge can be deleted */
    SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
    int                   root,               /**< the root */
    SCIP_Bool             solgiven            /**< is sol given? */
@@ -1309,7 +1284,6 @@ int reduceSPG(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
-   const SCIP_Bool checkstate = (edgestate != NULL);
    const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, minpathcost));
 
    if( solgiven )
@@ -1349,7 +1323,7 @@ int reduceSPG(
          continue;
       }
 
-      if( !Is_term(graph->term[k]) && !keepsol && !checkstate &&
+      if( !Is_term(graph->term[k]) && !keepsol &&
          (SCIPisGT(scip, redcost, minpathcost) || (solgiven && SCIPisEQ(scip, redcost, minpathcost) && !nodearrchar[k])) )
       {
          nfixed += graph->grad[k];
@@ -1365,7 +1339,6 @@ int reduceSPG(
 
          /* for rpc no artificial terminal arcs should be deleted */
          if( (rpc && !graph->mark[head])
-          || (checkstate && edgestate[e] == EDGE_BLOCKED)
           || (keepsol && (result[e] == CONNECT || result[flipedge(e)] == CONNECT)) )
          {
             e = enext;
@@ -1604,6 +1577,7 @@ int reducePcMwTryBest(
 SCIP_RETCODE reduce_check3Tree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
+   int                   root,               /**< graph root from dual ascent */
    const SCIP_Real*      redcost,            /**< reduced costs */
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
@@ -1616,6 +1590,9 @@ SCIP_RETCODE reduce_check3Tree(
    SCIP_Bool*            ruleout             /**< could tree be ruled out? */
 )
 {
+#ifndef NDEBUG
+   const SCIP_Real orgtreebound = *treebound;
+#endif
    assert(scip != NULL);
    assert(graph != NULL);
    assert(redcost != NULL);
@@ -1626,7 +1603,6 @@ SCIP_RETCODE reduce_check3Tree(
    assert(outedges != NULL);
    assert(inedge >= 0 && outedges[0] >= 0 && outedges[1] >= 0);
    assert(inedge < graph->edges && outedges[0] < graph->edges && outedges[1] < graph->edges);
-
 
    /* trivial rule-out? */
    if( SCIPisGT(scip, *treebound, cutoff) )
@@ -1673,6 +1649,8 @@ SCIP_RETCODE reduce_check3Tree(
          int nadded_edges = 0;
          SCIP_Bool stopped = FALSE;
 
+         assert(startnode != root && costartnode != root);
+
          /* cannot extend over terminals or vertices of high degree  */
          if( Is_term(graph->term[startnode]) || graph->grad[startnode] > maxgrad )
             continue;
@@ -1707,8 +1685,7 @@ SCIP_RETCODE reduce_check3Tree(
                if( !stopped )
                {
                   *ruleout = TRUE;
-                  assert(minbound > *treebound);
-                  assert(SCIPisGT(scip, minbound, cutoff));
+                  assert(minbound == FARAWAY);
                }
 
                break;
@@ -1763,6 +1740,10 @@ SCIP_RETCODE reduce_check3Tree(
                /* do we need to stop extension? */
                if( Is_term(graph->term[currhead]) || graph->grad[currhead] > maxgrad || dfsdepth >= maxdfsdepth  )
                {
+                  /* can we still rule out subtree? */
+                  if( root == currhead )
+                     continue;
+
                   stopped = TRUE;
 
                   if( extendedcost < minbound )
@@ -1805,18 +1786,154 @@ printf("stop  \n");
             }
          }
 
-         assert(SCIPisGE(scip, minbound, *treebound));
+#ifndef NDEBUG
+         assert(SCIPisGE(scip, minbound, orgtreebound));
+#endif
 
          if( minbound > *treebound )
             *treebound = minbound;
 
       } /* main loop */
 
-      if( !(*ruleout) )
+      if( !(*ruleout) && !Is_term(graph->term[graph->tail[inedge]]) && graph->grad[graph->tail[inedge]] <= maxgrad )
       {
-         int todo; /* return cost of tree? */
          /* move down the incoming edge */
-      }
+
+         SCIP_Real minbound = FARAWAY;
+         const int innode = graph->tail[inedge];
+         int dfsdepth = 0;
+         int nadded_edges = 0;
+         SCIP_Bool stopped = FALSE;
+
+         int todo; // correct?
+         SCIP_Real treecost = *treebound - pathdist[innode];
+        // printf("treeound before %f \n", *treebound);
+
+         assert(treecost >= 0.0);
+         assert(nodemark[basenode]);
+
+#ifdef PPP
+         printf("innode %d \n", innode);
+         for( int e = graph->outbeg[startnode]; e != EAT_LAST; e = graph->oeat[e] )
+         if( !nodemark[graph->head[e]] )
+         printf("add to heap %d %d \n", startnode, graph->head[e]);
+#endif
+
+         for( int e = graph->inpbeg[innode]; e != EAT_LAST; e = graph->ieat[e] )
+            if( !nodemark[graph->tail[e]] )
+               edgestack[nadded_edges++] = e;
+
+         /* limited DFS starting from inedge */
+         for( ;; )
+         {
+            int curredge;
+            int currtail;
+
+            /* whole subtree processed? */
+            if( nadded_edges == 0 )
+            {
+               assert(dfsdepth == 0);
+
+               if( !stopped )
+               {
+             //     printf("inedge rule out \n");
+
+                  *ruleout = TRUE;
+                  assert(minbound == FARAWAY);
+               }
+
+               break;
+            }
+
+            curredge = edgestack[--nadded_edges];
+            currtail = graph->tail[curredge];
+
+#ifdef PPP
+      printf("check %d %d\n", graph->tail[curredge], currhead);
+#endif
+
+            /*  subtree already processed? */
+            if( nodemark[currtail] )
+            {
+#ifdef PPP
+      printf("processed already  \n");
+#endif
+               nodemark[currtail] = FALSE;
+               treecost -= redcost[curredge];
+
+               dfsdepth--;
+               assert(dfsdepth >= 0);
+               assert(treeedges[dfsdepth] == curredge);
+            }
+            else
+            {
+               const SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
+
+               /* can we rule out subtree? */
+               if( SCIPisGT(scip, extendedcost, cutoff) )
+               {
+#ifdef PPP
+      printf("rule out \n");
+#endif
+                  continue;
+               }
+
+               /* do we need to stop extension? */
+               if( Is_term(graph->term[currtail]) || graph->grad[currtail] > maxgrad || dfsdepth >= maxdfsdepth  )
+               {
+                  stopped = TRUE;
+
+                  if( extendedcost < minbound )
+                     minbound = extendedcost;
+#ifdef PPP
+printf("stop  \n");
+#endif
+                  continue;
+
+                  //break;
+               }
+
+#ifdef PPP
+      printf("extend ...  \n");
+#endif
+               nodemark[currtail] = TRUE;
+               treecost += redcost[curredge];
+               treeedges[dfsdepth++] = curredge;
+               nadded_edges++;
+
+               for( int e = graph->inpbeg[currtail]; e != EAT_LAST; e = graph->ieat[e] )
+                  if( !nodemark[graph->tail[e]] )
+                     edgestack[nadded_edges++] = e;
+#ifdef PPP
+               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
+                                 if( !nodemark[graph->head[e]] )
+                                    printf("add to heap(2) %d %d \n", graph->tail[e], graph->head[e]);
+#endif
+            }
+         } /* DFS loop */
+
+         if( !(*ruleout) )
+         {
+            /* clean and break */
+            for( int etree = 0; etree < dfsdepth; etree++ )
+            {
+               const int head = graph->tail[treeedges[etree]];
+               assert(nodemark[head]);
+               nodemark[head] = FALSE;
+            }
+         }
+
+#ifndef NDEBUG
+         assert(SCIPisGE(scip, minbound, orgtreebound));
+#endif
+
+         if( minbound > *treebound )
+            *treebound = minbound;
+
+       //  printf("*treebound after %f \n", minbound);
+
+      } /* inedge */
+
 
       /* clean nodemark array */
       nodemark[basenode] = FALSE;
@@ -1855,9 +1972,8 @@ SCIP_RETCODE reduce_da(
    int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   prevrounds,         /**< number of reduction rounds that have been performed already */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
-   int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
-   SCIP_Bool             userec              /**< use recombination heuristic? */
+   SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             extended            /**< use extended tests? */
 )
 {
    STPSOLPOOL* pool;
@@ -2162,10 +2278,10 @@ SCIP_RETCODE reduce_da(
          updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
          SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
-               lpobjval, upperbound, root, (run == 0), (run > 0)) );
+               lpobjval, upperbound, root, (run == 0), extended) );
       }
 
-      nfixed += reduceSPG(scip, graph, offset, marked, nodearrchar, vnoi, cost, pathdist, result, edgestate,
+      nfixed += reduceSPG(scip, graph, offset, marked, nodearrchar, vnoi, cost, pathdist, result,
             minpathcost, root, apsol);
 
       if( !directed && !SCIPisZero(scip, minpathcost) )

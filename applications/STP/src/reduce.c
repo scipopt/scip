@@ -35,6 +35,8 @@
 #define STP_RED_EXTENSIVE FALSE
 #define STP_RED_MWTERMBOUND 400
 #define STP_RED_MAXNROUNDS 15
+#define STP_RED_EXFACTOR   3
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +48,26 @@
 #include "scip/scip.h"
 #include "probdata_stp.h"
 #include "prop_stp.h"
+
+#define STP_PRINT_STATS
+
+
+/** print reduction information */
+static
+void reduceStatsPrint(
+   SCIP_Bool             print,
+   const char*           method,
+   int                   nelims
+)
+{
+   assert(nelims >= 0);
+
+#ifdef STP_PRINT_STATS
+    if( print )
+       printf("%s: %d \n", method, nelims);
+#endif
+
+}
 
 /** iterate NV and SL test while at least minelims many contractions are being performed */
 static
@@ -207,7 +229,6 @@ SCIP_RETCODE reduceStp(
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             dualascent,         /**< perform dual-ascent reductions? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
-   int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
@@ -286,7 +307,7 @@ SCIP_RETCODE reduceStp(
 
    /* reduction loop */
    SCIP_CALL( redLoopStp(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, heap, state,
-         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, edgestate, userec) );
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, userec) );
 
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", *fixed);
 
@@ -769,7 +790,7 @@ SCIP_RETCODE reduceSap(
       if( da )
       {
          SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
-               nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL, FALSE) );
+               nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE) );
 
          if( danelims <= 2 * redbound )
             da = FALSE;
@@ -870,7 +891,7 @@ SCIP_RETCODE reduceNw(
          break;
 
       SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
-            nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL, FALSE) );
+            nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE) );
 
       if( danelims <= 2 * redbound )
          da = FALSE;
@@ -1318,7 +1339,7 @@ SCIP_RETCODE redLoopPc(
       {
          if( rpc )
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
-                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL, FALSE) );
+                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE) );
          else
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
                   state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE, userec, randnumgen, prizesum) );
@@ -1354,7 +1375,7 @@ SCIP_RETCODE redLoopPc(
          if( rpc )
          {
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
-                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL, FALSE) );
+                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE) );
          }
          else
          {
@@ -1397,8 +1418,6 @@ SCIP_RETCODE redLoopPc(
    return SCIP_OKAY;
 }
 
-#define STP_PRINT_STATS
-
 /** STP loop */
 SCIP_RETCODE redLoopStp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1423,7 +1442,6 @@ SCIP_RETCODE redLoopStp(
    SCIP_Bool             boundreduce,        /**< do bound-based reduction? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
@@ -1438,13 +1456,16 @@ SCIP_RETCODE redLoopStp(
    SCIP_Bool    bred = boundreduce;
    SCIP_Bool    nvsl = nodereplacing;
    SCIP_Bool    rerun = TRUE;
+
+
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    int i = 0;
    int rounds = 0;
-   int restarts = 0;
+
    SCIP_RANDNUMGEN* randnumgen;
    const SCIP_Bool fullreduce = (da && userec);
 
+   assert(reductbound > 0);
    assert(graph_valid(g));
 
    /* create random number generator */
@@ -1454,183 +1475,190 @@ SCIP_RETCODE redLoopStp(
    fix = 0.0;
 
    SCIP_CALL( reduce_contractZeroEdges(scip, g, TRUE) );
-   SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &i, edgestate) );
+   SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &i, NULL) );
 
    /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   while( rerun && !SCIPisStopped(scip) )
+   do
    {
-      int danelims = 0;
-      int lenelims = 0;
-      int sdnelims = 0;
-      int sdcnelims = 0;
-      int bd3nelims = 0;
-      int nvslnelims = 0;
-      int brednelims = 0;
-      int degtnelims = 0;
+      int inner_restarts = 0;
 
-      if( SCIPgetTotalTime(scip) > timelimit )
-         break;
-
-      if( le || extensive )
+      /* inner reduction loop */
+      while( rerun && !SCIPisStopped(scip) )
       {
-         SCIP_CALL( reduce_ledge(scip, g, vnoi, heap, state, vbase, &lenelims, edgestate) );
-
-         if( lenelims <= reductbound )
-            le = FALSE;
-         else
-            SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
-#ifdef STP_PRINT_STATS
-         if( fullreduce)
-            printf("le: %d \n", lenelims);
-#endif
-
-         SCIPdebugMessage("le: %d \n", lenelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( sd || extensive  )
-      {
-         SCIP_CALL( reduce_sd(scip, g, vnoi, edgearrreal, nodearrreal, heap, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims, nodereplacing, edgestate) );
-
-         if( sdnelims <= reductbound )
-            sd = FALSE;
-#ifdef STP_PRINT_STATS
-         if( fullreduce)
-            printf("sd: %d, \n", sdnelims);
-#endif
-
-         SCIPdebugMessage("sd: %d, \n", sdnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( sdc || extensive  )
-      {
-         SCIP_CALL( reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
-               ((rounds > 0) ? (STP_RED_SDSPBOUND2 / 2) : (STP_RED_SDSPBOUND / 2)), edgestate) );
-
-         if( sdcnelims <= reductbound )
-            sdc = FALSE;
-
-#ifdef STP_PRINT_STATS
-         if( fullreduce)
-            printf("sdsp: %d \n", sdcnelims);
-#endif
-
-         SCIPdebugMessage("sdsp: %d \n", sdcnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( sd || sdc )
-         SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
-
-      if( bd3 || extensive )
-      {
-         SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND) );
-         if( bd3nelims <= reductbound )
-            bd3 = FALSE;
-         else
-            SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
-
-#ifdef STP_PRINT_STATS
-         if( fullreduce)
-            printf("bd3: %d \n", bd3nelims);
-#endif
-
-         SCIPdebugMessage("bd3: %d \n", bd3nelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( nvsl || extensive  )
-      {
-         SCIP_CALL( nvreduce_sl(scip, g, vnoi, nodearrreal, &fix, edgearrint, heap, state, vbase, nodearrint, NULL, solnode, nodearrchar, &nvslnelims, reductbound) );
-
-         if( nvslnelims <= reductbound )
-            nvsl = FALSE;
-
-         SCIPdebugMessage("nvsl: %d \n", nvslnelims);
-
-#ifdef STP_PRINT_STATS
-         if( fullreduce)
-            printf("nvsl: %d \n", nvslnelims);
-#endif
+         int danelims = 0;
+         int lenelims = 0;
+         int sdnelims = 0;
+         int sdcnelims = 0;
+         int bd3nelims = 0;
+         int nvslnelims = 0;
+         int brednelims = 0;
+         int degtnelims = 0;
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
-      }
 
-      ub = -1.0;
-
-      if( da )
-      {
-         SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
-               nodearrint, nodearrint2, nodearrchar, &danelims, rounds, randnumgen, nodereplacing, edgestate, userec) );
-
-         if( danelims <= 3 * reductbound )
-            da = FALSE;
-
-#ifdef STP_PRINT_STATS
-         if( fullreduce)
-            printf("da: %d \n", danelims);
-#endif
-
-         SCIPdebugMessage("da: %d \n", danelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( bred && nodereplacing )
-      {
-         SCIP_CALL( reduce_bound(scip, g, vnoi, edgearrreal, NULL, nodearrreal, edgearrreal2, &fix, &ub, heap, state, vbase, &brednelims) );
-
-         SCIP_CALL( level0(scip, g) );
-
-         if( brednelims <= 2 * reductbound )
-            bred = FALSE;
-
-#ifdef STP_PRINT_STATS
-         if( fullreduce)
-            printf("bnd: %d \n\n", brednelims);
-#endif
-
-         SCIPdebugMessage("bnd: %d \n\n", brednelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-      SCIP_CALL( level0(scip, g) );
-      SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
-
-      if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) <= 2 * reductbound  )
-      {
-         // at least one successful round and full reduce and no restarts yet?
-         if( rounds > 0 && fullreduce && restarts == 0 )
+         if( le || extensive )
          {
-            restarts++;
-            le = TRUE;
-            sd = TRUE;
-            sdc = TRUE;
-            da = TRUE;
-            bd3 = nodereplacing;
-            nvsl = nodereplacing;
+            SCIP_CALL(reduce_ledge(scip, g, vnoi, heap, state, vbase, &lenelims, NULL));
+
+            if( lenelims <= reductbound )
+               le = FALSE;
+            else
+               SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &degtnelims, NULL));
+
+            reduceStatsPrint(fullreduce, "le", lenelims);
+            SCIPdebugMessage("le: %d \n", lenelims);
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+               break;
+         }
+
+         if( sd || extensive )
+         {
+            SCIP_CALL(
+                  reduce_sd(scip, g, vnoi, edgearrreal, nodearrreal, heap, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims,
+                        nodereplacing, NULL));
+
+            if( sdnelims <= reductbound )
+               sd = FALSE;
+
+            reduceStatsPrint(fullreduce, "sd", sdnelims);
+            SCIPdebugMessage("sd: %d, \n", sdnelims);
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+               break;
+         }
+
+         if( sdc || extensive )
+         {
+            SCIP_CALL(
+                  reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, ((rounds > 0) ? (STP_RED_SDSPBOUND2 / 2) : (STP_RED_SDSPBOUND / 2)), NULL));
+
+            if( sdcnelims <= reductbound )
+               sdc = FALSE;
+
+            reduceStatsPrint(fullreduce, "sdsp", sdcnelims);
+            SCIPdebugMessage("sdsp: %d \n", sdcnelims);
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+               break;
+         }
+
+         if( sd || sdc )
+            SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &degtnelims, NULL));
+
+         if( bd3 || extensive )
+         {
+            SCIP_CALL(reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND));
+            if( bd3nelims <= reductbound )
+               bd3 = FALSE;
+            else
+               SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &degtnelims, NULL));
+
+            reduceStatsPrint(fullreduce, "bd3", bd3nelims);
+            SCIPdebugMessage("bd3: %d \n", bd3nelims);
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+               break;
+         }
+
+         if( nvsl || extensive )
+         {
+            SCIP_CALL(
+                  nvreduce_sl(scip, g, vnoi, nodearrreal, &fix, edgearrint, heap, state, vbase, nodearrint, NULL, solnode, nodearrchar, &nvslnelims, reductbound));
+
+            if( nvslnelims <= reductbound )
+               nvsl = FALSE;
+
+            reduceStatsPrint(fullreduce, "nvsl", nvslnelims);
+            SCIPdebugMessage("nvsl: %d \n", nvslnelims);
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+               break;
+         }
+
+         ub = -1.0;
+
+         if( da )
+         {
+            SCIP_CALL(
+                  reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
+                        nodearrint2, nodearrchar, &danelims, rounds, randnumgen, userec, FALSE));
+
+            if( danelims <= STP_RED_EXFACTOR * reductbound )
+               da = FALSE;
+
+            reduceStatsPrint(fullreduce, "da", danelims);
+            SCIPdebugMessage("da: %d \n", danelims);
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+               break;
+         }
+
+         if( bred && nodereplacing )
+         {
+            SCIP_CALL(reduce_bound(scip, g, vnoi, edgearrreal, NULL, nodearrreal, edgearrreal2, &fix, &ub, heap, state, vbase, &brednelims));
+
+            SCIP_CALL(level0(scip, g));
+
+            if( brednelims <= reductbound )
+               bred = FALSE;
+
+            reduceStatsPrint(fullreduce, "bnd", brednelims);
+            SCIPdebugMessage("bnd: %d \n\n", brednelims);
+
+            if( SCIPgetTotalTime(scip) > timelimit )
+               break;
+         }
+         SCIP_CALL(level0(scip, g));
+         SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &degtnelims, NULL));
+
+         if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) <= 2 * reductbound )
+         {
+            // at least one successful round and full reduce and no inner_restarts yet?
+            if( rounds > 0 && fullreduce && inner_restarts == 0 )
+            {
+               inner_restarts++;
+               le = TRUE;
+               sd = TRUE;
+               sdc = TRUE;
+               da = TRUE;
+               bd3 = nodereplacing;
+               nvsl = nodereplacing;
 
 #ifdef STP_PRINT_STATS
-            printf("RESTART reductions (restart %d) \n", restarts);
+               printf("RESTART reductions (restart %d) \n", inner_restarts);
 #endif
+            }
+            else
+               rerun = FALSE;
          }
-         else
-            rerun = FALSE;
+
+         if( extensive && (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) > 0 )
+            rerun = TRUE;
+
+         rounds++;
+      } /* inner reduction loop */
+
+      if( fullreduce && !SCIPisStopped(scip) )
+      {
+         int extendedelims = 0;
+
+         assert(!rerun);
+
+         SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
+                     nodearrint2, nodearrchar, &extendedelims, rounds, randnumgen, userec, TRUE));
+
+         reduceStatsPrint(fullreduce, "ext", extendedelims);
+
+
+         if( extendedelims > STP_RED_EXFACTOR * reductbound )
+            rerun = TRUE;
       }
-
-      if( extensive && (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) > 0 )
-         rerun = TRUE;
-
-      rounds++;
    }
+   while( rerun && !SCIPisStopped(scip) ); /* extensive reduction loop*/
 
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
@@ -1702,7 +1730,7 @@ SCIP_RETCODE reduce(
       }
       else
       {
-         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, FALSE, TRUE, NULL, FALSE) );
+         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, FALSE, TRUE, FALSE) );
       }
    }
    else if( level == 2 )
@@ -1729,7 +1757,7 @@ SCIP_RETCODE reduce(
       }
       else
       {
-         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, TRUE, TRUE, NULL, userec) );
+         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, TRUE, TRUE, userec) );
       }
    }
    SCIPdebugMessage("offset : %f \n", *offset);

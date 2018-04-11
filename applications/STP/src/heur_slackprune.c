@@ -677,7 +677,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    if( reducegraph )
    {
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE) );
    }
 
    /* get number of remaining vertices, edges and terminals */
@@ -750,7 +750,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE) );
 
       /* graph vanished? */
       if( prunegraph->grad[prunegraph->source] == 0 )

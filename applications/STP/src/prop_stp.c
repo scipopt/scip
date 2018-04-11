@@ -426,7 +426,7 @@ SCIP_RETCODE redbasedVarfixing(
    /* reduce graph */
 
    SCIP_CALL( level0(scip, propgraph) );
-   SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, NULL, FALSE) );
+   SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );
 
    assert(graph_valid(propgraph));
 
