@@ -172,6 +172,37 @@ SCIP_Real SCIPbendersGetSubprobObjval(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** Public functions associated with Benders' cuts */
+
+/** returns the Benders' cut of the given name, or NULL if not existing */
+EXTERN
+SCIP_BENDERSCUT* SCIPfindBenderscut(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   const char*           name                /**< name of Benderscut' decomposition */
+   );
+
+
+/** returns the array of currently available Benders' cuts; active benders are in the first slots of the array */
+EXTERN
+SCIP_BENDERSCUT** SCIPbendersGetBenderscuts(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+
+/** returns the number of currently available Benders' cuts */
+EXTERN
+int SCIPbendersGetNBenderscuts(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** sets the priority of a Benders' decomposition */
+EXTERN
+SCIP_RETCODE SCIPbendersSetBenderscutPriority(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' cut */
+   int                   priority            /**< new priority of the Benders' decomposition */
+   );
+
 /** returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
 EXTERN
 SCIP_Bool SCIPbendersSubprobIsLP(

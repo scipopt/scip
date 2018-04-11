@@ -69,10 +69,12 @@
 #include "scip/type_concsolver.h"
 #include "scip/type_syncstore.h"
 #include "scip/type_benders.h"
+#include "scip/type_benderscut.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
 #include "scip/pub_bandit.h"
 #include "scip/pub_benders.h"
+#include "scip/pub_benderscut.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
@@ -3048,6 +3050,174 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< variable benders */
    int                   probnumber          /**< the subproblem number */
+   );
+
+/* @} */
+
+/** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
+ *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
+ *  to include a Benders' cut algorithm if a Benders' decomposition has already been included
+ *  This should be done during the problem creation stage.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note method has all benders callbacks as arguments and is thus changed every time a new callback is added
+ *        in future releases; consider using SCIPincludeBendersBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeBenderscut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   const char*           name,               /**< name of Benders' decomposition cuts */
+   const char*           desc,               /**< description of Benders' decomposition cuts */
+   int                   priority,           /**< priority of the Benders' decomposition cuts */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
+   SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of Benders' decomposition cuts */
+   SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize Benders' decomposition cuts */
+   SCIP_DECL_BENDERSCUTEXIT((*benderscutexit)),/**< deinitialize Benders' decomposition cuts */
+   SCIP_DECL_BENDERSCUTINITSOL((*benderscutinitsol)),/**< solving process initialization method of Benders' decomposition cuts */
+   SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol)),/**< solving process deinitialization method of Benders' decomposition cuts */
+   SCIP_DECL_BENDERSCUTEXEC((*benderscutexec)),/**< execution method of Benders' decomposition cuts */
+   SCIP_BENDERSCUTDATA*  benderscutdata      /**< Benders' decomposition cuts data */
+   );
+
+/** creates a Benders' cut and includes it an associated Benders' decomposition with all non-fundamental callbacks set to NULL;
+ *  if needed, these can be added afterwards via setter functions SCIPsetBenderscutCopy(), SCIPsetBenderscutFree(),
+ *  SCIPsetBenderscutInit(), SCIPsetBenderscutExit(), SCIPsetBenderscutInitsol(), SCIPsetBenderscutExitsol();
+ *
+ *  This should be done during the problem creation stage.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeBenders() instead
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeBenderscutBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSCUT**     benderscutptr,      /**< reference to a benders cut, or NULL */
+   const char*           name,               /**< name of Benders' decomposition */
+   const char*           desc,               /**< description of Benders' decomposition */
+   int                   priority,           /**< priority of the Benders' decomposition */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
+   SCIP_DECL_BENDERSCUTEXEC((*benderscutexec)),/**< the execution method of the Benders' cut algorithm */
+   SCIP_BENDERSCUTDATA*  benderscutdata      /**< Benders' cut data */
+   );
+
+/** sets copy method of benders cut
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBenderscutCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< benders cut */
+   SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy))/**< copy method of benderscut or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of benderscut
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBenderscutFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
+   SCIP_DECL_BENDERSCUTFREE((*benderscutfree))/**< destructor of benderscut */
+   );
+
+/** sets initialization method of benderscut
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBenderscutInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
+   SCIP_DECL_BENDERSCUTINIT((*benderscutinit))/**< initialize benderscut */
+   );
+
+/** sets deinitialization method of benderscut
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBenderscutExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
+   SCIP_DECL_BENDERSCUTEXIT((*benderscutexit))/**< deinitialize benderscut */
+   );
+
+/** sets solving process initialization method of benderscut
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBenderscutInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
+   SCIP_DECL_BENDERSCUTINITSOL((*benderscutinitsol))/**< solving process initialization method of benderscut */
+   );
+
+/** sets solving process deinitialization method of benderscut
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBenderscutExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
+   SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization method of benderscut */
+   );
+
+/** sets the priority of a Benders' decomposition cut algorithm */
+EXTERN
+SCIP_RETCODE SCIPsetBenderscutPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
+   int                   priority            /**< new priority of the Benders' decomposition */
    );
 
 /* @} */

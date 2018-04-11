@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/type_clock.h"
 #include "scip/type_benders.h"
+#include "scip/type_benderscut.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -93,6 +94,13 @@ struct SCIP_Benders
                                                to continuous variables. */
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
+
+   /* Bender's cut information */
+   SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */
+   int                   nbenderscuts;       /**< the number of Benders' cut algorithms */
+   int                   benderscutssize;    /**< the size of the Benders' cuts algorithms array */
+   SCIP_Bool             benderscutssorted;  /**< are the Benders' cuts algorithms sorted by priority */
+   SCIP_Bool             benderscutsnamessorted;/**< are the Benders' cuts algorithms sorted by name */
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored
