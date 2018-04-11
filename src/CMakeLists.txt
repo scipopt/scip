@@ -144,7 +144,6 @@ set(scipsources
     scip/presol_dualcomp.c
     scip/presol_dualinfer.c
     scip/presol_gateextraction.c
-    scip/presol_implfree.c
     scip/presol_implics.c
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
@@ -518,7 +517,6 @@ set(scipheaders
     scip/presol_dualinfer.h
     scip/presol_gateextraction.h
     scip/presol.h
-    scip/presol_implfree.h
     scip/presol_implics.h
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h

@@ -221,6 +221,10 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+#if SOPLEX_APIVERSION >= 2
+      setBoolParam(SoPlex::ENSURERAY, true);
+#endif
+
 #ifdef WITH_LPSCHECK
       int cpxstat;
       _checknum = 0;
@@ -986,6 +990,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 #endif
+}
+
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return FALSE;
 }
 
 /**@} */
@@ -3438,15 +3466,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    )
 {
    int i;
-   int nCols = lpi->spx->numColsReal();
-   int nRows = lpi->spx->numRowsReal();
+   int ncols;
+   int nrows;
 
    SCIPdebugMessage("calling SCIPlpiSetBase()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
@@ -3454,10 +3486,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    DataArray<SPxSolver::VarStatus>& _colstat = lpi->spx->colStat();
    DataArray<SPxSolver::VarStatus>& _rowstat = lpi->spx->rowStat();
 
-   _colstat.reSize(nCols);
-   _rowstat.reSize(nRows);
+   _colstat.reSize(ncols);
+   _rowstat.reSize(nrows);
 
-   for( i = 0; i < nRows; ++i )
+   for( i = 0; i < nrows; ++i )
    {
       switch( rstat[i] ) /*lint !e613*/
       {
@@ -3480,7 +3512,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   for( i = 0; i < nCols; ++i )
+   for( i = 0; i < ncols; ++i )
    {
       switch( cstat[i] ) /*lint !e613*/
       {

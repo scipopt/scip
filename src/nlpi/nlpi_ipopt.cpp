@@ -36,6 +36,7 @@
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 #include "scip/misc.h"
 
 #include <new>      /* for std::bad_alloc */

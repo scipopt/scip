@@ -104,6 +104,12 @@ SCIP_Bool SCIPsolveIsStopped(
          SCIPresetInterrupted();
       }
    }
+   else if( SCIPterminated() )
+   {
+      stat->status = SCIP_STATUS_TERMINATE;
+
+      return TRUE;
+   }
    /* only measure the clock if a time limit is set */
    else if( set->istimelimitfinite )
    {

@@ -81,7 +81,7 @@ set(settings_fastMIP
     "separating_off"
   )
 set(settings_MINLP
-    "checkfeastolfac10"
+    "minlp"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -93,12 +93,12 @@ set(settings_MINLP
     "separating_aggressive"
 )
 set(settings_Bivariate
-    "checkfeastolfac10"
+    "minlp"
     "bivariate"
 )
 
 set(settings_Bilinrelax
-    "checkfeastolfac10"
+    "minlp"
     "bilinrelax"
   )
 
@@ -495,6 +495,8 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-mipstart-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                # the MIP start instances are validated twice.
+                                FAIL_REGULAR_EXPRESSION "Validation         : Fail"
                                 DEPENDS scip-build
                             )
     endif()
@@ -651,5 +653,27 @@ foreach(instance ${instances_MIP})
 
 endforeach()
 
+#
+# add a test for handling of the SIGTERM signal. The test uses the timeout command that
+# is only available on Linux, that is available on MAC OS as "gtimeout" after installing
+# the 'coreutils' package
+#
+if (UNIX)
+    if (APPLE)
+        set(timeoutcommand "gtimeout")
+    else ()
+        set(timeoutcommand "timeout")
+    endif (APPLE)
 
-
+    add_test(NAME signal-handling-sigterm-blend2
+            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -f ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/blend2.mps
+            )
+    set_tests_properties(signal-handling-sigterm-blend2
+                        PROPERTIES
+                            DEPENDS scip-build
+                            PASS_REGULAR_EXPRESSION "termination signal received"
+                            #
+                            # I assume that this test takes longer than 2 seconds
+                            #
+                            )
+endif (UNIX)

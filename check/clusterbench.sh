@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # benchmarks the performance of all nodes of a given slurm queue: on each node run exclusively a predefined test set
 # with a specified SCIP binary; to distinguish the runs, create artificial empty settings files such that comparison is
@@ -127,7 +127,8 @@ for Q in ${split_queue[@]}; do
   echo "     EXCLUSIVE=true"
   echo "     TEST=$TEST"
   echo "     TIME=600"
-  echo "     OUTPUTDIR=results/clusterbench"
+  export OUTPUTDIR="results/clusterbench$(date +%Y%m%d)"
+  echo "     OUTPUTDIR=${DATEHASH}"
   echo
 
   # execute the testing script on all nodes
@@ -136,14 +137,16 @@ for Q in ${split_queue[@]}; do
     # create an empty settings file named by the slurm queue, node, date, and time
     SETTINGS=$Q-$n-$DATETIME
     mkdir -p settings
-    mkdir -p check/results/clusterbench
+    mkdir -p check/${OUTPUTDIR}
     touch settings/$SETTINGS.set
 
     # run full test set on each node
     echo "     CLUSTERNODES=$n"
     echo "     SETTINGS=$SETTINGS"
-    make testcluster EXECUTABLE=$EXECUTABLE QUEUE=$Q CLUSTERNODES=$n EXCLUSIVE=true TEST=$TEST SETTINGS=$SETTINGS TIME=601 OUTPUTDIR=results/clusterbench
+    make testcluster EXECUTABLE=$EXECUTABLE QUEUE=$Q CLUSTERNODES=$n EXCLUSIVE=true TEST=$TEST SETTINGS=$SETTINGS TIME=601 OUTPUTDIR="${OUTPUTDIR}"
 
     # artificial settings file may only be removed after executable was started
   done
+
+  cd check
 done
