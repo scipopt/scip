@@ -2580,7 +2580,7 @@ SCIP_RETCODE lpCheckRealpar(
    SCIP_LPPARAM          lpparam,            /**< LP parameter */
    SCIP_Real             value               /**< value parameter should have */
    )
-{
+{/*lint --e{715}*/
    SCIP_RETCODE retcode;
    SCIP_Real lpivalue;
 
@@ -2592,8 +2592,16 @@ SCIP_RETCODE lpCheckRealpar(
    if( retcode == SCIP_PARAMETERUNKNOWN )
       return SCIP_OKAY;
 
+   /* This assert is currently disabled because it can happen that the feasibility tolerance is changed to a
+    * value outside the interval allowed by the LP solver, in which case the lpi might project it to the bounds
+    * of the LP solver and this assert will fail the next time.
+    * It should be reenabled once this behaviour is unified among the lpis and handled explicitly in
+    * lpSetFeastol() etc. with dedicated code instead of calling lpCheckRealpar().
+    */
+#if SCIP_DISABLED_CODE/*lint !e553*/
    /* check value */
    assert(lpivalue == value); /*lint !e777*/
+#endif
 
    return retcode;
 }
