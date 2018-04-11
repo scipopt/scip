@@ -56,7 +56,7 @@ SCIP_BENDERSCUTDATA* SCIPbenderscutGetData(
 EXTERN
 void SCIPbenderscutSetData(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   SCIP_BENDERSCUTDATA*   benderscutdata     /**< new Benders' decomposition cut user data */
+   SCIP_BENDERSCUTDATA*  benderscutdata      /**< new Benders' decomposition cut user data */
    );
 
 /** gets name of the Benders' decomposition cut */

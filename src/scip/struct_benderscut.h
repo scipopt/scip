@@ -48,8 +48,8 @@ struct SCIP_Benderscut
    SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol));/**< solving process deinitialization method of the Benders' decomposition cut */
    SCIP_DECL_BENDERSCUTEXEC((*benderscutexec));/**< execution method of the Benders' decomposition cut */
    SCIP_BENDERSCUTDATA*  benderscutdata;     /**< Benders' decomposition cuts local data */
-   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this benderscutession for the next stages */
-   SCIP_CLOCK*           benderscutclock;    /**< compression execution time */
+   SCIP_CLOCK*           setuptime;          /**< time spent setting up the Benders' decomposition cut plugin */
+   SCIP_CLOCK*           benderscutclock;    /**< the execution time of the Benders' decomposition cut plugin */
    int                   priority;           /**< priority of the Benders' decomposition cuts */
    SCIP_Bool             islpcut;            /**< does this Benders' cut use LP information? */
    SCIP_Bool             initialized;        /**< has the Benders' decomposition cut been initialized? */

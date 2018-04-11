@@ -157,6 +157,8 @@ SCIP_RETCODE freeEventhandler(
 
    SCIPfreeBlockMemory(scip, &eventhdlrdata);
 
+   SCIPeventhdlrSetData(eventhdlr, NULL);
+
    return SCIP_OKAY;
 }
 
@@ -623,12 +625,12 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       /* the flag is set to indicate that the Benders' decomposition is a copy */
       targetbenders->iscopy = TRUE;
 
-         /* calling the copy method for the Benders' cuts */
-         SCIPbendersSortBenderscuts(benders);
-         for( i = 0; i < benders->nbenderscuts; i++ )
-         {
-            SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], targetset) );
-         }
+      /* calling the copy method for the Benders' cuts */
+      SCIPbendersSortBenderscuts(benders);
+      for( i = 0; i < benders->nbenderscuts; i++ )
+      {
+         SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], targetset) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1597,8 +1599,14 @@ SCIP_RETCODE SCIPbendersExitsol(
       SCIPclockStop(benders->setuptime, set);
    }
 
-   /* calling the exitsol method for the Benders' cuts */
+   /* sorting the Benders' decomposition cuts in order of priority. Only a single cut is generated for each subproblem
+    * per solving iteration. This is particularly important in the case of the optimality and feasibility cuts. Since
+    * these work on two different solutions to the subproblem, it is not necessary to generate both cuts. So, once the
+    * feasibility cut is generated, then no other cuts will be generated.
+    */
    SCIPbendersSortBenderscuts(benders);
+
+   /* calling the exitsol method for the Benders' cuts */
    for( i = 0; i < benders->nbenderscuts; i++ )
    {
       SCIP_CALL( SCIPbenderscutExitsol(benders->benderscuts[i], set) );
@@ -2919,7 +2927,7 @@ const char* SCIPbendersGetName(
 
 /** gets description of Benders' decomposition */
 const char* SCIPbendersGetDesc(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   SCIP_BENDERS*         benders             /**< Benders' dnumberecomposition */
    )
 {
    assert(benders != NULL);
@@ -3171,7 +3179,7 @@ void SCIPbendersSetBenderscutsSorted(
    benders->benderscutsnamessorted = sorted;
 }
 
-/** inserts a Benders' cut into the Benders' cuts list */
+/** inserts a Benders' cut into the Benders' cnumberuts list */
 SCIP_RETCODE SCIPbendersIncludeBenderscut(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */

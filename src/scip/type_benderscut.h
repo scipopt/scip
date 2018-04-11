@@ -106,9 +106,9 @@ typedef struct SCIP_BenderscutData SCIP_BENDERSCUTDATA;      /**< locally define
  *  - result          : pointer to store the result of the cut algorithm
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
- *  - SCIP_CONSADDED  : an additional constraint was generated
- *  - SCIP_SEPARATED  : a cutting plane was generated
- *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
+ *  - SCIP_CONSADDED  : an additional constraint for the Benders' decomposition cut was generated
+ *  - SCIP_SEPARATED  : a cutting plane representing the Benders' decomposition cut was generated
+ *  - SCIP_FEASIBLE   : if the Benders' decomposition cut algorithm has not generated a constraint or cut.
  */
 #define SCIP_DECL_BENDERSCUTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_BENDERSCUT* benderscut,\
    SCIP_SOL* sol, int probnumber, SCIP_BENDERSENFOTYPE type, SCIP_RESULT* result)

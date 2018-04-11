@@ -382,6 +382,8 @@ set(scipheaders
     scip/bandit_epsgreedy.h
     scip/bandit_exp3.h
     scip/bandit_ucb.h
+    scip/benders.h
+    scip/benderscut.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
