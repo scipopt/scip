@@ -2582,7 +2582,9 @@ SCIP_RETCODE lpCheckRealpar(
    )
 {
    SCIP_RETCODE retcode;
+#if SCIP_DISABLED_CODE/*lint !e553*/
    SCIP_Real lpivalue;
+#endif
 
    assert(lp != NULL);
 
@@ -2598,7 +2600,7 @@ SCIP_RETCODE lpCheckRealpar(
     * It should be reenabled once this behaviour is unified among the lpis and handled explicitly in
     * lpSetFeastol() etc. with dedicated code instead of calling lpCheckRealpar().
     */
-#if SCIP_DISABLED_CODE
+#if SCIP_DISABLED_CODE/*lint !e553*/
    /* check value */
    assert(lpivalue == value); /*lint !e777*/
 #endif
