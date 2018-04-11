@@ -89,7 +89,6 @@ struct TimInput
    const char*           f2;
    const char*           f3;
    char                  probname[TIM_MAX_NAMELEN];
-   char                  stochtype[TIM_MAX_NAMELEN];
    const char**          stagestartvars;
    const char**          stagestartcons;
    const char**          stagenames;
@@ -203,9 +202,6 @@ SCIP_RETCODE createStages(
    /* assigning the constraint to the stages */
    for( i = 0; i < SCIPcorGetNConsNames(correader); i++ )
    {
-      /* the first constraint in the cons names list should be the start of the first stage */
-      assert((stage == 0 && i == 0 && strcmp(SCIPcorGetConsName(correader, i), readerdata->stagestartcons[stage]) == 0)
-         || i > 0);
       /* checking whether the next stage has been found */
       if( i > 0 && stage < readerdata->nstages - 1
          && strcmp(SCIPcorGetConsName(correader, i), readerdata->stagestartcons[stage + 1]) == 0 )
@@ -343,7 +339,6 @@ SCIP_RETCODE timinputCreate(
    (*timi)->haserror    = FALSE;
    (*timi)->buf     [0] = '\0';
    (*timi)->probname[0] = '\0';
-   (*timi)->stochtype[0] = '\0';
    (*timi)->f0          = NULL;
    (*timi)->f1          = NULL;
    (*timi)->f2          = NULL;
@@ -471,20 +466,6 @@ void timinputSetProbname(
    assert(strlen(probname) < sizeof(timi->probname));
 
    (void)SCIPmemccpy(timi->probname, probname, '\0', TIM_MAX_NAMELEN - 1);
-}
-
-/** set the problem type name in the tim input structure to given objective name */
-static
-void timinputSetStochtype(
-   TIMINPUT*             timi,               /**< tim input structure */
-   const char*           stochtype           /**< name of the problem type to set */
-   )
-{
-   assert(timi != NULL);
-   assert(stochtype != NULL);
-   assert(strlen(stochtype) < sizeof(timi->stochtype));
-
-   (void)SCIPmemccpy(timi->stochtype, stochtype, '\0', TIM_MAX_NAMELEN - 1);
 }
 
 /** set the problem var name that starts a stage in the tim input structure to given objective name */
@@ -699,12 +680,6 @@ SCIP_RETCODE readPeriods(
    )
 {
    SCIPdebugMsg(scip, "read Periods\n");
-
-   /* This has to be the Line with the name. */
-   if( timinputField1(timi) == NULL )
-      timinputSetStochtype(timi, "LP");
-   else
-      timinputSetStochtype(timi, timinputField1(timi));
 
    while( timinputReadLine(timi) )
    {
@@ -964,6 +939,47 @@ const char* SCIPtimGetStageName(
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
+   assert(stagenum >= 0 && stagenum < readerdata->nstages);
+
+   return readerdata->stagenames[stagenum];
+}
+
+/* returns the stage name for a given constraint name */
+const char* SCIPtimConsGetStageName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           consname            /**< the constraint to search for */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+   int stagenum;
+   int i;
+   int j;
+
+   reader = SCIPfindReader(scip, READER_NAME);
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   /* looping over all stages to find the provided constraint */
+   stagenum = -1;
+   for( i = 0; i < readerdata->nstages; i++ )
+   {
+      for( j = 0; j < readerdata->stages[i]->nconss; j++ )
+      {
+         if( strcmp(SCIPconsGetName(readerdata->stages[i]->conss[j]), consname) == 0 )
+         {
+            stagenum = i;
+            break;
+         }
+      }
+
+      if( stagenum >= 0 )
+         break;
+   }
    assert(stagenum >= 0 && stagenum < readerdata->nstages);
 
    return readerdata->stagenames[stagenum];

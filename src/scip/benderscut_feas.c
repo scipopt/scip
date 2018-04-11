@@ -295,7 +295,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cut, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
 
    if( SCIPgetNLPIterations(subproblem) == 0 )
-      SCIPinfoMessage(masterprob, NULL, "No iterations in pricing problem %d\n", probnumber);
+      SCIPdebugMessage("No iterations in pricing problem %d\n", probnumber);
 
    /* computing the coefficients of the feasibility cut */
    SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, sol, cut) );

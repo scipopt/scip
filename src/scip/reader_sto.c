@@ -98,10 +98,23 @@ enum StoSection
 };
 typedef enum StoSection STOSECTION;
 
+/** enum containing the types of stochastic information */
+enum StoStochInfo
+{
+   STO_STOCHINFO_NONE         = -1,
+   STO_STOCHINFO_DISCRETE     = 0,
+   STO_STOCHINFO_UNIFORM      = 1,
+   STO_STOCHINFO_NORMAL       = 2,
+   STO_STOCHINFO_SUB          = 3,
+   STO_STOCHINFO_LINTR        = 4
+};
+typedef enum StoStochInfo STOSTOCHINFO;
+
 /** sto input structure */
 struct StoInput
 {
    STOSECTION            section;
+   STOSTOCHINFO          stochinfotype;
    SCIP_FILE*            fp;
    int                   lineno;
    SCIP_Bool             haserror;
@@ -775,6 +788,7 @@ SCIP_RETCODE buildScenariosFromBlocks(
    int                   blocknum            /**< the block number */
    )
 {
+   SCIP_Bool processed;
    int i;
    int j;
 
@@ -783,22 +797,33 @@ SCIP_RETCODE buildScenariosFromBlocks(
    assert(scenarios != NULL);
    assert(blocksforscen != NULL);
 
-   for( i = blocknum + 1; i < numblocks; i++ )
+   processed = FALSE;
+   i = blocknum + 1;
+   while( !processed && i < numblocks )
    {
       /* it is only necessary to process the next block in the list the belongs to the given stage. */
-      if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) != 0 )
-         continue;
-
-      for( j = 0; j < numblocksperblock[i]; j++ )
+      if( strcmp(getScenarioStageName(scip, blocks[i][0]), stage) == 0 )
       {
-         /* adding the blocks that will build the scenario */
-         (*blocksforscen)[(*numblocksforscen)] = blocks[i][j];
-         (*numblocksforscen)++;
-         SCIP_CALL( buildScenariosFromBlocks(scip, blocks, scenarios, blocksforscen, numblocksforscen, numblocks,
-               numblocksperblock, numscenarios, scenariossize, stage, stagenum + 1, i)  );
+         processed = TRUE;
 
-         /* the last block needs to be removed so that a new block can be used in its place */
-         (*numblocksforscen)--;
+         for( j = 0; j < numblocksperblock[i]; j++ )
+         {
+            /* adding the blocks that will build the scenario */
+            (*blocksforscen)[(*numblocksforscen)] = blocks[i][j];
+            (*numblocksforscen)++;
+            SCIP_CALL( buildScenariosFromBlocks(scip, blocks, scenarios, blocksforscen, numblocksforscen, numblocks,
+                  numblocksperblock, numscenarios, scenariossize, stage, stagenum + 1, i)  );
+
+            /* the last block needs to be removed so that a new block can be used in its place */
+            (*numblocksforscen)--;
+         }
+      }
+      else
+      {
+         /* the index is only incremented if no block is processed. This is necessary because the value of i is used in
+          * the next if statement for identifying whether all blocks have been processed.
+          */
+         i++;
       }
    }
 
@@ -976,6 +1001,7 @@ SCIP_RETCODE stoinputCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, stoi) );
 
    (*stoi)->section     = STO_STOCH;
+   (*stoi)->stochinfotype = STO_STOCHINFO_NONE;
    (*stoi)->fp          = fp;
    (*stoi)->lineno      = 0;
    (*stoi)->haserror    = FALSE;
@@ -1011,6 +1037,17 @@ STOSECTION stoinputSection(
    assert(stoi != NULL);
 
    return stoi->section;
+}
+
+/** returns the stochastic information type */
+static
+STOSTOCHINFO stoinputStochInfoType(
+   const STOINPUT*       stoi                /**< sto input structure */
+   )
+{
+   assert(stoi != NULL);
+
+   return stoi->stochinfotype;
 }
 
 /** return the current value of field 0 */
@@ -1102,6 +1139,18 @@ void stoinputSetSection(
    stoi->section = section;
 }
 
+/** set the stochastic info type in the sto input structure */
+static
+void stoinputSetStochInfoType(
+   STOINPUT*             stoi,               /**< sto input structure */
+   STOSTOCHINFO          stochinfotype       /**< the stochastic infomation type */
+   )
+{
+   assert(stoi != NULL);
+
+   stoi->stochinfotype = stochinfotype;
+}
+
 /** set the problem name in the sto input structure to given problem name */
 static
 void stoinputSetProbname(
@@ -1120,7 +1169,7 @@ void stoinputSetProbname(
 static
 void stoinputSetStochtype(
    STOINPUT*             stoi,               /**< sto input structure */
-   const char*           stochtype           /**< name of the scenario type */
+   const char*           stochtype            /**< name of the scenario type */
    )
 {
    assert(stoi != NULL);
@@ -1285,6 +1334,7 @@ SCIP_RETCODE readStoch(
       return SCIP_OKAY;
    }
 
+   /* setting the stochatic information section */
    if( !strncmp(stoinputField0(stoi), "BLOCKS", 6) )
       stoinputSetSection(stoi, STO_BLOCKS);
    else if( !strncmp(stoinputField0(stoi), "SCENARIOS", 9) )
@@ -1296,6 +1346,24 @@ SCIP_RETCODE readStoch(
       stoinputSyntaxerror(stoi);
       return SCIP_OKAY;
    }
+
+   /* setting the stochastic information type */
+   if( !strncmp(stoinputField1(stoi), "DISCRETE", 8) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_DISCRETE);
+   else if( !strncmp(stoinputField1(stoi), "UNIFORM", 7) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_UNIFORM);
+   else if( !strncmp(stoinputField1(stoi), "NORMAL", 6) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_NORMAL);
+   else if( !strncmp(stoinputField1(stoi), "SUB", 3) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_SUB);
+   else if( !strncmp(stoinputField1(stoi), "LINTR", 5) )
+      stoinputSetStochInfoType(stoi, STO_STOCHINFO_LINTR);
+   else
+   {
+      stoinputSyntaxerror(stoi);
+      return SCIP_OKAY;
+   }
+
 
    return SCIP_OKAY;
 }
@@ -1573,7 +1641,7 @@ SCIP_RETCODE readScenarios(
          SCIP_CALL( setScenarioName(scip, scenario, stoinputField2(stoi)) );
          SCIP_CALL( setScenarioStageName(scip, scenario, stoinputField5(stoi)) );
          SCIP_CALL( setScenarioNum(scip, scenario, numscenarios) );
-         SCIP_CALL( setScenarioStageNum(scip, scenario, -1) );
+         SCIP_CALL( setScenarioStageNum(scip, scenario, SCIPtimFindStage(scip, stoinputField5(stoi))) );
          SCIP_CALL( setScenarioProbability(scip, scenario, atof(stoinputField4(stoi))) );
 
          numscenarios++;
@@ -1614,6 +1682,9 @@ SCIP_RETCODE readIndep(
    int numstages;
    SCIP_Bool foundblock;
 
+   SCIP_Real probability;
+   char currstagename[SCIP_MAXSTRLEN];
+
    SCIPdebugMsg(scip, "read Indep\n");
 
    /* This has to be the Line with the name. */
@@ -1644,13 +1715,6 @@ SCIP_RETCODE readIndep(
          if( !strcmp(stoinputField0(stoi), "INDEP") )
          {
             stoinputSetSection(stoi, STO_INDEP);
-
-            if( strcmp(stoinputField1(stoi), "DISCRETE") )
-            {
-               SCIPerrorMessage("Sorry, %s independent scenarios is not currently supported.\n", stoinputField1(stoi));
-               SCIPerrorMessage("Only DISCRETE independent scenarios are supported.\n");
-               goto TERMINATE;
-            }
          }
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
          {
@@ -1663,11 +1727,27 @@ SCIP_RETCODE readIndep(
          goto TERMINATE;
       }
 
+      /* if the 5th input is NULL, then the 4th input is the probability. Otherwise, the 4th input is the stage name and
+       * the 5th input is the probability. The stage name is redundant information, but sometimes included for more
+       * information.
+       */
+      if( stoinputField5(stoi) == NULL )
+      {
+         probability = atof(stoinputField4(stoi));
+         (void) SCIPsnprintf(currstagename, SCIP_MAXSTRLEN, "%s", SCIPtimConsGetStageName(scip, stoinputField2(stoi)));
+      }
+      else
+      {
+         probability = atof(stoinputField5(stoi));
+         (void) SCIPsnprintf(currstagename, SCIP_MAXSTRLEN, "%s", stoinputField4(stoi));
+      }
+
       /* checking whether the stage has been added previously */
-      if( strstr(stagenames, stoinputField4(stoi)) == NULL )
+      if( strstr(stagenames, currstagename) == NULL )
       {
          /* recording the stage name as processed */
-         (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "%s_%s", stagenames, stoinputField4(stoi));
+         (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "%s_%s", stagenames, currstagename);
+
          numstages++;
       }
 
@@ -1721,8 +1801,8 @@ SCIP_RETCODE readIndep(
       SCIP_CALL( createScenarioData(scip, &blocks[blocknum][blockindex]) );
 
       SCIP_CALL( setScenarioName(scip, blocks[blocknum][blockindex], stoinputField2(stoi)) );
-      SCIP_CALL( setScenarioStageName(scip, blocks[blocknum][blockindex], stoinputField4(stoi)) );
-      SCIP_CALL( setScenarioProbability(scip, blocks[blocknum][blockindex], atof(stoinputField5(stoi))) );
+      SCIP_CALL( setScenarioStageName(scip, blocks[blocknum][blockindex], currstagename) );
+      SCIP_CALL( setScenarioProbability(scip, blocks[blocknum][blockindex], probability) );
       numblocksperblock[blocknum]++;
 
       if( !foundblock )
@@ -2084,7 +2164,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    }
    else
 #else
-      assert(!decomp);
+   assert(!decomp);
 #endif
       scenarioscip = scip;
 
@@ -2126,14 +2206,15 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       char RHS[] = "RHS";
       char RIGHT[] = "RIGHT";
       char MINI[] = "MINI";
-      char OBJ[] = "obj";
+      char obj[] = "obj";
+      char OBJ[] = "OBJ";
 
       /* finding the constraint associated with the row */
       getScenarioEntityName(name, getScenarioEntryRow(scenario, i), getScenarioStageNum(scenarioscip, scenario),
          getScenarioNum(scenarioscip, scenario));
       cons = SCIPfindCons(scenarioscip, name);
 
-      if( strcmp(getScenarioEntryCol(scenario, i), RHS) == 0 || strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
+      if( strncmp(getScenarioEntryCol(scenario, i), RHS, 3) == 0 || strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
       {
          /* if the constraint is an equality constraint, then the LHS must also be changed */
          if( SCIPgetLhsLinear(scenarioscip, cons) >= SCIPgetRhsLinear(scenarioscip, cons) )
@@ -2147,6 +2228,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
             SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
       }
       else if( strstr(getScenarioEntryRow(scenario, i), MINI) != NULL ||
+         strstr(getScenarioEntryRow(scenario, i), obj) != NULL ||
          strstr(getScenarioEntryRow(scenario, i), OBJ) != NULL )
       {
          /* finding the variable associated with the column */
@@ -2331,6 +2413,7 @@ SCIP_RETCODE readSto(
    STOINPUT* stoi;
    SCIP_RETCODE retcode;
    SCIP_Bool error = TRUE;
+   SCIP_Bool unsupported = FALSE;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -2348,26 +2431,50 @@ SCIP_RETCODE readSto(
 
    SCIP_CALL_TERMINATE( retcode, readStoch(scip, stoi), TERMINATE );
 
-   if( stoinputSection(stoi) == STO_BLOCKS )
+   /* checking for supported stochastic information types */
+   if( stoinputStochInfoType(stoi) != STO_STOCHINFO_DISCRETE )
    {
-      SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
+         SCIPinfoMessage(scip, NULL, "\nSorry, currently only STO files with the stochastic information as DISCRETE are supported.\n\n");
+         SCIPinfoMessage(scip, NULL, "NOTE: The problem provided by the COR file is loaded without stochastic information.\n\n");
+         unsupported = TRUE;
    }
-   if( stoinputSection(stoi) == STO_SCENARIOS )
+   else
    {
-      SCIP_CALL_TERMINATE( retcode, readScenarios(stoi, scip, readerdata), TERMINATE );
+      if( stoinputSection(stoi) == STO_BLOCKS )
+      {
+         SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
+      }
+
+      if( stoinputSection(stoi) == STO_SCENARIOS )
+      {
+         /* if the number of stages exceeds 1, i.e. more than two stages, then the sto file is not read. */
+         if( SCIPtimGetNStages(scip) > 2 )
+         {
+            SCIPinfoMessage(scip, NULL, "\nThe scenarios for the stochastic programs are defined in <%s> as SCENARIOS\n", filename);
+            SCIPinfoMessage(scip, NULL, "Sorry, currently only two-stage stochastic programs are supported when scenarios are defined as SCENARIOS.\n\n");
+            SCIPinfoMessage(scip, NULL, "NOTE: The problem provided by the COR file is loaded without stochastic information.\n\n");
+            unsupported = TRUE;
+         }
+         else
+         {
+            SCIP_CALL_TERMINATE( retcode, readScenarios(stoi, scip, readerdata), TERMINATE );
+         }
+      }
+
+      if( stoinputSection(stoi) == STO_INDEP )
+      {
+         SCIP_CALL_TERMINATE( retcode, readIndep(stoi, scip, readerdata), TERMINATE );
+      }
    }
-   if( stoinputSection(stoi) == STO_INDEP )
-   {
-      SCIP_CALL_TERMINATE( retcode, readIndep(stoi, scip, readerdata), TERMINATE );
-   }
-   if( stoinputSection(stoi) != STO_ENDATA )
+
+   if( !unsupported && stoinputSection(stoi) != STO_ENDATA )
       stoinputSyntaxerror(stoi);
 
    SCIPfclose(fp);
 
    error = stoinputHasError(stoi);
 
-   if( !error )
+   if( !error && !unsupported )
    {
 #ifdef BENDERSBRANCH
       if( readerdata->usebenders )

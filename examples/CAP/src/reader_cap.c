@@ -103,7 +103,8 @@
 #define READER_EXTENSION        "txt"
 
 
-#define DEFAULT_USEBENDERS       TRUE
+//#define DEFAULT_USEBENDERS       TRUE
+#define DEFAULT_USEBENDERS       FALSE
 #define DEFAULT_NUMSCENARIOS      250
 
 #define MAXNCOSTS                   7

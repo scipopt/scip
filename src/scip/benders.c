@@ -847,8 +847,6 @@ SCIP_RETCODE initialiseLPSubproblem(
    SCIP* subproblem;
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_Bool infeasible;
-   SCIP_Bool cutoff;
 
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
@@ -2023,23 +2021,17 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
    )
 {
-   SCIP_BENDERSCUT** benderscuts;
    int nsubproblems;
    int subproblemcount;
    int nsubprobssolved;
-   int nbenderscuts;
    int nsolveloops;     /* the number of times the subproblems are solved. An additional loop is required when integer
                            variables are in the subproblem */
-   int numnotopt;
-   int numtocheck;
    int i;
-   int j;
    int l;
    SCIP_Bool optimal;
    SCIP_Bool allchecked;      /* flag to indicate whether all subproblems have been checked */
    int nchecked;              /* the number of subproblems that have been checked */
    SCIP_Bool* subisinfeas;
-   SCIP_Bool onlylpcheck;     /* should only the LP be checked in the presence of integer subproblems */
 
    /* start timing */
    SCIPclockStart(benders->bendersclock, set);
@@ -2289,8 +2281,6 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    SCIP_Real solval;
    int nvars;
    int i;
-   SCIP_Bool infeasible;
-   SCIP_Bool fixed;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -2331,14 +2321,15 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
             //solval, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
 
          /* fixing the variable in the subproblem */
-         if( SCIPisFeasLT(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+         if( !SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
          {
-            SCIP_CALL( SCIPfixVar(subproblem, vars[i], solval, &infeasible, &fixed) );
-            assert(fixed);
-            assert(!infeasible);
+            if( SCIPisGT(subproblem, solval, SCIPvarGetLbLocal(vars[i])) )
+               SCIP_CALL( SCIPchgVarLb(subproblem, vars[i], solval) );
+            if( SCIPisLT(subproblem, solval, SCIPvarGetUbLocal(vars[i])) )
+               SCIP_CALL( SCIPchgVarUb(subproblem, vars[i], solval) );
          }
 
-         assert(SCIPisFeasEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
+         assert(SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
       }
    }
 
@@ -2559,8 +2550,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
 {
    SCIP* subproblem;
    SCIP_SUBPROBPARAMS* origparams;
-   SCIP_Bool mipchecksolve;         /* flag to indicate whether the MIP problem is solved during the CHECK.
-                                       In this case, the subproblems may be interrupted because of the upper bound. */
 
    assert(benders != NULL);
    assert(infeasible != NULL);
@@ -2597,8 +2586,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
          /* NOTE: This should be a parameter */
          /* SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 5) ); */
       }
-
-      mipchecksolve = TRUE;
    }
    else if( solvemip )
    {

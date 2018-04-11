@@ -110,6 +110,12 @@ const char* SCIPtimGetStageName(
    int                   stagenum            /**< the number of the requested stage */
    );
 
+/* returns the stage name for a given constraint name */
+const char* SCIPtimConsGetStageName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           consname            /**< the constraint to search for */
+   );
+
 /* returns the number for a given stage */
 EXTERN
 int SCIPtimFindStage(
