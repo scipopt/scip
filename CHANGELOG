@@ -5,6 +5,9 @@ performance improvements:
 - cuts generated from certain quadratic constraints with convex feasible region are now global
 - improved bound tightening for some quadratic equations
 
+features:
+- new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
+
 interface changes:
 - functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
   SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
