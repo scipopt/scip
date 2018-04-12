@@ -13,6 +13,12 @@ interface changes:
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+- "propagating/orbitalfixing/oftiming" to change the timining of symmetry computation for orbital fixing
+- "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
+- "presolving/symbreak/addconsstiming" to  change the timining of symmetry computation for symmetry handling inequalities
+
+deleted and modified parameters:
+- removed parameter "presolving/symmetry/computepresolved"
 
 deleted files:
 - presol_implfree removed
