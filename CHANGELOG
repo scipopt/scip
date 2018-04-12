@@ -30,6 +30,8 @@ new parameters:
 deleted files:
 - presol_implfree removed
 
+misc:
+- updated CppAD to version 20180000.0
 
 
 SCIP version 5.0.2
