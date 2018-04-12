@@ -53,7 +53,8 @@
 #define PROP_PRESOL_MAXROUNDS        -1           /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 
 /* parameters */
-#define DEFAULT_OFTIMING              2           /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
+#define DEFAULT_OFTIMING              2           /**< timing of symmetry computation for orbital fixing
+                                                   *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING     FALSE       /**< Run orbital fixing during presolving? */
 
 
@@ -78,7 +79,8 @@ struct SCIP_PropData
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Bool             enabled;            /**< run orbital branching? */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
-   int                   oftiming;           /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
+   int                   oftiming;           /**< timing of symmetry computation for orbital fixing
+                                              *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
@@ -848,7 +850,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    /* add parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/oftiming",
-         "timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call)",
+         "timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call)",
          &propdata->oftiming, TRUE, DEFAULT_OFTIMING, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
