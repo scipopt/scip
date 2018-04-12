@@ -252,6 +252,7 @@ local::ADTape<Base>*  AD<Base>::tape_manage(tape_manage_job job)
 	// check if there is no tape currently attached to this thread
 	if( tape_table[thread] == CPPAD_NULL )
 	{	// allocate separate memroy to avoid false sharing
+#if CPPAD_MAX_NUM_THREADS > 1
 		if( thread == 0 )
 		{	// mastert tape is a static in this routine
 			tape_table[thread] = &tape_zero;
@@ -260,6 +261,9 @@ local::ADTape<Base>*  AD<Base>::tape_manage(tape_manage_job job)
 		{	// other tapes are allocated
 			tape_table[thread] = new local::ADTape<Base>();
 		}
+#else
+			tape_table[thread] = &tape_zero;
+#endif
 		// current id and pointer to this tape
 		tape_table[thread]->id_ = tape_id_save[thread];
 		*tape_id                = &tape_table[thread]->id_;
