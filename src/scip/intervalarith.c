@@ -2957,6 +2957,65 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    assert(sqrcoeff <  infinity);
    assert(sqrcoeff > -infinity);
 
+   if( sqrcoeff == 0.0 )
+   {
+      /* special handling for linear b * x >= c
+       *
+       * The non-negative solutions here are:
+       * b <  0, c <= 0 : [0, c/b]
+       * b <= 0, c >  0 : empty
+       * b >  0, c >  0 : [c/b, infty]
+       * b >= 0, c <= 0 : [0, infty]
+       *
+       * The same should have been computed below, but without the sqrcoeff, terms simplify (thus, also less rounding).
+       */
+
+      if( lincoeff <= 0.0 && rhs > 0.0 )
+      {
+         SCIPintervalSetEmpty(resultant);
+         return;
+      }
+
+      if( lincoeff >= 0.0 && rhs <= 0.0 )
+      {
+         /* [0,infty] cap xbnds */
+         resultant->inf = MAX(0.0, xbnds.inf);
+         resultant->sup = xbnds.sup;
+         return;
+      }
+
+      roundmode = SCIPintervalGetRoundingMode();
+
+      if( lincoeff < 0.0 && rhs <= 0.0 )
+      {
+         /* [0,c/b] cap xbnds */
+         resultant->inf = MAX(0.0, xbnds.inf);
+
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+         resultant->sup = rhs / lincoeff;
+         if( xbnds.sup < resultant->sup )
+            resultant->sup = xbnds.sup;
+      }
+      else
+      {
+         assert(lincoeff > 0.0);
+         assert(rhs > 0.0);
+
+         /* [c/b, infty] cap xbnds */
+
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf = rhs / lincoeff;
+         if( resultant->inf < xbnds.inf )
+            resultant->inf = xbnds.inf;
+
+         resultant->sup = xbnds.sup;
+      }
+
+      SCIPintervalSetRoundingMode(roundmode);
+
+      return;
+   }
+
    resultant->inf = 0.0;
    resultant->sup = infinity;
 
@@ -2971,7 +3030,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
       if( rhs > 0.0 )
       { /* b >= 0.0 and c > 0.0 */
          delta = b*b + sqrcoeff*rhs;
-         if( delta < 0.0 || (sqrcoeff == 0.0 && lincoeff == 0.0) )
+         if( delta < 0.0 )
          {
             SCIPintervalSetEmpty(resultant);
          }
@@ -3090,6 +3149,18 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL xneg;
 
    assert(resultant != NULL);
+
+   /* special handling for lincoeff * x = rhs without 0 in lincoeff
+    * rhs/lincoeff gives a good interval that we just have to intersect with xbnds
+    * the code below would also work, but uses many more case distinctions to get to a result that should be the same (though epsilon differences can sometimes be observed)
+    */
+   if( sqrcoeff.inf == 0.0 && sqrcoeff.sup == 0.0 && (lincoeff.inf > 0.0 || lincoeff.sup < 0.0) )
+   {
+      SCIPintervalDiv(infinity, resultant, rhs, lincoeff);
+      SCIPintervalIntersect(resultant, *resultant, xbnds);
+      SCIPdebugMessage("solving [%g,%g]*x = [%g,%g] for x in [%g,%g] gives [%g,%g]\n", lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, xbnds.sup, resultant->inf, resultant->sup);
+      return;
+   }
 
    SCIPdebugMessage("solving [%g,%g]*x^2 + [%g,%g]*x = [%g,%g] for x in [%g,%g]\n", sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xbnds.inf, xbnds.sup);
 

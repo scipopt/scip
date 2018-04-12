@@ -6471,10 +6471,22 @@ void rowCalcActivityBounds(
       row->maxactivity = SCIPsetInfinity(set);
    row->validactivitybdsdomchg = stat->domchgcount;
 
-   assert(!row->integral || mininfinite || REALABS(row->minactivity - row->constant) > 1.0/SCIP_DEFAULT_SUMEPSILON
-      || EPSISINT(row->minactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
-   assert(!row->integral || maxinfinite || REALABS(row->maxactivity - row->constant) > 1.0/SCIP_DEFAULT_SUMEPSILON
-      || EPSISINT(row->maxactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
+#ifndef NDEBUG
+   {
+      SCIP_Real inttol = 1000.0*SCIPsetFeastol(set);
+
+      /* even if the row is integral, the bounds on the variables used for computing minimum and maximum activity might
+       * be integral only within feasibility tolerance; this can happen, e.g., if a continuous variable is promoted to
+       * an (implicit) integer variable and the bounds cannot be adjusted because they are minimally tighter than the
+       * rounded bound value; hence, the activity may violate integrality; we allow 1000 times the default feasibility
+       * tolerance as a proxy to account for the accumulation effect
+       */
+      assert(!row->integral || mininfinite || REALABS(row->minactivity - row->constant) > 1.0/SCIPsetSumepsilon(set)
+         || EPSISINT(row->minactivity - row->constant, inttol));
+      assert(!row->integral || maxinfinite || REALABS(row->maxactivity - row->constant) > 1.0/SCIPsetSumepsilon(set)
+         || EPSISINT(row->maxactivity - row->constant, inttol));
+   }
+#endif
 }
 
 /** returns the minimal activity of a row w.r.t. the columns' bounds */
@@ -11723,7 +11735,7 @@ SCIP_RETCODE lpSolveStable(
    return SCIP_OKAY;
 }
 
-/** adjust the LP objective value if its greater/less than +/- SCIPsetInfinity() */
+/** adjust the LP objective value if it is greater/less than +/- SCIPsetInfinity() */
 static
 void adjustLPobjval(
    SCIP_LP*              lp,                 /**< current LP data */

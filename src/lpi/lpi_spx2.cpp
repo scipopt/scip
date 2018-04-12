@@ -221,6 +221,10 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+#if SOPLEX_APIVERSION >= 2
+      setBoolParam(SoPlex::ENSURERAY, true);
+#endif
+
 #ifdef WITH_LPSCHECK
       int cpxstat;
       _checknum = 0;
