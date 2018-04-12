@@ -1460,7 +1460,6 @@ SCIP_RETCODE redLoopStp(
 
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    int i = 0;
-   int rounds = 0;
 
    SCIP_RANDNUMGEN* randnumgen;
    const SCIP_Bool fullreduce = (da && userec);
@@ -1482,6 +1481,7 @@ SCIP_RETCODE redLoopStp(
 
    do
    {
+      int inner_rounds = 0;
       int inner_restarts = 0;
 
       /* inner reduction loop */
@@ -1534,7 +1534,7 @@ SCIP_RETCODE redLoopStp(
          if( sdc || extensive )
          {
             SCIP_CALL(
-                  reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, ((rounds > 0) ? (STP_RED_SDSPBOUND2 / 2) : (STP_RED_SDSPBOUND / 2)), NULL));
+                  reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, ((inner_rounds > 0) ? (STP_RED_SDSPBOUND2 / 2) : (STP_RED_SDSPBOUND / 2)), NULL));
 
             if( sdcnelims <= reductbound )
                sdc = FALSE;
@@ -1585,7 +1585,7 @@ SCIP_RETCODE redLoopStp(
          {
             SCIP_CALL(
                   reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
-                        nodearrint2, nodearrchar, &danelims, rounds, randnumgen, userec, FALSE));
+                        nodearrint2, nodearrchar, &danelims, inner_rounds, randnumgen, userec, FALSE));
 
             if( danelims <= STP_RED_EXFACTOR * reductbound )
                da = FALSE;
@@ -1618,7 +1618,7 @@ SCIP_RETCODE redLoopStp(
          if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) <= 2 * reductbound )
          {
             // at least one successful round and full reduce and no inner_restarts yet?
-            if( rounds > 0 && fullreduce && inner_restarts == 0 )
+            if( inner_rounds > 0 && fullreduce && inner_restarts == 0 )
             {
                inner_restarts++;
                le = TRUE;
@@ -1639,7 +1639,7 @@ SCIP_RETCODE redLoopStp(
          if( extensive && (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) > 0 )
             rerun = TRUE;
 
-         rounds++;
+         inner_rounds++;
       } /* inner reduction loop */
 
       if( fullreduce && !SCIPisStopped(scip) )
@@ -1649,7 +1649,7 @@ SCIP_RETCODE redLoopStp(
          assert(!rerun);
 
          SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
-                     nodearrint2, nodearrchar, &extendedelims, rounds, randnumgen, userec, TRUE));
+                     nodearrint2, nodearrchar, &extendedelims, inner_rounds, randnumgen, userec, TRUE));
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 

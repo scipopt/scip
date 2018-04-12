@@ -307,16 +307,13 @@ SCIP_RETCODE updateNodeReplaceBounds(
 
                      if( tmpcostY < fixbnd )
                      {
-                        int todo;
-                        if( extendedsearch || 1 )
+                        if( extendedsearch )
                         {
                            int tree3outedges[2];
                            SCIP_Bool ruleout;
-
 #ifndef NDEBUG
                            const SCIP_Real tmpcostYorg = tmpcostY;
 #endif
-
                            tree3outedges[0] = outedge1;
                            tree3outedges[1] = outedge2;
 
@@ -2511,17 +2508,23 @@ SCIP_RETCODE reduce_da(
 #endif
          updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
-         SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
-               lpobjval, upperbound, root, (run == 0), extended) );
       }
 
       nfixed += reduceSPG(scip, graph, offset, marked, nodearrchar, vnoi, cost, pathdist, result,
             minpathcost, root, apsol);
 
-      if( !directed && !SCIPisZero(scip, minpathcost) )
+      if( !directed )
       {
-         nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
-         nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, upperbound);
+         const SCIP_Bool extendedReplace = (extended && (run == nruns - 1));
+
+         if( !SCIPisZero(scip, minpathcost) )
+         {
+            nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
+            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, upperbound);
+         }
+
+         SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
+               lpobjval, upperbound, root, (run == 0), extendedReplace) );
       }
 
       assert(graph_valid(graph));
