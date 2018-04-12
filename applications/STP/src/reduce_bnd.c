@@ -55,8 +55,8 @@
 
 /** clean subtree if not ruled out */
 static
-void cleanSubtreeHead(
-   const GRAPH*          graph,              /**< graph data structure */
+void cleanSubtree(
+   const int*            edgeends,           /**< heads or tail of edge */
    const int*            treeedges,          /**< tree edges */
    int                   dfsdepth,           /**< dfs depth */
    SCIP_Bool             ruleout,            /**< rule out? */
@@ -67,31 +67,9 @@ void cleanSubtreeHead(
    {
       for( int etree = 0; etree < dfsdepth; etree++ )
       {
-         const int head = graph->head[treeedges[etree]];
-         assert(nodepos[head]);
-         nodepos[head] = 0;
-      }
-   }
-}
-
-/** clean subtree if not ruled out */
-static
-void cleanSubtreeTail
-(
-   const GRAPH*          graph,              /**< graph data structure */
-   const int*            treeedges,          /**< tree edges */
-   int                   dfsdepth,           /**< dfs depth */
-   SCIP_Bool             ruleout,            /**< rule out? */
-   int*                  nodepos             /**< node position in tree */
-)
-{
-   if( !ruleout )
-   {
-      for( int etree = 0; etree < dfsdepth; etree++ )
-      {
-         const int tail = graph->tail[treeedges[etree]];
-         assert(nodepos[tail]);
-         nodepos[tail] = 0;
+         const int node = edgeends[treeedges[etree]];
+         assert(nodepos[node]);
+         nodepos[node] = 0;
       }
    }
 }
@@ -231,7 +209,7 @@ printf("rule out \n");
             if( nodepos[graph->tail[e]] > graph->knots )
             {
                start = nodepos[graph->tail[e]] - 1 - graph->knots;
-               assert(start >= 0 || start <= 3);
+               assert(start >= 0 && start <= 3);
 
                if( start <= 2 )
                {
@@ -239,9 +217,8 @@ printf("rule out \n");
 
                   if( SCIPisLT(scip, ecost, basebottlenecks[start]) )
                   {
-                     int todo;
                      printf("excluded2  %d \n", currhead);
-           //          return TRUE;
+                     return TRUE;
                   }
                }
                start = 0;
@@ -256,7 +233,7 @@ printf("rule out \n");
                if( SCIPisLT(scip, ecost, treecosts[i]) )
                {
                   printf("excluded3  %d \n", currhead);
-             //     return TRUE;
+                  return TRUE;
                }
          }
    }
@@ -1857,7 +1834,7 @@ SCIP_RETCODE reduce_check3Tree(
          int nadded_edges = 0;
          SCIP_Bool stopped = FALSE;
 
-         /* try to exend the tree from startnode */
+         /* try to extend the tree from startnode */
 
          assert(startnode != root && costartnode != root);
 
@@ -1970,7 +1947,7 @@ SCIP_RETCODE reduce_check3Tree(
             }
          } /* DFS loop */
 
-         cleanSubtreeHead(graph, treeedges, dfsdepth, *ruleout, nodepos);
+         cleanSubtree(graph->head, treeedges, dfsdepth, *ruleout, nodepos);
 
 #ifndef NDEBUG
          assert(SCIPisGE(scip, minbound, orgtreebound));
@@ -2075,7 +2052,7 @@ SCIP_RETCODE reduce_check3Tree(
             }
          } /* DFS loop */
 
-         cleanSubtreeTail(graph, treeedges, dfsdepth, *ruleout, nodepos);
+         cleanSubtree(graph->tail, treeedges, dfsdepth, *ruleout, nodepos);
 
 #ifndef NDEBUG
          assert(SCIPisGE(scip, minbound, orgtreebound));
@@ -2235,7 +2212,7 @@ SCIP_RETCODE reduce_checkEdge(
             }
          } /* DFS loop */
 
-         cleanSubtreeHead(graph, treeedges, dfsdepth, ruleout, nodemark);
+         cleanSubtree(graph->head, treeedges, dfsdepth, ruleout, nodemark);
 
 #ifndef NDEBUG
          assert(SCIPisGE(scip, minbound, orgedgebound));
