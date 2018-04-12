@@ -569,7 +569,7 @@ void get_opt_op_info(
 			case EqvvOp:
 			case NevvOp:
 			if( compare_op )
-			CPPAD_ASSERT_UNKNOWN( NumRes(op) == 0 );
+			{CPPAD_ASSERT_UNKNOWN( NumRes(op) == 0 );}
 			if( compare_op )
 			{	opt_op_info[i_op].usage = yes_usage;
 				//

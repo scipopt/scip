@@ -457,10 +457,10 @@ size_t ADFun<Base>::sparse_hes(
 			);
 # endif
 		}
-		else CPPAD_ASSERT_KNOWN(
+		else {CPPAD_ASSERT_KNOWN(
 			false,
 			"sparse_hes: coloring is not valid."
-		);
+		);}
 		//
 		// put sorting indices in color order
 		SizeVector key(K);

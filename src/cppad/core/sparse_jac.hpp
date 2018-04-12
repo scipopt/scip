@@ -366,10 +366,10 @@ size_t ADFun<Base>::sparse_jac_for(
 			);
 # endif
 		}
-		else CPPAD_ASSERT_KNOWN(
+		else {CPPAD_ASSERT_KNOWN(
 			false,
 			"sparse_jac_for: coloring is not valid."
-		);
+		);}
 		//
 		// put sorting indices in color order
 		SizeVector key(K);
@@ -558,10 +558,10 @@ size_t ADFun<Base>::sparse_jac_rev(
 			);
 # endif
 		}
-		else CPPAD_ASSERT_KNOWN(
+		else {CPPAD_ASSERT_KNOWN(
 			false,
 			"sparse_jac_rev: coloring is not valid."
-		);
+		);}
 		//
 		// put sorting indices in color order
 		SizeVector key(K);
