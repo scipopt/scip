@@ -38,11 +38,42 @@
 #define MAXPERMUTATIONS       5
 #define DEFAULT_RANDSEED      177           /**< random seed                                                                       */
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      TRUE          /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
+
+struct SCIP_HeurData
+{
+   SCIP_SOL** candidates;
+   int ncandidates;
+   int candlength;
+};
 
 /*
  * Local methods
  */
+
+/** External method that adds a solution to the list of candidate-solutions that should be improved */
+SCIP_RETCODE addCandSolCyckerlin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< The given solution */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+   heurdata = SCIPheurGetData(SCIPfindHeur(scip, "cyckerlin") );
+
+   assert(heurdata != NULL );
+   assert(sol != NULL);
+   /* realloc candidate array, if necessary */
+   if( heurdata->candlength - 1 <= heurdata->ncandidates )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(heurdata->candidates), heurdata->candlength, heurdata->candlength + 10) );
+      heurdata->candlength += 10;
+   }
+   heurdata->candidates[heurdata->ncandidates] = sol;
+   heurdata->ncandidates++;
+
+   return SCIP_OKAY;
+}
+
 
 /** Get the bin-var assignment from scip and save it as a matrix */
 static
@@ -56,101 +87,40 @@ SCIP_RETCODE getSolutionValues(
    )
 {
    SCIP_VAR*** binvars;
-   SCIP_VAR**** edgevars;
-   SCIP_Bool* processed;
    int nbins;
    int ncluster;
    int i;
    int c;
-   int nextbin;
-   int currentbin;
-   int currentcluster;
-   int nprocessed;
-   char model;
+   assert(bestsol != NULL);
 
    nbins = SCIPcycGetNBins(scip);
    ncluster = SCIPcycGetNCluster(scip);
    binvars = SCIPcycGetBinvars(scip);
-   edgevars = SCIPcycGetEdgevars(scip);
 
    assert(nbins > 0 && ncluster > 0 && nbins > ncluster);
-   assert(binvars != NULL && edgevars != NULL);
+   assert(binvars != NULL );
 
-   SCIP_CALL( SCIPgetCharParam(scip, "model", &model) );
-
-   switch(model)
+   /* Get the bin-variable values from the solution */
+   for( i = 0; i < nbins; ++i )
    {
-      case 's':
-         /* Get the bin-variable values from the solution */
-         for( i = 0; i < nbins; ++i )
+      for( c = 0; c < ncluster; ++c )
+      {
+         binfixed[i][c] = FALSE;
+
+         if( binvars[i][c] != NULL)
          {
-            for( c = 0; c < ncluster; ++c )
+            if( (SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(binvars[i][c]), SCIPvarGetLbGlobal(binvars[i][c]))) )
+               binfixed[i][c] = TRUE;
+
+            solclustering[i][c] = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
+
+            if( SCIPisFeasEQ(scip, solclustering[i][c], 1.0) )
             {
-               binfixed[i][c] = FALSE;
-
-               if( binvars[i][c] != NULL)
-               {
-                  if( (SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(binvars[i][c]), SCIPvarGetLbGlobal(binvars[i][c]))) )
-                     binfixed[i][c] = TRUE;
-
-                  solclustering[i][c] = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
-
-                  if( SCIPisFeasEQ(scip, solclustering[i][c], 1.0) )
-                  {
-                     clusterofbin[i] = c;
-                     nbinsincluster[c]++;
-                  }
-
-               }
+               clusterofbin[i] = c;
+               nbinsincluster[c]++;
             }
          }
-         break;
-
-      case 'e':
-         /* getting the solution for edge-only representation involves more effort */
-         SCIP_CALL(SCIPallocClearMemoryArray(scip, &processed, nbins));
-         nprocessed = 0;
-         currentbin = 0;
-         for( i = 0; i < nbins; ++i )
-         {
-            processed[i] = FALSE;
-         }
-         currentcluster = 0;
-         while( nprocessed < nbins && currentcluster < ncluster )
-         {
-            nextbin = -1;
-            solclustering[currentbin][currentcluster] = 1;
-            processed[currentbin] = TRUE;
-            nprocessed++;
-
-            for( i = currentbin + 1; i < nbins; ++i )
-            {
-               if( SCIPgetSolVal(scip, bestsol, edgevars[i][currentbin][0]) > 0 )
-               {
-                  solclustering[i][currentcluster] = 1;
-                  processed[i] = TRUE;
-                  nprocessed++;
-               }
-               else if( !processed[i] && nextbin == -1 )
-               {
-                  nextbin = i;
-               }
-            }
-
-            currentcluster++;
-            currentbin = nextbin;
-         }
-         for( i = 0; i < nbins; ++i )
-         {
-            if( !processed[i] )
-               solclustering[i][0] = 1;
-         }
-         SCIPfreeMemoryArray(scip, &processed);
-         break;
-
-      default:
-         SCIPerrorMessage("Model descriptor %s not implemented\n", model);
-         return SCIP_INVALIDDATA;
+      }
    }
 
    return SCIP_OKAY;
@@ -291,6 +261,7 @@ SCIP_Bool switchNext(
    oldobjective = getObjective(scip, qmatrix, scale, ncluster);
    maxbin = -1;
    maxcluster = -1;
+   assert(isPartition(scip, clustering, nbins, ncluster));
 
    for( bin = 0; bin < nbins; ++bin )
    {
@@ -514,6 +485,8 @@ SCIP_RETCODE createSwitchSolution(
       if( max > objective )
       {
          SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
+
+         assert(isPartition(scip, solclustering, nbins, ncluster));
          SCIP_CALL( assignVars(scip, worksol, solclustering, nbins, ncluster) );
          SCIP_CALL( SCIPtrySolFree(scip, &worksol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
       }
@@ -619,64 +592,16 @@ SCIP_RETCODE permuteStartSolution(
 
    return SCIP_OKAY;
 }
-/*
- * Callback methods of primal heuristic
- */
 
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+/** executes the exchange heuristic for a given solution */
 static
-SCIP_DECL_HEURCOPY(heurCopyCyckerlin)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurCycKerlin(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeCyckerlin)
-{  /*lint --e{715}*/
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
-
-   return SCIP_OKAY;
-}
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolCyckerlin)
-{  /*lint --e{715}*/
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* reset the timing mask to its default value */
-   SCIPheurSetTimingmask(heur, HEUR_TIMING);
-
-   return SCIP_OKAY;
-}
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitCyckerlin)
-{  /*lint --e{715}*/
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   return SCIP_OKAY;
-}
-
-
-/** execution method of primal heuristic */
-static
-SCIP_DECL_HEUREXEC(heurExecCyckerlin)
-{  /*lint --e{715}*/
-   SCIP_SOL* bestsol;                        /* incumbent solution */
+SCIP_RETCODE runCyckerlin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< Heuristic pointer */
+   SCIP_SOL*             sol,                /**< Given solution */
+   SCIP_RESULT*          result              /**< Result pointer */
+)
+{
    SCIP_Real** startclustering;              /* the assignment given from the solution */
    SCIP_Bool** binfixed;                     /* The bins that are fixed from scip */
    SCIP_Real** cmatrix;                      /* Transition matrix */
@@ -684,38 +609,16 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
    SCIP_RANDNUMGEN* rnd;                     /* Random number generator */
    int* clusterofbin;                        /* hold the cluster that each bin is in */
    int* nbinsincluster;                      /* The number of bins ins each cluster */
-   SCIP_Real objective;                      /* The value of the objective function */
    int nbins;
    int ncluster;
-   int c;
    int i;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* we only want to process each solution once */
-   bestsol = SCIPgetBestSol(scip);
-
-   /* reset the timing mask to its default value (at the root node it could be different) */
-   if( SCIPgetNNodes(scip) > 1 )
-      SCIPheurSetTimingmask(heur, HEUR_TIMING);
+   int c;
 
    /* get problem variables */
    nbins = SCIPcycGetNBins(scip);
    ncluster = SCIPcycGetNCluster(scip);
    cmatrix = SCIPcycGetCmatrix(scip);
    SCIP_CALL( SCIPcreateRandom(scip, &rnd, DEFAULT_RANDSEED) );
-
-   /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
-    * in case of a (ideally) full reversible problem there cannot be a better solution, in the other case, i.e., the
-    * problem has irreversible parts, it seems the heuristic will not find solutions respecting the coherence conditions
-    */
-   objective = SCIPgetSolOrigObj(scip, bestsol);
-   if( SCIPisZero(scip, objective) )
-      return SCIP_OKAY;
 
    assert(nbins >= 0);
    assert(ncluster >= 0);
@@ -738,7 +641,7 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
    }
 
    /* get the solution values from scip */
-   SCIP_CALL( getSolutionValues(scip, bestsol, startclustering, binfixed, clusterofbin, nbinsincluster) );
+   SCIP_CALL( getSolutionValues(scip, sol, startclustering, binfixed, clusterofbin, nbinsincluster) );
 
    if( isPartition(scip, startclustering, nbins, ncluster) )
    {
@@ -774,6 +677,127 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
 }
 
 /*
+ * Callback methods of primal heuristic
+ */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyCyckerlin)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurCycKerlin(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeCyckerlin)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free heuristic data */
+   SCIPfreeBlockMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolCyckerlin)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* reset the timing mask to its default value */
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free flag array if exist */
+   if( heurdata->candlength > 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &(heurdata->candidates), heurdata->candlength);
+   }
+   heurdata->candlength = 0;
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitCyckerlin)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   heurdata->ncandidates = 0;
+   heurdata->candlength = 10;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(heurdata->candidates), heurdata->candlength) );
+
+   return SCIP_OKAY;
+}
+
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecCyckerlin)
+{  /*lint --e{715}*/
+   SCIP_Real objective;
+   SCIP_HEURDATA* heurdata;
+   int i;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+   heurdata = SCIPheurGetData(heur);
+
+   assert(NULL != heurdata);
+
+   /* reset the timing mask to its default value (at the root node it could be different) */
+   if( SCIPgetNNodes(scip) > 1 )
+      SCIPheurSetTimingmask(heur, HEUR_TIMING);
+   for( i = 0; i < heurdata->ncandidates; i++ )
+   {
+      objective = SCIPgetSolOrigObj(scip, heurdata->candidates[i]);
+      if( !SCIPisZero(scip, objective) )
+         SCIP_CALL( runCyckerlin(scip, heur, heurdata->candidates[i], result) );
+      heurdata->candidates[i] = NULL;
+   }
+
+   heurdata->ncandidates = 0;
+   return SCIP_OKAY;
+}
+
+/*
  * primal heuristic specific interface methods
  */
 
@@ -783,11 +807,14 @@ SCIP_RETCODE SCIPincludeHeurCycKerlin(
    )
 {
    SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
       HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-      HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCyckerlin, NULL) );
+      HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCyckerlin, heurdata) );
 
    assert(heur != NULL);
 

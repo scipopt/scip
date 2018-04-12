@@ -79,6 +79,12 @@ SCIP_VAR**** SCIPcycGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
+/** Returns the edge-graph */
+extern
+SCIP_DIGRAPH* SCIPcycGetEdgeGraph(
+   SCIP*                 scip                /**< SCIP data structure */
+);
+
 /** returns the number of scaling parameter */
 extern
 SCIP_Real SCIPcycGetScale(

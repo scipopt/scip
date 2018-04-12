@@ -193,11 +193,18 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
             score[i] = 0;
             for( k = 0; k < ncluster; ++k )
             {
+               /* Do not branch on variables that are already fixed locally */
+               if( SCIPisEQ(scip, SCIPvarGetUbLocal(binvars[i][k]), SCIPvarGetLbLocal(binvars[i][k])) )
+               {
+                  score[i] = -SCIPinfinity(scip);
+                  break;
+               }
+
                if( SCIPvarGetStatus(binvars[i][k]) == SCIP_VARSTATUS_COLUMN && !SCIPisZero(scip, SCIPvarGetLPSol(binvars[i][k])) && !SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), 1.0) )
                   score[i] += SCIPgetVarPseudocostScore(scip, binvars[i][k], SCIPvarGetLPSol(binvars[i][k]));
             }
 
-            if( SCIPisLT(scip, max, score[i]) )
+            if( SCIPisLT(scip, max, score[i]) && !SCIPisInfinity(scip, -score[i]) )
             {
                max = score[i];
                maxrow = i;

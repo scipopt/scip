@@ -263,7 +263,9 @@ SCIP_RETCODE assignNextBin(
    {
       bestcluster[i] = 0;
       binobjective[i] = -SCIPinfinity(scip);
-
+   }
+   for( i = 0; i < nbins; ++i )
+   {
       if( isassigned[i] )
          continue;
 

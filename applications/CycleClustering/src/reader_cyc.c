@@ -217,9 +217,9 @@ SCIP_RETCODE SCIPincludeReaderCyc(
    SCIP_CALL( SCIPsetReaderCopy( scip, reader, readerCopyCyc) );
    SCIP_CALL( SCIPsetReaderRead( scip, reader, readerReadCyc ) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,"scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
-   SCIP_CALL( SCIPaddIntParam(scip, "ncluster", "the amount of clusters allowed", NULL, FALSE, 3, 1, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip, "model", "the model variant", NULL, FALSE, 's', "seq", NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,"cycleclustering/scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
+   SCIP_CALL( SCIPaddCharParam(scip, "cycleclustering/model", "the model variant", NULL, FALSE, 's', "seqt", NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cycleclustering/usecutselection", "true if cut selection should be used in cyc-separators", NULL, FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

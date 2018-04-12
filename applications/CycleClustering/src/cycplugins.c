@@ -29,6 +29,8 @@
 #include "heur_fuzzyround.h"
 #include "branch_multinode.h"
 #include "heur_cyckerlin.h"
+#include "heur_redsize.h"
+#include "event_newsol.h"
 
 /** includes default plugins for cycle clustering into SCIP */
 SCIP_RETCODE SCIPincludeCycPlugins(
@@ -43,6 +45,7 @@ SCIP_RETCODE SCIPincludeCycPlugins(
    SCIP_CALL( SCIPincludeHeurCycKerlin(scip) );
    SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
    SCIP_CALL( SCIPincludeHeurCycGreedy(scip) );
+   SCIP_CALL( SCIPincludeHeurRedsize(scip) );
 
    /* Separators */
    SCIP_CALL( SCIPincludeSepaEdge(scip) );
@@ -51,6 +54,9 @@ SCIP_RETCODE SCIPincludeCycPlugins(
 
    /* Branching rule */
    SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
+
+   /* Event handler that reruns exchange heuristic for new solutions */
+   SCIP_CALL( SCIPincludeEventHdlrNewsol(scip) );
 
    return SCIP_OKAY;
 }
