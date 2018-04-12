@@ -1583,9 +1583,10 @@ SCIP_RETCODE redLoopStp(
 
          if( da )
          {
+            int todo; // check me out
             SCIP_CALL(
                   reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
-                        nodearrint2, nodearrchar, &danelims, inner_rounds, randnumgen, userec, FALSE));
+                        nodearrint2, nodearrchar, &danelims, inner_rounds, randnumgen, userec, TRUE));
 
             if( danelims <= STP_RED_EXFACTOR * reductbound )
                da = FALSE;

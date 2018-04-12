@@ -55,8 +55,7 @@
 
 /** clean subtree if not ruled out */
 static
-void cleanSubtreeHead
-(
+void cleanSubtreeHead(
    const GRAPH*          graph,              /**< graph data structure */
    const int*            treeedges,          /**< tree edges */
    int                   dfsdepth,           /**< dfs depth */
@@ -129,10 +128,63 @@ SCIP_Bool truncateSubtree
    return FALSE;
 }
 
+/** extend subtree and return new nadded_edges todo makro? */
+static
+int extendSubtreeHead(
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   int                   curredge,           /**< added edges */
+   int                   currhead,           /**< latest node */
+   int                   dfsdepth,           /**< dfs depth*/
+   int                   nadded_edges,       /**< added edges */
+   SCIP_Real*            treecost,           /**< pointer to treecost */
+   int*                  nodemark,           /**< marks nodes of tree */
+   int*                  treeedges,          /**< edges of tree */
+   int*                  edgestack           /**< stack */
+)
+{
+   int n = nadded_edges + 1;
+   nodemark[currhead] = TRUE;
+   *treecost += redcost[curredge];
+   treeedges[dfsdepth] = curredge;
+
+   for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
+      if( !nodemark[graph->head[e]] )
+         edgestack[n++] = e;
+
+   return n;
+}
+
+/** extend subtree and return new nadded_edges todo makro? */
+static
+int extendSubtreeTail(
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   int                   curredge,           /**< added edges */
+   int                   currtail,           /**< latest node */
+   int                   dfsdepth,           /**< dfs depth*/
+   int                   nadded_edges,       /**< added edges */
+   SCIP_Real*            treecost,           /**< pointer to treecost */
+   int*                  nodemark,           /**< marks nodes of tree */
+   int*                  treeedges,          /**< edges of tree */
+   int*                  edgestack           /**< stack */
+)
+{
+   int n = nadded_edges + 1;
+   nodemark[currtail] = TRUE;
+   *treecost += redcost[curredge];
+   treeedges[dfsdepth] = curredge;
+
+   for( int e = graph->inpbeg[currtail]; e != EAT_LAST; e = graph->ieat[e] )
+      if( !nodemark[graph->tail[e]] )
+         edgestack[n++] = e;
+
+   return n;
+}
+
 /** can subtree be ruled out? */
 static
-SCIP_Bool ruleOutSubtree
-(
+SCIP_Bool ruleOutSubtree(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    const int*            nodemark,           /**< nodes of the tree */
@@ -1852,22 +1904,8 @@ SCIP_RETCODE reduce_check3Tree(
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
                   continue;
 
-#ifdef PPP
-      printf("extend ...  \n");
-#endif
-               nodemark[currhead] = TRUE;
-               treecost += redcost[curredge];
-               treeedges[dfsdepth++] = curredge;
-               nadded_edges++;
-
-               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
-                  if( !nodemark[graph->head[e]] )
-                     edgestack[nadded_edges++] = e;
-#ifdef PPP
-               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
-                                 if( !nodemark[graph->head[e]] )
-                                    printf("add to heap(2) %d %d \n", graph->tail[e], graph->head[e]);
-#endif
+               nadded_edges = extendSubtreeHead(graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, nodemark, treeedges, edgestack);
+               dfsdepth++;
             }
          } /* DFS loop */
 
@@ -1961,22 +1999,8 @@ SCIP_RETCODE reduce_check3Tree(
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
                   continue;
 
-#ifdef PPP
-      printf("extend ...  \n");
-#endif
-               nodemark[currtail] = TRUE;
-               treecost += redcost[curredge];
-               treeedges[dfsdepth++] = curredge;
-               nadded_edges++;
-
-               for( int e = graph->inpbeg[currtail]; e != EAT_LAST; e = graph->ieat[e] )
-                  if( !nodemark[graph->tail[e]] )
-                     edgestack[nadded_edges++] = e;
-#ifdef PPP
-               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
-                                 if( !nodemark[graph->head[e]] )
-                                    printf("add to heap(2) %d %d \n", graph->tail[e], graph->head[e]);
-#endif
+               nadded_edges = extendSubtreeTail(graph, redcost, curredge, currtail, dfsdepth, nadded_edges, &treecost, nodemark, treeedges, edgestack);
+               dfsdepth++;
             }
          } /* DFS loop */
 
@@ -2008,7 +2032,7 @@ SCIP_RETCODE reduce_check3Tree(
 }
 
 
-#if 0
+#ifndef NDEBUG
 /** check (directed) edge */
 SCIP_RETCODE reduce_checkEdge(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2132,26 +2156,12 @@ SCIP_RETCODE reduce_checkEdge(
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
                   continue;
 
-#ifdef PPP
-      printf("extend ...  \n");
-#endif
-               nodemark[currhead] = TRUE;
-               treecost += redcost[curredge];
-               treeedges[dfsdepth++] = curredge;
-               nadded_edges++;
-
-               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
-                  if( !nodemark[graph->head[e]] )
-                     edgestack[nadded_edges++] = e;
-#ifdef PPP
-               for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
-                                 if( !nodemark[graph->head[e]] )
-                                    printf("add to heap(2) %d %d \n", graph->tail[e], graph->head[e]);
-#endif
+               nadded_edges = extendSubtreeHead(graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, nodemark, treeedges, edgestack);
+               dfsdepth++;
             }
          } /* DFS loop */
 
-         cleanSubtreeHead(graph, nodemark, treeedges, dfsdepth, ruleout);
+         cleanSubtreeHead(graph, treeedges, dfsdepth, ruleout, nodemark);
 
 #ifndef NDEBUG
          assert(SCIPisGE(scip, minbound, orgedgebound));
