@@ -469,8 +469,9 @@ private:
    /** stores exponent value corresponding to next call to forward or reverse
     *
     * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
     */
-   virtual void set_id(size_t id)
+   virtual void set_old(size_t id)
    {
       exponent = (int) id;
    }
@@ -725,9 +726,10 @@ private:
 
    /** stores exponent corresponding to next call to forward or reverse
     *
-    *  How is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * How is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
     */
-   virtual void set_id(size_t id)
+   virtual void set_old(size_t id)
    {
       exponent = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
    }
@@ -957,9 +959,10 @@ private:
 
    /** stores exponent corresponding to next call to forward or reverse
     *
-    *  How is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * How is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
     */
-   virtual void set_id(size_t id)
+   virtual void set_old(size_t id)
    {
       exponent = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
    }
@@ -1246,8 +1249,9 @@ private:
    /** stores user expression corresponding to next call to forward or reverse
     *
     * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
     */
-   virtual void set_id(size_t id)
+   virtual void set_old(size_t id)
    {
       expr = (SCIP_EXPR*)(void*)id;
       assert(SCIPexprGetOperator(expr) == SCIP_EXPR_USER);
