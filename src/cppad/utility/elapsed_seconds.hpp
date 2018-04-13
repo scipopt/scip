@@ -82,10 +82,10 @@ $end
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
 # include <cppad/utility/thread_alloc.hpp>
 
-# if CPPAD_USE_CPLUSPLUS_2011
-# include <chrono>
-# elif _MSC_VER
+# if _MSC_VER
 extern double microsoft_timer(void);
+# elif CPPAD_USE_CPLUSPLUS_2011
+# include <chrono>
 # elif CPPAD_HAS_GETTIMEOFDAY
 # include <sys/time.h>
 # else
