@@ -894,7 +894,7 @@ public:
 			previous_new             = next_new;
 			//
 			// get next value
-			previous = next;
+			//SV never read: previous = next;
 			next     = data_[next].next;
 			value = data_[next].value;
 		}
@@ -915,7 +915,7 @@ public:
 			previous_new             = next_new;
 			//
 			// get next value
-			previous = next;
+			//SV never read: previous = next;
 			next     = data_[next].next;
 			value = data_[next].value;
 		}
