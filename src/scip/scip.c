@@ -6797,41 +6797,6 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    return SCIP_OKAY;
 }
 
-/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value against the
- *  value of the corresponding auxiliary variable
- */
-SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
-   int                   probnumber,         /**< the number of the pricing problem */
-   SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
-   )
-{
-   assert(scip != NULL);
-   assert(benders != NULL);
-   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
-
-   SCIP_CALL( SCIPbendersCheckSubprobOptimality(benders, scip->set, sol, probnumber, optimal) );
-
-   return SCIP_OKAY;
-}
-
-/** returns the value of the auxiliary variable for a given subproblem */
-SCIP_Real SCIPgetBendersAuxiliaryVarVal(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
-   int                   probnumber          /**< the number of the pricing problem */
-   )
-{
-   assert(scip != NULL);
-   assert(benders != NULL);
-   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
-
-   return SCIPbendersGetAuxiliaryVarVal(benders, scip->set, sol, probnumber);
-}
-
 /** creates a constraint handler and includes it in SCIP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

@@ -107,6 +107,12 @@ SCIP_Real SCIPbenderscutGetTime(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
+/** returns whether the Benders' cut uses the LP information */
+EXTERN
+SCIP_Bool SCIPbenderscutIsLPCut(
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
+   );
+
 /* @} */
 
 #ifdef __cplusplus
