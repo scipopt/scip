@@ -632,7 +632,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       }
    }
 
-   return SCIP_OKAY;SCIPtreeHasFocusNodeLP(tree)
+   return SCIP_OKAY;
 }
 
 /** creates a Benders' decomposition structure
