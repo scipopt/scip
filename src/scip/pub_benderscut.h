@@ -107,6 +107,34 @@ SCIP_Real SCIPbenderscutGetTime(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
+/** returns the constraints that have been added by the Benders' cut plugin */
+EXTERN
+SCIP_RETCODE SCIPbenderscutGetCons(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_CONS***          addedcons,          /**< pointer to store the constraint array */
+   int*                  naddedcons          /**< pointer to store the number of added constraints */
+   );
+
+/** returns the cuts that have been added by the Benders' cut plugin */
+EXTERN
+SCIP_RETCODE SCIPbenderscutGetCuts(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_ROW***           addedcuts,          /**< pointer to store the cuts array */
+   int*                  naddedcuts          /**< pointer to store the number of added cut */
+   );
+
+/** returns the number of constraints that have been added by the Benders' cut plugin */
+EXTERN
+int SCIPbenderscutGetNAddedCons(
+   SCIP_BENDERSCUT*      benderscut         /**< Benders' decomposition cut */
+   );
+
+/** returns the number of cuts that have been added by the Benders' cut plugin */
+EXTERN
+int SCIPbenderscutGetNAddedCuts(
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
+   );
+
 /* @} */
 
 #ifdef __cplusplus
