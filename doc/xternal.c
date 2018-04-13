@@ -104,6 +104,8 @@
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref PARAM   "additional user parameters"
  *   - \ref TABLE   "Statistics tables"
+ *   - \ref BENDERS "Benders' decomposition"
+ *     + \ref BENDERSCUTS "Benders' decomposition cuts"
  *
  * @subsection HOWTOUSESECTION How to use ...
  *
@@ -112,6 +114,7 @@
  *   - \ref COUNTER "How to use SCIP to count feasible solutions"
  *   - \ref REOPT   "How to use reoptimization in SCIP"
  *   - \ref CONCSCIP "How to use the concurrent solving mode in SCIP"
+ *   - \ref BENDDEF "How to use default Benders' decomposition implementation"
  *
  *
  * @section FURTHERINFO Further information
@@ -5623,6 +5626,110 @@
  *
  * The TABLEEXITSOL callback is executed before the branch-and-bound process is freed. The statistics table should use this
  * call to clean up its branch-and-bound specific data.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page BENDERS How to add a custom interface to the Benders' decomposition framework
+ *
+ * An expression interpreter is a tool to compute point-wise and interval-wise the function values, gradients, and
+ * derivatives of algebraic expressions which are given in the form of an expression tree.
+ * It is used, e.g., by an NLP solver interface to compute Jacobians and Hessians for the solver.
+ *
+ * The expression interpreter interface in SCIP has been implemented similar to those of the LP solver interface (LPI).
+ * For one binary, exactly one expression interpreter has to be linked.
+ * The expression interpreter API has been designed such that it can be used independently from SCIP.
+ *
+ * A complete list of all expression interpreters contained in this release can be found \ref EXPRINTS "here".
+ *
+ * We now explain how users can add their own expression interpreters.
+ * Take the interface to CppAD (\ref exprinterpret_cppad.cpp) as an example.
+ * Unlike most other plugins, it is written in C++.
+ *
+ * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
+ * can be found in the file \ref exprinterpret.h
+ *
+ * Here is what you have to do to implement an expression interpreter:
+ * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
+ *    \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor.
+ * -# Define the expression interpreter data (see \ref EXPRINT_DATA).
+ * -# Implement the interface methods (see \ref EXPRINT_INTERFACE).
+ *
+ *
+ * @section BENDERS_DATA Benders' decomposition Data
+ *
+ * In "struct SCIP_BendersData", you can store the general data of your expression interpreter.
+ * For example, you could store a pointer to the block memory data structure.
+ *
+ * @section BENDERS_INTERFACE Interface Methods
+ *
+ * The expression interpreter has to implement a set of interface method.
+ * In your "exprinterpret_myexprinterpret.c", these methods are mostly dummy methods that return error codes.
+ *
+ * @subsection SCIPexprintGetName
+ *
+ * The SCIPexprintGetName method should return the name of the expression interpreter.
+ *
+ * @subsection SCIPexprintGetDesc
+ *
+ * The SCIPexprintGetDesc method should return a short description of the expression interpreter, e.g., the name of the developer of the code.
+ *
+ * @subsection SCIPexprintGetCapability
+ *
+ * The SCIPexprintGetCapability method should return a bitmask that indicates the capabilities of the expression interpreter,
+ * i.e., whether it can evaluate gradients, Hessians, or do interval arithmetic.
+ *
+ * @subsection SCIPexprintCreate
+ *
+ * The SCIPexprintCreate method is called to create an expression interpreter data structure.
+ * The method should initialize a "struct SCIP_ExprInt" here.
+ *
+ * @subsection SCIPexprintFree
+ *
+ * The SCIPexprintFree method is called to free an expression interpreter data structure.
+ * The method should free a "struct SCIP_ExprInt" here.
+ *
+ * @subsection SCIPexprintCompile
+ *
+ * The SCIPexprintCompile method is called to initialize the data structures that are required to evaluate
+ * a particular expression tree.
+ * The expression interpreter can store data that is particular to a given expression tree in the tree by using
+ * SCIPexprtreeSetInterpreterData().
+ *
+ * @subsection SCIPexprintFreeData
+ *
+ * The SCIPexprintFreeData method is called when an expression tree is freed.
+ * The expression interpreter should free the given data structure.
+ *
+ * @subsection SCIPexprintNewParametrization
+ *
+ * The SCIPexprintNewParametrization method is called when the values of the parameters in a parametrized expression tree have changed.
+ *
+ * @subsection SCIPexprintEval
+ *
+ * The SCIPexprintEval method is called when the value of an expression represented by an expression tree should be computed for a point.
+ *
+ * @subsection SCIPexprintEvalInt
+ *
+ * The SCIPexprintEvalInt method is called when an interval that contains the range of an expression represented by an expression tree with respect to intervals for the variables should be computed.
+ *
+ * @subsection SCIPexprintGrad
+ *
+ * The SCIPexprintGrad method is called when the gradient of an expression represented by an expression tree should be computed for a point.
+ *
+ * @subsection SCIPexprintGradInt
+ *
+ * The SCIPexprintGradInt method is called when an interval vector that contains the range of the gradients of an expression represented by an expression tree with respect to intervals for the variables should be computed.
+ *
+ * @subsection SCIPexprintHessianSparsityDense
+ *
+ * The SCIPexprintHessianSparsityDense method is called when the sparsity structure of the Hessian matrix should be computed and returned in dense form.
+ *
+ * @subsection SCIPexprintHessianDense
+ *
+ * The SCIPexprintHessianDense method is called when the Hessian of an expression represented by an expression tree should be computed for a point.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -4,6 +4,11 @@ SCIP version NEXT
 performance improvements:
 - cuts generated from certain quadratic constraints with convex feasible region are now global
 
+features:
+- a Benders' decomposition framework has been added. This framework provides the functionality for a user to solve a
+  decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
+  integer optimality cuts and no-good cuts.
+
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 
