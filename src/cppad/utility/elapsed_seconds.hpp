@@ -115,7 +115,10 @@ The number of seconds since the first call to \c elapsed_seconds.
 */
 inline double elapsed_seconds(void)
 // --------------------------------------------------------------------------
-# if CPPAD_USE_CPLUSPLUS_2011
+# if _MSC_VER
+{  return microsoft_timer(); }
+// --------------------------------------------------------------------------
+# elif CPPAD_USE_CPLUSPLUS_2011
 {	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
 	static bool first_ = true;
 	static std::chrono::time_point<std::chrono::steady_clock> start_;
@@ -129,9 +132,6 @@ inline double elapsed_seconds(void)
     std::chrono::duration<double> difference = now - start_;
 	return difference.count();
 }
-// --------------------------------------------------------------------------
-# elif _MSC_VER
-{	return microsoft_timer(); }
 // --------------------------------------------------------------------------
 # elif CPPAD_HAS_GETTIMEOFDAY
 {	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
