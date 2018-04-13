@@ -40,8 +40,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary Benders' decomposition data */
-
 /** Benders' decomposition data */
 struct SCIP_BendersData
 {
@@ -175,8 +173,6 @@ SCIP_RETCODE createVariableMappings(
 /*
  * Callback methods for Benders' decomposition
  */
-
-/* TODO: Implement all necessary Benders' decomposition methods. The methods with an #if 0 ... #else #define ... are optional */
 
 /** copy method for benders plugins (called when SCIP copies plugins) */
 static

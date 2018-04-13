@@ -49,15 +49,6 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
    );
 
-/**@addtogroup BENDERSS
- *
- * @{
- */
-
-/** TODO: add public methods to this group for documentation purposes */
-
-/* @} */
-
 #ifdef __cplusplus
 }
 #endif

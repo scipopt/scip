@@ -330,9 +330,8 @@ SCIP_RETCODE SCIPincludeBendersXyz(
    SCIP_CALL( SCIPsetBendersInitsol(scip, benders, bendersInitsolXyz) );
    SCIP_CALL( SCIPsetBendersExitsol(scip, benders, bendersExitsolXyz) );
    SCIP_CALL( SCIPsetBendersPresubsolve(scip, benders, bendersPresubsolveXyz) );
-   SCIP_CALL( SCIPsetBendersSolvesub(scip, benders, bendersSolvesubXyz) );
+   SCIP_CALL( SCIPsetBendersSolveAndFreesub(scip, benders, bendersSolvesubXyz, bendersFreesubXyz) );
    SCIP_CALL( SCIPsetBendersPostsolve(scip, benders, bendersPostsolveXyz) );
-   SCIP_CALL( SCIPsetBendersFreesub(scip, benders, bendersFreesubXyz) );
 #endif
 
    /* OPTIONAL: including the default cuts for Benders' decomposition */
