@@ -329,33 +329,6 @@ SCIP_RETCODE SCIPbendersGetVar(
    int                   probnumber          /**< the problem number for the desired variable, -1 for the master problem */
    );
 
-/** inserts a Benders' cut into the Benders' cuts list */
-extern
-SCIP_RETCODE SCIPbendersIncludeBenderscut(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' cut */
-   );
-
-/** sets the Benders' cuts sorted flags in the Benders' decomposition */
-extern
-void SCIPbendersSetBenderscutsSorted(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
-   SCIP_Bool             sorted              /**< the value to set the sorted flag to */
-   );
-
-/** sorts benders cuts by priorities */
-extern
-void SCIPbendersSortBenderscuts(
-   SCIP_BENDERS*         benders             /**< benders */
-   );
-
-/** sorts benders cuts by name */
-extern
-void SCIPbendersSortBenderscutsName(
-   SCIP_BENDERS*         benders             /**< benders */
-   );
-
 /** Adds a subproblem to the Benders' decomposition data */
 extern
 SCIP_RETCODE SCIPbendersAddSubproblem(
@@ -364,18 +337,10 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
    );
 
 /** Removes the subproblems from the Benders' decomposition data */
-SCIP_RETCODE SCIPbendersRemoveSubproblems(
+void SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
- *  process. One example is when the three-phase method is employed, where the first phase solves the of both the master
- *  and subproblems and by the third phase the integer subproblem is solved. */
-extern
-void SCIPbendersSetSubprobIsLP(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
    );
 
 /** sets the subproblem setup flag */
@@ -429,6 +394,33 @@ extern
 SCIP_Bool SCIPbendersGetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
+   );
+
+/** inserts a Benders' cut algorithm plugin into the Benders' cuts plugin list */
+extern
+SCIP_RETCODE SCIPbendersIncludeBenderscut(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' cut */
+   );
+
+/** sets the Benders' cuts sorted flags in the Benders' decomposition */
+extern
+void SCIPbendersSetBenderscutsSorted(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
+   SCIP_Bool             sorted              /**< the value to set the sorted flag to */
+   );
+
+/** sorts benders cuts by priorities */
+extern
+void SCIPbendersSortBenderscuts(
+   SCIP_BENDERS*         benders             /**< benders */
+   );
+
+/** sorts benders cuts by name */
+extern
+void SCIPbendersSortBenderscutsName(
+   SCIP_BENDERS*         benders             /**< benders */
    );
 
 #ifdef __cplusplus
