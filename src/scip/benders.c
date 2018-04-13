@@ -2041,6 +2041,8 @@ SCIP_RETCODE SCIPbendersExec(
    int nchecked;              /* the number of subproblems that have been checked */
    SCIP_Bool* subisinfeas;
 
+   SCIPdebugMessage("Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
+
    /* start timing */
    SCIPclockStart(benders->bendersclock, set);
 
@@ -2128,7 +2130,7 @@ SCIP_RETCODE SCIPbendersExec(
 
    allchecked = (nchecked == nsubproblems);
 
-#ifndef NDEBUG
+#ifdef SCIP_DEBUG
    if( (*result) == SCIP_CONSADDED )
    {
       SCIPdebugMessage("Benders decomposition: Cut added\n");
@@ -2188,6 +2190,9 @@ SCIP_RETCODE SCIPbendersExec(
 
    /* increment the number of calls to the Benders' decomposition subproblem solve */
    benders->ncalls++;
+
+   SCIPdebugMessage("End Benders' decomposition subproblem solve. result %d infeasible %d auxviol %d\n", *result,
+      *infeasible, *auxviol);
 
    /* end timing */
    SCIPclockStop(benders->bendersclock, set);
