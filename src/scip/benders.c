@@ -541,58 +541,6 @@ SCIP_RETCODE assignAuxiliaryVariables(
    return SCIP_OKAY;
 }
 
-/** assigns the copied auxiliary variables in the target scip to the target benders data */
-static
-SCIP_RETCODE assignAuxiliaryVariables(
-   SCIP*                 scip,               /**< SCIP data structure, the target scip */
-   SCIP_BENDERS*         benders             /**< benders */
-   )
-{
-   SCIP_BENDERS* topbenders;        /* the highest priority Benders' decomposition */
-   SCIP_VAR* targetvar;
-   SCIP_VARDATA* vardata;
-   char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
-   SCIP_Bool shareauxvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(benders != NULL);
-
-   /* this is a workaround for GCG. GCG expects that the variable has vardata when added. So a dummy vardata is created */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &vardata) );
-   vardata->vartype = -1;
-
-   /* getting the highest priority Benders' decomposition */
-   topbenders = SCIPgetBenders(scip)[0];
-
-   /* if the auxiliary variable are shared, then the variable name will have a suffix of the highest priority Benders'
-    * name. So the shareauxvars flag indicates how to search for the auxiliary variables */
-   shareauxvars = FALSE;
-   if( topbenders != benders && SCIPbendersShareAuxVars(benders) )
-      shareauxvars = TRUE;
-
-   for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
-   {
-      if( shareauxvars )
-         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(topbenders));
-      else
-         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders));
-
-      /* finding the variable in the copied problem that has the same name as the auxiliary variable */
-      targetvar = SCIPfindVar(scip, varname);
-
-      SCIPvarSetData(targetvar, vardata);
-
-      benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
-
-      SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
-   }
-
-   SCIPfreeBlockMemory(scip, &vardata);
-
-   return SCIP_OKAY;
-}
-
 /* sets the subproblem objective value array to -infinity */
 static
 void resetSubproblemObjectiveValue(
@@ -3253,6 +3201,39 @@ SCIP_Real SCIPbendersGetSubprobObjval(
 
    return benders->subprobobjval[probnumber];
 }
+
+/* sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
+ * process. One example is when the three-phase method is employed, where the first phase solves the of both the master
+ * and subproblems and by the third phase the integer subproblem is solved. */
+void SCIPbendersSetSubprobIsLP(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   if( islp && !benders->subprobislp[probnumber] )
+      benders->nlpsubprobs++;
+   else if( !islp && benders->subprobislp[probnumber] )
+      benders->nlpsubprobs--;
+
+   benders->subprobislp[probnumber] = islp;
+
+   assert(benders->nlpsubprobs >= 0 && benders->nlpsubprobs <= benders->nsubproblems);
+}
+
+/* returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
+SCIP_Bool SCIPbendersSubprobIsLP(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->subprobislp[probnumber];
 }
 
 /** returns the number of subproblems that are LPs */
@@ -3359,6 +3340,31 @@ SCIP_Bool SCIPbendersSubprobIsSetup(
    return benders->subprobsetup[probnumber];
 }
 
+/** sets the independent subproblem flag */
+void SCIPbendersSetSubprobIsIndependent(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             isindep             /**< flag to indicate whether the subproblem is independent */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   benders->indepsubprob[probnumber] = isindep;
+}
+
+/** returns whether the subproblem is independent */
+SCIP_Bool SCIPbendersSubprobIsIndependent(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->indepsubprob[probnumber];
+}
+
 /** sets a flag to indicate whether the master variables are all set to continuous */
 SCIP_RETCODE SCIPbendersSetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -3394,6 +3400,18 @@ SCIP_Bool SCIPbendersGetMastervarsCont(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    return benders->mastervarscont[probnumber];
+}
+
+/** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */
+int SCIPbendersGetNTransferredCuts(
+   SCIP_BENDERS*         benders             /**< the Benders' decomposition data structure */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->ntransferred;
+}
+
 /** sets the sorted flags in the Benders' decomposition */
 void SCIPbendersSetBenderscutsSorted(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
