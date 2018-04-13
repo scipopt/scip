@@ -433,33 +433,106 @@ struct SCIP_VarData
 static
 SCIP_RETCODE addAuxiliaryVariablesToMaster(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders             /**< benders */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_Real*            lowerbound          /**< array of lower bounds for the auxiliary variables */
    )
 {
+   SCIP_BENDERS* topbenders;        /* the highest priority Benders' decomposition */
    SCIP_VAR* auxiliaryvar;
    SCIP_VARDATA* vardata;
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
+   SCIP_Bool shareauxvars;
    int i;
 
    /* this is a workaround for GCG. GCG expects that the variable has vardata when added. So a dummy vardata is created */
    SCIP_CALL( SCIPallocBlockMemory(scip, &vardata) );
    vardata->vartype = -1;
 
+   /* getting the highest priority Benders' decomposition */
+   topbenders = SCIPgetBenders(scip)[0];
+
+   /* if the current Benders is the highest priority Benders, then we need to create the auxiliary variables.
+    * Otherwise, if the shareauxvars flag is set, then the auxiliar variables from the highest priority Benders' are
+    * stored with this Benders. */
+   shareauxvars = FALSE;
+   if( topbenders != benders && SCIPbendersShareAuxVars(benders) )
+      shareauxvars = TRUE;
+
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
-      /* if no optimality cuts have been added for this subproblem, then the auxiliary variable will be created and
-       * added */
-      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d", AUXILIARYVAR_NAME, i );
-      SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-            SCIP_VARTYPE_CONTINUOUS) );
+      /* if the auxiliary variables are shared, then a pointer to the variable is retrieved from topbenders,
+       * otherwise the auxiliaryvariable is created. */
+      if( shareauxvars )
+      {
+         auxiliaryvar = SCIPbendersGetAuxiliaryVar(topbenders, i);
 
-      SCIPvarSetData(auxiliaryvar, vardata);
+         SCIP_CALL( SCIPcaptureVar(scip, auxiliaryvar) );
+      }
+      else
+      {
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
+         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, lowerbound[i], SCIPinfinity(scip), 1.0,
+               SCIP_VARTYPE_CONTINUOUS) );
 
-      SCIP_CALL( SCIPaddVar(scip, auxiliaryvar) );
+         SCIPvarSetData(auxiliaryvar, vardata);
+
+         SCIP_CALL( SCIPaddVar(scip, auxiliaryvar) );
+      }
 
       benders->auxiliaryvars[i] = auxiliaryvar;
+   }
 
-      SCIP_CALL( SCIPreleaseVar(scip, &auxiliaryvar) );
+   SCIPfreeBlockMemory(scip, &vardata);
+
+   return SCIP_OKAY;
+}
+
+/** assigns the copied auxiliary variables in the target scip to the target benders data */
+static
+SCIP_RETCODE assignAuxiliaryVariables(
+   SCIP*                 scip,               /**< SCIP data structure, the target scip */
+   SCIP_BENDERS*         benders             /**< benders */
+   )
+{
+   SCIP_BENDERS* topbenders;        /* the highest priority Benders' decomposition */
+   SCIP_VAR* targetvar;
+   SCIP_VARDATA* vardata;
+   char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
+   SCIP_Bool shareauxvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   /* this is a workaround for GCG. GCG expects that the variable has vardata when added. So a dummy vardata is created */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &vardata) );
+   vardata->vartype = -1;
+
+   /* getting the highest priority Benders' decomposition */
+   topbenders = SCIPgetBenders(scip)[0];
+
+   /* if the auxiliary variable are shared, then the variable name will have a suffix of the highest priority Benders'
+    * name. So the shareauxvars flag indicates how to search for the auxiliary variables */
+   shareauxvars = FALSE;
+   if( topbenders != benders && SCIPbendersShareAuxVars(benders) )
+      shareauxvars = TRUE;
+
+   for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
+   {
+      if( shareauxvars )
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(topbenders));
+      else
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders));
+
+      /* finding the variable in the copied problem that has the same name as the auxiliary variable */
+      targetvar = SCIPfindVar(scip, varname);
+      assert(targetvar != NULL);
+
+      SCIPvarSetData(targetvar, vardata);
+
+      benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
+
+      SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
    }
 
    SCIPfreeBlockMemory(scip, &vardata);
@@ -576,6 +649,7 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_Bool             cutlp,              /**< should Benders' cuts be generated for LP solutions */
    SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
    SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
+   SCIP_Bool             shareauxvars,       /**< should this Benders' use the highest priority Benders aux vars */
    SCIP_DECL_BENDERSCOPY ((*benderscopy)),   /**< copy method of benders or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSFREE ((*bendersfree)),   /**< destructor of Benders' decomposition */
    SCIP_DECL_BENDERSINIT ((*bendersinit)),   /**< initialize Benders' decomposition */
@@ -609,13 +683,14 @@ SCIP_RETCODE SCIPbendersCreate(
    }
 
    SCIP_ALLOC( BMSallocMemory(benders) );
-   BMSclearMemory(benders);
+   BMSclearMemory(*benders);
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benders)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benders)->desc, desc, strlen(desc)+1) );
    (*benders)->priority = priority;
    (*benders)->cutlp = cutlp;
    (*benders)->cutpseudo = cutpseudo;
    (*benders)->cutrelax = cutrelax;
+   (*benders)->shareauxvars = shareauxvars;
    (*benders)->benderscopy = benderscopy;
    (*benders)->bendersfree = bendersfree;
    (*benders)->bendersinit = bendersinit;
@@ -997,8 +1072,24 @@ SCIP_RETCODE SCIPbendersInitpre(
 
    if( !benders->iscopy )
    {
+      SCIP_Real* lowerbound;
+      int nsubproblems;
+      int i;
+
+      nsubproblems = SCIPbendersGetNSubproblems(benders);
+
+      /* allocating memory for the auxiliay variables lower bounds array */
+      SCIP_CALL( SCIPallocBufferArray(set->scip, &lowerbound, nsubproblems) );
+
+      /* initialising the lower bound array */
+      for( i = 0; i < nsubproblems; i++ )
+         lowerbound[i] = -SCIPsetInfinity(set);
+
       /* adding the auxiliary variables to the master problem */
-      SCIP_CALL( addAuxiliaryVariablesToMaster(set->scip, benders) );
+      SCIP_CALL( addAuxiliaryVariablesToMaster(set->scip, benders, lowerbound) );
+
+      /* freeing the lower bound array */
+      SCIPfreeBufferArray(set->scip, &lowerbound);
    }
 
    /* call presolving initialization method of Benders' decomposition */
@@ -1070,7 +1161,7 @@ SCIP_RETCODE SCIPbendersInitsol(
    SCIPbendersSortBenderscuts(benders);
    for( i = 0; i < benders->nbenderscuts; i++ )
    {
-      SCIP_CALL( SCIPbenderscutExitsol(benders->benderscuts[i], set) );
+      SCIP_CALL( SCIPbenderscutInitsol(benders->benderscuts[i], set) );
    }
 
    return SCIP_OKAY;
@@ -1110,7 +1201,7 @@ SCIP_RETCODE SCIPbendersExitsol(
    /* calling the initsol method for the Benders' cuts */
    for( i = 0; i < benders->nbenderscuts; i++ )
    {
-      SCIP_CALL( SCIPbenderscutInitsol(benders->benderscuts[i], set) );
+      SCIP_CALL( SCIPbenderscutExitsol(benders->benderscuts[i], set) );
    }
 
    return SCIP_OKAY;
@@ -1143,6 +1234,7 @@ SCIP_RETCODE SCIPbendersActivate(
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->bestsubprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobislp, benders->nsubproblems) );
+      SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobsetup, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->mastervarscont, benders->nsubproblems) );
 
       for( i = 0; i < benders->nsubproblems; i++ )
@@ -1152,6 +1244,7 @@ SCIP_RETCODE SCIPbendersActivate(
          benders->subprobobjval[i] = SCIPsetInfinity(set);
          benders->bestsubprobobjval[i] = SCIPsetInfinity(set);
          benders->subprobislp[i] = FALSE;
+         benders->subprobsetup[i] = FALSE;
          benders->mastervarscont[i] = FALSE;
       }
    }
@@ -1191,6 +1284,7 @@ void SCIPbendersDeactivate(
 
       /* freeing the memory allocated during the activation of the Benders' decomposition */
       BMSfreeMemoryArray(&benders->mastervarscont);
+      BMSfreeMemoryArray(&benders->subprobsetup);
       BMSfreeMemoryArray(&benders->subprobislp);
       BMSfreeMemoryArray(&benders->bestsubprobobjval);
       BMSfreeMemoryArray(&benders->subprobobjval);
@@ -1365,12 +1459,15 @@ SCIP_RETCODE solveBendersSubproblems(
                   }
 #endif
 
-                  /* only increment the checked count if the subproblem is not an LP, or the solve loop is the MIP
-                   * solving loop. Hence, the LP are solved once and the MIPs are solved twice, one for the LP
-                   * relaxation of the MIP and the other to solve the MIP itself.
-                   * If the user has implemented a solving function, then it is expected that the user has
-                   * completely checked a subproblem in the solving callback. So in this case, the check count is
-                   * increased.
+                  /* the nchecked variable is only incremented when the original form of the subproblem has been solved.
+                   * What is meant by "original" is that the LP relaxation of CIPs are solved to generate valid cuts. So
+                   * if the subproblem is defined as a CIP, then it is only classified as checked if the CIP is solved.
+                   * There are three cases where the "original" form is solved are:
+                   * i) solveloop == SCIP_BENDERSSOLVELOOP_LP and the subproblem is an LP - the original form has been
+                   * solved.
+                   * ii) solveloop == SCIP_BENDERSSOLVELOOP_CIP and the CIP for the subproblem has been solved.
+                   * iii) solveloop == SCIP_BENDERSSOLVELOOP_USER, since the user has defined a solve function should be
+                   * the "original form".
                    */
                   if( (solveloop == SCIP_BENDERSSOLVELOOP_LP && lpsub)
                      || (solveloop == SCIP_BENDERSSOLVELOOP_CIP && !lpsub)
@@ -1598,15 +1695,476 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnum,            /**< the subproblem number */
+   int                   probnumber,            /**< the subproblem number */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    )
 {
-   /* This calls either the user defined solve method or the inbuilt solve methods.
-    * The details of this function have been removed for the merge request. */
+   SCIP* subproblem;
+   SCIP_SOL* bestsol;
+
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < benders->nsubproblems);
+
+   SCIPdebugMessage("Benders decomposition: solving subproblem %d\n", probnumber);
+
+   /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
+   if( solveloop == SCIP_BENDERSSOLVELOOP_USER )
+   {
+      assert(benders->benderssolvesub != NULL);
+      SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnumber, infeasible) );
+   }
+   else
+   {
+      /* setting up the subproblem */
+      if( solveloop == SCIP_BENDERSSOLVELOOP_LP )
+         SCIP_CALL( SCIPbendersSetupSubproblem(benders, set, sol, probnumber) );
+      else
+         SCIP_CALL( updateEventhdlrUpperbound(benders, probnumber, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) );
+
+
+      /* solving the subproblem
+       * the LP of the subproblem is solved in the first solveloop.
+       * In the second solve loop, the MIP problem is solved */
+      if( solveloop == SCIP_BENDERSSOLVELOOP_LP || SCIPbendersSubprobIsLP(benders, probnumber) )
+         SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
+      else
+         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, infeasible, type, FALSE) );
+   }
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   bestsol = SCIPgetBestSol(subproblem);
+
+   if( !enhancement )
+   {
+      /* The following handles the cases when the subproblem is OPTIMAL, INFEASIBLE and UNBOUNDED.
+       * If a subproblem is unbounded, then the auxiliary variables are set to -infinity and the unbounded flag is
+       * returned as TRUE. No cut will be generated, but the result will be set to SCIP_FEASIBLE.
+       */
+      if( solveloop == SCIP_BENDERSSOLVELOOP_LP )
+      {
+         if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, NULL));
+         else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPinfinity(set->scip));
+         else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         {
+            SCIPerrorMessage("The LP of Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
+               probnumber);
+            SCIPABORT();
+         }
+         else
+         {
+            SCIPerrorMessage("Invalid status returned from solving the LP of Benders' decomposition subproblem %d. LP status: %d\n",
+               probnumber, SCIPgetLPSolstat(subproblem));
+            SCIPABORT();
+         }
+      }
+      else
+      {
+         assert(solveloop == SCIP_BENDERSSOLVELOOP_CIP || solveloop == SCIP_BENDERSSOLVELOOP_USER);
+
+         /* TODO: Consider whether other solutions status should be handled */
+         if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, bestsol));
+         else if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPinfinity(set->scip));
+         else if( SCIPgetStatus(subproblem) == SCIP_STATUS_USERINTERRUPT || SCIPgetStatus(subproblem) == SCIP_STATUS_BESTSOLLIMIT )
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, bestsol));
+         else if( SCIPgetStatus(subproblem) == SCIP_STATUS_UNBOUNDED )
+         {
+            SCIPerrorMessage("The Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
+               probnumber);
+            SCIPABORT();
+         }
+         else
+         {
+            SCIPerrorMessage("Invalid status returned from solving Benders' decomposition subproblem %d. Solution status: %d\n",
+               probnumber, SCIPgetStatus(subproblem));
+            SCIPABORT();
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets up the subproblem using the solution to the master problem  */
+SCIP_RETCODE SCIPbendersSetupSubproblem(
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   SCIP* subproblem;
+   SCIP_VAR** vars;
+   SCIP_VAR* mastervar;
+   SCIP_Real solval;
+   int nvars;
+   int i;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   /* changing all of the master problem variable to continuous. */
+   SCIP_CALL( SCIPbendersChgMastervarsToCont(benders, set, probnumber) );
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   /* if the Benders subproblem is an LP, then probing mode must be started.
+    * If the subproblem is a MIP, the problem must be initialised, put into SCIP_STAGE_SOLVING to be able to change the
+    * variable bounds. The probing mode is entered once the variable bounds are set.
+    * In the MIP case, the transformed problem is freed after each subproblem solve round. */
+   if( SCIPbendersSubprobIsLP(benders, probnumber) )
+      SCIP_CALL( SCIPstartProbing(subproblem) );
+   else
+      SCIP_CALL( initialiseSubproblem(benders, probnumber) );
+
+   vars = SCIPgetVars(subproblem);
+   nvars = SCIPgetNVars(subproblem);
+
+   /* looping over all variables in the subproblem to find those corresponding to the master problem variables. */
+   /* TODO: It should be possible to store the pointers to the master variables to speed up the subproblem setup */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
+
+      if( mastervar != NULL )
+      {
+         /** It is possible due to numerics that the solution value exceeds the upper or lower bounds. When this
+          * happens, it causes an error in the LP solver as a result of inconsistent bounds. So the following statements
+          * are used to enusure that the bounds are not exceeded when applying the fixings for the Benders'
+          * decomposition subproblems
+          */
+         solval = SCIPgetSolVal(set->scip, sol, mastervar);
+         if( solval > SCIPvarGetUbLocal(vars[i]) )
+            solval = SCIPvarGetUbLocal(vars[i]);
+         else if( solval < SCIPvarGetLbLocal(vars[i]) )
+            solval = SCIPvarGetLbLocal(vars[i]);
+
+         /* fixing the variable in the subproblem */
+         if( !SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+         {
+            SCIP_CALL( SCIPchgVarLb(subproblem, vars[i], solval) );
+            SCIP_CALL( SCIPchgVarUb(subproblem, vars[i], solval) );
+         }
+
+         assert(SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
+      }
+   }
+
+   /* if the subproblem is a MIP, the probing mode is entered after setting up the subproblem */
+   if( !SCIPbendersSubprobIsLP(benders, probnumber) )
+      SCIP_CALL( SCIPstartProbing(subproblem) );
+
+   /* set the flag to indicate that the subproblems have been set up */
+   SCIPbendersSetSubprobIsSetup(benders, probnumber, TRUE);
+
+   return SCIP_OKAY;
+}
+
+/** Solve a Benders' decomposition subproblems. This will either call the user defined method or the generic solving
+ * methods. If the generic method is called, then the subproblem must be set up before calling this method. */
+SCIP_RETCODE SCIPbendersSolveSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   )
+{
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   /* the subproblem must be set up before this function is called. */
+   if( SCIPbendersSubprobIsSetup(benders, probnumber) )
+   {
+      SCIPerrorMessage("Benders subproblem %d must be set up before calling SCIPbendersSolveSubproblem(). Call SCIPsetupSubproblem() first.\n", probnumber);
+      return SCIP_ERROR;
+   }
+
+   /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
+   if( benders->benderssolvesub != NULL)
+      SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnumber, infeasible) );
+   else
+   {
+      /* solving the subproblem */
+      if( solvemip )
+         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, infeasible, type, solvemip) );
+      else
+      {
+         /* if the subproblem is an LP, then it should have been initialised and in SCIP_STAGE_SOLVING.
+          * in this case, the subproblem only needs to be put into probing mode. */
+         if( SCIPbendersSubprobIsLP(benders, probnumber) )
+         {
+            /* if the subproblem is not in probing mode, then it must be put into that mode for the LP solve. */
+            if( !SCIPinProbing(SCIPbendersSubproblem(benders, probnumber)) )
+               SCIP_CALL( SCIPstartProbing(SCIPbendersSubproblem(benders, probnumber)) );
+         }
+         else
+            SCIP_CALL( initialiseSubproblem(benders, probnumber) );
+
+         SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** stores the original parameters from the subproblem */
+static
+SCIP_RETCODE storeOrigSubprobParams(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
+   )
+{
+   assert(scip != NULL);
+   assert(origparams != NULL);
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &origparams->conflict_enable) );
+   SCIP_CALL( SCIPgetIntParam(scip, "lp/disablecutoff", &origparams->lp_disablecutoff) );
+   SCIP_CALL( SCIPgetIntParam(scip, "lp/scaling", &origparams->lp_scaling) );
+   SCIP_CALL( SCIPgetCharParam(scip, "lp/initalgorithm", &origparams->lp_initalg) );
+   SCIP_CALL( SCIPgetCharParam(scip, "lp/resolvealgorithm", &origparams->lp_resolvealg) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/alwaysgetduals", &origparams->misc_alwaysgetduals) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/scaleobj", &origparams->misc_scaleobj) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/catchctrlc", &origparams->misc_catchctrlc) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxrounds", &origparams->prop_maxrounds) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxroundsroot", &origparams->prop_maxroundsroot) );
+   SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/propfreq", &origparams->cons_linear_propfreq) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the parameters for the subproblem */
+static
+SCIP_RETCODE setSubprobParams(
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   /* Do we have to disable presolving? If yes, we have to store all presolving parameters. */
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* Disabling heuristics so that the problem is not trivially solved */
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* store parameters that are changed for the generation of the subproblem cuts */
+   SCIP_CALL( SCIPsetParam(scip, "conflict/enable", FALSE) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", 1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", 0) );
+
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", 'd') );
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", FALSE) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", FALSE) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", -1) );
+
+   return SCIP_OKAY;
+}
+
+/** resets the original parameters from the subproblem */
+static
+SCIP_RETCODE resetOrigSubprobParams(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
+   )
+{
+   assert(scip != NULL);
+   assert(origparams != NULL);
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", origparams->conflict_enable) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", origparams->lp_disablecutoff) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", origparams->lp_scaling) );
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", origparams->lp_initalg) );
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", origparams->lp_resolvealg) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", origparams->misc_alwaysgetduals) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", origparams->misc_scaleobj) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", origparams->misc_catchctrlc) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", origparams->prop_maxrounds) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", origparams->prop_maxroundsroot) );
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", origparams->cons_linear_propfreq) );
+
+   return SCIP_OKAY;
+}
+
+/** solves the LP of the Benders' decomposition subproblem. This requires that the subproblem is in probing mode */
+SCIP_RETCODE SCIPbendersSolveSubproblemLP(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
+   )
+{
+   SCIP* subproblem;
+   SCIP_SUBPROBPARAMS* origparams;
+   SCIP_Bool lperror;
+   SCIP_Bool cutoff;
+
+   assert(benders != NULL);
+   assert(infeasible != NULL);
+   assert(SCIPbendersSubprobIsSetup(benders, probnumber));
+
+   (*infeasible) = FALSE;
+
+
+   /* TODO: This should be solved just as an LP, so as a MIP. There is too much overhead with the MIP.
+    * Need to change status check for checking the LP. */
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   assert(SCIPisLPConstructed(subproblem));
+   assert(SCIPinProbing(subproblem));
+
+   /* allocating memory for the parameter storage */
+   SCIP_CALL( SCIPallocBlockMemory(subproblem, &origparams) );
+
+   /* store the original parameters of the subproblem */
+   SCIP_CALL( storeOrigSubprobParams(subproblem, origparams) );
+
+   /* setting the subproblem parameters */
+   SCIP_CALL( setSubprobParams(subproblem) );
+
+   SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
+
+   assert(!lperror);
+
+   if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
+      (*infeasible) = TRUE;
+   else if( SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_OPTIMAL
+      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   {
+      SCIPerrorMessage("Invalid status: %d. Solving the LP relaxation of Benders' decomposition subproblem %d.\n",
+         SCIPgetLPSolstat(subproblem), probnumber);
+      SCIPABORT();
+   }
+
+   /* resetting the subproblem parameters */
+   SCIP_CALL( resetOrigSubprobParams(subproblem, origparams) );
+
+   /* freeing the parameter storage */
+   SCIPfreeBlockMemory(subproblem, &origparams);
+
+   return SCIP_OKAY;
+}
+
+/** solves the Benders' decomposition subproblem. */
+SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   )
+{
+   SCIP* subproblem;
+   SCIP_SUBPROBPARAMS* origparams;
+   SCIP_Bool mipchecksolve;         /* flag to indicate whether the MIP problem is solved during the CHECK.
+                                       In this case, the subproblems may be interrupted because of the upper bound. */
+
+   assert(benders != NULL);
+   assert(infeasible != NULL);
+
+   (*infeasible) = FALSE;
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   /* allocating memory for the parameter storage */
+   SCIP_CALL( SCIPallocBlockMemory(subproblem, &origparams) );
+
+   /* store the original parameters of the subproblem */
+   SCIP_CALL( storeOrigSubprobParams(subproblem, origparams) );
+
+   /* If the solve has been stopped for the subproblem, then we need to restart it to complete the solve. The subproblem
+    * is stopped when it is a MIP so that LP cuts and IP cuts can be generated. */
+   if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING )
+   {
+      /* the subproblem should be in probing mode. Otherwise, the eventhandler did not work correctly */
+      assert( SCIPinProbing(subproblem) );
+
+      /* the probing mode needs to be stopped so that the MIP can be solved */
+      SCIP_CALL( SCIPendProbing(subproblem) );
+
+      /* the problem was interrupted in the event handler, so SCIP needs to be informed that the problem is to be restarted */
+      SCIP_CALL( SCIPrestartSolve(subproblem) );
+
+      /* if the solve type is for CHECK, then the FEASIBILITY emphasis setting is used. */
+      if( type == SCIP_BENDERSENFOTYPE_CHECK )
+      {
+         SCIP_CALL( SCIPsetHeuristics(subproblem, SCIP_PARAMSETTING_FAST, TRUE) );
+
+         /* the number of solution improvements is limited to try and prove feasibility quickly */
+         /* NOTE: This should be a parameter */
+         /* SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 5) ); */
+      }
+
+      mipchecksolve = TRUE;
+   }
+   else if( solvemip )
+   {
+      /* if the MIP will be solved directly, then the probing mode needs to be skipped.
+       * This is achieved by setting the solvemip flag in the event handler data to TRUE
+       */
+      SCIP_EVENTHDLR* eventhdlr;
+      SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+      eventhdlr = SCIPfindEventhdlr(subproblem, MIPNODEFOCUS_EVENTHDLR_NAME);
+      eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+      eventhdlrdata->solvemip = TRUE;
+   }
+   else
+   {
+      /* if the problem is not in probing mode, then we need to solve the LP. That requires all methods that will
+       * modify the structure of the problem need to be deactivated */
+
+      /* setting the subproblem parameters */
+      SCIP_CALL( setSubprobParams(subproblem) );
+
+#ifdef SCIP_MOREDEBUG
+      SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
+#endif
+   }
+
+#ifdef SCIP_MOREDEBUG
+      SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_FULL) );
+#endif
+
+   SCIP_CALL( SCIPsolve(subproblem) );
+
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
+      (*infeasible) = TRUE;
+   else if( SCIPgetStatus(subproblem) != SCIP_STATUS_OPTIMAL && SCIPgetStatus(subproblem) != SCIP_STATUS_UNBOUNDED
+      && SCIPgetStatus(subproblem) != SCIP_STATUS_USERINTERRUPT && SCIPgetStatus(subproblem) != SCIP_STATUS_BESTSOLLIMIT)
+   {
+      SCIPerrorMessage("Invalid status: %d. Solving the CIP of Benders' decomposition subproblem %d.\n",
+         SCIPgetLPSolstat(subproblem), probnumber);
+      SCIPABORT();
+   }
+
+   /* resetting the subproblem parameters */
+   SCIP_CALL( resetOrigSubprobParams(subproblem, origparams) );
+
+   /* freeing the parameter storage */
+   SCIPfreeBlockMemory(subproblem, &origparams);
 
    return SCIP_OKAY;
 }
@@ -1626,8 +2184,26 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
       SCIP_CALL( benders->bendersfreesub(set->scip, benders, probnumber) );
    else
    {
+      SCIP* subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+      if( SCIPbendersSubprobIsLP(benders, probnumber) )
+      {
+         /* ending probing mode to reset the current node. The probing mode will be restarted at the next solve */
+         SCIP_CALL( SCIPendProbing(subproblem) );
+      }
+      else
+      {
+         /* if the subproblems were solved as part of an enforcement stage, then they will still be in probing mode. The
+          * probing mode must first be finished and then the problem can be freed */
+         if( SCIPgetStage(subproblem) >= SCIP_STAGE_TRANSFORMED && SCIPinProbing(subproblem) )
+            SCIP_CALL( SCIPendProbing(subproblem) );
+
+         SCIP_CALL( SCIPfreeTransform(subproblem) );
+      }
    }
 
+   /* setting the setup flag for the subproblem to FALSE */
+   SCIPbendersSetSubprobIsSetup(benders, probnumber, FALSE);
    return SCIP_OKAY;
 }
 
@@ -1728,194 +2304,6 @@ void SCIPbendersSetData(
    assert(benders != NULL);
 
    benders->bendersdata = bendersdata;
-}
-
-/** stores the original parameters from the subproblem */
-static
-SCIP_RETCODE storeOrigSubprobParams(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
-   )
-{
-   assert(scip != NULL);
-   assert(origparams != NULL);
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &origparams->conflict_enable) );
-   SCIP_CALL( SCIPgetIntParam(scip, "lp/disablecutoff", &origparams->lp_disablecutoff) );
-   SCIP_CALL( SCIPgetIntParam(scip, "lp/scaling", &origparams->lp_scaling) );
-   SCIP_CALL( SCIPgetCharParam(scip, "lp/initalgorithm", &origparams->lp_initalg) );
-   SCIP_CALL( SCIPgetCharParam(scip, "lp/resolvealgorithm", &origparams->lp_resolvealg) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/alwaysgetduals", &origparams->misc_alwaysgetduals) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/scaleobj", &origparams->misc_scaleobj) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/catchctrlc", &origparams->misc_catchctrlc) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxrounds", &origparams->prop_maxrounds) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxroundsroot", &origparams->prop_maxroundsroot) );
-   SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/propfreq", &origparams->cons_linear_propfreq) );
-
-   return SCIP_OKAY;
-}
-
-/** sets the parameters for the subproblem */
-static
-SCIP_RETCODE setSubprobParams(
-   SCIP*                 scip                /**< the SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   /* Do we have to disable presolving? If yes, we have to store all presolving parameters. */
-   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* Disabling heuristics so that the problem is not trivially solved */
-   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* store parameters that are changed for the generation of the subproblem cuts */
-   SCIP_CALL( SCIPsetParam(scip, "conflict/enable", FALSE) );
-
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", 1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", 0) );
-
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", 'd') );
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
-
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", FALSE) );
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", FALSE) );
-
-   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
-
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
-
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", -1) );
-
-   return SCIP_OKAY;
-}
-
-/** resets the original parameters from the subproblem */
-static
-SCIP_RETCODE resetOrigSubprobParams(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
-   )
-{
-   assert(scip != NULL);
-   assert(origparams != NULL);
-
-   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", origparams->conflict_enable) );
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", origparams->lp_disablecutoff) );
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", origparams->lp_scaling) );
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", origparams->lp_initalg) );
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", origparams->lp_resolvealg) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", origparams->misc_alwaysgetduals) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", origparams->misc_scaleobj) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", origparams->misc_catchctrlc) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", origparams->prop_maxrounds) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", origparams->prop_maxroundsroot) );
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", origparams->cons_linear_propfreq) );
-
-   return SCIP_OKAY;
-}
-
-/** solves the Benders' decomposition subproblem. */
-SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
-   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
-   )
-{
-   SCIP* subproblem;
-   SCIP_SUBPROBPARAMS* origparams;
-   SCIP_Bool mipchecksolve;         /* flag to indicate whether the MIP problem is solved during the CHECK.
-                                       In this case, the subproblems may be interrupted because of the upper bound. */
-
-   assert(benders != NULL);
-   assert(infeasible != NULL);
-
-   (*infeasible) = FALSE;
-
-   subproblem = SCIPbendersSubproblem(benders, probnumber);
-
-   /* allocating memory for the parameter storage */
-   SCIP_CALL( SCIPallocBlockMemory(subproblem, &origparams) );
-
-   /* store the original parameters of the subproblem */
-   SCIP_CALL( storeOrigSubprobParams(subproblem, origparams) );
-
-   /* If the solve has been stopped for the subproblem, then we need to restart it to complete the solve. The subproblem
-    * is stopped when it is a MIP so that LP cuts and IP cuts can be generated. */
-   if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING )
-   {
-      /* the subproblem should be in probing mode. Otherwise, the eventhandler did not work correctly */
-      assert( SCIPinProbing(subproblem) );
-
-      /* the probing mode needs to be stopped so that the MIP can be solved */
-      SCIP_CALL( SCIPendProbing(subproblem) );
-
-      /* the problem was interrupted in the event handler, so SCIP needs to be informed that the problem is to be restarted */
-      SCIP_CALL( SCIPrestartSolve(subproblem) );
-
-      /* if the solve type is for CHECK, then the FEASIBILITY emphasis setting is used. */
-      if( type == SCIP_BENDERSENFOTYPE_CHECK )
-      {
-         SCIP_CALL( SCIPsetHeuristics(subproblem, SCIP_PARAMSETTING_FAST, TRUE) );
-
-         /* the number of solution improvements is limited to try and prove feasibility quickly */
-         /* NOTE: This should be a parameter */
-         /* SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 5) ); */
-      }
-
-      mipchecksolve = TRUE;
-   }
-   else if( solvemip )
-   {
-      /* if the MIP will be solved directly, then the probing mode needs to be skipped.
-       * This is achieved by setting the solvemip flag in the event handler data to TRUE
-       */
-      SCIP_EVENTHDLR* eventhdlr;
-      SCIP_EVENTHDLRDATA* eventhdlrdata;
-
-      eventhdlr = SCIPfindEventhdlr(subproblem, MIPNODEFOCUS_EVENTHDLR_NAME);
-      eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-
-      eventhdlrdata->solvemip = TRUE;
-   }
-   else
-   {
-      /* if the problem is not in probing mode, then we need to solve the LP. That requires all methods that will
-       * modify the structure of the problem need to be deactivated */
-
-      /* setting the subproblem parameters */
-      SCIP_CALL( setSubprobParams(subproblem) );
-
-#ifdef SCIP_MOREDEBUG
-      SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
-#endif
-   }
-
-#ifdef SCIP_MOREDEBUG
-      SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_FULL) );
-#endif
-
-   SCIP_CALL( SCIPsolve(subproblem) );
-
-   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE || SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL
-      || SCIPgetStatus(subproblem) == SCIP_STATUS_USERINTERRUPT || SCIPgetStatus(subproblem) == SCIP_STATUS_BESTSOLLIMIT);
-
-   if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
-      (*infeasible) = TRUE;
-
-   /* resetting the subproblem parameters */
-   SCIP_CALL( resetOrigSubprobParams(subproblem, origparams) );
-
-   /* freeing the parameter storage */
-   SCIPfreeBlockMemory(subproblem, &origparams);
-
-   return SCIP_OKAY;
 }
 
 /** sets copy callback of benders */
@@ -2208,6 +2596,45 @@ SCIP_Bool SCIPbendersCutRelaxation(
    return benders->cutrelax;
 }
 
+/** should this Benders' use the auxiliary variables from the highest priority Benders' */
+SCIP_Bool SCIPbendersShareAuxVars(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->shareauxvars;
+}
+
+/** Adds a subproblem to the Benders' decomposition data */
+SCIP_RETCODE SCIPbendersAddSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP*                 subproblem          /**< subproblem to be added to the data storage */
+   )
+{
+   assert(benders != NULL);
+   assert(subproblem != NULL);
+   assert(benders->subproblems != NULL);
+   assert(benders->naddedsubprobs + 1 <= benders->nsubproblems);
+
+   benders->subproblems[benders->naddedsubprobs] = subproblem;
+
+   benders->naddedsubprobs++;
+
+   return SCIP_OKAY;
+}
+
+/** Removes the subproblems from the Benders' decomposition data */
+void SCIPbendersRemoveSubproblems(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+   assert(benders->subproblems != NULL);
+
+   BMSclearMemoryArray(&benders->subproblems, benders->naddedsubprobs);
+   benders->naddedsubprobs = 0;
+}
 
 /** returns the auxiliary variable for the given subproblem */
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(
@@ -2291,6 +2718,147 @@ void SCIPbendersSetSubprobIsLP(
    benders->subprobislp[probnumber] = islp;
 
    assert(benders->nlpsubprobs >= 0 && benders->nlpsubprobs <= benders->nsubproblems);
+}
+
+/** returns the number of subproblems that are LPs */
+int SCIPbendersGetNLPSubprobs(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nlpsubprobs;
+}
+
+/** changes all of the master problem variables in the given subproblem to continuous */
+SCIP_RETCODE SCIPbendersChgMastervarsToCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   SCIP* subproblem;
+   SCIP_VAR** vars;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int chgvarscount;
+   int origintvars;
+   int i;
+   SCIP_Bool infeasible;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+   assert(subproblem != NULL);
+
+   /* only set the master problem variable to continuous if they have not already been changed. */
+   if( !SCIPbendersGetMastervarsCont(benders, probnumber) )
+   {
+      /* retrieving the variable data */
+      SCIP_CALL( SCIPgetVarsData(subproblem, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
+
+      origintvars = nbinvars + nintvars + nimplvars;
+
+      chgvarscount = 0;
+
+      /* looping over all integer variables to change the master variables to continuous */
+      i = 0;
+      while( i < nbinvars + nintvars + nimplvars )
+      {
+         SCIP_VAR* mastervar;
+
+         SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
+
+         if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && mastervar != NULL )
+         {
+            SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+
+            assert(!infeasible);
+
+            chgvarscount++;
+            SCIP_CALL( SCIPgetVarsData(subproblem, NULL, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
+         }
+         else
+            i++;
+      }
+
+      /* if all of the integer variables have been changed to continuous, then the subproblem must now be an LP. In this
+       * case, the subproblem is initialised and then put into probing mode */
+      if( chgvarscount > 0 && chgvarscount == origintvars )
+      {
+         SCIP_CALL( initialiseLPSubproblem(benders, probnumber) );
+         SCIPbendersSetSubprobIsLP(benders, probnumber, TRUE);
+      }
+
+      SCIP_CALL( SCIPbendersSetMastervarsCont(benders, probnumber, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets the subproblem setup flag */
+void SCIPbendersSetSubprobIsSetup(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             issetup             /**< flag to indicate whether the subproblem has been setup */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   benders->subprobsetup[probnumber] = issetup;
+}
+
+/** returns the subproblem setup flag */
+SCIP_Bool SCIPbendersSubprobIsSetup(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->subprobsetup[probnumber];
+}
+
+/** sets a flag to indicate whether the master variables are all set to continuous */
+SCIP_RETCODE SCIPbendersSetMastervarsCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             arecont             /**< flag to indicate whether the master problem variables are continuous */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   /* if the master variables were all continuous and now are not, then the subproblem must exit probing mode and be
+    * changed to non-LP subproblem */
+   if( benders->mastervarscont[probnumber] && !arecont )
+   {
+      if( SCIPinProbing(SCIPbendersSubproblem(benders, probnumber)) )
+         SCIP_CALL( SCIPendProbing(SCIPbendersSubproblem(benders, probnumber)) );
+
+      SCIPbendersSetSubprobIsLP(benders, probnumber, FALSE);
+   }
+
+   benders->mastervarscont[probnumber] = arecont;
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the master variables are all set to continuous */
+SCIP_Bool SCIPbendersGetMastervarsCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->mastervarscont[probnumber];
 }
 
 /** sets the sorted flags in the Benders' decomposition */
