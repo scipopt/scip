@@ -34,6 +34,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_pricestore.h"
 #include "scip/type_benders.h"
+#include "scip/type_benderscut.h"
 #include "scip/pub_benders.h"
 
 #ifdef __cplusplus
@@ -386,6 +387,33 @@ extern
 SCIP_Bool SCIPbendersGetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
+   );
+
+/** inserts a Benders' cut algorithm plugin into the Benders' cuts plugin list */
+extern
+SCIP_RETCODE SCIPbendersIncludeBenderscut(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' cut */
+   );
+
+/** sets the Benders' cuts sorted flags in the Benders' decomposition */
+extern
+void SCIPbendersSetBenderscutsSorted(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
+   SCIP_Bool             sorted              /**< the value to set the sorted flag to */
+   );
+
+/** sorts Benders' cuts plugins by priorities */
+extern
+void SCIPbendersSortBenderscuts(
+   SCIP_BENDERS*         benders             /**< benders */
+   );
+
+/** sorts Benders' cuts plugins by name */
+extern
+void SCIPbendersSortBenderscutsName(
+   SCIP_BENDERS*         benders             /**< benders */
    );
 
 #ifdef __cplusplus
