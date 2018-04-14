@@ -644,8 +644,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
       SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
       SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
       SCIP_Bool overestimate, \
       SCIP_Bool underestimate, \
       SCIP_Bool* infeasible)
@@ -661,8 +661,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 #define SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
-      SCIP_CONSEXPR_EXPR* expr)
+      SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata)
 
 /** nonlinear handler separation callback
  *
@@ -709,9 +709,9 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 #define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_INTERVAL* interval, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_INTERVAL* interval, \
    SCIP_Real varboundrelax)
 
 /** nonlinear handler callback for reverse propagation
