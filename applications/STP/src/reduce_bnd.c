@@ -1616,6 +1616,7 @@ int reduceSPGExtended(
          }
 
          graph_edge_del(scip, graph, e, TRUE);
+         nfixed++;
       }
    }
 
