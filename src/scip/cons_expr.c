@@ -5678,6 +5678,8 @@ static
 SCIP_DECL_CONSINIT(consInitExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_CONSEXPR_NLHDLR* nlhdlr;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5692,6 +5694,44 @@ SCIP_DECL_CONSINIT(consInitExpr)
    /* sort nonlinear handlers by priority, in decreasing order */
    if( conshdlrdata->nnlhdlrs > 1 )
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
+
+   /* reset statistics in expression handlers */
+   for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
+   {
+      exprhdlr = conshdlrdata->exprhdlrs[i];
+      assert(exprhdlr != NULL);
+
+      exprhdlr->nsepacalls = 0;
+      exprhdlr->npropcalls = 0;
+      exprhdlr->ncutsfound = 0;
+      exprhdlr->ncutoffs = 0;
+      exprhdlr->ndomreds = 0;
+      exprhdlr->nsimplifycalls = 0;
+
+      SCIP_CALL( SCIPresetClock(scip, exprhdlr->sepatime) );
+      SCIP_CALL( SCIPresetClock(scip, exprhdlr->proptime) );
+      SCIP_CALL( SCIPresetClock(scip, exprhdlr->intevaltime) );
+      SCIP_CALL( SCIPresetClock(scip, exprhdlr->simplifytime) );
+   }
+
+   /* reset statistics in nonlinear handlers */
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      nlhdlr = conshdlrdata->nlhdlrs[i];
+      assert(nlhdlr != NULL);
+
+      nlhdlr->nsepacalls = 0;
+      nlhdlr->npropcalls = 0;
+      nlhdlr->ncutsfound = 0;
+      nlhdlr->ncutoffs = 0;
+      nlhdlr->ndomreds = 0;
+      nlhdlr->ndetections = 0;
+
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->sepatime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
+   }
 
    return SCIP_OKAY;
 }

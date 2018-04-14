@@ -151,7 +151,7 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_Longint                  ncutsfound; /**< number of cuts found by this expression handler */
    SCIP_Longint                  ncutoffs;   /**< number of cutoffs found so far by this expression handler */
    SCIP_Longint                  ndomreds;   /**< number of domain reductions found so far by this expression handler */
-   SCIP_Longint                  ndetections;/**< number of detect calls in which structure was detected (success returned by detect call) */
+   SCIP_Longint                  ndetections;/**< number of detect calls in which structure was detected (success returned by detect call) (over all runs) */
 
    SCIP_CLOCK*                   detecttime; /**< time used for detection */
    SCIP_CLOCK*                   sepatime;   /**< time used for separation */
