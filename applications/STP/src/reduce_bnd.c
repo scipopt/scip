@@ -216,7 +216,7 @@ printf("rule out \n");
 
             assert(flipedge(e) != curredge);
 
-            if( SCIPisLT(scip, ecost, currcost) )
+            if( ecost <= currcost )
                return TRUE;
 
             if( nodepos[graph->tail[e]] > graph->knots )
@@ -228,7 +228,7 @@ printf("rule out \n");
                {
                   assert(basebottlenecks[start] > 0);
 
-                  if( SCIPisLT(scip, ecost, basebottlenecks[start]) )
+                  if( ecost <= basebottlenecks[start] )
                      return TRUE;
                }
                start = 0;
@@ -240,7 +240,7 @@ printf("rule out \n");
             }
 
             for( int i = start; i < dfsdepth; i++ )
-               if( SCIPisLT(scip, ecost, treecosts[i]) )
+               if( ecost <= treecosts[i] )
                   return TRUE;
          }
    }
@@ -1916,7 +1916,7 @@ SCIP_RETCODE reduce_check3Tree(
          nodepos[costartnode] = nnodes + 3;
          nodepos[startnode] = nnodes + 4;
 
-         /* can we rule out entire subtree already? Comparison needs to stay < !!!!!!  */
+         /* can we rule out entire subtree already? */
          if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, startedge, startnode) )
          {
             *ruleout = TRUE;
@@ -2032,7 +2032,7 @@ SCIP_RETCODE reduce_check3Tree(
          /* for outedges[1] */
          basebottlenecks[2] = MAX(graph->cost[outedges[1]], graph->cost[inedge]);
 
-         /* can we rule out entire subtree already? Comparison needs to stay < !!!!!!  */
+         /* can we rule out entire subtree already? */
          if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, flipedge(inedge), innode) )
          {
             *ruleout = TRUE;
