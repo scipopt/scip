@@ -1046,6 +1046,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
 /**@} */
 
 
@@ -3524,13 +3548,18 @@ SCIP_RETCODE SCIPlpiSetBase(
 {
    int i;
    int nrows;
+   int ncols;
    char sense;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    SCIPdebugMessage("loading basis %p/%p into CPLEX\n", (void *) cstat, (void *) rstat);
 
@@ -3544,18 +3573,17 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    /* Copy rstat to internal structure and correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that
     * the slack is 0, i.e., the upper bound is tight. */
-   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
    for (i = 0; i < nrows; ++i)
    {
-      if ( rstat[i] == (int) SCIP_BASESTAT_UPPER )
+      if ( rstat[i] == (int) SCIP_BASESTAT_UPPER ) /*lint !e613*/
       {
          CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
          if ( sense == 'L' )
             lpi->rstat[i] = CPX_AT_LOWER;
       }
       else
-         lpi->rstat[i] = rstat[i];
+         lpi->rstat[i] = rstat[i]; /*lint !e613*/
    }
 
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, lpi->rstat) );

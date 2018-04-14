@@ -210,7 +210,7 @@ if test $QUEUETYPE = local ; then
 fi
 
 # if cutoff should be passed, check for solu file
-if test $SETCUTOFF = 1 ; then
+if test $SETCUTOFF = 1 || test $SETCUTOFF = true ; then
   if test -e testset/$TSTNAME.solu ; then
     SOLUFILE=testset/$TSTNAME.solu
   elif test -e testset/all.solu ; then
@@ -249,7 +249,7 @@ then
     EXCLUSIVE=" --exclusive"
     if test $CLUSTERQUEUE = "opt"
     then
-        CLUSTERQUEUE="M610"
+        CLUSTERQUEUE="M640"
     fi
 else
     EXCLUSIVE=""
@@ -358,7 +358,7 @@ do
       GDXFILE="gdx=$SOLDIR/${GMSFILE/%gms/gdx}"
     fi
 
-    if test $SETCUTOFF = 1
+    if test $SETCUTOFF = 1 || test $SETCUTOFF = true
     then
       export CUTOFF=`grep ${GMSFILE/%.gms/} $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
     fi

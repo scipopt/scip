@@ -315,8 +315,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
 
    /* communicate that we will enforce one side by separation */
    *enforcemethods |= exprdata.convex ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-   *enforcedbelow = exprdata.convex;
-   *enforcedabove = !exprdata.convex;
+   *enforcedbelow |= exprdata.convex;
+   *enforcedabove |= !exprdata.convex;
    *success = TRUE;
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 
@@ -401,7 +401,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
 
       /* add cut */
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
       *ncuts += 1;
 

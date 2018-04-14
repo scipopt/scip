@@ -170,6 +170,7 @@ struct SCIP_ConshdlrData
    unsigned int             lastinitsepatag; /**< last separation initialization flag used */
    unsigned int             lastbrscoretag;  /**< last branching score tag used */
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
+   unsigned int             lastintevaltag;  /**< last interval evaluation tag used */
 
    SCIP_Longint             lastenfolpnodenum; /**< number of node for which enforcement has been called last */
    SCIP_Longint             lastenfopsnodenum; /**< number of node for which enforcement has been called last */
@@ -209,7 +210,6 @@ typedef struct
 {
    unsigned int          boxtag;             /**< box tag */
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an empty interval */
-   SCIP_Bool             intersect;          /**< should the computed expression interval be intersected with the existing one? */
    SCIP_Bool             force;              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool             tightenauxvars;     /**< should the bounds of auxiliary variables be tightened? */
    SCIP_Real             varboundrelax;      /**< by how much to relax variable bounds (at most) */
@@ -288,12 +288,78 @@ typedef struct
  * Local methods
  */
 
+/** creates an expression */
+static
+SCIP_RETCODE createExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data (expression assumes ownership) */
+   int                     nchildren,        /**< number of children */
+   SCIP_CONSEXPR_EXPR**    children          /**< children (can be NULL if nchildren is 0) */
+   )
+{
+   int c;
+
+   assert(expr != NULL);
+   assert(exprhdlr != NULL);
+   assert(children != NULL || nchildren == 0);
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, expr) );
+
+   (*expr)->exprhdlr = exprhdlr;
+   (*expr)->exprdata = exprdata;
+   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   /* initialize an empty interval for interval evaluation */
+   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->interval);
+
+   if( nchildren > 0 )
+   {
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*expr)->children, children, nchildren) );
+      (*expr)->nchildren = nchildren;
+      (*expr)->childrensize = nchildren;
+
+      for( c = 0; c < nchildren; ++c )
+         SCIPcaptureConsExprExpr((*expr)->children[c]);
+   }
+
+   SCIPcaptureConsExprExpr(*expr);
+
+   return SCIP_OKAY;
+}
+
+/** frees an expression */
+static
+SCIP_RETCODE freeExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR**  expr                /**< pointer to free the expression */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(*expr != NULL);
+   assert((*expr)->nuses == 1);
+
+   /* free children array, if any */
+   SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);
+
+   /* expression should not be locked anymore */
+   assert((*expr)->nlockspos == 0);
+   assert((*expr)->nlocksneg == 0);
+
+   SCIPfreeBlockMemory(scip, expr);
+   assert(*expr == NULL);
+
+   return SCIP_OKAY;
+}
+
 /** frees auxiliary variables of expression, if any */
 static
 SCIP_RETCODE freeAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression which auxvar to free, if any */
-)
+   )
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -817,7 +883,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
 
 /** expression walk callback to free an expression including its children (if not used anywhere else) */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExprWalk)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -884,15 +950,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          /* child should have no data associated */
          assert(child->exprdata == NULL);
 
-         /* free child's children array, if any */
-         SCIPfreeBlockMemoryArrayNull(scip, &child->children, child->childrensize);
-
-         /* expression should not be locked anymore */
-         assert(child->nlockspos == 0);
-         assert(child->nlocksneg == 0);
-
-         SCIPfreeBlockMemory(scip, &child);
-         assert(child == NULL);
+         /* free child expression */
+         SCIP_CALL( freeExpr(scip, &child) );
          expr->children[expr->walkcurrentchild] = NULL;
 
          *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -1149,7 +1208,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprVisitChild)
    propdata = (FORWARDPROP_DATA*)data;
 
    /* skip child if it has been evaluated already */
-   if( propdata->boxtag != 0 && propdata->boxtag == expr->children[expr->walkcurrentchild]->intevaltag )
+   if( propdata->boxtag != 0 && propdata->boxtag == expr->children[expr->walkcurrentchild]->intevaltag && !expr->hastightened )
    {
       if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->children[expr->walkcurrentchild]->interval) )
       {
@@ -1177,6 +1236,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
    FORWARDPROP_DATA* propdata;
    SCIP_INTERVAL interval;
    SCIP_INTERVAL nlhdlrinterval;
+   SCIP_Bool intersect;
    int ntightenings = 0;
    int e;
 
@@ -1185,16 +1245,32 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
 
    propdata = (FORWARDPROP_DATA*)data;
 
-   /* set tag in any case */
-   expr->intevaltag = propdata->boxtag;
-
-   /* mark expression as not tightened if we do not intersect expression intervals; this happens once before calling
-    * the reverse propagation
+   /* reset interval of the expression if using boxtag = 0 or we did not visit this expression so
+    * far, i.e., expr->intevaltag != propdata->boxtag
     */
-   if( !propdata->intersect )
+   if( propdata->boxtag == 0 || expr->intevaltag != propdata->boxtag )
+   {
+      expr->intevaltag = propdata->boxtag;
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
       expr->hastightened = FALSE;
+      intersect = FALSE;
+   }
+   else
+   {
+      assert(expr->intevaltag == propdata->boxtag);
 
-   if( propdata->intersect )
+      /* the interval of the expression is valid, but did not change since the last call -> skip this expression */
+      if( !expr->hastightened )
+      {
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
+      }
+
+      /* intersect result with existing interval */
+      intersect = TRUE;
+   }
+
+   if( intersect )
    {
       /* start with interval that is stored in expression */
       interval = expr->interval;
@@ -1224,7 +1300,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
    {
       /* start with infinite interval [-inf,+inf] */
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
    }
 
    assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
@@ -1241,8 +1316,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
             continue;
 
          /* let nlhdlr evaluate current expression */
+         SCIPdebugMsg(scip, "Calling interval evaluation of nlhdlr <%s>\n", nlhdlr->name);
          nlhdlrinterval = interval;
          SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, &nlhdlrinterval, expr, expr->enfos[e]->nlhdlrexprdata, propdata->varboundrelax) );
+         SCIPdebugMsg(scip, "Nlhdlr <%s> computed interval [%g, %g] for expr\n", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
+
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
+#endif
 
          /* intersect with interval */
          SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
@@ -1252,9 +1334,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
    {
       /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
       SCIP_CALL( expr->exprhdlr->inteval(scip, expr, &interval, propdata->varboundrelax) );
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "computed interval [%g, %g] for expr\n", interval.inf, interval.sup);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
+#endif
    }
 
-   if( propdata->intersect )
+   if( intersect )
    {
       /* make sure resulting interval is subset of expr->interval, if intersect is true
        * even though we passed expr->interval as input to the inteval callbacks,
@@ -2079,7 +2167,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    assert(conshdlr != NULL);
 
    /* evaluate all subexpressions */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0, 0.0) );
 
    /* compute curvatures */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, conshdlr) );
@@ -2326,7 +2414,6 @@ static
 SCIP_RETCODE forwardPropExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
    SCIP_Real               varboundrelax,    /**< amount by which variable bounds should be relaxed (at most) */
@@ -2347,12 +2434,11 @@ SCIP_RETCODE forwardPropExpr(
       *ntightenings = 0;
 
    /* if value is up-to-date, then nothing to do */
-   if( boxtag != 0 && expr->intevaltag == boxtag )
+   if( boxtag != 0 && expr->intevaltag == boxtag && !expr->hastightened )
       return SCIP_OKAY;
 
    propdata.aborted = FALSE;
    propdata.boxtag = boxtag;
-   propdata.intersect = intersect;
    propdata.force = force;
    propdata.tightenauxvars = tightenauxvars;
    propdata.varboundrelax = varboundrelax;
@@ -2388,8 +2474,8 @@ SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONS*              cons,             /**< constraint to propagate */
-   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    SCIP_Bool*              redundant,        /**< buffer to store whether the constraint is redundant */
    int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings */
@@ -2418,7 +2504,7 @@ SCIP_RETCODE forwardPropCons(
    /* handle constant expressions separately; either the problem is infeasible or the constraint is redundant */
    if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
    {
-      SCIP_Real value = SCIPgetConsExprExprValue(consdata->expr);
+      SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
       if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasLT(scip, value - consdata->lhs, 0.0))
          || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasGT(scip, value - consdata->rhs, 0.0)) )
          *infeasible = TRUE;
@@ -2431,7 +2517,7 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals
     * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
     */
-   SCIP_CALL( forwardPropExpr(scip, consdata->expr, intersect, force, TRUE, SCIPepsilon(scip), 0, infeasible, ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, consdata->expr, force, TRUE, SCIPepsilon(scip), boxtag, infeasible, ntightenings) );
 
    /* @todo delete constraint locally if they are redundant w.r.t. bounds used by the LP solver; the LP solution might
     * violate variable bounds by more than SCIPfeastol() because of relative comparisons
@@ -2588,6 +2674,9 @@ SCIP_RETCODE reversePropConss(
                continue;
 
             /* call the reverseprop of the nlhdlr */
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "Use nlhdlr <%s>\n", nlhdlr->name);
+#endif
             nreds = 0;
             SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
             assert(nreds >= 0);
@@ -2693,6 +2782,10 @@ SCIP_RETCODE propConss(
    roundnr = 0;
    cutoff = FALSE;
 
+   /* increase lastinteval tag */
+   ++(conshdlrdata->lastintevaltag);
+   assert(conshdlrdata->lastintevaltag > 0);
+
    /* main propagation loop */
    do
    {
@@ -2718,7 +2811,8 @@ SCIP_RETCODE propConss(
             redundant = FALSE;
             ntightenings = 0;
 
-            SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], (roundnr != 0), force, &cutoff, &redundant, &ntightenings) );
+            SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], force, conshdlrdata->lastintevaltag, &cutoff,
+               &redundant, &ntightenings) );
             assert(ntightenings >= 0);
             *nchgbds += ntightenings;
 
@@ -2764,7 +2858,7 @@ SCIP_RETCODE propConss(
 
 /** returns the total number of variables in an expression
  *
- * @note the function counts variables in common sub-expressions multiple times; use this function to get a descent
+ * @note the function counts variables in common sub-expressions multiple times; use this function to get a decent
  *       upper bound on the number of unique variables in an expression
  */
 SCIP_RETCODE SCIPgetConsExprExprNVars(
@@ -3152,7 +3246,7 @@ SCIP_RETCODE addLocks(
    /* call interval evaluation when root expression is locked for the first time */
    if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
    {
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, FALSE, 0, 0.0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, 0, 0.0) );
    }
 
    /* remember locks */
@@ -4477,13 +4571,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    assert(expr->enfos == NULL);
 
    /* analyze expression with nonlinear handlers
-    * we start with no enforcement methods and requiring enforcement from below and above
-    * (change the latter when we have better locks and have to enforce inequalities only)
+    * if nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
+    * if nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
     */
    nsuccess = 0;
    enforcemethods = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcedbelow = FALSE;
-   enforcedabove = FALSE;
+   enforcedbelow = (SCIPgetConsExprExprNLocksPos(expr) == 0); /* no need for underestimation */
+   enforcedabove = (SCIPgetConsExprExprNLocksNeg(expr) == 0); /* no need for overestimation */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -4516,7 +4610,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
          continue;
       }
 
-      /* if the nldhlr enforces, then it must have added at least one enforcement method */
+      /* if the nlhdlr enforces, then it must have added at least one enforcement method */
       assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
 
       /* remember nlhdlr and its data */
@@ -4592,7 +4686,7 @@ SCIP_RETCODE detectNlhdlrs(
       /* make sure intervals in expression are uptodate (use 0 force recomputing)
        * we do this here to have bounds for the auxiliary variables
        */
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, FALSE, 0, SCIPepsilon(scip)) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, 0, SCIPepsilon(scip)) );
 
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
@@ -7229,32 +7323,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
    SCIP_CONSEXPR_EXPR**    children          /**< children (can be NULL if nchildren is 0) */
    )
 {
-   int c;
-
-   assert(expr != NULL);
-   assert(exprhdlr != NULL);
-   assert(children != NULL || nchildren == 0);
-
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, expr) );
-
-   (*expr)->exprhdlr = exprhdlr;
-   (*expr)->exprdata = exprdata;
-   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
-
-   /* initialize an empty interval for interval evaluation */
-   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->interval);
-
-   if( nchildren > 0 )
-   {
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*expr)->children, children, nchildren) );
-      (*expr)->nchildren = nchildren;
-      (*expr)->childrensize = nchildren;
-
-      for( c = 0; c < nchildren; ++c )
-         SCIPcaptureConsExprExpr((*expr)->children[c]);
-   }
-
-   SCIPcaptureConsExprExpr(*expr);
+   SCIP_CALL( createExpr(scip, expr, exprhdlr, exprdata, nchildren, children) );
 
    return SCIP_OKAY;
 }
@@ -7678,20 +7747,10 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
          SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
       }
 
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, freeExpr, freeExpr, NULL,  NULL) );
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, freeExprWalk, freeExprWalk, NULL,  NULL) );
 
       /* handle the root expr separately: free its children and itself here */
-      assert((*expr)->nuses == 1);
-
-      /* free children array, if any */
-      SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);
-
-      /* expression should not be locked anymore */
-      assert((*expr)->nlockspos == 0);
-      assert((*expr)->nlocksneg == 0);
-
-      SCIPfreeBlockMemory(scip, expr);
-      assert(*expr == NULL);
+      SCIP_CALL( freeExpr(scip, expr) );
 
       return SCIP_OKAY;
    }
@@ -8075,16 +8134,14 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
-   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_Real               varboundrelax     /**< amount by which variable bounds should be relaxed (at most) */
    )
 {
-   /* if value is up-to-date, then nothing to do */
-   if( boxtag != 0 && expr->intevaltag == boxtag )
-      return SCIP_OKAY;
+   assert(expr != NULL);
+   assert(varboundrelax >= 0.0);
 
-   SCIP_CALL( forwardPropExpr(scip, expr, intersect, FALSE, FALSE, varboundrelax, boxtag, NULL, NULL) );
+   SCIP_CALL( forwardPropExpr(scip, expr, FALSE, FALSE, varboundrelax, boxtag, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -8121,6 +8178,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    oldub = SCIPintervalGetSup(expr->interval);
    *cutoff = FALSE;
 
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "Trying to tighten bounds of expr ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "");
+      SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
+#endif
+
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) || SCIPintervalGetInf(newbounds) > oldub
       || SCIPintervalGetSup(newbounds) < oldlb )
@@ -8143,12 +8207,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-#ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "tighten bounds of expr ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "");
-      SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, newlb, newub);
-#endif
 
    /* check which bound can be tightened */
    if( force )
