@@ -2158,8 +2158,6 @@ SCIP_RETCODE reduce_checkEdge(
       const int maxdfsdepth = (graph->edges > STP_DAEX_EDGELIMIT) ? STP_DAEX_MINDFSDEPTH : STP_DAEX_MAXDFSDEPTH;
       const int maxgrad = 8;
 
-      printf("Called for %d %d \n", tail, head);
-
       /* allocate clean array */
       SCIP_CALL(SCIPallocCleanBufferArray(scip, &nodepos, nnodes));
 
@@ -2262,7 +2260,7 @@ SCIP_RETCODE reduce_checkEdge(
             {
                SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, currtail) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), currtail) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2643,7 +2641,10 @@ SCIP_RETCODE reduce_da(
          if( extended && 0 )
          {
             int todo;
+            printf("nfixed before %d \n", nfixed);
             nfixed += reduceSPGExtended(scip, graph, marked, vnoi, cost, pathdist, result, minpathcost, root, nodearrint);
+            printf("nfixed after %d \n", nfixed);
+
          }
 
          SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
