@@ -5306,7 +5306,7 @@ void printExprHdlrStatistics(
    assert(conshdlrdata != NULL);
 
    SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "SimplCalls", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "SepaTi", "PropTi", "IntEvalTi", "SimplifyTi");
+      "SimplCalls", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
 
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -5345,7 +5345,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "DetectTime", "SepaTime", "PropTime", "IntEvalTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -5358,6 +5358,10 @@ void printNlhdlrStatistics(
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndomreds);
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->detecttime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->sepatime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->proptime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->intevaltime));
       SCIPinfoMessage(scip, file, "\n");
    }
 }
@@ -5641,6 +5645,12 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       {
          SCIP_CALL( (*nlhdlr->freehdlrdata)(scip, nlhdlr, &nlhdlr->data) );
       }
+
+      /* free clocks */
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->detecttime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->sepatime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->proptime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->intevaltime) );
 
       SCIPfreeMemory(scip, &nlhdlr->name);
       SCIPfreeMemoryNull(scip, &nlhdlr->desc);
@@ -9513,6 +9523,11 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    (*nlhdlr)->priority = priority;
    (*nlhdlr)->data = data;
    (*nlhdlr)->detect = detect;
+
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->detecttime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->sepatime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
 
    ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize, conshdlrdata->nnlhdlrs+1);
 
