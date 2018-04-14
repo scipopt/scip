@@ -5336,7 +5336,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "DetectTime", "SepaTime", "PropTime", "IntEvalTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "DetectTime", "SepaTime", "PropTime", "IntEvalTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -5346,6 +5346,7 @@ void printNlhdlrStatistics(
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nsepacalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetections);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndomreds);
@@ -9724,10 +9725,14 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlr(
    assert(nlhdlr != NULL);
    assert(nlhdlr->detect != NULL);
    assert(nlhdlr->detecttime != NULL);
+   assert(success != NULL);
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->detecttime) );
    SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
+
+   if( *success )
+      ++nlhdlr->ndetections;
 
    return SCIP_OKAY;
 }
@@ -9746,6 +9751,7 @@ SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
+   assert(nlhdlr->sepatime != NULL);
    assert(infeasible != NULL);
 
    if( nlhdlr->initsepa == NULL )
@@ -9775,6 +9781,7 @@ SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
+   assert(nlhdlr->sepatime != NULL);
 
    if( nlhdlr->exitsepa != NULL )
    {
@@ -9803,6 +9810,7 @@ SCIP_RETCODE SCIPsepaConsExprNlhdlr(
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
+   assert(nlhdlr->sepatime != NULL);
    assert(result != NULL);
 
    if( nlhdlr->sepa == NULL )
@@ -9837,6 +9845,7 @@ SCIP_RETCODE SCIPintevalConsExprNlhdlr(
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
+   assert(nlhdlr->intevaltime != NULL);
 
    if( nlhdlr->inteval != NULL )
    {
@@ -9862,6 +9871,7 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
+   assert(nlhdlr->proptime != NULL);
    assert(infeasible != NULL);
    assert(nreductions != NULL);
 
