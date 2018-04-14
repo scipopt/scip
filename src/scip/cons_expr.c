@@ -413,10 +413,10 @@ SCIP_RETCODE freeEnfoData(
       nlhdlr = expr->enfos[e]->nlhdlr;
       assert(nlhdlr != NULL);
 
-      if( expr->enfos[e]->issepainit && nlhdlr->exitsepa != NULL )
+      if( expr->enfos[e]->issepainit )
       {
          /* call the separation deinitialization callback of the nonlinear handler */
-         SCIP_CALL( nlhdlr->exitsepa(scip, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr) );
+         SCIP_CALL( SCIPexitsepaConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata) );
          expr->enfos[e]->issepainit = FALSE;
       }
 
@@ -1312,13 +1312,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
          assert(nlhdlr != NULL);
 
          /* skip nlhdlr if it does not provide interval evaluation */
-         if( nlhdlr->inteval == NULL )
+         if( !SCIPhasConsExprNlhdlrInteval(nlhdlr) )
             continue;
 
          /* let nlhdlr evaluate current expression */
          SCIPdebugMsg(scip, "Calling interval evaluation of nlhdlr <%s>\n", nlhdlr->name);
          nlhdlrinterval = interval;
-         SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, &nlhdlrinterval, expr, expr->enfos[e]->nlhdlrexprdata, propdata->varboundrelax) );
+         SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, propdata->varboundrelax) );
          SCIPdebugMsg(scip, "Nlhdlr <%s> computed interval [%g, %g] for expr\n", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
 
 #ifdef SCIP_DEBUG
@@ -1330,10 +1330,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
          SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
       }
    }
-   else if( expr->exprhdlr->inteval != NULL )
+   else
    {
       /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
-      SCIP_CALL( expr->exprhdlr->inteval(scip, expr, &interval, propdata->varboundrelax) );
+      SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &interval, propdata->varboundrelax) );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "computed interval [%g, %g] for expr\n", interval.inf, interval.sup);
@@ -2669,27 +2669,23 @@ SCIP_RETCODE reversePropConss(
             nlhdlr = expr->enfos[e]->nlhdlr;
             assert(nlhdlr != NULL);
 
-            /* skip nlhdlr that does not implement reverseprop */
-            if( nlhdlr->reverseprop == NULL )
-               continue;
-
             /* call the reverseprop of the nlhdlr */
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "Use nlhdlr <%s>\n", nlhdlr->name);
 #endif
             nreds = 0;
-            SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
+            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
             assert(nreds >= 0);
             *ntightenings += nreds;
          }
       }
-      else if( expr->exprhdlr->reverseprop != NULL )
+      else
       {
-         /* if node without enforcement (no auxvar or in presolve), call reverse propagation callback of exprhdlr directly (if any) */
+         /* if node without enforcement (no auxvar or in presolve), call reverse propagation callback of exprhdlr directly */
          int nreds = 0;
 
          /* call the reverseprop of the exprhdlr */
-         SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, queue, infeasible, &nreds, force) );
+         SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, expr, queue, infeasible, &nreds, force) );
          assert(nreds >= 0);
          *ntightenings += nreds;
       }
@@ -4584,7 +4580,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
 
       nlhdlr = conshdlrdata->nlhdlrs[h];
       assert(nlhdlr != NULL);
-      assert(nlhdlr->detect != NULL); /* detect callback is mandatory */
 
       /* call detect routine of nlhdlr */
       nlhdlrexprdata = NULL;
@@ -4592,7 +4587,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       nlhdlrenforcemethods = enforcemethods;
       nlhdlrenforcedbelow = enforcedbelow;
       nlhdlrenforcedabove = enforcedabove;
-      SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
+      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
 
       /* detection is only allowed to augment to the various parameters (enforce "more", add "more" methods) */
       assert(nlhdlrenforcemethods >= enforcemethods);
@@ -4825,7 +4820,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       assert(nlhdlr != NULL);
 
       /* only init sepa if there is an initsepa callback */
-      if( nlhdlr->initsepa == NULL )
+      if( !SCIPhasConsExprNlhdlrInitSepa(nlhdlr) )
          continue;
 
       assert(!expr->enfos[e]->issepainit);
@@ -4837,7 +4832,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
 
       /* call the separation initialization callback of the nonlinear handler */
       infeasible = FALSE;
-      SCIP_CALL( nlhdlr->initsepa(scip, initsepadata->conshdlr, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr,
+      SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, initsepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
          overestimate, underestimate, &infeasible) );
       expr->enfos[e]->issepainit = TRUE;
 
@@ -4944,12 +4939,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
 
-         /* skip nlhdlr that does not have a sepa callback */
-         if( nlhdlr->sepa == NULL )
-            continue;
-
          /* call the separation callback of the nonlinear handler */
-         SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+         SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
             overestimate, sepadata->minviolation, separated, &separesult, &ncuts) );
 
          assert(ncuts >= 0);
@@ -4960,7 +4951,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             /* call the separation callback of the nonlinear handler again for underestimation, if nothing found yet
              * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error), see above
              */
-            SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+            SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
                FALSE, sepadata->minviolation, separated, &separesult, &ncuts) );
 
             assert(ncuts >= 0);
@@ -7223,7 +7214,7 @@ SCIP_RETCODE SCIPsepaConsExprExprHdlr(
    assert(result != NULL);
    assert(ncuts != NULL);
 
-   *result = SCIP_DIDNOTFIND;
+   *result = SCIP_DIDNOTRUN;
    *ncuts = 0;
 
    if( SCIPhasConsExprExprHdlrSepa(expr->exprhdlr) )
@@ -9676,3 +9667,221 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    return nlhdlr->data;
 }
 
+/** returns whether nonlinear handler implements the separation initialization callback */
+SCIP_Bool SCIPhasConsExprNlhdlrInitSepa(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+)
+{
+   return nlhdlr->initsepa != NULL;
+}
+
+/** returns whether nonlinear handler implements the separation deinitialization callback */
+SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+)
+{
+   return nlhdlr->exitsepa != NULL;
+}
+
+/** returns whether nonlinear handler implements the separation callback */
+SCIP_Bool SCIPhasConsExprNlhdlrSepa(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+)
+{
+   return nlhdlr->sepa != NULL;
+}
+
+/** returns whether nonlinear handler implements the interval evaluation callback */
+SCIP_Bool SCIPhasConsExprNlhdlrInteval(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+)
+{
+   return nlhdlr->inteval != NULL;
+}
+
+/** returns whether nonlinear handler implements the reverse propagation callback */
+SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+)
+{
+   return nlhdlr->reverseprop != NULL;
+}
+
+/** call the detect callback of a nonlinear handler */
+SCIP_RETCODE SCIPdetectConsExprNlhdlr(
+   SCIP*                          scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                 conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR*          nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*            expr,             /**< expression to analyze */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods,   /**< enforcement methods that are provided (to be updated by this call) */
+   SCIP_Bool*                     enforcedbelow,    /**< indicates whether an enforcement method for expr <= auxvar exists (to be updated by this call) or is not necessary */
+   SCIP_Bool*                     enforcedabove,    /**< indicates whether an enforcement method for expr >= auxvar exists (to be updated by this call) or is not necessary */
+   SCIP_Bool*                     success,          /**< buffer to store whether the nonlinear handler should be called for this expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata    /**< nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE */
+)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(nlhdlr->detect != NULL);
+   assert(nlhdlr->detecttime != NULL);
+
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->detecttime) );
+   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the separation initialization callback of a nonlinear handler */
+SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_Bool                     overestimate,     /**< whether the expression needs to be overestimated */
+   SCIP_Bool                     underestimate,    /**< whether the expression needs to be underestimated */
+   SCIP_Bool*                    infeasible        /**< pointer to store whether an infeasibility was detected */
+)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(infeasible != NULL);
+
+   if( nlhdlr->initsepa == NULL )
+   {
+      *infeasible = FALSE;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
+   SCIP_CALL( nlhdlr->initsepa(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, overestimate, underestimate, infeasible) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
+
+   ++nlhdlr->nsepacalls;
+   if( *infeasible )
+      ++nlhdlr->ncutoffs;
+
+   return SCIP_OKAY;
+}
+
+/** calls the separation deinitialization callback of a nonlinear handler */
+SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata    /**< expression data of nonlinear handler */
+)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+
+   if( nlhdlr->exitsepa != NULL )
+   {
+      SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
+      SCIP_CALL( nlhdlr->exitsepa(scip, nlhdlr, expr, nlhdlrexprdata) );
+      SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the separation callback of a nonlinear handler */
+SCIP_RETCODE SCIPsepaConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_SOL*                     sol,              /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Bool                     overestimate,     /**< whether the expression needs to be over- or underestimated */
+   SCIP_Real                     minviolation,     /**< minimal violation of a cut if it should be added to the LP */
+   SCIP_Bool                     separated,        /**< whether another nonlinear handler already added a cut for this expression */
+   SCIP_RESULT*                  result,           /**< pointer to store the result */
+   int*                          ncuts             /**< pointer to store the number of added cuts */
+)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(result != NULL);
+
+   if( nlhdlr->sepa == NULL )
+   {
+      *result = SCIP_DIDNOTRUN;
+      *ncuts = 0;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
+   SCIP_CALL( nlhdlr->sepa(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, overestimate, minviolation, separated, result, ncuts) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
+
+   /* update statistics */
+   ++nlhdlr->nsepacalls;
+   nlhdlr->ncutsfound += *ncuts;
+   if( *result == SCIP_CUTOFF )
+      ++nlhdlr->ncutoffs;
+
+   return SCIP_OKAY;
+}
+
+/** calls the interval evaluation callback of a nonlinear handler */
+SCIP_RETCODE SCIPintevalConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_INTERVAL*                interval,         /**< buffer where to store interval (on input: current interval for expr, on output: computed interval for expr) */
+   SCIP_Real                     varboundrelax     /**< a suggested amount by which to relax variable bounds */
+)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+
+   if( nlhdlr->inteval != NULL )
+   {
+      SCIP_CALL( SCIPstartClock(scip, nlhdlr->intevaltime) );
+      SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, expr, nlhdlrexprdata, interval, varboundrelax) );
+      SCIP_CALL( SCIPstopClock(scip, nlhdlr->intevaltime) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the reverse propagation callback of a nonlinear handler */
+SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_QUEUE*                   reversepropqueue, /**< expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval */
+   SCIP_Bool*                    infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   int*                          nreductions,      /**< buffer to store the number of interval reductions of all children */
+   SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
+)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(infeasible != NULL);
+   assert(nreductions != NULL);
+
+   if( nlhdlr->reverseprop == NULL )
+   {
+      *infeasible = FALSE;
+      *nreductions = 0;
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->proptime) );
+   SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, nlhdlrexprdata, reversepropqueue, infeasible, nreductions, force) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->proptime) );
+
+   /* update statistics */
+   nlhdlr->ndomreds += *nreductions;
+   if( *infeasible )
+      ++nlhdlr->ncutoffs;
+   ++nlhdlr->npropcalls;
+
+   return SCIP_OKAY;
+}
