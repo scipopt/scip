@@ -52,6 +52,18 @@
 #define TABLE_POSITION_RPA                   12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_RPA             SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
+/* parameters */
+#define DEFAULT_VERIFICATION_NLPTILIM        10.0      /**< time limit for each verification NLP */
+#define DEFAULT_VERIFICATION_NLPNODELIM      10000L    /**< node limit for each verification NLP */
+#define DEFAULT_VERIFICATION_HEURTILIM       10.0      /**< time limit for heuristic verification */
+#define DEFAULT_VERIFICATION_HEURITERLIM     1000      /**< iteration limit for each heuristic verification */
+#define DEFAULT_VERIFICATION_NLPTILIMSOFT    1.0       /**< soft time limit for each verification NLP */
+#define DEFAULT_VERIFICATION_NLPNODELIMSOFT  1000L     /**< soft node limit for each verification NLP */
+#define DEFAULT_VERIFICATION_HEURTILIMSOFT   1.0       /**< soft time limit for heuristic verification */
+#define DEFAULT_VERIFICATION_HEURITERLIMSOFT 100       /**< soft iteration limit for each heuristic verification */
+#define DEFAULT_VERIFICATION_TOTALTILIM      3600.0    /**< total time limit for all verification problems during the solving process */
+#define DEFAULT_VERIFICATION_TOTALTILIMSOFT  1200.0    /**< total time limit for all verification problems during the enumeration */
+
 #ifndef M_PI
 #define M_PI           3.141592653589793238462643
 #endif
@@ -100,6 +112,65 @@ struct SCIP_ProbData
  *
  * @{
  */
+
+/** auxiliary function to add verification parameters to scip */
+static
+SCIP_RETCODE addVerificationParams(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/nlptilim",
+      "time limit for verification NLP",
+      NULL, FALSE, DEFAULT_VERIFICATION_NLPTILIM, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip,
+      "ringpacking/verification/nlpnodelim",
+      "node limit for verification NLP",
+      NULL, FALSE, DEFAULT_VERIFICATION_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/heurtilim",
+      "time limit for heuristic verification",
+      NULL, FALSE, DEFAULT_VERIFICATION_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+      "ringpacking/verification/heuriterlim",
+      "iteration limit for heuristic verification",
+      NULL, FALSE, DEFAULT_VERIFICATION_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/nlptilimsoft",
+      "soft time limit for verification NLP",
+      NULL, FALSE, DEFAULT_VERIFICATION_NLPTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip,
+      "ringpacking/verification/nlpnodelimsoft",
+      "soft node limit for verification NLP",
+      NULL, FALSE, DEFAULT_VERIFICATION_NLPNODELIMSOFT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/heurtilimsoft",
+      "soft time limit for heuristic verification",
+      NULL, FALSE, DEFAULT_VERIFICATION_HEURTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+      "ringpacking/verification/heuriterlimsoft",
+      "soft iteration limit for heuristic verification",
+      NULL, FALSE, DEFAULT_VERIFICATION_HEURITERLIMSOFT, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/totaltilim",
+      "total time limit for all verification problems during the solving process",
+      NULL, FALSE, DEFAULT_VERIFICATION_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/totaltilimsoft",
+      "total time limit for all verification problems during the enumeration",
+      NULL, FALSE, DEFAULT_VERIFICATION_TOTALTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
 
 /** auxiliary function to create problem data;
  *
@@ -1406,6 +1477,9 @@ SCIP_RETCODE SCIPprobdataCreate(
          assert(rexts[t] >= rexts[t+1]);
    }
 #endif
+
+   /* add parameters for verification */
+   SCIP_CALL( addVerificationParams(scip) );
 
    /* create SCIP problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
