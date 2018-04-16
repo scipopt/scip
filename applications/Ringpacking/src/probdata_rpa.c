@@ -104,7 +104,13 @@ struct SCIP_ProbData
    SCIP_Real             dualbound;          /**< valid dual bound for RCPP instance */
 
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
-   SCIP_Real             timeleft;           /**< time left for enumerating circular patterns */
+
+   /* parameters */
+   SCIP_Real             nlptilimsoft;       /**< soft time limit for verification NLP */
+   SCIP_Real             heurtilimsoft ;     /**< soft time limit for verification heuristic */
+   SCIP_Real             totaltilimsoft;     /**< time left for enumerating circular patterns */
+   SCIP_Longint          nlpnodelimsoft;     /**< soft node limit for verification NLP */
+   int                   heuriterlimsoft;    /**< soft iteration limit for verification heuristic */
 };
 
 
@@ -116,9 +122,12 @@ struct SCIP_ProbData
 /** auxiliary function to add verification parameters to scip */
 static
 SCIP_RETCODE addVerificationParams(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< pointer to problem data */
    )
 {
+   assert(probdata != NULL);
+
    SCIP_CALL( SCIPaddRealParam(scip,
       "ringpacking/verification/nlptilim",
       "time limit for verification NLP",
@@ -142,22 +151,22 @@ SCIP_RETCODE addVerificationParams(
    SCIP_CALL( SCIPaddRealParam(scip,
       "ringpacking/verification/nlptilimsoft",
       "soft time limit for verification NLP",
-      NULL, FALSE, DEFAULT_VERIFICATION_NLPTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+      &probdata->nlptilimsoft, FALSE, DEFAULT_VERIFICATION_NLPTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip,
       "ringpacking/verification/nlpnodelimsoft",
       "soft node limit for verification NLP",
-      NULL, FALSE, DEFAULT_VERIFICATION_NLPNODELIMSOFT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+      &probdata->nlpnodelimsoft, FALSE, DEFAULT_VERIFICATION_NLPNODELIMSOFT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
       "ringpacking/verification/heurtilimsoft",
       "soft time limit for heuristic verification",
-      NULL, FALSE, DEFAULT_VERIFICATION_HEURTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+      &probdata->heurtilimsoft, FALSE, DEFAULT_VERIFICATION_HEURTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
       "ringpacking/verification/heuriterlimsoft",
       "soft iteration limit for heuristic verification",
-      NULL, FALSE, DEFAULT_VERIFICATION_HEURITERLIMSOFT, 0, INT_MAX, NULL, NULL) );
+      &probdata->heuriterlimsoft, FALSE, DEFAULT_VERIFICATION_HEURITERLIMSOFT, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
       "ringpacking/verification/totaltilim",
@@ -167,7 +176,7 @@ SCIP_RETCODE addVerificationParams(
    SCIP_CALL( SCIPaddRealParam(scip,
       "ringpacking/verification/totaltilimsoft",
       "total time limit for all verification problems during the enumeration",
-      NULL, FALSE, DEFAULT_VERIFICATION_TOTALTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+      &probdata->totaltilimsoft, FALSE, DEFAULT_VERIFICATION_TOTALTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -715,9 +724,9 @@ SCIP_RETCODE enumeratePatterns(
          timelim = MIN(heurtilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
 
          /* verify pattern */
-         probdata->timeleft += SCIPgetTotalTime(scip);
+         probdata->totaltilimsoft += SCIPgetTotalTime(scip);
          SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuriterlim) );
-         probdata->timeleft -= SCIPgetTotalTime(scip);
+         probdata->totaltilimsoft -= SCIPgetTotalTime(scip);
 
          /*
           * try to verify with NLP
@@ -725,12 +734,12 @@ SCIP_RETCODE enumeratePatterns(
          if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
          {
             /* compute time limit */
-            timelim = MIN3(probdata->timeleft, nlptilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
+            timelim = MIN3(probdata->totaltilimsoft, nlptilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
 
             /* verify pattern */
-            probdata->timeleft += SCIPgetTotalTime(scip);
+            probdata->totaltilimsoft += SCIPgetTotalTime(scip);
             SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, timelim, nlpnodelim) );
-            probdata->timeleft -= SCIPgetTotalTime(scip);
+            probdata->totaltilimsoft -= SCIPgetTotalTime(scip);
          }
 
          /* pattern is not packable -> don't add more elements */
@@ -785,13 +794,9 @@ SCIP_RETCODE setupProblem(
    SCIP_Real* rexts;
    SCIP_Real* rints;
    int* demands;
-   SCIP_Real heurtilim;
-   SCIP_Real nlptilim;
    SCIP_Real dualbound;
    SCIP_Real minrext;
    SCIP_Real volume;
-   SCIP_Longint nlpnodelim;
-   int heuriterlim;
    int ntypes;
    int p;
    int t;
@@ -803,13 +808,6 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
    SCIP_CALL( SCIPsetObjIntegral(scip) );
 
-   /* collect working limits */
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/nlptilimsoft", &nlptilim) );
-   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/verification/nlpnodelimsoft", &nlpnodelim) );
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilimsoft", &heurtilim) );
-   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlimsoft", &heuriterlim) );
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/totaltilimsoft", &probdata->timeleft) );
-
    /* get problem data */
    ntypes = SCIPprobdataGetNTypes(probdata);
    rexts = SCIPprobdataGetRexts(probdata);
@@ -817,7 +815,8 @@ SCIP_RETCODE setupProblem(
    demands = SCIPprobdataGetDemands(probdata);
 
    /* compute all non-dominated circular patterns */
-   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, nlptilim, heurtilim, nlpnodelim, heuriterlim) );
+   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, probdata->nlptilimsoft, probdata->heurtilimsoft,
+         probdata->nlpnodelimsoft, probdata->heuriterlimsoft) );
    SCIPinfoMessage(scip, NULL, "+++++++++++++ starting with |CP|=%d\n", probdata->ncpatterns,
       probdata->nrpatterns);
 
@@ -1478,9 +1477,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 #endif
 
-   /* add parameters for verification */
-   SCIP_CALL( addVerificationParams(scip) );
-
    /* create SCIP problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
 
@@ -1492,6 +1488,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigRingpacking) );
    SCIP_CALL( SCIPsetProbTrans(scip, probtransRingpacking) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransRingpacking) );
+
+   /* add parameters for verification */
+   SCIP_CALL( addVerificationParams(scip, probdata) );
 
    /* activate pricer */
    SCIP_CALL( SCIPpricerRpaActivate(scip) );
