@@ -385,7 +385,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
 
                      if( tmpcostY < fixbnd )
                      {
-                        if( extendedsearch )
+                        if( extendedsearch && SCIPisLE(scip, tmpcostY, cutoff) )
                         {
                            int tree3outedges[2];
                            SCIP_Bool ruleout;
@@ -395,13 +395,11 @@ SCIP_RETCODE updateNodeReplaceBounds(
                            tree3outedges[0] = outedge1;
                            tree3outedges[1] = outedge2;
 
-
                            SCIP_CALL( reduce_check3Tree(scip, graph, root, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint,
                                        &tmpcostY, &ruleout) );
 #ifndef NDEBUG
                            assert(tmpcostY >= tmpcostYorg);
 #endif
-
                         }
 
                         fixbnd = tmpcostY;
