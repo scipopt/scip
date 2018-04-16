@@ -197,9 +197,6 @@ SCIP_Bool ruleOutSubtree(
 {
    if( SCIPisGT(scip, extendedcost, cutoff) )
    {
-#ifdef PPP
-printf("rule out \n");
-#endif
       return TRUE;
    }
    else
@@ -617,13 +614,16 @@ int reduceWithEdgeFixingBounds(
    GRAPH*                graph,              /**< graph data structure */
    GRAPH*                transgraph,         /**< graph data structure or NULL */
    const SCIP_Real*      fixingbounds,       /**< fixing bounds */
+   const int*            result,             /**< solution */
    SCIP_Real             upperbound          /**< best upperbound */
 )
 {
    int nfixed = 0;
    int nnodes = graph->knots;
+   const SCIP_Bool solgiven = (result != NULL);
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
+   assert(!solgiven || graph_sol_valid(scip, graph, result));
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -641,8 +641,14 @@ int reduceWithEdgeFixingBounds(
          if( graph->mark[graph->head[e]] )
          {
             const int erev = flipedge(e);
+            SCIP_Bool delete;
 
-            if( SCIPisLT(scip, upperbound, fixingbounds[e]) && SCIPisLT(scip, upperbound, fixingbounds[erev]) )
+            if( !solgiven || result[e] == CONNECT || result[erev] == CONNECT )
+               delete = (SCIPisLT(scip, upperbound, fixingbounds[e]) && SCIPisLT(scip, upperbound, fixingbounds[erev]));
+            else
+               delete = (upperbound <= fixingbounds[e] && upperbound <= fixingbounds[erev]);
+
+            if( delete )
             {
                SCIPdebugMessage("delete edge %d \n", e);
 
@@ -2634,9 +2640,8 @@ SCIP_RETCODE reduce_da(
          if( !SCIPisZero(scip, minpathcost) )
          {
             nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
-            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, upperbound);
+            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, result, upperbound);
          }
-
 
          if( extended && 0 )
          {
@@ -3422,7 +3427,7 @@ SCIP_RETCODE reduce_daPcMw(
       nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
             &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
 
-      nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, upperbound);
+      nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
       nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
       if( userec )
@@ -3459,7 +3464,7 @@ SCIP_RETCODE reduce_daPcMw(
          nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
                &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
 
-         nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, upperbound);
+         nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
          nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
          SCIPdebugMessage("DA: pertubated run %d NFIXED %d \n", run, nfixed);
@@ -3628,7 +3633,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       /* try to eliminate vertices and edges */
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
-      nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, upperbound);
+      nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
       nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
       apsol = apsol && graph_sol_unreduced(scip, graph, result);
