@@ -1786,9 +1786,10 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
 
    case SCIP_NLPPAR_TILIM:
    {
-      if( dval >= 0 )
+      if( dval >= 0.0 )
       {
-         problem->ipopt->Options()->SetNumericValue("max_cpu_time", dval);
+         /* Ipopt doesn't like a setting of exactly 0 for the max_cpu_time, so increase as little as possible in that case */
+         problem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(dval, DBL_MIN));
       }
       else
       {
