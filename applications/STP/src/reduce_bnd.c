@@ -192,10 +192,12 @@ SCIP_Bool ruleOutSubtree(
    SCIP_Real             extendedcost,       /**< cost of subtree */
    int                   dfsdepth,           /**< dfs depth */
    int                   curredge,           /**< latest edge */
-   int                   currhead            /**< latest node */
+   int                   currhead,           /**< latest node */
+   SCIP_Bool             allowequality       /**< rule out also in case of equality */
 )
 {
-   if( SCIPisGT(scip, extendedcost, cutoff) )
+
+   if( allowequality ? (extendedcost >= cutoff) : SCIPisGT(scip, extendedcost, cutoff) )
    {
       return TRUE;
    }
@@ -1606,7 +1608,7 @@ int reduceSPGExtended(
 
          if( !marked[e] )
          {
-            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, nodearr, &deletable));
+            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, FALSE, nodearr, &deletable));
 
             if( !deletable )
                continue;
@@ -1614,7 +1616,7 @@ int reduceSPGExtended(
 
          if( !marked[erev] )
          {
-            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, nodearr, &deletable));
+            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, FALSE, nodearr, &deletable));
 
             if( !deletable )
                continue;
@@ -1923,7 +1925,7 @@ SCIP_RETCODE reduce_check3Tree(
          nodepos[startnode] = nnodes + 4;
 
          /* can we rule out entire subtree already? */
-         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, startedge, startnode) )
+         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, startedge, startnode, FALSE) )
          {
             *ruleout = TRUE;
             break;
@@ -1985,7 +1987,7 @@ SCIP_RETCODE reduce_check3Tree(
                   extendedcost += vnoi[costartnode].dist + vnoi[currhead].dist;
 
                /* can we rule out subtree? */
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, currhead) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, currhead, FALSE) )
                   continue;
 
                /* do we need to stop extension? */
@@ -2039,7 +2041,7 @@ SCIP_RETCODE reduce_check3Tree(
          basebottlenecks[2] = MAX(graph->cost[outedges[1]], graph->cost[inedge]);
 
          /* can we rule out entire subtree already? */
-         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, flipedge(inedge), innode) )
+         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, flipedge(inedge), innode, FALSE) )
          {
             *ruleout = TRUE;
          }
@@ -2076,7 +2078,7 @@ SCIP_RETCODE reduce_check3Tree(
             {
                const SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), currtail) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), currtail, FALSE) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2132,6 +2134,7 @@ SCIP_RETCODE reduce_checkEdge(
    const PATH*           vnoi,               /**< Voronoi paths  */
    SCIP_Real             cutoff,             /**< cutoff value */
    int                   edge,               /**< (directed) edge to be checked */
+   SCIP_Bool             equality,           /**< allow equality? */
    int*                  edgestack,          /**< array of size nodes for internal computations */
    SCIP_Bool*            deletable           /**< is edge deletable? */
 )
@@ -2150,7 +2153,7 @@ SCIP_RETCODE reduce_checkEdge(
    *deletable = FALSE;
 
    /* trivial rule-out? */
-   if( SCIPisGT(scip, edgebound, cutoff) || head == root )
+   if( SCIPisGT(scip, edgebound, cutoff) || (equality && SCIPisEQ(scip, edgebound, cutoff)) || head == root )
    {
       *deletable = TRUE;
    }
@@ -2198,7 +2201,7 @@ SCIP_RETCODE reduce_checkEdge(
             /*  subtree already processed? */
             if( nodepos[currhead] )
             {
-               nodepos[currhead] = FALSE;
+               nodepos[currhead] = 0;
                treecost -= redcost[curredge];
 
                dfsdepth--;
@@ -2208,7 +2211,7 @@ SCIP_RETCODE reduce_checkEdge(
             {
                SCIP_Real extendedcost = treecost + redcost[curredge] + vnoi[currhead].dist;
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, currhead) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, currhead, equality) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2256,7 +2259,7 @@ SCIP_RETCODE reduce_checkEdge(
             /*  subtree already processed? */
             if( nodepos[currtail] )
             {
-               nodepos[currtail] = FALSE;
+               nodepos[currtail] = 0;
                treecost -= redcost[curredge];
 
                dfsdepth--;
@@ -2266,7 +2269,7 @@ SCIP_RETCODE reduce_checkEdge(
             {
                SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), currtail) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), currtail, equality) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2640,7 +2643,7 @@ SCIP_RETCODE reduce_da(
          if( !SCIPisZero(scip, minpathcost) )
          {
             nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
-            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, result, upperbound);
+            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (apsol ? result : NULL), upperbound);
          }
 
          if( extended && 0 )
