@@ -2012,7 +2012,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    if( intlogfilename != NULL && intlogfilename[0] != '\0' )
    {
-      char finalfilename[SCIP_MAXSTRLEN];;
+      char finalfilename[SCIP_MAXSTRLEN];
 
       if( strcmp("use_probname", intlogfilename) == 0 )
          (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s_int.stplog", probname);

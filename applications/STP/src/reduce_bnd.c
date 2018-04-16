@@ -1601,6 +1601,7 @@ int reduceSPGExtended(
    {
       if( graph->oeat[e] != EAT_FREE )
       {
+         int doresult;
          const int erev = e + 1;
          SCIP_Bool deletable;
 
@@ -2646,11 +2647,11 @@ SCIP_RETCODE reduce_da(
             nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (apsol ? result : NULL), upperbound);
          }
 
-         if( extended && 0 )
+         if( extended )
          {
             int todo;
             printf("nfixed before %d \n", nfixed);
-            nfixed += reduceSPGExtended(scip, graph, marked, vnoi, cost, pathdist, result, minpathcost, root, nodearrint);
+            nfixed += reduceSPGExtended(scip, graph, marked, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, root, nodearrint);
             printf("nfixed after %d \n", nfixed);
 
          }
