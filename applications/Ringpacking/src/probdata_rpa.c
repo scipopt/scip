@@ -52,16 +52,11 @@
 #define TABLE_POSITION_RPA                   12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_RPA             SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
-/* parameters */
-#define DEFAULT_VERIFICATION_NLPTILIM        10.0      /**< time limit for each verification NLP */
-#define DEFAULT_VERIFICATION_NLPNODELIM      10000L    /**< node limit for each verification NLP */
-#define DEFAULT_VERIFICATION_HEURTILIM       10.0      /**< time limit for heuristic verification */
-#define DEFAULT_VERIFICATION_HEURITERLIM     1000      /**< iteration limit for each heuristic verification */
+/* default values of parameters */
 #define DEFAULT_VERIFICATION_NLPTILIMSOFT    1.0       /**< soft time limit for each verification NLP */
 #define DEFAULT_VERIFICATION_NLPNODELIMSOFT  1000L     /**< soft node limit for each verification NLP */
 #define DEFAULT_VERIFICATION_HEURTILIMSOFT   1.0       /**< soft time limit for heuristic verification */
 #define DEFAULT_VERIFICATION_HEURITERLIMSOFT 100       /**< soft iteration limit for each heuristic verification */
-#define DEFAULT_VERIFICATION_TOTALTILIM      3600.0    /**< total time limit for all verification problems during the solving process */
 #define DEFAULT_VERIFICATION_TOTALTILIMSOFT  1200.0    /**< total time limit for all verification problems during the enumeration */
 
 #ifndef M_PI
@@ -119,34 +114,14 @@ struct SCIP_ProbData
  * @{
  */
 
-/** auxiliary function to add verification parameters to scip */
+/** auxiliary function to add soft verification parameters to scip and store them */
 static
-SCIP_RETCODE addVerificationParams(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROBDATA*        probdata            /**< pointer to problem data */
+SCIP_RETCODE addSoftVerificationParams(
+   SCIP *scip,                               /**< SCIP data structure */
+   SCIP_PROBDATA *probdata                   /**< pointer to problem data */
    )
 {
    assert(probdata != NULL);
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-      "ringpacking/verification/nlptilim",
-      "time limit for verification NLP",
-      NULL, FALSE, DEFAULT_VERIFICATION_NLPTILIM, -1.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddLongintParam(scip,
-      "ringpacking/verification/nlpnodelim",
-      "node limit for verification NLP",
-      NULL, FALSE, DEFAULT_VERIFICATION_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-      "ringpacking/verification/heurtilim",
-      "time limit for heuristic verification",
-      NULL, FALSE, DEFAULT_VERIFICATION_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip,
-      "ringpacking/verification/heuriterlim",
-      "iteration limit for heuristic verification",
-      NULL, FALSE, DEFAULT_VERIFICATION_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
       "ringpacking/verification/nlptilimsoft",
@@ -167,11 +142,6 @@ SCIP_RETCODE addVerificationParams(
       "ringpacking/verification/heuriterlimsoft",
       "soft iteration limit for heuristic verification",
       &probdata->heuriterlimsoft, FALSE, DEFAULT_VERIFICATION_HEURITERLIMSOFT, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-      "ringpacking/verification/totaltilim",
-      "total time limit for all verification problems during the solving process",
-      NULL, FALSE, DEFAULT_VERIFICATION_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
       "ringpacking/verification/totaltilimsoft",
@@ -1490,7 +1460,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransRingpacking) );
 
    /* add parameters for verification */
-   SCIP_CALL( addVerificationParams(scip, probdata) );
+   SCIP_CALL(addSoftVerificationParams(scip, probdata) );
 
    /* activate pricer */
    SCIP_CALL( SCIPpricerRpaActivate(scip) );

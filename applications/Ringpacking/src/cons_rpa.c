@@ -60,6 +60,13 @@
 #define EVENTHDLR_NAME         "bestsol"
 #define EVENTHDLR_DESC         "best solution event handler"
 
+/* default values of parameters */
+#define DEFAULT_VERIFICATION_NLPTILIM        10.0      /**< time limit for each verification NLP */
+#define DEFAULT_VERIFICATION_NLPNODELIM      10000L    /**< node limit for each verification NLP */
+#define DEFAULT_VERIFICATION_HEURTILIM       10.0      /**< time limit for heuristic verification */
+#define DEFAULT_VERIFICATION_HEURITERLIM     1000      /**< iteration limit for each heuristic verification */
+#define DEFAULT_VERIFICATION_TOTALTILIM      3600.0    /**< total time limit for all verification problems during the solving process */
+
 /*
  * Data structures
  */
@@ -72,12 +79,55 @@ struct SCIP_ConshdlrData
    SCIP_Bool*            locked;            /**< array to remember which (not verified) patterns have been locked */
    int                   lockedsize;        /**< size of locked array */
    SCIP_Bool*            tried;             /**< array to mark circular patterns that have been tried to be verified */\
+
+   /* parameter for verification */
    SCIP_Real             timeleft;          /**< time left for solving verification problem during the solving process */
+   SCIP_Real             nlptilim;          /**< hard time limit for verification nlp */
+   SCIP_Real             heurtilim;         /**< hard time limit for verification heuristic*/
+   SCIP_Longint          nlpnodelim;        /**< hard node limit for verification nlp */
+   int                   heuriterlim;       /**< hard iteration limit for verification heuristic*/
 };
 
 /*
  * Local methods
  */
+
+/** auxiliary function to add hard verification parameters to scip and store them */
+static
+SCIP_RETCODE addHardVerificationParams(
+   SCIP *scip,                               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA *conshdlrdata           /**< pointer to problem data */
+   )
+{
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/nlptilim",
+      "time limit for verification NLP",
+      &conshdlrdata->nlptilim, FALSE, DEFAULT_VERIFICATION_NLPTILIM, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip,
+      "ringpacking/verification/nlpnodelim",
+      "node limit for verification NLP",
+      &conshdlrdata->nlpnodelim, FALSE, DEFAULT_VERIFICATION_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/heurtilim",
+      "time limit for heuristic verification",
+      &conshdlrdata->heurtilim, FALSE, DEFAULT_VERIFICATION_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+      "ringpacking/verification/heuriterlim",
+      "iteration limit for heuristic verification",
+      &conshdlrdata->heuriterlim, FALSE, DEFAULT_VERIFICATION_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/totaltilim",
+      "total time limit for all verification problems during the solving process",
+      &conshdlrdata->timeleft, FALSE, DEFAULT_VERIFICATION_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
 
 /** auxiliary function to decide whether a proposed solution is feasible; a solution is called feasible if and only if
  *  z*_C = 0 holds for all circular patterns that are either not packable, i.e., SCIP_PACKABLE_NO or SCIP_PACKABLE_UNKNOWN
@@ -132,11 +182,9 @@ SCIP_RETCODE verifyCircularPattern(
    SCIP_PATTERN*         pattern             /**< circular pattern */
    )
 {
-   SCIP_Longint nlpnodelimit;
    SCIP_Real timelimit;
    SCIP_Real nlptimelimit;
    SCIP_Real heurtimelimit;
-   int heuriterlimit;
 
    assert(probdata != NULL);
    assert(pattern != NULL);
@@ -147,25 +195,21 @@ SCIP_RETCODE verifyCircularPattern(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
    /* verify heuristically */
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilim", &heurtimelimit) );
-   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlim", &heuriterlimit) );
-   heurtimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), heurtimelimit); /*lint !e666*/
+   heurtimelimit = MIN(timelimit - SCIPgetSolvingTime(scip), conshdlrdata->heurtilim); /*lint !e666*/
 
-   SCIPdebugMsg(scip, "call verification heuristic (%g,%d)\n", heurtimelimit, heuriterlimit);
+   SCIPdebugMsg(scip, "call verification heuristic (%g,%d)\n", heurtimelimit, conshdlrdata->heuriterlim);
    conshdlrdata->timeleft += SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, heurtimelimit, heuriterlimit) );
+   SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, heurtimelimit, conshdlrdata->heuriterlim) );
    conshdlrdata->timeleft -= SCIPgetSolvingTime(scip);
 
    /* use verification NLP if pattern is still not verified */
    if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
    {
-      SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/nlptilim", &nlptimelimit) );
-      SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/verification/nlpnodelim", &nlpnodelimit) );
-      nlptimelimit = MIN3(conshdlrdata->timeleft, timelimit - SCIPgetSolvingTime(scip), nlptimelimit); /*lint !e666*/
+      nlptimelimit = MIN3(conshdlrdata->timeleft, timelimit - SCIPgetSolvingTime(scip), conshdlrdata->nlptilim); /*lint !e666*/
 
-      SCIPdebugMsg(scip, "call verification NLP (%g,%lld)\n", nlptimelimit, nlpnodelimit);
+      SCIPdebugMsg(scip, "call verification NLP (%g,%lld)\n", nlptimelimit, conshdlrdata->nlpnodelim);
       conshdlrdata->timeleft += SCIPgetSolvingTime(scip);
-      SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, nlptimelimit, nlpnodelimit) );
+      SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, nlptimelimit, conshdlrdata->nlpnodelim) );
       conshdlrdata->timeleft -= SCIPgetSolvingTime(scip);
    }
 
@@ -503,8 +547,8 @@ SCIP_DECL_CONSINIT(consInitRpa)
    SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* get the time limit available for solving verification problems during the solving process */
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/totaltilim", &conshdlrdata->timeleft) );
+   /* add and store verification parameters */
+   SCIP_CALL( addHardVerificationParams(scip, conshdlrdata) );
 
    return SCIP_OKAY;
 }
