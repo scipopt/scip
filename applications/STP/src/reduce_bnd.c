@@ -1583,11 +1583,12 @@ int reduceSPGExtended(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
-   const SCIP_Bool solgiven = (result != NULL);
-   const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, minpathcost));
 
    if( rpc )
       graph_pc_2orgcheck(graph);
+
+   if( SCIPisZero(scip, minpathcost) )
+      return 0;
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
@@ -2652,6 +2653,7 @@ SCIP_RETCODE reduce_da(
                lpobjval, upperbound, root, (run == 0), extendedReplace) );
       }
 
+      SCIP_CALL( level0(scip, graph) );
       assert(graph_valid(graph));
 
       if( !rpc )

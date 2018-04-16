@@ -166,10 +166,10 @@ SCIP_Bool sddeltable(
 static
 int getcloseterms(
    SCIP*                 scip,
-   PATH*                 vnoi,
+   const PATH*           vnoi,
    SCIP_Real*            termdist,
    SCIP_Real             ecost,
-   int*                  vbase,
+   const int*            vbase,
    int*                  neighbterms,
    int                   i,
    int                   nnodes
@@ -2092,6 +2092,7 @@ SCIP_Real getRSD(
    SCIP_Real*            mstsdist,           /**< MST distance in aux-graph */
    SCIP_Real*            termdist1,          /**< dist array */
    SCIP_Real*            termdist2,          /**< second dist array */
+   SCIP_Real             sd_initial,         /**< initial sd or -1.0 */
    int*                  vbase,              /**< bases for nearest terminals */
    int*                  nodesid,            /**< nodes identification array */
    int*                  neighbterms1,       /**< neighbour terminals array */
@@ -2129,13 +2130,19 @@ SCIP_Real getRSD(
 
    nnodes = g->knots;
    l = 0;
-   sd = FARAWAY;
+
+   if( sd_initial >= 0.0 )
+      sd = sd_initial;
+   else
+      sd = FARAWAY;
+
    /* compare restricted sd with edge cost (if existing) */
    for( e = g->outbeg[i]; (l++ <= limit) && (e != EAT_LAST); e = g->oeat[e] )
    {
       if( g->head[e] == i2 )
       {
-         sd = g->cost[e];
+         if( g->cost[e] < sd )
+            sd = g->cost[e];
          break;
       }
    }
@@ -3133,14 +3140,14 @@ SCIP_RETCODE reduce_bdr(
          {
             csum = ecost[0] + ecost[1] + ecost[2];
 
-            sd[0] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[0],
+            sd[0] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[0] + ecost[1], vbase, nodesid, neighbterms1, neighbterms2, adjvert[0],
                   adjvert[1], 300);
-            sd[1] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[1],
+            sd[1] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[1] + ecost[2], vbase, nodesid, neighbterms1, neighbterms2, adjvert[1],
                   adjvert[2], 300);
-            sd[2] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, adjvert[2],
+            sd[2] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[2] + ecost[0], vbase, nodesid, neighbterms1, neighbterms2, adjvert[2],
                   adjvert[0], 300);
 
-            if( SCIPisLE(scip, sd[0] + sd[1], csum) || SCIPisLE(scip, sd[0] + sd[2], csum) || SCIPisLE(scip, sd[1] + sd[2], csum) )
+            if( sd[0] + sd[1] <= csum || sd[0] + sd[2] <= csum || sd[1] + sd[2] <= csum )
             {
                SCIP_Bool success;
 
@@ -3168,7 +3175,7 @@ SCIP_RETCODE reduce_bdr(
                   const int k2 = auxg->head[e];
                   if( k2 > k )
                   {
-                     auxg->cost[e] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1,
+                     auxg->cost[e] = getRSD(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[k] + ecost[k2], vbase, nodesid, neighbterms1,
                            neighbterms2, adjvert[k], adjvert[k2], 200);
                      auxg->cost[flipedge(e)] = auxg->cost[e];
                   }
@@ -3193,7 +3200,7 @@ SCIP_RETCODE reduce_bdr(
             k = UNKNOWN;
             csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
 
-            if( SCIPisGE(scip, csum, mstcost) )
+            if( csum >= mstcost )
             {
                /* compute mst on all 3-subsets of all neigbours */
                for( k = 0; k < 4; k++ )
@@ -3218,7 +3225,7 @@ SCIP_RETCODE reduce_bdr(
                   auxg->mark[k] = TRUE;
                   csum -= ecost[k];
 
-                  if( SCIPisLT(scip, csum, mstcost) )
+                  if( csum < mstcost )
                      break;
 
                   csum += ecost[k];
