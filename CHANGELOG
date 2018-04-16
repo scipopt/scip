@@ -26,7 +26,7 @@ interface changes:
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
-- "propagating/orbitalfixing/oftiming" to change the timining of symmetry computation for orbital fixing
+- "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
 - "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
 - "presolving/symbreak/addconsstiming" to  change the timining of symmetry computation for symmetry handling inequalities
 
