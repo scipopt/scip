@@ -60,7 +60,7 @@ VISUALIZE=${27}
 CLUSTERNODES=${28}
 
 # check if all variables defined (by checking the last one)
-if test -z $VISUALIZE
+if test -z $CLUSTERNODES
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -90,6 +90,7 @@ then
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "VISUALIZE     = $VISUALIZE"
+    echo "CLUSTERNODES  = $CLUSTERNODES"
     exit 1;
 fi
 

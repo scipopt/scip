@@ -27,6 +27,7 @@
 
 #include "lpi/lpi.h"
 #include "scip/bitencode.h"
+#include "scip/pub_message.h"
 #include <string.h>
 
 /* do defines for windows directly here to make the lpi more independent */
@@ -678,6 +679,31 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/**@} */
 
 
 /*
@@ -3411,9 +3437,8 @@ SCIP_RETCODE SCIPlpiGetSol(
          assert(sux != NULL);
          redcost[i] -= sux[i];
       }
+      BMSfreeMemoryArray(&sux);
    }
-
-   BMSfreeMemoryArray(&sux);
 
    return SCIP_OKAY;
 }
@@ -4553,9 +4578,9 @@ SCIP_RETCODE SCIPlpiWriteState(
 
    if( emptyname )
    {
-      SCIPerrorMessage("LP Error: MOSEK cannot write state since name of %s %d is empty.\n",
-            v < nvars ? "variable" : "constraint", v < nvars ? v : c);/*lint !e644*/
-      return SCIP_LPERROR;
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Writing LP state with unnamed %s %d, using default"
+            " names instead. Note that this state cannot be read back in later!\n",
+            v < nvars ? "variable" : "constraint", v < nvars ? v : c);
    }
 
    /* set parameter to be able to write */

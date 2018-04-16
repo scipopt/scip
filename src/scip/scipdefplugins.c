@@ -83,7 +83,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
-   SCIP_CALL( SCIPincludePresolImplfree(scip) );
    SCIP_CALL( SCIPincludePresolDualagg(scip) );
    SCIP_CALL( SCIPincludePresolDualcomp(scip) );
    SCIP_CALL( SCIPincludePresolDualinfer(scip) );
@@ -130,6 +129,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurDins(scip) );
    SCIP_CALL( SCIPincludeHeurDistributiondiving(scip) );
    SCIP_CALL( SCIPincludeHeurDualval(scip) );
+   SCIP_CALL( SCIPincludeHeurFarkasdiving(scip) );
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );

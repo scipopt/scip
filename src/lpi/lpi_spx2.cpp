@@ -221,6 +221,10 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+#if SOPLEX_APIVERSION >= 2
+      setBoolParam(SoPlex::ENSURERAY, true);
+#endif
+
 #ifdef WITH_LPSCHECK
       int cpxstat;
       _checknum = 0;
@@ -986,6 +990,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 #endif
+}
+
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return FALSE;
 }
 
 /**@} */

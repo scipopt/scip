@@ -485,15 +485,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       lastlpobjval = SCIPgetLPObjval(scip);
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
-      /* in case we do not solve LP's at every probing node, we must explicitly store the solution values by unlinking the
-       * solution, otherwise, the working solution may contain wrong entries, if, e.g., a backtrack occurred after an
-       * intermediate LP resolve
+      /* we must explicitly store the solution values by unlinking the solution, otherwise,
+       * the working solution may contain wrong entries, if, e.g., a backtrack occurred after an
+       * intermediate LP resolve or the LP was resolved during conflict analysis.
        */
-      if( lpsolvefreq != 1 )
-      {
-         SCIP_CALL( SCIPunlinkSol(scip, worksol) );
-      }
-
+      SCIP_CALL( SCIPunlinkSol(scip, worksol) );
 
       /* ensure array sizes for the diving on the fractional variables */
       if( onlylpbranchcands && nlpcands > lpcandsscoressize )

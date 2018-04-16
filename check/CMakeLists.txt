@@ -495,6 +495,8 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-mipstart-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                # the MIP start instances are validated twice.
+                                FAIL_REGULAR_EXPRESSION "Validation         : Fail"
                                 DEPENDS scip-build
                             )
     endif()

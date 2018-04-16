@@ -1,11 +1,59 @@
 SCIP version NEXT
 =================
 
+performance improvements:
+- cuts generated from certain quadratic constraints with convex feasible region are now global
+- performance improvements for Adaptive Large Neighborhood Search heur_alns.c:
+    - all neighborhoods now start conservatively from maximum fixing rate
+    - new default parameter settings for bandit selection parameters
+    - no adjustment of minimum improvement by default
+- improved bound tightening for some quadratic equations
+
+features:
+- new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
+
+interface changes:
+- additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
+  weights that are simple averages or higher weights for more recent observations (the previous default).
+  The last two parameters are used for a finer control of the exponential decay.
+- functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
+  existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+- added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  directly by the target node limit within the heuristic.
+
+new parameters:
+- "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+- "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
+
+deleted files:
+- presol_implfree removed
+
+
+
 SCIP version 5.0.2
 =================
 
+performance improvements:
+- deactivate gauge cuts
+
 fixed bugs:
+- suppress debug solution warnings during problem creation stage
 - fixed check for activated debugging solution in components constraint handler
+- fixed potential bug concerning solution linking to LP in SCIPperformGenericDivingAlgorithm()
+- fixed reward computation in ALNS on continuous, especially nonlinear, problems
+- fixed bug in freeing reoptimization data if problem was solved during presolving
+- fixed check of timing in heur_completesol
+- fixed wrong propagation in optcumulative constraint handler
+- fixed non-deterministic behavior in OBBT propagator
+- don't disable LP presolving when using Xpress as LP solver
+- fixed possible NULL pointer usage in cons_pseudoboolean
+- ensured that SCIPgetDualbound() returns global dual bound instead of the dual bound of the remaining search tree
+
+data structures:
+- expression interpreter objects are now stored in the block memory
+
 
 SCIP version 5.0.1
 ==================
@@ -16,6 +64,7 @@ performance improvements:
   (disaggregation can still be very helpful on some instances, but also seems hurtful on others)
 - test additional scaling factors in CMIR cut generatio heuristic
 - cleaned up implementation of the cut selection procedure and added new cut quality measure
+- use random tie-breaking in cut selection
 
 features:
 - allow output of lower bounds for visualization
@@ -56,6 +105,7 @@ fixed bugs:
 - fix bug in sepa_gomory if cut is a bound change
 - fixed bug with NULL pointer handling in LPIs
 - fixed handling of infinite bounds in cons_sos1
+- fixed bug while scaling linear constraints
 
 unit tests:
 - expanded unit tests of the lpis

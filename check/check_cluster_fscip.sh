@@ -34,28 +34,29 @@ TSTNAME=$1
 BINNAME=$2
 SETNAMES=$3
 BINID=$4
-TIMELIMIT=$5
-NODELIMIT=$6
-MEMLIMIT=$7
-THREADS=$8
-FEASTOL=$9
-LPS=${10}
-DISPFREQ=${11}
-CONTINUE=${12}
-QUEUETYPE=${13}
-QUEUE=${14}
-PPN=${15}
-CLIENTTMPDIR=${16}
-NOWAITCLUSTER=${17}
-EXCLUSIVE=${18}
-PERMUTE=${19}
-SEEDS=${20}
-DEBUGTOOL=${21}
-REOPT=${22}
-OPTCOMMAND=${23}
-SETCUTOFF=${24}
-VISUALIZE=${25}
-GLBSEEDSHIFT=${26}
+OUTPUTDIR=$5
+TIMELIMIT=$6
+NODELIMIT=$7
+MEMLIMIT=$8
+THREADS=$9
+FEASTOL=${10}
+LPS=${11}
+DISPFREQ=${12}
+CONTINUE=${13}
+QUEUETYPE=${14}
+QUEUE=${15}
+PPN=${16}
+CLIENTTMPDIR=${17}
+NOWAITCLUSTER=${18}
+EXCLUSIVE=${19}
+PERMUTE=${20}
+SEEDS=${21}
+GLBSEEDSHIFT=${22}
+DEBUGTOOL=${23}
+REOPT=${24}
+OPTCOMMAND=${25}
+SETCUTOFF=${26}
+VISUALIZE=${27}
 
 SOLVER=fscip
 
@@ -65,8 +66,9 @@ then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
     echo "BINNAME       = $BINNAME"
-    echo "SETNAMES      = $SETNAME"
+    echo "SETNAMES      = $SETNAMES"
     echo "BINID         = $BINID"
+    echo "OUTPUTDIR     = $OUTPUTDIR"
     echo "TIMELIMIT     = $TIMELIMIT"
     echo "NODELIMIT     = $NODELIMIT"
     echo "MEMLIMIT      = $MEMLIMIT"
@@ -83,7 +85,8 @@ then
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
-    echo "DEBUGTOOL      = $DEBUGTOOL"
+    echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
+    echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
@@ -177,6 +180,7 @@ do
 		    export BASENAME=$FILENAME
 		    export FILENAME=$INSTANCE
 		    export CLIENTTMPDIR
+                    export OUTPUTDIR
 		    export HARDTIMELIMIT
 		    export HARDMEMLIMIT
 		    export CHECKERPATH=$SCIPPATH/solchecker
@@ -190,7 +194,7 @@ do
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
-			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR \
+			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR,OUTPUTDIR=$OUTPUTDIR \
 			-V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run_fscip.sh
 		fi
 	    done # end for SETNAME

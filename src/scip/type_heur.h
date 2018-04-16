@@ -138,10 +138,10 @@ typedef struct SCIP_VGraph SCIP_VGRAPH;           /**< variable graph data struc
  *  - scip            : SCIP main data structure
  *  - diveset         : diving settings for scoring
  *  - divetype        : represents different methods for a dive set to explore the next children
- *  - cand            : Candidate variable for which the score should be determined
+ *  - cand            : candidate variable for which the score should be determined
  *  - candsol         : solution value of variable in LP relaxation solution
  *  - candsfrac       : fractional part of solution value of variable
- *  - score           : pointer for diving score value - small scores are preferred
+ *  - score           : pointer for diving score value - the best candidate maximizes this score
  *  - roundup         : pointer to store whether the preferred rounding direction is upwards
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code

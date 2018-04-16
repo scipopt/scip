@@ -329,7 +329,7 @@ void incrementalStatsUpdate(
    *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
 
    /* it may happen that *sumvarptr is slightly negative, especially after a series of add/removal operations */
-   assert(*sumvarptr >= -1e-6);
+   assert(*sumvarptr >= -1e-4);
    *sumvarptr = MAX(0.0, *sumvarptr);
 }
 
@@ -10313,18 +10313,16 @@ SCIP_Real SCIPcomputeGap(
 {
    if( EPSEQ(primalbound, dualbound, eps) )
       return 0.0;
-   else if( EPSZ(dualbound, eps) ||
-            EPSZ(primalbound, eps) ||
-            REALABS(primalbound) >= inf ||
-            REALABS(dualbound) >= inf ||
-            primalbound * dualbound < 0.0 )
-      return inf;
    else
    {
       SCIP_Real absdual = REALABS(dualbound);
       SCIP_Real absprimal = REALABS(primalbound);
 
-      return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
+      if( EPSZ(dualbound, eps) || EPSZ(primalbound, eps) || absprimal >= inf || absdual >= inf ||
+         primalbound * dualbound < 0.0 )
+         return inf;
+      else
+         return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
    }
 }
 
