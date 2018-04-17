@@ -4273,8 +4273,7 @@ static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
 {
    BRSCORE_DATA* brscoredata;
-   SCIP_Bool success;
-   int e;
+   SCIP_Real violation;
 
    assert(expr != NULL);
    assert(result != NULL);
@@ -4296,34 +4295,40 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       return SCIP_OKAY;
    }
 
-   /* call branching score callbacks of nlhdlrs until one succeeds */
-   success = FALSE;
-   for( e = 0; e < expr->nenfos && !success; ++e )
+   /* TODO regard locks */
+   violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol, SCIPgetConsExprExprAuxVar(expr))
+      - expr->evalvalue);
+
+   if( violation > 0.0 )
    {
-      SCIP_CONSEXPR_NLHDLR* nlhdlr;
+      SCIP_Bool success;
+      int e;
 
-      nlhdlr = expr->enfos[e]->nlhdlr;
-      assert(nlhdlr != NULL);
-
-      SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
-   }
-
-   /* fallback: if no branch score callback were available or had success so far, define |f(x*) - z*| as the branching score,
-    * where f is the expression, x* solution values of original variables, and z* be the solution value of the linearization
-    * variable attached to expression f
-    */
-   if( !success )
-   {
-      SCIP_Real violation;
-      int c;
-
-      violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol,SCIPgetConsExprExprAuxVar(expr))
-         - expr->evalvalue);
-
-      /* add violation as branching score to all children */
-      for( c = 0; c < expr->nchildren; ++c )
+      /* call branching score callbacks of nlhdlrs until one succeeds */
+      success = FALSE;
+      for( e = 0; e < expr->nenfos && !success; ++e )
       {
-         SCIPaddConsExprExprBranchScore(scip, expr->children[c], brscoredata->brscoretag, violation);
+         SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+         nlhdlr = expr->enfos[e]->nlhdlr;
+         assert(nlhdlr != NULL);
+
+         SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
+      }
+
+      /* fallback: if no branch score callback were available or had success so far, define |f(x*) - z*| as the branching score,
+       * where f is the expression, x* solution values of original variables, and z* be the solution value of the linearization
+       * variable attached to expression f
+       */
+      if( !success )
+      {
+         int c;
+
+         /* add violation as branching score to all children */
+         for( c = 0; c < expr->nchildren; ++c )
+         {
+            SCIPaddConsExprExprBranchScore(scip, expr->children[c], brscoredata->brscoretag, violation);
+         }
       }
    }
 
