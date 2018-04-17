@@ -206,8 +206,8 @@ extern "C" {
  *
  * input:
  *  - scip : SCIP main data structure
- *  - val : buffer where to store value
  *  - expr : expression to be evaluated
+ *  - val : buffer where to store value
  *  - sol : solution that is evaluated (can be NULL)
  */
 #define SCIP_DECL_CONSEXPR_EXPREVAL(x) SCIP_RETCODE x (\

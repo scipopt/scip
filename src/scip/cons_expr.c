@@ -1180,7 +1180,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
 
    evaldata = (EXPREVAL_DATA*)data;
 
-   SCIP_CALL( (*expr->exprhdlr->eval)(scip, expr, &expr->evalvalue, evaldata->sol) );
+   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, evaldata->sol) );
    expr->evaltag = evaldata->soltag;
 
    if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
@@ -7182,6 +7182,57 @@ SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
 
       /* update statistics */
       ++(expr->exprhdlr->nsimplifycalls);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the evaluation callback of an expression handler
+ *
+ * further, allows to evaluate w.r.t. given children values
+ */
+extern
+SCIP_RETCODE SCIPevalConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 val,          /**< buffer store value of expression */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*                  sol           /**< solution that is evaluated (used by the var-expression) */
+)
+{
+   SCIP_Real* origvals = NULL;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(expr->exprhdlr->eval != NULL);
+   assert(val != NULL);
+
+   /* temporarily overwrite the evalvalue in all children with values from childrenvals */
+   if( childrenvals != NULL && expr->nchildren > 0 )
+   {
+      int c;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &origvals, expr->nchildren) );
+
+      for( c = 0; c < expr->nchildren; ++c )
+      {
+         origvals[c] = expr->children[c]->evalvalue;
+         expr->children[c]->evalvalue = childrenvals[c];
+      }
+   }
+
+   /* call expression eval callback */
+   SCIP_CALL( expr->exprhdlr->eval(scip, expr, val, sol) );
+
+   /* restore original evalvalues in children */
+   if( origvals != NULL )
+   {
+      int c;
+      for( c = 0; c < expr->nchildren; ++c )
+         expr->children[c]->evalvalue = origvals[c];
+
+      SCIPfreeBufferArray(scip, &origvals);
    }
 
    return SCIP_OKAY;

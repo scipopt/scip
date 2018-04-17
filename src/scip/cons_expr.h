@@ -328,6 +328,19 @@ SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
    SCIP_CONSEXPR_EXPR**       simplifiedexpr/**< pointer to store the simplified expression */
    );
 
+/** calls the evaluation callback of an expression handler
+ *
+ * further, allows to evaluate w.r.t. given children values
+ */
+extern
+SCIP_RETCODE SCIPevalConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 val,          /**< buffer store value of expression */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*                  sol           /**< solution that is evaluated (used by the var-expression) */
+);
+
 /** calls the separation initialization method of an expression handler */
 extern
 SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
