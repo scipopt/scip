@@ -2672,11 +2672,7 @@ SCIP_RETCODE reduce_da(
 
          if( extended )
          {
-            int todo;
-            printf("nfixed before %d \n", nfixed);
             nfixed += reduceSPGExtended(scip, graph, marked, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, root, nodearrint);
-            printf("nfixed after %d \n", nfixed);
-
          }
 
          SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
