@@ -784,21 +784,25 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    SCIP_Bool success;
    int j;
 
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(conshdlr != NULL);
+   assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
+   assert(nlhdlrexprdata != NULL);
+   assert(result != NULL);
+   assert(ncuts != NULL);
+
+   *ncuts = 0;
+   *result = SCIP_DIDNOTRUN;
+
    /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
     * propagate them
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
       return SCIP_OKAY;
 
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(conshdlr != NULL);
-   assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
-   assert(result != NULL);
-   assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
 
-   *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
