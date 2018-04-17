@@ -1125,7 +1125,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
             {
                case ClpSimplex::isFree:
                case ClpSimplex::superBasic:
-                  sol[j] = 0.0;
+                  sol[k] = 0.0;
                   break;
                case ClpSimplex::atUpperBound:
                   sol[k] = colUpper[k];
@@ -1141,7 +1141,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
          }
          else
          { /* workaround: if there is no status, we assume something */
-            sol[j] = 0.0;
+            sol[ind[j]] = 0.0;
          }
       }
    }
