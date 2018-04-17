@@ -180,6 +180,29 @@ int extendSubtreeTail(
    return n;
 }
 
+#if 0
+/** small helper */
+static
+void updateEqArrays(
+   int                   edge,               /**< the edge */
+   unsigned int*         eqstack,            /**< stores edges that were used for equality comparison */
+   int*                  eqstack_size,       /**< pointer to size of eqstack */
+   SCIP_Bool*            eqmark              /**< marks edges that were used for equality comparison */
+)
+{
+   assert(edge >= 0);
+   const unsigned int halfedge = ((unsigned int) edge) / 2;
+
+   if( !eqmark[halfedge]  )
+   {
+      eqmark[halfedge] = TRUE;
+      eqstack[*eqstack_size] = halfedge;
+
+      *eqstack_size = *eqstack_size + 1;
+   }
+}
+#endif
+
 /** can subtree be ruled out? */
 static
 SCIP_Bool ruleOutSubtree(
@@ -215,7 +238,7 @@ SCIP_Bool ruleOutSubtree(
 
             assert(flipedge(e) != curredge);
 
-            if( ecost <= currcost )
+            if( SCIPisLT(scip, ecost, currcost) )
                return TRUE;
 
             if( nodepos[graph->tail[e]] > graph->knots )
@@ -227,7 +250,7 @@ SCIP_Bool ruleOutSubtree(
                {
                   assert(basebottlenecks[start] > 0);
 
-                  if( ecost <= basebottlenecks[start] )
+                  if( SCIPisLT(scip, ecost, basebottlenecks[start]) )
                      return TRUE;
                }
                start = 0;
@@ -239,7 +262,7 @@ SCIP_Bool ruleOutSubtree(
             }
 
             for( int i = start; i < dfsdepth; i++ )
-               if( ecost <= treecosts[i] )
+               if( SCIPisLT(scip, ecost, treecosts[i]) )
                   return TRUE;
          }
    }
@@ -1601,15 +1624,16 @@ int reduceSPGExtended(
    {
       if( graph->oeat[e] != EAT_FREE )
       {
-         int doresult;
          const int erev = e + 1;
          SCIP_Bool deletable;
+
 
          assert(graph->oeat[erev] != EAT_FREE);
 
          if( !marked[e] )
          {
-            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, FALSE, nodearr, &deletable));
+            const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT);
+            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, allowequality, nodearr, &deletable));
 
             if( !deletable )
                continue;
@@ -1617,7 +1641,8 @@ int reduceSPGExtended(
 
          if( !marked[erev] )
          {
-            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, FALSE, nodearr, &deletable));
+            const SCIP_Bool allowequality = (result != NULL && result[erev] != CONNECT);
+            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, allowequality, nodearr, &deletable));
 
             if( !deletable )
                continue;
