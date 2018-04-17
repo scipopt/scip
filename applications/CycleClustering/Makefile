@@ -172,4 +172,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
+# include local targets
+include $(SCIPDIR)/make/local/make.targets
+
 #---- EOF --------------------------------------------------------------------

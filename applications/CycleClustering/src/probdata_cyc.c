@@ -287,6 +287,8 @@ SCIP_RETCODE createProbSimplifiedTest(
    {
       for( j = 0; j < i; ++j )
       {
+         if( probdata->edgevars[i][j] == NULL )
+            continue;
          /* set the objective weight for the edge-variables */
 
          /* these edges are not within a cluster */
@@ -339,7 +341,7 @@ SCIP_RETCODE createProbSimplifiedTest(
    {
       for( j = 0; j < i; ++j )
       {
-         if( NULL == probdata->edgevars[i][j][0] )
+         if( NULL == probdata->edgevars[i][j]  )
             continue;
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sumedge_%d_%d",  i+1, j+1 );
          SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 1.0, 1.0 ) );
@@ -483,6 +485,8 @@ SCIP_RETCODE createProbSimplified(
             /* these are the edges that are between consequtive clusters */
             SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][1], (probdata->cmatrix[i][j] - probdata->cmatrix[j][i]) -  (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) * scale) );
             SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[j][i][1], (probdata->cmatrix[j][i] - probdata->cmatrix[i][j]) -  (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) * scale) );
+
+            SCIP_CALL( SCIPaddOrigObjoffset(scip, (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) * scale) );
 
             /* create constraints that determine when the edge-variables have to be non-zero*/
             for( c1 = 0; c1 < ncluster; ++c1 )

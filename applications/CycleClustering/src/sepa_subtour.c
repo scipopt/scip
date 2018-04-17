@@ -84,6 +84,8 @@ SCIP_RETCODE addSubtourCuts(
    int intermediate;                         /* if arc is contracted, we use this for the intermediate node between current and successor */
    int anchor;                               /* state that we want to construct a violated subtour inequality from */
    int ncontractions;                        /* number of contracted arcs along the subtour */
+   int liftabley;
+   int liftablez;
    int c;
    int k;
    int l;
@@ -157,6 +159,8 @@ SCIP_RETCODE addSubtourCuts(
          if( isduplicate )
             continue;
 
+         liftabley = cyclelength - 1;
+         liftablez = SCIPcycGetNCluster(scip) - cyclelength - 1;
          /* Now build the cut and add the subtour inequality */
          (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "subtour_%d_length_%d_contracted_%d", anchor, cyclelength, ncontractions );
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), cyclelength + ncontractions - 1.0, FALSE, FALSE, TRUE) );
@@ -171,10 +175,25 @@ SCIP_RETCODE addSubtourCuts(
             {
                SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][intermediate][1], 1.0) );
                SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0], 1.0) );
+               if( liftabley > 0 && SCIPvarGetLPSol(edgevars[MAX(currentnode, intermediate)][MIN(currentnode, intermediate)][0]) > 0 )
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(currentnode, intermediate)][MIN(currentnode, intermediate)][0], 1.0) );
+                  liftabley--;
+               }
+               if( liftablez > 0 && SCIPvarGetLPSol(edgevars[MAX(currentnode, intermediate)][MIN(currentnode, intermediate)][0]) > 0 )
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[intermediate][successor][1], 1.0) );
+                  liftablez--;
+               }
             }
             else
             {
                SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][successor][1], 1.0) );
+               if( liftabley > 0 && SCIPvarGetLPSol(edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0]) > 0 )
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0], 1.0) );
+                  liftabley--;
+               }
             }
          }
          SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
@@ -228,6 +247,8 @@ SCIP_RETCODE addPathCuts(
    int k;
    int i;
    int j;
+   int nz;
+   int ny;
 
    edgevars = SCIPcycGetEdgevars(scip);
    nstates = SCIPdigraphGetNNodes(adjacencygraph);
@@ -270,6 +291,9 @@ SCIP_RETCODE addPathCuts(
             if( iscontracted[start][end] != -1 )
                ncontractions++;
 
+            nz = pathlength;
+            ny = 0;
+
             /*construct the corresponding inequality and add it to scip */
             (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "path_%d_%d_length_%d_contracted_%d", start, end, pathlength, ncontractions );
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), (SCIP_Real) pathlength + ncontractions, FALSE, FALSE, TRUE) );
@@ -284,10 +308,25 @@ SCIP_RETCODE addPathCuts(
                {
                   SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][intermediate][1], 1.0) );
                   SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0], 1.0) );
+                  if( nz < SCIPcycGetNCluster(scip) && SCIPisPositive(scip, SCIPvarGetLPSol(edgevars[intermediate][successor][1])) )
+                  {
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[intermediate][successor][1], 1.0) );
+                     nz++;
+                  }
+                  if( ny < pathlength - 2 && SCIPisPositive(scip, SCIPvarGetLPSol(edgevars[MAX(currentnode, intermediate)][MIN(currentnode, intermediate)][0])) )
+                  {
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(currentnode, intermediate)][MIN(currentnode, intermediate)][0], 1.0) );
+                     ny ++;
+                  }
                }
                else
                {
                   SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][successor][1], 1.0) );
+                  if( ny < pathlength - 2 && SCIPisPositive(scip, SCIPvarGetLPSol(edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0])) )
+                  {
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0], 1.0) );
+                     ny ++;
+                  }
                }
             }
 
