@@ -2983,6 +2983,9 @@ SCIP_RETCODE SCIPlpiGetBase(
 
    if( cstat != NULL )
    {
+      const double* lb = clp->getColLower();
+      const double* ub = clp->getColUpper();
+
       for( int j = 0; j < clp->numberColumns(); ++j )
       {
 	 switch ( clp->getColumnStatus(j) )
@@ -2995,18 +2998,26 @@ SCIP_RETCODE SCIPlpiGetBase(
             break;
 	 case ClpSimplex::atUpperBound:
             cstat[j] = SCIP_BASESTAT_UPPER;
+            assert( ub[j] < COIN_DBL_MAX );
             break;
 	 case ClpSimplex::atLowerBound:
             cstat[j] = SCIP_BASESTAT_LOWER;
+            assert( lb[j] > -COIN_DBL_MAX );
             break;
 	 case ClpSimplex::superBasic:
             cstat[j] = SCIP_BASESTAT_ZERO;
             break;
 	 case ClpSimplex::isFixed:
 	    if (clp->getReducedCost()[j] > 0.0)
+            {
 	       cstat[j] = SCIP_BASESTAT_LOWER;
+               assert( lb[j] > -COIN_DBL_MAX );
+            }
 	    else
+            {
 	       cstat[j] = SCIP_BASESTAT_UPPER;
+               assert( ub[j] < COIN_DBL_MAX );
+            }
 	    break;
 	 default: SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
