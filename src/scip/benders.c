@@ -662,6 +662,7 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_DECL_BENDERSGETVAR((*bendersgetvar)),/**< returns the master variable for a given subproblem variable */
    SCIP_DECL_BENDERSCREATESUB((*benderscreatesub)),/**< creates a Benders' decomposition subproblem */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve)),/**< called prior to the subproblem solving loop */
+   SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex)),/**< the solving method for convex Benders' decomposition subproblems */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve)),/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub)),/**< the freeing method for the Benders' decomposition subproblems */
@@ -676,10 +677,11 @@ SCIP_RETCODE SCIPbendersCreate(
    assert(desc != NULL);
 
    /* Checking whether the benderssolvesub and the bendersfreesub are both implemented or both are not implemented */
-   if( (benderssolvesub == NULL && bendersfreesub != NULL) || (benderssolvesub != NULL && bendersfreesub == NULL) )
+   if( (benderssolvesubconvex == NULL && benderssolvesub == NULL && bendersfreesub != NULL)
+      || ((benderssolvesubconvex != NULL || benderssolvesub != NULL) && bendersfreesub == NULL) )
    {
-      SCIPerrorMessage("Benders' decomposition <%s> requires that both bendersSolvesub%s and bendersFreesub%s are \
-         implemented or neither\n", name, name, name);
+      SCIPerrorMessage("Benders' decomposition <%s> requires that if bendersFreesub%s is implemented, then at least "
+         "one of bendersSolvesubconvex%s or bendersSolvesub%s are implemented.\n", name, name, name, name);
       return SCIP_INVALIDCALL;
    }
 
@@ -703,6 +705,7 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->bendersgetvar = bendersgetvar;
    (*benders)->benderscreatesub = benderscreatesub;
    (*benders)->benderspresubsolve = benderspresubsolve;
+   (*benders)->benderssolvesubconvex = benderssolvesubconvex;
    (*benders)->benderssolvesub = benderssolvesub;
    (*benders)->benderspostsolve = benderspostsolve;
    (*benders)->bendersfreesub = bendersfreesub;
@@ -923,7 +926,8 @@ SCIP_RETCODE createSubproblems(
 
          /* if the user has not implemented a solve subproblem callback, then the subproblem solves are performed
           * internally. To be more efficient the subproblem is put into probing mode. */
-         if( benders->benderssolvesub == NULL && SCIPgetStage(subproblem) <= SCIP_STAGE_PROBLEM )
+         if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
+            && SCIPgetStage(subproblem) <= SCIP_STAGE_PROBLEM )
             SCIP_CALL( initialiseLPSubproblem(benders, i) );
       }
       else
@@ -935,7 +939,7 @@ SCIP_RETCODE createSubproblems(
 
          /* because the subproblems could be reused in the copy, the event handler is not created again.
           * NOTE: This currently works with the benders_default implementation. It may not be very general. */
-         if( benders->benderssolvesub == NULL && !benders->iscopy )
+         if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL && !benders->iscopy )
          {
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
@@ -1485,7 +1489,7 @@ SCIP_RETCODE SCIPbendersInitpre(
       /* check the subproblem independence and update the auxiliary variable lower bounds.
        * This check is only performed if the user has not implemented a solve subproblem function.
        */
-      if( benders->benderssolvesub == NULL )
+      if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL )
         SCIP_CALL( checkSubproblemIndependenceAndLowerbound(set->scip, benders, lowerbound) );
 
       /* adding the auxiliary variables to the master problem */
@@ -2144,7 +2148,8 @@ SCIP_RETCODE SCIPbendersExec(
    {
       SCIP_BENDERSSOLVELOOP solveloop;    /* identifies what problem type is solve in this solve loop */
 
-      if( benders->benderssolvesub != NULL )
+      /* if either benderssolvesubconvex or benderssolvesub are implemented, then the user callbacks are invoked */
+      if( benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL )
       {
          if( l == 0 )
             solveloop = SCIP_BENDERSSOLVELOOP_USERCONVEX;
@@ -2256,7 +2261,7 @@ SCIP_RETCODE executeUserDefinedSolvesub(
 {
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
-   assert(benders->benderssolvesub != NULL);
+   assert(benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL);
 
    assert(solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP);
 
@@ -2264,8 +2269,25 @@ SCIP_RETCODE executeUserDefinedSolvesub(
 
    /* calls the user defined subproblem solving method. Only the convex relaxations are solved during the Large
     * Neighbourhood Benders' Search. */
-   SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnumber,
-         solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX, onlyCheckSubproblemConvexRelax(benders), objective, result) );
+   if( solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX )
+   {
+      if( benders->benderssolvesubconvex != NULL )
+      {
+         SCIP_CALL( benders->benderssolvesubconvex(set->scip, benders, sol, probnumber,
+               onlyCheckSubproblemConvexRelax(benders), objective, result) );
+      }
+      else
+         (*result) = SCIP_DIDNOTRUN;
+   }
+   else if( solveloop == SCIP_BENDERSSOLVELOOP_USERCIP )
+   {
+      if( benders->benderssolvesub != NULL )
+      {
+         SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnumber, objective, result) );
+      }
+      else
+         (*result) = SCIP_DIDNOTRUN;
+   }
 
    /* evaluate result */
    if( (*result) != SCIP_DIDNOTRUN
@@ -2322,8 +2344,6 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
    if( solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP )
    {
-      assert(benders->benderssolvesub != NULL);
-
       /* calls the user defined subproblem solving method. Only the convex relaxations are solved during the Large
        * Neighbourhood Benders' Search. */
       SCIP_CALL( executeUserDefinedSolvesub(benders, set, sol, probnumber, solveloop, infeasible, type, &objective,
@@ -2531,7 +2551,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    }
 
    /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
-   if( benders->benderssolvesub != NULL)
+   if( benders->benderssolvesubconvex != NULL ||  benders->benderssolvesub != NULL)
    {
       SCIP_BENDERSSOLVELOOP solveloop;
       SCIP_RESULT result;
@@ -2839,7 +2859,8 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
    )
 {
    assert(benders != NULL);
-   assert(benders->bendersfreesub != NULL || (benders->bendersfreesub == NULL && benders->benderssolvesub == NULL));
+   assert(benders->bendersfreesub != NULL
+      || (benders->bendersfreesub == NULL && benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL));
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
    if( benders->bendersfreesub != NULL )
@@ -3069,6 +3090,17 @@ void SCIPbendersSetPresubsolve(
    assert(benders != NULL);
 
    benders->benderspresubsolve = benderspresubsolve;
+}
+
+/** sets convex solve callback of Benders' decomposition */
+void SCIPbendersSetSolvesubconvex(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex))/**< solving method for the convex Benders' decomposition subproblem */
+   )
+{
+   assert(benders != NULL);
+
+   benders->benderssolvesubconvex = benderssolvesubconvex;
 }
 
 /** sets solve callback of Benders' decomposition */

@@ -236,6 +236,24 @@ SCIP_DECL_BENDERSPRESUBSOLVE(bendersPresubsolveObj)
 }
 
 
+/** method called to solve the convex relaxation of an individual subproblem of the Benders' decomposition */
+static
+SCIP_DECL_BENDERSSOLVESUBCONVEX(bendersSolvesubconvexObj)
+{  /*lint --e{715}*/
+   SCIP_BENDERSDATA* bendersdata;
+
+   bendersdata = SCIPbendersGetData(benders);
+   assert(bendersdata != NULL);
+   assert(bendersdata->objbenders != NULL);
+
+   /* call virtual method of benders object */
+   SCIP_CALL( bendersdata->objbenders->scip_solvesubconvex(scip, benders, sol, probnumber, onlyconvexcheck, objective,
+         result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** method called to solve an individual subproblem of the Benders' decomposition */
 static
 SCIP_DECL_BENDERSSOLVESUB(bendersSolvesubObj)
@@ -247,8 +265,7 @@ SCIP_DECL_BENDERSSOLVESUB(bendersSolvesubObj)
    assert(bendersdata->objbenders != NULL);
 
    /* call virtual method of benders object */
-   SCIP_CALL( bendersdata->objbenders->scip_solvesub(scip, benders, sol, probnumber, convex, onlyconvexcheck,
-         objective, result) );
+   SCIP_CALL( bendersdata->objbenders->scip_solvesub(scip, benders, sol, probnumber, objective, result) );
 
    return SCIP_OKAY;
 }
@@ -335,7 +352,7 @@ SCIP_RETCODE SCIPincludeObjBenders(
          objbenders->scip_priority_, objbenders->scip_cutlp_, objbenders->scip_cutpseudo_,
          objbenders->scip_cutrelax_, objbenders->scip_shareauxvars_, bendersCopyObj, bendersFreeObj, bendersInitObj,
          bendersExitObj, bendersInitpreObj, bendersExitpreObj, bendersInitsolObj, bendersExitsolObj, bendersGetvarObj,
-         bendersCreatesubObj, bendersPresubsolveObj, bendersSolvesubObj, bendersPostsolveObj,
+         bendersCreatesubObj, bendersPresubsolveObj, bendersSolvesubconvexObj, bendersSolvesubObj, bendersPostsolveObj,
          bendersFreesubObj, bendersdata) ); /*lint !e429*/
 
    /* registering the Benders' decomposition structure pointer with the ObjBenders class */

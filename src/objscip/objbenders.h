@@ -195,7 +195,20 @@ public:
     *
     *   @see SCIP_DECL_BENDERSPRESUBSOLVE(x) in @ref type_benders.h
     */
-   virtual SCIP_DECL_BENDERSPRESUBSOLVE(scip_presubsolve) = 0;
+   virtual SCIP_DECL_BENDERSPRESUBSOLVE(scip_presubsolve)
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
+
+   /** the solving method for a single convex Benders' decomposition subproblem. The solving methods are separated so
+    *  that they can be called in parallel.
+    *
+    *   @see SCIP_DECL_BENDERSSOLVESUBCONVEX(x) in @ref type_benders.h
+    */
+   virtual SCIP_DECL_BENDERSSOLVESUBCONVEX(scip_solvesubconvex)
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
 
    /** the solving method for a single Benders' decomposition subproblem. The solving methods are separated so that they
     *  can be called in parallel.
