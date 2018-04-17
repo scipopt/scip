@@ -1626,13 +1626,12 @@ int reduceSPGExtended(
       {
          const int erev = e + 1;
          SCIP_Bool deletable;
-
+         const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
 
          assert(graph->oeat[erev] != EAT_FREE);
 
          if( !marked[e] )
          {
-            const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT);
             SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, allowequality, nodearr, &deletable));
 
             if( !deletable )
@@ -1641,7 +1640,6 @@ int reduceSPGExtended(
 
          if( !marked[erev] )
          {
-            const SCIP_Bool allowequality = (result != NULL && result[erev] != CONNECT);
             SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, allowequality, nodearr, &deletable));
 
             if( !deletable )
