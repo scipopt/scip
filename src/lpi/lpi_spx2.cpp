@@ -371,6 +371,7 @@ public:
       case SPxSolver::INFEASIBLE:
          return "INFEASIBLE";
       default:
+         /* since version 3.1.1.4.3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
          return "UNKNOWN";
       }  /*lint !e788*/
    }
@@ -2369,6 +2370,7 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
    default:
+      /* since version 3.1.1.4.3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
       return SCIP_LPERROR;
    }  /*lint !e788*/
 }
@@ -2539,6 +2541,7 @@ SCIP_RETCODE lpiStrongbranch(
          case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
          case SPxSolver::ABORT_ITER:
          case SPxSolver::ABORT_CYCLING:
+         case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
             *down = spx->objValueReal();
             break;
          case SPxSolver::ABORT_VALUE:
@@ -2561,7 +2564,10 @@ SCIP_RETCODE lpiStrongbranch(
 #else
          /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
           * pre-strong-branching basis and try again with reduced iteration limit */
-         if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim )
+         if( (status == SPxSolver::ABORT_CYCLING
+                || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
+                || status == SPxSolver::SINGULAR)
+             && !fromparentbasis && spx->numIterations() < itlim )
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n",
                              itlim - spx->numIterations());
@@ -2622,6 +2628,7 @@ SCIP_RETCODE lpiStrongbranch(
             case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
             case SPxSolver::ABORT_ITER:
             case SPxSolver::ABORT_CYCLING:
+            case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
                *up = spx->objValueReal();
                break;
             case SPxSolver::ABORT_VALUE:
@@ -2644,7 +2651,10 @@ SCIP_RETCODE lpiStrongbranch(
 #else
             /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
              * pre-strong-branching basis and try again with reduced iteration limit */
-            else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim )
+            else if( (status == SPxSolver::ABORT_CYCLING
+                  || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
+                  || status == SPxSolver::SINGULAR)
+               && !fromparentbasis && spx->numIterations() < itlim )
             {
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->numIterations());
                assert( ! spx->hasPreStrongbranchingBasis() );
