@@ -2541,7 +2541,9 @@ SCIP_RETCODE lpiStrongbranch(
          case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
          case SPxSolver::ABORT_ITER:
          case SPxSolver::ABORT_CYCLING:
+#if SOPLEX_APIVERSION >= 3
          case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
+#endif
             *down = spx->objValueReal();
             break;
          case SPxSolver::ABORT_VALUE:
@@ -2628,7 +2630,9 @@ SCIP_RETCODE lpiStrongbranch(
             case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
             case SPxSolver::ABORT_ITER:
             case SPxSolver::ABORT_CYCLING:
+#if SOPLEX_APIVERSION >= 3
             case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
+#endif
                *up = spx->objValueReal();
                break;
             case SPxSolver::ABORT_VALUE:
