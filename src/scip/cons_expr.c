@@ -4305,10 +4305,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       nlhdlr = expr->enfos[e]->nlhdlr;
       assert(nlhdlr != NULL);
 
-      if( nlhdlr->branchscore != NULL )
-      {
-         SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
-      }
+      SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
    }
 
    /* fallback: if no branch score callback were available or had success so far, define |f(x*) - z*| as the branching score,
@@ -9983,6 +9980,32 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    if( *infeasible )
       ++nlhdlr->ncutoffs;
    ++nlhdlr->npropcalls;
+
+   return SCIP_OKAY;
+}
+
+/** calls the nonlinear handler branching score callback */
+SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_SOL*                     sol,              /**< solution (NULL for the LP solution) */
+   unsigned int                  brscoretag,       /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
+   SCIP_Bool*                    success           /**< buffer to store whether the branching score callback was successful */
+)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(success != NULL);
+
+   if( nlhdlr->branchscore == NULL )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, nlhdlrexprdata, sol, brscoretag, success) );
 
    return SCIP_OKAY;
 }

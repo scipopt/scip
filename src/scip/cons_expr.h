@@ -1370,6 +1370,18 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
 );
 
+/** calls the nonlinear handler branching score callback */
+EXTERN
+SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_SOL*                     sol,              /**< solution (NULL for the LP solution) */
+   unsigned int                  brscoretag,       /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
+   SCIP_Bool*                    success           /**< buffer to store whether the branching score callback was successful */
+);
+
 #ifdef __cplusplus
 }
 #endif
