@@ -89,8 +89,8 @@ struct SCIP_Benders
    SCIP_Real             bestsubprobbound;   /**< the best bound for the subproblems */
    int                   naddedsubprobs;     /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
-   SCIP_Bool*            subprobislp;        /**< is the subproblem formulated as an LP? */
-   int                   nlpsubprobs;        /**< the number of LP subproblems */
+   SCIP_Bool*            subprobisconvex;    /**< is the subproblem convex? This implies that the dual sol can be used for cuts */
+   int                   nconvexsubprobs;    /**< the number of subproblems that are convex */
    SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
                                                   This flag is used when retransforming the problem.*/
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted

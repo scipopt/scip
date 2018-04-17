@@ -1668,7 +1668,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
 
                /* solving the subproblem using the best solution to the master problem */
                SCIP_CALL( SCIPsolveBendersSubproblem(scip, benders[idx], bestsol, subidx, &infeasible,
-                     SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
+                     SCIP_BENDERSENFOTYPE_CHECK, TRUE, NULL) );
 
                if( infeasible )
                   SCIPdialogMessage(scip, NULL, "subproblem %d is infeasible.\n", subidx);
@@ -1676,7 +1676,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                {
                   SCIPdialogMessage(scip, NULL, "\n");
                   SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
-                  if( SCIPbendersSubprobIsLP(benders[idx], subidx) )
+                  if( SCIPbendersSubprobIsConvex(benders[idx], subidx) )
                      SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
                   else
                      SCIP_CALL( SCIPprintBestSol(subproblem, NULL, printzeros) );

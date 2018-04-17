@@ -175,6 +175,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    int                   probnum,            /**< the subproblem number */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of an enhancement? */
+   SCIP_Bool*            solved,             /**< flag to indicate whether the subproblem was solved */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
@@ -198,7 +199,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvemip,           /**< directly solve the MIP subproblem */
+   SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
 
 /** frees the subproblems. */
@@ -339,16 +341,6 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
 /** Removes the subproblems from the Benders' decomposition data */
 void SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   );
-
-/** sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
- *  process. One example is when the three-phase method is employed, where the first phase solves the of both the master
- *  and subproblems and by the third phase the integer subproblem is solved. */
-extern
-void SCIPbendersSetSubprobIsLP(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
    );
 
 /** sets the subproblem setup flag */

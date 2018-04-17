@@ -247,7 +247,8 @@ SCIP_DECL_BENDERSSOLVESUB(bendersSolvesubObj)
    assert(bendersdata->objbenders != NULL);
 
    /* call virtual method of benders object */
-   SCIP_CALL( bendersdata->objbenders->scip_solvesub(scip, benders, sol, probnumber, infeasible) );
+   SCIP_CALL( bendersdata->objbenders->scip_solvesub(scip, benders, sol, probnumber, convex, onlyconvexcheck,
+         objective, result) );
 
    return SCIP_OKAY;
 }

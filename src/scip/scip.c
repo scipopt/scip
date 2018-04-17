@@ -6420,7 +6420,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvemip,           /**< directly solve the MIP subproblem */
+   SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    )
 {
    assert(scip != NULL);
@@ -6428,7 +6429,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvemip) );
+   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvemip, objective) );
 
    return SCIP_OKAY;
 }

@@ -43,9 +43,10 @@ typedef enum SCIP_BendersEnfoType SCIP_BENDERSENFOTYPE;  /**< indicates the call
 
 enum SCIP_BendersSolveLoop
 {
-   SCIP_BENDERSSOLVELOOP_LP      = 0,        /**< the linear programming relaxation is solved in this iteration of the loop */
-   SCIP_BENDERSSOLVELOOP_CIP     = 1,        /**< the CIP is solved in this iteration of the loop */
-   SCIP_BENDERSSOLVELOOP_USER    = 2         /**< the user defined solve function is called */
+   SCIP_BENDERSSOLVELOOP_CONVEX     = 0,     /**< the relaxation is solved in this iteration of the loop */
+   SCIP_BENDERSSOLVELOOP_CIP        = 1,     /**< the CIP is solved in this iteration of the loop */
+   SCIP_BENDERSSOLVELOOP_USERCONVEX = 2,     /**< the user defined solve function is called */
+   SCIP_BENDERSSOLVELOOP_USERCIP    = 3      /**< the user defined solve function is called */
 };
 typedef enum SCIP_BendersSolveLoop SCIP_BENDERSSOLVELOOP;   /**< identifies the type of problem solved in each solve loop */
 
@@ -138,6 +139,14 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  some settings will be overridden by the standard solving method included in the Benders' decomposition framework.
  *  If a special solving method is desired, the user can implement the bendersSolvesubXyz callback.
  *
+ *  If the user defines a subproblem solving method, then in this method, the user must specify whether the subproblem
+ *  is convex. This is necessary because the dual solutions from convex problems can be used to generate cuts. The
+ *  classical Benders' optimality and feasibility cuts require that the subproblems are convex. If the subproblem is
+ *  convex, then the user must call SCIPbendersSetSubprobIsConvex()
+ *
+ *  If the user does NOT implement a subporblem solving method, then the convexity of the problem is determined
+ *  internally.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition data structure
@@ -166,10 +175,20 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  - benders         : the Benders' decomposition data structure
  *  - sol             : the solution that will be checked in the subproblem. Can be NULL.
  *  - probnumber      : the subproblem problem number
- *  - infeasible      : pointer to store whether the problem is infeasible
+ *  - convex          : flag to indicate that the convex relaxation of the subproblem should be solved
+ *  - onlyconvexcheck : flag to indicate that only the convex relaxations will be checked in this solving loop. This is
+ *                      a feature of the Large Neighbourhood Benders' Search
+ *  - objective       : variable to return the objective function value of the subproblem
+ *  - result          : the result from solving the subproblem
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_DIDNOTRUN  : the subproblem was not solved in this iteration
+ *  - SCIP_FEASIBLE   : the subproblem is solved and is feasible
+ *  - SCIP_INFEASIBLE : the subproblem is solved and is infeasible
+ *  - SCIP_UNBOUNDED  : the subproblem is solved and is unbounded
  */
 #define SCIP_DECL_BENDERSSOLVESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol, int probnumber,\
-  SCIP_Bool* infeasible)
+  SCIP_Bool convex, SCIP_Bool onlyconvexcheck, SCIP_Real* objective, SCIP_RESULT* result)
 
 /** the post-solve method for Benders' decomposition. The post-solve method is called after the subproblems have
  * been solved but before they have been freed. After the solving of the Benders' decomposition subproblems, the
