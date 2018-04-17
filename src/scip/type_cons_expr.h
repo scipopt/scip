@@ -503,7 +503,7 @@ typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 #define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
 #define SCIP_CONSEXPR_EXPRENFO_INTEVAL        0x4u /**< interval evaluation */
 #define SCIP_CONSEXPR_EXPRENFO_REVERSEPROP    0x8u /**< reverse propagation */
-#define SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE    0x16u /**< setting branching scores */
+#define SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE    0x10u /**< setting branching scores */
 #define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) /**< all enforcement methods */
 
 /** type for exprenfo bitflags */
