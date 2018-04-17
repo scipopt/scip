@@ -1031,7 +1031,8 @@ SCIP_Bool hasQuadvarHpProperty(
    haslhs = !SCIPisInfinity(scip, -consdata->lhs);
    hasrhs = !SCIPisInfinity(scip, consdata->rhs);
 
-   return SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
+   return SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1
+      && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
       && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && ((quadcoef < 0.0 && !haslhs) || (quadcoef > 0.0 && !hasrhs));
 }
 
@@ -11391,7 +11392,7 @@ void consdataFindUnlockedLinearVar(
          neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
       }
 
-      if( SCIPvarGetNLocksDown(consdata->linvars[i]) - neglock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - neglock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -11400,7 +11401,7 @@ void consdataFindUnlockedLinearVar(
             consdata->linvar_maydecrease = i;
       }
 
-      if( SCIPvarGetNLocksDown(consdata->linvars[i]) - poslock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - poslock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -13323,7 +13324,8 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       /* @todo try to be more clever, but variable locks that depend on the bounds of other variables are not trival to maintain */
-      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->quadvarterms[i].var, SCIP_LOCKTYPE_MODEL, nlockspos+nlocksneg, nlockspos+nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->quadvarterms[i].var, SCIP_LOCKTYPE_MODEL, nlockspos+nlocksneg,
+         nlockspos+nlocksneg) );
    }
 
    return SCIP_OKAY;

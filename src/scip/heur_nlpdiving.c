@@ -441,7 +441,7 @@ SCIP_RETCODE chooseVeclenVar(
 
       /* check whether the variable is roundable */
       *bestcandmayround = *bestcandmayround && (SCIPvarMayRoundDown(var) || SCIPvarMayRoundUp(var));
-      nlocks = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var);
+      nlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 
       /* smaller score is better */
       score = (objdelta + SCIPsumepsilon(scip))/((SCIP_Real)nlocks+1.0);
@@ -558,10 +558,10 @@ SCIP_RETCODE chooseCoefVar(
             if( roundup )
             {
                frac = 1.0 - frac;
-               nviolrows = SCIPvarGetNLocksUp(var);
+               nviolrows = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
             }
             else
-               nviolrows = SCIPvarGetNLocksDown(var);
+               nviolrows = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
 
             /* penalize too small fractions */
             if( SCIPisEQ(scip, frac, 0.01) )
@@ -599,8 +599,8 @@ SCIP_RETCODE chooseCoefVar(
       else
       {
          /* the candidate may not be rounded */
-         nlocksdown = SCIPvarGetNLocksDown(var);
-         nlocksup = SCIPvarGetNLocksUp(var);
+         nlocksdown = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
+         nlocksup = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 
          roundup = (nlocksdown > nlocksup);
          if( !roundup )

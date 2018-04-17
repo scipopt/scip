@@ -416,7 +416,7 @@ SCIP_RETCODE checkCands(
          {
             SCIP_Real roundedvalue;
 
-            if( SCIPvarGetNLocksUp(vars[i]) > SCIPvarGetNLocksDown(vars[i]) )
+            if( SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) )
             {
                roundedvalue = SCIPceil(scip, value - 1.0);
             }

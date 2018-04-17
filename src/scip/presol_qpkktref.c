@@ -1539,7 +1539,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
    int mayincrease;
    int maydecrease;
    int objind = -1;
-   
+
    SCIP_VAR* origObjVar;
    SCIP_Real origObjConstant = 0.0;
    SCIP_Real origObjScalar = 1.0;
@@ -1674,24 +1674,27 @@ SCIP_RETCODE checkConsQuadraticProblem(
     * whether 'objvar' is part of a linear constraint can be deduced from the variable locks */
    if( SCIPisFeasEQ(scip, quadlhs, quadrhs) )
    {
-      if( SCIPvarGetNLocksDown(*objvar) != 1 || SCIPvarGetNLocksUp(*objvar) != 1 )
+      if( SCIPvarGetNLocksDownType(*objvar, SCIP_LOCKTYPE_MODEL) != 1
+         || SCIPvarGetNLocksUpType(*objvar, SCIP_LOCKTYPE_MODEL) != 1 )
          return SCIP_OKAY;
    }
    else
    {
       assert( SCIPisInfinity(scip, -quadlhs) || SCIPisInfinity(scip, quadrhs) );
 
-      if( ( SCIPvarGetNLocksDown(*objvar) != 1 || SCIPvarGetNLocksUp(*objvar) != 0 )
-           && ( SCIPvarGetNLocksDown(*objvar) != 0 || SCIPvarGetNLocksUp(*objvar) != 1 ) )
+      if( ( SCIPvarGetNLocksDownType(*objvar, SCIP_LOCKTYPE_MODEL) != 1
+            || SCIPvarGetNLocksUpType(*objvar, SCIP_LOCKTYPE_MODEL) != 0 )
+         && ( SCIPvarGetNLocksDownType(*objvar, SCIP_LOCKTYPE_MODEL) != 0
+            || SCIPvarGetNLocksUpType(*objvar, SCIP_LOCKTYPE_MODEL) != 1 ) )
          return SCIP_OKAY;
    }
-   
+
    /* check bounds of original objective variable */
    origObjVar = lintermvars[objind];
    SCIP_CALL( SCIPvarGetOrigvarSum(&origObjVar, &origObjScalar, &origObjConstant) );
    if (origObjVar == NULL)
       return SCIP_OKAY;
-  
+
    if (SCIPisFeasPositive(scip, origObjScalar))
    {
 	   origObjUb = SCIPvarGetUbOriginal(origObjVar);
@@ -1702,12 +1705,12 @@ SCIP_RETCODE checkConsQuadraticProblem(
 	   origObjUb = -SCIPvarGetLbOriginal(origObjVar);
 	   origObjLb = -SCIPvarGetUbOriginal(origObjVar);
        origObjScalar *= -1;
-       origObjConstant *= -1;	   
+       origObjConstant *= -1;
    }
-   
+
    /* not every optimal solution of the problem is a KKT point if the objective variable is bounded */
    if( SCIPisFeasPositive(scip, obj))
-   {	  
+   {
 	  if ( !SCIPisInfinity(scip, -origObjLb))
 	     return SCIP_OKAY;
 	  if ( !SCIPisInfinity(scip, origObjUb)
@@ -1715,7 +1718,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
 	     return SCIP_OKAY;
    }
    else
-   {			  
+   {
       if ( !SCIPisInfinity(scip, origObjUb) )
          return SCIP_OKAY;
       if ( !SCIPisInfinity(scip, -origObjLb)
@@ -1723,7 +1726,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
          return SCIP_OKAY;
    }
 
-   
+
    *isqp = TRUE;
 
    return SCIP_OKAY;

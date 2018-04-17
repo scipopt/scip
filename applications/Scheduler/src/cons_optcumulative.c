@@ -468,10 +468,10 @@ SCIP_RETCODE unlockRounding(
    )
 {
    /* rounding up may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, binvar, cons, SCIP_LOCKTYPE_MODEL, FALSE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, binvar, cons, FALSE, TRUE) );
 
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIP_LOCKTYPE_MODEL, downlock, uplock) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, downlock, uplock) );
 
    return SCIP_OKAY;
 }

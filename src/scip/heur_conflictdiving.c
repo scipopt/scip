@@ -29,7 +29,7 @@
 #define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. conflict locks"
 #define HEUR_DISPCHAR                '~'
 #define HEUR_PRIORITY                1
-#define HEUR_FREQ                    10
+#define HEUR_FREQ                    -1
 #define HEUR_FREQOFS                 0
 #define HEUR_MAXDEPTH                -1
 #define HEUR_TIMING                  SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPPLUNGE
@@ -282,8 +282,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   nlocksup = SCIPvarGetNLocksUp(cand);
-   nlocksdown = SCIPvarGetNLocksDown(cand);
+   nlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
+   nlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
 
    nconflictlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_CONFLICT);
    nconflictlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_CONFLICT);
@@ -375,7 +375,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
       *score = candsfrac;
 
       if( nconflictlocksup > 0 )
-         *score += 10 * nconflictlocksup / conflictlocksum;
+         *score += (10.0 * nconflictlocksup / conflictlocksum);
 
       *score += (scalefactor * nlocksup / MAX(1.0, locksum));
    }
@@ -391,7 +391,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
       *score = candsfrac;
 
       if( nconflictlocksdown > 0 )
-         *score += 10 * nconflictlocksdown / conflictlocksum;
+         *score += (10.0 * nconflictlocksdown / conflictlocksum);
 
       *score += (scalefactor * nlocksdown / MAX(1.0, locksum));
    }

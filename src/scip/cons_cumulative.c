@@ -3338,7 +3338,7 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
 
       objval = SCIPvarGetObj(var);
 
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] && !SCIPisNegative(scip, objval) )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == downlocks[v] && !SCIPisNegative(scip, objval) )
       {
          int ub;
 
@@ -3356,7 +3356,7 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
          }
       }
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] && !SCIPisPositive(scip, objval) )
+      if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == uplocks[v] && !SCIPisPositive(scip, objval) )
       {
          int lb;
 
@@ -3705,7 +3705,8 @@ SCIP_Bool isConsIndependently(
       var = vars[v];
       assert(var != NULL);
 
-      if( SCIPvarGetNLocksDown(var) > (int)downlocks[v] || SCIPvarGetNLocksUp(var) > (int)uplocks[v] )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > (int)downlocks[v]
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > (int)uplocks[v] )
          return FALSE;
    }
 
@@ -7895,7 +7896,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
          continue;
 
 
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == downlocks[v] )
       {
          SCIP_CALL( varMayRoundDown(scip, var, &roundable) );
 
@@ -7942,7 +7943,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       if( ub - lb <= 0 )
          continue;
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] )
+      if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == uplocks[v] )
       {
          SCIP_CALL( varMayRoundUp(scip, var, &roundable) );
 
@@ -9455,7 +9456,7 @@ SCIP_RETCODE fixIntegerVariableUb(
    assert((int)TRUE == 1);
    assert((int)FALSE == 0);
 
-   if( SCIPvarGetNLocksUp(var) > (int)(uplock) )
+   if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > (int)(uplock) )
       return SCIP_OKAY;
 
    SCIP_CALL( varMayRoundUp(scip, var, &roundable) );
@@ -9507,7 +9508,7 @@ SCIP_RETCODE fixIntegerVariableLb(
    assert((int)TRUE == 1);
    assert((int)FALSE == 0);
 
-   if( SCIPvarGetNLocksDown(var) > (int)(downlock) )
+   if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > (int)(downlock) )
       return SCIP_OKAY;
 
    SCIP_CALL( varMayRoundDown(scip, var, &roundable) );
@@ -10076,7 +10077,7 @@ SCIP_RETCODE presolveConsEst(
          /* check if the cumulative constraint is the only one looking this variable down and if the objective function
           * is in favor of rounding the variable down
           */
-         if( SCIPvarGetNLocksDown(var) == (int)(downlocks[v]) )
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == (int)(downlocks[v]) )
          {
             SCIP_Bool roundable;
 
@@ -10356,7 +10357,7 @@ SCIP_RETCODE presolveConsLct(
          /* check if the cumulative constraint is the only one looking this variable down and if the objective function
           * is in favor of rounding the variable down
           */
-         if( SCIPvarGetNLocksUp(var) == (int)(uplocks[v]) )
+         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == (int)(uplocks[v]) )
          {
             SCIP_Bool roundable;
 

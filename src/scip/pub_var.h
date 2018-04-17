@@ -44,7 +44,7 @@ extern "C" {
 #endif
 
 /*
- * methods for variables 
+ * methods for variables
  */
 
 /**@addtogroup PublicVariableMethods
@@ -52,13 +52,23 @@ extern "C" {
  * @{
  */
 
-/** gets number of locks for rounding down */
+/** gets number of locks for rounding down
+ *
+ *  @note This method will always return variable locks of type model
+ *
+ *  @note It is recommented to use SCIPvarGetNLocksDownType()
+ */
 EXTERN
 int SCIPvarGetNLocksDown(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets number of locks for rounding up */
+/** gets number of locks for rounding up
+ *
+ *  @note This method will always return variable locks of type model
+ *
+ *  @note It is recommented to use SCIPvarGetNLocksUpType()
+ */
 EXTERN
 int SCIPvarGetNLocksUp(
    SCIP_VAR*             var                 /**< problem variable */
@@ -78,13 +88,19 @@ int SCIPvarGetNLocksDownType(
    SCIP_LOCKTYPE         locktype            /**< type of variable locks */
    );
 
-/** is it possible, to round variable down and stay feasible? */
+/** is it possible, to round variable down and stay feasible?
+ *
+ *  @note This method will always check w.r.t variable locks of type model
+ */
 EXTERN
 SCIP_Bool SCIPvarMayRoundDown(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** is it possible, to round variable up and stay feasible? */
+/** is it possible, to round variable up and stay feasible?
+ *
+ *  @note This method will always check w.r.t. variable locks of type model
+ */
 EXTERN
 SCIP_Bool SCIPvarMayRoundUp(
    SCIP_VAR*             var                 /**< problem variable */

@@ -2339,8 +2339,8 @@ SCIP_DECL_PROPINITPRE(propInitpreGenvbounds)
    if( propdata->cutoffboundvar != NULL )
    {
       SCIPdebugMsg(scip, "propinitpre in problem <%s>: locking cutoffboundvar (current downlocks=%d, uplocks=%d)\n",
-         SCIPgetProbName(scip), SCIPvarGetNLocksDown(propdata->cutoffboundvar),
-         SCIPvarGetNLocksUp(propdata->cutoffboundvar));
+         SCIPgetProbName(scip), SCIPvarGetNLocksDownType(propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL),
+         SCIPvarGetNLocksUpType(propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL));
 
       SCIP_CALL( SCIPaddVarLocksType(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, 1, 1) );
    }

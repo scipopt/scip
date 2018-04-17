@@ -483,8 +483,8 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
       if( SCIPsetIsFeasIntegral(set, solval) || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
          continue;
 
-      nuplocks = SCIPvarGetNLocksUp(var);
-      ndownlocks = SCIPvarGetNLocksDown(var);
+      nuplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+      ndownlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
       obj = SCIPvarGetUnchangedObj(var);
 
       roundup = FALSE;

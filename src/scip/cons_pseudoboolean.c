@@ -1622,8 +1622,8 @@ SCIP_RETCODE checkLocksAndRes(
    assert(res != NULL);
 
    /* the resultant has no locks left and might be dual fixed now, we need to delete all its cliques */
-   if( SCIPvarIsActive(res) && SCIPvarGetNLocksDown(res) == 0 && SCIPvarGetNLocksUp(res) == 0
-      && SCIPgetStage(scip) < SCIP_STAGE_FREETRANS )
+   if( SCIPvarIsActive(res) && SCIPvarGetNLocksDownType(res, SCIP_LOCKTYPE_MODEL) == 0
+      && SCIPvarGetNLocksUpType(res, SCIP_LOCKTYPE_MODEL) == 0 && SCIPgetStage(scip) < SCIP_STAGE_FREETRANS )
    {
       SCIP_CALL( SCIPremoveVarFromGlobalStructures(scip, res) );
    }

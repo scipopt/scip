@@ -21059,7 +21059,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
          downchild = TRUE;
          break;
       case 'a':
-         downchild = SCIPvarGetNLocksDown(var) > SCIPvarGetNLocksUp(var);
+         downchild = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
          break;
       case 'h':
          downchild = (SCIPgetVarAvgCutoffs(scip, var, SCIP_BRANCHDIR_DOWNWARDS) > SCIPgetVarAvgCutoffs(scip, var, SCIP_BRANCHDIR_UPWARDS));
@@ -21712,6 +21712,8 @@ SCIP_RETCODE SCIPaddVarLocksType(
  *       - \ref SCIP_STAGE_FREETRANS
  *
  *  @note This method will always add variable locks of type model
+ *
+ *  @note It is recommented to use SCIPaddVarLocksType()
  */
 SCIP_RETCODE SCIPaddVarLocks(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -45913,8 +45915,8 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
                SCIPvarGetBranchFactor(vars[v]),
-               SCIPvarGetNLocksDown(vars[v]),
-               SCIPvarGetNLocksUp(vars[v]),
+               SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL),
+               SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL),
                (SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_DOWNWARDS)
                   + SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_UPWARDS))/2.0 - 1.0,
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS),
