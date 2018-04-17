@@ -2522,6 +2522,9 @@ SCIP_RETCODE lpiStrongbranch(
       (void) spx->setIntParam(SoPlex::ITERLIMIT, itlim);
       do
       {
+#ifndef STRONGBRANCH_RESTOREBASIS
+         SCIP_Bool repeatstrongbranching;
+#endif
 #ifdef WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
@@ -2566,10 +2569,14 @@ SCIP_RETCODE lpiStrongbranch(
 #else
          /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
           * pre-strong-branching basis and try again with reduced iteration limit */
-         if( (status == SPxSolver::ABORT_CYCLING
-                || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
-                || status == SPxSolver::SINGULAR)
-             && !fromparentbasis && spx->numIterations() < itlim )
+#if SOPLEX_APIVERSION >= 3
+         repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
+            || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim);
+#else
+         repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR)
+            && !fromparentbasis && spx->numIterations() < itlim);
+#endif
+         if( repeatstrongbranching )
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n",
                              itlim - spx->numIterations());
@@ -2611,6 +2618,9 @@ SCIP_RETCODE lpiStrongbranch(
          (void) spx->setIntParam(SoPlex::ITERLIMIT, itlim);
          do
          {
+#ifndef STRONGBRANCH_RESTOREBASIS
+            SCIP_Bool repeatstrongbranching;
+#endif
 #ifdef WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
@@ -2655,10 +2665,14 @@ SCIP_RETCODE lpiStrongbranch(
 #else
             /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
              * pre-strong-branching basis and try again with reduced iteration limit */
-            else if( (status == SPxSolver::ABORT_CYCLING
-                  || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
-                  || status == SPxSolver::SINGULAR)
-               && !fromparentbasis && spx->numIterations() < itlim )
+#if SOPLEX_APIVERSION >= 3
+            repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
+               || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim);
+#else
+            repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR)
+               && !fromparentbasis && spx->numIterations() < itlim);
+#endif
+            if( repeatstrongbranching )
             {
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->numIterations());
                assert( ! spx->hasPreStrongbranchingBasis() );
