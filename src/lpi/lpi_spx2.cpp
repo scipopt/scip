@@ -2562,7 +2562,6 @@ SCIP_RETCODE lpiStrongbranch(
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n",
                              itlim - spx->numIterations());
             spx->setIntParam(SoPlex::ITERLIMIT, itlim - spx->numIterations());
-            assert( ! spx->hasPreStrongbranchingBasis() );
             spx->restorePreStrongbranchingBasis();
             fromparentbasis = true;
             error = false;
@@ -2640,10 +2639,9 @@ SCIP_RETCODE lpiStrongbranch(
 #else
             /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
              * pre-strong-branching basis and try again with reduced iteration limit */
-            else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim )
+            if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim )
             {
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->numIterations());
-               assert( ! spx->hasPreStrongbranchingBasis() );
                spx->restorePreStrongbranchingBasis();
                spx->setIntParam(SoPlex::ITERLIMIT, itlim - spx->numIterations());
                error = false;
