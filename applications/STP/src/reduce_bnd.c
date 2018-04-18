@@ -52,7 +52,13 @@
 #define STP_DABD_MAXDNEDGES 10
 #define STP_DAEX_MAXDFSDEPTH 5
 #define STP_DAEX_MINDFSDEPTH 3
+#define STP_DAEX_MAXGRAD 8
+#define STP_DAEX_MINGRAD 5
 #define STP_DAEX_EDGELIMIT 50000
+
+#define EXEDGE_FREE 0
+#define EXEDGE_FIXED 1
+#define EXEDGE_KILLED 2
 
 
 /** finalize subtree computations (clean up, update global bound)  */
@@ -122,43 +128,182 @@ SCIP_Bool truncateSubtree
    return FALSE;
 }
 
-/** extend subtree and return new nadded_edges todo makro? */
+#define XX
+
+/** extend subtree and return new nadded_edges */
+static
+int reduceAndExtendSubtree(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            graph_start,        /**< start */
+   const int*            graph_next,         /**< next */
+   const int*            graph_endp,         /**< next */
+   int                   currnode,           /**< latest node */
+   int                   nadded_edges,       /**< added edges */
+   int*                  nodepos,            /**< node position in tree */
+   int*                  edgestack,          /**< stack */
+   unsigned char*        extensionmark       /**< mark array for extension */
+)
+{
+   int n = nadded_edges;
+   const int start = n;
+   SCIP_Bool cleanup = FALSE;
+
+#ifdef XX
+   int count1 = 0;
+   int count2 = 0;
+
+   for( int i = 0; i < graph->knots; i++ )
+   {
+      assert(nodepos[i] >= 0);
+      if( nodepos[i] )
+         count1++;
+   }
+#endif
+
+   /* extend from currnode */
+   for( int e = graph_start[currnode]; e != EAT_LAST; e = graph_next[e] )
+      if( !nodepos[graph_endp[e]] )
+      {
+         /* check whether edge needs to be added */
+
+         const int vertex_exnew = graph_endp[e];
+
+         assert((n - start) <= STP_DAEX_MAXGRAD);
+         extensionmark[n - start] = EXEDGE_FREE;
+
+      //   printf("check edge %d \n", e);
+
+         for( int e2 = graph->outbeg[vertex_exnew]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
+         {
+            const int head = graph->head[e2];
+
+            /* have we already extended to head? */
+            if( nodepos[head] < 0 )
+            {
+               const int stackposition = (-nodepos[head]) - 1;
+               const int edge_exold = edgestack[stackposition];
+               const SCIP_Real cost_exnew = graph->cost[e];
+               const SCIP_Real cost_exold = graph->cost[edge_exold];
+               const SCIP_Real cost_alt = graph->cost[e2];
+
+               assert(edge_exold >= 0);
+               assert(e != e2 && e != edge_exold && edge_exold != e2);
+
+               if( (SCIPisLT(scip, cost_alt, cost_exold) || SCIPisLT(scip, cost_alt, cost_exnew)) )
+               {
+                  /* can we eliminate new edge? */
+                  if( cost_exold <= cost_exnew && extensionmark[n - start] == EXEDGE_FREE )
+                  {
+                     assert(stackposition >= start);
+
+                     extensionmark[stackposition - start] = EXEDGE_FIXED;
+                     extensionmark[n - start] = EXEDGE_KILLED;
+                  //   printf("killedNew %d  \n", e);
+                     break;
+                  }
+
+                  /* can we eliminate old edge? */
+                  if( cost_exold >= cost_exnew && extensionmark[stackposition - start] == EXEDGE_FREE )
+                  {
+                     extensionmark[stackposition - start] = EXEDGE_KILLED;
+                     extensionmark[n - start] = EXEDGE_FIXED;
+                    // printf("mark killed %d \n", stackposition - start);
+                   //  printf("killedOld %d (at %d) old vs new: %f %f \n", edge_exold, e, cost_exold, cost_exnew);
+
+                     assert(head == graph->head[edge_exold]);
+                     nodepos[head] = 0;
+
+                     cleanup = TRUE;
+                  }
+               }
+            }
+         }
+
+         if( extensionmark[n - start] != EXEDGE_KILLED )
+         {
+            edgestack[n++] = e;
+//printf("add edge %d \n", e);
+            assert(nodepos[vertex_exnew] == 0);
+            nodepos[vertex_exnew] = -n;
+         }
+      }
+
+   for( int i = start; i < n; i++ )
+   {
+      const int edge = edgestack[i];
+
+      assert(edge >= 0);
+      assert(nodepos[graph->head[edge]] <= 0);
+      assert(nodepos[graph->head[edge]] < 0 || (extensionmark[i - start] == EXEDGE_KILLED));
+
+      nodepos[graph->head[edge]] = 0;
+   }
+
+   if( cleanup )
+   {
+      int newn = start;
+      for( int i = start; i < n; i++ )
+         if( extensionmark[i - start] != EXEDGE_KILLED )
+            edgestack[newn++] = edgestack[i];
+
+     // printf("newn %d n %d \n", newn, n);
+      assert(newn < n);
+      n = newn;
+   }
+
+#ifdef XX
+
+   for( int i = 0; i < graph->knots; i++ )
+   {
+      assert(nodepos[i] >= 0);
+      if( nodepos[i] )
+         count2++;
+   }
+   assert(count1 == count2);
+#endif
+
+
+   return n;
+
+
+
+}
+/** extend subtree and return new nadded_edges */
 static
 int extendSubtreeHead(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      redcost,            /**< reduced costs */
    int                   curredge,           /**< added edges */
    int                   currhead,           /**< latest node */
-   int                   dfsdepth,           /**< dfs depth*/
+   int                   dfsdepth,           /**< DFS depth*/
    int                   nadded_edges,       /**< added edges */
    SCIP_Real*            treecost,           /**< pointer to treecost */
    SCIP_Real*            treecosts,          /**< edge costs of tree */
    int*                  nodepos,            /**< node position in tree */
    int*                  treeedges,          /**< edges of tree */
-   int*                  edgestack           /**< stack */
+   int*                  edgestack,          /**< stack */
+   unsigned char*        extensionmark       /**< mark array for extension */
 )
 {
-   int n = nadded_edges + 1;
    nodepos[currhead] = dfsdepth + 1;
    *treecost += redcost[curredge];
    treeedges[dfsdepth] = curredge;
    treecosts[dfsdepth] = graph->cost[curredge];
 
-   for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
-      if( !nodepos[graph->head[e]] )
-         edgestack[n++] = e;
-
-   return n;
+   return reduceAndExtendSubtree(scip, graph, graph->outbeg, graph->oeat, graph->head, currhead, nadded_edges + 1,
+         nodepos, edgestack, extensionmark);
 }
 
-/** extend subtree and return new nadded_edges todo makro? */
+/** extend subtree and return new nadded_edges */
 static
 int extendSubtreeTail(
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      redcost,            /**< reduced costs */
    int                   curredge,           /**< added edges */
    int                   currtail,           /**< latest node */
-   int                   dfsdepth,           /**< dfs depth*/
+   int                   dfsdepth,           /**< DFS depth*/
    int                   nadded_edges,       /**< added edges */
    SCIP_Real*            treecost,           /**< pointer to treecost */
    SCIP_Real*            treecosts,          /**< edge costs of tree */
@@ -1900,6 +2045,7 @@ SCIP_RETCODE reduce_check3Tree(
    {
       SCIP_Real treecosts[STP_DAEX_MAXDFSDEPTH + 1];
       int treeedges[STP_DAEX_MAXDFSDEPTH + 1];
+      unsigned char extensionmark[STP_DAEX_MAXGRAD + 1];
       SCIP_Real basebottlenecks[3];
       const SCIP_Real basecost = redcost[inedge] + redcost[outedges[0]] + redcost[outedges[1]] + pathdist[graph->tail[inedge]];
       int* nodepos;
@@ -1967,9 +2113,8 @@ SCIP_RETCODE reduce_check3Tree(
 
          assert(nodepos[startnode]);
 
-         for( int e = graph->outbeg[startnode]; e != EAT_LAST; e = graph->oeat[e] )
-            if( !nodepos[graph->head[e]] )
-               edgestack[nadded_edges++] = e;
+         nadded_edges = reduceAndExtendSubtree(scip, graph, graph->outbeg, graph->oeat, graph->head, startnode,
+               nadded_edges, nodepos, edgestack, extensionmark);
 
          /* limited DFS starting from startnode */
          while ( nadded_edges > 0 )
@@ -2017,14 +2162,14 @@ SCIP_RETCODE reduce_check3Tree(
                /* do we need to stop extension? */
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
                {
-                  int todo;
+                  int todo2;
                   /* stopped and no further no improvement of bound possible? */
                 //  if( stopped && SCIPisLE(scip, minbound, *treebound) )
                 //     break;
                   continue;
                }
 
-               nadded_edges = extendSubtreeHead(graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges, edgestack);
+               nadded_edges = extendSubtreeHead(scip, graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges, edgestack, extensionmark);
                dfsdepth++;
             }
          } /* DFS loop */
@@ -2185,6 +2330,7 @@ SCIP_RETCODE reduce_checkEdge(
    {
       SCIP_Real treecosts[STP_DAEX_MAXDFSDEPTH + 1];
       int treeedges[STP_DAEX_MAXDFSDEPTH + 1];
+      unsigned char extensionmark[STP_DAEX_MAXGRAD + 1];
       SCIP_Real basebottlenecks[3];
       int* nodepos;
       const int nnodes = graph->knots;
@@ -2212,9 +2358,8 @@ SCIP_RETCODE reduce_checkEdge(
          nodepos[tail] = nnodes + 1;
          nodepos[head] = nnodes + 4;
 
-         for( int e = graph->outbeg[head]; e != EAT_LAST; e = graph->oeat[e] )
-            if( graph->head[e] != tail )
-               edgestack[nadded_edges++] = e;
+         nadded_edges = reduceAndExtendSubtree(scip, graph, graph->outbeg, graph->oeat, graph->head, head,
+                   nadded_edges, nodepos, edgestack, extensionmark);
 
          /* limited DFS */
          while( nadded_edges > 0 )
@@ -2247,7 +2392,7 @@ SCIP_RETCODE reduce_checkEdge(
                   continue;
                }
 
-               nadded_edges = extendSubtreeHead(graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges,  edgestack);
+               nadded_edges = extendSubtreeHead(scip, graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges,  edgestack, extensionmark);
                dfsdepth++;
             }
          } /* DFS loop */
