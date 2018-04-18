@@ -371,7 +371,7 @@ public:
       case SPxSolver::INFEASIBLE:
          return "INFEASIBLE";
       default:
-         /* since version 3.1.1.4.3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
+         /* since API version 3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
          return "UNKNOWN";
       }  /*lint !e788*/
    }
@@ -2370,7 +2370,7 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
    default:
-      /* since version 3.1.1.4.3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
+      /* since API version 3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
       return SCIP_LPERROR;
    }  /*lint !e788*/
 }
