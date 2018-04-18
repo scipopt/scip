@@ -167,17 +167,18 @@ else()
 endif()
 
 # parse the version number
-if(EXISTS ${IPOPT_INCLUDE_DIRS} )
-  file(STRINGS ${IPOPT_INCLUDE_DIRS}/IpoptConfig.h CONFIGFILE)
-
-  foreach(STR ${CONFIGFILE})
-    if("${STR}" MATCHES "^#define IPOPT_VERSION ")
-      string(REGEX REPLACE "#define IPOPT_VERSION " "" IPOPT_VERSION ${STR})
-      string(REGEX REPLACE "\"" "" IPOPT_VERSION ${IPOPT_VERSION})
-    endif()
-  endforeach()
-  # MESSAGE("found Ipopt ${IPOPT_VERSION}")
-endif()
+foreach( INCLUDE_DIR ${IPOPT_INCLUDE_DIRS} )
+  if( EXISTS ${INCLUDE_DIR}/IpoptConfig.h )
+  file(STRINGS ${INCLUDE_DIR}/IpoptConfig.h CONFIGFILE)
+    foreach(STR ${CONFIGFILE})
+      if("${STR}" MATCHES "^#define IPOPT_VERSION ")
+        string(REGEX REPLACE "#define IPOPT_VERSION " "" IPOPT_VERSION ${STR})
+        string(REGEX REPLACE "\"" "" IPOPT_VERSION ${IPOPT_VERSION})
+      endif()
+    endforeach()
+    #MESSAGE("found Ipopt ${IPOPT_VERSION}")
+  endif()
+endforeach()
 
 mark_as_advanced(IPOPT_INCLUDE_DIRS
                  IPOPT_LIBRARIES
