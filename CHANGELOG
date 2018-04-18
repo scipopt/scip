@@ -18,6 +18,7 @@ fixed bugs:
 - ensured that SCIPgetDualbound() returns global dual bound instead of the dual bound of the remaining search tree
 - fixed rare division-by-zero when solving bivariate quadratic interval equation
 - use total memory for triggering memory saving mode
+- fix parsing of version number in the CMake module for Ipopt
 
 data structures:
 - expression interpreter objects are now stored in the block memory
