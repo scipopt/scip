@@ -92,43 +92,6 @@ struct SCIP_ConshdlrData
  * Local methods
  */
 
-/** auxiliary function to add hard verification parameters to scip and store them */
-static
-SCIP_RETCODE addHardVerificationParams(
-   SCIP *scip,                               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA *conshdlrdata           /**< pointer to problem data */
-   )
-{
-   assert(conshdlrdata != NULL);
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-      "ringpacking/verification/nlptilim",
-      "time limit for verification NLP",
-      &conshdlrdata->nlptilim, FALSE, DEFAULT_VERIFICATION_NLPTILIM, -1.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddLongintParam(scip,
-      "ringpacking/verification/nlpnodelim",
-      "node limit for verification NLP",
-      &conshdlrdata->nlpnodelim, FALSE, DEFAULT_VERIFICATION_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-      "ringpacking/verification/heurtilim",
-      "time limit for heuristic verification",
-      &conshdlrdata->heurtilim, FALSE, DEFAULT_VERIFICATION_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip,
-      "ringpacking/verification/heuriterlim",
-      "iteration limit for heuristic verification",
-      &conshdlrdata->heuriterlim, FALSE, DEFAULT_VERIFICATION_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-      "ringpacking/verification/totaltilim",
-      "total time limit for all verification problems during the solving process",
-      &conshdlrdata->timeleft, FALSE, DEFAULT_VERIFICATION_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   return SCIP_OKAY;
-}
-
 /** auxiliary function to decide whether a proposed solution is feasible; a solution is called feasible if and only if
  *  z*_C = 0 holds for all circular patterns that are either not packable, i.e., SCIP_PACKABLE_NO or SCIP_PACKABLE_UNKNOWN
  */
@@ -547,9 +510,6 @@ SCIP_DECL_CONSINIT(consInitRpa)
    SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* add and store verification parameters */
-   SCIP_CALL( addHardVerificationParams(scip, conshdlrdata) );
-
    return SCIP_OKAY;
 }
 
@@ -750,6 +710,32 @@ SCIP_RETCODE SCIPincludeConshdlrRpa(
    /* add event handler for new solutios */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          processNewSolutionEvent, NULL) );
+
+   /* add verification parameters */
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/nlptilim",
+      "time limit for verification NLP",
+      &conshdlrdata->nlptilim, FALSE, DEFAULT_VERIFICATION_NLPTILIM, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip,
+      "ringpacking/verification/nlpnodelim",
+      "node limit for verification NLP",
+      &conshdlrdata->nlpnodelim, FALSE, DEFAULT_VERIFICATION_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/heurtilim",
+      "time limit for heuristic verification",
+      &conshdlrdata->heurtilim, FALSE, DEFAULT_VERIFICATION_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+      "ringpacking/verification/heuriterlim",
+      "iteration limit for heuristic verification",
+      &conshdlrdata->heuriterlim, FALSE, DEFAULT_VERIFICATION_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+      "ringpacking/verification/totaltilim",
+      "total time limit for all verification problems during the solving process",
+      &conshdlrdata->timeleft, FALSE, DEFAULT_VERIFICATION_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -97,6 +97,12 @@ struct SCIP_PricerData
 {
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             timeleft;           /**< time left for solving pricing problems (with NLP or heuristic) */
+
+   /* parameters */
+   SCIP_Real             nlptilim;           /**< time limit for pricing NLP */
+   SCIP_Real             heurtilim;          /**< time limit for pricing heuristic */
+   SCIP_Longint          nlpnodelim;         /**< node limit for pricing NLP */
+   int                   heuriterlim;        /**< iteration limit for pricing heuristic */
 };
 
 
@@ -767,9 +773,6 @@ SCIP_DECL_PRICERINIT(pricerInitRingpacking)
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &pricerdata->randnumgen, 0) );
 
-   /* get the total time limit for solving pricing problems */
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/pricing/totaltilim", &pricerdata->timeleft) );
-
    return SCIP_OKAY;
 }
 
@@ -836,10 +839,6 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
 
    /* collect working limits */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &totaltilim) );
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/pricing/nlptilim", &nlptilim) );
-   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/pricing/nlpnodelim", &nlpnodelim) );
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/pricing/heurtilim", &heurtilim) );
-   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/pricing/heuriterlim", &heuriterlim) );
 
    /* solve pricing problem with heuristic */
    heurtilim = MIN(heurtilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
@@ -933,27 +932,27 @@ SCIP_RETCODE SCIPincludePricerRpa(
    SCIP_CALL( SCIPaddRealParam(scip,
          "ringpacking/pricing/nlptilim",
          "time limit for each pricing NLP",
-         NULL, FALSE, DEFAULT_PRICING_NLPTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &pricerdata->nlptilim, FALSE, DEFAULT_PRICING_NLPTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip,
          "ringpacking/pricing/nlpnodelim",
          "node limit for each pricing NLP",
-         NULL, FALSE, DEFAULT_PRICING_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+         &pricerdata->nlpnodelim, FALSE, DEFAULT_PRICING_NLPNODELIM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "ringpacking/pricing/heurtilim",
          "time limit for each heuristic pricing",
-         NULL, FALSE, DEFAULT_PRICING_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &pricerdata->heurtilim, FALSE, DEFAULT_PRICING_HEURTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "ringpacking/pricing/heuriterlim",
          "iteration limit for each heuristic pricing",
-         NULL, FALSE, DEFAULT_PRICING_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
+         &pricerdata->heuriterlim, FALSE, DEFAULT_PRICING_HEURITERLIM, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "ringpacking/pricing/totaltilim",
          "total time limit for all pricing NLPs and heuristic calls",
-         NULL, FALSE, DEFAULT_PRICING_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &pricerdata->timeleft, FALSE, DEFAULT_PRICING_TOTALTILIM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
