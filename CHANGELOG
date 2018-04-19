@@ -19,6 +19,7 @@ fixed bugs:
 - fixed rare division-by-zero when solving bivariate quadratic interval equation
 - use total memory for triggering memory saving mode
 - fix parsing of version number in the CMake module for Ipopt
+- fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
 
 data structures:
 - expression interpreter objects are now stored in the block memory
