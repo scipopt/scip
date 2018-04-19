@@ -1232,10 +1232,10 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreSymbreak)
    assert( presoldata != NULL );
 
    /* guarantee that symmetries are computed (and handled) even if presolving is disabled */
-   if ( ! presoldata->enabled || presoldata->addedconss )
-      return SCIP_OKAY;
-
-   SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
+   if ( presoldata->enabled && ! presoldata->addedconss )
+   {
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
+   }
 
    return SCIP_OKAY;
 }
