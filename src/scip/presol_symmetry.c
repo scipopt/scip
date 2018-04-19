@@ -1640,6 +1640,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
+   /* if not already done before, compute symmetries */
    if ( ! presoldata->computedsym )
    {
       if ( SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING &&
