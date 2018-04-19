@@ -596,15 +596,12 @@ SCIP_RETCODE createProbQP(
       }
    }
 
-   /* fix one bin now to reduce symmetry */
-   SCIP_CALL( SCIPchgVarLbGlobal(scip, probdata->binvars[nbins - 1][0], 1.0) );
-
    /* create variables for the edges in each cluster combination. Index 0 are edges within cluster, 1 edges between consequtive clusters and 2 edges between non-consequtive clusters */
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &(edgevars), 2 * ncluster) );
    for( i = 0; i < 2 * ncluster; ++i ) {
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "f_%d", i);
 
-      SCIP_CALL( SCIPcreateVarBasic(scip, &edgevars[i], varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVarBasic(scip, &edgevars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
       SCIP_CALL( SCIPaddVar(scip, edgevars[i]) );
    }
 
@@ -615,17 +612,7 @@ SCIP_RETCODE createProbQP(
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) ); /*lint !e866*/
       for( j = 0; j < nbins; ++j )
       {
-         if( i == j || (SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) && SCIPisZero(scip, (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]))) )
-            continue;
-         SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) ); /*lint !e866*/
-         for( edgetype = 0; edgetype < 2; ++edgetype )
-         {
-            if( edgetype == 0 && i < j )
-               continue;
-            (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "y_%d_%d_%d", i, j, edgetype);
-            SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->edgevars[i][j][edgetype], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
-            SCIP_CALL( SCIPaddVar(scip, probdata->edgevars[i][j][edgetype]) );
-         }
+         probdata->edgevars[i][j] = NULL;
       }
    }
 
@@ -662,15 +649,15 @@ SCIP_RETCODE createProbQP(
    for( c = 0; c < ncluster; ++c)
    {
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "irrev_%d", c);
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0.0, 0.0) );
-      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c], -1.0) );
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 0.0) );
+      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c], 1.0) );
       for( i = 0; i < nbins; ++i )
       {
          for( j = 0; j < nbins; ++j )
          {
             if( i == j )
                continue;
-            SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][c], probdata->binvars[j][phi(c,ncluster)],probdata->cmatrix[i][j] - probdata->cmatrix[j][i]) );
+            SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][c], probdata->binvars[j][phi(c,ncluster)], - probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) );
          }
       }
       SCIP_CALL( SCIPaddCons(scip, temp) );
@@ -680,15 +667,15 @@ SCIP_RETCODE createProbQP(
    for( c = 0; c < ncluster; ++c )
    {
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "coh_%d", c);
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0.0, 0.0) );
-      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c+ncluster], -1.0) );
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 0.0) );
+      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c+ncluster], 1.0) );
       for( i = 0; i < nbins; ++i)
       {
          for( j = 0; j < nbins; ++j )
          {
             if( i <= j )
                continue;
-            SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][c], probdata->binvars[j][c], scale * (probdata->cmatrix[i][j] + probdata->cmatrix[j][i])) );
+            SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][c], probdata->binvars[j][c], -scale * (probdata->cmatrix[i][j] + probdata->cmatrix[j][i])) );
          }
       }
       SCIP_CALL( SCIPaddCons(scip, temp) );

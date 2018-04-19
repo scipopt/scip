@@ -57,8 +57,12 @@ SCIP_RETCODE addCandSolCyckerlin(
    SCIP_SOL*             sol                 /**< The given solution */
    )
 {
+   SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;
-   heurdata = SCIPheurGetData(SCIPfindHeur(scip, "cyckerlin") );
+   heur = SCIPfindHeur(scip, "cyckerlin");
+   if( heur == NULL )
+      return SCIP_OKAY;
+   heurdata = SCIPheurGetData(heur);
 
    assert(heurdata != NULL );
    assert(sol != NULL);
