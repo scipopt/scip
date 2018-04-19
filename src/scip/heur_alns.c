@@ -3863,7 +3863,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          &heurdata->useredcost, TRUE, DEFAULT_USEREDCOST, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/domorefixings",
-         "should the ALNS heuristic do more fixings by itself based on variable prioritization"
+         "should the ALNS heuristic do more fixings by itself based on variable prioritization "
          "until the target fixing rate is reached?",
          &heurdata->domorefixings, TRUE, DEFAULT_DOMOREFIXINGS, NULL, NULL) );
 

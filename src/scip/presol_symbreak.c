@@ -632,7 +632,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_Bool* usedperm;
       int** orbitopevaridx;
       int* columnorder;
-      int ntwocyclescomp = -1;
+      int ntwocyclescomp = INT_MAX;
       int nfilledcols;
       int nusedperms;
       int* nusedelems;
@@ -652,7 +652,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
          /* if we are checking the first permutation */
-         if ( ntwocyclescomp == - 1 )
+         if ( ntwocyclescomp == INT_MAX )
             ntwocyclescomp = ntwocyclesperm;
 
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
@@ -667,6 +667,7 @@ SCIP_RETCODE detectOrbitopes(
       if ( ! isorbitope )
          continue;
       assert( ntwocyclescomp > 0 );
+      assert( ntwocyclescomp < INT_MAX );
 
       /* iterate over permutations and check whether for each permutation there exists
        * another permutation whose 2-cycles intersect pairwise in exactly one element */
