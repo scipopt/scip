@@ -407,8 +407,12 @@ SCIP_Bool ruleOutSubtree(
             }
 
             for( int i = start; i < dfsdepth; i++ )
+            {
+               assert(treecosts[i] >= 0.0);
+
                if( SCIPisLT(scip, ecost, treecosts[i]) )
                   return TRUE;
+            }
          }
    }
 
@@ -420,7 +424,6 @@ static
 void updateNodeFixingBounds(
    SCIP_Real*            fixingbounds,       /**< fixing bounds */
    const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Real*      cost,               /**< reduced costs */
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
    SCIP_Real             lpobjval,            /**< LP objective  */
@@ -754,6 +757,8 @@ int reduceWithNodeReplaceBounds(
                   edgecount++;
                }
             }
+
+            assert(edgecount > 0);
 
             /* try to eliminate */
 
@@ -1174,7 +1179,7 @@ void pertubateEdgeCosts(
    for( e = 0; e < nedges; e++ )
       if( result[e] == CONNECT && graph->tail[e] != root )
          nodearrchar[graph->head[e]] = TRUE;
-   srand(graph->terms);
+   srand((unsigned)graph->terms);
 
    if( graph->stp_type != STP_MWCSP )
    {
@@ -1347,7 +1352,6 @@ SCIP_RETCODE computeDaSolPcMw(
    int*                  result2,            /**< sol int array */
    int*                  vbase,              /**< int array */
    int*                  pathedge,           /**< int array */
-   int                   root,               /**< da root */
    STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
    SCIP_Bool*            apsol               /**< ascend-prune sol? */
 )
@@ -1382,8 +1386,6 @@ SCIP_RETCODE computeDaSolPcMw(
       }
       printf("\n ");
 #endif
-
-      SCIPdebugMessage("DA: added this sol to pool? %d \n", success);
 
       if( success && pool->size >= 2 )
       {
@@ -1526,7 +1528,7 @@ SCIP_RETCODE computePertubedSol(
       SCIPfreeBufferArray(scip, &transcost);
    }
 
-   SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, upperbound, result, result2, vbase, pathedge, root, nodearrchar, apsol) );
+   SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
 
    /* does result not contain a valid solution? */
    if( !(*apsol) )
@@ -1575,7 +1577,7 @@ SCIP_RETCODE computePertubedSol(
    lb += offset;
    *lpobjval = lb;
 
-   SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, upperbound, result, result2, vbase, pathedge, root, nodearrchar, apsol) );
+   SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
 
    assert(!(*apsol) || graph_sol_valid(scip, graph, result));
 
@@ -2063,6 +2065,14 @@ SCIP_RETCODE reduce_check3Tree(
       nodepos[basenode] = nnodes + 1;            /* basenode */
       nodepos[innode] = nnodes + 2;              /* innode */
 
+#ifndef NDEBUG
+      for( int i = 0; i < STP_DAEX_MAXDFSDEPTH + 1; i++ )
+      {
+         treecosts[i] = -1.0;
+         treeedges[i] = -1;
+      }
+#endif
+
       *ruleout = FALSE;
 
       /* main loop: extend tree and try to rule it out */
@@ -2344,6 +2354,12 @@ SCIP_RETCODE reduce_checkEdge(
 #ifndef NEBUG
       basebottlenecks[1] = -1.0;
       basebottlenecks[2] = -1.0;
+
+      for( int i = 0; i < STP_DAEX_MAXDFSDEPTH + 1; i++ )
+      {
+         treecosts[i] = -1.0;
+         treeedges[i] = -1;
+      }
 #endif
 
       /* check whether to extend from head */
@@ -2798,7 +2814,7 @@ SCIP_RETCODE reduce_da(
             else
                assert(vbase[i] == i);
 #endif
-         updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, (run == 0));
+         updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
       }
 
@@ -3509,7 +3525,7 @@ SCIP_RETCODE reduce_daPcMw(
    /* compute first primal solution */
    upperbound = FARAWAY;
    apsol = FALSE;
-   SCIP_CALL( computeDaSolPcMw(scip, graph, NULL, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, root, nodearrchar, &apsol) );
+   SCIP_CALL( computeDaSolPcMw(scip, graph, NULL, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, nodearrchar, &apsol) );
 
    assert(apsol && upperbound < FARAWAY);
    assert(graph_sol_valid(scip, graph, result));
@@ -3546,7 +3562,7 @@ SCIP_RETCODE reduce_daPcMw(
    assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
 
    updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, TRUE, FALSE);
-   updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, TRUE);
+   updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, TRUE);
 
    nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
 
@@ -3588,7 +3604,7 @@ SCIP_RETCODE reduce_daPcMw(
       assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
       updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
-      updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, FALSE);
+      updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, FALSE);
 
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
@@ -3625,7 +3641,7 @@ SCIP_RETCODE reduce_daPcMw(
 
          computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
-         updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, FALSE);
+         updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, FALSE);
 
          nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
@@ -3743,7 +3759,7 @@ SCIP_RETCODE reduce_daPcMw(
       }
 
       apsol = FALSE;
-      SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, root, nodearrchar, &apsol) );
+      SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, nodearrchar, &apsol) );
 
       SCIPdebugMessage("ROOTRUNS upperbound %f \n", upperbound);
       SCIPdebugMessage("ROOTRUNS best sol in pool %f \n", pool->sols[0]->obj);
@@ -3794,7 +3810,7 @@ SCIP_RETCODE reduce_daPcMw(
             edgefixingbounds[e] = MIN(edgefixingbounds[e], edgefixingbounds[flipedge(e)]);
 
       updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, TRUE);
-      updateNodeFixingBounds(nodefixingbounds, graph, cost, pathdist, vnoi, lpobjval, FALSE);
+      updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, FALSE);
 
       for( int e = 0; e < transnedges; e++ )
          marked[e] = FALSE;
