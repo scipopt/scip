@@ -4304,9 +4304,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       SCIP_Bool success;
       int e;
 
-      /* call branching score callbacks of nlhdlrs until one succeeds */
+      /* call branching score callbacks of all nlhdlrs */
       success = FALSE;
-      for( e = 0; e < expr->nenfos && !success; ++e )
+      for( e = 0; e < expr->nenfos; ++e )
       {
          SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
@@ -4314,21 +4314,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
          assert(nlhdlr != NULL);
 
          SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
-      }
-
-      /* fallback: if no branch score callback were available or had success so far, define |f(x*) - z*| as the branching score,
-       * where f is the expression, x* solution values of original variables, and z* be the solution value of the linearization
-       * variable attached to expression f
-       */
-      if( !success )
-      {
-         int c;
-
-         /* add violation as branching score to all children */
-         for( c = 0; c < expr->nchildren; ++c )
-         {
-            SCIPaddConsExprExprBranchScore(scip, expr->children[c], brscoredata->brscoretag, violation);
-         }
       }
    }
 

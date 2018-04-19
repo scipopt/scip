@@ -742,8 +742,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 
 /** nonlinear handler callback for branching scores
  *
- * The method adds branching scores to successors if it finds that the value of the
- * linearization variables does not coincide with the value of the expression in the given solution.
+ * The method adds branching scores to successors if it finds that this is how to enforce
+ * the relation between the auxiliary variable and the value of the expression in the given solution.
  * It shall use the function SCIPaddConsExprExprBranchScore() to add a branching score to its successors.
  * It shall return TRUE in success if no branching is necessary or branching scores have been added.
  * If returning FALSE in success, then other scoring methods will be applied.
