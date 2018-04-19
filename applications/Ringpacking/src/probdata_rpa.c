@@ -100,10 +100,11 @@ struct SCIP_ProbData
 
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
+   SCIP_Real             enumtimeleft;       /**< time left for enumerating circular patterns */
+
    /* parameters */
    SCIP_Real             nlptilimsoft;       /**< soft time limit for verification NLP */
-   SCIP_Real             heurtilimsoft ;     /**< soft time limit for verification heuristic */
-   SCIP_Real             totaltilimsoft;     /**< time left for enumerating circular patterns */
+   SCIP_Real             heurtilimsoft;      /**< soft time limit for verification heuristic */
    SCIP_Longint          nlpnodelimsoft;     /**< soft node limit for verification NLP */
    int                   heuriterlimsoft;    /**< soft iteration limit for verification heuristic */
 };
@@ -144,9 +145,9 @@ SCIP_RETCODE addSoftVerificationParams(
       &probdata->heuriterlimsoft, FALSE, DEFAULT_VERIFICATION_HEURITERLIMSOFT, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-      "ringpacking/verification/totaltilimsoft",
+      "ringpacking/verification/enumtimeleft",
       "total time limit for all verification problems during the enumeration",
-      &probdata->totaltilimsoft, FALSE, DEFAULT_VERIFICATION_TOTALTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+      &probdata->enumtimeleft, FALSE, DEFAULT_VERIFICATION_TOTALTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -694,9 +695,9 @@ SCIP_RETCODE enumeratePatterns(
          timelim = MIN(heurtilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
 
          /* verify pattern */
-         probdata->totaltilimsoft += SCIPgetTotalTime(scip);
+         probdata->enumtimeleft += SCIPgetTotalTime(scip);
          SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, timelim, heuriterlim) );
-         probdata->totaltilimsoft -= SCIPgetTotalTime(scip);
+         probdata->enumtimeleft -= SCIPgetTotalTime(scip);
 
          /*
           * try to verify with NLP
@@ -704,12 +705,12 @@ SCIP_RETCODE enumeratePatterns(
          if( SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN )
          {
             /* compute time limit */
-            timelim = MIN3(probdata->totaltilimsoft, nlptilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
+            timelim = MIN3(probdata->enumtimeleft, nlptilim, totaltimelim - SCIPgetTotalTime(scip)); /*lint !e666*/
 
             /* verify pattern */
-            probdata->totaltilimsoft += SCIPgetTotalTime(scip);
+            probdata->enumtimeleft += SCIPgetTotalTime(scip);
             SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, timelim, nlpnodelim) );
-            probdata->totaltilimsoft -= SCIPgetTotalTime(scip);
+            probdata->enumtimeleft -= SCIPgetTotalTime(scip);
          }
 
          /* pattern is not packable -> don't add more elements */
