@@ -117,8 +117,8 @@ struct SCIP_ProbData
 /** auxiliary function to add soft verification parameters to scip and store them */
 static
 SCIP_RETCODE addSoftVerificationParams(
-   SCIP *scip,                               /**< SCIP data structure */
-   SCIP_PROBDATA *probdata                   /**< pointer to problem data */
+   SCIP                  *scip,              /**< SCIP data structure */
+   SCIP_PROBDATA         *probdata           /**< pointer to problem data */
    )
 {
    assert(probdata != NULL);
@@ -1460,7 +1460,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransRingpacking) );
 
    /* add parameters for verification */
-   SCIP_CALL(addSoftVerificationParams(scip, probdata) );
+   SCIP_CALL( addSoftVerificationParams(scip, probdata) );
 
    /* activate pricer */
    SCIP_CALL( SCIPpricerRpaActivate(scip) );
