@@ -2366,6 +2366,7 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::REGULAR:
    case SPxSolver::UNKNOWN:
    case SPxSolver::OPTIMAL:
+   case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
    case SPxSolver::UNBOUNDED:
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
@@ -3110,8 +3111,11 @@ SCIP_Bool SCIPlpiIsStable(
       if( kappa > lpi->conditionlimit )
          return FALSE;
    }
-
+#if SOPLEX_APIVERSION >= 4
    return (lpi->spx->status() != SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS);
+#else
+   return TRUE;
+#endif
 }
 
 /** returns TRUE iff the objective limit was reached */
@@ -3180,7 +3184,6 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 
 #if SOPLEX_APIVERSION >= 4
    *success = lpi->spx->ignoreUnscaledViolations();
-   lpi->instabilityignored = *success;
 #else
    *success = FALSE;
 #endif
