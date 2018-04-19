@@ -1206,7 +1206,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 
       if ( presoldata->addconsstiming == 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Executing presolver <%s> early, since symmetries are computed early.\n\n", SCIPpresolGetName(presol));
+         SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
 
          SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
       }
