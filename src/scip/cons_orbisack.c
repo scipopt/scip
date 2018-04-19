@@ -2017,9 +2017,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
          "Whether check routine returns always SCIP_FEASIBLE.",
          &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
-   /* initialize maximum number of rows */
-   conshdlrdata->maxnrows = 0;
-
    return SCIP_OKAY;
 }
 
