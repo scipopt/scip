@@ -2370,7 +2370,6 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
@@ -2390,10 +2389,6 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-
-   /* possibly update conshdlr data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
 
    return SCIP_OKAY;
 }
