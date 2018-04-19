@@ -362,6 +362,135 @@ SCIP_RETCODE addPathCuts(
    return SCIP_OKAY;
 }
 
+/** Detect if path inequalities are violated and if so, add them to scip */
+static
+SCIP_RETCODE addTourCuts(
+   SCIP*                 scip,               /**< SCIP data structure. */
+   SCIP_SEPA*            sepa,               /**< The subtour separator */
+   SCIP_Real***          adjacencymatrix,    /**< The matrizes adjacency-matrix with the weight of all paths with 1,...,|Clutster| arcs */
+   SCIP_DIGRAPH*         adjacencygraph,     /**< The directed edge-graph */
+   int**                 iscontracted,       /**< Information with intermediate contraction-nodes for contracted arcs */
+   int                   tourlength,         /**< The length of the subtours to add */
+   SCIP_RESULT*          result,             /**< Pointer to store the result of separation */
+   int*                  ncuts               /**< Pointer to store number of cuts */
+   )
+{
+   SCIP_VAR**** edgevars;                    /* pointer for edge-variables from probdata */
+   char cutname[SCIP_MAXSTRLEN];             /* cut-name */
+   SCIP_ROW* cut;                            /* used to construct the cut */
+   int* tour;                                /* reconstruct the states in a violated tour inequality */
+   int nstates;                              /* store number of states from probdata */
+   int currentnode;                          /* current node along the tour */
+   int successor;                            /* successor of current node */
+   int intermediate;                         /* if arc is contracted, we use this for the intermediate node between current and successor */
+   int start;                                /* starting-state that we want to construct a violated tour inequality from */
+   int end;                                  /* last state in tour that we want to construct a violated tour inequality from */
+   int ncontractions;                        /* number of contracted arcs along the subtour */
+   int k;
+   int i;
+   int j;
+   int nz;
+   int ny;
+
+   edgevars = SCIPcycGetEdgevars(scip);
+   nstates = SCIPdigraphGetNNodes(adjacencygraph);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &tour, tourlength + 1) );
+
+   for( start = 0; start < nstates; ++start )
+   {
+      tour[0] =  start;
+      for( j = 0; j < SCIPdigraphGetNSuccessors(adjacencygraph, start); ++j )
+      {
+         ncontractions = 0;
+
+         end = SCIPdigraphGetSuccessors(adjacencygraph, start)[j];
+         tour[tourlength] = end;
+
+         /* check if tour-inequality is violated */
+         if( SCIPisGT(scip, adjacencymatrix[tourlength - 1][start][end] - adjacencymatrix[0][end][start], (SCIP_Real) tourlength - 1) )
+         {
+            /*reconstruct the tour */
+            for( k = 0; k < tourlength - 1; ++k )
+            {
+               currentnode = tour[k];
+               for( i = 0; i < SCIPdigraphGetNSuccessors(adjacencygraph, currentnode); ++i )
+               {
+                  successor = SCIPdigraphGetSuccessors(adjacencygraph, currentnode)[i];
+                  if( SCIPisEQ(scip, adjacencymatrix[0][currentnode][successor] + adjacencymatrix[tourlength - (k + 2)][successor][end], adjacencymatrix[tourlength - (k + 1)][currentnode][end]) )
+                  {
+                     tour[k + 1] = successor;
+                     if( iscontracted[currentnode][successor] != -1 )
+                        ncontractions++;
+                     break;
+                  }
+               }
+            }
+
+            /* check the last arc along the tour and the direct arc from start to end for contractions */
+            if( iscontracted[tour[tourlength - 1]][end] != -1 )
+               ncontractions++;
+            if( iscontracted[end][start] != -1 )
+               ncontractions++;
+
+            nz = tourlength;
+            ny = 0;
+
+            /*construct the corresponding inequality and add it to scip */
+            (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "tour_%d_%d_length_%d_contracted_%d", start, end, tourlength, ncontractions );
+            SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), (SCIP_Real) tourlength + ncontractions - 1, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+            for( k = 0; k < tourlength; ++k )
+            {
+               currentnode = tour[k];
+               successor = tour[k+1];
+               intermediate = iscontracted[currentnode][successor];
+
+               if( intermediate != -1 )
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][intermediate][1], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0], 1.0) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][successor][1], 1.0) );
+               }
+            }
+
+            /* add the direct arc from start to end */
+            intermediate = iscontracted[end][start];
+            if( iscontracted[end][start] != -1 )
+            {
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[end][intermediate][1], -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(intermediate, start)][MIN(intermediate, start)][0], 1.0) );
+            }
+            else
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[end][start][1], -1.0) );
+
+            SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+            /* print row if in debug mode */
+            SCIPdebug( SCIPprintRow(scip, cut, NULL) );
+
+            /* if an arc appears twice then the tour inequality should not be used */
+            if( SCIPgetRowMaxCoef(scip, cut) == 1 )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+               *result = SCIP_SEPARATED;
+               (*ncuts)++;
+            }
+            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         }
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &tour);
+
+   return SCIP_OKAY;
+}
+
+
+
 /** Compute the next matrix with the weight off all the longest paths with exactly narcs and store it in adjacencymatrix[narcs - 1].
  *  For this, simply compute 	\f{align*}{ d^{k}(currentnode,successor) = max_{l=1,\ldots,n} \{d^{k-1}(currentnode,l) + d^1(l,successor) \}	\f}.
  */
@@ -541,6 +670,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
 
       /* check if any path-inequalities are violated and sepatare them */
       SCIP_CALL( addPathCuts(scip, sepa, adjacencymatrix, adjacencygraph, iscontracted, cyclelength, result, &ncuts) );
+
+      if( cyclelength == ncluster - 1 )
+         SCIP_CALL( addTourCuts(scip, sepa, adjacencymatrix, adjacencygraph, iscontracted, cyclelength, result, &ncuts) );
 
       /* stop if we added maximal number of cuts */
       if( ncuts >= MAXCUTS )
