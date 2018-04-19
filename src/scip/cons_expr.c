@@ -4295,10 +4295,19 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       return SCIP_OKAY;
    }
 
-   /* TODO regard locks */
-   violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol, SCIPgetConsExprExprAuxVar(expr))
-      - expr->evalvalue);
+   /* compute violation w.r.t. original variables */
+   if( expr->evalvalue == SCIP_INVALID )
+      violation = SCIPinfinity(scip);
+   else
+   {
+      violation = expr->evalvalue - SCIPgetSolVal(scip, brscoredata->sol, SCIPgetConsExprExprAuxVar(expr));
+      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
+         violation = -violation;
+      else if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
+         violation = 0.0;
+   }
 
+   /* if there is violation, then consider branching */
    if( violation > 0.0 )
    {
       SCIP_Bool success;
