@@ -333,6 +333,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    if( !SCIPisPositive(scip, violation) )
       return SCIP_OKAY;
 
+   /* TODO try to figure out which variables appear linear and skip them here */
    for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
    {
       assert(nlhdlrexprdata->varexprs[i] != NULL);

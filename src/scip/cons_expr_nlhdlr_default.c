@@ -295,7 +295,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
     *
     * TODO doing this only if violation > epsilon is correct, or better do this for any violation > 0?
     */
-   if( !SCIPisZero(scip, violation) )
+   if( SCIPisPositive(scip, violation) )
    {
       int c;
 
