@@ -22,6 +22,8 @@ interface changes:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
 - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
   directly by the target node limit within the heuristic.
+- removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independently
+  from other components anymore.
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
