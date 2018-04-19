@@ -1294,7 +1294,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
             nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
             nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
-      /* exit if cutoff has been detected */
+      /* exit if cutoff or unboundedness has been detected */
       if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
       {
          SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(presoldata->genconss[i]));
