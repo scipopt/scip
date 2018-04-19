@@ -1166,7 +1166,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    presoldata->addedconss = FALSE;
    presoldata->computedsymmetry = FALSE;
    presoldata->enabled = TRUE;
-   presoldata->addconsstiming = 0;
    presoldata->nperms = -1;
    presoldata->log10groupsize = -1.0;
    presoldata->binvaraffected = FALSE;
