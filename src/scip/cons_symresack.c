@@ -1347,6 +1347,40 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
 
+/** initialization method of constraint handler (called after problem was transformed) */
+static
+SCIP_DECL_CONSINIT(consInitSymresack)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+
+   /* determine maximum number of vars in a symresack constraint */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   conshdlrdata->maxnvars = 0;
+
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+
+      /* get data of constraint */
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      if ( consdata->nvars > conshdlrdata->maxnvars )
+         conshdlrdata->maxnvars = consdata->nvars;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteSymresack)
@@ -2266,6 +2300,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSymresack) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSymresack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSymresack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymresack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSymresack) );
@@ -2286,9 +2321,6 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
          "Whether check routine returns always SCIP_FEASIBLE.",
          &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
-
-   /* initialize maximum number of variables */
-   conshdlrdata->maxnvars = 0;
 
    return SCIP_OKAY;
 }
@@ -2362,9 +2394,6 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    /* possibly update conshdlr data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
-
-   if ( conshdlrdata->maxnvars < nvars )
-      conshdlrdata->maxnvars = nvars;
 
    return SCIP_OKAY;
 }
