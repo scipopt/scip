@@ -1329,7 +1329,6 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->addedconss = FALSE;
    presoldata->computedsymmetry = FALSE;
    presoldata->enabled = TRUE;
-   presoldata->addconsstiming = 0;
    presoldata->nsymresacks = 0;
    presoldata->norbitopes = 0;
    presoldata->ngenconss = 0;
