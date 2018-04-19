@@ -4296,7 +4296,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
    }
 
    /* compute violation w.r.t. original variables */
-   if( expr->evalvalue == SCIP_INVALID )
+   if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
       violation = SCIPinfinity(scip);
    else
    {
@@ -7187,7 +7187,6 @@ SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
  *
  * further, allows to evaluate w.r.t. given children values
  */
-extern
 SCIP_RETCODE SCIPevalConsExprExprHdlr(
    SCIP*                      scip,         /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*        expr,         /**< expression */

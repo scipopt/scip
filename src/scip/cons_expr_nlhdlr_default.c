@@ -265,7 +265,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
    /* get value of expression w.r.t. value of auxiliary variables of children */
    SCIP_CALL( evalExprInAux(scip, expr, &exprval, sol) );
 
-   if( exprval == SCIP_INVALID )
+   if( exprval == SCIP_INVALID ) /*lint !e777*/
    {
       /* if cannot evaluate, then always branch */
       violation = SCIPinfinity(scip);

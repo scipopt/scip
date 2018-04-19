@@ -330,7 +330,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    /* if no violation, then no need for branching
     * TODO doing this only if violation > epsilon is correct, or better do this for any violation > 0?
     */
-   if( !SCIPisPositive(scip, violation) )
+   if( !SCIPisPositive(scip, violation) ) /*lint !e777*/
       return SCIP_OKAY;
 
    for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
