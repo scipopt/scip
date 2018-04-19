@@ -127,8 +127,7 @@ SCIP_Bool truncateSubtree
    }
    return FALSE;
 }
-
-#define XX
+#if 0
 
 /** extend subtree and return new nadded_edges */
 static
@@ -148,18 +147,6 @@ int reduceAndExtendSubtree(
    int n = nadded_edges;
    const int start = n;
    SCIP_Bool cleanup = FALSE;
-
-#ifdef XX
-   int count1 = 0;
-   int count2 = 0;
-
-   for( int i = 0; i < graph->knots; i++ )
-   {
-      assert(nodepos[i] >= 0);
-      if( nodepos[i] )
-         count1++;
-   }
-#endif
 
    /* extend from currnode */
    for( int e = graph_start[currnode]; e != EAT_LAST; e = graph_next[e] )
@@ -252,23 +239,11 @@ int reduceAndExtendSubtree(
       n = newn;
    }
 
-#ifdef XX
-
-   for( int i = 0; i < graph->knots; i++ )
-   {
-      assert(nodepos[i] >= 0);
-      if( nodepos[i] )
-         count2++;
-   }
-   assert(count1 == count2);
-#endif
-
 
    return n;
-
-
-
 }
+#endif
+
 /** extend subtree and return new nadded_edges */
 static
 int extendSubtreeHead(
@@ -287,13 +262,17 @@ int extendSubtreeHead(
    unsigned char*        extensionmark       /**< mark array for extension */
 )
 {
+   int n = nadded_edges + 1;
    nodepos[currhead] = dfsdepth + 1;
    *treecost += redcost[curredge];
    treeedges[dfsdepth] = curredge;
    treecosts[dfsdepth] = graph->cost[curredge];
 
-   return reduceAndExtendSubtree(scip, graph, graph->outbeg, graph->oeat, graph->head, currhead, nadded_edges + 1,
-         nodepos, edgestack, extensionmark);
+   for( int e = graph->outbeg[currhead]; e != EAT_LAST; e = graph->oeat[e] )
+      if( !nodepos[graph->head[e]] )
+         edgestack[n++] = e;
+
+   return n;
 }
 
 /** extend subtree and return new nadded_edges */
@@ -2115,16 +2094,11 @@ SCIP_RETCODE reduce_check3Tree(
          if( Is_term(graph->term[startnode]) || graph->grad[startnode] > maxgrad )
             continue;
 
-#ifdef PPP
-      printf("startnode %d \n", startnode);
-      for( int e = graph->outbeg[startnode]; e != EAT_LAST; e = graph->oeat[e] )
-                  if( !nodepos[graph->head[e]] ) printf("add to heap %d %d \n", startnode, graph->head[e]);
-#endif
-
          assert(nodepos[startnode]);
 
-         nadded_edges = reduceAndExtendSubtree(scip, graph, graph->outbeg, graph->oeat, graph->head, startnode,
-               nadded_edges, nodepos, edgestack, extensionmark);
+         for( int e = graph->outbeg[startnode]; e != EAT_LAST; e = graph->oeat[e] )
+            if( !nodepos[graph->head[e]] )
+               edgestack[nadded_edges++] = e;
 
          /* limited DFS starting from startnode */
          while ( nadded_edges > 0 )
@@ -2132,16 +2106,9 @@ SCIP_RETCODE reduce_check3Tree(
             const int curredge = edgestack[--nadded_edges];
             const int currhead = graph->head[curredge];
 
-#ifdef PPP
-      printf("check %d %d\n", graph->tail[curredge], currhead);
-#endif
-
             /*  subtree already processed? */
             if( nodepos[currhead] )
             {
-#ifdef PPP
-      printf("processed already  \n");
-#endif
                nodepos[currhead] = 0;
                treecost -= redcost[curredge];
                dfsdepth--;
@@ -2374,8 +2341,9 @@ SCIP_RETCODE reduce_checkEdge(
          nodepos[tail] = nnodes + 1;
          nodepos[head] = nnodes + 4;
 
-         nadded_edges = reduceAndExtendSubtree(scip, graph, graph->outbeg, graph->oeat, graph->head, head,
-                   nadded_edges, nodepos, edgestack, extensionmark);
+         for( int e = graph->outbeg[head]; e != EAT_LAST; e = graph->oeat[e] )
+            if( graph->head[e] != tail )
+               edgestack[nadded_edges++] = e;
 
          /* limited DFS */
          while( nadded_edges > 0 )
