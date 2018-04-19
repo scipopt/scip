@@ -3111,7 +3111,7 @@ SCIP_Bool SCIPlpiIsStable(
          return FALSE;
    }
 
-   return TRUE;
+   return (lpi->spx->status() != SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS);
 }
 
 /** returns TRUE iff the objective limit was reached */
@@ -3158,7 +3158,7 @@ int SCIPlpiGetInternalStatus(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiIsTimelimExc()\n");
+   SCIPdebugMessage("calling SCIPlpiGetInternalStatus()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3178,8 +3178,12 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    assert(lpi->spx != NULL);
    assert(success != NULL);
 
-   /* instable situations cannot be ignored */
+#if SOPLEX_APIVERSION >= 4
+   *success = lpi->spx->ignoreUnscaledViolations();
+   lpi->instabilityignored = *success;
+#else
    *success = FALSE;
+#endif
 
    return SCIP_OKAY;
 }
