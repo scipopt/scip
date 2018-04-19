@@ -1000,6 +1000,40 @@ SCIP_RETCODE separateInequalities(
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
 
+/** initialization method of constraint handler (called after problem was transformed) */
+static
+SCIP_DECL_CONSINIT(consInitOrbisack)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+
+   /* determine maximum number of rows in an orbisack constraint */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   conshdlrdata->maxnrows = 0;
+
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+
+      /* get data of constraint */
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      if ( consdata->nrows > conshdlrdata->maxnrows )
+         conshdlrdata->maxnrows = consdata->nrows;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbisack)
@@ -1948,6 +1982,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbisack) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitOrbisack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbisack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbisack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbisack) );
@@ -2090,10 +2125,6 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
 
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
-
-      /* possibly update conshdlr data */
-      if ( conshdlrdata->maxnrows < nrows )
-         conshdlrdata->maxnrows = nrows;
    }
 
    return SCIP_OKAY;
