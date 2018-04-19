@@ -34,7 +34,8 @@
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define MAXCUTS                    5000
+#define MAXCUTS                    2000 /**< Maximal number of cuts that can be added to cut pool */
+#define MAXCUTSCREATED            10000 /**< Maximal number of cuts to select from */
 #define MAXROUNDS                    20
 
 
@@ -146,7 +147,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    int cutsize;
    int ncutscreated;
    int ncutsapplied;
-   int maxcutscreated;
    int* firstpart;
    int* secondpart;
    int nfirst;
@@ -167,7 +167,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    rounds = SCIPsepaGetNCallsAtNode(sepa);
    cutsize = MAXCUTS;
    ncutscreated = 0;
-   maxcutscreated = 10 * MAXCUTS;
    SCIP_CALL( SCIPgetBoolParam(scip, "cycleclustering/usecutselection", &usecutselection) );
 
 
@@ -177,7 +176,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
 
    *result = SCIP_DIDNOTFIND;
 
-   if( rounds >= MAXROUNDS )
+   if( SCIPcycGetNCluster(scip) == 3 || rounds >= MAXROUNDS )
    {
       *result =  SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -214,15 +213,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    SCIPsortDownRealInt(fractionality, idx, nstates);
 
    /* we try to construct partition inequalities from triangle-inequalities that are almost satisfied at equality */
-   for( i = 0; i < nstates && ncutscreated < maxcutscreated; ++i )
+   for( i = 0; i < nstates && ncutscreated < MAXCUTSCREATED; ++i )
    {
       states[0] = idx[i];
 
-      for( j = 0; j < SCIPdigraphGetNSuccessors(edgegraph, states[0]) && ncutscreated < maxcutscreated; ++j )
+      for( j = 0; j < SCIPdigraphGetNSuccessors(edgegraph, states[0]) && ncutscreated < MAXCUTSCREATED; ++j )
       {
          states[1] = SCIPdigraphGetSuccessors(edgegraph, states[0])[j];
 
-         for( k = 0; k < SCIPdigraphGetNSuccessors(edgegraph, states[1]) && ncutscreated < maxcutscreated; ++k )
+         for( k = 0; k < SCIPdigraphGetNSuccessors(edgegraph, states[1]) && ncutscreated < MAXCUTSCREATED; ++k )
          {
             states[2] = SCIPdigraphGetSuccessors(edgegraph, states[1])[k];
 
