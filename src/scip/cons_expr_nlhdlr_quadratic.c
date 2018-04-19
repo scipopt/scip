@@ -1288,7 +1288,9 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
    *success = FALSE;
 
    /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
-    * propagate them; however, we only separate for known curvatures, so we only provide branchscore in that case
+    * propagate them; however, we only separate for convex quadratics, so we only provide branchscore in that case
+    * normally, we should not need to branch, but there could be small violations or numerical issues that
+    * prevented separation to succeed
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
       return SCIP_OKAY;
@@ -1335,15 +1337,10 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
    else /* nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE */
       violation = MAX(0.0, side - activity);
 
+   /* if there is violation, then add branchscore for all expr in quadratic part */
    if( SCIPisPositive(scip, violation) )
-   {
-      /* if there is a violation, then add branchscore for all children corresponding to quadratic terms?
-       * TODO we separate a convex function here, so there should be no large violations left
-       * for small violations, we did not add a cut, but branching will not help either
-       */
       for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
          SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->quadexprterms[i].expr, brscoretag, violation);
-   }
 
    *success = TRUE;
 

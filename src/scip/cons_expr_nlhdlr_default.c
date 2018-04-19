@@ -265,24 +265,28 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
    /* get value of expression w.r.t. value of auxiliary variables of children */
    SCIP_CALL( evalExprInAux(scip, expr, &exprval, sol) );
 
-   /* TODO handle exprval = SCIP_INVALID */
-
-   /* get value of auxiliary variable of this expression */
-   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-   auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-
-   /* compute the violation
-    * if there are no negative locks, then evalvalue < auxval is ok
-    * if there are no positive locks, then evalvalue > auxval is ok
-    * TODO we should actually remember for which side we enforce (by separation) and use this info here
-    */
-   violation = exprval - auxval;
-   if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
-      violation = -violation;
-   else if( SCIPgetConsExprExprNLocksPos(expr) > 0 && violation > 0.0 )
-      ;
+   if( exprval == SCIP_INVALID )
+   {
+      /* if cannot evaluate, then always branch */
+      violation = SCIPinfinity(scip);
+   }
    else
-      violation = 0.0;
+   {
+      /* get value of auxiliary variable of this expression */
+      assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+      auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+
+      /* compute the violation
+       * if there are no negative locks, then evalvalue < auxval is ok
+       * if there are no positive locks, then evalvalue > auxval is ok
+       * TODO we should actually remember for which side we enforce (by separation) and use this info here
+       */
+      violation = exprval - auxval;
+      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
+         violation = -violation;
+      else if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
+         violation = 0.0;
+   }
 
    /* register violation as branching score for each child
     * this handler tries to enforce that the value of the auxvar (=auxval) equals (or lower/greater equals)
