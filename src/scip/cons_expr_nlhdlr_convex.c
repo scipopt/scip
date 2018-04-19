@@ -318,7 +318,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
     */
 
    /* compute violation */
-   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID )
+   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
       violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
    else if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX  )
       violation = SCIPgetConsExprExprValue(expr) - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
@@ -330,7 +330,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    /* if no violation, then no need for branching
     * TODO doing this only if violation > epsilon is correct, or better do this for any violation > 0?
     */
-   if( !SCIPisPositive(scip, violation) ) /*lint !e777*/
+   if( !SCIPisPositive(scip, violation) )
       return SCIP_OKAY;
 
    for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
