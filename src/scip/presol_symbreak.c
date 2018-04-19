@@ -1275,6 +1275,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
    SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
 
+   /* terminate if symmetry handling constraints have already been added */
    if ( ! presoldata->addedconss )
       return SCIP_OKAY;
 
