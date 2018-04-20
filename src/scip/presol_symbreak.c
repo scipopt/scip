@@ -994,8 +994,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       assert( presoldata->nperms < 0 );
 
       /* get symmetries */
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(presoldata->npermvars), &(presoldata->permvars),
-            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0,
+            &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
+            &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
 
       presoldata->computedsymmetry = TRUE;
 
@@ -1090,12 +1091,6 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
    else
    {
       presoldata->enabled = FALSE;
-   }
-
-   if ( presoldata->enabled )
-   {
-      /* register presolver for symmetry information */
-      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
    }
 
    return SCIP_OKAY;
@@ -1200,17 +1195,12 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
       presoldata->enabled = FALSE;
    }
 
-   if ( presoldata->enabled )
+   /* add symmetry handling constraints if required  */
+   if ( presoldata->enabled && presoldata->addconsstiming == 0 )
    {
-      /* register presolver for symmetry information */
-      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+      SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
 
-      if ( presoldata->addconsstiming == 0 )
-      {
-         SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
-
-         SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
-      }
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
    }
 
    return SCIP_OKAY;

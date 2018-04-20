@@ -155,7 +155,8 @@ SCIP_RETCODE getSymmetries(
 
    if ( propdata->nperms < 0 )
    {
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, &(propdata->npermvars),
+            &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
 
       if ( propdata->nperms == 0 )
          return SCIP_OKAY;
@@ -598,12 +599,6 @@ SCIP_DECL_PROPINIT(propInitOrbitalfixing)
    else
    {
       propdata->enabled = FALSE;
-   }
-
-   if ( propdata->enabled )
-   {
-      /* register presolver for symmetry information, work on binary variables while fixing integer variables */
-      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_ORBITALFIXING, SYM_SPEC_BINARY, SYM_SPEC_INTEGER) );
    }
 
    return SCIP_OKAY;

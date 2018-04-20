@@ -1250,7 +1250,9 @@ SCIP_RETCODE computeNOrbitVars(
 static
 SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
+   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
+   SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
 {
    int maxgenerators;
@@ -1312,7 +1314,7 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
    /* skip symmetry computation if required variables are not present */
-   else if ( ! (type & presoldata->symspecrequire) )
+   else if ( ! (type & symspecrequire) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "   (%.1fs) symmetry computation skipped: type (bin %c, int %c, cont %c) does not match requirements (bin %c, int %c, cont %c)\n",
@@ -1320,9 +1322,9 @@ SCIP_RETCODE determineSymmetry(
          SCIPgetNBinVars(scip) > 0 ? '+' : '-',
          SCIPgetNIntVars(scip) > 0  ? '+' : '-',
          SCIPgetNContVars(scip) + SCIPgetNImplVars(scip) > 0 ? '+' : '-',
-         (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
-         (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
-         (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
+         (symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+         (symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+         (symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
       return SCIP_OKAY;
    }
    /* skip symmetry computation if there are constraints that cannot be handled by symmetry */
@@ -1337,14 +1339,14 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
       "   (%.1fs) symmetry computation started: requiring (bin %c, int %c, cont %c), (fixed: bin %c, int %c, cont %c)\n",
       SCIPgetSolvingTime(scip),
-      (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
-      (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
-      (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-',
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
+      (symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+      (symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+      (symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-',
+      (symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+      (symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+      (symspecrequirefixed & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
 
-   if ( presoldata->symspecrequire & presoldata->symspecrequirefixed )
+   if ( symspecrequire & symspecrequirefixed )
       SCIPwarningMessage(scip, "Warning: some required symmetries must be fixed.\n");
 
    /* actually compute (global) symmetry */
@@ -1352,7 +1354,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = presoldata->maxgenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
-   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE, presoldata->checksymmetries,
+   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, presoldata->checksymmetries,
          &presoldata->npermvars, &presoldata->permvars, &presoldata->permvarsobj, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms,
          &presoldata->log10groupsize, &presoldata->successful) );
 
@@ -1479,9 +1481,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
 
    /* reset settings */
-   presoldata->symtype = 0;
-   presoldata->symspecrequire = 0;
-   presoldata->symspecrequirefixed = 0;
    presoldata->npermvars = 0;
    presoldata->nperms = 0;
    presoldata->nmaxperms = 0;
@@ -1557,9 +1556,6 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
    assert( presoldata != NULL );
 
-   presoldata->symtype = 0;
-   presoldata->symspecrequire = 0;
-   presoldata->symspecrequirefixed = 0;
    presoldata->npermvars = 0;
    presoldata->permvars = NULL;
    presoldata->permvarsobj = NULL;
@@ -1610,6 +1606,8 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
 /** return symmetry group generators */
 SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
+   SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -1652,7 +1650,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       }
 
       /* determine symmetry here */
-      SCIP_CALL( determineSymmetry(scip, presoldata) );
+      SCIP_CALL( determineSymmetry(scip, presoldata, symspecrequire, symspecrequirefixed) );
    }
 
    *npermvars = presoldata->npermvars;
@@ -1694,47 +1692,6 @@ SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
    assert( presoldata != NULL );
 
    *permvarsobj = presoldata->permvarsobj;
-
-   return SCIP_OKAY;
-}
-
-
-/** register that a specific symmetry is needed */
-SCIP_RETCODE SCIPregisterSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_HANDLETYPE        symtype,            /**< type of symmetry handling of callee */
-   SYM_SPEC              type,               /**< variable types the callee is interested in */
-   SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
-   )
-{
-   SCIP_PRESOLDATA* presoldata;
-   SCIP_PRESOL* presol;
-
-   assert( scip != NULL );
-
-   /* find symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   if ( presol == NULL )
-   {
-      SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   /* check if there are conflicting symmetry handling methods */
-   if ( ( presoldata->symtype & ~ symtype ) != 0 )
-   {
-      SCIPerrorMessage("Conflicting symmetry handling methods are activated.\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   presoldata->symtype |= symtype;
-   presoldata->symspecrequire |= type;
-   presoldata->symspecrequirefixed |= fixedtype;
 
    return SCIP_OKAY;
 }
