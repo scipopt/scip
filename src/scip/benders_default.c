@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,7 +58,7 @@ struct SCIP_BendersData
  * Local methods
  */
 
-/* creates the Benders' decomposition data */
+/** creates the Benders' decomposition data */
 static
 SCIP_RETCODE createBendersData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -86,7 +86,7 @@ SCIP_RETCODE createBendersData(
 }
 
 
-/* Creates the variable mappings between the  */
+/** Creates the variable mappings between the  */
 static
 SCIP_RETCODE createVariableMappings(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -358,7 +358,7 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    bendersdata = SCIPbendersGetData(benders);
 
    /* turning restarts off */
-   SCIP_CALL( SCIPgetIntParam(scip, "limits/restarts" &nrestarts) );
+   SCIP_CALL( SCIPgetIntParam(scip, "limits/restarts", &nrestarts) );
    if( SCIPisParamFixed(scip, "limits/restarts") && nrestarts > 0)
    {
       SCIPerrorMessage("The number of restarts is fixed to %d. The default Benders' decomposition requires the number"
@@ -404,8 +404,6 @@ SCIP_RETCODE SCIPincludeBendersDefault(
    SCIP_CALL( SCIPsetBendersCopy(scip, benders, bendersCopyDefault) );
    SCIP_CALL( SCIPsetBendersFree(scip, benders, bendersFreeDefault) );
    SCIP_CALL( SCIPsetBendersInit(scip, benders, bendersInitDefault) );
-
-   /* OPTIONAL: including the default cuts for Benders' decomposition */
 
    return SCIP_OKAY;
 }
