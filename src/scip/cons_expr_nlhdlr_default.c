@@ -29,6 +29,41 @@
 #define NLHDLR_DESC         "default handler for expressions"
 #define NLHDLR_PRIORITY     0
 
+/** evaluates an expression w.r.t. the values in the auxiliary variables */
+static
+SCIP_RETCODE evalExprInAux(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to be evaluated */
+   SCIP_Real*            val,                /**< buffer to store value of expression */
+   SCIP_SOL*             sol                 /**< solution to be evaluated */
+)
+{
+   SCIP_Real* childvals;
+   SCIP_VAR* childvar;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(val != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &childvals, SCIPgetConsExprExprNChildren(expr)) );
+
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
+      assert(childvar != NULL); /* because we created auxvars in detect for every child */
+
+      childvals[c] = SCIPgetSolVal(scip, sol, childvar);
+   }
+
+   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, val, childvals, sol) );
+
+   SCIPfreeBufferArray(scip, &childvals);
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 { /*lint --e{715}*/
@@ -74,7 +109,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       /* make sure that an (auxiliary) variable exists for every child */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
       {
-         /* todo skip this for value-expressions? */
+         /* todo skip this for value-expressions? would then need update in evalExprInAux, too */
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
       }
 
@@ -89,14 +124,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *success = TRUE;
 
       /* return also branching score possibility if we use separation from exprhdlr */
-      if( SCIPhasConsExprExprHdlrBranchingScore(exprhdlr) )
-      {
-         mymethods |= SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
-         *success = TRUE;
-      }
+      mymethods |= SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+      *success = TRUE;
    }
-   else if( SCIPhasConsExprExprHdlrBranchingScore(exprhdlr) &&
-      (!*enforcedbelow || !*enforcedabove) &&
+#if 0 /* TODO branching method needs to distinguish whether we do separation (thus added auxvar) or only propagate (no auxvar) */
+   else if( (!*enforcedbelow || !*enforcedabove) &&
       (mymethods & SCIP_CONSEXPR_EXPRENFO_INTEVAL) != 0 &&
       (mymethods & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) != 0 )
    {
@@ -108,6 +140,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *enforcedabove = TRUE;
       *success = TRUE;
    }
+#endif
 
    /* it does not makes much sense to advertise a brscore callback if we do not also enforce via separation or propagation */
 
@@ -209,6 +242,10 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
 static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
 { /*lint --e{715}*/
+   SCIP_Real exprval;
+   SCIP_Real auxval;
+   SCIP_Real violation;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(success != NULL);
@@ -219,6 +256,55 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
 
    /* call the branching callback of the expression handler */
    SCIP_CALL( SCIPbranchscoreConsExprExprHdlr(scip, expr, sol, brscoretag, success) );
+
+   if( *success )
+      return SCIP_OKAY;
+
+   /* fallback: register violation w.r.t. values in auxiliary variables as branching score for each child */
+
+   /* get value of expression w.r.t. value of auxiliary variables of children */
+   SCIP_CALL( evalExprInAux(scip, expr, &exprval, sol) );
+
+   if( exprval == SCIP_INVALID ) /*lint !e777*/
+   {
+      /* if cannot evaluate, then always branch */
+      violation = SCIPinfinity(scip);
+   }
+   else
+   {
+      /* get value of auxiliary variable of this expression */
+      assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+      auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+
+      /* compute the violation
+       * if there are no negative locks, then evalvalue < auxval is ok
+       * if there are no positive locks, then evalvalue > auxval is ok
+       * TODO we should actually remember for which side we enforce (by separation) and use this info here
+       */
+      violation = exprval - auxval;
+      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
+         violation = -violation;
+      else if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
+         violation = 0.0;
+   }
+
+   /* register violation as branching score for each child
+    * this handler tries to enforce that the value of the auxvar (=auxval) equals (or lower/greater equals)
+    * the value of the expression when evaluated w.r.t. the values of the auxvars in the children (=exprval)
+    * if there is a difference, then we may branch on some of the children
+    *
+    * TODO doing this only if violation > epsilon is correct, or better do this for any violation > 0?
+    */
+   if( SCIPisPositive(scip, violation) )
+   {
+      int c;
+
+      /* add violation as branching score to all children */
+      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+         SCIPaddConsExprExprBranchScore(scip, SCIPgetConsExprExprChildren(expr)[c], brscoretag, REALABS(violation));
+   }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

@@ -298,6 +298,54 @@ CLEANUP:
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
+{ /*lint --e{715}*/
+   SCIP_Real violation;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
+   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->varexprs != NULL);
+   assert(nlhdlrexprdata->nvarexprs > 0);
+   assert(success != NULL);
+
+   /* we separate only convex functions here, so there should be little use for branching
+    * if violations are small or there are numerical issues, then we will not have generated a cut, though
+    * in that case, we will still branch, that is, register branchscores for all depending var exprs
+    */
+
+   /* compute violation */
+   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
+      violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
+   else if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX  )
+      violation = SCIPgetConsExprExprValue(expr) - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+   else
+      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - SCIPgetConsExprExprValue(expr);
+
+   *success = TRUE;
+
+   /* if no violation, then no need for branching
+    * TODO doing this only if violation > epsilon is correct, or better do this for any violation > 0?
+    */
+   if( !SCIPisPositive(scip, violation) )
+      return SCIP_OKAY;
+
+   /* TODO try to figure out which variables appear linear and skip them here */
+   for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
+   {
+      assert(nlhdlrexprdata->varexprs[i] != NULL);
+      assert(SCIPisConsExprExprVar(nlhdlrexprdata->varexprs[i]));
+
+      SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->varexprs[i], brscoretag, violation);
+   }
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConvex)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
@@ -327,6 +375,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvex);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaConvex, NULL);
+   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreConvex);
 
    return SCIP_OKAY;
 }

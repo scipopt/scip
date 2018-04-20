@@ -1180,7 +1180,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
 
    evaldata = (EXPREVAL_DATA*)data;
 
-   SCIP_CALL( (*expr->exprhdlr->eval)(scip, expr, &expr->evalvalue, evaldata->sol) );
+   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, evaldata->sol) );
    expr->evaltag = evaldata->soltag;
 
    if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
@@ -4273,8 +4273,7 @@ static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
 {
    BRSCORE_DATA* brscoredata;
-   SCIP_Bool success;
-   int e;
+   SCIP_Real violation;
 
    assert(expr != NULL);
    assert(result != NULL);
@@ -4296,37 +4295,34 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       return SCIP_OKAY;
    }
 
-   /* call branching score callbacks of nlhdlrs until one succeeds */
-   success = FALSE;
-   for( e = 0; e < expr->nenfos && !success; ++e )
+   /* compute violation w.r.t. original variables */
+   if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
+      violation = SCIPinfinity(scip);
+   else
    {
-      SCIP_CONSEXPR_NLHDLR* nlhdlr;
-
-      nlhdlr = expr->enfos[e]->nlhdlr;
-      assert(nlhdlr != NULL);
-
-      if( nlhdlr->branchscore != NULL )
-      {
-         SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
-      }
+      violation = expr->evalvalue - SCIPgetSolVal(scip, brscoredata->sol, SCIPgetConsExprExprAuxVar(expr));
+      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
+         violation = -violation;
+      else if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
+         violation = 0.0;
    }
 
-   /* fallback: if no branch score callback were available or had success so far, define |f(x*) - z*| as the branching score,
-    * where f is the expression, x* solution values of original variables, and z* be the solution value of the linearization
-    * variable attached to expression f
-    */
-   if( !success )
+   /* if there is violation, then consider branching */
+   if( violation > 0.0 )
    {
-      SCIP_Real violation;
-      int c;
+      SCIP_Bool success;
+      int e;
 
-      violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol,SCIPgetConsExprExprAuxVar(expr))
-         - expr->evalvalue);
-
-      /* add violation as branching score to all children */
-      for( c = 0; c < expr->nchildren; ++c )
+      /* call branching score callbacks of all nlhdlrs */
+      success = FALSE;
+      for( e = 0; e < expr->nenfos; ++e )
       {
-         SCIPaddConsExprExprBranchScore(scip, expr->children[c], brscoredata->brscoretag, violation);
+         SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+         nlhdlr = expr->enfos[e]->nlhdlr;
+         assert(nlhdlr != NULL);
+
+         SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
       }
    }
 
@@ -7187,6 +7183,56 @@ SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
    return SCIP_OKAY;
 }
 
+/** calls the evaluation callback of an expression handler
+ *
+ * further, allows to evaluate w.r.t. given children values
+ */
+SCIP_RETCODE SCIPevalConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 val,          /**< buffer store value of expression */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*                  sol           /**< solution that is evaluated (used by the var-expression) */
+)
+{
+   SCIP_Real* origvals = NULL;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(expr->exprhdlr->eval != NULL);
+   assert(val != NULL);
+
+   /* temporarily overwrite the evalvalue in all children with values from childrenvals */
+   if( childrenvals != NULL && expr->nchildren > 0 )
+   {
+      int c;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &origvals, expr->nchildren) );
+
+      for( c = 0; c < expr->nchildren; ++c )
+      {
+         origvals[c] = expr->children[c]->evalvalue;
+         expr->children[c]->evalvalue = childrenvals[c];
+      }
+   }
+
+   /* call expression eval callback */
+   SCIP_CALL( expr->exprhdlr->eval(scip, expr, val, sol) );
+
+   /* restore original evalvalues in children */
+   if( origvals != NULL )
+   {
+      int c;
+      for( c = 0; c < expr->nchildren; ++c )
+         expr->children[c]->evalvalue = origvals[c];
+
+      SCIPfreeBufferArray(scip, &origvals);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls the separation initialization method of an expression handler */
 SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
    SCIP*                      scip,         /**< SCIP data structure */
@@ -9932,6 +9978,32 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    if( *infeasible )
       ++nlhdlr->ncutoffs;
    ++nlhdlr->npropcalls;
+
+   return SCIP_OKAY;
+}
+
+/** calls the nonlinear handler branching score callback */
+SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_SOL*                     sol,              /**< solution (NULL for the LP solution) */
+   unsigned int                  brscoretag,       /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
+   SCIP_Bool*                    success           /**< buffer to store whether the branching score callback was successful */
+)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(success != NULL);
+
+   if( nlhdlr->branchscore == NULL )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, nlhdlrexprdata, sol, brscoretag, success) );
 
    return SCIP_OKAY;
 }

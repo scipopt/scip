@@ -784,21 +784,25 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    SCIP_Bool success;
    int j;
 
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(conshdlr != NULL);
+   assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
+   assert(nlhdlrexprdata != NULL);
+   assert(result != NULL);
+   assert(ncuts != NULL);
+
+   *ncuts = 0;
+   *result = SCIP_DIDNOTRUN;
+
    /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
     * propagate them
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
       return SCIP_OKAY;
 
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(conshdlr != NULL);
-   assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
-   assert(result != NULL);
-   assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
 
-   *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -1268,6 +1272,81 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
+{ /*lint --e{715}*/
+   SCIP_Real activity;
+   SCIP_Real side;
+   SCIP_Real violation;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
+    * propagate them; however, we only separate for convex quadratics, so we only provide branchscore in that case
+    * normally, we should not need to branch, but there could be small violations or numerical issues that
+    * prevented separation to succeed
+    */
+   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
+      return SCIP_OKAY;
+
+   assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
+
+   /* evaluate expression w.r.t. auxiliary variables */
+   activity = SCIPgetConsExprExprSumConstant(expr);
+
+   for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
+      activity += nlhdlrexprdata->lincoefs[i] *
+      SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[i]));
+
+   for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i ) /* quadratic terms */
+   {
+      SCIP_QUADEXPRTERM quadexprterm;
+      SCIP_Real solval;
+
+      quadexprterm = nlhdlrexprdata->quadexprterms[i];
+      solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm.expr));
+      activity += (quadexprterm.lincoef + quadexprterm.sqrcoef * solval) * solval;
+   }
+   for( i = 0; i < nlhdlrexprdata->nbilinexprterms; ++i ) /* bilinear terms */
+   {
+      SCIP_BILINEXPRTERM bilinexprterm;
+
+      bilinexprterm = nlhdlrexprdata->bilinexprterms[i];
+      activity += bilinexprterm.coef *
+         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr1)) *
+         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr2));
+   }
+
+   side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+
+   SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", activity,
+      SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
+         "concave");
+
+   /* if convex, then we enforce expr <= auxvar, so violation is expr - auxvar = activity - side, if positive
+    * if concave, then we enforce expr >= auxvar, so violation is auxvar - expr = side - activity, if positive
+    */
+   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
+      violation = MAX(0.0, activity - side);
+   else /* nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE */
+      violation = MAX(0.0, side - activity);
+
+   /* if there is violation, then add branchscore for all expr in quadratic part */
+   if( SCIPisPositive(scip, violation) )
+      for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
+         SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->quadexprterms[i].expr, brscoretag, violation);
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** nonlinear handler copy callback
  *
  * the method includes the nonlinear handler into a expression constraint handler
@@ -1305,6 +1384,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrsepaHdlrQuadratic, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuadratic, nlhdlrReversepropQuadratic);
+   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreQuadratic);
 
    return SCIP_OKAY;
 }

@@ -328,6 +328,19 @@ SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
    SCIP_CONSEXPR_EXPR**       simplifiedexpr/**< pointer to store the simplified expression */
    );
 
+/** calls the evaluation callback of an expression handler
+ *
+ * further, allows to evaluate w.r.t. given children values
+ */
+extern
+SCIP_RETCODE SCIPevalConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 val,          /**< buffer store value of expression */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*                  sol           /**< solution that is evaluated (used by the var-expression) */
+);
+
 /** calls the separation initialization method of an expression handler */
 extern
 SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
@@ -1355,6 +1368,18 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    SCIP_Bool*                    infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                          nreductions,      /**< buffer to store the number of interval reductions of all children */
    SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
+);
+
+/** calls the nonlinear handler branching score callback */
+EXTERN
+SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_SOL*                     sol,              /**< solution (NULL for the LP solution) */
+   unsigned int                  brscoretag,       /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
+   SCIP_Bool*                    success           /**< buffer to store whether the branching score callback was successful */
 );
 
 #ifdef __cplusplus

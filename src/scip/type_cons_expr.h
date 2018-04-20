@@ -206,8 +206,8 @@ extern "C" {
  *
  * input:
  *  - scip : SCIP main data structure
- *  - val : buffer where to store value
  *  - expr : expression to be evaluated
+ *  - val : buffer where to store value
  *  - sol : solution that is evaluated (can be NULL)
  */
 #define SCIP_DECL_CONSEXPR_EXPREVAL(x) SCIP_RETCODE x (\
@@ -503,7 +503,7 @@ typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 #define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
 #define SCIP_CONSEXPR_EXPRENFO_INTEVAL        0x4u /**< interval evaluation */
 #define SCIP_CONSEXPR_EXPRENFO_REVERSEPROP    0x8u /**< reverse propagation */
-#define SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE    0x16u /**< setting branching scores */
+#define SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE    0x10u /**< setting branching scores */
 #define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) /**< all enforcement methods */
 
 /** type for exprenfo bitflags */
@@ -742,8 +742,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 
 /** nonlinear handler callback for branching scores
  *
- * The method adds branching scores to successors if it finds that the value of the
- * linearization variables does not coincide with the value of the expression in the given solution.
+ * The method adds branching scores to successors if it finds that this is how to enforce
+ * the relation between the auxiliary variable and the value of the expression in the given solution.
  * It shall use the function SCIPaddConsExprExprBranchScore() to add a branching score to its successors.
  * It shall return TRUE in success if no branching is necessary or branching scores have been added.
  * If returning FALSE in success, then other scoring methods will be applied.
