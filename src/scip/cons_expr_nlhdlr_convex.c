@@ -140,21 +140,21 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    curvature = SCIPgetConsExprExprCurvature(expr);
 
    /* check whether expression is nonlinear, convex or concave, and is not handled by another nonlinear handler */
-   if( curvature == SCIP_EXPRCURV_CONVEX && !*enforcedabove )
-   {
-      *enforcedabove = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-      *success = TRUE;
-
-      SCIPdebugMsg(scip, "detected convexity of %p\n", (void*)expr);
-   }
-   else if( curvature == SCIP_EXPRCURV_CONCAVE && !*enforcedbelow )
+   if( curvature == SCIP_EXPRCURV_CONVEX && !*enforcedbelow )
    {
       *enforcedbelow = TRUE;
       *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
       *success = TRUE;
 
-      SCIPdebugMsg(scip, "detected concavity of %p\n", (void*)expr);
+      SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
+   }
+   else if( curvature == SCIP_EXPRCURV_CONCAVE && !*enforcedabove )
+   {
+      *enforcedabove = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+      *success = TRUE;
+
+      SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
    }
 
    /* store variable expressions into the expression data of the nonlinear handler */
