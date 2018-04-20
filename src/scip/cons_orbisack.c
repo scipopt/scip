@@ -1000,44 +1000,6 @@ SCIP_RETCODE separateInequalities(
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
 
-/** initialization method of constraint handler (called after problem was transformed) */
-static
-SCIP_DECL_CONSINIT(consInitOrbisack)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int c;
-
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-
-   /* nothing has to be done if there are no constraints */
-   if ( nconss == 0 )
-      return SCIP_OKAY;
-   assert( conss != NULL );
-
-   /* determine maximum number of rows in an orbisack constraint */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   conshdlrdata->maxnrows = 0;
-
-   for (c = 0; c < nconss; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-
-      if ( consdata->nrows > conshdlrdata->maxnrows )
-         conshdlrdata->maxnrows = consdata->nrows;
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbisack)
@@ -1136,7 +1098,6 @@ SCIP_DECL_CONSINITLP(consInitlpOrbisack)
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
-      /* get data of constraint */
       assert( conss[c] != 0 );
 
       SCIPdebugMsg(scip, "Generating initial orbisack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
@@ -1146,6 +1107,42 @@ SCIP_DECL_CONSINITLP(consInitlpOrbisack)
          break;
 
       SCIPdebugMsg(scip, "Generated initial orbisack cut.\n");
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_CONSINITSOL(consInitsolOrbisack)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   /* determine maximum number of rows in an orbisack constraint */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   conshdlrdata->maxnrows = 0;
+
+   /* loop through constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+
+      assert( conss[c] != NULL );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* update conshdlrdata if necessary */
+      if ( consdata->nrows > conshdlrdata->maxnrows )
+         conshdlrdata->maxnrows = consdata->nrows;
    }
 
    return SCIP_OKAY;
@@ -1986,7 +1983,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbisack) );
-   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitOrbisack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbisack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbisack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbisack) );
@@ -1998,6 +1994,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbisack, consSepasolOrbisack, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbisack) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOrbisack) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolOrbisack) );
 
    /* separation methods */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/coverseparation",

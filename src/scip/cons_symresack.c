@@ -1347,44 +1347,6 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
 
-/** initialization method of constraint handler (called after problem was transformed) */
-static
-SCIP_DECL_CONSINIT(consInitSymresack)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int c;
-
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-
-   /* nothing has to be done if there are no constraints */
-   if ( nconss == 0 )
-      return SCIP_OKAY;
-   assert( conss != NULL );
-
-   /* determine maximum number of vars in a symresack constraint */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   conshdlrdata->maxnvars = 0;
-
-   for (c = 0; c < nconss; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-
-      if ( consdata->nvars > conshdlrdata->maxnvars )
-         conshdlrdata->maxnvars = consdata->nvars;
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteSymresack)
@@ -1528,6 +1490,42 @@ SCIP_DECL_CONSINITLP(consInitlpSymresack)
          break;
    }
    SCIPdebugMsg(scip, "Generated initial symresack cuts.\n");
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_CONSINITSOL(consInitsolSymresack)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   /* determine maximum number of vars in a symresack constraint */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   conshdlrdata->maxnvars = 0;
+
+   /* loop through constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+
+      assert( conss[c] != NULL );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* update conshdlrdata if necessary */
+      if ( consdata->nvars > conshdlrdata->maxnvars )
+         conshdlrdata->maxnvars = consdata->nvars;
+   }
 
    return SCIP_OKAY;
 }
@@ -2304,7 +2302,6 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSymresack) );
-   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSymresack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSymresack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymresack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSymresack) );
@@ -2316,6 +2313,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSymresack, consSepasolSymresack, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSymresack) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSymresack) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSymresack) );
 
    /* whether we allow upgrading to packing/partioning symresack constraints*/
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/ppsymresack",
