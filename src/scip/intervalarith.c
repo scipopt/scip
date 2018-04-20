@@ -3017,6 +3017,9 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL xneg;
 
    assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, sqrcoeff));
+   assert(!SCIPintervalIsEmpty(infinity, lincoeff));
+   assert(!SCIPintervalIsEmpty(infinity, rhs));
 
    if( sqrcoeff.inf == 0.0 && sqrcoeff.sup == 0.0 )
    { /* relatively easy case: x \in rhs / lincoeff */
