@@ -70,9 +70,6 @@ struct SCIP_PresolData
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
-   SYM_HANDLETYPE        symtype;            /**< type of symmetry of registered calling function */
-   SYM_SPEC              symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
-   SYM_SPEC              symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
