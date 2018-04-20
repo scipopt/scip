@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,8 +45,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary compression data */
-
 /** Benders' decomposition cuts data */
 struct SCIP_BenderscutData
 {
@@ -61,7 +59,7 @@ struct SCIP_BenderscutData
  * Local methods
  */
 
-/* compute no good cut */
+/** compute no good cut */
 static
 SCIP_RETCODE computeNogoodCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
@@ -74,7 +72,7 @@ SCIP_RETCODE computeNogoodCut(
 {
    SCIP_VAR** vars;
    int nvars;
-   SCIP_Real lhs;          /* the left hand side of the cut */
+   SCIP_Real lhs;
    int i;
 #ifndef NDEBUG
    SCIP_Real verifycons;
@@ -122,17 +120,25 @@ SCIP_RETCODE computeNogoodCut(
 
          /* adding the variable to the cut. The coefficient is the subproblem objective value */
          if( addcut )
+         {
             SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[i], coef) );
+         }
          else
+         {
             SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[i], coef) );
+         }
       }
    }
 
    /* Update the lhs of the cut */
    if( addcut )
+   {
       SCIP_CALL( SCIPchgRowLhs(masterprob, row, lhs) );
+   }
    else
+   {
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
+   }
 
 
 #ifndef NDEBUG
@@ -149,7 +155,7 @@ SCIP_RETCODE computeNogoodCut(
 
 
 
-/* generates and applies Benders' cuts */
+/** generates and applies Benders' cuts */
 static
 SCIP_RETCODE generateAndApplyBendersNogoodCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
@@ -161,10 +167,10 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    )
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
-   SCIP_CONSHDLR* consbenders;      /* the Benders' decomposition constraint handler */
-   SCIP_CONS* cons;                 /* the cut that will be generated from the solution to the pricing problem */
-   SCIP_ROW* row;                   /* the that is generated for the Benders' cut */
-   char cutname[SCIP_MAXSTRLEN];    /* the name of the generated cut */
+   SCIP_CONSHDLR* consbenders;
+   SCIP_CONS* cons;
+   SCIP_ROW* row;
+   char cutname[SCIP_MAXSTRLEN];
    SCIP_Bool addcut;
 
    assert(masterprob != NULL);
@@ -178,8 +184,9 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    /* retreiving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
 
-   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be added
-    * to the master problem. */
+   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must bei
+    * added to the master problem.
+    */
    if( SCIPgetStage(masterprob) < SCIP_STAGE_INITSOLVE )
       addcut = FALSE;
    else
@@ -223,9 +230,6 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
          SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
       }
 
-      /* storing the generated cut */
-      //SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
-
 #ifdef SCIP_DEBUG
       SCIP_CALL( SCIPprintRow(masterprob, row, NULL) );
       SCIPinfoMessage(masterprob, NULL, ";\n");
@@ -240,13 +244,7 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    {
       SCIP_CALL( SCIPaddCons(masterprob, cons) );
 
-      /* storing the generated cut */
-      //SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
-
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintCons(masterprob, cons, NULL) );
-      SCIPinfoMessage(masterprob, NULL, ";\n");
-#endif
+      SCIPdebugPrintCons(masterprob, cons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
 
@@ -299,7 +297,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
    assert(benderscutdata != NULL);
 
    /* if the curriter is less than the number of Benders' decomposition calls, then we are in a new round.
-    * So the cutadded flag must be set to FALSE */
+    * So the cutadded flag must be set to FALSE
+    */
    if( benderscutdata->curriter < SCIPbendersGetNCalls(benders) )
    {
       benderscutdata->curriter = SCIPbendersGetNCalls(benders);
@@ -310,12 +309,9 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
    if( benderscutdata->cutadded )
       return SCIP_OKAY;
 
-   /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
-   //if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
-      //return SCIP_OKAY;
-
    /* We can not rely on complete recourse for the subproblems. As such, the subproblems may be feasible for the LP, but
-    * infeasible for the IP. As such, if one subproblem is infeasible, then a no good cut is generated. */
+    * infeasible for the IP. As such, if one subproblem is infeasible, then a no good cut is generated.
+    */
    if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_INFEASIBLE )
    {
       /* generating a cut */
@@ -361,7 +357,8 @@ SCIP_RETCODE SCIPincludeBenderscutNogood(
    SCIP_CALL( SCIPsetBenderscutFree(scip, benderscut, benderscutFreeNogood) );
 
    /* add nogood Benders' decomposition cuts parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/addcuts", SCIPbendersGetName(benders), BENDERSCUT_NAME);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/addcuts",
+      SCIPbendersGetName(benders), BENDERSCUT_NAME);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname,
          "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
          &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );

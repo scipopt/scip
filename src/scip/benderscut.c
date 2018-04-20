@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -137,11 +137,11 @@ SCIP_RETCODE SCIPbenderscutCreate(
    (*benderscut)->ncalls = 0;
    (*benderscut)->nfound = 0;
    (*benderscut)->initialized = FALSE;
-   (*benderscut)->addedcons = NULL;
+   (*benderscut)->addedconss = NULL;
    (*benderscut)->addedcuts = NULL;
-   (*benderscut)->addedconssize = BENDERSCUT_ARRAYSIZE;
+   (*benderscut)->addedconsssize = BENDERSCUT_ARRAYSIZE;
    (*benderscut)->addedcutssize = BENDERSCUT_ARRAYSIZE;
-   (*benderscut)->naddedcons = 0;
+   (*benderscut)->naddedconss = 0;
    (*benderscut)->naddedcuts = 0;
 
    /* add parameters */
@@ -204,7 +204,7 @@ SCIP_RETCODE SCIPbenderscutInit(
    }
 
    /* allocating memory for the added constraint/cut arrays */
-   SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedcons, benderscut->addedconssize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedconss, benderscut->addedconsssize) );
    SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedcuts, benderscut->addedcutssize) );
 
    if( benderscut->benderscutinit != NULL )
@@ -241,16 +241,20 @@ SCIP_RETCODE SCIPbenderscutExit(
 
    /* releasing the stored rows and constraints */
    for( i = 0; i < benderscut->naddedcuts; i++ )
+   {
       SCIP_CALL( SCIPreleaseRow(set->scip, &benderscut->addedcuts[i]) );
+   }
 
-   for( i = 0; i < benderscut->naddedcons; i++ )
-      SCIP_CALL( SCIPreleaseCons(set->scip, &benderscut->addedcons[i]) );
+   for( i = 0; i < benderscut->naddedconss; i++ )
+   {
+      SCIP_CALL( SCIPreleaseCons(set->scip, &benderscut->addedconss[i]) );
+   }
 
    BMSfreeMemoryArray(&benderscut->addedcuts);
-   BMSfreeMemoryArray(&benderscut->addedcons);
-   benderscut->addedconssize = BENDERSCUT_ARRAYSIZE;
+   BMSfreeMemoryArray(&benderscut->addedconss);
+   benderscut->addedconsssize = BENDERSCUT_ARRAYSIZE;
    benderscut->addedcutssize = BENDERSCUT_ARRAYSIZE;
-   benderscut->naddedcons = 0;
+   benderscut->naddedconss = 0;
    benderscut->naddedcuts = 0;
 
    if( benderscut->benderscutexit != NULL )
@@ -548,7 +552,7 @@ SCIP_Real SCIPbenderscutGetTime(
    return SCIPclockGetTime(benderscut->benderscutclock);
 }
 
-/** adds the generated constraint to the Benders cut storage */
+/** adds the generated constraint to the Benders' cut storage */
 SCIP_RETCODE SCIPbenderscutStoreCons(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -560,16 +564,16 @@ SCIP_RETCODE SCIPbenderscutStoreCons(
    assert(cons != NULL);
 
    /* ensuring the required memory is available for the added constraints array */
-   if( benderscut->addedconssize < benderscut->naddedcons + 1 )
+   if( benderscut->addedconsssize < benderscut->naddedconss + 1 )
    {
-      benderscut->addedconssize = SCIPsetCalcMemGrowSize(set, benderscut->naddedcons + 1);
-      SCIP_ALLOC( BMSreallocMemoryArray(&benderscut->addedcons, benderscut->addedconssize) );
+      benderscut->addedconsssize = SCIPsetCalcMemGrowSize(set, benderscut->naddedconss + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&benderscut->addedconss, benderscut->addedconsssize) );
    }
-   assert(benderscut->addedconssize >= benderscut->naddedcons + 1);
+   assert(benderscut->addedconsssize >= benderscut->naddedconss + 1);
 
    /* adding the constraint to the Benders' cut storage */
-   benderscut->addedcons[benderscut->naddedcons] = cons;
-   benderscut->naddedcons++;
+   benderscut->addedconss[benderscut->naddedconss] = cons;
+   benderscut->naddedconss++;
 
    return SCIP_OKAY;
 }
@@ -603,16 +607,16 @@ SCIP_RETCODE SCIPbenderscutStoreCut(
 /** returns the constraints that have been added by the Benders' cut plugin */
 SCIP_RETCODE SCIPbenderscutGetCons(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   SCIP_CONS***          addedcons,          /**< pointer to store the constraint array */
-   int*                  naddedcons          /**< pointer to store the number of added constraints */
+   SCIP_CONS***          addedconss,         /**< pointer to store the constraint array */
+   int*                  naddedconss         /**< pointer to store the number of added constraints */
    )
 {
    assert(benderscut != NULL);
-   assert(addedcons != NULL);
-   assert(naddedcons != NULL);
+   assert(addedconss != NULL);
+   assert(naddedconss != NULL);
 
-   (*addedcons) = benderscut->addedcons;
-   (*naddedcons) = benderscut->naddedcons;
+   (*addedconss) = benderscut->addedconss;
+   (*naddedconss) = benderscut->naddedconss;
 
    return SCIP_OKAY;
 }
@@ -635,13 +639,13 @@ SCIP_RETCODE SCIPbenderscutGetCuts(
 }
 
 /** returns the number of constraints that have been added by the Benders' cut plugin */
-int SCIPbenderscutGetNAddedCons(
+int SCIPbenderscutGetNaddedconss(
    SCIP_BENDERSCUT*      benderscut         /**< Benders' decomposition cut */
    )
 {
    assert(benderscut != NULL);
 
-   return benderscut->naddedcons;
+   return benderscut->naddedconss;
 }
 
 /** returns the number of cuts that have been added by the Benders' cut plugin */

@@ -1540,7 +1540,8 @@ SCIP_RETCODE generateBendersCuts(
 
    /* in the case of an LNS check, only the LP of the subproblems will be solved. This is a performance feature, since
     * solving the LP relaxation is much more efficient than solving the MIP. While the MIP is not solved during the LNS
-    * check, the solutions are still of higher quality than when Benders' is not employed. */
+    * check, the solutions are still of higher quality than when Benders' is not employed.
+    */
    onlylpcheck = onlyCheckSubproblemLP(benders);
 
    /* It is only possible to add cuts to the problem if it has not already been solved */
@@ -1549,7 +1550,6 @@ SCIP_RETCODE generateBendersCuts(
       SCIP_Longint addedcuts = 0;
 
       /* This is done in two loops. The first is by subproblem and the second is by cut type. */
-      //for( i = 0; i < nsubproblems; i++ )
       i = benders->firstchecked;
       subproblemcount = 0;
       while( subproblemcount < nsubprobssolved )
@@ -1570,7 +1570,8 @@ SCIP_RETCODE generateBendersCuts(
             /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
              * the first iteration of the solve loop.
              * TODO: Need to work out how to handle the solve loops. Should I always run two solve loops? Or only one
-             * when the user defines a subproblem solving method */
+             * when the user defines a subproblem solving method
+             */
             if( (solveloop == SCIP_BENDERSSOLVELOOP_LP && SCIPbenderscutIsLPCut(benderscuts[j]))
                || (solveloop == SCIP_BENDERSSOLVELOOP_CIP && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[j]))
                || solveloop == SCIP_BENDERSSOLVELOOP_USER )
@@ -1632,7 +1633,7 @@ SCIP_RETCODE SCIPbendersExec(
    int nchecked;              /* the number of subproblems that have been checked */
    SCIP_Bool* subisinfeas;
 
-   SCIPdebugMessage("Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
+   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
 
    /* start timing */
    SCIPclockStart(benders->bendersclock, set);
@@ -1782,7 +1783,7 @@ SCIP_RETCODE SCIPbendersExec(
    /* increment the number of calls to the Benders' decomposition subproblem solve */
    benders->ncalls++;
 
-   SCIPdebugMessage("End Benders' decomposition subproblem solve. result %d infeasible %d auxviol %d\n", *result,
+   SCIPsetDebugMsg(set, "End Benders' decomposition subproblem solve. result %d infeasible %d auxviol %d\n", *result,
       *infeasible, *auxviol);
 
    /* end timing */
