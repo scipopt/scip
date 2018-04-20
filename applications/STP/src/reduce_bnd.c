@@ -327,6 +327,57 @@ void updateEqArrays(
 }
 #endif
 
+/** compare with tree bottleneck */
+static
+SCIP_Bool bottleneckRuleOut(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      treecosts,          /**< costs of edges of the tree */
+   const SCIP_Real*      basebottlenecks,    /**< bottleneck costs for innode and basenode */
+   const int*            nodepos,            /**< node position in tree */
+   SCIP_Real             orgedgecost,        /**< cost of original edge */
+   SCIP_Real             extedgecost,        /**< cost of short-cut edge */
+   int                   orgedge,            /**< original edge */
+   int                   extedge,            /**< short-cut edge */
+   int                   dfsdepth            /**< dfs depth */
+)
+{
+   int start;
+
+   if( SCIPisLT(scip, extedgecost, orgedgecost) )
+      return TRUE;
+
+   if( nodepos[graph->tail[extedge]] > graph->knots )
+   {
+      start = nodepos[graph->tail[extedge]] - 1 - graph->knots;
+      assert(start >= 0 && start <= 3);
+
+      if( start <= 2 )
+      {
+         assert(basebottlenecks[start] > 0);
+
+         if( SCIPisLT(scip, extedgecost, basebottlenecks[start]) )
+            return TRUE;
+      }
+      start = 0;
+   }
+   else
+   {
+      start = nodepos[graph->tail[extedge]] - 1;
+      assert(start >= 0 && start < dfsdepth);
+   }
+
+   for( int i = start; i < dfsdepth; i++ )
+   {
+      assert(treecosts[i] >= 0.0);
+
+      if( SCIPisLT(scip, extedgecost, treecosts[i]) )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
 /** can subtree be ruled out? */
 static
 SCIP_Bool ruleOutSubtree(
@@ -339,7 +390,6 @@ SCIP_Bool ruleOutSubtree(
    SCIP_Real             extendedcost,       /**< cost of subtree */
    int                   dfsdepth,           /**< dfs depth */
    int                   curredge,           /**< latest edge */
-   int                   currhead,           /**< latest node */
    SCIP_Bool             allowequality       /**< rule out also in case of equality */
 )
 {
@@ -351,48 +401,58 @@ SCIP_Bool ruleOutSubtree(
    else
    {
       const SCIP_Real currcost = graph->cost[curredge];
+      const int currhead = graph->head[curredge];
 
       for( int e = graph->inpbeg[currhead]; e != EAT_LAST; e = graph->ieat[e] )
-         if( e != curredge && nodepos[graph->tail[e]] )
+      {
+         int tail;
+         SCIP_Real ecost;
+
+         if( e == curredge )
+            continue;
+
+         assert(flipedge(e) != curredge);
+
+         tail = graph->tail[e];
+         ecost = graph->cost[e];
+
+         if( nodepos[tail] )
          {
-            /* compute tree bottleneck */
-
-            int start;
-            const SCIP_Real ecost = graph->cost[e];
-
-            assert(flipedge(e) != curredge);
-
-            if( SCIPisLT(scip, ecost, currcost) )
+            if( bottleneckRuleOut(scip, graph, treecosts, basebottlenecks, nodepos, currcost,
+                  ecost, curredge, e, dfsdepth) )
                return TRUE;
+         }
+         else
+         {
+            const SCIP_Bool is_term = Is_term(graph->term[tail]);
 
-            if( nodepos[graph->tail[e]] > graph->knots )
+            for( int e2 = graph->outbeg[tail], count = 0; e2 != EAT_LAST && count < STP_DAEX_MAXGRAD;
+                  e2 = graph->oeat[e2], count++ )
             {
-               start = nodepos[graph->tail[e]] - 1 - graph->knots;
-               assert(start >= 0 && start <= 3);
+               int head2;
 
-               if( start <= 2 )
+               if( e2 == e )
+                  continue;
+
+               assert(flipedge(e2) != e && e2 != curredge && e2 != flipedge(curredge) );
+
+               head2 = graph->head[e2];
+               assert(head2 != tail);
+
+               if( nodepos[head2] )
                {
-                  assert(basebottlenecks[start] > 0);
+                  const SCIP_Real extcost = is_term ? MAX(ecost, graph->cost[e2]) : (ecost + graph->cost[e2]);
+                  assert(head2 != currhead);
 
-                  if( SCIPisLT(scip, ecost, basebottlenecks[start]) )
-                     return TRUE;
+                  if( bottleneckRuleOut(scip, graph, treecosts, basebottlenecks,
+                        nodepos, currcost, extcost, curredge, flipedge(e2), dfsdepth) )
+                  {
+                      return TRUE;
+                  }
                }
-               start = 0;
-            }
-            else
-            {
-               start = nodepos[graph->tail[e]] - 1;
-               assert(start >= 0 && start < dfsdepth);
-            }
-
-            for( int i = start; i < dfsdepth; i++ )
-            {
-               assert(treecosts[i] >= 0.0);
-
-               if( SCIPisLT(scip, ecost, treecosts[i]) )
-                  return TRUE;
             }
          }
+      }
    }
 
    return FALSE;
@@ -2084,7 +2144,7 @@ SCIP_RETCODE reduce_check3Tree(
          nodepos[startnode] = nnodes + 4;
 
          /* can we rule out entire subtree already? */
-         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, startedge, startnode, FALSE) )
+         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, startedge, FALSE) )
          {
             *ruleout = TRUE;
             break;
@@ -2133,7 +2193,7 @@ SCIP_RETCODE reduce_check3Tree(
                   extendedcost += vnoi[costartnode].dist + vnoi[currhead].dist;
 
                /* can we rule out subtree? */
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, currhead, FALSE) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, FALSE) )
                   continue;
 
                /* do we need to stop extension? */
@@ -2187,7 +2247,7 @@ SCIP_RETCODE reduce_check3Tree(
          basebottlenecks[2] = MAX(graph->cost[outedges[1]], graph->cost[inedge]);
 
          /* can we rule out entire subtree already? */
-         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, flipedge(inedge), innode, FALSE) )
+         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, flipedge(inedge), FALSE) )
          {
             *ruleout = TRUE;
          }
@@ -2224,7 +2284,7 @@ SCIP_RETCODE reduce_check3Tree(
             {
                const SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), currtail, FALSE) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), FALSE) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2364,7 +2424,7 @@ SCIP_RETCODE reduce_checkEdge(
             {
                SCIP_Real extendedcost = treecost + redcost[curredge] + vnoi[currhead].dist;
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, currhead, equality) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, equality) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2422,7 +2482,7 @@ SCIP_RETCODE reduce_checkEdge(
             {
                SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), currtail, equality) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), equality) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2808,7 +2868,8 @@ SCIP_RETCODE reduce_da(
                lpobjval, upperbound, root, (run == 0), extendedReplace) );
       }
 
-      SCIP_CALL( level0(scip, graph) );
+      if( nfixed > 0 )
+         SCIP_CALL( level0(scip, graph) );
       assert(graph_valid(graph));
 
       if( !rpc )
