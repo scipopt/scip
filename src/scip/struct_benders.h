@@ -50,6 +50,7 @@ struct SCIP_Benders
    SCIP_DECL_BENDERSGETVAR((*bendersgetvar)); /**< returns the corresponding variable from the master or subproblem */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve));/**< called prior to the subproblem solving loop */
    SCIP_DECL_BENDERSCREATESUB((*benderscreatesub));/**< creates the Benders' decomposition subproblems */
+   SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex));/**< the solving method for convex Benders' decomposition subproblems */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub));/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve));/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub));/**< the freeing method for the Benders' decomposition subproblems */
@@ -87,8 +88,8 @@ struct SCIP_Benders
    SCIP_Real*            bestsubprobobjval;  /**< the best objective value of the subproblem */
    int                   naddedsubprobs;     /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
-   SCIP_Bool*            subprobislp;        /**< is the subproblem formulated as an LP? */
-   int                   nlpsubprobs;        /**< the number of LP subproblems */
+   SCIP_Bool*            subprobisconvex;    /**< is the subproblem convex? This implies that the dual sol can be used for cuts */
+   int                   nconvexsubprobs;    /**< the number of subproblems that are convex */
    SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
                                                   This flag is used when retransforming the problem.*/
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted

@@ -76,6 +76,7 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_DECL_BENDERSGETVAR((*bendersgetvar)),/**< returns the master variable for a given subproblem variable */
    SCIP_DECL_BENDERSCREATESUB((*benderscreatesub)),/**< creates a Benders' decomposition subproblem */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve)),/**< called prior to the subproblem solving loop */
+   SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex)),/**< the solving method for convex Benders' decomposition subproblems */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve)),/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub)),/**< the freeing method for the Benders' decomposition subproblems */
@@ -175,6 +176,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    int                   probnum,            /**< the subproblem number */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of an enhancement? */
+   SCIP_Bool*            solved,             /**< flag to indicate whether the subproblem was solved */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
@@ -198,7 +200,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvemip,           /**< directly solve the MIP subproblem */
+   SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
 
 /** frees the subproblems. */
@@ -297,6 +300,13 @@ void SCIPbendersSetPresubsolve(
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve))/**< called prior to the subproblem solving loop */
    );
 
+/** sets convex solve callback of Benders' decomposition */
+extern
+void SCIPbendersSetSolvesubconvex(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex))/**< solving method for the convex Benders' decomposition subproblem */
+   );
+
 /** sets solve callback of Benders' decomposition */
 extern
 void SCIPbendersSetSolvesub(
@@ -339,16 +349,6 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
 /** Removes the subproblems from the Benders' decomposition data */
 void SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   );
-
-/** sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
- *  process. One example is when the three-phase method is employed, where the first phase solves the of both the master
- *  and subproblems and by the third phase the integer subproblem is solved. */
-extern
-void SCIPbendersSetSubprobIsLP(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
    );
 
 /** sets the subproblem setup flag */

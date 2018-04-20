@@ -5823,6 +5823,7 @@ SCIP_RETCODE SCIPincludeBenders(
    SCIP_DECL_BENDERSGETVAR((*bendersgetvar)),/**< returns the master variable for a given subproblem variable */
    SCIP_DECL_BENDERSCREATESUB((*benderscreatesub)),/**< creates a Benders' decomposition subproblem */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve)),/**< the execution method of the Benders' decomposition algorithm */
+   SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex)),/**< the solving method for convex Benders' decomposition subproblems */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve)),/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub)),/**< the freeing method for the Benders' decomposition subproblems */
@@ -5840,10 +5841,22 @@ SCIP_RETCODE SCIPincludeBenders(
       return SCIP_INVALIDDATA;
    }
 
+   /* Checking whether the benderssolvesub and the bendersfreesub are both implemented or both are not implemented */
+   if( (benderssolvesubconvex == NULL && benderssolvesub == NULL && bendersfreesub != NULL)
+      || ((benderssolvesubconvex != NULL || benderssolvesub != NULL) && bendersfreesub == NULL) )
+   {
+      SCIPerrorMessage("Benders' decomposition <%s> requires that if bendersFreesub%s is "
+         "implemented at least one of bendersSolvesubconvex%s or bendersSolvesub%s are implemented, "
+         "or if bendersFreesub%s is not implemented, then none are implented.\n", SCIPbendersGetName(benders),
+         SCIPbendersGetName(benders), SCIPbendersGetName(benders), SCIPbendersGetName(benders),
+         SCIPbendersGetName(benders));
+      return SCIP_INVALIDCALL;
+   }
+
    SCIP_CALL( SCIPbendersCreate(&benders, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
          cutlp, cutpseudo, cutrelax, shareauxvars, benderscopy, bendersfree, bendersinit, bendersexit, bendersinitpre,
          bendersexitpre, bendersinitsol, bendersexitsol, bendersgetvar, benderscreatesub, benderspresubsolve,
-         benderssolvesub, benderspostsolve, bendersfreesub, bendersdata) );
+         benderssolvesubconvex, benderssolvesub, benderspostsolve, bendersfreesub, bendersdata) );
    SCIP_CALL( SCIPsetIncludeBenders(scip->set, benders) );
 
    return SCIP_OKAY;
@@ -5894,7 +5907,7 @@ SCIP_RETCODE SCIPincludeBendersBasic(
 
    SCIP_CALL( SCIPbendersCreate(&benders, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
          cutlp, cutpseudo, cutrelax, shareauxvars, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bendersgetvar,
-         benderscreatesub, NULL, NULL, NULL, NULL, bendersdata) );
+         benderscreatesub, NULL, NULL, NULL, NULL, NULL, bendersdata) );
    SCIP_CALL( SCIPsetIncludeBenders(scip->set, benders) );
 
    if( bendersptr != NULL )
@@ -6131,6 +6144,7 @@ SCIP_RETCODE SCIPsetBendersPresubsolve(
 SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex)),/**< the solving method for convex Benders' decomposition subproblems */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< solving method for a Benders' decomposition subproblem */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the subproblem freeing method for Benders' decomposition */
    )
@@ -6140,13 +6154,18 @@ SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
    assert(benders != NULL);
 
    /* Checking whether the benderssolvesub and the bendersfreesub are both implemented or both are not implemented */
-   if( (benderssolvesub == NULL && bendersfreesub != NULL) || (benderssolvesub != NULL && bendersfreesub == NULL) )
+   if( (benderssolvesubconvex == NULL && benderssolvesub == NULL && bendersfreesub != NULL)
+      || ((benderssolvesubconvex != NULL || benderssolvesub != NULL) && bendersfreesub == NULL) )
    {
-      SCIPerrorMessage("Benders' decomposition <%s> requires that both bendersSolvesub%s and bendersFreesub%s are \
-         implemented or neither\n", SCIPbendersGetName(benders), SCIPbendersGetName(benders), SCIPbendersGetName(benders));
+      SCIPerrorMessage("Benders' decomposition <%s> requires that if bendersFreesub%s is "
+         "implemented at least one of bendersSolvesubconvex%s or bendersSolvesub%s are implemented, "
+         "or if bendersFreesub%s is not implemented, then none are implented.\n", SCIPbendersGetName(benders),
+         SCIPbendersGetName(benders), SCIPbendersGetName(benders), SCIPbendersGetName(benders),
+         SCIPbendersGetName(benders));
       return SCIP_INVALIDCALL;
    }
 
+   SCIPbendersSetSolvesubconvex(benders, benderssolvesubconvex);
    SCIPbendersSetSolvesub(benders, benderssolvesub);
    SCIPbendersSetFreesub(benders, bendersfreesub);
 
@@ -6420,7 +6439,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvemip,           /**< directly solve the MIP subproblem */
+   SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    )
 {
    assert(scip != NULL);
@@ -6428,7 +6448,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvemip) );
+   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvemip, objective) );
 
    return SCIP_OKAY;
 }
@@ -6725,8 +6745,8 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    return SCIP_OKAY;
 }
 
-/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value against the
- *  value of the corresponding auxiliary variable
+/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
+ * value of the corresponding auxiliary variable
  */
 SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    SCIP*                 scip,               /**< SCIP data structure */
