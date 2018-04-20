@@ -37,7 +37,6 @@ set(scipsources
     scip/branch_pscost.c
     scip/branch_random.c
     scip/branch_relpscost.c
-    scip/branch_treemodel.c
     scip/cons_abspower.c
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
@@ -202,6 +201,7 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/treemodel.c
     scip/table_default.c
     scip/boundstore.c
     scip/branch.c

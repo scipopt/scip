@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "scip/branch_relpscost.h"
-#include "scip/branch_treemodel.h"
+#include "scip/treemodel.h"
 #include "scip/cons_and.h"
 #include "scip/pub_misc.h"
 

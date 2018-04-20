@@ -510,7 +510,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
-			scip/branch_treemodel.o \
 			scip/cons_abspower.o \
 			scip/compr_largestrepr.o \
 			scip/compr_weakcompr.o \
@@ -676,6 +675,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o \
+            scip/treemodel.o \
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \

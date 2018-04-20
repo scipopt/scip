@@ -22,7 +22,7 @@
 
 #include <scip/scip.h>
 #include <scip/scipdefplugins.h>
-#include <scip/branch_treemodel.h>
+#include <scip/treemodel.h>
 
 #include <scip/struct_scip.h>
 #include <scip/struct_primal.h>
