@@ -1356,6 +1356,10 @@ SCIP_DECL_CONSINIT(consInitSymresack)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
+
+   /* nothing has to be done if there are no constraints */
+   if ( nconss == 0 )
+      return SCIP_OKAY;
    assert( conss != NULL );
 
    /* determine maximum number of vars in a symresack constraint */

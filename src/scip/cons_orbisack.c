@@ -1009,6 +1009,10 @@ SCIP_DECL_CONSINIT(consInitOrbisack)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
+
+   /* nothing has to be done if there are no constraints */
+   if ( nconss == 0 )
+      return SCIP_OKAY;
    assert( conss != NULL );
 
    /* determine maximum number of rows in an orbisack constraint */
