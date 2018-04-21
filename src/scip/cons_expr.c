@@ -180,10 +180,6 @@ struct SCIP_ConshdlrData
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
 
-   /* separation parameters */
-   SCIP_Real                mincutviolationsepa;    /**< minimal violation of a cut in order to add it to relaxation during separation */
-   SCIP_Real                mincutviolationenfofac; /**< minimal target violation of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
-
    /* upgrade */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
    int                      exprconsupgradessize; /**< size of exprconsupgrades array */
@@ -5202,7 +5198,7 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
 
 /** helper function to enforce constraints */
 static
-SCIP_RETCODE enforceConstraint(
+SCIP_RETCODE enforceConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
@@ -5214,7 +5210,6 @@ SCIP_RETCODE enforceConstraint(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_Real mincutviolation;
    SCIP_Real maxviol;
    SCIP_RESULT propresult;
    SCIP_Bool force;
@@ -5259,9 +5254,7 @@ SCIP_RETCODE enforceConstraint(
    }
 
    /* try to separate the LP solution */
-   mincutviolation = MIN(0.75*maxviol, conshdlrdata->mincutviolationenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   mincutviolation = MAX(mincutviolation, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, mincutviolation, result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
       return SCIP_OKAY;
@@ -6000,11 +5993,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlr != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -6016,8 +6005,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
    }
 
    /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutviolationsepa,
-         result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPgetSepaMinEfficacy(scip), result) );
 
    return SCIP_OKAY;
 }
@@ -6027,11 +6015,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlr != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -6043,8 +6027,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
    }
 
    /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutviolationsepa,
-         result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetSepaMinEfficacy(scip), result) );
 
    return SCIP_OKAY;
 }
@@ -6054,7 +6037,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -6063,7 +6046,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -9019,14 +9002,6 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
          &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minviolationsepa",
-         "minimal violation for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutviolationsepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minviolationenfofac",
-         "minimal target violation of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutviolationenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
