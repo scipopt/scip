@@ -224,7 +224,15 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
       /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
        * still need to be updated. This is done by constructing a valid solution. */
       if( (*result) == SCIP_FEASIBLE && auxviol )
+      {
+         if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
+         {
+            if( !SCIPsolIsOriginal(sol) )
+               SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
+         }
+
          (*result) = SCIP_INFEASIBLE;
+      }
    }
 
    /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result

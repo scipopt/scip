@@ -381,6 +381,23 @@ SCIP_Bool SCIPbendersSubprobIsIndependent(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** sets whether the subproblem is enabled or disabled. A subproblem is disabled if it has been merged into the master
+ * problem
+ */
+extern
+void SCIPbendersSetSubprobEnabled(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             enabled             /**< flag to indicate whether the subproblem is enabled */
+   );
+
+/** returns whether the subproblem is enabled */
+extern
+SCIP_Bool SCIPbendersSubprobIsEnabled(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /** changes all of the master problem variables in the given subproblem to continuous */
 extern
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(

@@ -151,7 +151,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
       /* retreiving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
 
-      var = SCIPvarGetProbvar(var);
+      //var = SCIPvarGetProbvar(var);
 
       redcost = SCIPgetVarRedcost(subproblem, var);
 

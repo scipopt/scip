@@ -148,6 +148,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          SCIP_VAR* mastervar;
          SCIP_VAR* consvar;
          SCIP_Real consval;
+         SCIP_Real scalar;
+         SCIP_Real constant;
 
          consvar = consvars[j];
          consval = consvals[j];
@@ -156,7 +158,10 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, consvar, &mastervar) );
 
          /* TODO: Do we need the problem variable? */
-         consvar = SCIPvarGetProbvar(consvar);
+         //consvar = SCIPvarGetProbvarSum(consvar);
+         SCIP_CALL( SCIPgetProbvarSum(subproblem, &consvar, &scalar, &constant) );
+         assert(SCIPisZero(subproblem, scalar));
+         assert(SCIPisZero(subproblem, constant));
 
          //assert(!BDoriginalVarIsLinking(consvar));
 
@@ -168,8 +173,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
           * given by the upper bound of the variable. */
          if( mastervar != NULL )
          {
-            SCIPdebugMessage("Computing Farkas LHS: dualsol %g consval %g varUB %g varLB %g\n",
-               dualsol, consval, SCIPvarGetUbLocal(consvar), SCIPvarGetLbLocal(consvar));
+            SCIPdebugMessage("Computing Farkas LHS: dualsol %g consval %g varUB %g varLB %g scalar %g constant %g\n",
+               dualsol, consval, SCIPvarGetUbLocal(consvar), SCIPvarGetLbLocal(consvar), scalar, constant);
             farkaslhs -= dualsol * consval * SCIPvarGetUbLocal(consvar);
          }
       }
@@ -240,7 +245,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    lhs = SCIPgetLhsLinear(masterprob, cut);
    activity = SCIPgetActivityLinear(masterprob, cut, sol);
    SCIPdebugMessage("Generating a feasiility cut - activity = %g, lhs = %g\n", activity, lhs);
-   assert(activity < lhs);
+   assert(SCIPisLT(masterprob, activity, lhs));
 #endif
 
 
@@ -256,7 +261,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    /* TODO: Not sure about how to generate the solution for the first assert. Need to check */
    //assert(SCIPgetActivityLinear(masterprob, cut, pricingsol) < SCIPgetLhsLinear(masterprob, cut));
    SCIPdebugMessage("Checking Farkas proof - activity = %g, lhs = %g\n", farkasact, farkaslhs);
-   assert(farkasact < farkaslhs);
+   //assert((farkasact >= 0 && farkaslhs < 0) || (farkasact <= 0 && farkaslhs > 0));
    SCIPfreeBufferArray(subproblem, &farkascoefs);
 #endif
 
