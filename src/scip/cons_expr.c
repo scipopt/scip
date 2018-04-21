@@ -251,9 +251,11 @@ typedef struct
 {
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
    SCIP_SOL*               sol;              /**< solution to separate (NULL for separating the LP solution) */
+   SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger separation */
    SCIP_Real               mincutviolation;  /**< minimal violation of a cut if it should be added to the LP */
    SCIP_RESULT             result;           /**< buffer to store a result */
    int                     ncuts;            /**< buffer to store the total number of added cuts */
+   SCIP_Real               maxauxviolation;  /**< buffer to store maximal violation w.r.t. auxvars */
    unsigned int            sepatag;          /**< separation tag */
 } SEPA_DATA;
 
@@ -4893,6 +4895,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
    {
       SCIP_RESULT separesult;
       SCIP_Real violation;
+      SCIP_Real auxvarvalue;
       SCIP_Bool underestimate;
       SCIP_Bool overestimate;
       SCIP_Bool separated;
@@ -4903,23 +4906,42 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       ncuts = 0;
       separated = FALSE;
 
+      auxvarvalue = SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
 
-      /* decide whether to under- or overestimate */
+      /* compute violation and decide whether under- or overestimate is required */
       if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
       {
-         /* the expression could be evaluated, then look at sign of violation */
-         violation = expr->evalvalue - SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
-         overestimate = SCIPisLT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksNeg(expr) > 0;
-         underestimate = SCIPisGT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksPos(expr) > 0;
+         /* the expression could be evaluated, then look how much it is violation */
+
+         /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
+         if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > 0.0 )
+         {
+            violation = auxvarvalue - expr->evalvalue;
+            overestimate = violation > sepadata->minviolation;
+         }
+         else
+         {
+            violation = 0.0;
+            overestimate = FALSE;
+         }
+
+         /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
+         if( SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > 0.0 )
+         {
+            assert(!overestimate); /* because that would mean auxvarvalue - evalvalue > 0 */
+            violation = expr->evalvalue - auxvarvalue;
+            underestimate = violation > sepadata->minviolation;
+         }
       }
       else
       {
          /* if expression could not be evaluated, then both under- and overestimate should be considered */
+         violation = SCIPinfinity(scip);
          overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
          underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
       }
 
-      /* no violation w.r.t. the original variables -> skip expression */
+      /* no sufficient violation w.r.t. the original variables -> skip expression */
       if( !overestimate && !underestimate )
          return SCIP_OKAY;
 
@@ -4934,20 +4956,26 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
          SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sepadata->sol) );
 
-         /* TODO use auxvalue to decide whether calling separation is useful here */
-
-         /* call the separation callback of the nonlinear handler */
-         SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
-            expr->enfos[e]->auxvalue, overestimate, sepadata->mincutviolation, separated, &separesult, &ncuts) );
-
-         assert(ncuts >= 0);
-         sepadata->ncuts += ncuts;
-
-         if( underestimate && overestimate && separesult != SCIP_CUTOFF && separesult != SCIP_SEPARATED )
+         /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
+         if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > sepadata->minviolation) )
          {
-            /* call the separation callback of the nonlinear handler again for underestimation, if nothing found yet
-             * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error), see above
+            /* call the separation callback of the nonlinear handler for overestimation */
+            SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+               expr->enfos[e]->auxvalue, TRUE, sepadata->mincutviolation, separated, &separesult, &ncuts) );
+
+            assert(ncuts >= 0);
+            sepadata->ncuts += ncuts;
+
+            /* if overestimation was successful, then no more need for underestimation
+             * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error) anyway
              */
+            if( separesult == SCIP_CUTOFF || separesult == SCIP_SEPARATED )
+               underestimate = FALSE;
+         }
+
+         if( underestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > sepadata->minviolation) )
+         {
+            /* call the separation callback of the nonlinear handler for underestimation */
             SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
                expr->enfos[e]->auxvalue, FALSE, sepadata->mincutviolation, separated, &separesult, &ncuts) );
 
@@ -4963,7 +4991,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             *result = SCIP_CONSEXPREXPRWALK_ABORT;
             break;
          }
-         else if( separesult == SCIP_SEPARATED )
+
+         if( separesult == SCIP_SEPARATED )
          {
             assert(ncuts > 0);
             SCIPdebugMsg(scip, "found %d cuts by nlhdlr <%s> separating the current solution\n", ncuts, nlhdlr->name);
@@ -5048,6 +5077,7 @@ SCIP_RETCODE separatePoint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   SCIP_Real             minviolation,       /**< minimal violation in an expression to call separation */
    SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
    SCIP_RESULT*          result              /**< result of separation */
    )
@@ -5084,9 +5114,11 @@ SCIP_RETCODE separatePoint(
       /* initialize separation data */
       sepadata.conshdlr = conshdlr;
       sepadata.sol = sol;
+      sepadata.minviolation = minviolation;
       sepadata.mincutviolation = mincutviolation;
       sepadata.result = SCIP_DIDNOTFIND;
       sepadata.ncuts = 0;
+      sepadata.maxauxviolation = 0.0;
       sepadata.sepatag = conshdlrdata->lastsepatag;
 
       #ifdef SEPA_DEBUG
@@ -5254,7 +5286,7 @@ SCIP_RETCODE enforceConstraints(
    }
 
    /* try to separate the LP solution */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), SCIPfeastol(scip), result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
       return SCIP_OKAY;
@@ -6004,8 +6036,10 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
       SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
    }
 
-   /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPgetSepaMinEfficacy(scip), result) );
+   /* call separation
+    * TODO revise minviolation, should it be larger than feastol?
+    */
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result) );
 
    return SCIP_OKAY;
 }
@@ -6026,8 +6060,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
       SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
    }
 
-   /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetSepaMinEfficacy(scip), result) );
+   /* call separation
+    * TODO revise minviolation, should it be larger than feastol?
+    */
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result) );
 
    return SCIP_OKAY;
 }
