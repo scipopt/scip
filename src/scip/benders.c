@@ -1593,7 +1593,7 @@ SCIP_RETCODE generateBendersCuts(
                /* at most a single cut is generated for each subproblem */
                break;
             }
-            else if( cutresult == SCIP_DIDNOTFIND && ((*result) != SCIP_CONSADDED || (*result) != SCIP_SEPARATED) )
+            else if( cutresult == SCIP_DIDNOTFIND && (*result) != SCIP_CONSADDED && (*result) != SCIP_SEPARATED )
                (*result) = cutresult;
          }
 
