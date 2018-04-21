@@ -5260,6 +5260,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real maxviol;
+   SCIP_Real minviolation;
    SCIP_RESULT propresult;
    SCIP_Bool force;
    int nnotify;
@@ -5302,22 +5303,34 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
-   /* try to separate the LP solution */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), SCIPfeastol(scip), result) );
+   minviolation = SCIPfeastol(scip);
+   do
+   {
+      /* try to separate the LP solution */
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minviolation, SCIPfeastol(scip), result) );
 
-   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
-      return SCIP_OKAY;
+      if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
+         return SCIP_OKAY;
 
-   /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, SCIPfeastol(scip), &nnotify) );
-   SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
+      /* find branching candidates */
+      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, minviolation, &nnotify) );
+      SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
-   /* all variables have been fixed -> cutoff node */
-   /* @todo If we do not branch on linear variables any more this should be changed. We need to introduce linear
-    * constraints which are obtained by replacing all fixed non-linear variables as it is done in cons_nonlinear.
-    */
+      /* if no cut or branching candidate, then try less violated expressions */
+      if( nnotify == 0 )
+         minviolation /= 10.0;
+   }
+   while( nnotify == 0 && SCIPisPositive(scip, minviolation) );
+
    if( nnotify == 0 )
+   {
+      /* could not find branching candidates even when looking at minimal violated (>eps) expressions
+       * for now, cut off the node
+       * @todo more fallbacks, e.g., branch on any unfixed nonlinear variable in a still violated constraint,
+       * then introduce linear constraints that are obtained by replacing all fixed non-linear variables (as it is done in cons_nonlinear)
+       */
       *result = SCIP_CUTOFF;
+   }
 
    return SCIP_OKAY;
 }
