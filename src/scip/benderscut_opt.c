@@ -67,7 +67,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_CONS*            cons,               /**< the constraint for the generated cut, can be NULL */
    SCIP_ROW*             row,                /**< the row for the generated cut, can be NULL */
-   SCIP_Bool             addcut              /**< indicates whether a cut is created instead of a constraint */
+   SCIP_Bool             addcut,             /**< indicates whether a cut is created instead of a constraint */
+   SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
    SCIP_VAR** vars;
@@ -79,6 +80,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
    SCIP_Real dualsol;
    SCIP_Real addval;
    SCIP_Real lhs;
+   SCIP_Real rhs;
    int i;
 
 #ifndef NDEBUG
@@ -91,6 +93,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
    assert(benders != NULL);
    assert(cons != NULL || addcut);
    assert(row != NULL || !addcut);
+
+   (*success) = FALSE;
 
    nvars = SCIPgetNVars(subproblem);
    vars = SCIPgetVars(subproblem);
@@ -125,6 +129,14 @@ SCIP_RETCODE computeStandardOptimalityCut(
          addval = dualsol*BDconsGetRhs(subproblem, conss[i]);
 
       lhs += addval;
+
+      /* if the bound becomes infinite, then the cut generation terminates. */
+      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");
+         return SCIP_OKAY;
+      }
 
       /* Update the lhs of the cut */
       if( addcut )
@@ -194,6 +206,14 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
             lhs += addval;
 
+            /* if the bound becomes infinite, then the cut generation terminates. */
+            if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+            {
+               (*success) = FALSE;
+               SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");
+               return SCIP_OKAY;
+            }
+
             /* Update lhs */
             if( addcut )
             {
@@ -206,6 +226,14 @@ SCIP_RETCODE computeStandardOptimalityCut(
          }
       }
    }
+
+   /* checking whether the RHS is infinity */
+   if( addcut )
+      rhs = SCIProwGetRhs(row);
+   else
+      rhs = SCIPgetRhsLinear(masterprob, cons);
+
+   assert(SCIPisInfinity(masterprob, rhs));
 
 #ifndef NDEBUG
    if( addcut )
@@ -222,7 +250,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
    assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj));
 
-   assert(cons != NULL);
+   (*success) = TRUE;
 
    return SCIP_OKAY;
 }
@@ -284,6 +312,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    char cutname[SCIP_MAXSTRLEN];
    SCIP_Bool optimal;
    SCIP_Bool addcut;
+   SCIP_Bool success;
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -337,47 +366,58 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    }
 
    /* computing the coefficients of the optimality cut */
-   SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, cons, row, addcut) );
+   SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, cons, row, addcut, &success) );
 
-   /* adding the auxiliary variable to the optimality cut */
-   SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cons, row, probnumber, addcut) );
-
-   /* adding the constraint to the master problem */
-   if( addcut )
+   /* if success is FALSE, then there was an error in generating the optimaltiy cut. No cut will be added to the master
+    * problem. Otherwise, the constraint is added to the master problem.
+    */
+   if( !success )
    {
-      SCIP_Bool infeasible;
-
-      if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
-      {
-         SCIP_CALL( SCIPaddRow(masterprob, row, FALSE, &infeasible) );
-         assert(!infeasible);
-      }
-      else
-      {
-         assert(type == SCIP_BENDERSENFOTYPE_CHECK || type == SCIP_BENDERSENFOTYPE_PSEUDO);
-         SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
-      }
-
-      /* storing the generated cut */
-      SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
-
-      /* release the row */
-      SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
-
-      (*result) = SCIP_SEPARATED;
+      (*result) = SCIP_DIDNOTFIND;
+      SCIPdebugMsg(masterprob, "Error in generating Benders' optimality cut for problem %d.\n", probnumber);
    }
    else
    {
-      SCIP_CALL( SCIPaddCons(masterprob, cons) );
+      /* adding the auxiliary variable to the optimality cut */
+      SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cons, row, probnumber, addcut) );
 
-      SCIPdebugPrintCons(masterprob, cons, NULL);
+      /* adding the constraint to the master problem */
+      if( addcut )
+      {
+         SCIP_Bool infeasible;
 
-      /* storing the generated cut */
-      SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
+         if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
+         {
+            SCIP_CALL( SCIPaddRow(masterprob, row, FALSE, &infeasible) );
+            assert(!infeasible);
+         }
+         else
+         {
+            assert(type == SCIP_BENDERSENFOTYPE_CHECK || type == SCIP_BENDERSENFOTYPE_PSEUDO);
+            SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
+         }
 
-      SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+         /* storing the generated cut */
+         SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
 
-      (*result) = SCIP_CONSADDED;
+         /* release the row */
+         SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+
+         (*result) = SCIP_SEPARATED;
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddCons(masterprob, cons) );
+
+         SCIPdebugPrintCons(masterprob, cons, NULL);
+
+         /* storing the generated cut */
+         SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
+
+         SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+
+         (*result) = SCIP_CONSADDED;
+      }
    }
 
    return SCIP_OKAY;

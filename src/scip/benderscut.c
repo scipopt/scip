@@ -353,6 +353,7 @@ SCIP_RETCODE SCIPbenderscutExec(
 
    /* evaluate result */
    if( cutresult != SCIP_DIDNOTRUN
+      && cutresult != SCIP_DIDNOTFIND
       && cutresult != SCIP_CONSADDED
       && cutresult != SCIP_FEASIBLE
       && cutresult != SCIP_SEPARATED )

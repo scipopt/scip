@@ -1579,7 +1579,11 @@ SCIP_RETCODE generateBendersCuts(
 
             addedcuts += (SCIPbenderscutGetNFound(benderscuts[j]) - prevaddedcuts);
 
-            /* the result is updated only if a Benders' cut is generated */
+            /* the result is updated only if a Benders' cut is generated or one was not found. However, if a cut has
+             * been found in a previous iteration, then the result is returned as SCIP_CONSADDED or SCIP_SEPARATED.
+             * This result is permitted because if a constraint was added, the solution that caused the error in the cut
+             * generation will be cutoff from the master problem.
+            */
             if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
             {
                *result = cutresult;
@@ -1589,6 +1593,8 @@ SCIP_RETCODE generateBendersCuts(
                /* at most a single cut is generated for each subproblem */
                break;
             }
+            else if( cutresult == SCIP_DIDNOTFIND && ((*result) != SCIP_CONSADDED || (*result) != SCIP_SEPARATED) )
+               (*result) = cutresult;
          }
 
          subproblemcount++;
@@ -1729,6 +1735,17 @@ SCIP_RETCODE SCIPbendersExec(
    }
 #endif
 
+   /* if the result is SCIP_DIDNOTFIND, then there was a error in generating cuts in all subproblems that are not
+    * optimal. This result does not cutoff any solution, so the Benders' decomposition algorithm will fail.
+    * TODO: Work out a way to ensure Benders' decomposition does not terminate due to a SCIP_DIDNOTFIND result.
+    */
+   if( (*result) == SCIP_DIDNOTFIND )
+   {
+      SCIPerrorMessage("An error was found when generating all cuts for non-optimal subproblems of Benders' "
+         "decomposition <%s>. The solution process will terminate.\n", SCIPbendersGetName(benders));
+      goto TERMINATE;
+   }
+
    if( checkint && (type == SCIP_BENDERSENFOTYPE_CHECK || (*result) != SCIP_CONSADDED) )
    {
       /* if the subproblems are being solved as part of conscheck, then the results flag must be returned after the solving
@@ -1759,6 +1776,7 @@ SCIP_RETCODE SCIPbendersExec(
    }
 #endif
 
+TERMINATE:
    /* calling the post-solve call back for the Benders' decomposition algorithm. This allows the user to work directly
     * with the solved subproblems and the master problem */
    if( benders->benderspostsolve != NULL )
@@ -1792,7 +1810,11 @@ SCIP_RETCODE SCIPbendersExec(
    /* freeing memory */
    SCIPfreeBlockMemoryArray(set->scip, &subisinfeas, nsubproblems);
 
-   return SCIP_OKAY;
+   /* if the result is SCIP_DIDNOTFIND, then an error is returned and SCIP will terminate. */
+   if( (*result) == SCIP_DIDNOTFIND )
+      return SCIP_ERROR;
+   else
+      return SCIP_OKAY;
 }
 
 /** solves the subproblems. */

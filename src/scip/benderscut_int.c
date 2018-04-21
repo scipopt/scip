@@ -234,7 +234,8 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    SCIP_ROW*             row,                /**< the row for the generated cut, can be NULL */
    SCIP_Real             cutconstant,        /**< the constant value in the integer optimality cut */
    int                   probnumber,         /**< the number of the pricing problem */
-   SCIP_Bool             addcut              /**< indicates whether a cut is created instead of a constraint */
+   SCIP_Bool             addcut,             /**< indicates whether a cut is created instead of a constraint */
+   SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
    SCIP_VAR** vars;
@@ -254,6 +255,8 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    assert(benders != NULL);
    assert(cons != NULL || addcut);
    assert(row != NULL || !addcut);
+
+   (*success) = FALSE;
 
    /* getting the best solution from the subproblem */
 
@@ -310,6 +313,14 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 
    lhs += subprobobj;
 
+   /* if the bound becomes infinite, then the cut generation terminates. */
+   if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+   {
+      (*success) = FALSE;
+      SCIPdebugMsg(masterprob, "Infinite bound when generating integer optimality cut.\n");
+      return SCIP_OKAY;
+   }
+
    /* Update the lhs of the cut */
    if( addcut )
    {
@@ -335,6 +346,8 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 #endif
 
    assert(SCIPisFeasEQ(masterprob, verifyobj, subprobobj));
+
+   (*success) = TRUE;
 
    return SCIP_OKAY;
 }
@@ -396,6 +409,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    char cutname[SCIP_MAXSTRLEN];    /* the name of the generated cut */
    SCIP_Bool optimal;               /* flag to indicate whether the current subproblem is optimal for the master */
    SCIP_Bool addcut;
+   SCIP_Bool success;
 
    assert(masterprob != NULL);
    assert(benders != NULL);
@@ -469,6 +483,13 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 
       lhs += benderscutdata->subprobconstant[probnumber];
 
+      /* if the bound becomes infinite, then the cut generation terminates. */
+      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+      {
+         success = FALSE;
+         SCIPdebugMsg(masterprob, "Infinite bound when generating integer optimality cut.\n");
+      }
+
       /* Update the lhs of the cut */
       if( addcut )
       {
@@ -483,53 +504,64 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    {
       /* computing the coefficients of the optimality cut */
       SCIP_CALL( computeStandardIntegerOptCut(masterprob, benders, sol, cons, row,
-            benderscutdata->subprobconstant[probnumber], probnumber, addcut) );
+            benderscutdata->subprobconstant[probnumber], probnumber, addcut, &success) );
    }
 
-   /* adding the auxiliary variable to the optimality cut */
-   SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cons, row, probnumber, addcut) );
-
-   /* adding the constraint to the master problem */
-   if( addcut )
+   /* if success is FALSE, then there was an error in generating the integer optimaltiy cut. No cut will be added to
+    * the master problem. Otherwise, the constraint is added to the master problem.
+    */
+   if( !success )
    {
-      SCIP_Bool infeasible;
-
-      if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
-      {
-         SCIP_CALL( SCIPaddRow(masterprob, row, FALSE, &infeasible) );
-         assert(!infeasible);
-      }
-      else
-      {
-         assert(type == SCIP_BENDERSENFOTYPE_CHECK || type == SCIP_BENDERSENFOTYPE_PSEUDO);
-         SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
-      }
-
-      /* storing the generated cut */
-      SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
-
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintRow(masterprob, row, NULL) );
-      SCIPinfoMessage(masterprob, NULL, ";\n");
-#endif
-
-      /* release the row */
-      SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
-
-      (*result) = SCIP_SEPARATED;
+      (*result) = SCIP_DIDNOTFIND;
+      SCIPdebugMsg(masterprob, "Error in generating Benders' integer optimality cut for problem %d.\n", probnumber);
    }
    else
    {
-      SCIP_CALL( SCIPaddCons(masterprob, cons) );
+      /* adding the auxiliary variable to the optimality cut */
+      SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cons, row, probnumber, addcut) );
 
-      /* storing the generated cut */
-      SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
+      /* adding the constraint to the master problem */
+      if( addcut )
+      {
+         SCIP_Bool infeasible;
 
-      SCIPdebugPrintCons(masterprob, cons, NULL);
+         if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
+         {
+            SCIP_CALL( SCIPaddRow(masterprob, row, FALSE, &infeasible) );
+            assert(!infeasible);
+         }
+         else
+         {
+            assert(type == SCIP_BENDERSENFOTYPE_CHECK || type == SCIP_BENDERSENFOTYPE_PSEUDO);
+            SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
+         }
 
-      SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+         /* storing the generated cut */
+         SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
 
-      (*result) = SCIP_CONSADDED;
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPprintRow(masterprob, row, NULL) );
+         SCIPinfoMessage(masterprob, NULL, ";\n");
+#endif
+
+         /* release the row */
+         SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+
+         (*result) = SCIP_SEPARATED;
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddCons(masterprob, cons) );
+
+         /* storing the generated cut */
+         SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
+
+         SCIPdebugPrintCons(masterprob, cons, NULL);
+
+         SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+
+         (*result) = SCIP_CONSADDED;
+      }
    }
 
 

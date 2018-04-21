@@ -48,7 +48,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_CONS*            cut                 /**< the cut that is generated from the pricing problem */
+   SCIP_CONS*            cut,                /**< the cut that is generated from the pricing problem */
+   SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
    SCIP_VAR** vars;
@@ -60,6 +61,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIP_Real dualsol;
    SCIP_Real lhs;       /* the left hand side of the cut */
    SCIP_Real addval;    /* the value that must be added to the lhs */
+   SCIP_Real activity;
    int i;
 
    SCIP_VAR** consvars;
@@ -68,7 +70,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
 #ifndef NDEBUG
    int j;
-   SCIP_Real activity;
    SCIP_Real* farkascoefs;    /* the coefficients of the farkas proof */
    SCIP_Real farkasact = 0;   /* the activities of the farkas proof */
    SCIP_Real farkaslhs = 0;   // the lhs of the farkas proof
@@ -78,6 +79,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    assert(subproblem != NULL);
    assert(benders != NULL);
    assert(cut != NULL);
+
+   (*success) = FALSE;
 
    nvars = SCIPgetNVars(subproblem);
    vars = SCIPgetVars(subproblem);
@@ -111,6 +114,14 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          addval = dualsol*BDconsGetRhs(subproblem, conss[i]);
 
       lhs += addval;
+
+      /* if the bound becomes infinite, then the cut generation terminates. */
+      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
+         return SCIP_OKAY;
+      }
 
       /* Update the lhs of the cut */
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
@@ -206,6 +217,14 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          farkasact -= addval;
 #endif
 
+         /* if the bound becomes infinite, then the cut generation terminates. */
+         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+         {
+            (*success) = FALSE;
+            SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
+            return SCIP_OKAY;
+         }
+
          /* Update lhs */
          SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
       }
@@ -213,23 +232,24 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
    assert(SCIPisInfinity(masterprob, SCIPgetRhsLinear(masterprob, cut)));
 
-#ifndef NDEBUG
+   /* the activity of the cut should be less than the lhs. This will ensure that the evaluated solution will be cut off.
+    * It is possible that the activity is greater than the lhs. This could be caused by numerical difficulties. In this
+    * case, no cut will be generated.
+    */
    lhs = SCIPgetLhsLinear(masterprob, cut);
    activity = SCIPgetActivityLinear(masterprob, cut, sol);
-   SCIPdebugMessage("Generating a feasibility cut - activity = %g, lhs = %g\n", activity, lhs);
-   assert(SCIPisLT(masterprob, activity, lhs));
-#endif
+   if( SCIPisGE(masterprob, activity, lhs) )
+   {
+      (*success) = FALSE;
+      SCIPdebugMessage("Invalid feasibility cut - activity is greater than lhs %g >= %g.\n", activity, lhs);
+      return SCIP_OKAY;
+   }
 
    assert(cut != NULL);
 
    SCIPdebugPrintCons(masterprob, cut, NULL);
 
-#ifndef NDEBUG
-   /* TODO: Not sure about how to generate the solution for the first assert. Need to check */
-   SCIPdebugMessage("Checking Farkas proof - activity = %g, lhs = %g\n", farkasact, farkaslhs);
-   assert(SCIPisLT(masterprob, farkasact, farkaslhs));
-   SCIPfreeBufferArray(subproblem, &farkascoefs);
-#endif
+   (*success) = TRUE;
 
    return SCIP_OKAY;
 }
@@ -249,6 +269,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 {
    SCIP_CONS* cut;
    char cutname[SCIP_MAXSTRLEN];
+   SCIP_Bool success;
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -268,14 +289,25 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       SCIPinfoMessage(masterprob, NULL, "No iterations in pricing problem %d\n", probnumber);
 
    /* computing the coefficients of the feasibility cut */
-   SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, sol, cut) );
+   SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, sol, cut, &success) );
 
-   /* adding the constraint to the master problem */
-   SCIP_CALL( SCIPaddCons(masterprob, cut) );
+   /* if success is FALSE, then there was an error in generating the feasibility cut. No cut will be added to the master
+    * problem. Otherwise, the constraint is added to the master problem.
+    */
+   if( !success )
+   {
+      (*result) = SCIP_DIDNOTFIND;
+      SCIPdebugMsg(masterprob, "Error in generating Benders' feasibility cut for problem %d.\n", probnumber);
+   }
+   else
+   {
+      /* adding the constraint to the master problem */
+      SCIP_CALL( SCIPaddCons(masterprob, cut) );
+
+      (*result) = SCIP_CONSADDED;
+   }
 
    SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );
-
-   (*result) = SCIP_CONSADDED;
 
    return SCIP_OKAY;
 }
