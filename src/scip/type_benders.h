@@ -144,7 +144,7 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  The classical Benders' optimality and feasibility cuts require that the subproblems are convex. If the subproblem is
  *  convex, then the user must call SCIPbendersSetSubprobIsConvex()
  *
- *  If the user does NOT implement a subporblem solving method, then the convexity of the problem is determined
+ *  If the user does NOT implement a subproblem solving method, then the convexity of the problem is determined
  *  internally.
  *
  *  input:

@@ -1349,7 +1349,7 @@ SCIP_RETCODE solveBendersSubproblems(
    SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the current solve loop */
    SCIP_Bool             checkint,           /**< are the subproblems called during a check/enforce of integer sols? */
-   int*                  nchecked,   /**< the number of subproblems checked in this solve loop, they may not be solved */
+   int*                  nchecked,           /**< the number of subproblems checked in this solve loop, they may not be solved */
    int*                  nverified,          /**< the number of subproblems verified in the current loop */
    SCIP_Bool*            subprobsolved,      /**< an array indicating the subproblems that were solved in this loop. */
    SCIP_Bool*            subisinfeas,        /**< array to store whether a subproblem is infeasible */
@@ -1725,6 +1725,7 @@ SCIP_RETCODE SCIPbendersExec(
 }
 
 /** solves the user-defined subproblem solving function */
+static
 SCIP_RETCODE executeUserDefinedSolvesub(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1782,8 +1783,7 @@ SCIP_RETCODE executeUserDefinedSolvesub(
       (*infeasible) = TRUE;
 
    if( (*result) == SCIP_FEASIBLE
-      && !(SCIPsetIsGT(set, (*objective), -SCIPsetInfinity(set))
-      && SCIPsetIsLT(set, (*objective), SCIPsetInfinity(set))) )
+      && (SCIPsetIsInfinity(set, -(*objective)) || SCIPsetIsInfinity(set, (*objective))) )
    {
       SCIPerrorMessage("the user-defined solving method for the Benders' decomposition <%s> returned objective value %g\n",
          benders->name, (*objective));
@@ -2859,8 +2859,10 @@ SCIP_Real SCIPbendersGetSubprobObjval(
 }
 
 /* sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
- * process. One example is when the three-phase method is employed, where the first phase solves the of both the master
- * and subproblems and by the third phase the integer subproblem is solved. */
+ * process. One example is when the three-phase method is employed, where the first phase solves the convex relaxation
+ * of both the master and subproblems, the second phase reintroduces the integrality constraints to the master problem
+ * and the third phase then reintroduces integrality constraints to the subproblems.
+ */
 void SCIPbendersSetSubprobIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */

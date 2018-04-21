@@ -6745,8 +6745,8 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    return SCIP_OKAY;
 }
 
-/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
- * value of the corresponding auxiliary variable
+/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value against the
+ *  value of the corresponding auxiliary variable
  */
 SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    SCIP*                 scip,               /**< SCIP data structure */
