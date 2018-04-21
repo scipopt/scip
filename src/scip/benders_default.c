@@ -135,7 +135,6 @@ SCIP_RETCODE createVariableMappings(
       SCIP_VAR* subvar;
       SCIP_Real scalar;
       SCIP_Real constant;
-      char* endptr;
       const char* origvarname;
       int charcount = SCIPgetSubscipDepth(scip)*2;
 
@@ -151,16 +150,13 @@ SCIP_RETCODE createVariableMappings(
 
       /* retrieving the var name */
       origvarname = SCIPvarGetName(origvar);
-      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "<%s>", &origvarname[charcount]);
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", &origvarname[charcount]);
 
       /* retrieving the subproblem variable for the given master variable */
       for( j = 0; j < nsubproblems; j++ )
       {
-         /* parsing the master variable name to find the corresponding subproblem variable
-          * NOTE: I am using SCIPparseVarName here. This is necessary if SCIP changes the variables during the reading.
-          * I expect that SCIPfindVar could be a better option.
-          */
-         SCIP_CALL( SCIPparseVarName(bendersdata->subproblems[j], varname, &subvar, &endptr) );
+         /* find the corresponding subproblem variable for a given master problem variable using the variable name. */
+         subvar = SCIPfindVar(bendersdata->subproblems[j], varname)
 
          /* adding the subvariable to master variable mapping into the hash map */
          if( subvar != NULL )
