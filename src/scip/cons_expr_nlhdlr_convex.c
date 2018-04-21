@@ -217,6 +217,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
 
    /* compute g(x*) */
    constant = SCIPgetConsExprExprValue(expr);
+   assert(auxvalue == constant); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value */
 
    /* evaluation error or a too large constant -> skip */
    if( SCIPisInfinity(scip, REALABS(constant)) )

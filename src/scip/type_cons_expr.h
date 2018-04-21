@@ -692,10 +692,11 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - sol  : solution to be separated (NULL for the LP solution)
+ *  - sol : solution to be separated (NULL for the LP solution)
+ *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - overestimate : whether the expression needs to be over- or underestimated
- *  - minviolation : minimal violation of a cut if it should be added to the LP
- *  - separated: whether another nonlinear handler already added a cut for this expression
+ *  - minviolation :  minimal violation of a cut if it should be added to the LP
+ *  - separated : whether another nonlinear handler already added a cut for this expression
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
  */
@@ -706,6 +707,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
+   SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
    SCIP_Real minviolation, \
    SCIP_Bool separated, \
@@ -772,6 +774,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - expr : expression to be hashed
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
  *  - sol  : solution (NULL for the LP solution)
+ *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
  *  - success: buffer to store whether the branching score callback was successful
  */
@@ -781,6 +784,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
+   SCIP_Real auxvalue, \
    unsigned int brscoretag, \
    SCIP_Bool* success)
 

@@ -4322,7 +4322,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
 
-         SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
+         SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &success) );
       }
    }
 
@@ -4935,9 +4935,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
 
+         /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
+         SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sepadata->sol) );
+
+         /* TODO use auxvalue to decide whether calling separation is useful here */
+
          /* call the separation callback of the nonlinear handler */
          SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
-            overestimate, sepadata->minviolation, separated, &separesult, &ncuts) );
+            expr->enfos[e]->auxvalue, overestimate, sepadata->minviolation, separated, &separesult, &ncuts) );
 
          assert(ncuts >= 0);
          sepadata->ncuts += ncuts;
@@ -4948,7 +4953,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
              * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error), see above
              */
             SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
-               FALSE, sepadata->minviolation, separated, &separesult, &ncuts) );
+               expr->enfos[e]->auxvalue, FALSE, sepadata->minviolation, separated, &separesult, &ncuts) );
 
             assert(ncuts >= 0);
             sepadata->ncuts += ncuts;
@@ -9826,6 +9831,17 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlr(
    return SCIP_OKAY;
 }
 
+/** call the auxiliary evaluation callback of a nonlinear handler */
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(SCIPevalauxConsExprNlhdlr)
+{
+   assert(nlhdlr != NULL);
+   assert(nlhdlr->evalaux != NULL);
+
+   SCIP_CALL( nlhdlr->evalaux(scip, nlhdlr, expr, nlhdlrexprdata, auxvalue, sol) );
+
+   return SCIP_OKAY;
+}
+
 /** calls the separation initialization callback of a nonlinear handler */
 SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
    SCIP*                         scip,             /**< SCIP data structure */
@@ -9883,19 +9899,7 @@ SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
 }
 
 /** calls the separation callback of a nonlinear handler */
-SCIP_RETCODE SCIPsepaConsExprNlhdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_SOL*                     sol,              /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Bool                     overestimate,     /**< whether the expression needs to be over- or underestimated */
-   SCIP_Real                     minviolation,     /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_Bool                     separated,        /**< whether another nonlinear handler already added a cut for this expression */
-   SCIP_RESULT*                  result,           /**< pointer to store the result */
-   int*                          ncuts             /**< pointer to store the number of added cuts */
-)
+SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -9909,8 +9913,17 @@ SCIP_RETCODE SCIPsepaConsExprNlhdlr(
       return SCIP_OKAY;
    }
 
+#ifndef NDEBUG
+   /* check that auxvalue is correct by reevaluating */
+   {
+      SCIP_Real auxvaluetest;
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
+      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */
+   }
+#endif
+
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
-   SCIP_CALL( nlhdlr->sepa(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, overestimate, minviolation, separated, result, ncuts) );
+   SCIP_CALL( nlhdlr->sepa(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, minviolation, separated, result, ncuts) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
 
    /* update statistics */
@@ -9986,15 +9999,7 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
 }
 
 /** calls the nonlinear handler branching score callback */
-SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_SOL*                     sol,              /**< solution (NULL for the LP solution) */
-   unsigned int                  brscoretag,       /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
-   SCIP_Bool*                    success           /**< buffer to store whether the branching score callback was successful */
-)
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10006,7 +10011,16 @@ SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, nlhdlrexprdata, sol, brscoretag, success) );
+#ifndef NDEBUG
+   /* check that auxvalue is correct by reevaluating */
+   {
+      SCIP_Real auxvaluetest;
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
+      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */
+   }
+#endif
+
+   SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, brscoretag, success) );
 
    return SCIP_OKAY;
 }

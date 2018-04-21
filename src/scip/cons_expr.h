@@ -1309,6 +1309,10 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlr(
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata    /**< nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE */
 );
 
+/** call the auxiliary evaluation callback of a nonlinear handler */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(SCIPevalauxConsExprNlhdlr);
+
 /** calls the separation initialization callback of a nonlinear handler */
 EXTERN
 SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
@@ -1333,19 +1337,7 @@ SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
 
 /** calls the separation callback of a nonlinear handler */
 EXTERN
-SCIP_RETCODE SCIPsepaConsExprNlhdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_SOL*                     sol,              /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Bool                     overestimate,     /**< whether the expression needs to be over- or underestimated */
-   SCIP_Real                     minviolation,     /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_Bool                     separated,        /**< whether another nonlinear handler already added a cut for this expression */
-   SCIP_RESULT*                  result,           /**< pointer to store the result */
-   int*                          ncuts             /**< pointer to store the number of added cuts */
-);
+SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr);
 
 /** calls the interval evaluation callback of a nonlinear handler */
 EXTERN
@@ -1373,15 +1365,7 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
 
 /** calls the nonlinear handler branching score callback */
 EXTERN
-SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_SOL*                     sol,              /**< solution (NULL for the LP solution) */
-   unsigned int                  brscoretag,       /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
-   SCIP_Bool*                    success           /**< buffer to store whether the branching score callback was successful */
-);
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
 
 #ifdef __cplusplus
 }

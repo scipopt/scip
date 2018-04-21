@@ -161,6 +161,16 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxDefault)
    assert(expr != NULL);
    assert(auxvalue != NULL);
 
+   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+   {
+      /* if we did not say that we separated, then we did not introduce auxvars
+       * in that case, return the expression value, though it is a bit odd that we are still called
+       */
+      *auxvalue = SCIPgetConsExprExprValue(expr);
+
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( evalExprInAux(scip, expr, auxvalue, sol) );
 
    return SCIP_OKAY;
@@ -253,8 +263,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
 static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
 { /*lint --e{715}*/
-   SCIP_Real exprval;
-   SCIP_Real auxval;
+   SCIP_Real auxval; /* value of expression in aux. variables */
    SCIP_Real violation;
 
    assert(scip != NULL);
@@ -273,10 +282,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
 
    /* fallback: register violation w.r.t. values in auxiliary variables as branching score for each child */
 
-   /* get value of expression w.r.t. value of auxiliary variables of children */
-   SCIP_CALL( evalExprInAux(scip, expr, &exprval, sol) );
-
-   if( exprval == SCIP_INVALID ) /*lint !e777*/
+   if( auxvalue == SCIP_INVALID ) /*lint !e777*/
    {
       /* if cannot evaluate, then always branch */
       violation = SCIPinfinity(scip);
@@ -292,7 +298,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
        * if there are no positive locks, then evalvalue > auxval is ok
        * TODO we should actually remember for which side we enforce (by separation) and use this info here
        */
-      violation = exprval - auxval;
+      violation = auxvalue - auxval;
       if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
          violation = -violation;
       else if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
@@ -301,7 +307,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
 
    /* register violation as branching score for each child
     * this handler tries to enforce that the value of the auxvar (=auxval) equals (or lower/greater equals)
-    * the value of the expression when evaluated w.r.t. the values of the auxvars in the children (=exprval)
+    * the value of the expression when evaluated w.r.t. the values of the auxvars in the children (=auxvalue)
     * if there is a difference, then we may branch on some of the children
     *
     * TODO doing this only if violation > epsilon is correct, or better do this for any violation > 0?

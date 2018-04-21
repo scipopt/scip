@@ -783,7 +783,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
    assert(expr != NULL);
    assert(auxvalue != NULL);
 
-   /* evaluate expression w.r.t. auxiliary variables */
+   /* TODO: is this okay or should the constant be stored at the moment of creation? */
    *auxvalue = SCIPgetConsExprExprSumConstant(expr);
 
    for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
@@ -850,43 +850,17 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
     * TODO: maybe have a flag to know whether the expression is quadratic in the original variables
     */
    {
-      SCIP_Real activity;
       SCIP_Real side;
-      int i;
-
-      activity = SCIPgetConsExprExprSumConstant(expr); /* TODO: is this okay or should the constant be stored at the moment of creation? */
-      for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
-         activity += nlhdlrexprdata->lincoefs[i] *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[i]));
-
-      for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i ) /* quadratic terms */
-      {
-         SCIP_QUADEXPRTERM quadexprterm;
-         SCIP_Real solval;
-
-         quadexprterm = nlhdlrexprdata->quadexprterms[i];
-         solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm.expr));
-         activity += (quadexprterm.lincoef + quadexprterm.sqrcoef * solval) * solval;
-      }
-      for( i = 0; i < nlhdlrexprdata->nbilinexprterms; ++i ) /* bilinear terms */
-      {
-         SCIP_BILINEXPRTERM bilinexprterm;
-
-         bilinexprterm = nlhdlrexprdata->bilinexprterms[i];
-         activity += bilinexprterm.coef *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr1)) *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr2));
-      }
 
       side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
 
-      SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", activity,
+      SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", auxvalue,
             SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
             "concave");
 
-      if( activity - side > minviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
+      if( auxvalue - side > minviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
          rowprep->sidetype = SCIP_SIDETYPE_RIGHT;
-      else if( minviolation < side - activity && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
+      else if( minviolation < side - auxvalue && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
          rowprep->sidetype = SCIP_SIDETYPE_LEFT;
       else
          goto CLEANUP;
@@ -1314,7 +1288,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
 static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
 { /*lint --e{715}*/
-   SCIP_Real activity;
    SCIP_Real side;
    SCIP_Real violation;
    int i;
@@ -1336,12 +1309,9 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
 
    assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
 
-   /* evaluate expression w.r.t. auxiliary variables */
-   SCIP_CALL( nlhdlrEvalAuxQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &activity, sol) );
-
    side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
 
-   SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", activity,
+   SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", auxvalue,
       SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
          "concave");
 
@@ -1349,9 +1319,9 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
     * if concave, then we enforce expr >= auxvar, so violation is auxvar - expr = side - activity, if positive
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
-      violation = MAX(0.0, activity - side);
+      violation = MAX(0.0, auxvalue - side);
    else /* nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE */
-      violation = MAX(0.0, side - activity);
+      violation = MAX(0.0, side - auxvalue);
 
    /* if there is violation, then add branchscore for all expr in quadratic part */
    if( SCIPisPositive(scip, violation) )

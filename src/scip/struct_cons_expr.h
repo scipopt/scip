@@ -179,6 +179,7 @@ struct SCIP_ConsExpr_ExprEnfo
    SCIP_CONSEXPR_NLHDLR*         nlhdlr;          /**< nonlinear handler */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;  /**< data of nonlinear handler */
    SCIP_Bool                     issepainit;      /**< was the initsepa callback of nlhdlr called */
+   SCIP_Real                     auxvalue;        /**< auxiliary value of expression w.r.t. currently enforced solution */
 };
 
 /** expression tree iterator */
