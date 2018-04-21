@@ -139,9 +139,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          /* retreiving the master problem variable for the given subproblem variable. */
          SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, consvar, &mastervar) );
 
-         /* TODO: Do we need the problem variable? */
-         consvar = SCIPvarGetProbvar(consvar);
-
          /* update the coefficient in the farkas activity */
          farkascoefs[SCIPvarGetProbindex(consvar)] += dualsol * consval;
 
@@ -175,8 +172,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
       /* retreiving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
-
-      var = SCIPvarGetProbvar(var);
 
       dualsol = SCIPgetVarFarkasCoef(subproblem, var);
 
