@@ -166,6 +166,22 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    return SCIP_OKAY;
 }
 
+/** auxiliary evaluation callback */
+static
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
+{
+   assert(auxvalue != NULL);
+   assert(expr != NULL);
+
+   /* currently this nlhdlr does not introduce auxiliary variables,
+    * so we can return the value of the expression in the original variables
+    */
+   *auxvalue = SCIPgetConsExprExprValue(expr);
+
+   return SCIP_OKAY;
+}
+
+/** separation callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
 { /*lint --e{715}*/
@@ -369,7 +385,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, NULL) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvex, NULL) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);

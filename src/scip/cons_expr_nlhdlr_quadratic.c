@@ -566,7 +566,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
  * It also implies that x^-2 < x^-1, but since, so far, we do not interpret x^-2 as (x^-1)^2, it is not a problem.
  */
 static
-SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
+SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata;
    SCIP_HASHMAP*  expridx;
@@ -768,6 +768,45 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
          SCIPsetConsExprExprCurvature(expr, nlexprdata->curvature);
          SCIPdebugMsg(scip, "expr is %s in the original variables\n", nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE ? "concave" : "convex");
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** nonlinear handler auxiliary evaluation callback */
+static
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
+{  /*lint --e{715}*/
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(auxvalue != NULL);
+
+   /* evaluate expression w.r.t. auxiliary variables */
+   *auxvalue = SCIPgetConsExprExprSumConstant(expr);
+
+   for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
+      *auxvalue += nlhdlrexprdata->lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[i]));
+
+   for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i ) /* quadratic terms */
+   {
+      SCIP_QUADEXPRTERM quadexprterm;
+      SCIP_Real solval;
+
+      quadexprterm = nlhdlrexprdata->quadexprterms[i];
+      solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm.expr));
+      *auxvalue += (quadexprterm.lincoef + quadexprterm.sqrcoef * solval) * solval;
+   }
+
+   for( i = 0; i < nlhdlrexprdata->nbilinexprterms; ++i ) /* bilinear terms */
+   {
+      SCIP_BILINEXPRTERM bilinexprterm;
+
+      bilinexprterm = nlhdlrexprdata->bilinexprterms[i];
+      *auxvalue += bilinexprterm.coef *
+         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr1)) *
+         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr2));
    }
 
    return SCIP_OKAY;
@@ -1298,30 +1337,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
    assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
 
    /* evaluate expression w.r.t. auxiliary variables */
-   activity = SCIPgetConsExprExprSumConstant(expr);
-
-   for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
-      activity += nlhdlrexprdata->lincoefs[i] *
-      SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[i]));
-
-   for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i ) /* quadratic terms */
-   {
-      SCIP_QUADEXPRTERM quadexprterm;
-      SCIP_Real solval;
-
-      quadexprterm = nlhdlrexprdata->quadexprterms[i];
-      solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm.expr));
-      activity += (quadexprterm.lincoef + quadexprterm.sqrcoef * solval) * solval;
-   }
-   for( i = 0; i < nlhdlrexprdata->nbilinexprterms; ++i ) /* bilinear terms */
-   {
-      SCIP_BILINEXPRTERM bilinexprterm;
-
-      bilinexprterm = nlhdlrexprdata->bilinexprterms[i];
-      activity += bilinexprterm.coef *
-         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr1)) *
-         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr2));
-   }
+   SCIP_CALL( nlhdlrEvalAuxQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &activity, sol) );
 
    side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
 
@@ -1378,7 +1394,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    assert(consexprhdlr != NULL);
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY,
-            detectHdlrQuadratic, NULL) );
+            nlhdlrDetectQuadratic, nlhdlrEvalAuxQuadratic, NULL) );
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);

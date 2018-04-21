@@ -9575,6 +9575,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
    unsigned int                priority,     /**< priority of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
    )
 {
@@ -9586,6 +9587,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    assert(nlhdlr != NULL);
    assert(name != NULL);
    assert(detect != NULL);
+   assert(evalaux != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -9601,6 +9603,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    (*nlhdlr)->priority = priority;
    (*nlhdlr)->data = data;
    (*nlhdlr)->detect = detect;
+   (*nlhdlr)->evalaux = evalaux;
 
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->detecttime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->sepatime) );
