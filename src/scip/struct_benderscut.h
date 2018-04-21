@@ -48,17 +48,17 @@ struct SCIP_Benderscut
    SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol));/**< solving process deinitialization method of the Benders' decomposition cut */
    SCIP_DECL_BENDERSCUTEXEC((*benderscutexec));/**< execution method of the Benders' decomposition cut */
    SCIP_BENDERSCUTDATA*  benderscutdata;     /**< Benders' decomposition cuts local data */
-   SCIP_CLOCK*           setuptime;          /**< time spent setting up the Benders' decomposition cut plugin */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up the Benders' decomposition cut plugin */
    SCIP_CLOCK*           benderscutclock;    /**< the execution time of the Benders' decomposition cut plugin */
    int                   priority;           /**< priority of the Benders' decomposition cuts */
    SCIP_Bool             islpcut;            /**< does this Benders' cut use LP information? */
    SCIP_Bool             initialized;        /**< has the Benders' decomposition cut been initialized? */
 
-   SCIP_CONS**           addedcons;          /**< an array to store the added constraints */
+   SCIP_CONS**           addedconss;         /**< an array to store the added constraints */
    SCIP_ROW**            addedcuts;          /**< an array to store the added cuts */
-   int                   addedconssize;      /**< the size of the added constraint array */
+   int                   addedconsssize;     /**< the size of the added constraint array */
    int                   addedcutssize;      /**< the size of the added cuts array */
-   int                   naddedcons;         /**< the number of the added constraint */
+   int                   naddedconss;        /**< the number of the added constraint */
    int                   naddedcuts;         /**< the number of the added cuts */
 };
 

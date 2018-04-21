@@ -111,8 +111,8 @@ SCIP_Real SCIPbenderscutGetTime(
 EXTERN
 SCIP_RETCODE SCIPbenderscutGetCons(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   SCIP_CONS***          addedcons,          /**< pointer to store the constraint array */
-   int*                  naddedcons          /**< pointer to store the number of added constraints */
+   SCIP_CONS***          addedconss,         /**< pointer to store the constraint array */
+   int*                  naddedconss         /**< pointer to store the number of added constraints */
    );
 
 /** returns the cuts that have been added by the Benders' cut plugin */

@@ -384,6 +384,10 @@ set(scipheaders
     scip/bandit_ucb.h
     scip/benders.h
     scip/benderscut.h
+    scip/benderscut_feas.h
+    scip/benderscut_int.h
+    scip/benderscut_nogood.h
+    scip/benderscut_opt.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
@@ -516,6 +520,7 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
+    scip/misc_benders.h
     scip/nlp.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
