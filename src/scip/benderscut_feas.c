@@ -100,7 +100,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       addval = 0;
       dualsol = BDconsGetDualfarkas(subproblem, conss[i]);
 
-      if( SCIPisZero(subproblem, dualsol) )
+      if( SCIPisDualfeasZero(subproblem, dualsol) )
          continue;
 
       lhs = SCIPgetLhsLinear(masterprob, cut);
