@@ -263,6 +263,7 @@ typedef struct
 typedef struct
 {
    SCIP_SOL*               sol;              /**< solution (NULL for current the LP solution) */
+   SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger branching score */
    unsigned int            brscoretag;       /**< branching score tag */
 } BRSCORE_DATA;
 
@@ -4271,6 +4272,7 @@ static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
 {
    BRSCORE_DATA* brscoredata;
+   SCIP_Real auxvarvalue;
    SCIP_Real violation;
 
    assert(expr != NULL);
@@ -4293,20 +4295,26 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       return SCIP_OKAY;
    }
 
+   auxvarvalue = SCIPgetSolVal(scip, brscoredata->sol, expr->auxvar);
+
    /* compute violation w.r.t. original variables */
    if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
       violation = SCIPinfinity(scip);
    else
    {
-      violation = expr->evalvalue - SCIPgetSolVal(scip, brscoredata->sol, SCIPgetConsExprExprAuxVar(expr));
-      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
-         violation = -violation;
-      else if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
-         violation = 0.0;
+      violation = 0.0;
+
+      /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
+      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > 0.0 )
+         violation = auxvarvalue - expr->evalvalue;
+
+      /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
+      if( SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > 0.0 )
+         violation = expr->evalvalue - auxvarvalue;
    }
 
    /* if there is violation, then consider branching */
-   if( violation > 0.0 )
+   if( violation > brscoredata->minviolation )
    {
       SCIP_Bool success;
       int e;
@@ -4320,7 +4328,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
 
-         SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &success) );
+         /* if there is violation w.r.t. auxiliary variables, then call brscore of nlhdlr */
+         if( expr->enfos[e]->auxvalue == SCIP_INVALID ||
+            (SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
+            (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
+         {
+            SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &success) );
+         }
       }
    }
 
@@ -4382,6 +4396,7 @@ SCIP_RETCODE computeBranchingScores(
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
+   SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
    SCIP_SOL*             sol                 /**< solution to branch on (NULL for LP solution) */
    )
 {
@@ -4399,6 +4414,7 @@ SCIP_RETCODE computeBranchingScores(
    assert(conshdlrdata != NULL);
 
    brscoredata.sol = sol;
+   brscoredata.minviolation = minviolation;
    brscoredata.brscoretag = ++(conshdlrdata->lastbrscoretag);
 
    /* call branching score callbacks for expressions in violated constraints */
@@ -4445,6 +4461,7 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
    SCIP_SOL*             sol,                /**< solution to branch on (NULL for LP solution) */
+   SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -4464,7 +4481,7 @@ SCIP_RETCODE registerBranchingCandidates(
    *nnotify = 0;
 
    /* compute branching scores by considering violation of all expressions */
-   SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, sol) );
+   SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, minviolation, sol) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5292,7 +5309,7 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
 
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, SCIPfeastol(scip), &nnotify) );
    SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
    /* all variables have been fixed -> cutoff node */
@@ -6131,8 +6148,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
       return SCIP_OKAY;
    }
 
+   /* FIXME auxvarvalues in expr enforcedata are not uptodate here, since no separation called! */
+
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, SCIPfeastol(scip), &nnotify) );
    SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
    *result = nnotify == 0 ? SCIP_SOLVELP : SCIP_INFEASIBLE;
