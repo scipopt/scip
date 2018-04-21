@@ -204,8 +204,8 @@ SCIP_RETCODE SCIPbenderscutInit(
    }
 
    /* allocating memory for the added constraint/cut arrays */
-   SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedconss, benderscut->addedconsssize) );
-   SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedcuts, benderscut->addedcutssize) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedconss, benderscut->addedconsssize) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedcuts, benderscut->addedcutssize) );
 
    if( benderscut->benderscutinit != NULL )
    {
@@ -250,8 +250,8 @@ SCIP_RETCODE SCIPbenderscutExit(
       SCIP_CALL( SCIPreleaseCons(set->scip, &benderscut->addedconss[i]) );
    }
 
-   BMSfreeMemoryArray(&benderscut->addedcuts);
-   BMSfreeMemoryArray(&benderscut->addedconss);
+   BMSfreeBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedcuts, benderscut->naddedcuts);
+   BMSfreeBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedconss, benderscut->naddedconss);
    benderscut->addedconsssize = BENDERSCUT_ARRAYSIZE;
    benderscut->addedcutssize = BENDERSCUT_ARRAYSIZE;
    benderscut->naddedconss = 0;
@@ -567,8 +567,12 @@ SCIP_RETCODE SCIPbenderscutStoreCons(
    /* ensuring the required memory is available for the added constraints array */
    if( benderscut->addedconsssize < benderscut->naddedconss + 1 )
    {
-      benderscut->addedconsssize = SCIPsetCalcMemGrowSize(set, benderscut->naddedconss + 1);
-      SCIP_ALLOC( BMSreallocMemoryArray(&benderscut->addedconss, benderscut->addedconsssize) );
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, benderscut->naddedconss + 1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedconss,
+            benderscut->addedconsssize, newsize) );
+      benderscut->addedconsssize = newsize;
    }
    assert(benderscut->addedconsssize >= benderscut->naddedconss + 1);
 
@@ -593,8 +597,13 @@ SCIP_RETCODE SCIPbenderscutStoreCut(
    /* ensuring the required memory is available for the added cuts array */
    if( benderscut->addedcutssize < benderscut->naddedcuts + 1 )
    {
-      benderscut->addedcutssize = SCIPsetCalcMemGrowSize(set, benderscut->naddedcuts + 1);
-      SCIP_ALLOC( BMSreallocMemoryArray(&benderscut->addedcuts, benderscut->addedcutssize) );
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, benderscut->naddedcuts + 1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedcuts,
+            benderscut->addedcutssize, newsize) );
+
+      benderscut->addedcutssize = newsize;
    }
    assert(benderscut->addedcutssize >= benderscut->naddedcuts + 1);
 
