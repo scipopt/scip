@@ -309,7 +309,7 @@ extern "C" {
  *  - expr : expression
  *  - sol  : solution to be separated (NULL for the LP solution)
  *  - overestimate : whether the expression needs to be over- or underestimated
- *  - minviolation : minimal violation of a cut if it should be added to the LP
+ *  - mincutviolation : minimal violation of a cut if it should be added to the LP
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
  */
@@ -319,7 +319,7 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
    SCIP_Bool overestimate, \
-   SCIP_Real minviolation, \
+   SCIP_Real mincutviolation, \
    SCIP_RESULT* result, \
    int* ncuts)
 
@@ -695,7 +695,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - sol : solution to be separated (NULL for the LP solution)
  *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - overestimate : whether the expression needs to be over- or underestimated
- *  - minviolation :  minimal violation of a cut if it should be added to the LP
+ *  - mincutviolation :  minimal violation of a cut if it should be added to the LP
  *  - separated : whether another nonlinear handler already added a cut for this expression
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
@@ -709,7 +709,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_SOL* sol, \
    SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
-   SCIP_Real minviolation, \
+   SCIP_Real mincutviolation, \
    SCIP_Bool separated, \
    SCIP_RESULT* result, \
    int* ncuts)

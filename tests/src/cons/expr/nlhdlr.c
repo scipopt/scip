@@ -414,7 +414,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       return SCIP_OKAY;
 
    /* check whether its violation and numerical properties are ok (and maybe improve) */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
    if( success )
    {
@@ -423,7 +423,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "testhdlrcut_cvx");
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, conshdlr) );
 
-      assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
+      assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= mincutviolation);
 
       /* add cut */
       SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );

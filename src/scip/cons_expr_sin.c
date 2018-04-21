@@ -1093,7 +1093,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
       if( cuts[i] == NULL )
          continue;
 
-      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
       if( success )
       {

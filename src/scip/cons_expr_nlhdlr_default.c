@@ -214,7 +214,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
    }
 
    /* call the separation callback of the expression handler */
-   SCIP_CALL( SCIPsepaConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, minviolation, result, ncuts) );
+   SCIP_CALL( SCIPsepaConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, mincutviolation, result, ncuts) );
 
    return SCIP_OKAY;
 }

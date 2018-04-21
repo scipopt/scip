@@ -247,7 +247,7 @@ SCIP_RETCODE separatePointLog(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
+   SCIP_Real             mincutviolation,    /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
@@ -319,7 +319,7 @@ SCIP_RETCODE separatePointLog(
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, lincoef) );
 
    /* take care of cut numerics */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
    if( success )
    {
@@ -343,7 +343,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointLog(scip, conshdlr, expr, sol, minviolation, overestimate, &cut) );
+   SCIP_CALL( separatePointLog(scip, conshdlr, expr, sol, mincutviolation, overestimate, &cut) );
 
    /* failed to compute a good cut */
    if( cut == NULL )

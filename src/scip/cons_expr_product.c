@@ -1098,7 +1098,7 @@ SCIP_RETCODE separatePointProduct(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
+   SCIP_Real             mincutviolation,    /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
@@ -1202,9 +1202,9 @@ SCIP_RETCODE separatePointProduct(
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, y, lincoefy) );
 
       /* take care of cut numerics */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &violation, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &violation, &success) );
 
-      if( success && violation >= minviolation )
+      if( success && violation >= mincutviolation )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "mccormick");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
@@ -1316,9 +1316,9 @@ SCIP_RETCODE separatePointProduct(
       SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nvars, vars, facet) );
 
       /* take care of cut numerics */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, &violation, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &violation, &success) );
 
-      if( success && violation >= minviolation )
+      if( success && violation >= mincutviolation )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "multilinear");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
@@ -1819,13 +1819,13 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    *ncuts = 0;
 
    /* try to find a cut */
-   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, minviolation, overestimate, &cut) );
+   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, mincutviolation, overestimate, &cut) );
 
    if( cut == NULL )
       return SCIP_OKAY;
 
    /* it might happen that the violation is not reliable and thus we check it here again */
-   if( SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, cut, sol), minviolation) )
+   if( SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, cut, sol), mincutviolation) )
    {
       /* add cut */
       SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );

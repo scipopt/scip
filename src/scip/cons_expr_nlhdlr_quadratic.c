@@ -858,9 +858,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
             SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
             "concave");
 
-      if( auxvalue - side > minviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
+      if( auxvalue - side > mincutviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
          rowprep->sidetype = SCIP_SIDETYPE_RIGHT;
-      else if( minviolation < side - auxvalue && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
+      else if( mincutviolation < side - auxvalue && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
          rowprep->sidetype = SCIP_SIDETYPE_LEFT;
       else
          goto CLEANUP;
@@ -943,7 +943,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
       if( !success )
          goto CLEANUP;

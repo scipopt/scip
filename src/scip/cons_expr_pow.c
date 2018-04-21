@@ -901,7 +901,7 @@ SCIP_RETCODE separatePointPow(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< pow expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
+   SCIP_Real             mincutviolation,    /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
@@ -1049,7 +1049,7 @@ SCIP_RETCODE separatePointPow(
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, lincoef) );
 
    /* take care of cut numerics */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
    if( success )
    {
@@ -1555,7 +1555,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaPow)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointPow(scip, conshdlr, expr, sol, minviolation, overestimate, &cut) );
+   SCIP_CALL( separatePointPow(scip, conshdlr, expr, sol, mincutviolation, overestimate, &cut) );
 
    /* failed to compute a cut */
    if( cut == NULL )
@@ -1568,7 +1568,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaPow)
    *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "add cut with violation %e\n", minviolation);
+   SCIPdebugMsg(scip, "add cut with violation %e\n", mincutviolation);
    SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 

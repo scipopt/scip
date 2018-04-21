@@ -233,7 +233,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - constant;
 
    /* expression is not violated -> skip */
-   if( violation < minviolation )
+   if( violation < mincutviolation )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "violation of %p = %.12f\n", (void*)expr, violation);
@@ -291,7 +291,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
       if( !success )
          goto CLEANUP;
