@@ -4,15 +4,10 @@ include(CTest)
 # simple test instances for Ringpacking
 #
 set(instances
-  #"test_circle0\;2"
-  "test_circle1\;2"
-  "test_circle2\;1"
-  "test_circle3\;1"
-  "test_circle4\;2"
-  "test_circle5\;1"
-  "test_circle6\;1"
-  #"test_circle16\;1"
-  "test_ring1\;1"
+  "circle6\;1"
+  "ring1\;1"
+  "ring2\;1"
+  "ring3\;1"
   )
 
 add_test(NAME applications-ringpacking-build
