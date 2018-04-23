@@ -18,11 +18,22 @@
  * @author Stephen J. Maher
  */
 
+/* author gregor
+ *
+ * TODO your brief description is wrong, see header file.
+ */
+
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
 
 #include "scip/reader_smps.h"
+
+/* author gregor
+ *
+ * TODO what do you need those headers for?
+ */
 #include "scip/reader_cor.h"
 #include "scip/reader_tim.h"
 #include "scip/reader_sto.h"
@@ -32,7 +43,8 @@
 #define READER_EXTENSION        "smps"
 
 #define SMPS_MAX_LINELEN  1024
-#define BLANK         ' '
+#define BLANK              ' '
+#define LINEWIDTH           80
 
 /** smps input structure */
 struct SmpsInput
@@ -51,7 +63,7 @@ typedef struct SmpsInput SMPSINPUT;
 static
 SCIP_RETCODE smpsinputCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SMPSINPUT**            smpsi,               /**< smps input structure */
+   SMPSINPUT**           smpsi,               /**< smps input structure */
    SCIP_FILE*            fp                  /**< file object for the input file */
    )
 {
@@ -75,7 +87,7 @@ SCIP_RETCODE smpsinputCreate(
 static
 void smpsinputFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SMPSINPUT**            smpsi                /**< smps input structure */
+   SMPSINPUT**           smpsi               /**< smps input structure */
    )
 {
    SCIPfreeBlockMemory(scip, smpsi);
@@ -84,7 +96,7 @@ void smpsinputFree(
 /** return the current value of field 0 */
 static
 const char* smpsinputField0(
-   const SMPSINPUT*       smpsi                /**< smps input structure */
+   const SMPSINPUT*      smpsi               /**< smps input structure */
    )
 {
    assert(smpsi != NULL);
@@ -92,7 +104,7 @@ const char* smpsinputField0(
    return smpsi->f0;
 }
 
-/** fill the line from \p pos up to column 80 with blanks. */
+/** fill the line from \p pos up to column LINEWIDTH with blanks. */
 static
 void clearFrom(
    char*                 buf,                /**< buffer to clear */
@@ -101,15 +113,15 @@ void clearFrom(
 {
    unsigned int i;
 
-   for(i = pos; i < 80; i++)
+   for(i = pos; i < LINEWIDTH; i++)
       buf[i] = BLANK;
-   buf[80] = '\0';
+   buf[LINEWIDTH] = '\0';
 }
 
 /** read a smps format data line and parse the fields. */
 static
 SCIP_Bool smpsinputReadLine(
-   SMPSINPUT*             smpsi                /**< smps input structure */
+   SMPSINPUT*            smpsi               /**< smps input structure */
    )
 {
    unsigned int len;
@@ -136,16 +148,19 @@ SCIP_Bool smpsinputReadLine(
       /* Normalize line */
       len = (unsigned int) strlen(smpsi->buf);
 
+      /* replace tabs and new lines by blanks */
       for( i = 0; i < len; i++ )
+      {
          if( (smpsi->buf[i] == '\t') || (smpsi->buf[i] == '\n') || (smpsi->buf[i] == '\r') )
             smpsi->buf[i] = BLANK;
+      }
 
-      if( len < 80 )
+      if( len < LINEWIDTH )
          clearFrom(smpsi->buf, len);
 
       SCIPdebugMessage("line %d: <%s>\n", smpsi->lineno, smpsi->buf);
 
-      assert(strlen(smpsi->buf) >= 80);
+      assert(strlen(smpsi->buf) >= LINEWIDTH);
 
       /* Look for new section */
       if( *smpsi->buf != BLANK )
@@ -217,6 +232,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       SCIPprintSysError(filename);
+
       return SCIP_NOFILE;
    }
 
@@ -227,6 +243,13 @@ SCIP_DECL_READERREAD(readerReadSmps)
       (void) SCIPsnprintf(newfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
       SCIPinfoMessage(scip, NULL, "read problem <%s>\n", newfilename);
       SCIPinfoMessage(scip, NULL, "============\n");
+      /* author gregor
+       *
+       * TODO if an error happens in one of the files, it is not clear which
+       * of the files is corrupted. Maybe you can use the lineno of the input
+       * for a descriptive error message.
+       */
+
       SCIP_CALL_TERMINATE( retcode, SCIPreadProb(scip, newfilename, NULL), TERMINATE );
       SCIPinfoMessage(scip, NULL, "\n\n");
    }
@@ -234,7 +257,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
    SCIPfclose(fp);
 
  /* cppcheck-suppress unusedLabel */
- TERMINATE:
+TERMINATE:
    smpsinputFree(scip, &smpsi);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
@@ -249,18 +272,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    return SCIP_OKAY;
 }
-
-
-/** problem writing method of reader */
-#if 0
-static
-SCIP_DECL_READERWRITE(readerWriteSmps)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
-#else
-#define readerWriteSmps NULL
-#endif
 
 
 /*
@@ -282,7 +293,6 @@ SCIP_RETCODE SCIPincludeReaderSmps(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopySmps) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadSmps) );
-   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteSmps) );
 
    return SCIP_OKAY;
 }

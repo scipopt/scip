@@ -17,7 +17,19 @@
  * @ingroup FILEREADERS
  * @brief  SMPS file reader (MPS format of the core problem for stochastic programs)
  * @author Stephen J. Maher
+ *
+ * An example of an smps file looks as follows.
+ *
+ * @verbinclude pltexpA2_6.smps
  */
+
+/* author gregor
+ *
+ * TODO your brief description is wrong. Please expand a bit on the format,
+ * specifying the order and input an example file to get a feeling what it should
+ * look like.
+ */
+
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
