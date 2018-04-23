@@ -93,6 +93,13 @@
 
 /**@} */
 
+/* default values of parameters */
+#define DEFAULT_VERIFICATION_NLPTILIMSOFT    1.0       /**< soft time limit for each verification NLP */
+#define DEFAULT_VERIFICATION_NLPNODELIMSOFT  1000L     /**< soft node limit for each verification NLP */
+#define DEFAULT_VERIFICATION_HEURTILIMSOFT   1.0       /**< soft time limit for heuristic verification */
+#define DEFAULT_VERIFICATION_HEURITERLIMSOFT 100       /**< soft iteration limit for each heuristic verification */
+#define DEFAULT_VERIFICATION_TOTALTILIMSOFT  1200.0    /**< total time limit for all verification problems during the enumeration */
+
 
 /**@name Callback methods
  *
@@ -278,6 +285,26 @@ SCIP_RETCODE SCIPincludeReaderRpa(
    /* include ringpacking reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
    assert(reader != NULL);
+
+   /* add soft verification parameters */
+   SCIP_CALL( SCIPaddRealParam(scip, "ringpacking/verification/nlptilimsoft", "soft time limit for verification NLP",
+                               NULL, FALSE, DEFAULT_VERIFICATION_NLPTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "ringpacking/verification/nlpnodelimsoft",
+                                  "soft node limit for verification NLP", NULL, FALSE,
+                                  DEFAULT_VERIFICATION_NLPNODELIMSOFT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "ringpacking/verification/heurtilimsoft",
+                               "soft time limit for heuristic verification", NULL, FALSE,
+                               DEFAULT_VERIFICATION_HEURTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "ringpacking/verification/heuriterlimsoft",
+                              "soft iteration limit for heuristic verification", NULL, FALSE,
+                              DEFAULT_VERIFICATION_HEURITERLIMSOFT, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "ringpacking/verification/totaltilimsoft",
+                               "total time limit for all verification problems during the enumeration", NULL, FALSE,
+                               DEFAULT_VERIFICATION_TOTALTILIMSOFT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadRpa) );
 
