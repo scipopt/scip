@@ -103,10 +103,14 @@ set(settings_Bilinrelax
   )
 
 set(settings_Symmetry
+    "orbitalfixing-timing0"
     "orbitalfixing-timing1"
     "orbitalfixing-timing2"
+    "orbitopes-timing0"
     "orbitopes-timing2"
+    "packingorbitopes-timing0"
     "packingorbitopes-timing2"
+    "symresacks-timing0"
     "symresacks-timing2"
     )
 
