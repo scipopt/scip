@@ -36,6 +36,12 @@
  *
  */
 
+/* author gregor
+ *
+ * TODO Can you move this documentation to the smps reader?
+ */
+
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_READER_COR_H__
@@ -100,6 +106,13 @@ SCIP_RETCODE SCIPwriteCor(
 /*
  * Interface method for the tim and sto readers
  */
+
+/* author gregor
+ *
+ * TODO please consider adding some documentation for the files below, and copy those
+ * into the c file, as well.
+ */
+
 EXTERN
 SCIP_Bool SCIPcorHasRead(
    SCIP_READER*          reader              /**< the file reader itself */
@@ -118,7 +131,7 @@ int SCIPcorGetNConsNames(
 EXTERN
 const char* SCIPcorGetVarName(
    SCIP_READER*          reader,             /**< the file reader itself */
-   int                   i                   /**< the index of the constraint that is requested */
+   int                   i                   /**< the index of the variable that is requested */
    );
 
 EXTERN

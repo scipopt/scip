@@ -46,6 +46,11 @@ struct SCIP_ReaderData
    SCIP_Bool             read;
 
    /* Required for the MPS reading and writing functions */
+   /* author gregor
+    *
+    * TODO these two parameters are nowhere used.
+    */
+
    SCIP_Bool             linearizeands;
    SCIP_Bool             aggrlinearizationands;
 };
@@ -256,6 +261,12 @@ SCIP_RETCODE SCIPwriteCor(
    }
    else
    {
+      /* author gregor
+       *
+       * TODO Can you please add a comment why it is not possible to write the variable names?
+       * Do you maybe mix up the cases and this is the cases for generic names == TRUE?
+       */
+
       SCIPwarningMessage(scip, "COR format is an MPS format with generic variable and constraint names\n");
 
       if( transformed )
@@ -325,7 +336,7 @@ int SCIPcorGetNConsNames(
 
 const char* SCIPcorGetVarName(
    SCIP_READER*          reader,             /**< the file reader itself */
-   int                   i                   /**< the index of the constraint that is requested */
+   int                   i                   /**< the index of the variable that is requested */
    )
 {
    SCIP_READERDATA* readerdata;
