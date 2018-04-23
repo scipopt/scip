@@ -18,6 +18,12 @@
  * @author Stephen J. Maher
  */
 
+/* author gregor
+ *
+ * TODO please expand the brief description, here and in the header file.
+ */
+
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -890,7 +896,7 @@ SCIP_RETCODE createScenariosFromBlocks(
    assert(scip != NULL);
    assert(blocks != NULL);
 
-   /* allocting the memory for the scenarios array */
+   /* allocating the memory for the scenarios array */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scenarios, numstages) );
    SCIP_CALL( SCIPallocBufferArray(scip, &numscenarios, numstages) );
    SCIP_CALL( SCIPallocBufferArray(scip, &scenariossize, numstages) );
@@ -901,7 +907,7 @@ SCIP_RETCODE createScenariosFromBlocks(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scenarios[i], scenariossize[i]) );
    }
 
-   /* allocting the memory for the block for scenario array */
+   /* allocating the memory for the block for scenario array */
    SCIP_CALL( SCIPallocBufferArray(scip, &blocksforscen, numblocks) );
 
    (void) SCIPsnprintf(periods, SCIP_MAXSTRLEN, "");
@@ -1232,8 +1238,10 @@ SCIP_Bool stoinputReadLine(
       len = (unsigned int) strlen(stoi->buf);
 
       for( i = 0; i < len; i++ )
+      {
          if( (stoi->buf[i] == '\t') || (stoi->buf[i] == '\n') || (stoi->buf[i] == '\r') )
             stoi->buf[i] = BLANK;
+      }
 
       if( len < 80 )
          clearFrom(stoi->buf, len);
@@ -1395,7 +1403,7 @@ SCIP_RETCODE readBlocks(
 
    stoinputSetStochtype(stoi, stoinputField1(stoi));
 
-   /* initialising the block data */
+   /* initializing the block data */
    numblocks = 0;
    blockssize = STO_DEFAULT_ARRAYSIZE;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks, STO_DEFAULT_ARRAYSIZE) );
@@ -1405,7 +1413,7 @@ SCIP_RETCODE readBlocks(
    blockindex = 0;
    blocknum = 0;
 
-   /* initialising the stage names record */
+   /* initializing the stage names record */
    numstages = 0;
    (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "");
 
@@ -1556,14 +1564,14 @@ SCIP_RETCODE readScenarios(
 
    stoinputSetStochtype(stoi, stoinputField1(stoi));
 
-   /* initialising the scen names record */
+   /* initializing the scen names record */
    numscenarios = 0;
    (void) SCIPsnprintf(scennames, SCIP_MAXSTRLEN, "ROOT");
 
    scenario = NULL;
    addscenario = FALSE;
 
-   /* initialising the root scenario in the reader data */
+   /* initializing the root scenario in the reader data */
    SCIP_CALL( setScenarioNum(scip, readerdata->scenariotree, 0) );
    SCIP_CALL( setScenarioStageNum(scip, readerdata->scenariotree, 0) );
 
@@ -1691,14 +1699,14 @@ SCIP_RETCODE readIndep(
 
    stoinputSetStochtype(stoi, stoinputField1(stoi));
 
-   /* initialising the block data */
+   /* initializing the block data */
    numblocks = 0;
    blockssize = STO_DEFAULT_ARRAYSIZE;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &numblocksperblock, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocksperblocksize, STO_DEFAULT_ARRAYSIZE) );
 
-   /* initialising the stage names record */
+   /* initializing the stage names record */
    numstages = 0;
    (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "");
 
@@ -2386,6 +2394,11 @@ SCIP_RETCODE buildDecompProblem(
 }
 #endif
 
+/* author gregor
+ *
+ * TODO please review the following documentation, which contains copy and
+ * paste errors (the links refer to ressources for the MPS format)
+ */
 
 /** Read LP in "STO File Format".
  *
@@ -2447,6 +2460,11 @@ SCIP_RETCODE readSto(
 
       if( stoinputSection(stoi) == STO_SCENARIOS )
       {
+         /* author gregor
+          *
+          * TODO exceeds 1 or more than 2 in the following comment?
+          */
+
          /* if the number of stages exceeds 1, i.e. more than two stages, then the sto file is not read. */
          if( SCIPtimGetNStages(scip) > 2 )
          {
@@ -2486,8 +2504,8 @@ SCIP_RETCODE readSto(
          SCIP_CALL_TERMINATE( retcode, buildFullProblem(scip, readerdata), TERMINATE );
    }
 
- /* cppcheck-suppress unusedLabel */
- TERMINATE:
+/* cppcheck-suppress unusedLabel */
+TERMINATE:
    stoinputFree(scip, &stoi);
 
    if( error )
@@ -2502,7 +2520,6 @@ SCIP_RETCODE readSto(
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
-/**! [SnippetReaderCopySto] */
 static
 SCIP_DECL_READERCOPY(readerCopySto)
 {  /*lint --e{715}*/
@@ -2515,10 +2532,8 @@ SCIP_DECL_READERCOPY(readerCopySto)
 
    return SCIP_OKAY;
 }
-/**! [SnippetReaderCopySto] */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
-/**! [SnippetReaderFreeSto] */
 static
 SCIP_DECL_READERFREE(readerFreeSto)
 {
@@ -2532,7 +2547,6 @@ SCIP_DECL_READERFREE(readerFreeSto)
 
    return SCIP_OKAY;
 }
-/**! [SnippetReaderFreeSto] */
 
 /** problem reading method of reader */
 static
@@ -2544,6 +2558,10 @@ SCIP_DECL_READERREAD(readerReadSto)
    return SCIP_OKAY;
 }
 
+/* author gregor
+ *
+ * TODO the code in comments should be removed
+ */
 
 /** problem writing method of reader */
 //static
@@ -2594,6 +2612,11 @@ SCIP_RETCODE SCIPincludeReaderSto(
    return SCIP_OKAY;
 }
 
+
+/* author gregor
+ *
+ * TODO what do you need the actual reader for? Can't you get it from SCIP instead, using SCIPfindReader()?
+ */
 
 /** reads problem from file */
 SCIP_RETCODE SCIPreadSto(
