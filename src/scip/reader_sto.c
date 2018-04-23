@@ -2439,8 +2439,8 @@ SCIP_RETCODE readSto(
       return SCIP_NOFILE;
    }
 
-   SCIP_CALL( stoinputCreate(scip, &stoi, fp) );
-   SCIP_CALL( createReaderdata(scip, readerdata) );
+   SCIP_CALL_FINALLY( stoinputCreate(scip, &stoi, fp), SCIPfclose(fp) );
+   SCIP_CALL_TERMINATE( retcode, createReaderdata(scip, readerdata), TERMINATE );
 
    SCIP_CALL_TERMINATE( retcode, readStoch(scip, stoi), TERMINATE );
 
@@ -2488,7 +2488,6 @@ SCIP_RETCODE readSto(
    if( !unsupported && stoinputSection(stoi) != STO_ENDATA )
       stoinputSyntaxerror(stoi);
 
-   SCIPfclose(fp);
 
    error = stoinputHasError(stoi);
 
@@ -2507,6 +2506,7 @@ SCIP_RETCODE readSto(
 /* cppcheck-suppress unusedLabel */
 TERMINATE:
    stoinputFree(scip, &stoi);
+   SCIPfclose(fp);
 
    if( error )
       return SCIP_READERROR;

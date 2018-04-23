@@ -642,7 +642,7 @@ SCIP_RETCODE readTime(
    TIMINPUT*             timi                /**< tim input structure */
    )
 {
-   SCIPdebugMsg(scip, "read problem name\n");
+   SCIPdebugMsg(scip, "read problem name from TIME section\n");
 
    /* This has to be the Line with the TIME section. */
    if( !timinputReadLine(timi) || timinputField0(timi) == NULL || strcmp(timinputField0(timi), "TIME") )
@@ -661,7 +661,7 @@ SCIP_RETCODE readTime(
       return SCIP_OKAY;
    }
 
-   if( !strncmp(timinputField0(timi), "PERIODS", 7) )
+   if( strncmp(timinputField0(timi), "PERIODS", 7) == 0 )
       timinputSetSection(timi, TIM_PERIODS);
    else
    {
@@ -685,9 +685,9 @@ SCIP_RETCODE readPeriods(
    {
       if( timinputField0(timi) != NULL )
       {
-         if( !strcmp(timinputField0(timi), "PERIODS") )
+         if( strcmp(timinputField0(timi), "PERIODS") == 0 )
             timinputSetSection(timi, TIM_PERIODS);
-         else if( !strcmp(timinputField0(timi), "ENDATA") )
+         else if( strcmp(timinputField0(timi), "ENDATA") == 0 )
             timinputSetSection(timi, TIM_ENDATA);
          else
             timinputSyntaxerror(timi);
@@ -735,10 +735,11 @@ SCIP_RETCODE readTim(
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       SCIPprintSysError(filename);
+
       return SCIP_NOFILE;
    }
 
-   SCIP_CALL( timinputCreate(scip, &timi, fp) );
+   SCIP_CALL_FINALLY( timinputCreate(scip, &timi, fp), SCIPfclose(fp) );
 
    SCIP_CALL_TERMINATE( retcode, readTime(scip, timi), TERMINATE );
 
@@ -748,8 +749,6 @@ SCIP_RETCODE readTim(
    }
    if( timinputSection(timi) != TIM_ENDATA )
       timinputSyntaxerror(timi);
-
-   SCIPfclose(fp);
 
    error = timinputHasError(timi);
 
@@ -761,6 +760,7 @@ SCIP_RETCODE readTim(
  /* cppcheck-suppress unusedLabel */
  TERMINATE:
    timinputFree(scip, &timi);
+   SCIPfclose(fp);
 
    if( error )
       return SCIP_READERROR;

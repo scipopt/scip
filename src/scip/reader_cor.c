@@ -264,7 +264,7 @@ SCIP_RETCODE SCIPwriteCor(
       /* author gregor
        *
        * TODO Can you please add a comment why it is not possible to write the variable names?
-       * Do you maybe mix up the cases and this is the cases for generic names == TRUE?
+       * Do you maybe mix up the cases and this is the case for genericnames == TRUE?
        */
 
       SCIPwarningMessage(scip, "COR format is an MPS format with generic variable and constraint names\n");

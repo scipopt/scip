@@ -60,6 +60,14 @@ SCIP_RETCODE SCIPincludeReaderTim(
  * @{
  */
 
+/* author gregor
+ *
+ * TODO the method documentation of SCIPreadTim lacks information about the supported file type
+ *
+ * Again, I do not get why the tim reader is part of the input, as it can be
+ * queried from the SCIP data structure.
+ */
+
 /** reads problem from file */
 EXTERN
 SCIP_RETCODE SCIPreadTim(
@@ -68,6 +76,11 @@ SCIP_RETCODE SCIPreadTim(
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
+
+/* author gregor
+ *
+ * TODO this method is not implemented in reader_tim.c, and I cannot find it elsewhere.
+ */
 
 /** writes problem to file */
 EXTERN
