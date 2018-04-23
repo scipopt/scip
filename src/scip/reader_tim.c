@@ -773,7 +773,6 @@ SCIP_RETCODE readTim(
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
-/**! [SnippetReaderCopyTim] */
 static
 SCIP_DECL_READERCOPY(readerCopyTim)
 {  /*lint --e{715}*/
@@ -786,10 +785,8 @@ SCIP_DECL_READERCOPY(readerCopyTim)
 
    return SCIP_OKAY;
 }
-/**! [SnippetReaderCopyTim] */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
-/**! [SnippetReaderFreeTim] */
 static
 SCIP_DECL_READERFREE(readerFreeTim)
 {
@@ -797,7 +794,6 @@ SCIP_DECL_READERFREE(readerFreeTim)
 
    return SCIP_OKAY;
 }
-/**! [SnippetReaderFreeTim] */
 
 /** problem reading method of reader */
 static
