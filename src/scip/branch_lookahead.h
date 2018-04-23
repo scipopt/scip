@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,12 +17,19 @@
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
  * @author Christoph Schubert
+ * @author Gerald Gamrath
  *
  * The (multi-level) lookahead branching rule applies strong branching to every fractional value of the LP solution
  * at the current node of the branch-and-bound tree, as well as recursivly to every temporary child problem created by this
  * strong branching. The rule selects the candidate with the best proven dual bound.
  *
- * @todo add Glankwamdee paper
+ * The branching rules was motivated by the following technical report:
+ *
+ * @par
+ * Wasu Glankwamdee and Jeff Linderoth@n
+ * Lookahead Branching for Mixed Integer Programming@n
+ * Technical Report 06T-004, Department of Industrial and Systems Engineering, Lehigh University.
+ *
  * For a more mathematical description and a comparison between lookahead branching and other branching rules
  * in SCIP, we refer to
  *
