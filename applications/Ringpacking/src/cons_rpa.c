@@ -503,17 +503,6 @@ SCIP_DECL_CONSFREE(consFreeRpa)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-static
-SCIP_DECL_CONSINIT(consInitRpa)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   return SCIP_OKAY;
-}
-
-
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_CONSINITSOL(consInitsolRpa)
@@ -703,7 +692,6 @@ SCIP_RETCODE SCIPincludeConshdlrRpa(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolRpa) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeRpa) );;
-   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitRpa) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolRpa) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxRpa) );
 
