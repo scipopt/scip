@@ -1563,7 +1563,7 @@ CANDIDATE* scoreContainerUpdateSortOrder(
 {
    int i;
    CANDIDATE* movecand = candidate;
-   /* @GG comment 26: Probably scorecontainer and candidate should not be empty, please add asserts. */w
+   /* @GG comment 26: Probably scorecontainer and candidate should not be empty, please add asserts. */
 
    for( i = insertpoint; i < scorecontainer->nbestsortedindices; i++ )
    {
