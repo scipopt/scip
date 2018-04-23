@@ -799,12 +799,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_Real* lambdas;
    SCIP_STATUS solstat;
    SCIP_Real redcostslb;
-   SCIP_Real nlptilim;
-   SCIP_Real heurtilim;
+   SCIP_Real nlptimelimit;
+   SCIP_Real heurtimelimit;
    SCIP_Real totaltilim;
-   SCIP_Longint nlpnodelim;
    SCIP_Bool success;
-   int heuriterlim;
    int t;
 
    pricerdata = SCIPpricerGetData(pricer);
@@ -841,9 +839,9 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &totaltilim) );
 
    /* solve pricing problem with heuristic */
-   heurtilim = MIN(heurtilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+   heurtimelimit = MIN(pricerdata->heurtilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
    pricerdata->timeleft += SCIPgetSolvingTime(scip);
-   SCIP_CALL( solvePricingHeuristic(scip, probdata, pricerdata, lambdas, heurtilim, heuriterlim, &success) );
+   SCIP_CALL( solvePricingHeuristic(scip, probdata, pricerdata, lambdas, heurtimelimit, pricerdata->heuriterlim, &success) );
    pricerdata->timeleft -= SCIPgetSolvingTime(scip);
 
    if( success )
@@ -853,9 +851,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostRingpacking)
    /* solve pricing problem as MINLP if heuristic was not successful and dual bound is still valid */
    else if ( !SCIPprobdataIsDualboundInvalid(probdata) )
    {
-      nlptilim = MIN3(pricerdata->timeleft, nlptilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
+      nlptimelimit = MIN3(pricerdata->timeleft, pricerdata->nlptilim, totaltilim - SCIPgetSolvingTime(scip)); /*lint !e666*/
       pricerdata->timeleft += SCIPgetSolvingTime(scip);
-      SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, nlptilim, nlpnodelim, &success, &solstat, &redcostslb) );
+      SCIP_CALL( solvePricingMINLP(scip, probdata, lambdas, nlptimelimit, pricerdata->nlpnodelim, &success, &solstat,
+            &redcostslb) );
       pricerdata->timeleft -= SCIPgetSolvingTime(scip);
       redcostslb += 1.0;
       SCIPdebugMsg(scip, "result of pricing MINLP: addedvar=%u soltat=%d\n", success, solstat);
