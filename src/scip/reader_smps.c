@@ -300,11 +300,19 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    /* printing errors if the correct files have not been provided */
    if( !hascorfile )
-      SCIPerrorMessage("The core file has not been provided in <%s>\n", smpsinputField0(smpsi), filename);
+   {
+      SCIPerrorMessage("The core file has not been listed in <%s>\n", filename);
+   }
+
    if( !hastimfile )
-      SCIPerrorMessage("The tim file has not been provided in <%s>\n", smpsinputField0(smpsi), filename);
+   {
+      SCIPerrorMessage("The tim file has not been listed in <%s>\n", filename);
+   }
+
    if( !hasstofile )
-      SCIPerrorMessage("The sto file has not been provided in <%s>\n", smpsinputField0(smpsi), filename);
+   {
+      SCIPerrorMessage("The sto file has not been listed in <%s>\n", filename);
+   }
 
    /* if one of the necessary file has not been provided, then an error will be returned */
    if( !hascorfile || !hastimfile || !hasstofile )
