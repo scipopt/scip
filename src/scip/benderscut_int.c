@@ -40,6 +40,8 @@
  * \varphi \geq (z(\bar{x}) - L)(\sum_{i \in S_{r}}(x_{i} - 1) + \sum_{i \notin S_{r}}x_{i} + 1)
  * \f]
  *
+ * Laporte, G. & Louveaux, F. V. The integer L-shaped method for stochastic integer programs with complete recourse
+ * Operations Research Letters, 1993, 13, 133-142
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
