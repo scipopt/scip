@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_tim.c
- * @brief  TIM file reader
+ * @brief  TIM file reader - the stage information for a stochastic programming instance in SMPS format
  * @author Stephen J. Maher
  */
 
@@ -795,7 +795,7 @@ SCIP_DECL_READERFREE(readerFreeTim)
    return SCIP_OKAY;
 }
 
-/** problem reading method of reader */
+/** reads the stage information for a stochastic programming instance in SMPS format */
 static
 SCIP_DECL_READERREAD(readerReadTim)
 {  /*lint --e{715}*/

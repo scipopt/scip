@@ -198,6 +198,9 @@ SCIP_RETCODE SCIPreadCor(
 /*
  * Interface method for the tim and sto readers
  */
+
+
+/** returns whether the COR file has been successfully read. This is used by the TIM and STO readers. */
 SCIP_Bool SCIPcorHasRead(
    SCIP_READER*          reader              /**< the file reader itself */
    )
@@ -213,6 +216,7 @@ SCIP_Bool SCIPcorHasRead(
    return readerdata->read;
 }
 
+/** returns the number of variable names in the COR problem */
 int SCIPcorGetNVarNames(
    SCIP_READER*          reader              /**< the file reader itself */
    )
@@ -228,6 +232,7 @@ int SCIPcorGetNVarNames(
    return readerdata->nvarnames;
 }
 
+/** returns the number of constriant names in the COR problem */
 int SCIPcorGetNConsNames(
    SCIP_READER*          reader              /**< the file reader itself */
    )
@@ -243,6 +248,7 @@ int SCIPcorGetNConsNames(
    return readerdata->nconsnames;
 }
 
+/** returns the variable name for the given index */
 const char* SCIPcorGetVarName(
    SCIP_READER*          reader,             /**< the file reader itself */
    int                   i                   /**< the index of the variable that is requested */
@@ -260,6 +266,7 @@ const char* SCIPcorGetVarName(
    return readerdata->varnames[i];
 }
 
+/** returns the constraint name for the given index */
 const char* SCIPcorGetConsName(
    SCIP_READER*          reader,             /**< the file reader itself */
    int                   i                   /**< the index of the constraint that is requested */

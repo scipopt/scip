@@ -15,7 +15,7 @@
 
 /**@file   reader_tim.h
  * @ingroup FILEREADERS
- * @brief  TIM file reader
+ * @brief  TIM file reader - the stage information for a stochastic programming instance in SMPS format
  * @author Stephen J. Maher
  *
  * This is a reader for the time file of a stochastic programming instance in SMPS format.
@@ -60,47 +60,12 @@ SCIP_RETCODE SCIPincludeReaderTim(
  * @{
  */
 
-/* author gregor
- *
- * TODO the method documentation of SCIPreadTim lacks information about the supported file type
- *
- * Again, I do not get why the tim reader is part of the input, as it can be
- * queried from the SCIP data structure.
- */
-
-/** reads problem from file */
+/** reads the stage information for a stochastic programming instance in SMPS format */
 EXTERN
 SCIP_RETCODE SCIPreadTim(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
-   );
-
-/* author gregor
- *
- * TODO this method is not implemented in reader_tim.c, and I cannot find it elsewhere.
- */
-
-/** writes problem to file */
-EXTERN
-SCIP_RETCODE SCIPwriteTim(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file, or NULL if standard output should be used */
-   const char*           name,               /**< problem name */
-   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE         objsense,           /**< objective sense */
-   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
-                                              * extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of active variables in the problem */
-   int                   nbinvars,           /**< number of binary variables */
-   int                   nintvars,           /**< number of general integer variables */
-   int                   nimplvars,          /**< number of implicit integer variables */
-   int                   ncontvars,          /**< number of continuous variables */
-   SCIP_CONS**           conss,              /**< array with constraints of the problem */
-   int                   nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
 /* @} */

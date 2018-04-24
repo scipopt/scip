@@ -36,11 +36,6 @@
  *
  */
 
-/* author gregor
- *
- * TODO Can you move this documentation to the smps reader?
- */
-
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -106,33 +101,32 @@ SCIP_RETCODE SCIPwriteCor(
  * Interface method for the tim and sto readers
  */
 
-/* author gregor
- *
- * TODO please consider adding some documentation for the files below, and copy those
- * into the c file, as well.
- */
-
+/** returns whether the COR file has been successfully read. This is used by the TIM and STO readers. */
 EXTERN
 SCIP_Bool SCIPcorHasRead(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
+/** returns the number of variable names in the COR problem */
 EXTERN
 int SCIPcorGetNVarNames(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
+/** returns the number of constriant names in the COR problem */
 EXTERN
 int SCIPcorGetNConsNames(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
+/** returns the variable name for the given index */
 EXTERN
 const char* SCIPcorGetVarName(
    SCIP_READER*          reader,             /**< the file reader itself */
    int                   i                   /**< the index of the variable that is requested */
    );
 
+/** returns the constraint name for the given index */
 EXTERN
 const char* SCIPcorGetConsName(
    SCIP_READER*          reader,             /**< the file reader itself */

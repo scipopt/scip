@@ -15,7 +15,7 @@
 
 /**@file   reader_sto.h
  * @ingroup FILEREADERS
- * @brief  STO file reader
+ * @brief  STO file reader - the stochastic information of an instance in SMPS format
  * @author Stephen J. Maher
  *
  * This is a reader for the stochastic information of a stochastic programming instance in SMPS format.
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPincludeReaderSto(
  * @{
  */
 
-/** reads problem from file */
+/** reads the stochastic information for a stochastic program that is in SMPS format */
 EXTERN
 SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
