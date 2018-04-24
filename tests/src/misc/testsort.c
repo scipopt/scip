@@ -27,6 +27,10 @@
 
 /* helper methods */
 
+/** compares two entries of an int array, returns 0 if both are equal, a negative number if the entry at position ind2
+ *  is larger than the one at position ind1, and a positive number otherwise; used for sorting an array in ascending
+ *  order
+ */
 static
 SCIP_DECL_SORTINDCOMP(intComparatorAscending)
 {  /*lint --e{715}*/
@@ -37,6 +41,10 @@ SCIP_DECL_SORTINDCOMP(intComparatorAscending)
    return tosort[ind1] - tosort[ind2];
 }
 
+/** compares two entries of an int array, returns 0 if both are equal, a positive number if the entry at position ind2
+ *  is larger than the one at position ind1, and a negative number otherwise; used for sorting an array in descending
+ *  order
+ */
 static
 SCIP_DECL_SORTINDCOMP(intComparatorDescending)
 {  /*lint --e{715}*/
@@ -84,7 +92,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
 TestSuite(sort, .init = setup, .fini = teardown);

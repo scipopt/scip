@@ -23,7 +23,7 @@
  * at the current node of the branch-and-bound tree, as well as recursivly to every temporary child problem created by this
  * strong branching. The rule selects the candidate with the best proven dual bound.
  *
- * The branching rules was motivated by the following technical report:
+ * The branching rule was motivated by the following technical report:
  *
  * @par
  * Wasu Glankwamdee and Jeff Linderoth@n
