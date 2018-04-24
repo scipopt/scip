@@ -2842,7 +2842,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(lpi->clp != NULL);
    assert(dualfarkas != NULL);
 
-   /* Infeasibility ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
+   /* Infeasibility ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays. */
    const double* dualray = lpi->clp->infeasibilityRay();
 
    if ( dualray == NULL )
@@ -2856,6 +2856,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    for (int j = 0; j < lpi->clp->numberRows(); ++j)
    {
       double val = fabs(dualray[j]);
+
       /* only consider nonzero entries */
       if ( val >= feastol )
       {
@@ -2953,7 +2954,6 @@ SCIP_RETCODE SCIPlpiGetBase(
 
    ClpSimplex* clp = lpi->clp;
 
-   // slower but easier to understand (and portable)
    if( rstat != NULL )
    {
       for( int i = 0; i < clp->numberRows(); ++i )
