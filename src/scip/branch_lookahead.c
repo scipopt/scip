@@ -1547,7 +1547,7 @@ int findInsertionPoint(
    )
 {
    int left = 0;
-   int right = ncandidates - 1; /* @GG comment 24: Should ncandidates be greater than 0 for this? @CH: no, if ncandidates == 0, right = -1 and we do not enter the while, so we return -1 + 1 = 0; but I added an assert ncandidates >= 0 */
+   int right = ncandidates - 1;
 
    assert(scip != NULL);
    assert(scorecontainer != NULL);
@@ -1625,8 +1625,6 @@ SCIP_RETCODE scoreContainerSetScore(
 
    probindex = SCIPvarGetProbindex(cand->branchvar);
    assert(probindex >= 0);
-   /* @GG comment 28: cand->branchvar should not be NULL, please add an assert. Moreover, probindex as well as the arguments in
-          findInsertionPoint() below should be non-negative. @CH: I added the probindex assert, but the other things are not dereferenced, so they should throw an assert in the called method, anyway and nothing goes wrong here */
 
    scorecontainer->scores[probindex] = score;
 
@@ -1788,7 +1786,6 @@ void addLowerBound(
    DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
    )
 {
-   /* @GG comment 30: Please add asserts that pointers are not NULL. @CH: not needed */
    /* We add the lower bound with number of proof nodes 2, as this method is only called from the recursion directly. There
     * it is called in case that only one child node is cut off. As proof nodes we count the cutoff node as well as the valid
     * node, as we need both to proof, that this domain reduction is valid. */
@@ -1872,7 +1869,6 @@ void addUpperBound(
    DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
    )
 {
-   /* @GG comment 31: Please add asserts that pointers are not NULL. @CH: not needed */
    /* We add the upper bound with number of proof nodes 2, as this method is only called from the recursion directly. There
     * it is called in case that only one child node is cutoff. As proof nodes we count the cutoff node as well as the valid
     * node, as we need both to proof, that this domain reduction is valid. */
@@ -2697,9 +2693,6 @@ SCIP_RETCODE addBinaryConstraint(
    assert(binconsdata->binaryvars != NULL);
    assert(binconsdata->binaryvars->nbinaryvars > 0);
 
-   /* @GG comment 45: You can remove one level of indentions by considering the case nbinaryvars == 1 first and adding
-    *      a return statement in this if-branch. @CH: I would like to keep it as it is because we do not need the else block without statistics
-    *      and I can define the variables in the if-block like this */
    /* If we only have one var for the constraint, we can ignore it as it is already added as a domain reduction. */
    if( binconsdata->binaryvars->nbinaryvars > 1 )
    {
@@ -5224,8 +5217,6 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_BRANCHRULE* branchrule;
-
-   /* @GG comment 96: Please assert that scip is not NULL. @CH: this is not needed, since scip is not dereferenced */
 
    /* create lookahead branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
