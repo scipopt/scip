@@ -35,7 +35,7 @@ foreach(instance ${instances})
   # call the Ringpacking binary and validate the solve with the given objective value
   #
   add_test(NAME "applications-ringpacking-${basename}"
-    COMMAND $<TARGET_FILE:ringpacking> -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/test/${basename}.rpa -o ${optval} ${optval}
+    COMMAND $<TARGET_FILE:ringpacking> -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.rpa -o ${optval} ${optval}
     )
   set_tests_properties("applications-ringpacking-${basename}"
     PROPERTIES
