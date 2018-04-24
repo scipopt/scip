@@ -1839,6 +1839,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    /* Primal algorithm */
    int status = lpi->clp->primal(0, startFinishOptions);
 
+   // assert( lpi->clp->moreSpecialOptions() == 8192 );
+
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char basisname[255];
    snprintf(basisname, 255, "debug_p_%d.bas", fileNr);
@@ -1918,6 +1920,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    /* Dual algorithm */
    int status = lpi->clp->dual(0, startFinishOptions);
+
+   // assert( lpi->clp->moreSpecialOptions() == 8192 );
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char basisname[255];
