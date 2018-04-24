@@ -304,7 +304,7 @@ int extendSubtreeTail(
    return n;
 }
 
-#if 0
+
 /** small helper */
 static
 void updateEqArrays(
@@ -314,8 +314,9 @@ void updateEqArrays(
    SCIP_Bool*            eqmark              /**< marks edges that were used for equality comparison */
 )
 {
-   assert(edge >= 0);
    const unsigned int halfedge = ((unsigned int) edge) / 2;
+
+   assert(edge >= 0);
 
    if( !eqmark[halfedge]  )
    {
@@ -325,7 +326,7 @@ void updateEqArrays(
       *eqstack_size = *eqstack_size + 1;
    }
 }
-#endif
+
 
 /** compare with tree bottleneck */
 static
@@ -335,16 +336,33 @@ SCIP_Bool bottleneckRuleOut(
    const SCIP_Real*      treecosts,          /**< costs of edges of the tree */
    const SCIP_Real*      basebottlenecks,    /**< bottleneck costs for innode and basenode */
    const int*            nodepos,            /**< node position in tree */
+   const int*            treeedges,          /**< edges in tree (corresponding to treecosts) */
    SCIP_Real             orgedgecost,        /**< cost of original edge */
    SCIP_Real             extedgecost,        /**< cost of short-cut edge */
    int                   orgedge,            /**< original edge */
    int                   extedge,            /**< short-cut edge */
-   int                   dfsdepth            /**< dfs depth */
+   int                   dfsdepth,           /**< dfs depth */
+   SCIP_Bool             allow_eq,           /**< test for equality? */
+   unsigned int*         eqstack,            /**< stores edges that were used for equality comparison */
+   int*                  eqstack_size,       /**< pointer to size of eqstack */
+   SCIP_Bool*            eqmark              /**< marks edges that were used for equality comparison */
 )
 {
    int start;
 
-   if( SCIPisLT(scip, extedgecost, orgedgecost) )
+   assert(!allow_eq ||(eqstack != NULL && eqstack_size != NULL && eqmark != NULL));
+
+   if( allow_eq )
+   {
+      if( SCIPisLE(scip, extedgecost, orgedgecost) )
+      {
+         if( SCIPisEQ(scip, extedgecost, orgedgecost) )
+            updateEqArrays(orgedge, eqstack, eqstack_size, eqmark);
+
+         return TRUE;
+      }
+   }
+   else if( SCIPisLT(scip, extedgecost, orgedgecost) )
       return TRUE;
 
    if( nodepos[graph->tail[extedge]] > graph->knots )
@@ -373,8 +391,18 @@ SCIP_Bool bottleneckRuleOut(
    {
       assert(treecosts[i] >= 0.0);
 
-      if( SCIPisLT(scip, extedgecost, treecosts[i]) )
-         return TRUE;
+      if( allow_eq )
+      {
+         if( SCIPisLE(scip, extedgecost, treecosts[i]) )
+         {
+            if( SCIPisEQ(scip, extedgecost, treecosts[i]) )
+               updateEqArrays(treeedges[i], eqstack, eqstack_size, eqmark);
+
+            return TRUE;
+         }
+      }
+      else if( SCIPisLT(scip, extedgecost, treecosts[i]) )
+            return TRUE;
    }
 
    return FALSE;
@@ -388,11 +416,15 @@ SCIP_Bool ruleOutSubtree(
    const SCIP_Real*      treecosts,          /**< costs of edges of the tree */
    const SCIP_Real*      basebottlenecks,    /**< bottleneck costs for innode and basenode */
    const int*            nodepos,            /**< node position in tree */
+   const int*            treeedges,          /**< edges in tree (corresponding to treecosts) */
    SCIP_Real             cutoff,             /**< cut-off bound */
    SCIP_Real             extendedcost,       /**< cost of subtree */
    int                   dfsdepth,           /**< dfs depth */
    int                   curredge,           /**< latest edge */
-   SCIP_Bool             allowequality       /**< rule out also in case of equality */
+   SCIP_Bool             allowequality,      /**< rule out also in case of equality */
+   unsigned int*         eqstack,            /**< stores edges that were used for equality comparison */
+   int*                  eqstack_size,       /**< pointer to size of eqstack */
+   SCIP_Bool*            eqmark              /**< marks edges that were used for equality comparison */
 )
 {
 
@@ -420,8 +452,10 @@ SCIP_Bool ruleOutSubtree(
 
          if( nodepos[tail] )
          {
-            if( bottleneckRuleOut(scip, graph, treecosts, basebottlenecks, nodepos, currcost,
-                  ecost, curredge, e, dfsdepth) )
+            const SCIP_Bool allow_eq = (eqmark != NULL && eqmark[((unsigned) e) / 2] == FALSE);
+
+            if( bottleneckRuleOut(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, currcost,
+                  ecost, curredge, e, dfsdepth, allow_eq, eqstack, eqstack_size, eqmark) )
                return TRUE;
          }
          else
@@ -444,10 +478,12 @@ SCIP_Bool ruleOutSubtree(
                if( nodepos[head2] )
                {
                   const SCIP_Real extcost = is_term ? MAX(ecost, graph->cost[e2]) : (ecost + graph->cost[e2]);
+                  const SCIP_Bool allow_eq = (eqmark != NULL && eqmark[((unsigned) e) / 2] == FALSE && eqmark[((unsigned) e2) / 2] == FALSE);
+
                   assert(head2 != currhead);
 
                   if( bottleneckRuleOut(scip, graph, treecosts, basebottlenecks,
-                        nodepos, currcost, extcost, curredge, flipedge(e2), dfsdepth) )
+                        nodepos, treeedges, currcost, extcost, curredge, flipedge(e2), dfsdepth, allow_eq, eqstack, eqstack_size, eqmark) )
                   {
                       return TRUE;
                   }
@@ -513,9 +549,12 @@ SCIP_RETCODE updateNodeReplaceBounds(
    SCIP_Bool             extendedsearch      /**< perform extended searching? */
 )
 {
+   unsigned int* eqstack = NULL;
+   SCIP_Bool* eqmark = NULL;
    int outedges[STP_DABD_MAXDEGREE];
    const int nnodes = graph->knots;
    const SCIP_Real cutoff = upperbound - lpobjval;
+   const int halfnedges = graph->edges / 2;
 
    assert(!SCIPisNegative(scip, cutoff));
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
@@ -523,6 +562,12 @@ SCIP_RETCODE updateNodeReplaceBounds(
    if( initialize )
       for( int k = 0; k < nnodes; k++ )
          replacebounds[k] = -FARAWAY;
+
+   if( extendedsearch )
+   {
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &eqmark, halfnedges) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &eqstack, halfnedges) );
+   }
 
    for( int node = 0; node < nnodes; node++ )
    {
@@ -543,9 +588,11 @@ SCIP_RETCODE updateNodeReplaceBounds(
          /* Y-test for small degrees */
          if( degree <= STP_DABD_MAXDEGREE && !SCIPisLT(scip, upperbound, fixbnd) )
          {
+            int eqstack_size = 0;
             int edgecount = 0;
 
             fixbnd = FARAWAY;
+
             for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
                outedges[edgecount++] = e;
 
@@ -607,7 +654,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
                            tree3outedges[1] = outedge2;
 
                            SCIP_CALL( reduce_check3Tree(scip, graph, root, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint,
-                                       &tmpcostY, &ruleout) );
+                                       &tmpcostY, &ruleout, eqstack, &eqstack_size, eqmark) );
 #ifndef NDEBUG
                            assert(tmpcostY >= tmpcostYorg);
 #endif
@@ -623,12 +670,29 @@ SCIP_RETCODE updateNodeReplaceBounds(
 
             assert(SCIPisGE(scip, fixbnd, pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval)
                   || fixbnd >= FARAWAY);
+
+            if( extendedsearch )
+            {
+               for( int i = 0; i < eqstack_size; i++ )
+                  eqmark[eqstack[i]] = FALSE;
+
+               for( int i = 0; i < halfnedges; i++ )
+                  assert(eqmark[i] == FALSE);
+            }
          }
 
          if( fixbnd > replacebounds[node] )
             replacebounds[node] = fixbnd;
       }
    }
+   if( extendedsearch )
+   {
+      assert(eqstack != NULL && eqmark != NULL);
+
+      SCIPfreeBufferArray(scip, &eqstack);
+      SCIPfreeCleanBufferArray(scip, &eqmark);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2046,8 +2110,6 @@ int reducePcMwTryBest(
    return 0;
 }
 
-//#define PPP
-
 /** check 3-tree */
 SCIP_RETCODE reduce_check3Tree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2062,7 +2124,10 @@ SCIP_RETCODE reduce_check3Tree(
    int                   inedge,             /**< incoming edge */
    int*                  edgestack,          /**< array of size nodes for internal computations */
    SCIP_Real*            treebound,          /**< to store a lower bound for the tree */
-   SCIP_Bool*            ruleout             /**< could tree be ruled out? */
+   SCIP_Bool*            ruleout,             /**< could tree be ruled out? */
+   unsigned int*         eqstack,            /**< stores edges that were used for equality comparison */
+   int*                  eqstack_size,       /**< pointer to size of eqstack */
+   SCIP_Bool*            eqmark              /**< marks edges that were used for equality comparison */
 )
 {
 #ifndef NDEBUG
@@ -2146,7 +2211,8 @@ SCIP_RETCODE reduce_check3Tree(
          nodepos[startnode] = nnodes + 4;
 
          /* can we rule out entire subtree already? */
-         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, startedge, FALSE) )
+         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, FARAWAY, 0.0, 0, startedge, FALSE,
+               NULL, NULL, NULL) )
          {
             *ruleout = TRUE;
             break;
@@ -2195,7 +2261,8 @@ SCIP_RETCODE reduce_check3Tree(
                   extendedcost += vnoi[costartnode].dist + vnoi[currhead].dist;
 
                /* can we rule out subtree? */
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, FALSE) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, cutoff, extendedcost, dfsdepth, curredge, FALSE,
+                     eqstack, eqstack_size, eqmark) )
                   continue;
 
                /* do we need to stop extension? */
@@ -2249,7 +2316,8 @@ SCIP_RETCODE reduce_check3Tree(
          basebottlenecks[2] = MAX(graph->cost[outedges[1]], graph->cost[inedge]);
 
          /* can we rule out entire subtree already? */
-         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, FARAWAY, 0.0, 0, flipedge(inedge), FALSE) )
+         if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, FARAWAY, 0.0, 0, flipedge(inedge), FALSE,
+               NULL, NULL, NULL) )
          {
             *ruleout = TRUE;
          }
@@ -2266,16 +2334,9 @@ SCIP_RETCODE reduce_check3Tree(
             const int curredge = edgestack[--nadded_edges];
             const int currtail = graph->tail[curredge];
 
-#ifdef PPP
-      printf("check %d %d\n", graph->tail[curredge], currhead);
-#endif
-
             /*  subtree already processed? */
             if( nodepos[currtail] )
             {
-#ifdef PPP
-      printf("processed already  \n");
-#endif
                nodepos[currtail] = 0;
                treecost -= redcost[curredge];
 
@@ -2286,7 +2347,8 @@ SCIP_RETCODE reduce_check3Tree(
             {
                const SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), FALSE) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), FALSE,
+                     eqstack, eqstack_size, eqmark) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2372,12 +2434,20 @@ SCIP_RETCODE reduce_checkEdge(
       unsigned char extensionmark[STP_DAEX_MAXGRAD + 1];
       SCIP_Real basebottlenecks[3];
       int* nodepos;
+      unsigned int* eqstack;
+      SCIP_Bool* eqmark;
+
+      int eqstack_size = 0;
+      const int halfnedges = graph->edges / 2;
       const int nnodes = graph->knots;
       const int maxdfsdepth = (graph->edges > STP_DAEX_EDGELIMIT) ? STP_DAEX_MINDFSDEPTH : STP_DAEX_MAXDFSDEPTH;
-      const int maxgrad = 8;
+      const int maxgrad = STP_DAEX_MAXGRAD;
 
-      /* allocate clean array */
-      SCIP_CALL(SCIPallocCleanBufferArray(scip, &nodepos, nnodes));
+      /* allocate clean arrays */
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodepos, nnodes) );
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &eqmark, halfnedges) );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &eqstack, halfnedges) );
 
       basebottlenecks[0] = graph->cost[edge];
 #ifndef NEBUG
@@ -2426,7 +2496,8 @@ SCIP_RETCODE reduce_checkEdge(
             {
                SCIP_Real extendedcost = treecost + redcost[curredge] + vnoi[currhead].dist;
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, curredge, equality) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, cutoff, extendedcost, dfsdepth, curredge, equality,
+                     eqstack, &eqstack_size, eqmark) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2438,7 +2509,7 @@ SCIP_RETCODE reduce_checkEdge(
                   continue;
                }
 
-               nadded_edges = extendSubtreeHead(scip, graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges,  edgestack, extensionmark);
+               nadded_edges = extendSubtreeHead(scip, graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges, edgestack, extensionmark);
                dfsdepth++;
             }
          } /* DFS loop */
@@ -2484,7 +2555,8 @@ SCIP_RETCODE reduce_checkEdge(
             {
                SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), equality) )
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), equality,
+                     eqstack, &eqstack_size, eqmark) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2506,13 +2578,22 @@ SCIP_RETCODE reduce_checkEdge(
          finalizeSubtree(graph->tail, treeedges, dfsdepth, stopped, minbound, &edgebound, deletable, nodepos);
       } /* extend from tail */
 
-      /* clean nodepos array */
+      /* clean arrays */
       nodepos[head] = 0;
       nodepos[tail] = 0;
 
+      for( int i = 0; i < eqstack_size; i++ )
+         eqmark[eqstack[i]] = FALSE;
+
+      /* free memory */
       for( int i = 0; i < nnodes; i++ )
          assert(nodepos[i] == 0);
+      for( int i = 0; i < halfnedges; i++ )
+         assert(eqmark[i] == FALSE);
 
+      SCIPfreeBufferArray(scip, &eqstack);
+
+      SCIPfreeCleanBufferArray(scip, &eqmark);
       SCIPfreeCleanBufferArray(scip, &nodepos);
    }
 
