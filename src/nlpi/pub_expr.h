@@ -950,7 +950,9 @@ SCIP_RETCODE SCIPexprtreeSimplify(
    );
 
 /** adds an expression to the root expression of the tree
- * the root is replaced with an SCIP_EXPR_PLUS expression which has the previous root and the given expression as children
+ *
+ *  The root is replaced with an SCIP_EXPR_PLUS expression which has the previous root and the given expression as children
+ *  If no root existed yet, then the root is set to the given expression (or a copy of it).
  */
 EXTERN
 SCIP_RETCODE SCIPexprtreeAddExpr(
