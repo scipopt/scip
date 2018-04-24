@@ -149,7 +149,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
       lhs += addval;
 
       /* if the bound becomes infinite, then the cut generation terminates. */
-      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+         || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
       {
          (*success) = FALSE;
          SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");
@@ -225,7 +226,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
             lhs += addval;
 
             /* if the bound becomes infinite, then the cut generation terminates. */
-            if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+            if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+               || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
             {
                (*success) = FALSE;
                SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");

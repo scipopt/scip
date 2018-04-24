@@ -130,7 +130,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       lhs += addval;
 
       /* if the bound becomes infinite, then the cut generation terminates. */
-      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+         || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
       {
          (*success) = FALSE;
          SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
@@ -232,7 +233,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 #endif
 
          /* if the bound becomes infinite, then the cut generation terminates. */
-         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+            || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
          {
             (*success) = FALSE;
             SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
