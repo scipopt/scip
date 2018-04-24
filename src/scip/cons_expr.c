@@ -4285,7 +4285,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    /* if no auxvar, then no need to compute branching score here (nothing can be violated) */
-   if( SCIPgetConsExprExprAuxVar(expr) == NULL )
+   if( expr->auxvar == NULL )
       return SCIP_OKAY;
 
    /* if having evaluated branching score already, then don't do again and don't enter subexpressions */
@@ -5318,7 +5318,7 @@ SCIP_RETCODE enforceConstraints(
 
       /* if no cut or branching candidate, then try less violated expressions */
       if( nnotify == 0 )
-         minviolation /= 10.0;
+         minviolation /= 10.0; /* TODO make this depend on maxviolation as computed in separatePoint */
    }
    while( nnotify == 0 && SCIPisPositive(scip, minviolation) );
 
