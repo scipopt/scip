@@ -18,16 +18,24 @@ echo "Evaluating the runs and uploading them to rubberband."
 EVALFILES=`ls ${OUTPUTDIR}*.eval`
 OUTPUT="clusterbenchmark_output.tmp"
 
+# declare the array
+declare -A RBIDS
+
 # evaluate with evalcheck_cluster.sh, that also uploads to rubberband, and collect rubberbandids
 i=0
 for EVALFILE in ${EVALFILES};
 do
-    ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
-    cat ${OUTPUT}
-    RBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+  ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
+  cat ${OUTPUT}
+  RBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+
+  # save the rubberbandid only if RBID is not empty
+  if [ "${RBID}" != "" ]; then
     RBIDS[$i]=${RBID}
     ((i++))
+  fi
 done
+
 rm ${OUTPUT}
 
 # last benchmarkrun is in database

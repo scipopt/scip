@@ -26,6 +26,7 @@
 #define __TPI_H__
 
 #include "scip/def.h"
+#include "scip/pub_message.h"
 #include "tpi/def_openmp.h"
 #include "tpi/type_tpi.h"
 

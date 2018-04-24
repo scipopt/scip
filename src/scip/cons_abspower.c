@@ -1179,6 +1179,13 @@ SCIP_RETCODE presolveDual(
          xlb = MAX(SCIPvarGetLbGlobal(consdata->x), xbnds.inf); /*lint !e666*/
          xub = MIN(SCIPvarGetUbGlobal(consdata->x), xbnds.sup); /*lint !e666*/
 
+         /* with our own "local" boundtightening, xlb might end slightly above xub,
+          * which can result in xfix being outside bounds below, see also #2202
+          */
+         assert(SCIPisFeasLE(scip, xlb, xub));
+         if( xub < xlb )
+            xlb = xub = (xlb + xub)/2.0;
+
          if( SCIPisZero(scip, SCIPvarGetObj(consdata->z)) )
          {
             /* even simpler case where objective is linear in x */

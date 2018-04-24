@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # benchmarks the performance of all nodes of a given slurm queue: on each node run exclusively a predefined test set
 # with a specified SCIP binary; to distinguish the runs, create artificial empty settings files such that comparison is

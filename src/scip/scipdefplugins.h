@@ -85,6 +85,7 @@
 #include "scip/heur_dins.h"
 #include "scip/heur_distributiondiving.h"
 #include "scip/heur_dualval.h"
+#include "scip/heur_farkasdiving.h"
 #include "scip/heur_feaspump.h"
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"

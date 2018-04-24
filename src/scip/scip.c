@@ -482,8 +482,29 @@ SCIP_Real getLowerbound(
 {
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
       return -SCIPinfinity(scip);
+   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+   {
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with lower
+       * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
+       * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
+       */
+      return -SCIPinfinity(scip);
+   }
+   else
+   {
+      SCIP_Real treelowerbound;
 
-   return SCIPtreeGetLowerbound(scip->tree, scip->set);
+      /* it may happen that the remaining tree is empty or all open nodes have a lower bound above the cutoff bound, but
+       * have not yet been cut off, e.g., when the user calls SCIPgetDualbound() in some event handler; in this case,
+       * the global lower bound is given by the upper bound value
+       */
+      treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+
+      if( treelowerbound < scip->primal->upperbound)
+         return treelowerbound;
+      else
+         return scip->primal->upperbound;
+   }
 }
 
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
@@ -497,7 +518,6 @@ SCIP_Real getUpperbound(
    else
       return scip->primal->upperbound;
 }
-
 
 /** gets global primal bound (objective value of best solution or user objective limit) */
 static
@@ -514,35 +534,11 @@ SCIP_Real getDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Real lowerbound;
+   /* in case we are in presolving we use the stored dual bound if it exits */
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE && scip->transprob->dualbound < SCIP_INVALID )
+      return scip->transprob->dualbound;
 
-   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-   {
-      /* in case we are in presolving we use the stored dual bound if it exits, otherwise, minus or plus infinity
-       * depending on the objective sense
-       */
-      if( scip->transprob->dualbound < SCIP_INVALID )
-         lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
-      else
-         return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, -SCIPinfinity(scip));
-   }
-   else
-      lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
-
-   if( SCIPsetIsInfinity(scip->set, lowerbound) )
-   {
-      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with
-       * dual bound = -inf instead of dual bound = primal bound = +inf
-       * also in case we prove that the problem is unbounded, it seems to make sense to return with dual bound = -inf,
-       * since -infinity is the only valid lower bound
-       */
-      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-         return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, -SCIPinfinity(scip));
-      else
-         return getPrimalbound(scip);
-   }
-   else
-      return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, lowerbound);
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, getLowerbound(scip));
 }
 
 /*
@@ -43542,16 +43538,19 @@ SCIP_Real SCIPgetGap(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with gap = +inf;
+    * if the problem was proven to be unbounded or proven to be infeasible we return gap = 0
+    */
+   if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      return SCIPsetInfinity(scip->set);
+   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+      return 0.0;
+
+   /* the lowerbound is infinity, but SCIP may not have updated the status; in this case, the problem was already solved
+    * so we return gap = 0
+    */
    if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
-   {
-      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with
-       * gap = +inf instead of gap = 0
-       */
-      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
-         return SCIPsetInfinity(scip->set);
-      else
-         return 0.0;
-   }
+      return 0.0;
 
    return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getPrimalbound(scip), getDualbound(scip));
 }
@@ -43571,37 +43570,23 @@ SCIP_Real SCIPgetTransGap(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Real upperbound;
-   SCIP_Real lowerbound;
-
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetTransGap", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   upperbound = getUpperbound(scip);
-   lowerbound = getLowerbound(scip);
-
-   if( SCIPsetIsInfinity(scip->set, lowerbound) )
-      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with
-       * gap = +inf instead of gap = 0
-       */
-      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
-         return SCIPsetInfinity(scip->set);
-      else
-         return 0.0;
-   else if( SCIPsetIsEQ(scip->set, upperbound, lowerbound) )
-      return 0.0;
-   else if( SCIPsetIsZero(scip->set, lowerbound)
-      || SCIPsetIsZero(scip->set, upperbound)
-      || SCIPsetIsInfinity(scip->set, upperbound)
-      || SCIPsetIsInfinity(scip->set, -lowerbound)
-      || lowerbound * upperbound < 0.0 )
+   /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with gap = +inf;
+    * if the problem was proven to be unbounded or proven to be infeasible we return gap = 0
+    */
+   if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
       return SCIPsetInfinity(scip->set);
-   else
-   {
-      SCIP_Real abslower = REALABS(lowerbound);
-      SCIP_Real absupper = REALABS(upperbound);
+   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+      return 0.0;
 
-      return REALABS((upperbound - lowerbound)/MIN(abslower, absupper));
-   }
+   /* the lowerbound is infinity, but SCIP may not have updated the status; in this case, the problem was already solved
+    * so we return gap = 0
+    */
+   if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
+      return 0.0;
+
+   return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getUpperbound(scip), getLowerbound(scip));
 }
 
 /** gets number of feasible primal solutions found so far
@@ -45960,30 +45945,7 @@ void SCIPstoreSolutionGap(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Real primalbound;
-   SCIP_Real dualbound;
-
-   primalbound = getPrimalbound(scip);
-   dualbound = getDualbound(scip);
-
-   if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
-      scip->stat->lastsolgap = 0.0;
-
-   else if( SCIPsetIsZero(scip->set, dualbound)
-      || SCIPsetIsZero(scip->set, primalbound)
-      || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
-      || SCIPsetIsInfinity(scip->set, REALABS(dualbound))
-      || primalbound * dualbound < 0.0 )
-   {
-      scip->stat->lastsolgap = SCIPsetInfinity(scip->set);
-   }
-   else
-   {
-      SCIP_Real absdual = REALABS(dualbound);
-      SCIP_Real absprimal = REALABS(primalbound);
-
-      scip->stat->lastsolgap = REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
-   }
+   scip->stat->lastsolgap = SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getPrimalbound(scip), getDualbound(scip));
 
    if( scip->primal->nsols == 1 )
       scip->stat->firstsolgap = scip->stat->lastsolgap;

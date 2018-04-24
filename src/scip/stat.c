@@ -607,7 +607,7 @@ void SCIPstatUpdateMemsaveMode(
    {
       SCIP_Longint memused;
 
-      memused = SCIPmemGetUsed(mem);
+      memused = SCIPmemGetTotal(mem);
       if( !stat->memsavemode && memused >= set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to memory saving mode */
