@@ -363,8 +363,10 @@ SCIP_Bool bottleneckRuleOut(
    }
    else
    {
-      start = nodepos[graph->tail[extedge]] - 1;
-      assert(start >= 0 && start < dfsdepth);
+      start = nodepos[graph->tail[extedge]];  /* not -1! We save the incoming bottlenecks */
+      assert(start >= 1 && start <= dfsdepth);
+      assert(start < dfsdepth || graph->tail[orgedge] == graph->tail[extedge]);
+
    }
 
    for( int i = start; i < dfsdepth; i++ )
