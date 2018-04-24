@@ -1860,9 +1860,12 @@ int reduceSPGExtended(
    int*                  nodearr             /**< for internal stuff */
 )
 {
+   unsigned int* eqstack;
+   SCIP_Bool* eqmark;
    int nfixed = 0;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
+   const int halfnedges = graph->edges / 2;
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
 
    if( rpc )
@@ -1871,12 +1874,16 @@ int reduceSPGExtended(
    if( SCIPisZero(scip, minpathcost) )
       return 0;
 
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &eqmark, halfnedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &eqstack, halfnedges) );
+
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
    {
       if( graph->oeat[e] != EAT_FREE )
       {
          const int erev = e + 1;
+         int eqstack_size = 0;
          SCIP_Bool deletable;
          const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
 
@@ -1884,24 +1891,32 @@ int reduceSPGExtended(
 
          if( !marked[e] )
          {
-            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, allowequality, nodearr, &deletable));
-
-            if( !deletable )
-               continue;
+            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, allowequality, nodearr,
+                  &deletable, eqstack, &eqstack_size, eqmark));
          }
 
-         if( !marked[erev] )
+         if( !marked[erev] && deletable )
          {
-            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, allowequality, nodearr, &deletable));
-
-            if( !deletable )
-               continue;
+            SCIP_CALL_ABORT(reduce_checkEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, allowequality,
+                  nodearr, &deletable, eqstack, &eqstack_size, eqmark));
          }
 
-         graph_edge_del(scip, graph, e, TRUE);
-         nfixed++;
+         for( int i = 0; i < eqstack_size; i++ )
+            eqmark[eqstack[i]] = FALSE;
+         for( int i = 0; i < halfnedges; i++ )
+            assert(eqmark[i] == FALSE);
+
+         if( deletable )
+         {
+            graph_edge_del(scip, graph, e, TRUE);
+            nfixed++;
+         }
       }
    }
+
+
+   SCIPfreeBufferArray(scip, &eqstack);
+   SCIPfreeCleanBufferArray(scip, &eqmark);
 
    for( int k = 0; k < nnodes; k++ )
       if( graph->grad[k] == 0 && k != root )
@@ -2406,7 +2421,10 @@ SCIP_RETCODE reduce_checkEdge(
    int                   edge,               /**< (directed) edge to be checked */
    SCIP_Bool             equality,           /**< allow equality? */
    int*                  edgestack,          /**< array of size nodes for internal computations */
-   SCIP_Bool*            deletable           /**< is edge deletable? */
+   SCIP_Bool*            deletable,          /**< is edge deletable? */
+   unsigned int*         eqstack,            /**< stores edges that were used for equality comparison */
+   int*                  eqstack_size,       /**< pointer to size of eqstack */
+   SCIP_Bool*            eqmark              /**< marks edges that were used for equality comparison */
 )
 {
    const int head = graph->head[edge];
@@ -2434,20 +2452,13 @@ SCIP_RETCODE reduce_checkEdge(
       unsigned char extensionmark[STP_DAEX_MAXGRAD + 1];
       SCIP_Real basebottlenecks[3];
       int* nodepos;
-      unsigned int* eqstack;
-      SCIP_Bool* eqmark;
 
-      int eqstack_size = 0;
-      const int halfnedges = graph->edges / 2;
       const int nnodes = graph->knots;
       const int maxdfsdepth = (graph->edges > STP_DAEX_EDGELIMIT) ? STP_DAEX_MINDFSDEPTH : STP_DAEX_MAXDFSDEPTH;
       const int maxgrad = STP_DAEX_MAXGRAD;
 
       /* allocate clean arrays */
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodepos, nnodes) );
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &eqmark, halfnedges) );
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &eqstack, halfnedges) );
 
       basebottlenecks[0] = graph->cost[edge];
 #ifndef NEBUG
@@ -2497,7 +2508,7 @@ SCIP_RETCODE reduce_checkEdge(
                SCIP_Real extendedcost = treecost + redcost[curredge] + vnoi[currhead].dist;
 
                if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, cutoff, extendedcost, dfsdepth, curredge, equality,
-                     eqstack, &eqstack_size, eqmark) )
+                     eqstack, eqstack_size, eqmark) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2556,7 +2567,7 @@ SCIP_RETCODE reduce_checkEdge(
                SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
                if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), equality,
-                     eqstack, &eqstack_size, eqmark) )
+                     eqstack, eqstack_size, eqmark) )
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
@@ -2582,18 +2593,10 @@ SCIP_RETCODE reduce_checkEdge(
       nodepos[head] = 0;
       nodepos[tail] = 0;
 
-      for( int i = 0; i < eqstack_size; i++ )
-         eqmark[eqstack[i]] = FALSE;
-
       /* free memory */
       for( int i = 0; i < nnodes; i++ )
          assert(nodepos[i] == 0);
-      for( int i = 0; i < halfnedges; i++ )
-         assert(eqmark[i] == FALSE);
 
-      SCIPfreeBufferArray(scip, &eqstack);
-
-      SCIPfreeCleanBufferArray(scip, &eqmark);
       SCIPfreeCleanBufferArray(scip, &nodepos);
    }
 
