@@ -15,19 +15,29 @@
 
 /**@file   reader_smps.h
  * @ingroup FILEREADERS
- * @brief  SMPS file reader - smps files list the cor, tim and sto files for a single instance
+ * @brief  SMPS file reader - SMPS files lists the cor, tim and sto files for a single instance to be read
  * @author Stephen J. Maher
+ *
+ * This is a reader for the reading the core, time and stochastic files  of a stochastic programming instance
+ * in SMPS format.
+ * The three files that must be listed in the smps file are:
+ * - .cor
+ * - .tim
+ * - .sto
+ * The order of the files is not important. It is just necessary that all three are provided.
+ *
+ * Details regarding the SMPS file format can be found at:
+ * Birge, J. R.; Dempster, M. A.; Gassmann, H. I.; Gunn, E.; King, A. J. & Wallace, S. W.
+ * A standard input format for multiperiod stochastic linear programs
+ * IIASA, Laxenburg, Austria, WP-87-118, 1987
  *
  * An example of an smps file looks as follows.
  *
  * @verbinclude pltexpA2_6.smps
- */
-
-/* author gregor
  *
- * TODO your brief description is wrong. Please expand a bit on the format,
- * specifying the order and input an example file to get a feeling what it should
- * look like.
+ *  pltexpA2.cor
+ *  pltexpA2.tim
+ *  pltexpA2_16.sto
  */
 
 

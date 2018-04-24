@@ -18,11 +18,6 @@
  * @author Stephen J. Maher
  */
 
-/* author gregor
- *
- * TODO your brief description is wrong, see header file.
- */
-
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -234,6 +229,10 @@ SCIP_DECL_READERREAD(readerReadSmps)
    char parent[SCIP_MAXSTRLEN];
    size_t parentlen;
 
+   SCIP_Bool hascorfile;
+   SCIP_Bool hastimfile;
+   SCIP_Bool hasstofile;
+
    int i;
 
    assert(scip != NULL);
@@ -266,6 +265,9 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    SCIP_CALL( smpsinputCreate(scip, &smpsi, fp) );
 
+   hascorfile = FALSE;
+   hastimfile = FALSE;
+   hasstofile = FALSE;
    while( smpsinputReadLine(smpsi) )
    {
       char* tmpinput;
@@ -278,19 +280,35 @@ SCIP_DECL_READERREAD(readerReadSmps)
       SCIPsplitFilename(tmpinput, NULL, NULL, &fileextension, NULL);
 
       if( strcasecmp(fileextension, COR_FILEEXTENSION) == 0 )
-         (void) SCIPsnprintf(corfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
-      else if( strcasecmp(fileextension, TIM_FILEEXTENSION) == 0 )
-         (void) SCIPsnprintf(timfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
-      else if( strcasecmp(fileextension, STO_FILEEXTENSION) == 0 )
-         (void) SCIPsnprintf(stofilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
-      else
       {
-         SCIPerrorMessage("An invalid input file name <%s> has been read from <%s>\n", smpsinputField0(smpsi), filename);
-         return SCIP_READERROR;
+         (void) SCIPsnprintf(corfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
+         hascorfile = TRUE;
+      }
+      else if( strcasecmp(fileextension, TIM_FILEEXTENSION) == 0 )
+      {
+         (void) SCIPsnprintf(timfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
+         hastimfile = TRUE;
+      }
+      else if( strcasecmp(fileextension, STO_FILEEXTENSION) == 0 )
+      {
+         (void) SCIPsnprintf(stofilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
+         hasstofile = TRUE;
       }
 
       SCIPfreeBufferArray(scip, &tmpinput);
    }
+
+   /* printing errors if the correct files have not been provided */
+   if( !hascorfile )
+      SCIPerrorMessage("The core file has not been provided in <%s>\n", smpsinputField0(smpsi), filename);
+   if( !hastimfile )
+      SCIPerrorMessage("The tim file has not been provided in <%s>\n", smpsinputField0(smpsi), filename);
+   if( !hasstofile )
+      SCIPerrorMessage("The sto file has not been provided in <%s>\n", smpsinputField0(smpsi), filename);
+
+   /* if one of the necessary file has not been provided, then an error will be returned */
+   if( !hascorfile || !hastimfile || !hasstofile )
+      return SCIP_READERROR;
 
    for( i = 0; i < 3; i++ )
    {

@@ -29,9 +29,6 @@
 #define READER_DESC             "file reader for CORE problem of stochastic programs in the SMPS file format"
 #define READER_EXTENSION        "cor"
 
-#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the mps file? */
-#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
-
 #define SCIP_DEFAULT_ARRAYSIZE      100
 
 /** COR reading data */
@@ -44,15 +41,6 @@ struct SCIP_ReaderData
    int                   nvarnames;
    int                   nconsnames;
    SCIP_Bool             read;
-
-   /* Required for the MPS reading and writing functions */
-   /* author gregor
-    *
-    * TODO these two parameters are nowhere used.
-    */
-
-   SCIP_Bool             linearizeands;
-   SCIP_Bool             aggrlinearizationands;
 };
 
 /** creates the reader data  */
@@ -151,18 +139,6 @@ SCIP_DECL_READERREAD(readerReadCor)
 }
 
 
-/** problem writing method of reader */
-static
-SCIP_DECL_READERWRITE(readerWriteCor)
-{  /*lint --e{715}*/
-
-   SCIP_CALL( SCIPwriteCor(scip, reader, file, name, transformed, objsense, objscale, objoffset, vars, nvars, nbinvars,
-         nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
-
-   return SCIP_OKAY;
-}
-
-
 /*
  * reader specific interface methods
  */
@@ -188,17 +164,6 @@ SCIP_RETCODE SCIPincludeReaderCor(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCor) );
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeCor) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCor) );
-   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCor) );
-
-   /* add lp-reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/" READER_NAME "/linearize-and-constraints",
-         "should possible \"and\" constraint be linearized when writing the mps file?",
-         &readerdata->linearizeands, TRUE, DEFAULT_LINEARIZE_ANDS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/" READER_NAME "/aggrlinearization-ands",
-         "should an aggregated linearization for and constraints be used?",
-         &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -229,63 +194,6 @@ SCIP_RETCODE SCIPreadCor(
 
    return SCIP_OKAY;
 }
-
-/** writes problem to file */
-SCIP_RETCODE SCIPwriteCor(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
-   FILE*                 file,               /**< output file, or NULL if standard output should be used */
-   const char*           name,               /**< problem name */
-   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE         objsense,           /**< objective sense */
-   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
-                                              * extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of active variables in the problem */
-   int                   nbinvars,           /**< number of binary variables */
-   int                   nintvars,           /**< number of general integer variables */
-   int                   nimplvars,          /**< number of implicit integer variables */
-   int                   ncontvars,          /**< number of continuous variables */
-   SCIP_VAR**            fixedvars,          /**< array with fixed and aggregated variables */
-   int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
-   SCIP_CONS**           conss,              /**< array with constraints of the problem */
-   int                   nconss,             /**< number of constraints in the problem */
-   SCIP_Bool             genericnames,       /**< should generic names be used for the variables and constraints? */
-   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
-   )
-{
-   if( genericnames )
-   {
-      SCIP_CALL( SCIPwriteMps(scip, reader, file, name, transformed, objsense, objscale, objoffset, vars,
-            nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, result) );
-   }
-   else
-   {
-      /* author gregor
-       *
-       * TODO Can you please add a comment why it is not possible to write the variable names?
-       * Do you maybe mix up the cases and this is the case for genericnames == TRUE?
-       */
-
-      SCIPwarningMessage(scip, "COR format is an MPS format with generic variable and constraint names\n");
-
-      if( transformed )
-      {
-         SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");
-         SCIP_CALL( SCIPprintTransProblem(scip, file, "cor", TRUE) );
-      }
-      else
-      {
-         SCIPwarningMessage(scip, "write original problem with generic variable and constraint names\n");
-         SCIP_CALL( SCIPprintOrigProblem(scip, file, "cor", TRUE) );
-      }
-      *result = SCIP_SUCCESS;
-   }
-
-   return SCIP_OKAY;
-}
-
 
 /*
  * Interface method for the tim and sto readers

@@ -2394,27 +2394,7 @@ SCIP_RETCODE buildDecompProblem(
 }
 #endif
 
-/* author gregor
- *
- * TODO please review the following documentation, which contains copy and
- * paste errors (the links refer to ressources for the MPS format)
- */
-
-/** Read LP in "STO File Format".
- *
- *  A specification of the STO format can be found at
- *
- *  http://plato.asu.edu/ftp/sto_format.txt,
- *  ftp://ftp.caam.rice.edu/pub/people/bixby/miplib/sto_format,
- *
- *  and in the
- *
- *  CPLEX Reference Manual
- *
- *  This routine should read all valid STO format files.
- *  What it will not do, is to find all cases where a file is ill formed.
- *  If this happens it may complain and read nothing or read "something".
- */
+/** Read the stochastic information of an SMPS file instance in "STO File Format". */
 static
 SCIP_RETCODE readSto(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2460,12 +2440,7 @@ SCIP_RETCODE readSto(
 
       if( stoinputSection(stoi) == STO_SCENARIOS )
       {
-         /* author gregor
-          *
-          * TODO exceeds 1 or more than 2 in the following comment?
-          */
-
-         /* if the number of stages exceeds 1, i.e. more than two stages, then the sto file is not read. */
+         /* if there more than two stages, then the sto file is not read. */
          if( SCIPtimGetNStages(scip) > 2 )
          {
             SCIPinfoMessage(scip, NULL, "\nThe scenarios for the stochastic programs are defined in <%s> as SCENARIOS\n", filename);
@@ -2596,25 +2571,6 @@ SCIP_DECL_READERREAD(readerReadSto)
    return SCIP_OKAY;
 }
 
-/* author gregor
- *
- * TODO the code in comments should be removed
- */
-
-/** problem writing method of reader */
-//static
-//SCIP_DECL_READERWRITE(readerWriteSto)
-//{  /*lint --e{715}*/
-   //assert(reader != NULL);
-   //assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
-
-   //SCIP_CALL( SCIPwriteSto(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         //nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
-
-   //return SCIP_OKAY;
-//}
-
-
 /*
  * sto file reader specific interface methods
  */
@@ -2651,11 +2607,6 @@ SCIP_RETCODE SCIPincludeReaderSto(
    return SCIP_OKAY;
 }
 
-
-/* author gregor
- *
- * TODO what do you need the actual reader for? Can't you get it from SCIP instead, using SCIPfindReader()?
- */
 
 /** reads problem from file */
 SCIP_RETCODE SCIPreadSto(
