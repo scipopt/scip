@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_smps.c
- * @brief  SMPS file reader (MPS format of the core problem for stochastic programs)
+ * @brief  SMPS file reader - smps files list the cor, tim and sto files for a single instance
  * @author Stephen J. Maher
  */
 
@@ -30,9 +30,9 @@
 
 #include "scip/reader_smps.h"
 
-/* author gregor
- *
- * TODO what do you need those headers for?
+/*
+ * The SMPS reader coordinates the reading of the cor, tim and sto files. The public reading methods from the cor, tim
+ * and sto readers are called from the SMPS reader. So, the header files for the cor, tim and sto readers are required.
  */
 #include "scip/reader_cor.h"
 #include "scip/reader_tim.h"
@@ -45,6 +45,20 @@
 #define SMPS_MAX_LINELEN  1024
 #define BLANK              ' '
 #define LINEWIDTH           80
+
+#define COR_FILEEXTENSION        "cor"
+#define TIM_FILEEXTENSION        "tim"
+#define STO_FILEEXTENSION        "sto"
+
+/** enum for the file types that are read by the SMPS reader */
+enum SMPS_FileType
+{
+   SMPS_FILETYPE_COR = 0,
+   SMPS_FILETYPE_TIM = 1,
+   SMPS_FILETYPE_STO = 2
+};
+typedef enum SMPS_FileType SCIP_FILETYPE;
+
 
 /** smps input structure */
 struct SmpsInput
@@ -210,12 +224,26 @@ SCIP_DECL_READERREAD(readerReadSmps)
    SCIP_RETCODE retcode = SCIP_OKAY;
 
    char newfilename[SCIP_MAXSTRLEN];
+   char corfilename[SCIP_MAXSTRLEN];
+   char timfilename[SCIP_MAXSTRLEN];
+   char stofilename[SCIP_MAXSTRLEN];
+   char* tmpfilename;
+   char* probname;
+   char* fileextension;
    char* fromlastslash;
    char parent[SCIP_MAXSTRLEN];
    size_t parentlen;
 
+   int i;
+
    assert(scip != NULL);
    assert(filename != NULL);
+
+   /* copy filename */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
+
+   /* getting the problem name from the SMPS file name */
+   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
    fromlastslash = (char*) strrchr(filename, '/');
 
@@ -240,17 +268,99 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    while( smpsinputReadLine(smpsi) )
    {
-      (void) SCIPsnprintf(newfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
-      SCIPinfoMessage(scip, NULL, "read problem <%s>\n", newfilename);
-      SCIPinfoMessage(scip, NULL, "============\n");
-      /* author gregor
-       *
-       * TODO if an error happens in one of the files, it is not clear which
-       * of the files is corrupted. Maybe you can use the lineno of the input
-       * for a descriptive error message.
-       */
+      char* tmpinput;
 
-      SCIP_CALL_TERMINATE( retcode, SCIPreadProb(scip, newfilename, NULL), TERMINATE );
+      /* copy the input */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpinput, smpsinputField0(smpsi),
+            (int)strlen(smpsinputField0(smpsi))+1) );
+
+      /* get extension from filename */
+      SCIPsplitFilename(tmpinput, NULL, NULL, &fileextension, NULL);
+
+      if( strcasecmp(fileextension, COR_FILEEXTENSION) == 0 )
+         (void) SCIPsnprintf(corfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
+      else if( strcasecmp(fileextension, TIM_FILEEXTENSION) == 0 )
+         (void) SCIPsnprintf(timfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
+      else if( strcasecmp(fileextension, STO_FILEEXTENSION) == 0 )
+         (void) SCIPsnprintf(stofilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
+      else
+      {
+         SCIPerrorMessage("An invalid input file name <%s> has been read from <%s>\n", smpsinputField0(smpsi), filename);
+         return SCIP_READERROR;
+      }
+
+      SCIPfreeBufferArray(scip, &tmpinput);
+   }
+
+   for( i = 0; i < 3; i++ )
+   {
+      int nvars;
+      int nbinvars;
+      int nintvars;
+      int nimplintvars;
+      int ncontvars;
+
+      switch( i )
+      {
+         case SMPS_FILETYPE_COR:
+            SCIPinfoMessage(scip, NULL, "reading core file <%s> for problem %s\n", corfilename, probname);
+            SCIPinfoMessage(scip, NULL, "============\n");
+
+            /* reading the CORE file */
+            SCIP_CALL_TERMINATE( retcode, SCIPreadCor(scip, corfilename, result), TERMINATE );
+
+            /* getting the variable information */
+            SCIP_CALL( SCIPgetOrigVarsData(scip, NULL, &nvars, &nbinvars, &nintvars, &nimplintvars, &ncontvars) );
+            SCIPinfoMessage(scip, NULL,
+               "core problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
+               nvars, nbinvars, nintvars, nimplintvars, ncontvars, SCIPgetNOrigConss(scip));
+            break;
+         case SMPS_FILETYPE_TIM:
+            SCIPinfoMessage(scip, NULL, "reading the time file <%s> for problem %s\n", timfilename, probname);
+            SCIPinfoMessage(scip, NULL, "============\n");
+
+            /* reading the TIME file */
+            SCIP_CALL_TERMINATE( retcode, SCIPreadTim(scip, timfilename, result), TERMINATE );
+
+            SCIPinfoMessage(scip, NULL, "problem %s has %d stages\n", probname, SCIPtimGetNStages(scip));
+            break;
+         case SMPS_FILETYPE_STO:
+#ifdef BENDERSBRANCH
+            SCIP_Bool usebenders;
+#endif
+
+            SCIPinfoMessage(scip, NULL, "read problem <%s>\n", stofilename);
+            SCIPinfoMessage(scip, NULL, "============\n");
+
+            /* reading the STO file */
+            SCIP_CALL_TERMINATE( retcode, SCIPreadSto(scip, stofilename, result), TERMINATE );
+
+            SCIPinfoMessage(scip, NULL, "problem %s has extended with a total of %d scenarios\n", probname,
+               SCIPstoGetNScenarios(scip));
+
+            /* getting the variable information */
+            SCIP_CALL( SCIPgetOrigVarsData(scip, NULL, &nvars, &nbinvars, &nintvars, &nimplintvars, &ncontvars) );
+
+            /* if Benders' decomposition is used, the variable will be distributed to a number of subproblems */
+#ifdef BENDERSBRANCH
+            SCIP_CALL( SCIPgetBoolParam(scip, "reading/sto/usebenders", &usebenders) );
+            if( usebenders )
+            {
+               SCIPinfoMessage(scip, NULL, "Benders' decomposition master problem ");
+            }
+            else
+#endif
+            {
+               SCIPinfoMessage(scip, NULL, "deterministic equivalent problem ");
+            }
+
+
+            SCIPinfoMessage(scip, NULL,
+               "has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
+               nvars, nbinvars, nintvars, nimplintvars, ncontvars, SCIPgetNOrigConss(scip));
+            break;
+      }
+
       SCIPinfoMessage(scip, NULL, "\n\n");
    }
 
@@ -259,6 +369,9 @@ SCIP_DECL_READERREAD(readerReadSmps)
  /* cppcheck-suppress unusedLabel */
 TERMINATE:
    smpsinputFree(scip, &smpsi);
+
+   /* freeing buffer array */
+   SCIPfreeBufferArray(scip, &tmpfilename);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;

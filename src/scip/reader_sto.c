@@ -30,8 +30,9 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "scip/reader_sto.h"
+#include "scip/reader_cor.h"
 #include "scip/reader_tim.h"
+#include "scip/reader_sto.h"
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
 
@@ -61,6 +62,7 @@ struct SCIP_ReaderData
 {
    SCIP_Bool             usebenders;
    STOSCENARIO*          scenariotree;       /**< the multi stage scenario tree */
+   int                   numscenarios;       /**< the total number of scenarios in the scenario tree */
 };
 
 
@@ -712,9 +714,7 @@ SCIP_RETCODE addScenariosToReaderdata(
 
    /* setting the number of scenarios per stage in the TIME reader data */
    for( i = 0; i < numscenariostages; i++ )
-      SCIPtimSetStageNScenarios(scip, i + 1, numscenarios[i]);
-
-
+      readerdata->numscenarios += numscenarios[i];
 
    return SCIP_OKAY;
 }
@@ -2552,8 +2552,46 @@ SCIP_DECL_READERFREE(readerFreeSto)
 static
 SCIP_DECL_READERREAD(readerReadSto)
 {  /*lint --e{715}*/
+   SCIP_READER* correader;
+   SCIP_READER* timreader;
 
-   SCIP_CALL( SCIPreadSto(scip, reader, filename, result) );
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   correader = SCIPfindReader(scip, "correader");
+   timreader = SCIPfindReader(scip, "timreader");
+
+   if( correader == NULL )
+   {
+      SCIPwarningMessage(scip, "It is necessary to include the \"cor\" reader\n");
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   if( timreader == NULL )
+   {
+      SCIPwarningMessage(scip, "It is necessary to include the \"tim\" reader\n");
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /* checking whether the cor file has been read */
+   if( !SCIPcorHasRead(correader) )
+   {
+      SCIPwarningMessage(scip, "The core file must be read before the time and stochastic files.\n");
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /* checking whether the tim file has been read */
+   if( !SCIPtimHasRead(timreader) )
+   {
+      SCIPwarningMessage(scip, "The time file must be read before the stochastic files.\n");
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPreadSto(scip, filename, result) );
 
    return SCIP_OKAY;
 }
@@ -2592,6 +2630,7 @@ SCIP_RETCODE SCIPincludeReaderSto(
    /* create reader data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
    readerdata->scenariotree = NULL;
+   readerdata->numscenarios = 0;
 
 
    /* include reader */
@@ -2621,19 +2660,19 @@ SCIP_RETCODE SCIPincludeReaderSto(
 /** reads problem from file */
 SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {
+   SCIP_READER* reader;
    SCIP_READERDATA* readerdata;
    SCIP_RETCODE retcode;
 
-   assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
    readerdata = SCIPreaderGetData(reader);
 
    retcode = readSto(scip, filename, readerdata);
@@ -2649,4 +2688,23 @@ SCIP_RETCODE SCIPreadSto(
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
+}
+
+/** returns the total number of scenarios added to the problem */
+int SCIPstoGetNScenarios(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+
+   reader = SCIPfindReader(scip, READER_NAME);
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   return readerdata->numscenarios;
 }

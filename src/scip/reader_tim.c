@@ -823,18 +823,7 @@ SCIP_DECL_READERREAD(readerReadTim)
       return SCIP_OKAY;
    }
 
-   /* getting the reader data for the tim reader */
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-
-   SCIP_CALL( SCIPreadTim(scip, reader, filename, result) );
-
-   /* setting the read flag to TRUE */
-   if( (*result) == SCIP_SUCCESS )
-   {
-      SCIP_CALL( createStages(scip, reader, correader) );
-      readerdata->read = TRUE;
-   }
+   SCIP_CALL( SCIPreadTim(scip, filename, result) );
 
    return SCIP_OKAY;
 }
@@ -871,15 +860,19 @@ SCIP_RETCODE SCIPincludeReaderTim(
 /** reads problem from file */
 SCIP_RETCODE SCIPreadTim(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {
+   SCIP_READER* reader;
    SCIP_RETCODE retcode;
+   SCIP_READERDATA* readerdata;
 
    assert(scip != NULL);
    assert(result != NULL);
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
 
    retcode = readTim(scip, reader, filename);
 
@@ -891,6 +884,13 @@ SCIP_RETCODE SCIPreadTim(
 
    SCIP_CALL( retcode );
 
+   /* creating the stages */
+   SCIP_CALL( createStages(scip, reader, SCIPfindReader(scip, "correader")) );
+
+   /* setting the read flag to TRUE */
+   readerdata = SCIPreaderGetData(reader);
+   readerdata->read = TRUE;
+
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
@@ -899,6 +899,23 @@ SCIP_RETCODE SCIPreadTim(
 /*
  * Interface methods for the cor and sto files
  */
+
+/* return whether the tim file has been read */
+SCIP_Bool SCIPtimHasRead(
+   SCIP_READER*          reader              /**< the file reader itself */
+   )
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   return readerdata->read;
+}
+
 
 /* returns the number of stages */
 int SCIPtimGetNStages(
@@ -1090,47 +1107,4 @@ int SCIPtimGetStageNConss(
    assert(stagenum >= 0 && stagenum < readerdata->nstages);
 
    return readerdata->stages[stagenum]->nconss;
-}
-
-/* returns the number of scenarios for a given stage */
-int SCIPtimGetStageNScenarios(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   stagenum            /**< the number of the requested stage */
-   )
-{
-   SCIP_READER* reader;
-   SCIP_READERDATA* readerdata;
-
-   reader = SCIPfindReader(scip, READER_NAME);
-
-   assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
-
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-   assert(stagenum >= 0 && stagenum < readerdata->nstages);
-
-   return readerdata->stages[stagenum]->nscenarios;
-}
-
-/* sets the number of scenarios for a given stage */
-void SCIPtimSetStageNScenarios(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   stagenum,           /**< the number of the requested stage */
-   int                   nscenarios          /**< the number of scenarios to set the stage parameter to */
-   )
-{
-   SCIP_READER* reader;
-   SCIP_READERDATA* readerdata;
-
-   reader = SCIPfindReader(scip, READER_NAME);
-
-   assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
-
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-   assert(stagenum >= 0 && stagenum < readerdata->nstages);
-
-   readerdata->stages[stagenum]->nscenarios = nscenarios;
 }

@@ -145,7 +145,7 @@ static
 SCIP_DECL_READERREAD(readerReadCor)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPreadCor(scip, reader, filename, result) );
+   SCIP_CALL( SCIPreadCor(scip, filename, result) );
 
    return SCIP_OKAY;
 }
@@ -208,13 +208,14 @@ SCIP_RETCODE SCIPincludeReaderCor(
 /** reads problem from file */
 SCIP_RETCODE SCIPreadCor(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {
+   SCIP_READER* reader;
    SCIP_READERDATA* readerdata;
 
+   reader = SCIPfindReader(scip, READER_NAME);
    assert(reader != NULL);
 
    readerdata = SCIPreaderGetData(reader);

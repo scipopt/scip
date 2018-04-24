@@ -15,7 +15,7 @@
 
 /**@file   reader_smps.h
  * @ingroup FILEREADERS
- * @brief  SMPS file reader (MPS format of the core problem for stochastic programs)
+ * @brief  SMPS file reader - smps files list the cor, tim and sto files for a single instance
  * @author Stephen J. Maher
  *
  * An example of an smps file looks as follows.

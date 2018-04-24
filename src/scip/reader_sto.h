@@ -64,7 +64,6 @@ SCIP_RETCODE SCIPincludeReaderSto(
 EXTERN
 SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
@@ -89,6 +88,12 @@ SCIP_RETCODE SCIPwriteSto(
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
+   );
+
+/** returns the total number of scenarios added to the problem */
+EXTERN
+int SCIPstoGetNScenarios(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* @} */

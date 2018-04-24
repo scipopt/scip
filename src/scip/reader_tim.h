@@ -72,7 +72,6 @@ SCIP_RETCODE SCIPincludeReaderTim(
 EXTERN
 SCIP_RETCODE SCIPreadTim(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
@@ -109,6 +108,12 @@ SCIP_RETCODE SCIPwriteTim(
 /*
  * Interface methods for the cor and sto files
  */
+
+/* return whether the tim file has been read */
+EXTERN
+SCIP_Bool SCIPtimHasRead(
+   SCIP_READER*          reader              /**< the file reader itself */
+   );
 
 /* returns the number of stages */
 EXTERN
@@ -162,21 +167,6 @@ EXTERN
 int SCIPtimGetStageNConss(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   stagenum            /**< the number of the requested stage */
-   );
-
-/* returns the number of scenarios for a given stage */
-EXTERN
-int SCIPtimGetStageNScenarios(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   stagenum            /**< the number of the requested stage */
-   );
-
-/* returns the number of scenarios for a given stage */
-EXTERN
-void SCIPtimSetStageNScenarios(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   stagenum,           /**< the number of the requested stage */
-   int                   nscenarios          /**< the number of scenarios to set the stage parameter to */
    );
 
 #ifdef __cplusplus
