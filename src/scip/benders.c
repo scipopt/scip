@@ -19,7 +19,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 //#define SCIP_MOREDEBUG
 #include <assert.h>
 #include <string.h>
@@ -2076,8 +2076,10 @@ SCIP_RETCODE generateBendersCuts(
 
                cutresult = SCIP_DIDNOTRUN;
 
-               /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
-                * the first iteration of the solve loop.
+               /* the result is updated only if a Benders' cut is generated or one was not found. However, if a cut has
+                * been found in a previous iteration, then the result is returned as SCIP_CONSADDED or SCIP_SEPARATED.
+                * This result is permitted because if a constraint was added, the solution that caused the error in the cut
+                * generation will be cutoff from the master problem.
                 */
                if( (SCIPbenderscutIsLPCut(benderscuts[j]) && (solveloop == SCIP_BENDERSSOLVELOOP_CONVEX
                         || solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX))
@@ -2097,6 +2099,8 @@ SCIP_RETCODE generateBendersCuts(
                   /* at most a single cut is generated for each subproblem */
                   break;
                }
+               else if( cutresult == SCIP_DIDNOTFIND && (*result) != SCIP_CONSADDED && (*result) != SCIP_SEPARATED )
+                  (*result) = cutresult;
             }
          }
 
@@ -2109,116 +2113,6 @@ SCIP_RETCODE generateBendersCuts(
       /* if no cuts were added, then the number of solve loops is increased */
       if( addedcuts == 0 && SCIPbendersGetNConvexSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
          && checkint && !onlyconvexcheck )
-         (*nsolveloops) = 2;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** calls the Benders' decompsition cuts for the given solve loop. There are three cases:
- *  i) solveloop == SCIP_BENDERSSOLVELOOP_LP - only the LP Benders' cuts are called
- *  ii) solveloop == SCIP_BENDERSSOLVELOOP_CIP - only the CIP Benders' cuts are called
- *  iii) solveloop == SCIP_BENDERSSOLVELOOP_USER - all Benders' cuts are called in decreasing priority
- */
-static
-SCIP_RETCODE generateBendersCuts(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_RESULT*          result,             /**< result of the pricing process */
-   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
-   SCIP_BENDERSSOLVELOOP solveloop,          /**< the current solve loop */
-   SCIP_Bool             checkint,           /**< are the subproblems called during a check/enforce of integer sols? */
-   int                   nsubprobssolved,    /**< the number of subproblems solved in this solve loop */
-   int*                  nsolveloops         /**< the number of solve loops, is updated w.r.t added cuts */
-   )
-{
-   SCIP_BENDERSCUT** benderscuts;
-   int nbenderscuts;
-   int nsubproblems;
-   int subproblemcount;
-   int i;
-   int j;
-   SCIP_Bool onlylpcheck;
-
-   assert(benders != NULL);
-   assert(set != NULL);
-
-   /* getting the Benders' decomposition cuts */
-   benderscuts = SCIPbendersGetBenderscuts(benders);
-   nbenderscuts = SCIPbendersGetNBenderscuts(benders);
-
-   /* getting the number of subproblems in the Benders' decompsition */
-   nsubproblems = SCIPbendersGetNSubproblems(benders);
-
-   /* in the case of an LNS check, only the LP of the subproblems will be solved. This is a performance feature, since
-    * solving the LP relaxation is much more efficient than solving the MIP. While the MIP is not solved during the LNS
-    * check, the solutions are still of higher quality than when Benders' is not employed.
-    */
-   onlylpcheck = onlyCheckSubproblemLP(benders);
-
-   /* It is only possible to add cuts to the problem if it has not already been solved */
-   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED )
-   {
-      SCIP_Longint addedcuts = 0;
-
-      /* This is done in two loops. The first is by subproblem and the second is by cut type. */
-      i = benders->firstchecked;
-      subproblemcount = 0;
-      while( subproblemcount < nsubprobssolved )
-      {
-         SCIP_Bool lpsub = SCIPbendersSubprobIsLP(benders, i);
-
-         for( j = 0; j < nbenderscuts; j++ )
-         {
-            SCIP_RESULT cutresult;
-            SCIP_Longint prevaddedcuts;
-
-            assert(benderscuts[j] != NULL);
-
-            prevaddedcuts = SCIPbenderscutGetNFound(benderscuts[j]);
-
-            cutresult = SCIP_DIDNOTRUN;
-
-            /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
-             * the first iteration of the solve loop.
-             * TODO: Need to work out how to handle the solve loops. Should I always run two solve loops? Or only one
-             * when the user defines a subproblem solving method
-             */
-            if( (solveloop == SCIP_BENDERSSOLVELOOP_LP && SCIPbenderscutIsLPCut(benderscuts[j]))
-               || (solveloop == SCIP_BENDERSSOLVELOOP_CIP && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[j]))
-               || solveloop == SCIP_BENDERSSOLVELOOP_USER )
-               SCIP_CALL( SCIPbenderscutExec(benderscuts[j], set, benders, sol, i, type, &cutresult) );
-
-            addedcuts += (SCIPbenderscutGetNFound(benderscuts[j]) - prevaddedcuts);
-
-            /* the result is updated only if a Benders' cut is generated or one was not found. However, if a cut has
-             * been found in a previous iteration, then the result is returned as SCIP_CONSADDED or SCIP_SEPARATED.
-             * This result is permitted because if a constraint was added, the solution that caused the error in the cut
-             * generation will be cutoff from the master problem.
-            */
-            if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
-            {
-               *result = cutresult;
-
-               benders->ncutsfound++;
-
-               /* at most a single cut is generated for each subproblem */
-               break;
-            }
-            else if( cutresult == SCIP_DIDNOTFIND && ((*result) != SCIP_CONSADDED || (*result) != SCIP_SEPARATED) )
-               (*result) = cutresult;
-         }
-
-         subproblemcount++;
-         i++;
-         if( i >= nsubproblems )
-            i = 0;
-      }
-
-      /* if no cuts were added, then the number of solve loops is increased */
-      if( addedcuts == 0 && SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
-         && benders->benderssolvesub == NULL && checkint && !onlylpcheck )
          (*nsolveloops) = 2;
    }
 
@@ -2373,8 +2267,11 @@ SCIP_RETCODE SCIPbendersExec(
     */
    if( (*result) == SCIP_DIDNOTFIND )
    {
+      (*result) = SCIP_SOLVELP;
       SCIPerrorMessage("An error was found when generating all cuts for non-optimal subproblems of Benders' "
          "decomposition <%s>. The solution process will terminate.\n", SCIPbendersGetName(benders));
+
+      SCIPABORT();
       goto TERMINATE;
    }
 

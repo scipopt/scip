@@ -189,7 +189,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersintcutNodesolved)
 
    benderscutdata = (SCIP_BENDERSCUTDATA*)SCIPeventhdlrGetData(eventhdlr);
 
-   if( SCIPbendersGetNSubproblems(benderscutdata->benders) > SCIPbendersGetNLPSubprobs(benderscutdata->benders) )
+   if( SCIPbendersGetNSubproblems(benderscutdata->benders) > SCIPbendersGetNConvexSubprobs(benderscutdata->benders) )
    {
       SCIP_CALL( updateCutConstant(scip, benderscutdata) );
    }
@@ -609,14 +609,6 @@ SCIP_DECL_BENDERSCUTINIT(benderscutInitInt)
    benderscutdata->nsubproblems = SCIPbendersGetNSubproblems(benderscutdata->benders);
    SCIP_CALL( createBenderscutData(scip, benderscutdata) );
 
-   /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
-   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - benderscutdata->nsubproblems) )
-   {
-      SCIPinfoMessage(scip, NULL, "The Laporte and Louveaux Benders' decomposition integer optimality cuts"
-         " can only be applied to problems with a pure binary master problem.\n"
-         "No integer optimality cuts will be generated for this problem. As such, your solution will be suboptimal.\n");
-   }
-
    return SCIP_OKAY;
 }
 
@@ -650,7 +642,13 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 
    /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
    if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
+   {
+      SCIPinfoMessage(scip, NULL, "The Laporte and Louveaux Benders' decomposition integer optimality cuts"
+         " can only be applied to problems with a pure binary master problem.\n"
+         "No integer optimality cuts will be generated for this problem. As such, your solution will be suboptimal.\n");
+
       return SCIP_OKAY;
+   }
 
    /* the integer subproblem could terminate early if the auxiliary variable value is much greater than the optimal
     * solution. As such, it is only necessary to generate a cut if the subproblem is OPTIMAL */

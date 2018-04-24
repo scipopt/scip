@@ -6480,6 +6480,7 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
@@ -6500,7 +6501,7 @@ SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* check stages for both, SCIP and the requested subproblem data structure */
-   SCIP_CALL( checkStage(scip, "SCIPcheckBendersSubprobOptimality", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcheckBendersSubprobOptimality", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubprobOptimality",
          FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -6802,44 +6803,6 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    nbenders = SCIPgetNBenders(scip);
    for( i = 0; i < nbenders; i++ )
       SCIPbendersSetBenderscutsSorted(benders[i], FALSE);
-
-   return SCIP_OKAY;
-}
-
-/** adds the generated constraint to the Benders cut storage */
-SCIP_RETCODE SCIPstoreBenderscutCons(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
-   )
-{
-   assert(scip != NULL);
-   assert(benderscut != NULL);
-   assert(cons != NULL);
-
-   SCIP_CALL( SCIPbenderscutStoreCons(benderscut, scip->set, cons) );
-
-   /* capturing the stored constraint */
-   SCIP_CALL( SCIPcaptureCons(scip, cons) );
-
-   return SCIP_OKAY;
-}
-
-/** adds the generated cuts to the Benders' cut storage */
-SCIP_RETCODE SCIPstoreBenderscutCut(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
-   )
-{
-   assert(scip != NULL);
-   assert(benderscut != NULL);
-   assert(cut != NULL);
-
-   SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, cut) );
-
-   /* capturing the row */
-   SCIP_CALL( SCIPcaptureRow(scip, cut) );
 
    return SCIP_OKAY;
 }
