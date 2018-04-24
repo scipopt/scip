@@ -1093,11 +1093,13 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    ClpSimplex* clp = lpi->clp;
 
-   /* We currently employ the following bug fix: the solution vector is modified to be set to the
-    * corresponding bounds. This avoids one error in Clp - maybe fixed in later versions. */
+#if 0
+   /* Employ the following bug fix: the solution vector is modified to be set to the corresponding bounds. This avoids
+    * one error in Clp - maybe fixed in later versions. */
    double* sol = lpi->clp->primalColumnSolution();
    const double* colLower = lpi->clp->getColLower();
    const double* colUpper = lpi->clp->getColUpper();
+#endif
 
    for (int j = 0; j < ncols; ++j)
    {
@@ -1114,6 +1116,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
       clp->setColumnBounds(ind[j], lb[j], ub[j]);
 
+#if 0
       if ( sol != 0 )
       {
          if( clp->statusExists() )
@@ -1144,6 +1147,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
             sol[ind[j]] = 0.0;
          }
       }
+#endif
    }
 
    return SCIP_OKAY;
