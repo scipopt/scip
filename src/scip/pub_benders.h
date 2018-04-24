@@ -209,9 +209,10 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
- *  process. One example is when the three-phase method is employed, where the first phase solves the of both the master
- *  and subproblems and by the third phase the integer subproblem is solved. */
+/* sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
+ * process. One example is when the three-phase method is employed, where the first phase solves the of both the master
+ * and subproblems and by the third phase the integer subproblem is solved.
+ */
 EXTERN
 void SCIPbendersSetSubprobIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
