@@ -308,7 +308,10 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    /* if one of the necessary file has not been provided, then an error will be returned */
    if( !hascorfile || !hastimfile || !hasstofile )
-      return SCIP_READERROR;
+   {
+      retcode = SCIP_READERROR;
+      goto TERMINATE;
+   }
 
    for( i = 0; i < 3; i++ )
    {

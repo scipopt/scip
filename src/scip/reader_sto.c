@@ -763,6 +763,8 @@ SCIP_RETCODE insertScenarioInReaderdata(
    /* adding the scenario as a child of the parent scenario */
    SCIP_CALL( scenarioAddChild(scip, &parentscen, scenario) );
 
+   readerdata->numscenarios++;
+
    return SCIP_OKAY;
 }
 
