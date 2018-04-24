@@ -559,6 +559,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
+			scip/heur_farkasdiving.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \

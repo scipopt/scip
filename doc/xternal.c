@@ -7445,13 +7445,25 @@
   * <br>
   * @section CHGINTERFUNC11 Changed interface methods
   *
+  *   <b>Data structures</b>
+  *    - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations (the previous default).
+  *      The last two parameters are used for a finer control of the exponential decay.
+  * - Functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  *   and SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() require additional argument to specify already
+  *   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+  *
   * <br>
+  *
   *   <b>SCIP Status</b>
   *   - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and
   *     SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
   *
   * <br>
   * @section CHGPARAMS11 Changed parameters
+  *
+  *   <b>Removed parameters</b>
+  *    - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  *      directly by the target node limit within the heuristic.
   *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".

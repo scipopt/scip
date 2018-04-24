@@ -3804,6 +3804,7 @@ GENERALUPG:
             for( j = 0; j <= lhsnvars; ++j )
                SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[j]) );
 
+            *nupgdconss = 0;
             goto cleanup;
          }
          lhsnvars++;
@@ -3828,6 +3829,7 @@ GENERALUPG:
             SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[j]) );
          }
 
+         *nupgdconss = 0;
          goto cleanup;
       }
 

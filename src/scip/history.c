@@ -27,6 +27,7 @@
 #include "scip/history.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_history.h"
+#include "scip/pub_message.h"
 
 #ifndef NDEBUG
 #include "scip/struct_history.h"

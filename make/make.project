@@ -320,7 +320,9 @@ endif
 ifeq ($(PARASCIP),false)
 FLAGS		+=	-DNPARASCIP
 else
+ifeq ($(FILTERSQP),true)
 LDFLAGS 	+=	-lpthread
+endif
 endif
 
 #-----------------------------------------------------------------------------

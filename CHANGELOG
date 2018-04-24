@@ -3,12 +3,36 @@ SCIP version NEXT
 
 performance improvements:
 - cuts generated from certain quadratic constraints with convex feasible region are now global
+- performance improvements for Adaptive Large Neighborhood Search heur_alns.c:
+    - all neighborhoods now start conservatively from maximum fixing rate
+    - new default parameter settings for bandit selection parameters
+    - no adjustment of minimum improvement by default
+- improved bound tightening for some quadratic equations
+
+features:
+- new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
+
+interface changes:
+- additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
+  weights that are simple averages or higher weights for more recent observations (the previous default).
+  The last two parameters are used for a finer control of the exponential decay.
+- functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
+  existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+- added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  directly by the target node limit within the heuristic.
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+- "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
 
 deleted files:
 - presol_implfree removed
+
+misc:
+- updated CppAD to version 20180000.0
+
 
 SCIP version 5.0.2
 =================
@@ -27,9 +51,15 @@ fixed bugs:
 - fixed non-deterministic behavior in OBBT propagator
 - don't disable LP presolving when using Xpress as LP solver
 - fixed possible NULL pointer usage in cons_pseudoboolean
+- ensured that SCIPgetDualbound() returns global dual bound instead of the dual bound of the remaining search tree
+- fixed rare division-by-zero when solving bivariate quadratic interval equation
+- use total memory for triggering memory saving mode
+- fix parsing of version number in the CMake module for Ipopt
+- fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
 
 data structures:
 - expression interpreter objects are now stored in the block memory
+
 
 SCIP version 5.0.1
 ==================
