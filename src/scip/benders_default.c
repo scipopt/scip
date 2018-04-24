@@ -344,7 +344,7 @@ SCIP_RETCODE SCIPcreateBendersDefault(
 {
    SCIP_BENDERS* benders;
    SCIP_BENDERSDATA* bendersdata;
-   int nrestarts;
+   int maxrestarts;
 
    assert(scip != NULL);
    assert(subproblems != NULL);
@@ -354,8 +354,8 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    bendersdata = SCIPbendersGetData(benders);
 
    /* turning restarts off */
-   SCIP_CALL( SCIPgetIntParam(scip, "limits/restarts", &nrestarts) );
-   if( SCIPisParamFixed(scip, "limits/restarts") && nrestarts > 0)
+   SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &maxrestarts) );
+   if( SCIPisParamFixed(scip, "presolving/maxrestarts") && maxrestarts != 0)
    {
       SCIPerrorMessage("The number of restarts is fixed to %d. The default Benders' decomposition requires the number"
          " of restarts to be 0.", nrestarts);
@@ -363,8 +363,8 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "limits/restarts", 0) );
-      SCIP_CALL( SCIPfixParam(scip, "limits/restarts") );
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/restarts", 0) );
+      SCIP_CALL( SCIPfixParam(scip, "presolving/restarts") );
    }
 
    SCIP_CALL( createBendersData(scip, subproblems, &bendersdata, nsubproblems) );
