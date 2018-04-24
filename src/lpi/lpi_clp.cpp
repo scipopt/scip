@@ -2870,7 +2870,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    /* Possibly scale and also convert sign. */
    if ( maxabsvalue > 0.0 )
    {
-      assert( minabsvalue <= maxabsvalue );
+      assert( 0.0 < minabsvalue && minabsvalue <= maxabsvalue );
 
       /* We try to make the maximum absolute value to be 1.0, but if the minimal absolute value would be less than the
        * feasibility tolerance, we adjust the factor such that it will be equal to the feasibility tolerance */
@@ -2879,7 +2879,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
          scalingfactor = minabsvalue * feastol;
 
       for (int j = 0; j < lpi->clp->numberRows(); ++j)
-         dualfarkas[j] = -dualray[j]/maxabsvalue;
+         dualfarkas[j] = -dualray[j]/scalingfactor;
    }
    else
    {
