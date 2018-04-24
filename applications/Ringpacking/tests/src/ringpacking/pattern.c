@@ -93,7 +93,7 @@ Test(pattern, patterntype)
 /* checks the type of a circular pattern */
 Test(pattern, type)
 {
-   cr_expect(SCIPpatternGetType(cpattern) == 1);
+   cr_expect(SCIPpatternGetCircleType(cpattern) == 1);
 }
 
 /* checks the position of an element */
