@@ -236,8 +236,8 @@ void SCIPstatReset(
    stat->nsbtimesiterlimhit = 0L;
    stat->nrootsblpiterations = 0;
    stat->nconflictlpiterations = 0;
-   stat->ninstablelps = 0;
-   stat->ninstablelpiters = 0;
+   stat->nresolveinstablelps = 0;
+   stat->nresolveinstablelpiters = 0;
    stat->ntotalnodes = 0;
    stat->ntotalinternalnodes = 0;
    stat->ntotalnodesmerged = 0;

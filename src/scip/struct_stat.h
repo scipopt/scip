@@ -68,8 +68,8 @@ struct SCIP_Stat
    SCIP_Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
-   SCIP_Longint          ninstablelps;       /**< number of resolves of instable LPs */
-   SCIP_Longint          ninstablelpiters;   /**< number of iterations used for resolving instable LPs */
+   SCIP_Longint          nresolveinstablelps;       /**< number of resolves of instable LPs */
+   SCIP_Longint          nresolveinstablelpiters;   /**< number of iterations used for resolving instable LPs */
    SCIP_Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
    SCIP_Longint          ninternalnodes;     /**< number of nodes processed in current run where a branching was performed */
    SCIP_Longint          nobjleaves;         /**< number of leaf nodes processed that reached the cutoff bound */

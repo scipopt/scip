@@ -10243,8 +10243,8 @@ SCIP_RETCODE lpPrimalSimplex(
       }
       if ( instable )
       {
-         SCIPstatIncrement(stat, set, ninstablelps);
-         SCIPstatAdd(stat, set, ninstablelpiters, iterations);
+         SCIPstatIncrement(stat, set, nresolveinstablelps);
+         SCIPstatAdd(stat, set, nresolveinstablelpiters, iterations);
       }
       if( lp->diving || lp->probing )
       {
@@ -10401,8 +10401,8 @@ SCIP_RETCODE lpDualSimplex(
       }
       if ( instable )
       {
-         SCIPstatIncrement(stat, set, ninstablelps);
-         SCIPstatAdd(stat, set, ninstablelpiters, iterations);
+         SCIPstatIncrement(stat, set, nresolveinstablelps);
+         SCIPstatAdd(stat, set, nresolveinstablelpiters, iterations);
       }
       if( lp->diving || lp->probing )
       {

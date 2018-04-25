@@ -45124,8 +45124,8 @@ void SCIPprintLPStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolve instable : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->instablelptime),
-      scip->stat->ninstablelps,
-      scip->stat->ninstablelpiters);
+      scip->stat->nresolveinstablelps,
+      scip->stat->nresolveinstablelpiters);
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  diving/probing LP: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
       SCIPclockGetTime(scip->stat->divinglptime),
