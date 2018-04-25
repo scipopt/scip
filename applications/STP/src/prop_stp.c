@@ -155,6 +155,115 @@ SCIP_RETCODE globalfixing(
    return SCIP_OKAY;
 }
 
+static
+SCIP_Bool redcostAvailable(
+   SCIP*                 scip,               /**< SCIP structure */
+   SCIP_Real             cutoffbound         /**< cutoff bound */
+)
+{
+   /* only execute dualcostVarfixing if current node has an LP */
+   if( !SCIPhasCurrentNodeLP(scip) )
+      return FALSE;
+
+   /* only execute dualcostVarfixing if optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return FALSE;
+
+   /* only execute dualcostVarfixing if current LP is valid relaxation */
+   if( !SCIPisLPRelax(scip) )
+      return FALSE;
+
+   /* we cannot apply reduced cost strengthening if no simplex basis is available */
+   if( !SCIPisLPSolBasic(scip) )
+      return FALSE;
+
+   /* reduced cost strengthening can only be applied if cutoff is finite */
+   if( SCIPisInfinity(scip, cutoffbound) )
+      return FALSE;
+
+   return TRUE;
+}
+
+/* initialize reduced costs*/
+static
+void setRedcosts(
+   SCIP*                 scip,               /**< SCIP structure */
+   SCIP_VAR**            vars,               /**< variables */
+   int                   nedges,             /**< nedges */
+   SCIP_Real*            cost                /**< reduced costs */
+)
+{
+   assert(nedges >= 0);
+
+   for( unsigned int e = 0; e < (unsigned) nedges; e++ )
+   {
+      assert(SCIPvarIsBinary(vars[e]));
+
+      /* variable is already fixed, we must not trust the reduced cost */
+      if( SCIPvarGetLbLocal(vars[e]) + 0.5 > SCIPvarGetUbLocal(vars[e]) )
+      {
+         if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
+            cost[e] = 0.0;
+         else
+         {
+            assert(SCIPvarGetUbLocal(vars[e]) < 0.5);
+            cost[e] = FARAWAY;
+         }
+      }
+      else
+      {
+         if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[e])) )
+         {
+            assert(!SCIPisDualfeasNegative(scip, SCIPgetVarRedcost(scip, vars[e])));
+            cost[e] = SCIPgetVarRedcost(scip, vars[e]);
+         }
+         else
+         {
+            assert(!SCIPisDualfeasPositive(scip, SCIPgetVarRedcost(scip, vars[e])));
+            assert(SCIPisFeasEQ(scip, SCIPgetSolVal(scip, NULL, vars[e]), 1.0) || SCIPisDualfeasZero(scip, SCIPgetVarRedcost(scip, vars[e])));
+            cost[e] = 0.0;
+         }
+      }
+
+      if( cost[e] < 0.0 )
+         cost[e] = 0.0;
+   }
+}
+
+
+/* initialize (Voronoi) distances */
+static
+void setVnoiDistances(
+   SCIP*                 scip,               /**< SCIP structure */
+   const SCIP_Real*      cost,               /**< reduced costs */
+   const GRAPH*          graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**> Voronoi paths  */
+   SCIP_Real*            costrev,            /**< reversed reduced costs */
+   SCIP_Real*            pathdist,           /**< path distance */
+   int*                  pathedge,           /**< path edge */
+   int*                  vbase               /**< Voronoi base */
+)
+{
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+
+   for( int k = 0; k < nnodes; k++ )
+      graph->mark[k] = (graph->grad[k] > 0);
+
+   /* distance from root to all nodes */
+   graph_path_execX(scip, graph, graph->source, cost, pathdist, pathedge);
+
+   for( unsigned int e = 0; e < (unsigned) nedges; e++ )
+      costrev[e] = cost[flipedge(e)];
+
+   /* no paths should go back to the root */
+   for( int e = graph->outbeg[graph->source]; e != EAT_LAST; e = graph->oeat[e] )
+      costrev[e] = FARAWAY;
+
+   /* build voronoi diagram */
+   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
+}
+
 /* updates fixing bounds for reduced cost fixings */
 static
 void updateFixingBounds(
@@ -198,33 +307,16 @@ SCIP_RETCODE dualcostVarfixing(
    SCIP_Real* pathdist;
    const SCIP_Real lpobjval = SCIPgetLPObjval(scip);
    const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
-   SCIP_Real minpathcost;
+   const SCIP_Real minpathcost = cutoffbound - lpobjval;;
    int* vbase;
    int* pathedge;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
 
-   /* only execute dualcostVarfixing if current node has an LP */
-   if( !SCIPhasCurrentNodeLP(scip) )
+   if( !redcostAvailable(scip, cutoffbound) )
       return SCIP_OKAY;
 
-   /* only execute dualcostVarfixing if optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
-
-   /* only execute dualcostVarfixing if current LP is valid relaxation */
-   if( !SCIPisLPRelax(scip) )
-      return SCIP_OKAY;
-
-   /* we cannot apply reduced cost strengthening if no simplex basis is available */
-   if( !SCIPisLPSolBasic(scip) )
-      return SCIP_OKAY;
-
-   /* reduced cost strengthening can only be applied if cutoff is finite */
-   if( SCIPisInfinity(scip, cutoffbound) )
-      return SCIP_OKAY;
-
-   minpathcost = cutoffbound - lpobjval;
+   assert(SCIPisGE(scip, minpathcost, 0.0));
 
    if( propdata->fixingbounds == NULL )
    {
@@ -240,55 +332,11 @@ SCIP_RETCODE dualcostVarfixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
 
-   for( unsigned int e = 0; e < (unsigned) nedges; e++ )
-   {
-      assert(SCIPvarIsBinary(vars[e]));
+   /* initialize reduced costs*/
+   setRedcosts(scip, vars, nedges, cost);
 
-      /* variable is already fixed, we must not trust the reduced cost */
-      if( SCIPvarGetLbLocal(vars[e]) + 0.5 > SCIPvarGetUbLocal(vars[e]) )
-      {
-         if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
-            cost[e] = 0.0;
-         else
-         {
-            assert(SCIPvarGetUbLocal(vars[e]) < 0.5);
-            cost[e] = FARAWAY;
-         }
-      }
-      else
-      {
-         if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[e])) )
-         {
-            assert(!SCIPisDualfeasNegative(scip, SCIPgetVarRedcost(scip, vars[e])));
-            cost[e] = SCIPgetVarRedcost(scip, vars[e]);
-         }
-         else
-         {
-            assert(!SCIPisDualfeasPositive(scip, SCIPgetVarRedcost(scip, vars[e])));
-            assert(SCIPisFeasEQ(scip, SCIPgetSolVal(scip, NULL, vars[e]), 1.0) || SCIPisDualfeasZero(scip, SCIPgetVarRedcost(scip, vars[e])));
-            cost[e] = 0.0;
-         }
-      }
-
-      if( cost[e] < 0.0 )
-         cost[e] = 0.0;
-   }
-
-   for( int k = 0; k < nnodes; k++ )
-      graph->mark[k] = (graph->grad[k] > 0);
-
-   /* distance from root to all nodes */
-   graph_path_execX(scip, graph, graph->source, cost, pathdist, pathedge);
-
-   for( unsigned int e = 0; e < (unsigned) nedges; e++ )
-      costrev[e] = cost[flipedge(e)];
-
-   /* no paths should go back to the root */
-   for( int e = graph->outbeg[graph->source]; e != EAT_LAST; e = graph->oeat[e] )
-      costrev[e] = FARAWAY;
-
-   /* build voronoi diagram */
-   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
+   /* initialize Voronoi structures */
+   setVnoiDistances(scip, cost, graph, vnoi, costrev, pathdist, pathedge, vbase);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -329,6 +377,64 @@ SCIP_RETCODE dualcostVarfixing(
    return SCIP_OKAY;
 }
 
+
+/** extended reduced cost reduction */
+static
+SCIP_RETCODE reduceRedcostExtended(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables */
+   GRAPH*                propgraph           /**< graph data structure */
+)
+{
+   PATH* vnoi;
+   SCIP_Real* redcost;
+   SCIP_Real* redcostrev;
+   SCIP_Real* pathdist;
+   int* nodearr;
+   int* pathedge;
+   int* vbase;
+   const SCIP_Real lpobjval = SCIPgetLPObjval(scip);
+   const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
+   SCIP_Real minpathcost;
+   int extnfixed;
+   const int nnodes = propgraph->knots;
+   const int nedges = propgraph->edges;
+
+   if( !redcostAvailable(scip, cutoffbound) )
+      return SCIP_OKAY;
+
+   minpathcost = cutoffbound - lpobjval;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcostrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
+
+   /* initialize reduced costs*/
+   setRedcosts(scip, vars, nedges, redcost);
+
+   /* initialize Voronoi structures */
+   setVnoiDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase);
+
+   /* reduce graph */
+   extnfixed = reduce_extendedEdge(scip, propgraph, NULL, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr);
+   SCIPdebugMessage("extended fixes: %d \n", extnfixed);
+   printf("extended fixes: %d \n", extnfixed);
+
+   SCIPfreeBufferArray(scip, &pathedge);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &pathdist);
+   SCIPfreeBufferArray(scip, &redcostrev);
+   SCIPfreeBufferArray(scip, &redcost);
+
+   if( extnfixed < 0 )
+      return SCIP_ERROR;
+
+   return SCIP_OKAY;
+}
 
 /** This methods tries to fix edges by performing reductions on the current graph.
  *  To this end, the already 0-fixed edges are (temporarily) removed from the underlying graph to strengthen the reduction methods. */
@@ -423,7 +529,16 @@ SCIP_RETCODE redbasedVarfixing(
 
    SCIP_CALL( graph_path_init(scip, propgraph) );
 
+
+   if( propdata->fixingbounds == NULL )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->fixingbounds), nedges) );
+      for( int i = 0; i < nedges; i++ )
+         propdata->fixingbounds[i] = -FARAWAY;
+   }
+
    /* reduce graph */
+   SCIP_CALL( reduceRedcostExtended(scip, vars, propgraph) );
 
    SCIP_CALL( level0(scip, propgraph) );
    SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );
