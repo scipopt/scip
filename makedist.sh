@@ -113,6 +113,7 @@ $NAME/applications/Ringpacking/* $NAME/applications/Ringpacking/doc/* $NAME/appl
 $NAME/applications/Ringpacking/check/CMakeLists.txt \
 $NAME/applications/Ringpacking/check/testset/short.test $NAME/applications/Ringpacking/check/testset/short.solu \
 $NAME/applications/Ringpacking/src/*.c $NAME/applications/Ringpacking/src/*.h \
+$NAME/applications/Ringpacking/tests/CMakeLists.txt \
 $NAME/applications/Ringpacking/tests/src/ringpacking/*.c \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
