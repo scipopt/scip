@@ -1325,10 +1325,12 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
 
    /* if there is violation, then add branchscore for all expr in quadratic part */
    if( violation > 0.0 )
+   {
       for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
          SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->quadexprterms[i].expr, brscoretag, violation);
 
-   *success = TRUE;
+      *success = TRUE;
+   }
 
    return SCIP_OKAY;
 }

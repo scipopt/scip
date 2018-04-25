@@ -343,9 +343,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    else
       violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
 
-   *success = TRUE;
-
-   /* if no violation, then no need for branching */
+   /* if violation is not on the side that we need to enforce, then no need for branching */
    if( violation <= 0.0 )
       return SCIP_OKAY;
 
@@ -357,6 +355,8 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
 
       SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->varexprs[i], brscoretag, violation);
    }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
