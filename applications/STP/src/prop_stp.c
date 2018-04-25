@@ -307,7 +307,7 @@ SCIP_RETCODE dualcostVarfixing(
    SCIP_Real* pathdist;
    const SCIP_Real lpobjval = SCIPgetLPObjval(scip);
    const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
-   const SCIP_Real minpathcost = cutoffbound - lpobjval;;
+   const SCIP_Real minpathcost = cutoffbound - lpobjval;
    int* vbase;
    int* pathedge;
    const int nedges = graph->edges;
