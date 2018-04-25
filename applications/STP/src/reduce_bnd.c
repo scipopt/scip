@@ -2563,7 +2563,7 @@ int reduce_extendedEdge(
       {
          const int erev = e + 1;
          int eqstack_size = 0;
-         SCIP_Bool deletable;
+         SCIP_Bool deletable = TRUE;
          const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
 
          assert(graph->oeat[erev] != EAT_FREE);

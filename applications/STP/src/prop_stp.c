@@ -294,6 +294,7 @@ void updateFixingBounds(
 static
 SCIP_RETCODE dualcostVarfixing(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  nfixed,             /**< pointer to number of fixed edges */
@@ -304,7 +305,6 @@ SCIP_RETCODE dualcostVarfixing(
    SCIP_Real* cost;
    SCIP_Real* costrev;
    SCIP_Real* pathdist;
-   const SCIP_Real lpobjval = SCIPgetLPObjval(scip);
    const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
    const SCIP_Real minpathcost = cutoffbound - lpobjval;
    int* vbase;
@@ -378,6 +378,7 @@ SCIP_RETCODE dualcostVarfixing(
 static
 SCIP_RETCODE reduceRedcostExtended(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
    GRAPH*                propgraph           /**< graph data structure */
 )
@@ -389,7 +390,6 @@ SCIP_RETCODE reduceRedcostExtended(
    int* nodearr;
    int* pathedge;
    int* vbase;
-   const SCIP_Real lpobjval = SCIPgetLPObjval(scip);
    const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
    SCIP_Real minpathcost;
    int extnfixed;
@@ -404,6 +404,7 @@ SCIP_RETCODE reduceRedcostExtended(
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearr, nnodes) );
 
    /* initialize reduced costs*/
    setRedcosts(scip, vars, nedges, redcost);
@@ -416,6 +417,7 @@ SCIP_RETCODE reduceRedcostExtended(
    SCIPdebugMessage("extended fixes: %d \n", extnfixed);
    printf("extended fixes: %d \n", extnfixed);
 
+   SCIPfreeBufferArray(scip, &nodearr);
    SCIPfreeBufferArray(scip, &pathedge);
    SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &vnoi);
@@ -434,6 +436,7 @@ SCIP_RETCODE reduceRedcostExtended(
 static
 SCIP_RETCODE redbasedVarfixing(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  nfixed,             /**< pointer to number of fixed edges */
@@ -531,7 +534,7 @@ SCIP_RETCODE redbasedVarfixing(
    }
 
    /* reduce graph */
-   SCIP_CALL( reduceRedcostExtended(scip, vars, propgraph) );
+   SCIP_CALL( reduceRedcostExtended(scip, lpobjval, vars, propgraph) );
 
    SCIP_CALL( level0(scip, propgraph) );
    SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );
@@ -665,6 +668,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_PROBDATA* probdata;
    SCIP_VAR** vars;
    GRAPH* graph;
+   SCIP_Real lpobjval;
    int nfixed;
    SCIP_Bool callreduce;
 
@@ -709,8 +713,10 @@ SCIP_DECL_PROPEXEC(propExecStp)
    nfixed = 0;
    *result = SCIP_DIDNOTFIND;
 
+   lpobjval = SCIPgetLPObjval(scip);
+
    /* call dual cost based variable fixing */
-   SCIP_CALL( dualcostVarfixing(scip, vars, propdata, &nfixed, graph) );
+   SCIP_CALL( dualcostVarfixing(scip, lpobjval, vars, propdata, &nfixed, graph) );
 
    callreduce = FALSE;
 
@@ -760,7 +766,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
       SCIPdebugMessage("use reduction techniques \n");
 
       /* call reduced cost based based variable fixing */
-      SCIP_CALL( redbasedVarfixing(scip, vars, propdata, &nfixed, &probisinfeas, graph) );
+      SCIP_CALL( redbasedVarfixing(scip, lpobjval, vars, propdata, &nfixed, &probisinfeas, graph) );
 
       propdata->postrednfixededges = 0;
 
