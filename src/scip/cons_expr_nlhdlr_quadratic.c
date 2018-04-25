@@ -1324,7 +1324,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
       violation = MAX(0.0, side - auxvalue);
 
    /* if there is violation, then add branchscore for all expr in quadratic part */
-   if( SCIPisPositive(scip, violation) )
+   if( violation > 0.0 )
       for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
          SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->quadexprterms[i].expr, brscoretag, violation);
 

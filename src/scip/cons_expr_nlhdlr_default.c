@@ -309,10 +309,8 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
     * this handler tries to enforce that the value of the auxvar (=auxval) equals (or lower/greater equals)
     * the value of the expression when evaluated w.r.t. the values of the auxvars in the children (=auxvalue)
     * if there is a difference, then we may branch on some of the children
-    *
-    * TODO doing this only if violation > epsilon is correct, or better do this for any violation > 0?
     */
-   if( SCIPisPositive(scip, violation) )
+   if( violation > 0.0 )
    {
       int c;
 

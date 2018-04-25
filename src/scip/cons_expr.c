@@ -4329,6 +4329,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
          assert(nlhdlr != NULL);
 
          /* if there is violation w.r.t. auxiliary variables, then call brscore of nlhdlr */
+         /* TODO call only brscore for nlhdlrs that are separating or that are enforcing? */
          if( expr->enfos[e]->auxvalue == SCIP_INVALID ||
             (SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
             (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )

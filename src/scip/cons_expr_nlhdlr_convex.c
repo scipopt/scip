@@ -324,6 +324,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
    assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+   assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->varexprs != NULL);
    assert(nlhdlrexprdata->nvarexprs > 0);
@@ -335,19 +336,17 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
     */
 
    /* compute violation */
-   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
+   if( auxvalue == SCIP_INVALID ) /*lint !e777*/
       violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
    else if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX  )
-      violation = SCIPgetConsExprExprValue(expr) - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+      violation = auxvalue - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
    else
-      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - SCIPgetConsExprExprValue(expr);
+      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
 
    *success = TRUE;
 
-   /* if no violation, then no need for branching
-    * TODO doing this only if violation > epsilon is correct, or better do this for any violation > 0?
-    */
-   if( !SCIPisPositive(scip, violation) )
+   /* if no violation, then no need for branching */
+   if( violation <= 0.0 )
       return SCIP_OKAY;
 
    /* TODO try to figure out which variables appear linear and skip them here */
