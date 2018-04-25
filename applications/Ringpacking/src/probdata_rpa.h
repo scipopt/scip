@@ -53,6 +53,7 @@ SCIP_RETCODE SCIPprobdataEnumeratePatterns(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_Real             nlptilim,           /**< time limit for each NLP verification */
    SCIP_Real             heurtilim,          /**< time limit for each call of the heuristics */
+   SCIP_Real             totaltilim,         /**< total time limit for enumeration */
    SCIP_Longint          nlpnodelim,         /**< node limit for each NLP verification */
    int                   heuriterlim         /**< iteration limit for each call of the heuristics */
    );

@@ -75,7 +75,8 @@ Test(enumerate, empty)
    cr_assert(probdata != NULL);
 
    /* compute circular patterns */
-   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIP_LONGINT_MAX, INT_MAX) );
+   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIPinfinity(scip),
+      SCIP_LONGINT_MAX, INT_MAX) );
 
    /* get circular pattern information */
    SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
@@ -100,7 +101,8 @@ Test(enumerate, two)
    cr_assert(probdata != NULL);
 
    /* compute circular patterns */
-   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIP_LONGINT_MAX, INT_MAX) );
+   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIPinfinity(scip),
+      SCIP_LONGINT_MAX, INT_MAX) );
 
    /* get circular pattern information */
    SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
@@ -119,7 +121,7 @@ Test(enumerate, three)
 {
    SCIP_Real rexts[3] = {3.0, 1.0, 0.45};
    SCIP_Real rints[3] = {2.414213562373095, 0.9, 0.0};
-   int demands[3] = {100, 100, 3};
+   int demands[3] = {100, 3, 3};
    SCIP_PATTERN** patterns;
    int npatterns;
 
@@ -129,18 +131,17 @@ Test(enumerate, three)
    cr_assert(probdata != NULL);
 
    /* compute circular patterns */
-   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIP_LONGINT_MAX, 10) );
+   SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIPinfinity(scip),
+      SCIP_LONGINT_MAX, 10) );
 
    /* get circular pattern information */
    SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
    cr_assert(patterns != NULL);
-   cr_expect(npatterns == 4);
+   cr_expect(npatterns == 3);
    cr_expect(SCIPpatternGetCircleType(patterns[0]) == 0);
    cr_expect(SCIPpatternGetNElemens(patterns[0]) == 6);
-   cr_expect(SCIPpatternGetCircleType(patterns[1]) == 0);
-   cr_expect(SCIPpatternGetNElemens(patterns[1]) == 4);
-   cr_expect(SCIPpatternGetCircleType(patterns[2]) == 1);
-   cr_expect(SCIPpatternGetNElemens(patterns[2]) == 2);
-   cr_expect(SCIPpatternGetCircleType(patterns[3]) == 2);
-   cr_expect(SCIPpatternGetNElemens(patterns[3]) == 0);
+   cr_expect(SCIPpatternGetCircleType(patterns[1]) == 1);
+   cr_expect(SCIPpatternGetNElemens(patterns[1]) == 2);
+   cr_expect(SCIPpatternGetCircleType(patterns[2]) == 2);
+   cr_expect(SCIPpatternGetNElemens(patterns[2]) == 0);
 }
