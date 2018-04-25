@@ -157,8 +157,7 @@ SCIP_RETCODE globalfixing(
 
 static
 SCIP_Bool redcostAvailable(
-   SCIP*                 scip,               /**< SCIP structure */
-   SCIP_Real             cutoffbound         /**< cutoff bound */
+   SCIP*                 scip                /**< SCIP structure */
 )
 {
    /* only execute dualcostVarfixing if current node has an LP */
@@ -178,7 +177,7 @@ SCIP_Bool redcostAvailable(
       return FALSE;
 
    /* reduced cost strengthening can only be applied if cutoff is finite */
-   if( SCIPisInfinity(scip, cutoffbound) )
+   if( SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
       return FALSE;
 
    return TRUE;
@@ -313,9 +312,6 @@ SCIP_RETCODE dualcostVarfixing(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
 
-   if( !redcostAvailable(scip, cutoffbound) )
-      return SCIP_OKAY;
-
    assert(SCIPisGE(scip, minpathcost, 0.0));
 
    if( propdata->fixingbounds == NULL )
@@ -399,9 +395,6 @@ SCIP_RETCODE reduceRedcostExtended(
    int extnfixed;
    const int nnodes = propgraph->knots;
    const int nedges = propgraph->edges;
-
-   if( !redcostAvailable(scip, cutoffbound) )
-      return SCIP_OKAY;
 
    minpathcost = cutoffbound - lpobjval;
 
@@ -693,6 +686,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    /* check if all integral variables are fixed */
    if( SCIPgetNPseudoBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
+   if( !redcostAvailable(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
