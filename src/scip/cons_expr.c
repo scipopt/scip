@@ -4316,11 +4316,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
    /* if there is violation, then consider branching */
    if( violation > brscoredata->minviolation )
    {
-      SCIP_Bool success;
+      /* SCIP_Bool success = FALSE; */
+      SCIP_Bool nlhdlrsuccess;
       int e;
 
       /* call branching score callbacks of all nlhdlrs */
-      success = FALSE;
       for( e = 0; e < expr->nenfos; ++e )
       {
          SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -4328,15 +4328,22 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
 
-         /* if there is violation w.r.t. auxiliary variables, then call brscore of nlhdlr */
-         /* TODO call only brscore for nlhdlrs that are separating or that are enforcing? */
+         /* if there is violation w.r.t. auxiliary variables, then call brscore of nlhdlr
+          * the nlhdlr currently needs to recheck whether auxvar <= expr or auxvar >= expr is violated
+          * and whether that corresponds to the relation that the nlhdlr tries to enforce
+          */
          if( expr->enfos[e]->auxvalue == SCIP_INVALID ||
             (SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
             (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
          {
-            SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &success) );
+            SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &nlhdlrsuccess) );
+            /* if( nlhdlrsuccess )
+               success = TRUE; */
          }
       }
+      /* if noone had success, then the violation here is caused by a violation deeper down in the expression tree,
+       * so there was no need to add branching scores from this expression
+       */
    }
 
    /* remember that we computed branching scores for this expression */
