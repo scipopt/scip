@@ -4981,6 +4981,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
          SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sepadata->sol) );
 
+         /* update maxauxviolation */
+         if( expr->enfos[e]->auxvalue == SCIP_INVALID )
+            sepadata->maxauxviolation = SCIPinfinity(scip);
+         else if( overestimate && auxvarvalue - expr->enfos[e]->auxvalue > sepadata->maxauxviolation )
+            sepadata->maxauxviolation = auxvarvalue - expr->enfos[e]->auxvalue;
+         else if( underestimate && expr->enfos[e]->auxvalue - auxvarvalue > sepadata->maxauxviolation )
+            sepadata->maxauxviolation = expr->enfos[e]->auxvalue - auxvarvalue;
+
          /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
          if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > sepadata->minviolation) )
          {
@@ -5104,7 +5112,8 @@ SCIP_RETCODE separatePoint(
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_Real             minviolation,       /**< minimal violation in an expression to call separation */
    SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_RESULT*          result              /**< result of separation */
+   SCIP_RESULT*          result,             /**< result of separation */
+   SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated), or NULL if not of interest */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -5123,6 +5132,14 @@ SCIP_RETCODE separatePoint(
    /* increase separation tag; use the same tag for all constraints in this separatePoint() call */
    ++(conshdlrdata->lastsepatag);
 
+   /* initialize separation data */
+   sepadata.conshdlr = conshdlr;
+   sepadata.sol = sol;
+   sepadata.minviolation = minviolation;
+   sepadata.mincutviolation = mincutviolation;
+   sepadata.maxauxviolation = 0.0;
+   sepadata.sepatag = conshdlrdata->lastsepatag;
+
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL && conss[c] != NULL);
@@ -5135,16 +5152,6 @@ SCIP_RETCODE separatePoint(
          || SCIPisLE(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
-
-      /* initialize separation data */
-      sepadata.conshdlr = conshdlr;
-      sepadata.sol = sol;
-      sepadata.minviolation = minviolation;
-      sepadata.mincutviolation = mincutviolation;
-      sepadata.result = SCIP_DIDNOTFIND;
-      sepadata.ncuts = 0;
-      sepadata.maxauxviolation = 0.0;
-      sepadata.sepatag = conshdlrdata->lastsepatag;
 
       #ifdef SEPA_DEBUG
       {
@@ -5162,6 +5169,10 @@ SCIP_RETCODE separatePoint(
       }
       #endif
 
+      /* reset some sepadata */
+      sepadata.result = SCIP_DIDNOTFIND;
+      sepadata.ncuts = 0;
+
       /* walk through the expression tree and call separation callback functions */
       SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, separateSolEnterExpr, NULL, NULL, NULL, (void*)&sepadata) );
 
@@ -5171,7 +5182,7 @@ SCIP_RETCODE separatePoint(
          *result = sepadata.result;
 
          if( *result == SCIP_CUTOFF )
-            return SCIP_OKAY;
+            break;
       }
 
       /* enforce only useful constraints; others are only checked and enforced if we are still feasible or have not
@@ -5180,6 +5191,9 @@ SCIP_RETCODE separatePoint(
       if( c >= nusefulconss && *result == SCIP_SEPARATED )
          break;
    }
+
+   if( maxauxviolation != NULL )
+      *maxauxviolation = sepadata.maxauxviolation;
 
    return SCIP_OKAY;
 }
@@ -5269,6 +5283,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_CONSDATA* consdata;
    SCIP_Real maxviol;
    SCIP_Real minviolation;
+   SCIP_Real maxauxviolation;
    SCIP_RESULT propresult;
    SCIP_Bool force;
    int nnotify;
@@ -5315,7 +5330,8 @@ SCIP_RETCODE enforceConstraints(
    do
    {
       /* try to separate the LP solution */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minviolation, SCIPfeastol(scip), result) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minviolation, SCIPfeastol(scip), result, &maxauxviolation) );
+      assert(maxauxviolation > 0.0); /* something must have been violated w.r.t. auxvariables, too */
 
       if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
          return SCIP_OKAY;
@@ -5324,9 +5340,11 @@ SCIP_RETCODE enforceConstraints(
       SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, minviolation, &nnotify) );
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
-      /* if no cut or branching candidate, then try less violated expressions */
+      /* if no cut or branching candidate, then try less violated expressions
+       * maxauxviolation tells us the maximal value we need to choose to have at least one violation considered
+       */
       if( nnotify == 0 )
-         minviolation /= 10.0; /* TODO make this depend on maxviolation as computed in separatePoint */
+         minviolation = maxauxviolation / 2.0;
    }
    while( nnotify == 0 && SCIPisPositive(scip, minviolation) );
 
@@ -6077,7 +6095,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
    /* call separation
     * TODO revise minviolation, should it be larger than feastol?
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6101,7 +6119,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
    /* call separation
     * TODO revise minviolation, should it be larger than feastol?
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
 
    return SCIP_OKAY;
 }
