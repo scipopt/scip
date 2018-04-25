@@ -10188,7 +10188,7 @@ SCIP_RETCODE lpPrimalSimplex(
    }
 
    /* if this is a call to resolve an instable LP, collect time */
-   if ( instable )
+   if( instable )
    {
       SCIPclockStart(stat->instablelptime, set);
    }
