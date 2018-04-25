@@ -4337,6 +4337,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
             (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
          {
             SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &nlhdlrsuccess) );
+            SCIPdebugMsg(scip, "branchscore of nlhdlr %s for expr %p (%s) with auxviolation %g: success = %d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), nlhdlrsuccess);
             /* if( nlhdlrsuccess )
                success = TRUE; */
          }
@@ -4515,9 +4516,8 @@ SCIP_RETCODE registerBranchingCandidates(
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
             assert(var != NULL);
 
-            /* introduce all variables which do not have been fixed yet and appear in some violated expressions (=have a branching score > feastol) */
-            if( SCIPisGT(scip, brscore, SCIPfeastol(scip))
-               && !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
+            /* introduce all variables which do not have been fixed yet and appear in some violated expressions (=have a branching score > 0) */
+            if( !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
             {
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
                ++(*nnotify);
@@ -5344,12 +5344,13 @@ SCIP_RETCODE enforceConstraints(
        * maxauxviolation tells us the maximal value we need to choose to have at least one violation considered
        */
       if( nnotify == 0 )
-         minviolation = maxauxviolation / 2.0;
+         minviolation = MIN(maxauxviolation / 2.0, minviolation / 2.0);
    }
-   while( nnotify == 0 && SCIPisPositive(scip, minviolation) );
+   while( nnotify == 0 && minviolation > 0.0 );
 
    if( nnotify == 0 )
    {
+      SCIPwarningMessage(scip, "enforcement with max. violation %g, auxviolation %g, failed; cutting off node\n", maxviol, maxauxviolation);
       /* could not find branching candidates even when looking at minimal violated (>eps) expressions
        * for now, cut off the node
        * @todo more fallbacks, e.g., branch on any unfixed nonlinear variable in a still violated constraint,
