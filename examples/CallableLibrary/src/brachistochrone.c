@@ -17,16 +17,14 @@
  * @brief  Minimum time for a particle to go from point A to B under gravity only.
  * @author Anass Meskini
  * 
- * This is an example that uses expressions and expression trees to set up non-linear constraints in SCIP
- * when used as a callable library. This example implements a discrete model
- * to obtain the trajectory associated with the shortest time to go from point 
- * A to B for a particle under gravity only.
+ * This is an example that uses expressions and expression trees to set up non-linear constraints in SCIP when used as 
+ * a callable library. This example implements a discretized model to obtain the trajectory associated with the shortest
+ * time to go from point A to B for a particle under gravity only.
  * 
  * The model:
  * 
  * Given \f$N\f$ number of points for the discretisation of the trajectory, we can approximate the time to go from
- * \f$(x_0,y_0)\f$ to \f$ (x_N,y_N)\f$ for a given trajectory by:
- * \f$T = \sqrt{\frac{2}{g}} 
+ * \f$(x_0,y_0)\f$ to \f$ (x_N,y_N)\f$ for a given trajectory by: \f$T = \sqrt{\frac{2}{g}} 
  * \sum_{0}^{N-1} \frac{\sqrt{(y_{i+1} - y_i)^2 + (x_{i+1} - x_i)^2}}{\sqrt{1-y_{i+1}} + \sqrt{1 - y_i}}\f$
  * 
  * The optimisation problem is \f$ \min\limits_{x_0,\dots x_N, y_0,\dots y_N } \sum_{i=0}^{N-1} t_i \f$, such that:
@@ -89,10 +87,10 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &y, (size_t) n + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &x, (size_t) n + 1) );
 
-   /* create and add variables to the problem and set the initial 
-   * and final point constraints through upper and lower bounds 
+   /* create and add variables to the problem and set the initial and final point constraints through upper and lower 
+   *  bounds 
    */
-   for(int i = 0; i< n+1; ++i){
+   for( int i = 0; i< n+1; ++i ){
       /* setting up the names of the variables */
       namet[0] = '\0';
       namey[0] = '\0';
@@ -181,16 +179,14 @@ SCIP_RETCODE setupProblem(
       SCIP_Real coef2 = -1.0;
       SCIP_Real coef3 = 1.0;
 
-      /* At each iteration create an expression for the non-linear part of the i-th constraint
-      * and add it the problem
-      */
+      /* At each iteration create an expression for the non-linear part of the i-th constraint and add it the problem */
       for( int i = 0; i < n; ++i )
       {
          /* vars to be added to the exprtree in this step of the loop */
          SCIP_VAR* varstoadd[6] = {y[i+1], y[i+1], y[i], y[i], x[i+1], x[i]};
 
-         /* create expressions meant to be child expressions in the tree
-         * we give different indexes to the expressions to assign the correct variables to them later 
+         /* create expressions meant to be child expressions in the tree. give different indexes to the expressions to 
+         *  assign the correct variables to them later 
          */
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yplusexpr, SCIP_EXPR_VARIDX, 0) );
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yplusexprsec, SCIP_EXPR_VARIDX,  1) );
@@ -311,7 +307,7 @@ SCIP_RETCODE runBrachistochrone(unsigned int n, SCIP_Real* coord)
 /** main method starting SCIP */
 int main(
    int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments, expecting number of points N and 4 coordinates y(0), y(N), x(0), x(N)*/
+   char**                     argv           /**< arguments: number of points and coordinates y(0), y(N), x(0), x(N)*/
    )
 {
    SCIP_RETCODE retcode;

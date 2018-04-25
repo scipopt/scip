@@ -29,5 +29,6 @@
  * - string.c shows how to setup general nonlinear and quadratic constraints
  * - gastrans.c shows how to setup absolute power constraints
  * - circle.c shows how to setup second-order-cone constraints
+ * - brachistochrone.c shows how to setup nonlinear constraints
  */
 
