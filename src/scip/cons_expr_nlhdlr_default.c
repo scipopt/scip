@@ -114,18 +114,23 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       }
 
       /* communicate back what the nlhdlr will do
-       * - it will enforce via separation
-       * - it will enforce from both below and above
-       * - it needs to be called for this expression
+       * - it will enforce via separation on those sides that are not enforced yet
+       * - it will provide branching scores if it does separation
+       * - it needs to be called for this expression (success = TRUE)
        */
-      mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
-      *enforcedbelow = TRUE;
-      *enforcedabove = TRUE;
-      *success = TRUE;
+      if( !*enforcedbelow )
+      {
+         mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+         *enforcedbelow = TRUE;
+         *success = TRUE;
+      }
 
-      /* return also branching score possibility if we use separation from exprhdlr */
-      mymethods |= SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
-      *success = TRUE;
+      if( !*enforcedabove )
+      {
+         mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+         *enforcedabove = TRUE;
+         *success = TRUE;
+      }
    }
 #if 0 /* TODO branching method needs to distinguish whether we do separation (thus added auxvar) or only propagate (no auxvar) */
    else if( (!*enforcedbelow || !*enforcedabove) &&
@@ -265,13 +270,16 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
 { /*lint --e{715}*/
    SCIP_Real auxval; /* value of expression in aux. variables */
    SCIP_Real violation;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enfomethods;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(success != NULL);
 
+   enfomethods = (SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata;
+
    /* if we did not say that we will provide branching scores, then stand by it */
-   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) == 0 )
+   if( (enfomethods & SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) == 0 )
       return SCIP_OKAY;
 
    /* call the branching callback of the expression handler */
@@ -294,22 +302,17 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
       auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
 
       /* compute the violation
-       * if there are no negative locks, then evalvalue < auxval is ok
-       * if there are no positive locks, then evalvalue > auxval is ok
-       * TODO we should actually remember for which side we enforce (by separation) and use this info here
+       * if we said we separate below, then we enforce expr <= auxval, so violation is (positive part of) auxvalue - auxval
+       * if we said we separate above, then we enforce expr >= auxval, so violation is (positive part of) auxval - auxvalue
        */
-      violation = auxvalue - auxval;
-      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
-         violation = -violation;
-      else if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
-         violation = 0.0;
+      violation = 0.0;
+      if( enfomethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW )
+         violation = MAX(0.0, auxvalue - auxval);
+      if( enfomethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE )
+         violation = MAX(violation, auxval - auxvalue);
    }
 
-   /* register violation as branching score for each child
-    * this handler tries to enforce that the value of the auxvar (=auxval) equals (or lower/greater equals)
-    * the value of the expression when evaluated w.r.t. the values of the auxvars in the children (=auxvalue)
-    * if there is a difference, then we may branch on some of the children
-    */
+   /* if there is a violation, then register it as branching score for each child */
    if( violation > 0.0 )
    {
       int c;
@@ -317,9 +320,9 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
       /* add violation as branching score to all children */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
          SCIPaddConsExprExprBranchScore(scip, SCIPgetConsExprExprChildren(expr)[c], brscoretag, REALABS(violation));
-   }
 
-   *success = TRUE;
+      *success = TRUE;
+   }
 
    return SCIP_OKAY;
 }
