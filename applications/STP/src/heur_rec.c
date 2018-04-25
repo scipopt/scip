@@ -1312,8 +1312,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                   solgraph->source, cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
 
 
-            assert(success);
-            assert(graph_sol_valid(scip, solgraph, soledges));
+            assert(SCIPisStopped(scip) || success);
+            assert(SCIPisStopped(scip) || graph_sol_valid(scip, solgraph, soledges));
 
             /* reset vertex weights */
             if( pcmw )
@@ -1332,7 +1332,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             assert(graph_valid(solgraph));
 
             /* run local heuristic (with original costs) */
-            if( probtype != STP_DHCSTP && probtype != STP_DCSTP
+            if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
                   && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP )
             {
                SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, solgraph->cost, soledges) );
@@ -1482,7 +1482,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          SCIPdebugMessage("REC: new obj: %f \n", pobj);
 
          /* improved incumbent solution? */
-         if( SCIPisLT(scip, pobj, incumentobj) )
+         if( !SCIPisStopped(scip) && SCIPisLT(scip, pobj, incumentobj) )
          {
             SCIPdebugMessage("...is better! \n");
             incumentobj = pobj;
