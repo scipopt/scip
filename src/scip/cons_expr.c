@@ -5113,7 +5113,7 @@ SCIP_RETCODE separatePoint(
    SCIP_Real             minviolation,       /**< minimal violation in an expression to call separation */
    SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
    SCIP_RESULT*          result,             /**< result of separation */
-   SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated), or NULL if not of interest */
+   SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated > minviolation), or NULL if not of interest */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -5331,7 +5331,6 @@ SCIP_RETCODE enforceConstraints(
    {
       /* try to separate the LP solution */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minviolation, SCIPfeastol(scip), result, &maxauxviolation) );
-      assert(maxauxviolation > 0.0); /* something must have been violated w.r.t. auxvariables, too */
 
       if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
          return SCIP_OKAY;
@@ -5341,12 +5340,14 @@ SCIP_RETCODE enforceConstraints(
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
       /* if no cut or branching candidate, then try less violated expressions
-       * maxauxviolation tells us the maximal value we need to choose to have at least one violation considered
+       * maxauxviolation tells us the maximal value we need to choose to have at least one violation in exprs with current violation > minviolation considered
+       * the latter condition means, however, that maxauxviolation = 0 is possible, that is, for all exprs with violation > minviolation, the auxviolation is 0
+       * TODO for now, just reduce minviolation by a factor of 10, though taking maxauxviolation into account would be nice
        */
       if( nnotify == 0 )
-         minviolation = MIN(maxauxviolation / 2.0, minviolation / 2.0);
+         minviolation /= 10.0;
    }
-   while( nnotify == 0 && minviolation > 0.0 );
+   while( nnotify == 0 && minviolation > 1.0/SCIPinfinity(scip) ); /* stopping at SCIPepsilon is not sufficient for numerically difficult instances, but something like 1e-100 doesn't seem useful, too; use 1e-20 for now */
 
    if( nnotify == 0 )
    {
