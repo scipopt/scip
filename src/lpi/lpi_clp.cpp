@@ -2876,7 +2876,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
        * feasibility tolerance, we adjust the factor such that it will be equal to the feasibility tolerance */
       double scalingfactor = maxabsvalue;
       if ( minabsvalue / scalingfactor < feastol )
-         scalingfactor = minabsvalue * feastol;
+         scalingfactor = minabsvalue / feastol;
 
       for (int j = 0; j < lpi->clp->numberRows(); ++j)
          dualfarkas[j] = -dualray[j]/scalingfactor;
