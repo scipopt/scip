@@ -1416,13 +1416,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbTrans(scip, probtransRingpacking) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransRingpacking) );
 
-   /* collect parameters for verification */
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/nlptilimsoft", &probdata->nlptilimsoft) );
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilimsoft", &probdata->heurtilimsoft) );
-   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/verification/nlpnodelimsoft", &probdata->nlpnodelimsoft) );
-   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlimsoft", &probdata->heuriterlimsoft) );
-   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/totaltilimsoft", &probdata->enumtimeleft) );
-
    /* activate pricer */
    SCIP_CALL( SCIPpricerRpaActivate(scip) );
 
@@ -1442,6 +1435,13 @@ SCIP_RETCODE SCIPprobdataSetupProblem(
 {
    SCIP_PROBDATA* probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
+
+   /* collect parameters for verification */
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/nlptilimsoft", &probdata->nlptilimsoft) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/heurtilimsoft", &probdata->heurtilimsoft) );
+   SCIP_CALL( SCIPgetLongintParam(scip, "ringpacking/verification/nlpnodelimsoft", &probdata->nlpnodelimsoft) );
+   SCIP_CALL( SCIPgetIntParam(scip, "ringpacking/verification/heuriterlimsoft", &probdata->heuriterlimsoft) );
+   SCIP_CALL( SCIPgetRealParam(scip, "ringpacking/verification/totaltilimsoft", &probdata->enumtimeleft) );
 
    SCIP_CALL( setupProblem(scip, probdata) );
 
