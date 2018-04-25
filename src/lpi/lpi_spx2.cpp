@@ -366,12 +366,15 @@ public:
          return "UNKNOWN";
       case SPxSolver::OPTIMAL:
          return "OPTIMAL";
+#if SOPLEX_APIVERSION >= 3
+      case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
+         return "OPTIMAL_UNSCALED_VIOLATIONS";
+#endif
       case SPxSolver::UNBOUNDED:
          return "UNBOUNDED";
       case SPxSolver::INFEASIBLE:
          return "INFEASIBLE";
       default:
-         /* since API version 3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
          return "UNKNOWN";
       }  /*lint !e788*/
    }
@@ -2366,12 +2369,13 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::REGULAR:
    case SPxSolver::UNKNOWN:
    case SPxSolver::OPTIMAL:
+#if SOPLEX_APIVERSION >= 3
    case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
+#endif
    case SPxSolver::UNBOUNDED:
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
    default:
-      /* since API version 3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
       return SCIP_LPERROR;
    }  /*lint !e788*/
 }
@@ -3092,7 +3096,10 @@ SCIP_Bool SCIPlpiIsStable(
 
    if( lpi->spx->status() == SPxSolver::ERROR || lpi->spx->status() == SPxSolver::SINGULAR )
       return FALSE;
-
+#if SOPLEX_APIVERSION >= 3
+   if( lpi->spx->status() == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS )
+      return FALSE;
+#endif
    /* only if we have a regular basis and the condition limit is set, we compute the condition number of the basis;
     * everything above the specified threshold is then counted as instable
     */
@@ -3111,11 +3118,7 @@ SCIP_Bool SCIPlpiIsStable(
       if( kappa > lpi->conditionlimit )
          return FALSE;
    }
-#if SOPLEX_APIVERSION >= 4
-   return (lpi->spx->status() != SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS);
-#else
    return TRUE;
-#endif
 }
 
 /** returns TRUE iff the objective limit was reached */
