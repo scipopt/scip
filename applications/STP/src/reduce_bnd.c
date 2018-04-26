@@ -649,10 +649,13 @@ SCIP_RETCODE updateNodeReplaceBounds(
                                        &tmpcostY, &ruleout, eqstack, &eqstack_size, eqmark) );
 #ifndef NDEBUG
                            assert(tmpcostY >= tmpcostYorg);
+                           if( ruleout )
+                              assert(tmpcostY >= FARAWAY );
 #endif
                         }
 
-                        fixbnd = tmpcostY;
+                        if( tmpcostY < fixbnd )
+                           fixbnd = tmpcostY;
                      }
                   }
                } /* Y loop */
@@ -2391,13 +2394,7 @@ SCIP_RETCODE reduce_check3Tree(
 
                /* do we need to stop extension? */
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
-               {
-                  int todo2;
-                  /* stopped and no further no improvement of bound possible? */
-                //  if( stopped && SCIPisLE(scip, minbound, *treebound) )
-                //     break;
                   continue;
-               }
 
                nadded_edges = extendSubtreeHead(scip, graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges, edgestack, extensionmark);
                dfsdepth++;
@@ -2476,12 +2473,7 @@ SCIP_RETCODE reduce_check3Tree(
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
-               {
-                  int todo;
-                 // if( stopped )
-                 //    break;
                   continue;
-               }
 
                nadded_edges = extendSubtreeTail(graph, redcost, curredge, currtail, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges, edgestack);
                dfsdepth++;
@@ -2929,8 +2921,6 @@ SCIP_RETCODE reduce_da(
 
       if( !directed )
       {
-         const SCIP_Bool extendedReplace = (extended && (run == nruns - 1));
-
          if( !SCIPisZero(scip, minpathcost) )
          {
             nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
@@ -2942,8 +2932,9 @@ SCIP_RETCODE reduce_da(
             nfixed += reduce_extendedEdge(scip, graph, marked, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, root, nodearrint);
          }
 
-         SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
-               lpobjval, upperbound, root, (run == 0), extendedReplace) );
+         if( !SCIPisZero(scip, minpathcost) )
+            SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
+                  lpobjval, upperbound, root, (run == 0), extended) );
       }
 
       if( nfixed > 0 )
