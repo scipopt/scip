@@ -79,6 +79,8 @@ set(settings_fastMIP
     "cgmipviol"
     "presolving_off"
     "separating_off"
+    "lookahead-abbrev-bincons"
+    "lookahead-addclique-scaledcutoffscore"
   )
 set(settings_MINLP
     "minlp"
