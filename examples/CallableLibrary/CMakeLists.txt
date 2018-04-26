@@ -15,6 +15,9 @@ add_executable(gastrans
 add_executable(string
    src/string.c)
 
+add_executable(brachistochrone
+   src/brachistochrone.c)
+
 # link to math library if it is available
 find_library(LIBM m)
 if(NOT LIBM)
@@ -24,9 +27,10 @@ endif()
 target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(string ${SCIP_LIBRARIES})
+target_link_libraries(brachistochrone ${SCIP_LIBRARIES})
 
 if( TARGET examples )
-    add_dependencies( examples circle gastrans string )
+    add_dependencies( examples circle gastrans string brachistochrone )
 endif()
 
 #
@@ -57,3 +61,4 @@ endmacro(addbuildandtest)
 addbuildandtest(circle)
 addbuildandtest(gastrans)
 addbuildandtest(string)
+addbuildandtest(brachistochrone)
