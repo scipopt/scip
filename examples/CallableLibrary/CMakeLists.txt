@@ -30,7 +30,7 @@ target_link_libraries(string ${SCIP_LIBRARIES})
 target_link_libraries(brachistochrone ${SCIP_LIBRARIES})
 
 if( TARGET examples )
-    add_dependencies( examples circle gastrans string brachistochrone)
+    add_dependencies( examples circle gastrans string brachistochrone )
 endif()
 
 #
