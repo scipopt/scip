@@ -3195,16 +3195,6 @@ SCIP_Bool SCIPbendersSubprobIsConvex(
 
 /** returns the number of subproblems that are convex */
 int SCIPbendersGetNConvexSubprobs(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber          /**< the subproblem number */
-   )
-{
-   assert(benders != NULL);
-   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
-
-   return benders->subprobislp[probnumber];
-}
-
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
