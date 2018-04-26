@@ -316,7 +316,7 @@ SCIP_RETCODE runBrachistochrone(
 /** main method starting SCIP */
 int main(
    int                   argc,               /**< number of arguments from the shell */
-   char**                argv                /**< arguments: number of points and coordinates y(0), y(N), x(0), x(N)*/
+   char**                argv                /**< arguments: number of points and end coordinates y(N), x(N)*/
    )
 {
    SCIP_RETCODE retcode;
@@ -325,18 +325,44 @@ int main(
    unsigned int n = DEFAULT_NPOINTS;
    SCIP_Real coord[4] = { Y_START, Y_END, X_START, X_END };
 
-   /* change the parameters if given as arguments */
-   if( argc >= 2 )
+   /* change some parameters if given as arguments */
+   if( argc == 4 || argc == 2  )
    {
-       n = atoi(argv[1]);
-       if( argc == 6 )
+       char *end1 = NULL;
+       char *end2 = NULL;
+       char *end3 = NULL;
+
+       n = strtol(argv[1], &end1, 10);
+       if( argc == 4 )
        {
-          coord[0] = atoi(argv[2]);
-          coord[1] = atoi(argv[3]);
-          coord[2] = atoi(argv[4]);
-          coord[3] = atoi(argv[5]);
+          coord[1] = strtof(argv[2], &end2);
+          coord[3] = strtof(argv[3], &end3);
+       }
+
+       if( end1 == argv[1] || ( argc == 4 && ( end2 == argv[2] || end3 == argv[3] ) ) )
+       {
+          printf("expected real values as arguments.\n");
+          return -1;
        }
    }
+   else if( argc != 1 )
+   {
+       printf(" usage:\n");
+       printf("./brachistochrone ,or\n");
+       printf("./brachistochrone [number of points], or\n");
+       printf("./brachistochrone [number of points] [y(N)] [x(N)]\n");
+       return -1;
+   }
+
+   /* check that y(0) > y(N) */
+   if( coord[0] <= coord[1] )
+   {
+      printf("expected y(N) < 1.0\n");
+      return -1;
+   }
+
+   printf("Brachistochrone problem between points: ");
+   printf("A(%f,%f) and B(%f,%f) with %d points\n", coord[2], coord[0], coord[3], coord[1], n);
 
    retcode = runBrachistochrone(n, coord);
 
