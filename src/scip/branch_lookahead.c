@@ -2260,7 +2260,7 @@ SCIP_RETCODE branchOnVar(
             currentlb = SCIPvarGetLbLocal(var);
             currentub = SCIPvarGetUbLocal(var);
 
-            /* update the lower bound of the lower child in case it is better then the current one */
+            /* update the lower bound of the lower child in case it is better than the current one */
             if( SCIPisGT(scip, newlb, currentlb) )
             {
                SCIP_CALL( SCIPchgVarLbNode(scip, downchild, var, newlb) );
@@ -2269,7 +2269,7 @@ SCIP_RETCODE branchOnVar(
                   SCIPnodeGetNumber(downchild), SCIPvarGetName(var), newlb);
             }
 
-            /* update the upper bound of the lower child in case it is better then the current one AND it is not the
+            /* update the upper bound of the lower child in case it is better than the current one AND it is not the
              * branching variable, as its upper bound is already updated
              */
             if( SCIPisLT(scip, newub, currentub) && var != bestvar )
@@ -2283,7 +2283,7 @@ SCIP_RETCODE branchOnVar(
             newlb = decision->uplowerbounds[i];
             newub = decision->upupperbounds[i];
 
-            /* update the lower bound of the upper child in case it is better then the current one AND it is not the
+            /* update the lower bound of the upper child in case it is better than the current one AND it is not the
              * branching variable, as its lower bound is already updated
              */
             if( SCIPisGT(scip, newlb, currentlb) && var != bestvar)
@@ -2294,7 +2294,7 @@ SCIP_RETCODE branchOnVar(
                   SCIPnodeGetNumber(upchild), SCIPvarGetName(var), newlb);
             }
 
-            /* update the upper bound of the upper child in case it is better then the current one */
+            /* update the upper bound of the upper child in case it is better than the current one */
             if( SCIPisLT(scip, newub, currentub) )
             {
                SCIP_CALL( SCIPchgVarUbNode(scip, upchild, var, newub) );
@@ -5048,7 +5048,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       && (config->usebincons || config->usedomainreduction)
       && isUsePreviousResult(scip, baselpsol, branchruledata->persistent) )
    {
-      /* in case we stopped the previous run without a branching decisions we have stored the decision and execute it
+      /* in case we stopped the previous run without a branching decision, we have stored the decision and execute it
        * now */
       SCIP_CALL( usePreviousResult(scip, branchruledata->persistent->prevdecision, result) );
    }
