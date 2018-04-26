@@ -647,10 +647,12 @@ SCIP_RETCODE updateNodeReplaceBounds(
 
                            SCIP_CALL( reduce_check3Tree(scip, graph, root, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint,
                                        &tmpcostY, &ruleout, eqstack, &eqstack_size, eqmark) );
+
+                           if( ruleout )
+                              tmpcostY = FARAWAY;
+
 #ifndef NDEBUG
                            assert(tmpcostY >= tmpcostYorg);
-                           if( ruleout )
-                              assert(tmpcostY >= FARAWAY );
 #endif
                         }
 
