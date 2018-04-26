@@ -11,6 +11,7 @@ performance improvements:
 
 features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
+- new example brachistochrone in CallableLibrary examples collection
 
 interface changes:
 - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
