@@ -335,7 +335,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
       int ncontvars;
       SCIP_SMPSFILETYPE type;
 
-      type = i;
+      type = (SCIP_SMPSFILETYPE) i;
       switch( type )
       {
          case SCIP_SMPSFILETYPE_COR:
