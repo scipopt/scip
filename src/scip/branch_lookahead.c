@@ -80,7 +80,7 @@
 #define DEFAULT_RECURSIONDEPTH               2     /**< The max depth of LAB. */
 #define DEFAULT_ADDNONVIOCONS                FALSE /**< Should binary constraints, that are not violated by the base LP, be
                                                     *   collected and added? */
-#define DEFAULT_PROPAGATE                    FALSE /**< Should domain propagation be executed before each temporary node is
+#define DEFAULT_PROPAGATE                    TRUE  /**< Should domain propagation be executed before each temporary node is
                                                     *   solved? */
 #define DEFAULT_ABBREVIATED                  FALSE /**< Toggles the abbreviated LAB. */
 #define DEFAULT_MAXNCANDS                    4     /**< If abbreviated: The max number of candidates to consider per node */
@@ -88,7 +88,7 @@
                                                     *   candidates be reused? */
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
                                                     *   candidate. */
-#define DEFAULT_SCORINGFUNCTION              'p'   /**< default scoring function to be used */
+#define DEFAULT_SCORINGFUNCTION              'd'   /**< default scoring function to be used */
 #define DEFAULT_MINWEIGHT                    4.0   /**< default value for the min weight to get a weighted score of two
                                                     *   child gains (taken from the paper) */
 #define DEFAULT_MAXWEIGHT                    1.0   /**< default value for the max weight to get a weighted score of two
@@ -3275,7 +3275,7 @@ SCIP_Real calculateScore(
 
    switch( config->scoringfunction )
    {
-   case 'p':
+   case 's':
       score = calculateScaledCutoffScore(downbranchingresult, upbranchingresult);
       break;
    case 'f':
@@ -5307,15 +5307,15 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->config->propagate, TRUE, DEFAULT_PROPAGATE, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/scoringfunction",
-         "scoring function to be used: 'd'efault, 'f'ullstrong branching or 'p'aper",
-         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORINGFUNCTION, "dfp", NULL, NULL) );
+         "scoring function to be used: 'd'efault, 'f'ullstrong branching or 's'caled cutoff score",
+         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORINGFUNCTION, "dfs", NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/lookahead/minweight",
-         "if scoringfunction is 'p', this value is used to weight the min of the gains of two child problems",
+         "if scoringfunction is 's', this value is used to weight the min of the gains of two child problems",
          &branchruledata->config->minweight, TRUE, DEFAULT_MINWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
         "branching/lookahead/maxweight",
-        "if scoringfunction is 'p', this value is used to weight the max of the gains of two child problems",
+        "if scoringfunction is 's', this value is used to weight the max of the gains of two child problems",
          &branchruledata->config->maxweight, TRUE, DEFAULT_MAXWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
