@@ -1,0 +1,17 @@
+# SCIP version 4.0.0.1
+
+# priority of branching rule <lookahead>
+# [type: int, advanced: FALSE, range: [-536870912,536870911], default: 0]
+branching/lookahead/priority = 1000000
+
+# should the abbreviated version of the LAB be used?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+branching/lookahead/abbreviated = TRUE
+
+# Should the problem be propagated before solving each inner node?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+branching/lookahead/propagate = TRUE
+
+# should implied binary constraints be added as a row to the LP?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+branching/lookahead/addbinconsrow = TRUE
