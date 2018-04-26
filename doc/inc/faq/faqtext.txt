@@ -553,7 +553,7 @@ SECTION: Using SCIP as a standalone solver
     <p>
         There is no clear answer to this question. The advantage of orbital fixing is that all symmetry handling
         reductions are based on propagation decisions. Thus, symmetry handling does not increase the size of your
-        LP relaxations. Depending on the problem, however, additional symmetry handling inequalities might interfere
+        LP relaxations. Depending on the problem, however, additional symmetry handling inequalities might interact
         with other cutting plane separators such that stronger cuts can be found. So, if you are dealing with a
         class of optimization problems, you should test which of both methods performs better.
     </p>
