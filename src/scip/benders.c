@@ -1202,7 +1202,7 @@ SCIP_RETCODE transferBendersCuts(
       benderscut = benders->benderscuts[i];
 
       /* retreiving the Benders' cuts constraints */
-      SCIP_CALL( SCIPbenderscutGetCons(benderscut, &addedcons, &naddedcons) );
+      SCIP_CALL( SCIPbenderscutGetAddedConss(benderscut, &addedcons, &naddedcons) );
 
       /* looping over all added constraints to costruct the cut for the source scip */
       for( j = 0; j < naddedcons; j++ )
@@ -1233,7 +1233,7 @@ SCIP_RETCODE transferBendersCuts(
       }
 
       /* retreiving the Benders' cuts added cuts */
-      SCIP_CALL( SCIPbenderscutGetCuts(benderscut, &addedcuts, &naddedcuts) );
+      SCIP_CALL( SCIPbenderscutGetAddedCuts(benderscut, &addedcuts, &naddedcuts) );
 
       /* looping over all added constraints to costruct the cut for the source scip */
       for( j = 0; j < naddedcuts; j++ )
