@@ -279,9 +279,10 @@ SCIP_RETCODE runBrachistochrone(
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    SCIPinfoMessage(scip, NULL, "\n");
-   SCIPinfoMessage(scip, NULL, "*********************************************\n");
-   SCIPinfoMessage(scip, NULL, "* Running Brachistochrone Problem *\n");
-   SCIPinfoMessage(scip, NULL, "*********************************************\n");
+   SCIPinfoMessage(scip, NULL, "**********************************************\n");
+   SCIPinfoMessage(scip, NULL, "* Running Brachistochrone Problem            *\n");
+   SCIPinfoMessage(scip, NULL, "* between A=(%g,%g) and B=(%g,%g) with %d points *\n", coord[2], coord[0], coord[3], coord[1], n);
+   SCIPinfoMessage(scip, NULL, "**********************************************\n");
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* set gap at which SCIP will stop */
@@ -358,9 +359,6 @@ int main(
       fprintf(stderr, "Error: expected y(N) < 1.0\n");
       return EXIT_FAILURE;
    }
-
-   printf("Brachistochrone problem between points: ");
-   printf("A(%f,%f) and B(%f,%f) with %d points\n", coord[2], coord[0], coord[3], coord[1], n);
 
    retcode = runBrachistochrone(n, coord);
 
