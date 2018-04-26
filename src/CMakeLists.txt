@@ -200,6 +200,7 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/benders_default.c
     scip/benderscut_feas.c
     scip/benderscut_int.c
     scip/benderscut_nogood.c
@@ -373,6 +374,7 @@ set(scipheaders
     scip/bandit_exp3.h
     scip/bandit_ucb.h
     scip/benders.h
+    scip/benders_default.h
     scip/benderscut.h
     scip/benderscut_feas.h
     scip/benderscut_int.h

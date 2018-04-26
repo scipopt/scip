@@ -209,16 +209,27 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
+/* sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
+ * process. One example is when the three-phase method is employed, where the first phase solves the of both the master
+ * and subproblems and by the third phase the integer subproblem is solved.
+ */
 EXTERN
-SCIP_Bool SCIPbendersSubprobIsLP(
+void SCIPbendersSetSubprobIsConvex(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             isconvex            /**< flag to indicate whether the subproblem is convex */
+   );
+
+/** returns whether the subproblem is convex. This means that the dual solution can be used to generate cuts. */
+EXTERN
+SCIP_Bool SCIPbendersSubprobIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
-/** returns the number of subproblems that are LPs */
+/** returns the number of subproblems that are convex */
 extern
-int SCIPbendersGetNLPSubprobs(
+int SCIPbendersGetNConvexSubprobs(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
