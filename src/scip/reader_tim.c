@@ -52,7 +52,6 @@ struct TimStage
    int                   nconss;
    int                   varssize;
    int                   conssize;
-   int                   nscenarios;         /**< the number of scenarios in this stage */
 };
 typedef struct TimStage TIMSTAGE;
 
@@ -800,8 +799,6 @@ static
 SCIP_DECL_READERREAD(readerReadTim)
 {  /*lint --e{715}*/
    SCIP_READER* correader;
-   SCIP_READERDATA* readerdata;
-
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);

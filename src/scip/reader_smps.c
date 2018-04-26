@@ -21,7 +21,13 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <stdlib.h>
+#include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
+#endif
 
 #include "scip/reader_smps.h"
 
@@ -46,13 +52,13 @@
 #define STO_FILEEXTENSION        "sto"
 
 /** enum for the file types that are read by the SMPS reader */
-enum SMPS_FileType
+enum SCIP_SmpsFileType
 {
-   SMPS_FILETYPE_COR = 0,
-   SMPS_FILETYPE_TIM = 1,
-   SMPS_FILETYPE_STO = 2
+   SCIP_SMPSFILETYPE_COR = 0,
+   SCIP_SMPSFILETYPE_TIM = 1,
+   SCIP_SMPSFILETYPE_STO = 2
 };
-typedef enum SMPS_FileType SCIP_FILETYPE;
+typedef enum SCIP_SmpsFileType SCIP_SMPSFILETYPE;
 
 
 /** smps input structure */
@@ -218,7 +224,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
    SMPSINPUT* smpsi;
    SCIP_RETCODE retcode = SCIP_OKAY;
 
-   char newfilename[SCIP_MAXSTRLEN];
    char corfilename[SCIP_MAXSTRLEN];
    char timfilename[SCIP_MAXSTRLEN];
    char stofilename[SCIP_MAXSTRLEN];
@@ -274,7 +279,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
       /* copy the input */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpinput, smpsinputField0(smpsi),
-            (int)strlen(smpsinputField0(smpsi))+1) );
+            (int)strlen(smpsinputField0(smpsi))+1) ); /*lint !e666*/
 
       /* get extension from filename */
       SCIPsplitFilename(tmpinput, NULL, NULL, &fileextension, NULL);
@@ -328,10 +333,12 @@ SCIP_DECL_READERREAD(readerReadSmps)
       int nintvars;
       int nimplintvars;
       int ncontvars;
+      SCIP_SMPSFILETYPE type;
 
-      switch( i )
+      type = i;
+      switch( type )
       {
-         case SMPS_FILETYPE_COR:
+         case SCIP_SMPSFILETYPE_COR:
             SCIPinfoMessage(scip, NULL, "reading core file <%s> for problem %s\n", corfilename, probname);
             SCIPinfoMessage(scip, NULL, "============\n");
 
@@ -344,7 +351,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
                "core problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
                nvars, nbinvars, nintvars, nimplintvars, ncontvars, SCIPgetNOrigConss(scip));
             break;
-         case SMPS_FILETYPE_TIM:
+         case SCIP_SMPSFILETYPE_TIM:
             SCIPinfoMessage(scip, NULL, "reading the time file <%s> for problem %s\n", timfilename, probname);
             SCIPinfoMessage(scip, NULL, "============\n");
 
@@ -353,7 +360,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
             SCIPinfoMessage(scip, NULL, "problem %s has %d stages\n", probname, SCIPtimGetNStages(scip));
             break;
-         case SMPS_FILETYPE_STO:
+         case SCIP_SMPSFILETYPE_STO:
 #ifdef BENDERSBRANCH
             SCIP_Bool usebenders;
 #endif
@@ -388,6 +395,11 @@ SCIP_DECL_READERREAD(readerReadSmps)
                "has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
                nvars, nbinvars, nintvars, nimplintvars, ncontvars, SCIPgetNOrigConss(scip));
             break;
+         default:
+            SCIPerrorMessage("This should not happen. Aborting.\n");
+            SCIPABORT();
+            retcode = SCIP_READERROR;
+            goto TERMINATE;
       }
 
       SCIPinfoMessage(scip, NULL, "\n\n");
