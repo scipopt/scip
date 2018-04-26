@@ -1079,7 +1079,10 @@ SCIP_RETCODE SCIPbendersInit(
 }
 
 
-/** create and add transferred cut */
+/** transfers Benders' cuts that were generated while solving a sub-SCIP to the original SCIP instance. This involves
+ *  creating a constraint/cut that is equivalent to the generated cut in the sub-SCIP. This new constraint/cut is then
+ *  added to the original SCIP instance.
+ */
 static
 SCIP_RETCODE createAndAddTransferredCut(
    SCIP*                 sourcescip,         /**< the source SCIP from when the Benders' decomposition was copied */
