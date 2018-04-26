@@ -286,7 +286,6 @@ typedef struct
    SCIP_Bool             downdbvalid;        /**< Indicator for the validity of the downdb value. Is FALSE, if no actual
                                               *   branching occurred or the value was determined by an LP not solved to
                                               *   optimality. */
-
    SCIP_Bool             updbvalid;          /**< Indicator for the validity of the updb value. Is FALSE, if no actual
                                               *   branching occurred or the value was determined by an LP not solved to
                                               *   optimality. */
@@ -353,6 +352,7 @@ SCIP_Bool branchingDecisionIsValid(
 }
 
 /* ensure that the array that stores the bounds for both child nodes is large enough */
+/* @GG : maybe rename the function to "branchingDecisionEnsureBoundArraysSize"*/
 static
 SCIP_RETCODE branchingDecisionEnsureBoundArrays(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -410,7 +410,7 @@ typedef struct
                                               *   branchings. */
    SCIP_Longint          niterations;        /**< The number of probing iterations needed in sub branch. */
    SCIP_Bool             cutoff;             /**< Indicates whether the node was infeasible and was cutoff. */
-   SCIP_Bool             dualboundvalid;     /**< Us the value of the dual bound valid? That means, was the according LP
+   SCIP_Bool             dualboundvalid;     /**< Is the value of the dual bound valid? That means, was the according LP
                                               *   or the sub problems solved to optimality? */
    int                   ndeepestcutoffs;    /**< number of cutoffs on the lowest level below this child */
    SCIP_Real             bestgain;           /**< best gain (w.r.t. to the base lp) on the lowest level below this child */
@@ -694,8 +694,8 @@ typedef struct
                                               *   by the LP at that node. */
    int                   ndepthreached;      /**< The number of times the branching was aborted due to a too small depth. */
    int                   ndomredcons;        /**< The number of binary constraints ignored, as they would be dom reds. */
-   int                   ncutoffproofnodes;  /**< The number of nodes needed to proof all found cutoffs. */
-   int                   ndomredproofnodes;  /**< The number of nodes needed to proof all found domreds. */
+   int                   ncutoffproofnodes;  /**< The number of nodes needed to prove all found cutoffs. */
+   int                   ndomredproofnodes;  /**< The number of nodes needed to prove all found domreds. */
    int                   stopafterfsb;       /**< If abbreviated, this is the number of times the rule was stopped after
                                               *   scoring candidates by FSB, e.g., by adding constraints or domreds. */
    int                   cutoffafterfsb;     /**< If abbreviated, this is the number of times the rule was stopped after
@@ -1182,7 +1182,7 @@ SCIP_RETCODE binConsDataCreate(
 static
 void binConsDataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   BINCONSDATA**         consdata            /**< Pointer to he struct to be freed. */
+   BINCONSDATA**         consdata            /**< Pointer to the struct to be freed. */
    )
 {
    assert(scip != NULL);
@@ -1541,7 +1541,7 @@ int findInsertionPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCORECONTAINER*       scorecontainer,     /**< container with all the scores for each candidate */
    SCIP_Real             scoretoinsert,      /**< score to find the insertion index for */
-   CANDIDATE**           candidates,         /**< candidate list where the first nsorted elemnts are sorted (w.r.t. their
+   CANDIDATE**           candidates,         /**< candidate list where the first nsorted elements are sorted (w.r.t. their
                                               *   score) */
    int                   ncandidates         /**< number of elements in candidates to consider, starting from 0 */
    )
@@ -1806,7 +1806,7 @@ void addUpperBoundProofNode(
                                               *   reduction is violated by it. */
    DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
 #ifdef SCIP_STATISTIC
-   ,int                  nproofnodes         /**< The number of nodes needed to proof the new lower bound. */
+   ,int                  nproofnodes         /**< The number of nodes needed to prove the new lower bound. */
 #endif
    )
 {
@@ -1923,7 +1923,7 @@ void applySingleDeeperDomainReductions(
 }
 
 /**
- * merges the domain reduction data from the two given branching childs data into the target parent data
+ * merges the domain reduction data from the two given branching children data into the target parent data
  */
 static
 void applyDeeperDomainReductions(
@@ -2001,7 +2001,7 @@ SCIP_RETCODE applyDomainReductions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
-   DOMAINREDUCTIONS*     domreds,            /**< The domain reductions that should be applied the current node. */
+   DOMAINREDUCTIONS*     domreds,            /**< The domain reductions that should be applied to the current node. */
    SCIP_Bool*            domredcutoff,       /**< pointer to store whether a cutoff was found due to domain reductions */
    SCIP_Bool*            domred              /**< pointer to store whether a domain change was added */
 #ifdef SCIP_STATISTIC
@@ -2999,7 +2999,7 @@ SCIP_RETCODE getOldBranching(
 static
 SCIP_RETCODE updateOldBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   PERSISTENTDATA*       persistent,         /**< data storage over multiple calls to the rulel */
+   PERSISTENTDATA*       persistent,         /**< data storage over multiple calls to the rule */
    SCIP_VAR*             branchvar,          /**< variable to store previous results for */
    SCIP_Real             branchval,          /**< the value of branchvar */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< down branching result to store */
@@ -3038,7 +3038,7 @@ SCIP_RETCODE getFSBResult(
    SCIP*                 scip,               /**< SCIP data structure */
    CONFIGURATION*        parentconfig,       /**< main configuration */
    CANDIDATELIST*        candidates,         /**< the candidates to get the scores for */
-   STATUS*               status,             /**< status getting updated by the fsb routine */
+   STATUS*               status,             /**< status getting updated by the FSB routine */
    SCORECONTAINER*       scorecontainer      /**< container for the scores and lpi information */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          parentstatistics    /**< main statistics */
@@ -4783,8 +4783,6 @@ SCIP_RETCODE freePersistent(
    SCIPfreeBlockMemoryArray(scip, &persistent->lastbranchupres, nvars);
    SCIPfreeBlockMemoryArray(scip, &persistent->lastbranchnlps, nvars);
    SCIPfreeBlockMemoryArray(scip, &persistent->lastbranchid, nvars);
-
-
 
    /* free the solution that was used for implied binary bounds */
    assert(persistent->prevbinsolution != NULL);
