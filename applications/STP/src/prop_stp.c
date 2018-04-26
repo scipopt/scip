@@ -412,7 +412,6 @@ SCIP_RETCODE reduceRedcostExtended(
    /* reduce graph */
    extnfixed = reduce_extendedEdge(scip, propgraph, NULL, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr);
    SCIPdebugMessage("extended fixes: %d \n", extnfixed);
-   printf("extended fixes: %d \n", extnfixed);
 
    SCIPfreeBufferArray(scip, &nodearr);
    SCIPfreeBufferArray(scip, &pathedge);
