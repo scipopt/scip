@@ -215,7 +215,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersintcutNodesolved)
 
    benderscutdata = (SCIP_BENDERSCUTDATA*)SCIPeventhdlrGetData(eventhdlr);
 
-   if( SCIPbendersGetNSubproblems(benderscutdata->benders) > SCIPbendersGetNLPSubprobs(benderscutdata->benders) )
+   if( SCIPbendersGetNSubproblems(benderscutdata->benders) > SCIPbendersGetNConvexSubprobs(benderscutdata->benders) )
    {
       SCIP_CALL( updateCutConstant(scip, benderscutdata) );
    }

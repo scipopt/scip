@@ -156,7 +156,7 @@ SCIP_RETCODE createVariableMappings(
       for( j = 0; j < nsubproblems; j++ )
       {
          /* find the corresponding subproblem variable for a given master problem variable using the variable name. */
-         subvar = SCIPfindVar(bendersdata->subproblems[j], varname)
+         subvar = SCIPfindVar(bendersdata->subproblems[j], varname);
 
          /* adding the subvariable to master variable mapping into the hash map */
          if( subvar != NULL )
@@ -358,7 +358,7 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    if( SCIPisParamFixed(scip, "presolving/maxrestarts") && maxrestarts != 0)
    {
       SCIPerrorMessage("The number of restarts is fixed to %d. The default Benders' decomposition requires the number"
-         " of restarts to be 0.", nrestarts);
+         " of restarts to be 0.", maxrestarts);
       return SCIP_ERROR;
    }
    else
