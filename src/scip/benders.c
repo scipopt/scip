@@ -256,7 +256,9 @@ SCIP_DECL_EVENTEXEC(eventExecBendersMipnodefocus)
 
    /* interrupting the solve so that the control is returned back to the Benders' core. */
    if( eventhdlrdata->numruns == 0 && !eventhdlrdata->solvemip )
+   {
       SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
 
    SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos));
    eventhdlrdata->filterpos = -1;
@@ -337,7 +339,10 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
    bestsol = SCIPgetBestSol(scip);
 
    if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol), eventhdlrdata->upperbound) )
+   {
       SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
+
 
    return SCIP_OKAY;
 }
@@ -926,7 +931,10 @@ SCIP_RETCODE createSubproblems(
           * internally. To be more efficient the subproblem is put into probing mode. */
          if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
             && SCIPgetStage(subproblem) <= SCIP_STAGE_PROBLEM )
+         {
             SCIP_CALL( initialiseLPSubproblem(benders, i) );
+         }
+
       }
       else
       {
@@ -1005,9 +1013,7 @@ SCIP_RETCODE createMasterVarMapping(
 
       /* The variable needs to be transformed back into an original variable. If the variable is already original, then
        * this function just returns the same variable */
-      retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
-      if( retcode != SCIP_OKAY )
-         assert(FALSE);
+      SCIP_CALL_ABORT( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
       sourcevar = SCIPfindVar(benders->sourcescip, SCIPvarGetName(origvar));
       if( sourcevar != NULL )
@@ -1056,11 +1062,17 @@ SCIP_RETCODE SCIPbendersInit(
    SCIP_CALL( createSubproblems(benders, set) );
 
    if( benders->bendersinit != NULL )
+   {
       SCIP_CALL( benders->bendersinit(set->scip, benders) );
+   }
+
 
    /* if the Benders' decomposition is a copy, then a variable mapping between the master problem variables is required */
    if( benders->iscopy )
+   {
       SCIP_CALL( createMasterVarMapping(benders, set) );
+   }
+
 
 
    /* initialising the Benders' cuts */
@@ -1118,6 +1130,11 @@ SCIP_RETCODE createAndAddTransferredCut(
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "transferredcut_%d",
       SCIPbendersGetNTransferredCuts(sourcebenders) );
 
+   /* TODO: It could be more efficient to pass an updated vars array with the vals array to the
+    * SCIPcreateConsBasicLinear/SCIPcreateEmptyRowCons. This should be implemented to improve the performance of the
+    * Large Neighbourhood Benders Search.
+    */
+
    /* creating an empty row/constraint for the transferred cut */
    if( sourcebenders->cutsasconss )
    {
@@ -1125,8 +1142,10 @@ SCIP_RETCODE createAndAddTransferredCut(
       SCIP_CALL( SCIPsetConsRemovable(sourcescip, transfercons, TRUE) );
    }
    else
+   {
       SCIP_CALL( SCIPcreateEmptyRowCons(sourcescip, &transfercut, consbenders, cutname, lhs, rhs, FALSE,
             FALSE, TRUE) );
+   }
 
    fail = FALSE;
    for( i = 0; i < nvars; i++ )
@@ -1143,29 +1162,39 @@ SCIP_RETCODE createAndAddTransferredCut(
       }
 
       if( sourcebenders->cutsasconss )
+      {
          SCIP_CALL( SCIPaddCoefLinear(sourcescip, transfercons, sourcevar, vals[i]) );    /*lint !e644*/
+      }
       else
+      {
          SCIP_CALL( SCIPaddVarToRow(sourcescip, transfercut, sourcevar, vals[i]) );       /*lint !e644*/
-
-      /* NOTE: There could be a problem with the auxiliary variables. They may not be copied. */
+      }
    }
 
    /* if all of the source variables were found to generate the cut */
    if( !fail )
    {
       if( sourcebenders->cutsasconss )
+      {
          SCIP_CALL( SCIPaddCons(sourcescip, transfercons) );
+      }
       else
+      {
          SCIP_CALL( SCIPaddPoolCut(sourcescip, transfercut) );
+      }
 
       sourcebenders->ntransferred++;
    }
 
    /* release the row/constraint */
    if( sourcebenders->cutsasconss )
+   {
       SCIP_CALL( SCIPreleaseCons(sourcescip, &transfercons) );
+   }
    else
+   {
       SCIP_CALL( SCIPreleaseRow(sourcescip, &transfercut) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1211,7 +1240,7 @@ SCIP_RETCODE transferBendersCuts(
       /* retreiving the Benders' cuts constraints */
       SCIP_CALL( SCIPbenderscutGetAddedConss(benderscut, &addedcons, &naddedcons) );
 
-      /* looping over all added constraints to costruct the cut for the source scip */
+      /* looping over all added constraints to construct the cut for the source scip */
       for( j = 0; j < naddedcons; j++ )
       {
          SCIP_CONSHDLR* conshdlr;
@@ -1331,7 +1360,9 @@ SCIP_RETCODE SCIPbendersExit(
    SCIPclockStart(benders->setuptime, set);
 
    if( benders->bendersexit != NULL )
+   {
       SCIP_CALL( benders->bendersexit(set->scip, benders) );
+   }
 
    /* if the Benders' decomposition is a copy, then
     * - the generated cuts will be transferred to the source scip, and
@@ -1346,7 +1377,9 @@ SCIP_RETCODE SCIPbendersExit(
    /* releasing all of the auxiliary variables */
    nsubproblems = SCIPbendersGetNSubproblems(benders);
    for( i = 0; i < nsubproblems; i++ )
+   {
       SCIP_CALL( SCIPreleaseVar(set->scip, &benders->auxiliaryvars[i]) );
+   }
 
    /* calling the exit method for the Benders' cuts */
    SCIPbendersSortBenderscuts(benders);
@@ -1915,7 +1948,9 @@ SCIP_RETCODE SCIPbendersExec(
    resetSubproblemObjectiveValue(benders);
 
    if( benders->benderspresubsolve != NULL )
+   {
       SCIP_CALL( benders->benderspresubsolve(set->scip, benders) );
+   }
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2136,18 +2171,26 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    {
       /* setting up the subproblem */
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )
+      {
          SCIP_CALL( SCIPbendersSetupSubproblem(benders, set, sol, probnumber) );
+      }
       else
+      {
          SCIP_CALL( updateEventhdlrUpperbound(benders, probnumber, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) );
+      }
 
 
       /* solving the subproblem
        * the LP of the subproblem is solved in the first solveloop.
        * In the second solve loop, the MIP problem is solved */
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || SCIPbendersSubprobIsConvex(benders, probnumber) )
+      {
          SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
+      }
       else
+      {
          SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, infeasible, type, FALSE) );
+      }
 
       /* if the generic subproblem solving methods are used, then the subproblems are always solved. */
       (*solved) = TRUE;
@@ -2257,9 +2300,13 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
     * variable bounds. The probing mode is entered once the variable bounds are set.
     * In the MIP case, the transformed problem is freed after each subproblem solve round. */
    if( SCIPbendersSubprobIsConvex(benders, probnumber) )
+   {
       SCIP_CALL( SCIPstartProbing(subproblem) );
+   }
    else
+   {
       SCIP_CALL( initialiseSubproblem(benders, probnumber) );
+   }
 
    vars = SCIPgetVars(subproblem);
    nvars = SCIPgetNVars(subproblem);
@@ -2287,9 +2334,13 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
          if( !SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
          {
             if( SCIPisGT(subproblem, solval, SCIPvarGetLbLocal(vars[i])) )
+            {
                SCIP_CALL( SCIPchgVarLb(subproblem, vars[i], solval) );
+            }
             if( SCIPisLT(subproblem, solval, SCIPvarGetUbLocal(vars[i])) )
+            {
                SCIP_CALL( SCIPchgVarUb(subproblem, vars[i], solval) );
+            }
          }
 
          assert(SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
@@ -2298,7 +2349,9 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
 
    /* if the subproblem is a MIP, the probing mode is entered after setting up the subproblem */
    if( !SCIPbendersSubprobIsConvex(benders, probnumber) )
+   {
       SCIP_CALL( SCIPstartProbing(subproblem) );
+   }
 
    /* set the flag to indicate that the subproblems have been set up */
    SCIPbendersSetSubprobIsSetup(benders, probnumber, TRUE);
@@ -2370,10 +2423,14 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
          {
             /* if the subproblem is not in probing mode, then it must be put into that mode for the LP solve. */
             if( !SCIPinProbing(subproblem) )
+            {
                SCIP_CALL( SCIPstartProbing(subproblem) );
+            }
          }
          else
+         {
             SCIP_CALL( initialiseSubproblem(benders, probnumber) );
+         }
 
          SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
 
@@ -2644,7 +2701,9 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
    if( benders->bendersfreesub != NULL )
+   {
       SCIP_CALL( benders->bendersfreesub(set->scip, benders, probnumber) );
+   }
    else
    {
       SCIP* subproblem = SCIPbendersSubproblem(benders, probnumber);
@@ -2659,7 +2718,9 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
          /* if the subproblems were solved as part of an enforcement stage, then they will still be in probing mode. The
           * probing mode must first be finished and then the problem can be freed */
          if( SCIPgetStage(subproblem) >= SCIP_STAGE_TRANSFORMED && SCIPinProbing(subproblem) )
+         {
             SCIP_CALL( SCIPendProbing(subproblem) );
+         }
 
          SCIP_CALL( SCIPfreeTransform(subproblem) );
       }
@@ -3315,7 +3376,9 @@ SCIP_RETCODE SCIPbendersSetMastervarsCont(
    if( benders->mastervarscont[probnumber] && !arecont )
    {
       if( SCIPinProbing(SCIPbendersSubproblem(benders, probnumber)) )
+      {
          SCIP_CALL( SCIPendProbing(SCIPbendersSubproblem(benders, probnumber)) );
+      }
 
       SCIPbendersSetSubprobIsConvex(benders, probnumber, FALSE);
    }
