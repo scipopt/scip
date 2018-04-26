@@ -139,8 +139,8 @@ SCIP_RETCODE SCIPbenderscutCreate(
    (*benderscut)->initialized = FALSE;
    (*benderscut)->addedconss = NULL;
    (*benderscut)->addedcuts = NULL;
-   (*benderscut)->addedconsssize = BENDERSCUT_ARRAYSIZE;
-   (*benderscut)->addedcutssize = BENDERSCUT_ARRAYSIZE;
+   (*benderscut)->addedconsssize = 0;
+   (*benderscut)->addedcutssize = 0;
    (*benderscut)->naddedconss = 0;
    (*benderscut)->naddedcuts = 0;
 
@@ -204,8 +204,17 @@ SCIP_RETCODE SCIPbenderscutInit(
    }
 
    /* allocating memory for the added constraint/cut arrays */
-   SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedconss, benderscut->addedconsssize) );
-   SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedcuts, benderscut->addedcutssize) );
+   if( benderscut->addedconsssize == 0 )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedconss, BENDERSCUT_ARRAYSIZE) );
+      benderscut->addedconsssize = BENDERSCUT_ARRAYSIZE;
+   }
+
+   if( benderscut->addedcutssize == 0 )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedcuts, BENDERSCUT_ARRAYSIZE) );
+      benderscut->addedcutssize = BENDERSCUT_ARRAYSIZE;
+   }
 
    if( benderscut->benderscutinit != NULL )
    {
@@ -241,15 +250,19 @@ SCIP_RETCODE SCIPbenderscutExit(
 
    /* releasing the stored rows and constraints */
    for( i = 0; i < benderscut->naddedcuts; i++ )
+   {
       SCIP_CALL( SCIPreleaseRow(set->scip, &benderscut->addedcuts[i]) );
+   }
 
    for( i = 0; i < benderscut->naddedconss; i++ )
+   {
       SCIP_CALL( SCIPreleaseCons(set->scip, &benderscut->addedconss[i]) );
+   }
 
    BMSfreeMemoryArray(&benderscut->addedcuts);
    BMSfreeMemoryArray(&benderscut->addedconss);
-   benderscut->addedconsssize = BENDERSCUT_ARRAYSIZE;
-   benderscut->addedcutssize = BENDERSCUT_ARRAYSIZE;
+   benderscut->addedconsssize = 0;
+   benderscut->addedcutssize = 0;
    benderscut->naddedconss = 0;
    benderscut->naddedcuts = 0;
 
