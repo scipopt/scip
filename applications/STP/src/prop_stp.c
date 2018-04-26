@@ -56,11 +56,8 @@
  */
 
 #define DEFAULT_MAXNWAITINGROUNDS        3    /**< maximum number of rounds to wait until propagating again */
-#ifdef WITH_UG
-#define REDUCTION_WAIT_RATIO             0.02 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
-#else
-#define REDUCTION_WAIT_RATIO             0.08 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
-#endif
+#define REDUCTION_WAIT_RATIO             0.01 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
+
 /**@} */
 
 /*
@@ -587,12 +584,7 @@ SCIP_RETCODE redbasedVarfixing(
    for( int e = 0; e < nedges; e++ )
       if( (remain[e] == PROP_STP_EDGE_UNSET || remain[e] == PROP_STP_EDGE_KILLED) && (SCIPvarGetLbLocal(vars[e]) > 0.5) )
       {
-         int todo;
-         printf("1 fix failed %d \n", 0);
-         exit(1);
-
          SCIPdebugMessage("1-fixed arc deleted by reduction methods ... can't propagate  \n \n \n");
-
          goto TERMINATE;
       }
 

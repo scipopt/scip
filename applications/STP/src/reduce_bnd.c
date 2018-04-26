@@ -119,9 +119,6 @@ SCIP_Bool truncateSubtree
          *stopped = TRUE;
          if( extendedcost < *minbound )
             *minbound = extendedcost;
-#ifdef PPP
-         printf("stop  \n");
-#endif
       }
       return TRUE;
    }
@@ -159,8 +156,6 @@ int reduceAndExtendSubtree(
          assert((n - start) <= STP_DAEX_MAXGRAD);
          extensionmark[n - start] = EXEDGE_FREE;
 
-      //   printf("check edge %d \n", e);
-
          for( int e2 = graph->outbeg[vertex_exnew]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
          {
             const int head = graph->head[e2];
@@ -186,7 +181,6 @@ int reduceAndExtendSubtree(
 
                      extensionmark[stackposition - start] = EXEDGE_FIXED;
                      extensionmark[n - start] = EXEDGE_KILLED;
-                  //   printf("killedNew %d  \n", e);
                      break;
                   }
 
@@ -195,8 +189,6 @@ int reduceAndExtendSubtree(
                   {
                      extensionmark[stackposition - start] = EXEDGE_KILLED;
                      extensionmark[n - start] = EXEDGE_FIXED;
-                    // printf("mark killed %d \n", stackposition - start);
-                   //  printf("killedOld %d (at %d) old vs new: %f %f \n", edge_exold, e, cost_exold, cost_exnew);
 
                      assert(head == graph->head[edge_exold]);
                      nodepos[head] = 0;
@@ -210,7 +202,7 @@ int reduceAndExtendSubtree(
          if( extensionmark[n - start] != EXEDGE_KILLED )
          {
             edgestack[n++] = e;
-//printf("add edge %d \n", e);
+
             assert(nodepos[vertex_exnew] == 0);
             nodepos[vertex_exnew] = -n;
          }
@@ -234,7 +226,7 @@ int reduceAndExtendSubtree(
          if( extensionmark[i - start] != EXEDGE_KILLED )
             edgestack[newn++] = edgestack[i];
 
-     // printf("newn %d n %d \n", newn, n);
+
       assert(newn < n);
       n = newn;
    }

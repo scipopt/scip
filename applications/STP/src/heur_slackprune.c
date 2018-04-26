@@ -1052,8 +1052,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
          /* calculate objective value of solution */
          objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
-      printf("\n\n obj of solution from solnode %f \n", objorg + SCIPprobdataGetOffset(scip));
-
       /* compute new solution on heuristically reduced graph */
 
 #ifdef SCIP_DEBUG

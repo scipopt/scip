@@ -429,9 +429,9 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
             nval[e] = 0.0;
          }
       }
-#ifdef SCIP_DEBUG
-      printf("prune, best: old %f, new %f \n  \n",  SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj);
-#endif
+
+      SCIPdebugMessage("prune, best: old %f, new %f \n  \n",  SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj);
+
       /* try to add new solution to pool */
       sol = NULL;
       SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
@@ -439,9 +439,8 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
       /* has solution been added? */
       if( success )
       {
-#ifdef SCIP_DEBUG
-         printf("solution added by PRUNE \n  \n");
-#endif
+         SCIPdebugMessage("solution added by PRUNE \n  \n");
+
          *result = SCIP_FOUNDSOL;
 
          assert(graph_sol_valid(scip, graph, soledge));

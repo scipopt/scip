@@ -783,13 +783,13 @@ SCIP_Bool graph_pc_term2edgeConsistent(
    {
       if( Is_gterm(g->term[i]) && i != g->source && g->term2edge[i] < 0 )
       {
-         printf("term2edge consistency fail1 %d \n", i);
+         SCIPdebugMessage("term2edge consistency fail1 %d \n", i);
          return FALSE;
       }
 
       if( !Is_gterm(g->term[i]) && g->term2edge[i] != -1 )
       {
-         printf("term2edge consistency fail2 %d \n", i);
+         SCIPdebugMessage("term2edge consistency fail2 %d \n", i);
          return FALSE;
       }
 
@@ -809,13 +809,13 @@ SCIP_Bool graph_pc_term2edgeConsistent(
 
          if( g->term2edge[i] != e )
          {
-            printf("term2edge consistency fail3 %d \n", i);
+            SCIPdebugMessage("term2edge consistency fail3 %d \n", i);
             return FALSE;
          }
 
          if( g->term2edge[k] != flipedge(e) )
          {
-            printf("term2edge consistency fail4 %d \n", i);
+            SCIPdebugMessage("term2edge consistency fail4 %d \n", i);
             return FALSE;
          }
       }
@@ -1125,9 +1125,6 @@ SCIP_RETCODE graph_pc_getSapShift(
 
    assert(maxvert >= 0);
 
-   printf("BEF TEMRS: %d \n", newg->terms);
-
-
    /* shift the costs */
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1187,9 +1184,6 @@ SCIP_RETCODE graph_pc_getSapShift(
          }
       }
    }
-
-   printf("AFT TEMRS: %d \n", newg->terms);
-
 
    SCIP_CALL( graph_resize(scip, newg, (newg->ksize + 1), (newg->esize + 2 * (newg->terms - 1)) , -1) );
 
@@ -1808,7 +1802,6 @@ SCIP_RETCODE graph_pc_mw2rmw(
 
       graph->stp_type = STP_RMWCSP;
 
-      printf("Transformed problem to RMWCSP \n \n \n");
    }
 
    SCIPdebugMessage("Transformed MW to RMW \n");
@@ -3256,10 +3249,7 @@ SCIP_RETCODE graph_get_edgeConflicts(
 
    for( int e = 0; e < nedgesorg / 2; e++ )
       if( childcount[e] > 1 )
-      {
-         printf("%d children: %d \n", e, childcount[e]);
          nconflicts++;
-      }
 
    printf("nconflicts %d \n", nconflicts);
 
@@ -4212,7 +4202,7 @@ SCIP_Bool graph_valid(
 
             if( g->grad[k] != 2 )
             {
-               printf("terminal degree != 2 for %d \n", k);
+               SCIPdebugMessage("terminal degree != 2 for %d \n", k);
                return FALSE;
             }
 
@@ -4222,7 +4212,7 @@ SCIP_Bool graph_valid(
 
             if( e == EAT_LAST )
             {
-               printf("no edge to root for term %d \n", term);
+               SCIPdebugMessage("no edge to root for term %d \n", term);
                return FALSE;
             }
 
@@ -4235,7 +4225,7 @@ SCIP_Bool graph_valid(
 
             if( e2 == EAT_LAST)
             {
-               printf("no terminal for dummy %d \n", g->head[e2]);
+               SCIPdebugMessage("no terminal for dummy %d \n", g->head[e2]);
                return FALSE;
             }
 
@@ -4243,13 +4233,13 @@ SCIP_Bool graph_valid(
 
             if( e2 != g->term2edge[term] )
             {
-               printf("term2edge for node %d faulty \n", term);
+               SCIPdebugMessage("term2edge for node %d faulty \n", term);
                return FALSE;
             }
 
             if( g->cost[e] != g->prize[pterm] )
             {
-               printf("prize mismatch for node %d: \n", k);
+               SCIPdebugMessage("prize mismatch for node %d: \n", k);
                return FALSE;
             }
          }
@@ -4262,7 +4252,7 @@ SCIP_Bool graph_valid(
       {
          if( !rooted )
          {
-            printf("wrong terminal count \n");
+            SCIPdebugMessage("wrong terminal count \n");
             return FALSE;
          }
       }

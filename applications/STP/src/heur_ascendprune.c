@@ -538,7 +538,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 #endif
    if( !success )
    {
-      printf("failed to build tree in ascend-prune (by prune) \n");
+      SCIPdebugMessage("failed to build tree in ascend-prune (by prune) \n");
       goto TERMINATE;
    }
 

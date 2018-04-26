@@ -2748,12 +2748,6 @@ SCIP_RETCODE reduce_sdspSap(
          /* can edge be deleted? */
          if( SCIPisGE(scip, g->cost[e], sdist) )
          {
-
-            if( SCIPisGE(scip, costrev[e], FARAWAY) )
-               printf("ELIM edge \n");
-            else
-               printf("counteredge \n");
-
             if( SCIPisGE(scip, costrev[e], FARAWAY) )
                graph_edge_del(scip, g, e, TRUE);
             else
@@ -3634,8 +3628,6 @@ SCIP_RETCODE reduce_nts(
             if( Is_term(g->term[tail]) || Is_term(g->term[head]) )
                continue;
 
-            printf("check %d %d \n", tail, head);
-
             edgecount = 0;
             for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
             {
@@ -3671,7 +3663,6 @@ SCIP_RETCODE reduce_nts(
             // todo reshuffle
             if( duplicate )
             {
-               printf("duplicate \n");
                continue;
             }
 
@@ -3707,7 +3698,6 @@ SCIP_RETCODE reduce_nts(
 
                         if( SCIPisGT(scip, s1, innercost) )
                         {
-                           printf("fail for %d (%f > %f)\n", k, s1, innercost);
           //                 success = FALSE;
             //               break;
                         }
@@ -3738,8 +3728,6 @@ SCIP_RETCODE reduce_nts(
 
             success = (success && SCIPisGE(scip, csum, mstcost));
 
-            if( !SCIPisGE(scip, csum, mstcost) )
-               printf("4 fail %f > %f \n", mstcost, csum);
 
             if( success && 0)
             {
@@ -3769,7 +3757,6 @@ SCIP_RETCODE reduce_nts(
 
                   if( SCIPisLT(scip, csum - ecost[k], mstcost) )
                   {
-                     printf("3-fail %f > %f \n", mstcost, csum - ecost[k]);
                      success = FALSE;
                      break;
                   }
@@ -3778,7 +3765,6 @@ SCIP_RETCODE reduce_nts(
 
             if( success )
             {
-               printf("nts: delete %d -> %d \n", tail, head);
              //  graph_edge_del(scip, g, edge, TRUE);
 
                (*nelims)++;
@@ -3795,8 +3781,6 @@ SCIP_RETCODE reduce_nts(
 
    graph_path_exit(scip, auxg);
    graph_free(scip, &auxg, TRUE);
-
-   printf("nts: %d nodes deleted\n", *nelims);
 
    assert(graph_valid(g));
 
@@ -4732,10 +4716,6 @@ void reduce_alt_dv(
             /* neighbors of j subset of those of k? */
             if( e2 == EAT_LAST )
             {
-               printf("dominated %d  %d\n", k, g->grad[i] );
-               if(
-                     g->grad[i] == 0)
-                  printf("WTF %d \n", 0);
 #if 0
                int maxe = g->outbeg[i];
                for( e2 = g->outbeg[i]; e2 != EAT_LAST; e2 = g->oeat[e2] )

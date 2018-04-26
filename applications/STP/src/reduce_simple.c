@@ -851,17 +851,6 @@ SCIP_RETCODE reduce_simple_sap(
          while( g->inpbeg[i] != EAT_LAST )
             graph_edge_del(scip, g, g->inpbeg[i], TRUE);
 
-#if 0
-      for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-      {
-	 if( SCIPisGE(scip, g->cost[e], FARAWAY) &&  SCIPisGE(scip, g->cost[flipedge(e)], FARAWAY) )
-	 {
-	    printf("remove high cost edge to node %d \n", i);
-            graph_edge_del(scip, g, e, TRUE);
-	 }
-      }
-#endif
-
    SCIPdebugMessage("dirdeg %d Knots deleted\n", *count);
    assert(graph_valid(g));
 
