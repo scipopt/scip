@@ -39,6 +39,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "scip/pub_misc.h"
 #include "scip/scip.h"
@@ -341,24 +342,21 @@ int main(
 
        if( end1 == argv[1] || ( argc == 4 && ( end2 == argv[2] || end3 == argv[3] ) ) )
        {
-          printf("expected real values as arguments.\n");
-          return -1;
+          fprintf(stderr, "Error: expected real values as arguments.\n");
+          return EXIT_FAILURE;
        }
    }
    else if( argc != 1 )
    {
-       printf(" usage:\n");
-       printf("./brachistochrone ,or\n");
-       printf("./brachistochrone [number of points], or\n");
-       printf("./brachistochrone [number of points] [y(N)] [x(N)]\n");
-       return -1;
+       fprintf(stderr, "Usage: %s [<N> [<y(N)> <x(N)>]]\n", argv[0]);
+       return EXIT_FAILURE;
    }
 
    /* check that y(0) > y(N) */
    if( coord[0] <= coord[1] )
    {
-      printf("expected y(N) < 1.0\n");
-      return -1;
+      fprintf(stderr, "Error: expected y(N) < 1.0\n");
+      return EXIT_FAILURE;
    }
 
    printf("Brachistochrone problem between points: ");
@@ -371,8 +369,8 @@ int main(
    {
       /* write error back trace */
       SCIPprintError(retcode);
-      return -1;
+      return EXIT_FAILURE;
    }
 
-   return 0;
+   return EXIT_SUCCESS;
 }
