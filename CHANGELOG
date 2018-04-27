@@ -13,20 +13,24 @@ features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
 - new example brachistochrone in CallableLibrary examples collection
 
-interface changes:
+deleted and modified API functions:
 - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
   weights that are simple averages or higher weights for more recent observations (the previous default).
   The last two parameters are used for a finer control of the exponential decay.
 - functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
   SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+
+new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
-- removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
-  directly by the target node limit within the heuristic.
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
+
+deleted and modified parameters:
+- removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  directly by the target node limit within the heuristic.
 
 deleted files:
 - presol_implfree removed
@@ -82,19 +86,17 @@ features:
 
 new parameters:
 - new parameter "visual/displb" that enables output of lower bounds for visualization
+- new parameter: "presolving/symmetry/displaynorbitvars" (whether we display the number of affected variables in the statistics)
+- new parameter: "separating/efficacyfac" to change the weight of the efficacy in cut score calculation
+- new parameter: "separating/dircutoffdistfac" to change the weight of the directed cutoff distance in cut score calculation
 
 deleted and modified parameters:
 - rename parameter: "constraints/orbisack/orbisack/coverseparation" to "constraints/orbisack/coverseparation"
 
-interface changes:
+new API functions:
 - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and SCIPterminated() in scip/interrupt.h for handling
    of SIGTERM signals.
 - new function SCIPselectCuts() to run SCIP's cut selection procedure on a given array of cuts
-
-new parameters:
-- new parameter: "presolving/symmetry/displaynorbitvars" (whether we display the number of affected variables in the statistics)
-- new parameter: "separating/efficacyfac" to change the weight of the efficacy in cut score calculation
-- new parameter: "separating/dircutoffdistfac" to change the weight of the directed cutoff distance in cut score calculation
 
 fixed bugs:
 - fixed wrong cast in LP iteration limit computation in proximity search heuristic
