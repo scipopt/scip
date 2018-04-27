@@ -29,54 +29,48 @@ OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
 
 for EXAMPLE in ${EXAMPLES[@]}
 do
-    echo
-    echo
-    echo ===== $EXAMPLE =====
-    echo
-    cd $EXAMPLE
-    echo
-    for OPT in ${OPTS[@]}
-    do
-#   currently do not run depend to detect errors
-#        echo make OPT=$OPT LPS=none ZIMPL=false depend
-#	if (! make OPT=$OPT LPS=none ZIMPL=false depend)
-#	then
-#	    exit
-#        fi
-	for LPS in ${LPSOLVERS[@]}
-	do
-	    for TYPE in ${LIBTYPE[@]}
-	    do
-		if test "$TYPE" = "shared"
-		then
-		    SHAREDVAL="true"
-		    LIBEXT="so"
-		else
-		    SHAREDVAL="false"
-		    LIBEXT="a"
-		fi
+   echo
+   echo
+   echo ===== $EXAMPLE =====
+   echo
+   cd $EXAMPLE
+   echo
+   for OPT in ${OPTS[@]}
+   do
+      for LPS in ${LPSOLVERS[@]}
+      do
+         for TYPE in ${LIBTYPE[@]}
+         do
+            if test "$TYPE" = "shared"
+            then
+               SHAREDVAL="true"
+               LIBEXT="so"
+            else
+               SHAREDVAL="false"
+               LIBEXT="a"
+            fi
 
-		SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
-		LPILIB=../../lib/$TYPE/liblpi${LPS}.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
-		if test -e $SCIPLIB && test -e $LPILIB
-		then
-		    echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
-		    if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
-		    then
-			exit $STATUS
-		    fi
-		    echo
-		    echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL
-		    if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL )
-		    then
-			exit $STATUS
-		    fi
-		else
-		    echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
-		fi
-		echo
-	    done
-	done
-    done
-    cd -
+            SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
+            LPILIB=../../lib/$TYPE/liblpi${LPS}.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
+            if test -e $SCIPLIB && test -e $LPILIB
+            then
+               echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
+               if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
+               then
+                  exit $STATUS
+               fi
+               echo
+               echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL
+               if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL )
+               then
+                  exit $STATUS
+               fi
+            else
+               echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
+            fi
+            echo
+         done
+      done
+   done
+   cd -
 done
