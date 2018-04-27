@@ -56,8 +56,9 @@ do
 		    LIBEXT="a"
 		fi
 
-		SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LPS.$LIBEXT
-		if test -e $SCIPLIB
+		SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
+		LPILIB=../../lib/$TYPE/liblpi${LPS}.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
+		if test -e $SCIPLIB && test -e $LPILIB
 		then
 		    echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
 		    if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
