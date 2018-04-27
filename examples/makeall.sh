@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-#
-# run with bash -e makeall.sh to stop on errors
-#
+
+# stop on error
+set -e
 
 EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens Relaxator TSP VRP)
 LPSOLVERS=(spx2 cpx none)
@@ -33,7 +33,7 @@ do
    echo
    echo ===== $EXAMPLE =====
    echo
-   cd $EXAMPLE
+   pushd $EXAMPLE > /dev/null
    echo
    for OPT in ${OPTS[@]}
    do
@@ -55,22 +55,16 @@ do
             if test -e $SCIPLIB && test -e $LPILIB
             then
                echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
-               if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
-               then
-                  exit $STATUS
-               fi
+               make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
                echo
                echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL
-               if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL )
-               then
-                  exit $STATUS
-               fi
+               make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL
             else
-               echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
+               echo "$SCIPLIB or $LPILIB do not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
             fi
             echo
          done
       done
    done
-   cd -
+   popd > /dev/null
 done
