@@ -7446,11 +7446,17 @@
   * @section CHGINTERFUNC11 Changed interface methods
   *
   *   <b>Data structures</b>
-  *    - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations (the previous default).
+  *    - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
+  *      weights that are simple averages or higher weights for more recent observations (the previous default).
   *      The last two parameters are used for a finer control of the exponential decay.
-  * - Functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
-  *   and SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() require additional argument to specify already
-  *   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+  *    - Functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  *      and SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() require additional argument to specify already
+  *      existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+  *
+  *   <b>Symmetry</b>
+  *    - removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries
+  *      independent of other components anymore
+
   *
   * <br>
   *
@@ -7464,6 +7470,8 @@
   *   <b>Removed parameters</b>
   *    - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
   *      directly by the target node limit within the heuristic.
+  *    - removed parameter "presolving/symmetry/computepresolved" since this presolver does not
+  *      compute symmetries independent of other components anymore
   *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".

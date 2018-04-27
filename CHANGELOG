@@ -12,6 +12,7 @@ performance improvements:
 features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
 - new example brachistochrone in CallableLibrary examples collection
+- restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
 
 deleted and modified API functions:
 - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
@@ -20,6 +21,8 @@ deleted and modified API functions:
 - functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
   SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+- removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
+  of other components anymore
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
@@ -27,10 +30,15 @@ new API functions:
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
+- "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
+- "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
+- "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
 
 deleted and modified parameters:
 - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
-  directly by the target node limit within the heuristic.
+  directly by the target node limit within the heuristic
+- removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
+  of other components anymore
 
 deleted files:
 - presol_implfree removed
