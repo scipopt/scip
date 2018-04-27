@@ -10190,7 +10190,7 @@ SCIP_RETCODE lpPrimalSimplex(
    /* if this is a call to resolve an instable LP, collect time */
    if( instable )
    {
-      SCIPclockStart(stat->instablelptime, set);
+      SCIPclockStart(stat->resolveinstablelptime, set);
    }
 
    /* call primal simplex */
@@ -10223,7 +10223,7 @@ SCIP_RETCODE lpPrimalSimplex(
 
    if ( instable )
    {
-      SCIPclockStop(stat->instablelptime, set);
+      SCIPclockStop(stat->resolveinstablelptime, set);
    }
 
    /* count number of iterations */
@@ -10348,7 +10348,7 @@ SCIP_RETCODE lpDualSimplex(
    /* if this is a call to resolve an instable LP, collect time */
    if ( instable )
    {
-      SCIPclockStart(stat->instablelptime, set);
+      SCIPclockStart(stat->resolveinstablelptime, set);
    }
 
    /* call dual simplex */
@@ -10381,7 +10381,7 @@ SCIP_RETCODE lpDualSimplex(
 
    if ( instable )
    {
-      SCIPclockStop(stat->instablelptime, set);
+      SCIPclockStop(stat->resolveinstablelptime, set);
    }
 
    /* count number of iterations */

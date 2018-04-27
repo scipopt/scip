@@ -149,7 +149,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           duallptime;         /**< dual LP solution time */
    SCIP_CLOCK*           lexduallptime;      /**< lexicographic dual LP solution time */
    SCIP_CLOCK*           barrierlptime;      /**< barrier LP solution time */
-   SCIP_CLOCK*           instablelptime;     /**< LP solution time for taking care of instable LPs */
+   SCIP_CLOCK*           resolveinstablelptime;/**< LP solution time for taking care of instable LPs */
    SCIP_CLOCK*           divinglptime;       /**< diving and probing LP solution time */
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */

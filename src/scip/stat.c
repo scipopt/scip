@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lexduallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->barrierlptime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->instablelptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->resolveinstablelptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -124,7 +124,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->duallptime);
    SCIPclockFree(&(*stat)->lexduallptime);
    SCIPclockFree(&(*stat)->barrierlptime);
-   SCIPclockFree(&(*stat)->instablelptime);
+   SCIPclockFree(&(*stat)->resolveinstablelptime);
    SCIPclockFree(&(*stat)->divinglptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
    SCIPclockFree(&(*stat)->conflictlptime);
@@ -200,7 +200,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->duallptime);
    SCIPclockReset(stat->lexduallptime);
    SCIPclockReset(stat->barrierlptime);
-   SCIPclockReset(stat->instablelptime);
+   SCIPclockReset(stat->resolveinstablelptime);
    SCIPclockReset(stat->divinglptime);
    SCIPclockReset(stat->strongbranchtime);
    SCIPclockReset(stat->conflictlptime);
@@ -657,7 +657,7 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->duallptime, enable);
    SCIPclockEnableOrDisable(stat->lexduallptime, enable);
    SCIPclockEnableOrDisable(stat->barrierlptime, enable);
-   SCIPclockEnableOrDisable(stat->instablelptime, enable);
+   SCIPclockEnableOrDisable(stat->resolveinstablelptime, enable);
    SCIPclockEnableOrDisable(stat->divinglptime, enable);
    SCIPclockEnableOrDisable(stat->strongbranchtime, enable);
    SCIPclockEnableOrDisable(stat->conflictlptime, enable);
