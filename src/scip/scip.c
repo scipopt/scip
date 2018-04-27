@@ -46006,30 +46006,7 @@ void SCIPstoreSolutionGap(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Real primalbound;
-   SCIP_Real dualbound;
-
-   primalbound = getPrimalbound(scip);
-   dualbound = getDualbound(scip);
-
-   if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
-      scip->stat->lastsolgap = 0.0;
-
-   else if( SCIPsetIsZero(scip->set, dualbound)
-      || SCIPsetIsZero(scip->set, primalbound)
-      || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
-      || SCIPsetIsInfinity(scip->set, REALABS(dualbound))
-      || primalbound * dualbound < 0.0 )
-   {
-      scip->stat->lastsolgap = SCIPsetInfinity(scip->set);
-   }
-   else
-   {
-      SCIP_Real absdual = REALABS(dualbound);
-      SCIP_Real absprimal = REALABS(primalbound);
-
-      scip->stat->lastsolgap = REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
-   }
+   scip->stat->lastsolgap = SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getPrimalbound(scip), getDualbound(scip));
 
    if( scip->primal->nsols == 1 )
       scip->stat->firstsolgap = scip->stat->lastsolgap;

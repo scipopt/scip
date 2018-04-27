@@ -380,6 +380,19 @@ SCIPInterval abs(
    return resultant;
 }
 
+/** absolute value of an interval */
+inline
+SCIPInterval fabs(
+   const SCIPInterval&   x                   /**< operand */
+   )
+{
+   SCIPInterval resultant;
+
+   SCIPintervalAbs(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
+}
+
 /** sign of an interval */
 inline
 SCIPInterval sign(

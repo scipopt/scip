@@ -11,6 +11,7 @@ performance improvements:
 
 features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
+- new example brachistochrone in CallableLibrary examples collection
 - new branching rule lookahead that evaluates that evaluates potential child and grandchild nodes to determine a branching
   decision
 
@@ -32,6 +33,8 @@ new parameters:
 deleted files:
 - presol_implfree removed
 
+misc:
+- updated CppAD to version 20180000.0
 
 
 SCIP version 5.0.2
@@ -52,6 +55,10 @@ fixed bugs:
 - don't disable LP presolving when using Xpress as LP solver
 - fixed possible NULL pointer usage in cons_pseudoboolean
 - ensured that SCIPgetDualbound() returns global dual bound instead of the dual bound of the remaining search tree
+- fixed rare division-by-zero when solving bivariate quadratic interval equation
+- use total memory for triggering memory saving mode
+- fix parsing of version number in the CMake module for Ipopt
+- fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
 
 data structures:
 - expression interpreter objects are now stored in the block memory

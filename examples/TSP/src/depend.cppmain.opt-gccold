@@ -1,8 +1,7 @@
 $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -33,7 +32,8 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -98,11 +98,12 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
  ../../src/scip/heur_completesol.h ../../src/scip/heur_crossover.h \
  ../../src/scip/heur_dins.h ../../src/scip/heur_distributiondiving.h \
- ../../src/scip/heur_dualval.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_gins.h ../../src/scip/heur_guideddiving.h \
- ../../src/scip/heur_indicator.h ../../src/scip/heur_intdiving.h \
- ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dualval.h ../../src/scip/heur_farkasdiving.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_gins.h \
+ ../../src/scip/heur_guideddiving.h ../../src/scip/heur_indicator.h \
+ ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
+ ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_locks.h \
  ../../src/scip/heur_lpface.h ../../src/scip/heur_alns.h \
  ../../src/scip/heur_multistart.h ../../src/scip/heur_mutation.h \
@@ -165,8 +166,7 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
 $(OBJDIR)/ConshdlrSubtour.o: src/ConshdlrSubtour.cpp src/ConshdlrSubtour.h \
  ../../src/objscip/objscip.h ../../src/objscip/objbranchrule.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -197,7 +197,8 @@ $(OBJDIR)/ConshdlrSubtour.o: src/ConshdlrSubtour.cpp src/ConshdlrSubtour.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -238,8 +239,7 @@ $(OBJDIR)/ConshdlrSubtour.o: src/ConshdlrSubtour.cpp src/ConshdlrSubtour.h \
 $(OBJDIR)/ProbDataTSP.o: src/ProbDataTSP.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -270,7 +270,8 @@ $(OBJDIR)/ProbDataTSP.o: src/ProbDataTSP.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -310,8 +311,7 @@ $(OBJDIR)/ProbDataTSP.o: src/ProbDataTSP.cpp ../../src/objscip/objscip.h \
 $(OBJDIR)/ReaderTSP.o: src/ReaderTSP.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -342,7 +342,8 @@ $(OBJDIR)/ReaderTSP.o: src/ReaderTSP.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -384,8 +385,7 @@ $(OBJDIR)/ReaderTSP.o: src/ReaderTSP.cpp ../../src/objscip/objscip.h \
 $(OBJDIR)/GomoryHuTree.o: src/GomoryHuTree.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -416,7 +416,8 @@ $(OBJDIR)/GomoryHuTree.o: src/GomoryHuTree.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -456,8 +457,7 @@ $(OBJDIR)/GomoryHuTree.o: src/GomoryHuTree.cpp ../../src/objscip/objscip.h \
 $(OBJDIR)/EventhdlrNewSol.o: src/EventhdlrNewSol.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -488,7 +488,8 @@ $(OBJDIR)/EventhdlrNewSol.o: src/EventhdlrNewSol.cpp ../../src/objscip/objscip.h
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -529,8 +530,7 @@ $(OBJDIR)/EventhdlrNewSol.o: src/EventhdlrNewSol.cpp ../../src/objscip/objscip.h
 $(OBJDIR)/HeurFarthestInsert.o: src/HeurFarthestInsert.cpp \
  ../../src/objscip/objscip.h ../../src/objscip/objbranchrule.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -561,7 +561,8 @@ $(OBJDIR)/HeurFarthestInsert.o: src/HeurFarthestInsert.cpp \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -601,8 +602,7 @@ $(OBJDIR)/HeurFarthestInsert.o: src/HeurFarthestInsert.cpp \
  src/HeurFarthestInsert.h src/ProbDataTSP.h
 $(OBJDIR)/HeurFrats.o: src/HeurFrats.cpp src/HeurFrats.h \
  ../../src/objscip/objheur.h ../../src/scip/scip.h ../../src/scip/def.h \
- ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
- ../../src/scip/type_message.h ../../src/scip/struct_message.h \
+ ../../src/scip/type_retcode.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
  ../../src/scip/type_clock.h ../../src/scip/type_misc.h \
  ../../src/scip/type_timing.h ../../src/scip/type_scip.h \
@@ -634,6 +634,7 @@ $(OBJDIR)/HeurFrats.o: src/HeurFrats.cpp src/HeurFrats.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/lpi/type_lpi.h \
  ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
+ ../../src/scip/pub_message.h ../../src/scip/struct_message.h \
  ../../src/scip/pub_misc.h ../../src/scip/pub_misc_select.h \
  ../../src/scip/type_misc.h ../../src/scip/pub_misc_sort.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
@@ -675,8 +676,7 @@ $(OBJDIR)/HeurFrats.o: src/HeurFrats.cpp src/HeurFrats.h \
 $(OBJDIR)/Heur2opt.o: src/Heur2opt.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -707,7 +707,8 @@ $(OBJDIR)/Heur2opt.o: src/Heur2opt.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \

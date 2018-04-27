@@ -3149,6 +3149,9 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL xneg;
 
    assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, sqrcoeff));
+   assert(!SCIPintervalIsEmpty(infinity, lincoeff));
+   assert(!SCIPintervalIsEmpty(infinity, rhs));
 
    /* special handling for lincoeff * x = rhs without 0 in lincoeff
     * rhs/lincoeff gives a good interval that we just have to intersect with xbnds
@@ -4265,14 +4268,22 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                ymin = ay * bx + sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               maxval = MAX(val, maxval);
+               if( ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0); /* the case -bx/axy in ybnds was handled aboved */
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  maxval = MAX(val, maxval);
+               }
 
                ymin = ay * bx - sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               maxval = MAX(val, maxval);
+               if( ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0); /* the case -bx/axy in ybnds was handled aboved */
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  maxval = MAX(val, maxval);
+               }
             }
          }
       }
