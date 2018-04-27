@@ -2148,10 +2148,10 @@ SCIP_RETCODE reduceCheckEdge(
 
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
                {
-                  int todo;
-                  /* stopped and no further no improvement of bound possible? */
-                  //  if( stopped && SCIPisLE(scip, minbound, *treebound) )
-                  //     break;
+                  /* stopped and no further improvement of bound possible? */
+                 if( stopped && minbound <= edgebound )
+                    break;
+
                   continue;
                }
 
@@ -2207,9 +2207,8 @@ SCIP_RETCODE reduceCheckEdge(
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
                {
-                  int todo;
-                  //  if( stopped ) )
-                  //     break;
+                  if( stopped )
+                     break;
                   continue;
                }
 
@@ -2396,7 +2395,12 @@ SCIP_RETCODE reduce_check3Tree(
 
                /* do we need to stop extension? */
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
+               {
+                  if( stopped && minbound <= (*treebound) )
+                     break;
+
                   continue;
+               }
 
                nadded_edges = extendSubtreeHead(scip, graph, redcost, curredge, currhead, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges, edgestack, extensionmark);
                dfsdepth++;
@@ -2475,7 +2479,12 @@ SCIP_RETCODE reduce_check3Tree(
                   continue;
 
                if( truncateSubtree(graph, extendedcost, -1, currtail, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
+               {
+                  if( stopped && minbound <= (*treebound) )
+                     break;
+
                   continue;
+               }
 
                nadded_edges = extendSubtreeTail(graph, redcost, curredge, currtail, dfsdepth, nadded_edges, &treecost, treecosts, nodepos, treeedges, edgestack);
                dfsdepth++;
@@ -2578,7 +2587,6 @@ int reduce_extendedEdge(
          }
       }
    }
-
 
    SCIPfreeBufferArray(scip, &eqstack);
    SCIPfreeCleanBufferArray(scip, &eqmark);

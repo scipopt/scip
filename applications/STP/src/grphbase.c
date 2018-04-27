@@ -3241,7 +3241,7 @@ SCIP_RETCODE graph_get_edgeConflicts(
    for( int e = 0; e < nedges; e += 2 )
       for( IDX* curr = g->ancestors[e]; curr != NULL; curr = curr->parent )
       {
-         assert(curr->index >= 0 && curr->index < nedgesorg / 2);
+         assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
          childcount[curr->index / 2]++;
       }
 
