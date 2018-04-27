@@ -119,14 +119,11 @@ do
             make OPT=$OPT LPS=$LPS $MAKEARGS test
          fi
 
-         # find most recently changed result file and display it
-         if test -d check/results
+         # find most recently changed result file and display it ("|| :" to ignore error)
+         RESFILE=`ls -tr check/results/*.res 2>/dev/null | tail -1` || :
+         if [ -n "$RESFILE" ] && [ -e "$RESFILE" ]
          then
-            RESFILE=`find check/results/*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
-            if [ -n "$RESFILE" ] && [ -e "$RESFILE" ]
-            then
-               cat $RESFILE >> $EXAMPLELOG
-            fi
+            cat $RESFILE >> $EXAMPLELOG
          fi
          echo | tee -a $EXAMPLELOG
       done
