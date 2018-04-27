@@ -251,6 +251,10 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
    (*success) = TRUE;
 
+#ifndef NDEBUG
+   SCIPfreeBufferArray(subproblem, &farkascoefs);
+#endif
+
    return SCIP_OKAY;
 }
 

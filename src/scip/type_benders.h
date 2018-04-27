@@ -160,8 +160,23 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition data structure
+ *  - sol             : the solution that will be checked in the subproblem. Can be NULL.
+ *  - type            : the enforcement type that called the Benders' decomposition solve.
+ *  - checkint        : should the integer subproblems be checked.
+ *  - skipsolve       : flag to return whether the current subproblem solving loop should be skipped
+ *  - result          : a result to be returned to the Benders' constraint handler if the solve is skipped. If the
+ *                      solve is not skipped, then the returned result is ignored.
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_DIDNOTRUN  : the subproblem was not solved in this iteration. Other decompositions will be checked.
+ *  - SCIP_CONSADDED  : a constraint has been added to the master problem. No other decompositions will be checked.
+ *  - SCIP_SEPARATED  : a cut has been added to the master proble. No other decompositions will be checked.
+ *  - SCIP_FEASIBLE   : feasibility of the solution is reported to SCIP. FEASIBLE can be returned if you can guarantee
+ *                      that this solution will never be optimal. Other decompositions will be checked.
+ *  - SCIP_INFEASIBLE : infeasibility of the solution is reported to SCIP. No other decompositions will be checked.
  */
-#define SCIP_DECL_BENDERSPRESUBSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
+#define SCIP_DECL_BENDERSPRESUBSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol,\
+   SCIP_BENDERSENFOTYPE type, SCIP_Bool checkint, SCIP_Bool* skipsolve,  SCIP_RESULT* result)
 
 /** the solving method for a convex Benders' decomposition subproblem. This call back is provided to solve problems
  *  for which the dual soluitons are used to generate Benders' decomposition cuts. In the classical Benders'
@@ -255,9 +270,12 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition data structure
  *  - sol             : the solution that was checked by solving the subproblems. Can be NULL.
+ *  - type            : the enforcement type that called the Benders' decomposition solve.
+ *  - checkint        : should the integer subproblems be checked.
  *  - infeasible      : indicates whether at least one subproblem is infeasible
  */
-#define SCIP_DECL_BENDERSPOSTSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol, SCIP_Bool infeasible)
+#define SCIP_DECL_BENDERSPOSTSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol,\
+   SCIP_BENDERSENFOTYPE type, SCIP_Bool checkint, SCIP_Bool infeasible)
 
 /** frees the subproblem so that it can be resolved in the next iteration. As stated above, it is not necessary to
  *  implement this callback. If the callback is implemented, the subproblems should be freed by calling

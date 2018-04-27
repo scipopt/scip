@@ -19,7 +19,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 //#define SCIP_MOREDEBUG
 #include <assert.h>
 #include <string.h>
@@ -608,13 +608,10 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
    (*valid) = FALSE;
 
-   if( benders->benderscopy != NULL && targetset->benders_copybenders )
+   if( benders->benderscopy != NULL && targetset->benders_copybenders && SCIPbendersIsActive(benders) )
    {
       SCIPsetDebugMsg(targetset, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)targetset->scip);
       SCIP_CALL( benders->benderscopy(targetset->scip, benders) );
-
-      /* if the Benders' decomposition is active, then copy is not valid. */
-      (*valid) = !SCIPbendersIsActive(benders);
 
       /* copying the Benders' cuts */
       targetbenders = SCIPsetFindBenders(targetset, SCIPbendersGetName(benders));
@@ -632,6 +629,9 @@ SCIP_RETCODE SCIPbendersCopyInclude(
          SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], targetset) );
       }
    }
+
+   /* if the Benders' decomposition is active, then copy is not valid. */
+   (*valid) = !SCIPbendersIsActive(benders);
 
    return SCIP_OKAY;
 }
@@ -2026,6 +2026,7 @@ SCIP_RETCODE generateBendersCuts(
    int nbenderscuts;
    int nsubproblems;
    int subproblemcount;
+   SCIP_Longint addedcuts = 0;
    int i;
    int j;
    SCIP_Bool onlyconvexcheck;
@@ -2048,10 +2049,8 @@ SCIP_RETCODE generateBendersCuts(
    onlyconvexcheck = onlyCheckSubproblemConvexRelax(benders);
 
    /* It is only possible to add cuts to the problem if it has not already been solved */
-   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED )
+   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED && type != SCIP_BENDERSENFOTYPE_CHECK )
    {
-      SCIP_Longint addedcuts = 0;
-
       /* This is done in two loops. The first is by subproblem and the second is by cut type. */
       //for( i = 0; i < nsubproblems; i++ )
       i = benders->firstchecked;
@@ -2109,12 +2108,12 @@ SCIP_RETCODE generateBendersCuts(
          if( i >= nsubproblems )
             i = 0;
       }
-
-      /* if no cuts were added, then the number of solve loops is increased */
-      if( addedcuts == 0 && SCIPbendersGetNConvexSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
-         && checkint && !onlyconvexcheck )
-         (*nsolveloops) = 2;
    }
+
+   /* if no cuts were added, then the number of solve loops is increased */
+   if( addedcuts == 0 && SCIPbendersGetNConvexSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
+      && checkint && !onlyconvexcheck )
+      (*nsolveloops) = 2;
 
    return SCIP_OKAY;
 }
@@ -2197,17 +2196,42 @@ SCIP_RETCODE SCIPbendersExec(
    /* setting the first subproblem to check in this round of subproblem checks */
    benders->firstchecked = benders->lastchecked;
 
-   /* allocating memory for the infeasible subproblem array */
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &subprobsolved, nsubproblems) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &subisinfeas, nsubproblems) );
-
    /* sets the stored objective function values of the subproblems to infinity */
    resetSubproblemObjectiveValue(benders);
 
-   if( benders->benderspresubsolve != NULL )
-      SCIP_CALL( benders->benderspresubsolve(set->scip, benders) );
-
    *result = SCIP_DIDNOTRUN;
+
+   if( benders->benderspresubsolve != NULL )
+   {
+      SCIP_Bool skipsolve;
+
+      skipsolve = FALSE;
+      SCIP_CALL( benders->benderspresubsolve(set->scip, benders, sol, type, checkint, &skipsolve, result) );
+
+      /* evaluate result */
+      if( (*result) != SCIP_DIDNOTRUN
+         && (*result) != SCIP_FEASIBLE
+         && (*result) != SCIP_INFEASIBLE
+         && (*result) != SCIP_CONSADDED
+         && (*result) != SCIP_SEPARATED )
+      {
+         SCIPerrorMessage("the user-defined pre subproblem solving method for the Benders' decomposition <%s> returned "
+            "invalid result <%d>\n", benders->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+
+      /* if the solve must be skipped, then the solving loop is exited and the user defined result is returned */
+      if( skipsolve )
+      {
+         SCIPsetDebugMsg(set, "skipping the subproblem solving for Benders' decomposition <%s>. "
+            "returning result <%d>\n", benders->name, *result);
+         return SCIP_OKAY;
+      }
+   }
+
+   /* allocating memory for the infeasible subproblem array */
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &subprobsolved, nsubproblems) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &subisinfeas, nsubproblems) );
 
    /* by default the number of solve loops is 1. This is the case if all subproblems are LP or the user has defined a
     * benderssolvesub callback. If there is a subproblem that is not an LP, then 2 solve loops are performed. The first
@@ -2314,7 +2338,7 @@ TERMINATE:
     * with the solved subproblems and the master problem */
    if( benders->benderspostsolve != NULL )
    {
-      SCIP_CALL( benders->benderspostsolve(set->scip, benders, sol, (*infeasible)) );
+      SCIP_CALL( benders->benderspostsolve(set->scip, benders, sol, type, checkint, (*infeasible)) );
    }
 
    /* freeing the subproblems after the cuts are generated */

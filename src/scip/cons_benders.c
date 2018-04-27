@@ -214,7 +214,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
       /* The decompositions are checked until one is found that is not feasible. Not being feasible could mean that
        * infeasibility of the original problem has been proven or a constraint has been added. If the result
        * SCIP_DIDNOTRUN is returned, then the next decomposition is checked */
-      if( (*result) != SCIP_FEASIBLE )
+      if( (*result) != SCIP_FEASIBLE && (*result) != SCIP_DIDNOTRUN )
          break;
    }
 
