@@ -291,6 +291,13 @@ SCIP_RETCODE runBrachistochrone(
    /* Set larger constraint violation tolerence to speed up the solving process */
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", 1e-4) );
 
+   /* if no NLP solver, then stop at first solution */
+   if( SCIPgetNNlpis(scip) == 0 )
+   {
+      SCIPwarningMessage(scip, "No NLP solver available. There is little hope to solve this problem. Stopping after first solution.\n");
+      SCIP_CALL( SCIPsetIntParam(scip, "limits/solutions", 1) );
+   }
+
    SCIP_CALL( setupProblem(scip, n, coord) );
 
    SCIPinfoMessage(scip, NULL, "Original problem:\n");
