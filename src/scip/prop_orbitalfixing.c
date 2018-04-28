@@ -81,6 +81,7 @@ struct SCIP_PropData
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
    int                   symcomptiming;      /**< timing of symmetry computation for orbital fixing
                                               *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
+   int                   lastrestart;        /**< last restart for which symmetries have been computed */
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
@@ -631,6 +632,7 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
    propdata->permvars = NULL;
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
+   propdata->lastrestart = 0;
 
    return SCIP_OKAY;
 }
@@ -823,6 +825,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->permvars = NULL;
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
+   propdata->lastrestart = 0;
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, propExecOrbitalfixing, propdata) );
