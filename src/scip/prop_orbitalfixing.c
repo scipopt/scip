@@ -154,10 +154,33 @@ SCIP_RETCODE getSymmetries(
    assert( scip != NULL );
    assert( propdata != NULL );
 
-   if ( propdata->nperms < 0 )
+   if ( propdata->nperms < 0 || SCIPgetNRuns(scip) > propdata->lastrestart )
    {
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, &(propdata->npermvars),
-            &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
+      /* recompute symmetries after a restart */
+      if ( SCIPgetNRuns(scip) > propdata->lastrestart )
+      {
+         /* reset symmetry information */
+         if ( propdata->permvarmap != NULL )
+         {
+            SCIPhashmapFree(&propdata->permvarmap);
+         }
+         propdata->nperms = -1;
+         propdata->perms = NULL;
+         propdata->permvars = NULL;
+         propdata->npermvars = -1;
+         propdata->permvarmap = NULL;
+
+         /* recompute symmetries and update restart counter */
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, &(propdata->npermvars),
+               &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL, TRUE) );
+
+         propdata->lastrestart = SCIPgetNRuns(scip);
+      }
+      else
+      {
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, &(propdata->npermvars),
+               &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL, FALSE) );
+      }
 
       if ( propdata->nperms == 0 )
          return SCIP_OKAY;
@@ -746,11 +769,6 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
 
    /* do nothing if we are in a probing node */
    if ( SCIPinProbing(scip) )
-      return SCIP_OKAY;
-
-   /* do not run after a restart */
-   /* @todo recompute symmetries after a restart */
-   if ( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
    /* get data */
