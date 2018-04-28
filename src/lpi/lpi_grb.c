@@ -3884,7 +3884,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->solstat == GRB_OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
