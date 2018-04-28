@@ -2378,14 +2378,14 @@ SCIP_RETCODE reduce_deleteConflictEdges(
 {
    int* edgemark;
    const int nedges = g->edges;
+   const int nancestors = MAX(g->edges, g->orgedges) / 2;
 
    assert(scip != NULL && g != NULL);
    assert(g->ancestors != NULL);
-   assert(nedges >= g->orgedges);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, nedges / 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, nancestors) );
 
-   for( int e = 0; e < nedges / 2; e++ )
+   for( int e = 0; e < nancestors; e++ )
       edgemark[e] = FALSE;
 
    for( int e = 0; e < nedges; e += 2 )
