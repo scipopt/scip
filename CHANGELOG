@@ -23,6 +23,7 @@ deleted and modified API functions:
   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
 - removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
   of other components anymore
+- additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
