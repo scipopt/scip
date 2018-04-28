@@ -50,7 +50,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of group size (or NULL) */
-   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
+   SCIP_Bool*            binvaraffected,     /**< pointer to store whether binary variables are affected */
+   SCIP_Bool             recompute           /**< Have symmetries already been computed? */
    );
 
 /** return objective coefficients of permuted variables at time of symmetry computation */

@@ -1610,7 +1610,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of group size (or NULL) */
-   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
+   SCIP_Bool*            binvaraffected,     /**< pointer to store whether binary variables are affected */
+   SCIP_Bool             recompute           /**< Have symmetries already been computed? */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -1634,6 +1635,29 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
+
+   /* free symmetry information if we recompute symmetries */
+   if ( recompute )
+   {
+      int i;
+
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
+      for (i = 0; i < presoldata->nperms; ++i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
+
+      /* reset settings */
+      presoldata->npermvars = 0;
+      presoldata->nperms = 0;
+      presoldata->nmaxperms = 0;
+      presoldata->norbitvars = 0;
+      presoldata->binvaraffected = FALSE;
+      presoldata->computedsym = FALSE;
+      presoldata->successful = FALSE;
+   }
 
    /* if not already done before, compute symmetries */
    if ( ! presoldata->computedsym )
