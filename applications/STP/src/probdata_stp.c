@@ -2168,6 +2168,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    graph->orgsource = graph->source;
 
    probdata->norgedges = graph->edges;
+   probdata->stp_type = graph->stp_type;
 
    /* presolving */
    SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims, TRUE) );
@@ -2185,7 +2186,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 #endif
 
    probdata->graph = graph;
-   probdata->stp_type = graph->stp_type;
 
 #ifndef WITH_UG
    if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS) )

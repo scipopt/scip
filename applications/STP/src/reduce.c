@@ -1662,6 +1662,11 @@ SCIP_RETCODE redLoopStp(
    }
    while( rerun && !SCIPisStopped(scip) ); /* extensive reduction loop*/
 
+   if( fullreduce )
+   {
+      SCIP_CALL( reduce_deleteConflictEdges(scip, g) );
+   }
+
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
 
@@ -1763,6 +1768,8 @@ SCIP_RETCODE reduce(
       }
    }
    SCIPdebugMessage("offset : %f \n", *offset);
+
+   SCIP_CALL( level0(scip, (*graph)) );
 
    assert(graph_valid(*graph));
 

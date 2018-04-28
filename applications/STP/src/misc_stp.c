@@ -129,22 +129,25 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
       int* hasharr;
       int i;
       int nelems = 0;
-      int maxlength;
+      const SCIP_Bool ignoreconflicts = (SCIPprobdataGetType(scip) == STP_SPG);
 
-      /* todo fix this hack; don't check at all, but just add */
-      maxlength = SCIPprobdataGetNorgEdges(scip);
-
-      assert(maxlength > 0);
-
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, maxlength) );
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &pointer, maxlength) );
-      while( curr1 != NULL )
+      if( !ignoreconflicts )
       {
-         i = curr1->index;
-         assert(i < maxlength && nelems < maxlength);
-         pointer[nelems++] = i;
-         hasharr[i] = 1;
-         curr1 = curr1->parent;
+         /* todo fix this hack; don't check at all, but just add */
+         const int maxlength = SCIPprobdataGetNorgEdges(scip);
+
+         assert(maxlength > 0);
+
+         SCIP_CALL(SCIPallocCleanBufferArray(scip, &hasharr, maxlength));
+         SCIP_CALL(SCIPallocCleanBufferArray(scip, &pointer, maxlength));
+         while( curr1 != NULL )
+         {
+            i = curr1->index;
+            assert(i < maxlength && nelems < maxlength);
+            pointer[nelems++] = i;
+            hasharr[i] = 1;
+            curr1 = curr1->parent;
+         }
       }
 
       curr1 = *node1;
@@ -152,7 +155,7 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
       {
          curr2idx = curr2->index;
 
-         if( hasharr[curr2idx] == 0 )
+         if( ignoreconflicts || hasharr[curr2idx] == 0 )
          {
             SCIP_CALL( SCIPallocBlockMemory(scip, &new) );
             new->index = curr2idx;
@@ -168,13 +171,16 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
          curr2 = curr2->parent;
       }
 
-      for( i = 0; i < nelems; i++ )
+      if( !ignoreconflicts )
       {
-         hasharr[pointer[i]] = 0;
-         pointer[i] = 0;
+         for( i = 0; i < nelems; i++ )
+         {
+            hasharr[pointer[i]] = 0;
+            pointer[i] = 0;
+         }
+         SCIPfreeCleanBufferArray(scip, &pointer);
+         SCIPfreeCleanBufferArray(scip, &hasharr);
       }
-      SCIPfreeCleanBufferArray(scip, &pointer);
-      SCIPfreeCleanBufferArray(scip, &hasharr);
    }
    else
    {
