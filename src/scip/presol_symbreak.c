@@ -996,7 +996,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       /* get symmetries */
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0,
             &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
-            &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
+            &(presoldata->log10groupsize), &(presoldata->binvaraffected), FALSE) );
 
       presoldata->computedsymmetry = TRUE;
 
