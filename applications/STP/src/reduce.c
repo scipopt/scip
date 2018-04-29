@@ -1657,7 +1657,15 @@ SCIP_RETCODE redLoopStp(
          SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &extendedelims, NULL));
 
          if( extendedelims > STP_RED_EXFACTOR * reductbound )
+         {
+            le = TRUE;
+            sd = TRUE;
+            sdc = TRUE;
+            da = TRUE;
+            bd3 = nodereplacing;
+            nvsl = nodereplacing;
             rerun = TRUE;
+         }
       }
    }
    while( rerun && !SCIPisStopped(scip) ); /* extensive reduction loop*/
