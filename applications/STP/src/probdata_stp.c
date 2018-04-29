@@ -2196,6 +2196,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 #endif
 
+   SCIP_CALL(SCIPsetIntParam(scip, "separating/clique/freq", -1));
+
    if( mw )
    {
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
