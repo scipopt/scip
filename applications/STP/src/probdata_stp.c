@@ -2349,11 +2349,11 @@ SCIP_RETCODE SCIPprobdataCreate(
       {
          if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
          {
-            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, -1.0, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, -1.0, NULL) );
          }
       }
    }
@@ -3724,10 +3724,10 @@ void initReceivedSubproblem(
    {
       if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
       {
-         //SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );}
+         //SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, -1.0, NULL) );}
 }else
       {
-         SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, FALSE, TRUE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
+         SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, FALSE, TRUE, NULL, NULL, NULL, NULL, graph->source, -1.0, NULL) );
       }
    }
 

@@ -1605,7 +1605,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
-   int                   nruns,              /**< number of dual ascent runs */
+   SCIP_Real             damaxdeviation,     /**< maximum deviation for dual-ascent ( -1.0 for default) */
    STP_Bool* RESTRICT    nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
 {
@@ -1626,7 +1626,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    STP_Bool* RESTRICT mynodearrchar = NULL;
    SCIP_Real dualobj;
    SCIP_Real currscore;
-   const SCIP_Real maxdeviation = DEFAULT_DAMAXDEVIATION;
+   const SCIP_Real maxdeviation = (damaxdeviation > 0.0) ? damaxdeviation : DEFAULT_DAMAXDEVIATION;
    const int nnodes = g->knots;
    const int nterms = g->terms;
    const int nedges = g->edges;
@@ -1639,10 +1639,11 @@ SCIP_RETCODE SCIPStpDualAscent(
    assert(addconss || !addcuts);
    assert(g != NULL);
    assert(scip != NULL);
-   assert(nruns >= 0);
    assert(objval != NULL);
    assert(Is_term(g->term[root]));
    assert(maxdeviation >= DAMAXDEVIATION_LOWER && maxdeviation <= DAMAXDEVIATION_UPPER);
+   assert(damaxdeviation == -1.0 || damaxdeviation > 0.0);
+
 
    if( nnodes == 1 )
       return SCIP_OKAY;
