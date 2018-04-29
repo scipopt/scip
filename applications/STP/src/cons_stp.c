@@ -95,6 +95,8 @@
 #define DEFAULT_FLOWSEP        TRUE  /**< Try Flow-Cuts */
 
 #define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
+#define DAMAXDEVIATION_LOWER 0.01  /**< lower bound for max deviation for dual ascent */
+#define DAMAXDEVIATION_UPPER 0.5  /**< upper bound for max deviation for dual ascent */
 
 
 /* *
@@ -1610,8 +1612,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_CONSHDLR* conshdlr = NULL;
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
-   SCIP_Real dualobj;
-   SCIP_Real currscore;
    SCIP_Real* RESTRICT rescap;
    GNODE** gnodearr;
    int* RESTRICT edgearr;
@@ -1624,6 +1624,9 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT gmark;
    int* RESTRICT active;
    STP_Bool* RESTRICT mynodearrchar = NULL;
+   SCIP_Real dualobj;
+   SCIP_Real currscore;
+   const SCIP_Real maxdeviation = DEFAULT_DAMAXDEVIATION;
    const int nnodes = g->knots;
    const int nterms = g->terms;
    const int nedges = g->edges;
@@ -1634,12 +1637,12 @@ SCIP_RETCODE SCIPStpDualAscent(
 
    /* should currently not  be activated */
    assert(addconss || !addcuts);
-
    assert(g != NULL);
    assert(scip != NULL);
    assert(nruns >= 0);
    assert(objval != NULL);
    assert(Is_term(g->term[root]));
+   assert(maxdeviation >= DAMAXDEVIATION_LOWER && maxdeviation <= DAMAXDEVIATION_UPPER);
 
    if( nnodes == 1 )
       return SCIP_OKAY;
@@ -1926,7 +1929,7 @@ SCIP_RETCODE SCIPStpDualAscent(
          SCIPdebugMessage("DA: currscore %f prio1 %f prio2 %f \n", currscore, prio1, prio2);
 
          /* augmentation criteria met? */
-         if( ((currscore - prio1) / prio1) <= DEFAULT_DAMAXDEVIATION || currscore <= prio2 )
+         if( ((currscore - prio1) / prio1) <= maxdeviation || currscore <= prio2 )
          {
             SCIP_CONS* cons = NULL;
             SCIP_ROW* row = NULL;

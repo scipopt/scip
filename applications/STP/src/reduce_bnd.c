@@ -336,6 +336,55 @@ int reduceAndExtendSubtree(
 }
 #endif
 
+/** remove latest edge from subtree and returns new tree cost */
+static
+SCIP_Real shortenSubtree(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   const int*            treeedges,          /**< edges of tree */
+   SCIP_Real             treecostold,        /**< old tree cost */
+   SCIP_Real             treecostoffset,     /**< tree cost offset */
+   int                   dfsdepth,           /**< DFS depth */
+   int                   lastnode,           /**< last node */
+   int*                  nodepos,            /**< array to mark node position*/
+   int*                  ancestormark,       /**< ancestor mark array */
+   unsigned int*         nstallrounds        /**< rounds since latest update */
+)
+{
+   const int lastedge = treeedges[dfsdepth - 1];
+
+   assert(dfsdepth >= 1 && lastnode >= 0);
+   assert(SCIPisGE(scip, treecostold, 0.0) && treecostoffset >= 0.0);
+
+   nodepos[lastnode] = 0;
+   unmarkAncestors(graph, lastedge, ancestormark);
+
+   /* recompute tree cost? */
+   if( (*nstallrounds)++ >= 9 )
+   {
+      SCIP_Real treecost = treecostoffset;
+
+      *nstallrounds = 0;
+
+      for( int i = 0; i < dfsdepth - 1; i++ )
+         treecost += redcost[treeedges[i]];
+
+#if 0 // todo deleteeme
+      if( !SCIPisEQ(scip, treecost, treecostold - redcost[lastedge]) )
+      {
+         printf("%.15f %.15f \n", treecost, treecostold - redcost[lastedge]);
+         assert(0);
+         exit(1);
+      }
+#endif
+
+      assert(SCIPisEQ(scip, treecost, treecostold - redcost[lastedge]));
+   }
+
+   return (treecostold - redcost[lastedge]);
+}
+
 /** extend subtree and return new nadded_edges */
 static
 int extendSubtreeHead(
@@ -2234,8 +2283,10 @@ SCIP_RETCODE reduceCheckEdge(
       /* check whether to extend from head */
       if( !Is_term(graph->term[head]) && graph->grad[head] <= maxgrad )
       {
+         const SCIP_Real treecostoffset = redcost[edge] + pathdist[tail];
          SCIP_Real minbound = FARAWAY;
-         SCIP_Real treecost = redcost[edge] + pathdist[tail]; // todo recompute from time to time!
+         SCIP_Real treecost = treecostoffset;
+         unsigned int rounds = 0;
          int dfsdepth = 0;
          int nadded_edges = 0;
          SCIP_Bool stopped = FALSE;
@@ -2256,12 +2307,12 @@ SCIP_RETCODE reduceCheckEdge(
             /*  subtree already processed? */
             if( nodepos[currhead] )
             {
-               nodepos[currhead] = 0;
-               treecost -= redcost[curredge];
-               unmarkAncestors(graph, curredge, ancestormark);
+               assert(dfsdepth >= 1 && treeedges[dfsdepth - 1] == curredge);
+
+               treecost = shortenSubtree(scip, graph, redcost, treeedges, treecost, treecostoffset, dfsdepth,
+                     currhead, nodepos, ancestormark, &rounds);
 
                dfsdepth--;
-               assert(dfsdepth >= 0 && treeedges[dfsdepth] == curredge);
             }
             else
             {
@@ -2295,10 +2346,12 @@ SCIP_RETCODE reduceCheckEdge(
       /* check whether to extend from tail */
       if( !(*deletable) && !Is_term(graph->term[tail]) && graph->grad[tail] <= maxgrad )
       {
+         const SCIP_Real treecostoffset = edgebound - pathdist[tail];
          SCIP_Real minbound = FARAWAY;
-         SCIP_Real treecost = edgebound - pathdist[tail]; // todo recompute from time to time!
+         SCIP_Real treecost = treecostoffset;
          int dfsdepth = 0;
          int nadded_edges = 0;
+         unsigned int rounds = 0;
          SCIP_Bool stopped = FALSE;
 
          nodepos[head] = nnodes + 1;
@@ -2317,12 +2370,12 @@ SCIP_RETCODE reduceCheckEdge(
             /*  subtree already processed? */
             if( nodepos[currtail] )
             {
-               nodepos[currtail] = 0;
-               treecost -= redcost[curredge];
-               unmarkAncestors(graph, curredge, ancestormark);
+               assert(dfsdepth >= 1 && treeedges[dfsdepth - 1] == curredge);
+
+               treecost = shortenSubtree(scip, graph, redcost, treeedges, treecost, treecostoffset, dfsdepth,
+                     currtail, nodepos, ancestormark, &rounds);
 
                dfsdepth--;
-               assert(dfsdepth >= 0 && treeedges[dfsdepth] == curredge);
             }
             else
             {
@@ -2497,7 +2550,7 @@ SCIP_RETCODE reduce_check3Tree(
       for( int i = 0; i < 2 && !(*ruleout); i++ )
       {
          SCIP_Real minbound = FARAWAY;
-         SCIP_Real treecost = basecost; // todo recompute from time to time by using treecosts
+         SCIP_Real treecost = basecost;
          const int startedge = outedges[i];
          const int costartedge = outedges[(i + 1) % 2];
          const int startnode = graph->head[startedge];
@@ -2505,6 +2558,7 @@ SCIP_RETCODE reduce_check3Tree(
          int dfsdepth = 0;
          int nadded_edges = 0;
          SCIP_Bool stopped = FALSE;
+         unsigned int rounds = 0;
 
          /* try to extend the tree from startnode */
 
@@ -2549,12 +2603,12 @@ SCIP_RETCODE reduce_check3Tree(
             /*  subtree already processed? */
             if( nodepos[currhead] )
             {
-               nodepos[currhead] = 0;
-               treecost -= redcost[curredge];
-               unmarkAncestors(graph, curredge, ancestormark);
-               dfsdepth--;
+               assert(dfsdepth >= 1 && treeedges[dfsdepth - 1] == curredge);
 
-               assert(dfsdepth >= 0 && treeedges[dfsdepth] == curredge);
+               treecost = shortenSubtree(scip, graph, redcost, treeedges, treecost, basecost, dfsdepth,
+                     currhead, nodepos, ancestormark, &rounds);
+
+               dfsdepth--;
             }
             else
             {
@@ -2599,17 +2653,22 @@ SCIP_RETCODE reduce_check3Tree(
 #endif
 
          finalizeSubtree(graph, graph->head, treeedges, dfsdepth, stopped, minbound, treebound, ruleout, nodepos, ancestormark);
-      } /* main loop */
+      } /* main loop for outgoing edges */
+
+#ifndef NDEBUG
+      assert(*treebound >= orgtreebound);
+#endif
 
       if( !(*ruleout) && !Is_term(graph->term[innode]) && graph->grad[innode] <= maxgrad )
       {
          /* move down the incoming edge */
-
+         const SCIP_Real treecostoffset = *treebound - pathdist[innode];
          SCIP_Real minbound = FARAWAY;
-         SCIP_Real treecost = *treebound - pathdist[innode];
+         SCIP_Real treecost = treecostoffset;
          int dfsdepth = 0;
          int nadded_edges = 0;
          SCIP_Bool stopped = FALSE;
+         unsigned int rounds = 0;
 
          assert(treecost >= 0.0);
          assert(nodepos[innode] == nnodes + 2);
@@ -2650,12 +2709,12 @@ SCIP_RETCODE reduce_check3Tree(
             /*  subtree already processed? */
             if( nodepos[currtail] )
             {
-               nodepos[currtail] = 0;
-               treecost -= redcost[curredge];
-               unmarkAncestors(graph, curredge, ancestormark);
-               dfsdepth--;
+               assert(dfsdepth >= 1 && treeedges[dfsdepth - 1] == curredge);
 
-               assert(dfsdepth >= 0 && treeedges[dfsdepth] == curredge);
+               treecost = shortenSubtree(scip, graph, redcost, treeedges, treecost, treecostoffset, dfsdepth,
+                     currtail, nodepos, ancestormark, &rounds);
+
+               dfsdepth--;
             }
             else
             {
@@ -2828,6 +2887,7 @@ SCIP_RETCODE reduce_da(
    SCIP_Real lpobjval;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
+   SCIP_Real damaxdeviation;
    SCIP_Bool success;
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
    const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
@@ -2952,6 +3012,9 @@ SCIP_RETCODE reduce_da(
     * 2. step: repeatedly compute lower bound and reduced costs and try to eliminate
     */
 
+
+   damaxdeviation = -1.0;
+
    /* if not RPC, select roots for dual ascent */
    if( !rpc && !directed )
    {
@@ -2959,6 +3022,9 @@ SCIP_RETCODE reduce_da(
 
       nruns = MIN(graph->terms, DEFAULT_DARUNS);
       SCIP_CALL( orderDaRoots(scip, graph, terms, graph->terms, (prevrounds > 0), randnumgen) );
+
+      if( prevrounds > 0 )
+         damaxdeviation = SCIPrandomGetReal(randnumgen, 0.15, 0.3);
    }
    else
    {
