@@ -13,24 +13,31 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_mps.h
+/**@file   reader_sto.h
  * @ingroup FILEREADERS
- * @brief  (extended) MPS file reader
- * @author Thorsten Koch
- * @author Tobias Achterberg
+ * @brief  STO file reader - the stochastic information of an instance in SMPS format
+ * @author Stephen J. Maher
  *
- * This reader allows to parse and write MPS files with linear and quadratic constraints and objective,
- * special ordered sets of type 1 and 2, indicators on linear constraints, and semicontinuous variables.
- * For writing, linear (general and specialized), indicator, quadratic, second order cone, and
- * special ordered set constraints are supported.
+ * This is a reader for the stochastic information of a stochastic programming instance in SMPS format.
+ * The three files that must be read are:
+ * - .cor
+ * - .tim
+ * - .sto
  *
- * See http://en.wikipedia.org/wiki/MPS_%28format%29 for a description.
+ * Alternatively, it is possible to create a .smps file with the relative path to the .cor, .tim and .sto files.
+ * A file reader is available for the .smps file.
+ *
+ * Details regarding the SMPS file format can be found at:
+ * Birge, J. R.; Dempster, M. A.; Gassmann, H. I.; Gunn, E.; King, A. J. & Wallace, S. W.
+ * A standard input format for multiperiod stochastic linear programs
+ * IIASA, Laxenburg, Austria, WP-87-118, 1987
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_READER_MPS_H__
-#define __SCIP_READER_MPS_H__
+#ifndef __SCIP_READER_STO_H__
+#define __SCIP_READER_STO_H__
 
 
 #include "scip/scip.h"
@@ -39,12 +46,12 @@
 extern "C" {
 #endif
 
-/** includes the mps file reader into SCIP
+/** includes the sto file reader into SCIP
  *
  *  @ingroup FileReaderIncludes
  */
 EXTERN
-SCIP_RETCODE SCIPincludeReaderMps(
+SCIP_RETCODE SCIPincludeReaderSto(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -53,26 +60,18 @@ SCIP_RETCODE SCIPincludeReaderMps(
  * @{
  */
 
-/** reads problem from file */
+/** reads the stochastic information for a stochastic program that is in SMPS format */
 EXTERN
-SCIP_RETCODE SCIPreadMps(
+SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-   SCIP_RESULT*          result,             /**< pointer to store the result of the file reading call */
-   const char***         varnames,           /**< storage for the variable names, or NULL */
-   const char***         consnames,          /**< storage for the constraint names, or NULL */
-   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
-   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
-   int*                  nvarnames,          /**< the number of stored variable names, or NULL */
-   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
 
 /** writes problem to file */
 EXTERN
-SCIP_RETCODE SCIPwriteMps(
+SCIP_RETCODE SCIPwriteSto(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */
    const char*           name,               /**< problem name */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
@@ -86,11 +85,15 @@ SCIP_RETCODE SCIPwriteMps(
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */
    int                   ncontvars,          /**< number of continuous variables */
-   SCIP_VAR**            fixedvars,          /**< array with fixed and aggregated variables */
-   int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
+   );
+
+/** returns the total number of scenarios added to the problem */
+EXTERN
+int SCIPstoGetNScenarios(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* @} */
