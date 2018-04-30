@@ -3013,7 +3013,7 @@ SCIP_RETCODE reduce_da(
       SCIP_CALL( orderDaRoots(scip, graph, terms, graph->terms, (prevrounds > 0), randnumgen) );
 
       if( prevrounds > 0 )
-         damaxdeviation = SCIPrandomGetReal(randnumgen, 0.15, 0.3);
+         damaxdeviation = SCIPrandomGetReal(randnumgen, 0.1, 0.3);
    }
    else
    {

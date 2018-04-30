@@ -59,7 +59,7 @@
 #define SLACKPRUNE_MAXSTALLPROPORTION   0.5       /**< maximum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define BREAKONERROR FALSE
 #define MAXNTERMINALS 500
-#define MAXNEDGES     25000
+#define MAXNEDGES     10000
 #define SLACK_MAXTOTNEDGES 99000
 
 #ifdef WITH_UG
