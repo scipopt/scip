@@ -396,7 +396,7 @@ void setFastmipClpParameters(
    // lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x2000000);
 
    // set default options
-   lpi->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x1000000);
+   lpi->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x2000000);
 
    // Do not change moreSpecialOptions().
 
@@ -419,8 +419,7 @@ void unsetFastmipClpParameters(
    lpi->clp->setPerturbation(100);
 
    // set default special options (see SCIPlpiCreate())
-   // lpi->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x2000000);
-   lpi->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x1000000);
+   lpi->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x2000000);
 
    // set default more special options
    lpi->clp->setMoreSpecialOptions(8192);
@@ -584,14 +583,15 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->clp->scaling(3);
 
    // set default special options (similar to Cbc):
+   //        32 - Create ray even in BAB
    //        64 - good idea to be fast
    //       128 - Assumes user will not create tiny or duplicate elements.
    //      1024 - In branch and bound.
    //     32768 - Just switches off some messages, e.g., empty problem.
    //    262144 - extra copy of scaled matrix
+   //   2097152 - ray even if >2 pivots AND if problem is "crunched"
    // 0x2000000 - is in a different branch and bound
-   //(*lpi)->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x2000000);
-   (*lpi)->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x1000000);
+   (*lpi)->clp->setSpecialOptions(32|64|128|1024|32768|262144|2097152|0x2000000);
 
    /* More special options:
     *        1 bit - if presolve says infeasible in ClpSolve return
@@ -2065,8 +2065,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    // lpi->clp->setSpecialOptions(64|128|512|1024|2048|4096|32768|262144|0x02000000);
    // use default settings:
-   // lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x2000000);
-   lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x1000000);
+   lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x2000000);
 
    /* 'startfinish' options for strong branching:
     *  1 - do not delete work areas and factorization at end
@@ -2191,8 +2190,7 @@ SCIP_RETCODE lpiStrongbranches(
 
    // lpi->clp->setSpecialOptions(64|128|512|1024|2048|4096|32768|262144|0x02000000);
    // use default settings:
-   // lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x2000000);
-   lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x1000000);
+   lpi->clp->setSpecialOptions(32|64|128|512|1024|2048|4096|32768|262144|2097152|0x2000000);
 
    /* 'startfinish' options for strong branching:
     *  1 - do not delete work areas and factorization at end
