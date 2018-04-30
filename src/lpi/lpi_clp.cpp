@@ -1812,7 +1812,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    invalidateSolution(lpi);
 
-   // intialize factorization freq. depending on model size - applied only once
+   // initialize factorization freq. depending on model size - applied only once
    setFactorizationFrequency(lpi);
 
    // if we want to construct a new basis
@@ -2484,7 +2484,7 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   /* Should return ClpModel::isProvenPrimalInfeasible() (which returns status == 1), but the
+   /* Should return ClpModel::isProvenPrimalInfeasible() (which returns "status == 1"), but the
     * following is correct (Clp will not be changed). The secondaryStatus is 1 if the dual simplex
     * detects an objective limit exceedence. The primal simplex has no such detection (will never
     * stop with objective limit exceedence). Hence we are infeasible only if status == 1 and we have
@@ -2537,8 +2537,8 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   /* Clp usually has a dual ray whenever it concludes "primal infeasible", (but is not necessarily dual feasible),
-    * see ClpModel::infeasibilityRay */
+   /* Clp usually has a dual ray whenever it concludes "primal infeasible" (but is not necessarily dual feasible),
+    * see ClpModel::infeasibilityRay. Additionally check whether ray exists. */
    if ( lpi->clp->rayExists() )
    {
       if ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 )
@@ -2861,7 +2861,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
       assert( 0.0 < minabsvalue && minabsvalue <= maxabsvalue );
 
       /* We try to make the maximum absolute value to be 1.0, but if the minimal absolute value would be less than the
-       * feasibility tolerance, we adjust the factor such that it will be equal to the feasibility tolerance */
+       * feasibility tolerance, we adjust the factor such that it will be equal to the feasibility tolerance. */
       double scalingfactor = maxabsvalue;
       if ( minabsvalue / scalingfactor < feastol )
          scalingfactor = minabsvalue / feastol;
@@ -3067,7 +3067,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch ( status )
       {
       case SCIP_BASESTAT_ZERO:
-	 if (lhs[i] <= -COIN_DBL_MAX && rhs[i] >= COIN_DBL_MAX)
+	 if ( lhs[i] <= -COIN_DBL_MAX && rhs[i] >= COIN_DBL_MAX )
 	    clp->setRowStatus(i, ClpSimplex::isFree);
 	 else
 	    clp->setRowStatus(i, ClpSimplex::superBasic);
@@ -3104,7 +3104,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch ( status )
       {
       case SCIP_BASESTAT_ZERO:
-	 if (lb[j] <= -COIN_DBL_MAX && ub[j] >= COIN_DBL_MAX)
+	 if ( lb[j] <= -COIN_DBL_MAX && ub[j] >= COIN_DBL_MAX )
 	    clp->setColumnStatus(j, ClpSimplex::isFree);
 	 else
 	    clp->setColumnStatus(j, ClpSimplex::superBasic);
