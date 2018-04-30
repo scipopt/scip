@@ -59,7 +59,8 @@
 #define SLACKPRUNE_MAXSTALLPROPORTION   0.5       /**< maximum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define BREAKONERROR FALSE
 #define MAXNTERMINALS 500
-#define MAXNEDGES     10000
+#define MAXNEDGES     25000
+#define SLACK_MAXTOTNEDGES 99000
 
 #ifdef WITH_UG
 extern
@@ -446,7 +447,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    }
    else
    {
-      SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE, (graph->edges < SLACK_MAXTOTNEDGES)) );
    }
 
    /* solution found by slackprune heuristic? */
@@ -534,7 +535,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    GRAPH*                g,                  /**< graph data structure */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
    SCIP_Bool*            success,            /**< feasible solution found? */
-   SCIP_Bool             reducegraph         /**< try to reduce graph initially? */
+   SCIP_Bool             reducegraph,        /**< try to reduce graph initially? */
+   SCIP_Bool             fullreduce          /**< use full reduction techniques? */
    )
 {
    GRAPH*    prunegraph;
@@ -677,7 +679,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    if( reducegraph )
    {
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE, fullreduce) );
    }
 
    /* get number of remaining vertices, edges and terminals */
@@ -750,7 +752,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE, fullreduce) );
 
       /* graph vanished? */
       if( prunegraph->grad[prunegraph->source] == 0 )

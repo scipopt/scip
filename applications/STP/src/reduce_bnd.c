@@ -61,8 +61,6 @@
 #define EXEDGE_KILLED 2
 
 
-#define DELETEME
-
 /** mark ancestors of given edge */
 static
 SCIP_Bool markAncestorsConflict(
@@ -71,7 +69,6 @@ SCIP_Bool markAncestorsConflict(
    int*                  ancestormark        /**< ancestor mark array */
    )
 {
-#ifdef DELETEME
    int count = 0;
    assert(edge >= 0);
 
@@ -87,7 +84,6 @@ SCIP_Bool markAncestorsConflict(
       ancestormark[idx] = 1;
    }
 
-#endif
    return FALSE;
 }
 
@@ -100,7 +96,6 @@ void markAncestors(
    int*                  ancestormark        /**< ancestor mark array */
    )
 {
-#ifdef DELETEME
    int count = 0;
    assert(edge >= 0);
 
@@ -111,7 +106,6 @@ void markAncestors(
 
       ancestormark[((unsigned) curr->index) / 2] = 1;
    }
-#endif
 }
 
 /** unmark ancestors of given edge */
@@ -122,7 +116,6 @@ void unmarkAncestorsConflict(
    int*                  ancestormark        /**< ancestor mark array */
    )
 {
-#ifdef DELETEME
    int count = 0;
    assert(edge >= 0);
 
@@ -131,7 +124,6 @@ void unmarkAncestorsConflict(
       assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
       ancestormark[((unsigned) curr->index) / 2] = 0;
    }
-#endif
 }
 
 /** unmark ancestors of given edge */
@@ -142,7 +134,6 @@ void unmarkAncestors(
    int*                  ancestormark        /**< ancestor mark array */
    )
 {
-#ifdef DELETEME
    int count = 0;
    assert(edge >= 0);
 
@@ -155,7 +146,6 @@ void unmarkAncestors(
 
       ancestormark[idx] = 0;
    }
-#endif
 }
 
 
@@ -582,7 +572,7 @@ SCIP_Bool ruleOutSubtree(
    {
       SCIP_Real currcost;
       int currhead;
-#ifdef DELETEME
+
       if( ancestormark != NULL )
       {
          int count = 0;
@@ -593,7 +583,6 @@ SCIP_Bool ruleOutSubtree(
                return TRUE;
          }
       }
-#endif
 
       currcost = graph->cost[curredge];
       currhead = graph->head[curredge];

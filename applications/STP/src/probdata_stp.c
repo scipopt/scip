@@ -72,6 +72,8 @@
 
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000
+#define CUT_MAXTOTNEDGES     50000
+
 
 
 #ifdef WITH_UG
@@ -2188,11 +2190,12 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->graph = graph;
 
 #ifndef WITH_UG
-   if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS) )
+   if( (graph->edges > CUT_MAXTOTNEDGES) || ((graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)) )
    {
       SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 3));
    }
 #endif
 

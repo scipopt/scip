@@ -302,7 +302,7 @@ extern void SCIPwriteStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
 extern SCIP_RETCODE level0(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0save(SCIP*, GRAPH*);
 extern SCIP_RETCODE reduceStp(SCIP*, GRAPH**, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
-extern SCIP_RETCODE redLoopStp(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Real, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool);
+extern SCIP_RETCODE redLoopStp(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Real, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE redLoopPc(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Bool, SCIP_Bool, int, SCIP_Bool);
 extern SCIP_RETCODE redLoopMw(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, STP_Bool, STP_Bool, STP_Bool, int, SCIP_Bool);
 extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int, SCIP_Bool);

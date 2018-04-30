@@ -307,7 +307,7 @@ SCIP_RETCODE reduceStp(
 
    /* reduction loop */
    SCIP_CALL( redLoopStp(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, heap, state,
-         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, userec) );
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, userec, (dualascent && userec)) );
 
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", *fixed);
 
@@ -1442,7 +1442,8 @@ SCIP_RETCODE redLoopStp(
    SCIP_Bool             boundreduce,        /**< do bound-based reduction? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   SCIP_Bool             userec              /**< use recombination heuristic? */
+   SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             fullreduce          /**< use full reductions? (including extended techniques) */
    )
 {
    SCIP_Real    ub;
@@ -1457,12 +1458,10 @@ SCIP_RETCODE redLoopStp(
    SCIP_Bool    nvsl = nodereplacing;
    SCIP_Bool    rerun = TRUE;
 
-
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    int i = 0;
 
    SCIP_RANDNUMGEN* randnumgen;
-   const SCIP_Bool fullreduce = (da && userec);
 
    assert(reductbound > 0);
    assert(graph_valid(g));
@@ -1583,7 +1582,6 @@ SCIP_RETCODE redLoopStp(
 
          if( da )
          {
-            int todo; // check me out
             SCIP_CALL(
                   reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
                         nodearrint2, nodearrchar, &danelims, inner_rounds, randnumgen, userec, FALSE));
