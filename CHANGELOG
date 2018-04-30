@@ -12,8 +12,7 @@ performance improvements:
 features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
 - new example brachistochrone in CallableLibrary examples collection
-- new branching rule lookahead that evaluates that evaluates potential child and grandchild nodes to determine a branching
-  decision
+- new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
 
 interface changes:
 - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
