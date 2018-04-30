@@ -127,7 +127,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
    SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.8) ); // todo tune > 0.3
    SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.8) ); // todo tune > 0.4
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.1) ); // todo tune <
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) ); // todo tune < 0.1
 
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/TM/duringlpfreq", 1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/TM/evalruns", 45) );

@@ -50,9 +50,9 @@
 #define STP_RED_MINBNDTERMS   500
 #define STP_DABD_MAXDEGREE 5
 #define STP_DABD_MAXDNEDGES 10
-#define STP_DAEX_MAXDFSDEPTH 5
-#define STP_DAEX_MINDFSDEPTH 3
-#define STP_DAEX_MAXGRAD 8
+#define STP_DAEX_MAXDFSDEPTH 7
+#define STP_DAEX_MINDFSDEPTH 5
+#define STP_DAEX_MAXGRAD 9
 #define STP_DAEX_MINGRAD 6
 #define STP_DAEX_EDGELIMIT 50000
 
@@ -3013,7 +3013,7 @@ SCIP_RETCODE reduce_da(
       SCIP_CALL( orderDaRoots(scip, graph, terms, graph->terms, (prevrounds > 0), randnumgen) );
 
       if( prevrounds > 0 )
-         damaxdeviation = SCIPrandomGetReal(randnumgen, 0.1, 0.3);
+         damaxdeviation = SCIPrandomGetReal(randnumgen, 0.15, 0.3);
    }
    else
    {
