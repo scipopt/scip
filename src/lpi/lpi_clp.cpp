@@ -1833,13 +1833,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    if ( lpi->validFactorization )
       startFinishOptions = startFinishOptions | 2;
 
-   /* make sure that more special options are clean (Clp sometimes seems to keep flag 8) */
-   // lpi->clp->setMoreSpecialOptions(8192);
-
    /* Primal algorithm */
    int status = lpi->clp->primal(0, startFinishOptions);
-
-   // assert( lpi->clp->moreSpecialOptions() == 8192 );
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char basisname[255];
@@ -1915,13 +1910,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
    if ( lpi->validFactorization )
       startFinishOptions = startFinishOptions | 2;
 
-   /* make sure that more special options are clean (Clp sometimes seems to keep 8) */
-   // lpi->clp->setMoreSpecialOptions(8192);
-
    /* Dual algorithm */
    int status = lpi->clp->dual(0, startFinishOptions);
-
-   // assert( lpi->clp->moreSpecialOptions() == 8192 );
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char basisname[255];
