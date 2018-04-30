@@ -45122,12 +45122,15 @@ void SCIPprintLPStatistics(
       scip->stat->barrierzeroittime,
       scip->stat->nbarrierzeroitlps);
 
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolve instable : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
+      SCIPclockGetTime(scip->stat->resolveinstablelptime),
+      scip->stat->nresolveinstablelps,
+      scip->stat->nresolveinstablelpiters,
+      scip->stat->nresolveinstablelps > 0 ? (SCIP_Real)scip->stat->nresolveinstablelpiters/(SCIP_Real)scip->stat->nresolveinstablelps : 0.0);
    if( SCIPclockGetTime(scip->stat->resolveinstablelptime) >= 0.01 )
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolve instable : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
-         SCIPclockGetTime(scip->stat->resolveinstablelptime), scip->stat->nresolveinstablelps, scip->stat->nresolveinstablelpiters);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f\n", (SCIP_Real)scip->stat->nresolveinstablelpiters/SCIPclockGetTime(scip->stat->resolveinstablelptime));
    else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolve instable :          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
-         scip->stat->nresolveinstablelps, scip->stat->nresolveinstablelpiters);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  diving/probing LP: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
       SCIPclockGetTime(scip->stat->divinglptime),
