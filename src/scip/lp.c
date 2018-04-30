@@ -14757,12 +14757,12 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    }
 
    /* check whether the farkasproof is valid
-    * due to numerics, it might happen that the left-hand side of the aggregation is larger or equal than infinity.
-    * that case, we declare the Farkas proof to be invalid.
+    * due to numerics, it might happen that the left-hand side of the aggregation is larger/smaller or equal than +/- infinity.
+    * in that case, we declare the Farkas proof to be invalid.
     */
-   if( checkfarkas && (SCIPsetIsInfinity(set, farkaslhs) || SCIPsetIsSumGE(set, maxactivity, farkaslhs)) )
+   if( checkfarkas && (SCIPsetIsInfinity(set, REALABS(farkaslhs)) || SCIPsetIsSumGE(set, maxactivity, farkaslhs)) )
    {
-      SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f >= lhs=%.12f\n", maxactivity, farkaslhs);
+      SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f, lhs=%.12f\n", maxactivity, farkaslhs);
 
       *valid = FALSE; /*lint !e613*/
    }
