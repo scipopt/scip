@@ -13,6 +13,9 @@ features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
 - new example brachistochrone in CallableLibrary examples collection
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
+- limits on the number of presolving rounds a presolver (maxrounds) or propagator/constraint handler (maxprerounds)
+  participates in are now compared to the number of calls of the particular presolving method, not the number of
+  presolving rounds in general, anymore
 
 deleted and modified API functions:
 - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
