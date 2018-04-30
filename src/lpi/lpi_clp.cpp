@@ -944,7 +944,6 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 #endif
 
-
       // copy beg-array
       BMScopyMemoryArray( mybeg, beg, nrows);
       mybeg[nrows] = nnonz;   // add additional entry at end
@@ -1647,7 +1646,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    assert(lpi->clp != NULL);
    assert(success != NULL);
 
-   /* unstable situations cannot be ignored */
+   /* Unstable situations are currently not ignored. Could fix this similar to lpi_cpx by adjusting the solution status. */
    *success = FALSE;
 
    return SCIP_OKAY;
