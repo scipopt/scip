@@ -1139,7 +1139,8 @@ SCIP_RETCODE computeSymmetryGroup(
       /* determine generators */
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
 
-      if ( ! SCIPisStopped(scip) && checksymmetries )
+      /* SCIPisStopped() might call SCIPgetGap() which is only available after initpresolve */
+      if ( checksymmetries && SCIPgetStage(scip) > SCIP_STAGE_INITPRESOLVE && ! SCIPisStopped(scip) )
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
