@@ -2437,7 +2437,7 @@ SCIP_RETCODE readSto(
 
       if( stoinputSection(stoi) == STO_SCENARIOS )
       {
-         /* if there more than two stages, then the sto file is not read. */
+         /* if there are more than two stages, then the sto file is not read. */
          if( SCIPtimGetNStages(scip) > 2 )
          {
             SCIPinfoMessage(scip, NULL, "\nThe scenarios for the stochastic programs are defined in <%s> as SCENARIOS\n", filename);

@@ -320,10 +320,6 @@ set(scip_reader_extensions
     "rlp"
     "mps"
     "lp"
-    "cor"
-    "tim"
-    "sto"
-    "smps"
     )
 
 #

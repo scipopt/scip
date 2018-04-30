@@ -87,7 +87,7 @@ int SCIPcorGetNVarNames(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
-/** returns the number of constriant names in the COR problem */
+/** returns the number of constraint names in the COR problem */
 EXTERN
 int SCIPcorGetNConsNames(
    SCIP_READER*          reader              /**< the file reader itself */

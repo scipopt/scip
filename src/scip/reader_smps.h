@@ -34,10 +34,6 @@
  * An example of an smps file looks as follows.
  *
  * @verbinclude pltexpA2_6.smps
- *
- *  pltexpA2.cor
- *  pltexpA2.tim
- *  pltexpA2_16.sto
  */
 
 
