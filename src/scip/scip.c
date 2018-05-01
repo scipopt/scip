@@ -10262,7 +10262,7 @@ SCIP_RETCODE SCIPreadProb(
          {
             SCIP_Bool permuteconss;
             SCIP_Bool permutevars;
-            int       permutationseed;
+            int permutationseed;
 
             permuteconss = scip->set->random_permuteconss;
             permutevars = scip->set->random_permutevars;
@@ -16554,7 +16554,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
        */
       SCIPselectDownRealInt(prios, solvertypes, nthreads, ncandsolvertypes);
 
-      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, scip->set->concurrent_initseed) );
+      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, (unsigned) scip->set->concurrent_initseed) );
       for( i = 0; i < nthreads; ++i )
       {
          SCIP_CONCSOLVER* concsolver;
@@ -25899,12 +25899,12 @@ SCIP_Bool SCIPallowObjProp(
 /** modifies an initial seed value with the global shift of random seeds */
 unsigned int SCIPinitializeRandomSeed(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   initialseedvalue    /**< initial seed value to be modified */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
    )
 {
    assert(scip != NULL);
 
-   return (unsigned int)SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
+   return SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
 }
 
 /** marks the variable that it must not be multi-aggregated
@@ -48578,10 +48578,11 @@ SCIP_RETCODE SCIPcreateRandom(
    )
 {
    unsigned int modifiedseed;
+
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, (int)(initialseed % INT_MAX));
+   modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
 
    SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
 
@@ -48611,10 +48612,11 @@ void SCIPsetRandomSeed(
    )
 {
    unsigned int modifiedseed;
+
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, (int)(seed % INT_MAX));
+   modifiedseed = SCIPinitializeRandomSeed(scip, seed);
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
 }
