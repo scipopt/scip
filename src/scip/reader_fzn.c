@@ -3962,8 +3962,8 @@ SCIP_RETCODE appendBuffer(
       SCIP_CALL( SCIPreallocBufferArray(scip, buffer, (*bufferlen)));
    }
 
-   /* append extension to linebuffer */
-   (void)strncpy((*buffer)+(*bufferpos), extension, (size_t)strlen(extension));
+   /* append extension to linebuffer - safe to use strcpy */
+   (void)strcpy((*buffer) + (*bufferpos), extension);
    *bufferpos = newpos;
 
    return SCIP_OKAY;

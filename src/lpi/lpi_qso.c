@@ -1069,8 +1069,7 @@ SCIP_RETCODE SCIPlpiClear(
    QS_CONDRET( QSget_objsense(lpi->prob, &objsen) );
 
    name = QSget_probname(lpi->prob);
-   (void) strncpy(savename, name, 1024);
-   name[1023] = '\0';
+   (void)SCIPstrncpy(savename, name, 1024);
 
    QSfree_prob(lpi->prob);
    lpi->prob = QScreate_prob(savename, objsen);

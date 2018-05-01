@@ -2838,7 +2838,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
-   (void)strncpy(filename, valuestr, SCIP_MAXSTRLEN-1);
+   (void)SCIPstrncpy(filename, valuestr, SCIP_MAXSTRLEN);
 
    /* second ask for generic variable and row names */
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,

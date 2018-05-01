@@ -318,8 +318,7 @@ public:
          spx_free(_probname);
       len = (int)strlen(probname);
       spx_alloc(_probname, len + 1);
-      strncpy(_probname, probname, len); /*lint !e732*/
-      _probname[len] = '\0';
+      (void)SCIPstrncpy(_probname, probname, len + 1);
    }
 
    void setRep(SPxSolver::Representation p_rep)

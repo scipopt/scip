@@ -754,7 +754,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_ALLOC( BMSallocMemory(lpi) );
 
    /* copy the problem name */
-   strncpy((*lpi)->name, name, 200);
+   (void)SCIPstrncpy((*lpi)->name, name, 200);
 
    (*lpi)->larray = NULL;
    (*lpi)->uarray = NULL;
