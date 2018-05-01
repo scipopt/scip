@@ -30,12 +30,12 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 #define REDUCE_C
 #define STP_RED_SDSPBOUND    200         /**< visited edges bound for SDSP test  */
-#define STP_RED_SDSPBOUND2   500         /**< visited edges bound for SDSP test  */
-#define STP_RED_BD3BOUND     400         /**< visited edges bound for BD3 test  */
+#define STP_RED_SDSPBOUND2   600         /**< visited edges bound for SDSP test  */
+#define STP_RED_BD3BOUND     500         /**< visited edges bound for BD3 test  */
 #define STP_RED_EXTENSIVE FALSE
 #define STP_RED_MWTERMBOUND 400
 #define STP_RED_MAXNROUNDS 15
-#define STP_RED_EXFACTOR   3
+#define STP_RED_EXFACTOR   2
 
 
 #include <stdio.h>

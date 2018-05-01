@@ -55,8 +55,8 @@
  * @{
  */
 
-#define DEFAULT_MAXNWAITINGROUNDS        3    /**< maximum number of rounds to wait until propagating again */
-#define REDUCTION_WAIT_RATIO             0.01 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
+#define DEFAULT_MAXNWAITINGROUNDS        2     /**< maximum number of rounds to wait until propagating again */
+#define REDUCTION_WAIT_RATIO             0.003 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
 
 /**@} */
 
