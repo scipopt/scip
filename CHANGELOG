@@ -26,6 +26,7 @@ deleted and modified API functions:
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- added SCIPstrncpy(), a safe version of strncpy()
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
