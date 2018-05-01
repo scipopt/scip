@@ -256,7 +256,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
    else
       parentlen = strlen(filename) - (strlen(fromlastslash) - 1);
 
-   (void)SCIPstrncpy(parent, filename, parentlen);
+   (void)SCIPstrncpy(parent, filename, (int)parentlen);
 
    fp = SCIPfopen(filename, "r");
    if( fp == NULL )
