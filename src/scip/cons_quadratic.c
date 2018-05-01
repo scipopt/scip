@@ -4343,7 +4343,7 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
    int                   nvars,              /**< number of variables */
    int*                  ncomponents,        /**< number of components */
    int*                  componentssize      /**< size of components */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_HASHMAPENTRY* entry;

@@ -264,7 +264,7 @@ SCIP_Real SCIPaggrRowGetRhs(
 /** gets the number of row aggregations */
 EXTERN
 int SCIPaggrRowGetNRows(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    );
 
 /** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the

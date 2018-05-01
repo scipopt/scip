@@ -7902,9 +7902,9 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
  *       - \ref SCIP_STAGE_PROBLEM
  */
 SCIP_RETCODE SCIPsetSlackVarUb(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_CONS*            cons,                /**< indicator constraint */
-   SCIP_Real             ub                   /**< upper bound for slack variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_Real             ub                  /**< upper bound for slack variable */
    )
 {
    SCIP_CONSDATA* consdata;
