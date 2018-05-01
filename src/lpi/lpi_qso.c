@@ -301,11 +301,12 @@ SCIP_RETCODE convertSides(
    const double* const   rhs                 /**< right hand side */
    )
 {
+   int state;
+   register int i;
+
    assert(lpi != NULL);
    assert(lhs != NULL);
    assert(rhs!= NULL);
-   int state;
-   register int i;
 
    for( i = 0 ; i < nrows ; ++i )
    {
