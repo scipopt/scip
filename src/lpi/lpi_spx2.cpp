@@ -318,7 +318,8 @@ public:
          spx_free(_probname);
       len = (int)strlen(probname);
       spx_alloc(_probname, len + 1);
-      (void)SCIPstrncpy(_probname, probname, len + 1);
+      /* safe to use strcpy */
+      (void)strcpy(_probname, probname);
    }
 
    void setRep(SPxSolver::Representation p_rep)
