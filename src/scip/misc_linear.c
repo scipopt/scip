@@ -231,7 +231,7 @@ SCIP_RETCODE SCIPgetConsVals(
    }
    else if( strcmp(conshdlrname, "knapsack") == 0 )
    {
-      SCIP_Real* weights;
+      SCIP_Longint* weights;
 
       weights = SCIPgetWeightsKnapsack(scip, cons);
       assert(weights != NULL);
