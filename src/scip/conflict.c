@@ -5114,6 +5114,7 @@ SCIP_RETCODE conflictAnalyze(
 {
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_BDCHGINFO** firstuips;
+   SCIP_CONFTYPE conftype;
    int nfirstuips;
    int focusdepth;
    int currentdepth;
@@ -5366,8 +5367,14 @@ SCIP_RETCODE conflictAnalyze(
    /* free the temporary memory */
    SCIPsetFreeBufferArray(set, &firstuips);
 
+   /* store last conflict type */
+   conftype = conflict->conflictset->conflicttype;
+
    /* clear the conflict candidate queue and the conflict set */
    conflictClear(conflict);
+
+   /* restore last conflict type */
+   conflict->conflictset->conflicttype = conftype;
 
    return SCIP_OKAY;
 }
@@ -6960,7 +6967,6 @@ SCIP_RETCODE tightenDualproof(
    else
    {
       SCIP_CALL( proofsetCreate(&proofset, blkmem) );
-      SCIP_CALL( conflictInsertProofset(conflict, set, proofset) );
    }
 
    /* start with a proofset containing all variables with a non-zero coefficient in the dual proof */
@@ -7038,7 +7044,14 @@ SCIP_RETCODE tightenDualproof(
       SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
       assert(proofset->rhs - getMaxActivity(transprob, proofset->vals, proofset->inds, proofset->nnz, NULL, NULL) < eps);
 #endif
-      proofsetClear(proofset);
+      if( initialproof )
+      {
+         proofsetClear(proofset);
+      }
+      else
+      {
+         proofsetFree(&proofset, blkmem);
+      }
    }
    else if( nchgcoefs > 0 )
    {
@@ -7046,6 +7059,11 @@ SCIP_RETCODE tightenDualproof(
          proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
       else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
          proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+
+      if( !initialproof )
+      {
+         SCIP_CALL( conflictInsertProofset(conflict, set, proofset) );
+      }
    }
 
    return SCIP_OKAY;
