@@ -7053,16 +7053,19 @@ SCIP_RETCODE tightenDualproof(
          proofsetFree(&proofset, blkmem);
       }
    }
-   else if( nchgcoefs > 0 )
+   else
    {
-      if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
-         proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
-      else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
-         proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
-
       if( !initialproof )
       {
          SCIP_CALL( conflictInsertProofset(conflict, set, proofset) );
+      }
+
+      if( nchgcoefs > 0 )
+      {
+         if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+            proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
+         else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+            proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
       }
    }
 
