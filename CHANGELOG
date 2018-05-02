@@ -23,9 +23,14 @@ deleted and modified API functions:
   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
 - removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
   of other components anymore
+- added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model and check constraints (SCIP_LOCKYPE_MODEL)
+  and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
+- new functions SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
+- new function SCIPaddConsLocksType()
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
@@ -85,14 +90,6 @@ performance improvements:
 - test additional scaling factors in CMIR cut generatio heuristic
 - cleaned up implementation of the cut selection procedure and added new cut quality measure
 - use random tie-breaking in cut selection
-
-deleted and modified API functions:
-- added parameter locktype to SCIPaddVarLocks(), SCIPlockVarCons(), SCIPunlockVarCons(), and SCIPaddConsLocks()
-- added parameter locktype to SCIP_DECL_CONSLOCK callback
-
-new API functions:
-- new functions SCIPconsIsConflictLocked(), SCIPconsIsConflictLocked{Pos,Neg}(), SCIPconsGetNConflictLocks{Pos,Neg}()
-- new functions SCIPvarGetNConflictLocksDown() and SCIPvarGetNConflictLocksUp()
 
 features:
 - allow output of lower bounds for visualization
