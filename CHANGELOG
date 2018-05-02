@@ -11,6 +11,8 @@ features:
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+- "misc/alwaysgetduals" ensure that the dual solutions are always computed from the recent LP solve.
+- "display/relevantstats" indicates whether the small relevant statistics are displayed at the end of solving.
 
 deleted files:
 - presol_implfree removed
