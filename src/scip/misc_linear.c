@@ -296,6 +296,7 @@ SCIP_RETCODE SCIPgetConsVals(
    else
    {
       SCIPwarningMessage(scip, " Cannot return values of <%s> (not implemented yet)\n", conshdlrname);
+      *success = FALSE;
    }
 
    return SCIP_OKAY;
