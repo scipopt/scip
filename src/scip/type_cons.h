@@ -652,7 +652,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that should lock rounding of its variables, or NULL if the constraint handler
  *                      does not need constraints
- *  - locktype        : type of rounding locks, i.e, SCIP_LOCKTYPE_MODEL or SCIP_LOCKTYPE_CONFLICT
+ *  - locktype        : type of rounding locks, i.e., SCIP_LOCKTYPE_MODEL or SCIP_LOCKTYPE_CONFLICT
  *  - nlockspos       : number of times, the roundings should be locked for the constraint (may be negative)
  *  - nlocksneg       : number of times, the roundings should be locked for the constraint's negation (may be negative)
  */
