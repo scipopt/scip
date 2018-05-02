@@ -61,14 +61,14 @@ SCIP_Real SCIPconsGetRhs(
    {
       switch( SCIPgetTypeSetppc(scip, cons) )
       {
-         case SCIP_SETPPCTYPE_PARTITIONING: /* fall through intended */
-         case SCIP_SETPPCTYPE_PACKING:
-            rhs = 1.0;
-            break;
+      case SCIP_SETPPCTYPE_PARTITIONING: /* fall through intended */
+      case SCIP_SETPPCTYPE_PACKING:
+         rhs = 1.0;
+         break;
 
-         case SCIP_SETPPCTYPE_COVERING:
-            rhs = SCIPinfinity(scip);
-            break;
+      case SCIP_SETPPCTYPE_COVERING:
+         rhs = SCIPinfinity(scip);
+         break;
       }
    }
    else if( strcmp(conshdlrname, "logicor") == 0 )
@@ -125,14 +125,14 @@ SCIP_Real SCIPconsGetLhs(
    {
       switch( SCIPgetTypeSetppc(scip, cons) )
       {
-         case SCIP_SETPPCTYPE_PARTITIONING: /* fall through intended */
-         case SCIP_SETPPCTYPE_COVERING:
-            lhs = 1.0;
-            break;
+      case SCIP_SETPPCTYPE_PARTITIONING: /* fall through intended */
+      case SCIP_SETPPCTYPE_COVERING:
+         lhs = 1.0;
+         break;
 
-         case SCIP_SETPPCTYPE_PACKING:
-            lhs = -SCIPinfinity(scip);
-            break;
+      case SCIP_SETPPCTYPE_PACKING:
+         lhs = -SCIPinfinity(scip);
+         break;
       }
    }
    else if( strcmp(conshdlrname, "logicor") == 0 )
