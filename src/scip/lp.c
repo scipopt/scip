@@ -2600,7 +2600,7 @@ SCIP_RETCODE lpCheckRealpar(
    SCIP_LPPARAM          lpparam,            /**< LP parameter */
    SCIP_Real             value               /**< value parameter should have */
    )
-{
+{/*lint --e{715}*/
    SCIP_RETCODE retcode;
    SCIP_Real lpivalue;
 
@@ -2612,8 +2612,16 @@ SCIP_RETCODE lpCheckRealpar(
    if( retcode == SCIP_PARAMETERUNKNOWN )
       return SCIP_OKAY;
 
+   /* This assert is currently disabled because it can happen that the feasibility tolerance is changed to a
+    * value outside the interval allowed by the LP solver, in which case the lpi might project it to the bounds
+    * of the LP solver and this assert will fail the next time.
+    * It should be reenabled once this behaviour is unified among the lpis and handled explicitly in
+    * lpSetFeastol() etc. with dedicated code instead of calling lpCheckRealpar().
+    */
+#if SCIP_DISABLED_CODE/*lint !e553*/
    /* check value */
    assert(lpivalue == value); /*lint !e777*/
+#endif
 
    return retcode;
 }
@@ -6471,10 +6479,22 @@ void rowCalcActivityBounds(
       row->maxactivity = SCIPsetInfinity(set);
    row->validactivitybdsdomchg = stat->domchgcount;
 
-   assert(!row->integral || mininfinite || REALABS(row->minactivity - row->constant) > 1.0/SCIP_DEFAULT_SUMEPSILON
-      || EPSISINT(row->minactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
-   assert(!row->integral || maxinfinite || REALABS(row->maxactivity - row->constant) > 1.0/SCIP_DEFAULT_SUMEPSILON
-      || EPSISINT(row->maxactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
+#ifndef NDEBUG
+   {
+      SCIP_Real inttol = 1000.0*SCIPsetFeastol(set);
+
+      /* even if the row is integral, the bounds on the variables used for computing minimum and maximum activity might
+       * be integral only within feasibility tolerance; this can happen, e.g., if a continuous variable is promoted to
+       * an (implicit) integer variable and the bounds cannot be adjusted because they are minimally tighter than the
+       * rounded bound value; hence, the activity may violate integrality; we allow 1000 times the default feasibility
+       * tolerance as a proxy to account for the accumulation effect
+       */
+      assert(!row->integral || mininfinite || REALABS(row->minactivity - row->constant) > 1.0/SCIPsetSumepsilon(set)
+         || EPSISINT(row->minactivity - row->constant, inttol));
+      assert(!row->integral || maxinfinite || REALABS(row->maxactivity - row->constant) > 1.0/SCIPsetSumepsilon(set)
+         || EPSISINT(row->maxactivity - row->constant, inttol));
+   }
+#endif
 }
 
 /** returns the minimal activity of a row w.r.t. the columns' bounds */
@@ -10120,6 +10140,7 @@ SCIP_RETCODE lpPrimalSimplex(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool             instable,           /**< is this a resolving call to avoid instable LPs? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
@@ -10166,6 +10187,12 @@ SCIP_RETCODE lpPrimalSimplex(
       timedelta = -SCIPclockGetTime(stat->primallptime);
    }
 
+   /* if this is a call to resolve an instable LP, collect time */
+   if( instable )
+   {
+      SCIPclockStart(stat->resolveinstablelptime, set);
+   }
+
    /* call primal simplex */
    retcode = SCIPlpiSolvePrimal(lp->lpi);
    if( retcode == SCIP_LPERROR )
@@ -10194,6 +10221,11 @@ SCIP_RETCODE lpPrimalSimplex(
       SCIPclockStop(stat->primallptime, set);
    }
 
+   if ( instable )
+   {
+      SCIPclockStop(stat->resolveinstablelptime, set);
+   }
+
    /* count number of iterations */
    SCIPstatIncrement(stat, set, lpcount);
    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
@@ -10208,6 +10240,11 @@ SCIP_RETCODE lpPrimalSimplex(
       {
          SCIPstatIncrement(stat, set, nprimalresolvelps );
          SCIPstatAdd(stat, set, nprimalresolvelpiterations, iterations);
+      }
+      if ( instable )
+      {
+         SCIPstatIncrement(stat, set, nresolveinstablelps);
+         SCIPstatAdd(stat, set, nresolveinstablelpiters, iterations);
       }
       if( lp->diving || lp->probing )
       {
@@ -10261,6 +10298,7 @@ SCIP_RETCODE lpDualSimplex(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool             instable,           /**< is this a resolving call to avoid instable LPs? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
@@ -10307,6 +10345,12 @@ SCIP_RETCODE lpDualSimplex(
       timedelta = -SCIPclockGetTime(stat->duallptime);      
    }
 
+   /* if this is a call to resolve an instable LP, collect time */
+   if ( instable )
+   {
+      SCIPclockStart(stat->resolveinstablelptime, set);
+   }
+
    /* call dual simplex */
    retcode = SCIPlpiSolveDual(lp->lpi);
    if( retcode == SCIP_LPERROR )
@@ -10335,6 +10379,11 @@ SCIP_RETCODE lpDualSimplex(
       SCIPclockStop(stat->duallptime, set);
    }
 
+   if ( instable )
+   {
+      SCIPclockStop(stat->resolveinstablelptime, set);
+   }
+
    /* count number of iterations */
    SCIPstatIncrement(stat, set, lpcount);
    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
@@ -10349,6 +10398,11 @@ SCIP_RETCODE lpDualSimplex(
       {
          SCIPstatIncrement(stat, set, ndualresolvelps);
          SCIPstatAdd(stat, set, ndualresolvelpiterations, iterations);
+      }
+      if ( instable )
+      {
+         SCIPstatIncrement(stat, set, nresolveinstablelps);
+         SCIPstatAdd(stat, set, nresolveinstablelpiters, iterations);
       }
       if( lp->diving || lp->probing )
       {
@@ -11171,6 +11225,7 @@ SCIP_RETCODE lpAlgorithm(
    SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool             instable,           /**< is this a resolving call to avoid instable LPs? */
    SCIP_Bool*            timelimit,          /**< pointer to store whether the time limit was hit */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
@@ -11198,13 +11253,13 @@ SCIP_RETCODE lpAlgorithm(
       *timelimit = TRUE;
       return SCIP_OKAY;
    }
-   SCIPsetDebugMsg(set, "calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
+   SCIPsetDebugMsg(set, "calling LP algorithm <%s> with a time limit of %g seconds\n", lpalgoName(lpalgo), lptimelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
    {
    case SCIP_LPALGO_PRIMALSIMPLEX:
-      SCIP_CALL( lpPrimalSimplex(lp, set, stat, resolve, keepsol, lperror) );
+      SCIP_CALL( lpPrimalSimplex(lp, set, stat, resolve, keepsol, instable, lperror) );
       break;
 
    case SCIP_LPALGO_DUALSIMPLEX:
@@ -11215,7 +11270,7 @@ SCIP_RETCODE lpAlgorithm(
       }
       else
       {
-         SCIP_CALL( lpDualSimplex(lp, set, stat, resolve, keepsol, lperror) );
+         SCIP_CALL( lpDualSimplex(lp, set, stat, resolve, keepsol, instable, lperror) );
       }
       break;
 
@@ -11403,13 +11458,15 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
    SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
-   SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+
+   SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, FALSE, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
    /* check for stability; iteration limit exceeded is also treated like instability if the iteration limit is soft */
    if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
       return SCIP_OKAY;
-   else if( !set->lp_checkstability )
+
+   if( !set->lp_checkstability )
    {
       SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
       if( success )
@@ -11432,12 +11489,13 @@ SCIP_RETCODE lpSolveStable(
       if( success )
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s without FASTMIP", lpalgoName(lpalgo));
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
             return SCIP_OKAY;
-         else if( !set->lp_checkstability )
+
+         if( !set->lp_checkstability )
          {
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
@@ -11450,21 +11508,22 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* if the iteration limit was exceeded in the last LP solving call, we leave out the remaining resolving calls with changed settings
-    * and go directly to solving the LP from scratch 
-    */
+    * and go directly to solving the LP from scratch */
    if( (*lperror) || !SCIPlpiIsIterlimExc(lp->lpi) )
    {
       /* solve again with opposite scaling setting (starts from the solution of the last LP solving call) */
       SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
-         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s scaling", lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s scaling",
+            lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
             return SCIP_OKAY;
-         else if( !set->lp_checkstability )
+
+         if( !set->lp_checkstability )
          {
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
@@ -11481,8 +11540,7 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* if the iteration limit was exceeded in the last LP solving call, we leave out the remaining resolving calls with changed settings
-    * and go directly to solving the LP from scratch
-    */
+    * and go directly to solving the LP from scratch */
    if( (*lperror) || !SCIPlpiIsIterlimExc(lp->lpi) )
    {
       /* solve again with opposite presolving setting (starts from the solution of the last LP solving call) */
@@ -11491,12 +11549,13 @@ SCIP_RETCODE lpSolveStable(
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s presolving",
             lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
             return SCIP_OKAY;
-         else if( !set->lp_checkstability )
+
+         if( !set->lp_checkstability )
          {
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
@@ -11513,8 +11572,7 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* solve again with a tighter feasibility tolerance (starts from the solution of the last LP solving call);
-    * do this only if the iteration limit was not exceeded in the last LP solving call 
-    */
+    * do this only if the iteration limit was not exceeded in the last LP solving call */
    if( ((simplex && (!tightprimfeastol || !tightdualfeastol)) || (!tightprimfeastol && !tightdualfeastol)) &&
       ((*lperror) || !SCIPlpiIsIterlimExc(lp->lpi)) )
    {
@@ -11538,13 +11596,15 @@ SCIP_RETCODE lpSolveStable(
 
       if( success || success2 || success3 )
       {
-         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s with tighter primal and dual feasibility tolerance", lpalgoName(lpalgo));
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s with tighter primal and dual feasibility tolerance",
+            lpalgoName(lpalgo));
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
             return SCIP_OKAY;
-         else if( !set->lp_checkstability )
+
+         if( !set->lp_checkstability )
          {
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
@@ -11581,12 +11641,13 @@ SCIP_RETCODE lpSolveStable(
       if( success )
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s", lpalgoName(lpalgo));
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
-         else if( !set->lp_checkstability )
+
+         if( !set->lp_checkstability )
          {
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
@@ -11603,12 +11664,13 @@ SCIP_RETCODE lpSolveStable(
    {
       lpalgo = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX ? SCIP_LPALGO_DUALSIMPLEX : SCIP_LPALGO_PRIMALSIMPLEX);
       lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s", lpalgoName(lpalgo));
-      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
       /* check for stability */
       if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
          return SCIP_OKAY;
-      else if( !set->lp_checkstability )
+
+      if( !set->lp_checkstability )
       {
          SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
          if( success )
@@ -11624,12 +11686,13 @@ SCIP_RETCODE lpSolveStable(
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s scaling",
             lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
-         else if( !set->lp_checkstability )
+
+         if( !set->lp_checkstability )
          {
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
@@ -11650,12 +11713,13 @@ SCIP_RETCODE lpSolveStable(
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s presolving",
             lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
-         else if( !set->lp_checkstability )
+
+         if( !set->lp_checkstability )
          {
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
@@ -11687,13 +11751,15 @@ SCIP_RETCODE lpSolveStable(
 
          if( success || success2 )
          {
-            lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s with tighter feasibility tolerance", lpalgoName(lpalgo));
-            SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
+            lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s with tighter feasibility tolerance",
+               lpalgoName(lpalgo));
+            SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
             /* check for stability */
             if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
                return SCIP_OKAY;
-            else if( !set->lp_checkstability )
+
+            if( !set->lp_checkstability )
             {
                SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
                if( success )
@@ -11723,7 +11789,7 @@ SCIP_RETCODE lpSolveStable(
    return SCIP_OKAY;
 }
 
-/** adjust the LP objective value if its greater/less than +/- SCIPsetInfinity() */
+/** adjust the LP objective value if it is greater/less than +/- SCIPsetInfinity() */
 static
 void adjustLPobjval(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -14737,12 +14803,12 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    }
 
    /* check whether the farkasproof is valid
-    * due to numerics, it might happen that the left-hand side of the aggregation is larger or equal than infinity.
-    * that case, we declare the Farkas proof to be invalid.
+    * due to numerics, it might happen that the left-hand side of the aggregation is larger/smaller or equal than +/- infinity.
+    * in that case, we declare the Farkas proof to be invalid.
     */
-   if( checkfarkas && (SCIPsetIsInfinity(set, farkaslhs) || SCIPsetIsSumGE(set, maxactivity, farkaslhs)) )
+   if( checkfarkas && (SCIPsetIsInfinity(set, REALABS(farkaslhs)) || SCIPsetIsSumGE(set, maxactivity, farkaslhs)) )
    {
-      SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f >= lhs=%.12f\n", maxactivity, farkaslhs);
+      SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f, lhs=%.12f\n", maxactivity, farkaslhs);
 
       *valid = FALSE; /*lint !e613*/
    }

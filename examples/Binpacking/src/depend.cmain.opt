@@ -1,7 +1,6 @@
 $(OBJDIR)/branch_ryanfoster.o: src/branch_ryanfoster.c src/branch_ryanfoster.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -32,7 +31,8 @@ $(OBJDIR)/branch_ryanfoster.o: src/branch_ryanfoster.c src/branch_ryanfoster.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -61,8 +61,7 @@ $(OBJDIR)/branch_ryanfoster.o: src/branch_ryanfoster.c src/branch_ryanfoster.h \
  ../../src/scip/solve.h src/cons_samediff.h src/probdata_binpacking.h \
  src/vardata_binpacking.h
 $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
- ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
- ../../src/scip/type_message.h ../../src/scip/struct_message.h \
+ ../../src/scip/type_retcode.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
  ../../src/scip/type_clock.h ../../src/scip/type_misc.h \
  ../../src/scip/type_timing.h ../../src/scip/type_scip.h \
@@ -94,6 +93,7 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/lpi/type_lpi.h \
  ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
+ ../../src/scip/pub_message.h ../../src/scip/struct_message.h \
  ../../src/scip/pub_misc.h ../../src/scip/pub_misc_select.h \
  ../../src/scip/type_misc.h ../../src/scip/pub_misc_sort.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
@@ -148,11 +148,12 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
  ../../src/scip/heur_completesol.h ../../src/scip/heur_crossover.h \
  ../../src/scip/heur_dins.h ../../src/scip/heur_distributiondiving.h \
- ../../src/scip/heur_dualval.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_gins.h ../../src/scip/heur_guideddiving.h \
- ../../src/scip/heur_indicator.h ../../src/scip/heur_intdiving.h \
- ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dualval.h ../../src/scip/heur_farkasdiving.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_gins.h \
+ ../../src/scip/heur_guideddiving.h ../../src/scip/heur_indicator.h \
+ ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
+ ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_locks.h \
  ../../src/scip/heur_lpface.h ../../src/scip/heur_alns.h \
  ../../src/scip/heur_multistart.h ../../src/scip/heur_mutation.h \
@@ -212,8 +213,7 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  src/pricer_binpacking.h src/reader_bpa.h
 $(OBJDIR)/cons_samediff.o: src/cons_samediff.c src/cons_samediff.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -244,7 +244,8 @@ $(OBJDIR)/cons_samediff.o: src/cons_samediff.c src/cons_samediff.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -275,8 +276,7 @@ $(OBJDIR)/cons_samediff.o: src/cons_samediff.c src/cons_samediff.h \
 $(OBJDIR)/pricer_binpacking.o: src/pricer_binpacking.c \
  ../../src/scip/cons_knapsack.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -307,7 +307,8 @@ $(OBJDIR)/pricer_binpacking.o: src/pricer_binpacking.c \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -361,11 +362,12 @@ $(OBJDIR)/pricer_binpacking.o: src/pricer_binpacking.c \
  ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
  ../../src/scip/heur_completesol.h ../../src/scip/heur_crossover.h \
  ../../src/scip/heur_dins.h ../../src/scip/heur_distributiondiving.h \
- ../../src/scip/heur_dualval.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_gins.h ../../src/scip/heur_guideddiving.h \
- ../../src/scip/heur_indicator.h ../../src/scip/heur_intdiving.h \
- ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dualval.h ../../src/scip/heur_farkasdiving.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_gins.h \
+ ../../src/scip/heur_guideddiving.h ../../src/scip/heur_indicator.h \
+ ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
+ ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_locks.h \
  ../../src/scip/heur_lpface.h ../../src/scip/heur_alns.h \
  ../../src/scip/heur_multistart.h ../../src/scip/heur_mutation.h \
@@ -426,8 +428,7 @@ $(OBJDIR)/pricer_binpacking.o: src/pricer_binpacking.c \
  src/vardata_binpacking.h
 $(OBJDIR)/probdata_binpacking.o: src/probdata_binpacking.c \
  src/probdata_binpacking.h ../../src/scip/scip.h ../../src/scip/def.h \
- ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
- ../../src/scip/type_message.h ../../src/scip/struct_message.h \
+ ../../src/scip/type_retcode.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
  ../../src/scip/type_clock.h ../../src/scip/type_misc.h \
  ../../src/scip/type_timing.h ../../src/scip/type_scip.h \
@@ -459,6 +460,7 @@ $(OBJDIR)/probdata_binpacking.o: src/probdata_binpacking.c \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/lpi/type_lpi.h \
  ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
+ ../../src/scip/pub_message.h ../../src/scip/struct_message.h \
  ../../src/scip/pub_misc.h ../../src/scip/pub_misc_select.h \
  ../../src/scip/type_misc.h ../../src/scip/pub_misc_sort.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
@@ -488,8 +490,7 @@ $(OBJDIR)/probdata_binpacking.o: src/probdata_binpacking.c \
  src/pricer_binpacking.h ../../src/scip/cons_setppc.h
 $(OBJDIR)/reader_bpa.o: src/reader_bpa.c ../../src/scip/cons_setppc.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -520,7 +521,8 @@ $(OBJDIR)/reader_bpa.o: src/reader_bpa.c ../../src/scip/cons_setppc.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -549,8 +551,7 @@ $(OBJDIR)/reader_bpa.o: src/reader_bpa.c ../../src/scip/cons_setppc.h \
  ../../src/scip/solve.h src/probdata_binpacking.h src/reader_bpa.h
 $(OBJDIR)/vardata_binpacking.o: src/vardata_binpacking.c src/probdata_binpacking.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -581,7 +582,8 @@ $(OBJDIR)/vardata_binpacking.o: src/vardata_binpacking.c src/probdata_binpacking
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \

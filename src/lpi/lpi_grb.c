@@ -105,12 +105,12 @@ static const char* dblparam[NUMDBLPARAM] =
    GRB_DBL_PAR_MARKOWITZTOL
 };
 
-/** default values for double parameters */
+/** minimal values for double parameters */
 static const double dblparammin[NUMDBLPARAM] =
 {
-   +1e-06,               /* GRB_DBL_PAR_FEASIBILITYTOL */
-   +1e-06,               /* GRB_DBL_PAR_OPTIMALITYTOL */
-   +1e-08,               /* GRB_DBL_PAR_BARCONVTOL */
+   +1e-09,               /* GRB_DBL_PAR_FEASIBILITYTOL */
+   +1e-09,               /* GRB_DBL_PAR_OPTIMALITYTOL */
+   0.0,                  /* GRB_DBL_PAR_BARCONVTOL */
    -GRB_INFINITY,        /* GRB_DBL_PAR_CUTOFF */
    0,                    /* GRB_DBL_PAR_TIMELIMIT */
    0,                    /* GRB_DBL_PAR_ITERATIONLIMIT */
@@ -3882,7 +3882,9 @@ SCIP_Bool SCIPlpiIsStable(
 {
    double consviol;
    double boundviol;
+   double dualviol;
    double feastol;
+   double optimalitytol;
    int res;
 
    assert(lpi != NULL);
@@ -3913,15 +3915,21 @@ SCIP_Bool SCIPlpiIsStable(
    /* test whether we have unscaled infeasibilities */
    if ( SCIPlpiIsOptimal(lpi) )
    {
-      /* first get tolerance */
+      /* first get tolerances */
       res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &feastol);
       if ( res != 0 )
       {
          SCIPABORT();
          return FALSE; /*lint !e527*/
       }
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &optimalitytol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
 
-      /* next get constraint and bound violations */
+      /* next get constraint, bound, and reduced cost violations */
       res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
       if ( res != 0 )
       {
@@ -3934,7 +3942,14 @@ SCIP_Bool SCIPlpiIsStable(
          SCIPABORT();
          return FALSE; /*lint !e527*/
       }
-      return ( consviol <= feastol && boundviol <= feastol );
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_DUAL_VIO, &dualviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      return ( consviol <= feastol && boundviol <= feastol && dualviol <= optimalitytol );
    }
 
    return (lpi->solstat != GRB_NUMERIC);
@@ -4033,24 +4048,30 @@ SCIP_RETCODE SCIPlpiGetObjval(
 
    ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
 
-   /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
-    * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queries (e.g., objval,
-    * primal and dual solution), in this case we just return the installed cutoff value minus some epsilon. This is some
-    * kind of hack for the code in conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that is similar to
-    * this case.
-    */
-   if( ret == GRB_ERROR_DATA_NOT_AVAILABLE && lpi->solstat == GRB_CUTOFF )
+   if( ret == GRB_ERROR_DATA_NOT_AVAILABLE )
    {
-      SCIP_Real dval;
-      SCIP_OBJSEN objsense;
+      /* return minus infinity if value not available and we reached an iteration limit (see lpi_cpx) */
+      if( lpi->solstat == GRB_ITERATION_LIMIT )
+         *objval = -SCIPlpiInfinity(lpi);
+      /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
+       * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queries (e.g., objval,
+       * primal and dual solution), in this case we just return the installed cutoff value minus some epsilon. This is some
+       * kind of hack for the code in conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that is similar to
+       * this case.
+       */
+      else if( lpi->solstat == GRB_CUTOFF )
+      {
+         SCIP_Real dval;
+         SCIP_OBJSEN objsense;
 
-      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
-      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
+         SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
+         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
 
-      if( objsense == SCIP_OBJSEN_MINIMIZE )
-         *objval = dval - 1e-06;
-      else
-         *objval = dval + 1e-06;
+         if( objsense == SCIP_OBJSEN_MINIMIZE )
+            *objval = dval - 1e-06;
+         else
+            *objval = dval + 1e-06;
+      }
    }
    else
    {
