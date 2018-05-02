@@ -168,6 +168,7 @@
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
 #define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
 #define SCIP_DEFAULT_DISP_ALLVIOLS        FALSE /**< display all violations of the best solution after the solving process finished? */
+#define SCIP_DEFAULT_DISP_RELEVANTSTATS    TRUE /**< should the relevant statistics be displayed at the end of solving? */
 
 /* History */
 
@@ -1510,6 +1511,11 @@ SCIP_RETCODE SCIPsetCreate(
          "display/allviols",
          "display all violations for a given start solution / the best solution after the solving process?",
          &(*set)->disp_allviols, FALSE, SCIP_DEFAULT_DISP_ALLVIOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "display/relevantstats",
+         "should the relevant statistics be displayed at the end of solving?",
+         &(*set)->disp_relevantstats, FALSE, SCIP_DEFAULT_DISP_RELEVANTSTATS,
          NULL, NULL) );
 
    /* history parameters */

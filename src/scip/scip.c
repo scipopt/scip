@@ -16747,7 +16747,7 @@ SCIP_RETCODE displayRelevantStats(
    assert(scip != NULL);
 
    /* display most relevant statistics */
-   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
+   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL && scip->set->disp_relevantstats )
    {
       SCIP_Bool objlimitreached = FALSE;
 
