@@ -32,8 +32,8 @@
 
 #define BENDERSCUT_NAME             "feas"
 #define BENDERSCUT_DESC             "Standard feasibility cuts for Benders' decomposition"
-#define BENDERSCUT_PRIORITY         0
-#define BENDERSCUT_LPCUT            TRUE
+#define BENDERSCUT_PRIORITY     10000
+#define BENDERSCUT_LPCUT         TRUE
 
 /*
  * Local methods

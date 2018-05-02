@@ -35,7 +35,7 @@
 #define BENDERSCUT_NAME             "integer"
 #define BENDERSCUT_DESC             "Laporte and Louveaux Benders' decomposition integer cut"
 #define BENDERSCUT_PRIORITY         0
-#define BENDERSCUT_LPCUT            FALSE
+#define BENDERSCUT_LPCUT        FALSE
 
 
 
@@ -43,10 +43,6 @@
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
 
 #define SCIP_DEFAULT_CUTCONSTANT          -10000.0
-
-/* event handler properties */
-#define EVENTHDLR_NAME         "bendersintcutnodesolved"
-#define EVENTHDLR_DESC         "node solved event handler for the Benders' integer cuts"
 
 /*
  * Data structures
@@ -103,10 +99,6 @@ SCIP_RETCODE createBenderscutData(
       benderscutdata->subprobconstant[i] = benderscutdata->cutconstant;
       benderscutdata->firstcut[i] = TRUE;
    }
-
-   return SCIP_OKAY;
-}
-      benderscutdata->firstcut[i] = TRUE;
 
    return SCIP_OKAY;
 }
@@ -337,6 +329,16 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
       return SCIP_OKAY;
    }
 
+   /* checking if the subproblem lower bound has been updated. If it is has changed, then firstcut is set to TRUE.
+    * Otherwise, the constant remains the same.
+    */
+   if( SCIPisLT(masterprob, benderscutdata->subprobconstant[probnumber],
+         SCIPbendersGetSubprobLowerbound(benders, probnumber)) )
+   {
+      benderscutdata->subprobconstant[probnumber] = SCIPbendersGetSubprobLowerbound(benders, probnumber);
+      benderscutdata->firstcut[probnumber] = TRUE;
+   }
+
    /* if no integer cuts have been previously generated, then an initial lower bounding cut is added */
    if( benderscutdata->firstcut[probnumber] )
    {
@@ -538,6 +540,10 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
          " can only be applied to problems with a pure binary master problem.\n"
          "No integer optimality cuts will be generated for this problem. As such, your solution will be suboptimal.\n");
 
+      SCIPinfoMessage(scip, NULL, "The Laporte and Louveaux Benders' decomposition cuts will be disabled.\n");
+
+      SCIPbenderscutSetEnabled(benderscut, FALSE);
+
       return SCIP_OKAY;
    }
 
@@ -565,8 +571,6 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
    SCIP_BENDERSCUT* benderscut;
-   SCIP_EVENTHDLR* eventhdlr;
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
    char paramname[SCIP_MAXSTRLEN];
 
 
@@ -609,14 +613,6 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
    SCIP_CALL( SCIPaddBoolParam(scip, paramname,
          "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
          &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );
-
-   eventhdlrdata = (SCIP_EVENTHDLRDATA*)benderscutdata;
-
-   /* include event handler into SCIP */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventExecBendersintcutNodesolved, eventhdlrdata) );
-   SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolBendersintcutNodesolved) );
-   assert(eventhdlr != NULL);
 
    return SCIP_OKAY;
 }

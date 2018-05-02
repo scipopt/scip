@@ -34,7 +34,7 @@
 
 #define BENDERSCUT_NAME             "optimality"
 #define BENDERSCUT_DESC             "Standard Benders' decomposition optimality cut"
-#define BENDERSCUT_PRIORITY         0
+#define BENDERSCUT_PRIORITY      5000
 #define BENDERSCUT_LPCUT            TRUE
 
 
