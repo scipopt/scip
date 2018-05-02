@@ -296,6 +296,20 @@ set(instances_Symmetry
     )
 
 #
+# Stochastic programming instances
+#
+set(instances_Stochastic
+#    "instances/Stochastic/4node1.smps\;480.9"
+#    "instances/Stochastic/4node2.smps\;480.9"
+   "instances/Stochastic/pltexpA2_6.smps\;-9.479354404641"
+   "instances/Stochastic/pltexpA2_16.smps\;-9.663308373027"
+   "instances/Stochastic/pltexpA4_6.smps\;-19.5994173819041"
+#    "instances/Stochastic/pltexpA4_16.smps\;-18.8493368600210"
+#    "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
+#    "instances/Stochastic/sslp_5_25_100.smps\;-127.37"
+   )
+
+#
 # available reader file extensions for SCIP readers
 #
 set(scip_reader_extensions
@@ -380,6 +394,7 @@ add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
 add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
+add_instancetests(instances_Stochastic settings_default "Stochastic")
 
 #
 # test writing and reading solutions
