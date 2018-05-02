@@ -205,7 +205,6 @@ set(scipsources
     scip/benderscut_int.c
     scip/benderscut_nogood.c
     scip/benderscut_opt.c
-    scip/misc_benders.c
     scip/table_default.c
     scip/benders.c
     scip/benderscut.c
@@ -234,6 +233,7 @@ set(scipsources
     scip/lp.c
     scip/matrix.c
     scip/mem.c
+    scip/misc_linear.c
     scip/misc.c
     scip/nlp.c
     scip/nodesel.c
