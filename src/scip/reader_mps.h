@@ -48,6 +48,53 @@ SCIP_RETCODE SCIPincludeReaderMps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/**@addtogroup FILEREADERS
+ *
+ * @{
+ */
+
+/** reads problem from file */
+EXTERN
+SCIP_RETCODE SCIPreadMps(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*          result,             /**< pointer to store the result of the file reading call */
+   const char***         varnames,           /**< storage for the variable names, or NULL */
+   const char***         consnames,          /**< storage for the constraint names, or NULL */
+   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
+   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
+   int*                  nvarnames,          /**< the number of stored variable names, or NULL */
+   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
+   );
+
+/** writes problem to file */
+EXTERN
+SCIP_RETCODE SCIPwriteMps(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              * extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of active variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_VAR**            fixedvars,          /**< array with fixed and aggregated variables */
+   int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
+   );
+
+/* @} */
+
 #ifdef __cplusplus
 }
 #endif
