@@ -201,6 +201,10 @@ set(scipsources
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
     scip/benders_default.c
+    scip/benderscut_feas.c
+    scip/benderscut_int.c
+    scip/benderscut_nogood.c
+    scip/benderscut_opt.c
     scip/table_default.c
     scip/benders.c
     scip/benderscut.c
@@ -229,6 +233,7 @@ set(scipsources
     scip/lp.c
     scip/matrix.c
     scip/mem.c
+    scip/misc_linear.c
     scip/misc.c
     scip/nlp.c
     scip/nodesel.c
@@ -371,6 +376,10 @@ set(scipheaders
     scip/benders.h
     scip/benders_default.h
     scip/benderscut.h
+    scip/benderscut_feas.h
+    scip/benderscut_int.h
+    scip/benderscut_nogood.h
+    scip/benderscut_opt.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
@@ -503,6 +512,7 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
+    scip/misc_benders.h
     scip/nlp.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
