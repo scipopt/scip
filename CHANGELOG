@@ -5,7 +5,7 @@ performance improvements:
 - cuts generated from certain quadratic constraints with convex feasible region are now global
 
 features:
-- new miscellaneous methods for constraints that have a linear representation in misc_linear.c
+- new miscellaneous methods for constraints that have a one-row linear representation in pub_misc_linear.h
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
