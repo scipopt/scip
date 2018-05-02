@@ -13,9 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   misc.c
+/**@file   misc_linear.c
  * @brief  miscellaneous methods for linear constraints
  * @author Jakob Witzig
+ * @author Ambros Gleixner
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -24,13 +25,17 @@
 
 #include "scip/def.h"
 #include "scip/scip.h"
-#include "scip/misc_linear.h"
+#include "scip/pub_misc_linear.h"
 
 
-/** returns the rhs of an arbitrary SCIP constraint that can be represented as a single linear constraint */
+/** returns the right-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
 SCIP_Real SCIPconsGetRhs(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to get left hand side for */
+   SCIP_CONS*            cons,               /**< constraint for which right-hand side is queried */
+   SCIP_Bool*            success             /**< pointer to store whether a valid right-hand side was returned */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -39,12 +44,14 @@ SCIP_Real SCIPconsGetRhs(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(success != NULL);
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
    conshdlrname = SCIPconshdlrGetName(conshdlr);
 
-   rhs = -SCIPinfinity(scip);
+   *success = TRUE;
+   rhs = SCIP_INVALID;
 
    if( strcmp(conshdlrname, "linear") == 0 )
    {
@@ -52,8 +59,9 @@ SCIP_Real SCIPconsGetRhs(
    }
    else if( strcmp(conshdlrname, "setppc") == 0 )
    {
-      switch ( SCIPgetTypeSetppc(scip, cons) ) {
-         case SCIP_SETPPCTYPE_PARTITIONING: /* fall through desired */
+      switch( SCIPgetTypeSetppc(scip, cons) )
+      {
+         case SCIP_SETPPCTYPE_PARTITIONING: /* fall through intended */
          case SCIP_SETPPCTYPE_PACKING:
             rhs = 1.0;
             break;
@@ -77,16 +85,21 @@ SCIP_Real SCIPconsGetRhs(
    }
    else
    {
-      SCIPwarningMessage(scip, " Cannot return rhs of <%s> (not implemented yet)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return rhs for constraint of type <%s>\n", conshdlrname);
+      *success = FALSE;
    }
 
    return rhs;
 }
 
-/** returns the lhs of an arbitrary SCIP constraint that can be represented as a single linear constraint */
+/** returns the left-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
 SCIP_Real SCIPconsGetLhs(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to get left hand side for */
+   SCIP_CONS*            cons,               /**< constraint to get left-hand side for */
+   SCIP_Bool*            success             /**< pointer to store whether a valid left-hand side was returned */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -95,12 +108,14 @@ SCIP_Real SCIPconsGetLhs(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(success != NULL);
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
    conshdlrname = SCIPconshdlrGetName(conshdlr);
 
-   lhs = SCIPinfinity(scip);
+   *success = TRUE;
+   lhs = SCIP_INVALID;
 
    if( strcmp(conshdlrname, "linear") == 0 )
    {
@@ -108,8 +123,9 @@ SCIP_Real SCIPconsGetLhs(
    }
    else if( strcmp(conshdlrname, "setppc") == 0 )
    {
-      switch ( SCIPgetTypeSetppc(scip, cons) ) {
-         case SCIP_SETPPCTYPE_PARTITIONING: /* fall through desired */
+      switch( SCIPgetTypeSetppc(scip, cons) )
+      {
+         case SCIP_SETPPCTYPE_PARTITIONING: /* fall through intended */
          case SCIP_SETPPCTYPE_COVERING:
             lhs = 1.0;
             break;
@@ -133,7 +149,8 @@ SCIP_Real SCIPconsGetLhs(
    }
    else
    {
-      SCIPwarningMessage(scip, " Cannot return lhs of <%s> (not implemented yet)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return lhs for constraint of type <%s>\n", conshdlrname);
+      *success = FALSE;
    }
 
    return lhs;
@@ -145,15 +162,12 @@ SCIP_Real SCIPconsGetLhs(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
- *
- *  @note It might be that a constraint handler does not support the functionality of returning the involved values,
- *        in that case the success pointer is set to FALSE
  */
 SCIP_RETCODE SCIPgetConsVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the coefficients are wanted */
    SCIP_Real*            vals,               /**< array to store the coefficients of the constraint */
-   int                   varssize,           /**< available slots in vals array which is needed to check if the array is large enough */
+   int                   varssize,           /**< available slots in vals array needed to check if the array is large enough */
    SCIP_Bool*            success             /**< pointer to store whether the coefficients are successfully copied */
    )
 {
@@ -178,19 +192,20 @@ SCIP_RETCODE SCIPgetConsVals(
 
    if( !(*success) )
    {
-      SCIPwarningMessage(scip, " Cannot return number of variables of <%s> (callback not implemented)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return value array for constraint of type\n", conshdlrname);
+      return SCIP_OKAY;
+   }
+
+   if( varssize < nvars )
+   {
+      SCIPwarningMessage(scip, "Cannot return value array for constraint of type (insufficient memory provided)\n", conshdlrname);
+      *success = FALSE;
       return SCIP_OKAY;
    }
 
    if( strcmp(conshdlrname, "linear") == 0 )
    {
       SCIP_Real* linvals;
-
-      if( varssize < nvars )
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
 
       linvals = SCIPgetValsLinear(scip, cons);
       assert(linvals != NULL);
@@ -202,12 +217,6 @@ SCIP_RETCODE SCIPgetConsVals(
    }
    else if( strcmp(conshdlrname, "setppc") == 0 )
    {
-      if( varssize < nvars )
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
       for( i = 0; i < nvars; i++ )
       {
          vals[i] = 1.0;
@@ -215,12 +224,6 @@ SCIP_RETCODE SCIPgetConsVals(
    }
    else if( strcmp(conshdlrname, "logicor") == 0 )
    {
-      if( varssize < nvars )
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
       for( i = 0; i < nvars; i++ )
       {
          vals[i] = 1.0;
@@ -229,12 +232,6 @@ SCIP_RETCODE SCIPgetConsVals(
    else if( strcmp(conshdlrname, "knapsack") == 0 )
    {
       SCIP_Real* weights;
-
-      if( varssize < nvars )
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
 
       weights = SCIPgetWeightsKnapsack(scip, cons);
       assert(weights != NULL);
@@ -248,11 +245,7 @@ SCIP_RETCODE SCIPgetConsVals(
    {
       SCIP_Real vbdcoef;
 
-      if( varssize < 2 )
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
+      assert(nvars == 2);
 
       vals[0] = 1.0;
       vals[1] = SCIPgetVbdcoefVarbound(scip, cons);
@@ -260,12 +253,6 @@ SCIP_RETCODE SCIPgetConsVals(
    else if( strcmp(conshdlrname, "SOS1") == 0 )
    {
       SCIP_Real* weights;
-
-      if( varssize < nvars)
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
 
       weights = SCIPgetWeightsSOS1(scip, cons);
       assert(weights != NULL);
@@ -279,12 +266,6 @@ SCIP_RETCODE SCIPgetConsVals(
    {
       SCIP_Real* weights;
 
-      if( varssize < nvars)
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
       weights = SCIPgetWeightsSOS2(scip, cons);
       assert(weights != NULL);
 
@@ -295,7 +276,7 @@ SCIP_RETCODE SCIPgetConsVals(
    }
    else
    {
-      SCIPwarningMessage(scip, " Cannot return values of <%s> (not implemented yet)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s>\n", conshdlrname);
       *success = FALSE;
    }
 
@@ -308,7 +289,7 @@ SCIP_RETCODE SCIPgetConsVals(
  */
 void SCIPconsGetDualfarkas(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to get left hand side for */
+   SCIP_CONS*            cons,               /**< constraint to get the dual farkas solution for */
    SCIP_Real*            dualfarkas,         /**< pointer to store the dual farkas solution */
    SCIP_Bool*            success             /**< pointer to store whether the dual farkas solution is successfully returned */
    )
@@ -345,14 +326,14 @@ void SCIPconsGetDualfarkas(
    {
       *dualfarkas = SCIPgetDualfarkasVarbound(scip, cons);
    }
-   /* this are Benders' specific constraint handlers */
+   /* these are Benders' specific constraint handlers */
    else if( strcmp(conshdlrname, "origbranch") == 0 || strcmp(conshdlrname, "masterbranch") == 0 )
    {
       *dualfarkas = 0.0;
    }
    else
    {
-      SCIPwarningMessage(scip, " Cannot return dual farkas solution of <%s> (not implemented yet)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return dual farkas solution for constraint of type <%s>\n", conshdlrname);
       *dualfarkas = 0.0;
       *success = FALSE;
    }
@@ -364,7 +345,7 @@ void SCIPconsGetDualfarkas(
  */
 void SCIPconsGetDualsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to get left hand side for */
+   SCIP_CONS*            cons,               /**< constraint to get the dual solution for */
    SCIP_Real*            dualsol,            /**< pointer to store the dual solution */
    SCIP_Bool*            success             /**< pointer to store whether the dual solution is successfully returned */
    )
@@ -401,14 +382,14 @@ void SCIPconsGetDualsol(
    {
       *dualsol = SCIPgetDualsolVarbound(scip, cons);
    }
-   /* this are Benders' specific constraint handlers */
+   /* these are Benders' specific constraint handlers */
    else if( strcmp(conshdlrname, "origbranch") == 0 || strcmp(conshdlrname, "masterbranch") == 0 )
    {
       *dualsol = 0.0;
    }
    else
    {
-      SCIPwarningMessage(scip, " Cannot return dual solution of <%s> (not implemented yet)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return dual solution for constraint of type <%s>\n", conshdlrname);
       *dualsol = 0.0;
       *success = FALSE;
    }
@@ -419,7 +400,7 @@ void SCIPconsGetDualsol(
  */
 SCIP_ROW* SCIPconsGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to get left hand side for */
+   SCIP_CONS*            cons                /**< constraint for which row is queried */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -454,7 +435,7 @@ SCIP_ROW* SCIPconsGetRow(
    }
    else
    {
-      SCIPwarningMessage(scip, " Cannot return row of <%s> (not implemented yet)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return row for constraint of type <%s>\n", conshdlrname);
    }
 
    return NULL;

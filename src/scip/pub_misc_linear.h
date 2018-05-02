@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   misc_Linear.h
+/**@file   pub_misc_linear.h
  * @ingroup INTERNALAPI
  * @brief  internal miscellaneous methods for linear constraints
  * @author Jakob Witzig
@@ -36,18 +36,26 @@
 extern "C" {
 #endif
 
-/** returns the rhs of an arbitrary SCIP constraint that can be represented as a single linear constraint */
-extern
+/** returns the right-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
+EXTERN
 SCIP_Real SCIPconsGetRhs(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to get left hand side for */
+   SCIP_CONS*            cons,               /**< constraint for which right-hand side is queried */
+   SCIP_Bool*            success             /**< pointer to store whether a valid right-hand side was returned */
    );
 
-/** returns the lhs of an arbitrary SCIP constraint that can be represented as a single linear constraint */
-extern
+/** returns the left-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
+EXTERN
 SCIP_Real SCIPconsGetLhs(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to get left hand side for */
+   SCIP_CONS*            cons,               /**< constraint to get left hand side for */
+   SCIP_Bool*            success             /**< pointer to store whether a valid left-hand side was returned */
    );
 
 /** returns the value array of an arbitrary SCIP constraint that can be represented as a single linear constraint
@@ -56,24 +64,21 @@ SCIP_Real SCIPconsGetLhs(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
- *
- *  @note It might be that a constraint handler does not support the functionality of returning the involved values,
- *        in that case the success pointer is set to FALSE
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetConsVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the coefficients are wanted */
    SCIP_Real*            vals,               /**< array to store the coefficients of the constraint */
-   int                   varssize,           /**< available slots in vals array which is needed to check if the array is large enough */
+   int                   varssize,           /**< available slots in vals array needed to check if the array is large enough */
    SCIP_Bool*            success             /**< pointer to store whether the coefficients are successfully copied */
    );
 
-/** returns the dual farkas sol of an arbitrary SCIP constraint that can be represented as a single linear constraint
+/** returns the dual farkas solution of an arbitrary SCIP constraint that can be represented as a single linear constraint
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the dual farkas solution
  */
-extern
+EXTERN
 void SCIPconsGetDualfarkas(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left hand side for */
@@ -81,7 +86,7 @@ void SCIPconsGetDualfarkas(
    SCIP_Bool*            success             /**< pointer to store whether the dual farkas solution is successfully returned */
    );
 
-/** returns the dual sol of an arbitrary SCIP constraint that can be represented as a single linear constraint
+/** returns the dual solution of an arbitrary SCIP constraint that can be represented as a single linear constraint
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the dual solution
  */
@@ -95,7 +100,7 @@ void SCIPconsGetDualsol(
 /** returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint
  *  or NULL of no row is awailable
  */
-extern
+EXTERN
 SCIP_ROW* SCIPconsGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
