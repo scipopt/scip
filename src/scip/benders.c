@@ -1897,6 +1897,7 @@ SCIP_Bool SCIPbendersIsActive(
  *  Once the subproblem is merged back into the master problem, then the subproblem is flagged as disabled. This means
  *  that it will not be solved in the subsequent subproblem solving loops.
  *  Additionally, the auxiliary variable associated with the subproblem is fixed to zero.
+ *
  *  TODO: The auxiliary variable could be removed or the objective function coefficient is set to zero.
  */
 static
@@ -1907,12 +1908,101 @@ SCIP_RETCODE mergeSubproblemIntoMaster(
    )
 {
    SCIP* subproblem;
+   SCIP_HASHMAP* subvartomastervar;
+   SCIP_VAR** vars;
+   SCIP_VAR* auxiliaryvar;
+   int nvars;
+   int i;
+   char varname[SCIP_MAXSTRLEN];
+   const char* origvarname;
+   SCIP_Bool valid;
+   SCIP_Bool infeasible;
+   SCIP_Bool fixed;
+
 
    assert(benders != NULL);
-   assert(probnumber != NULL);
+   assert(set != NULL);
+   assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
+   /* retrieving the subproblem variable to build a subproblem mapping */
+   vars = SCIPgetVars(subproblem);
+   nvars = SCIPgetNVars(subproblem);
+
+   /* creating the hashmap for the subproblem */
+   SCIP_CALL( SCIPhashmapCreate(&subvartomastervar, SCIPblkmem(subproblem), nvars) );
+
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_VAR* mastervar = NULL;
+      SCIP_Bool releasevar = FALSE;
+
+      SCIP_CALL( SCIPgetBendersMasterVar(set->scip, benders, vars[i], &mastervar) );
+      /* if the master problem variable is not NULL, then there is a corresponding variable in the master problem for
+       * the given subproblem variable. In this case, the variable is added to the hashmap. */
+      if( mastervar == NULL )
+      {
+         SCIP_VAR* origvar;
+         SCIP_Real scalar;
+         SCIP_Real constant;
+         SCIP_Real obj;
+
+         /* This is following the same process as in createVariableMappings. The original variable is used to map
+          * between the subproblem and the master problem */
+         origvar = vars[i];
+         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+
+         /* retreiving the var name */
+         origvarname = SCIPvarGetName(origvar);
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", origvarname);
+
+         /* creating and adding the variable to the Benders' decomposition subproblem */
+         SCIP_CALL( SCIPcreateVarBasic(subproblem, &mastervar, varname, SCIPvarGetLbOriginal(origvar),
+               SCIPvarGetUbOriginal(origvar), SCIPvarGetObj(origvar), SCIPvarGetType(origvar)) );
+
+         /* adding the variable to the subproblem */
+         SCIP_CALL( SCIPaddVar(set->scip, mastervar) );
+
+         SCIP_CALL( SCIPcaptureVar(set->scip, mastervar) );
+
+         /* the variable must be released */
+         releasevar = TRUE;
+      }
+
+      /* creating the mapping betwen the subproblem var and the master var for the constraint copying */
+      SCIP_CALL( SCIPhashmapInsert(subvartomastervar, vars[i], mastervar) );
+
+
+      /* releasing the variable */
+      if( releasevar )
+      {
+         SCIP_CALL( SCIPreleaseVar(set->scip, &mastervar) );
+      }
+   }
+
+   /* copying the constraints from the master problem to the subproblem */
+   SCIP_CALL( SCIPcopyConss(subproblem, set->scip, subvartomastervar, NULL, TRUE, TRUE, &valid) );
+   assert(valid);
+
+   /* freeing the hashmap */
+   SCIPhashmapFree(&subvartomastervar);
+
+   /* since the subproblem has been merged into the master problem, the auxiliary variable must be set to zero. */
+   auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders, probnumber);
+   SCIP_CALL( SCIPfixVar(set->scip, auxiliaryvar, 0.0, &infeasible, &fixed) );
+   assert(!infeasible);
+   assert(fixed);
+
+   /* freeing the subproblem because it will be flagged as independent. Since the subproblem is flagged as independent,
+    * it will no longer be solved or freed within the solving loop.
+    */
+   SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, probnumber) );
+
+   /* the merged subproblem is no longer solved. This is indicated by setting the subproblem as independent. The
+    * subproblem still exists, but it is not solved in the solving loop.
+    */
+   SCIPbendersSetSubprobIsIndependent(benders, probnumber, TRUE);
 
    return SCIP_OKAY;
 }
@@ -2032,6 +2122,22 @@ SCIP_RETCODE solveBendersSubproblems(
                SCIPbendersSetSubprobObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
          }
 
+         /* if the subproblem is independent, then it does not need to me solved. In this case, the nverified flag will
+          * increase by one.
+          * when the subproblem is not independent, then it needs to be checked.
+          */
+         if( SCIPbendersSubprobIsIndependent(benders, i) )
+         {
+            /* NOTE: There is no need to update the optimal flag. This is because optimal is always TRUE until a
+             * non-optimal subproblem is found. */
+
+            subisinfeas[i] = FALSE;
+            subprobsolved[i] = TRUE;
+
+            /* the nverified counter is only increased in the convex solving loop */
+            if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX )
+               nverified++;
+         }
          if( solvesub )
          {
             SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, solveloop, FALSE, &solved, &subinfeas, type) );
@@ -2154,6 +2260,7 @@ SCIP_RETCODE generateBendersCuts(
    SCIP_Bool             checkint,           /**< are the subproblems called during a check/enforce of integer sols? */
    int                   nchecked,   /**< the number of subproblems checked in this solve loop, they may not be solved */
    SCIP_Bool*            subprobsolved,      /**< an array indicating the subproblems that were solved in this loop. */
+   SCIP_Bool*            subisinfeas,        /**< array to indicate whether a subproblem is infeasible */
    int*                  nsolveloops         /**< the number of solve loops, is updated w.r.t added cuts */
    )
 {
@@ -2233,8 +2340,11 @@ SCIP_RETCODE generateBendersCuts(
                   /* at most a single cut is generated for each subproblem */
                   break;
                }
-               else if( cutresult == SCIP_DIDNOTFIND && (*result) != SCIP_CONSADDED && (*result) != SCIP_SEPARATED )
-                  (*result) = cutresult;
+               else if( cutresult == SCIP_DIDNOTFIND )
+               {
+                  if( (*result) != SCIP_CONSADDED && (*result) != SCIP_SEPARATED )
+                     (*result) = cutresult;
+               }
             }
          }
 
@@ -2400,7 +2510,7 @@ SCIP_RETCODE SCIPbendersExec(
        */
       if( type != SCIP_BENDERSENFOTYPE_PSEUDO )
          SCIP_CALL( generateBendersCuts(benders, set, sol, result, type, solveloop, checkint, nchecked,
-               subprobsolved, &nsolveloops) );
+               subisinfeas, subprobsolved, &nsolveloops) );
       else
       {
          /* if the problems are not infeasible, then the */
