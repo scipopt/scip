@@ -44,7 +44,7 @@
 #include "scip/benderscut_opt.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_benderscut.h"
-#include "scip/misc_benders.h"
+#include "scip/pub_misc_linear.h"
 
 #include "scip/cons_linear.h"
 #include "scip/pub_lp.h"
@@ -126,9 +126,16 @@ SCIP_RETCODE computeStandardOptimalityCut(
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
    {
+      SCIP_Bool conssuccess;
       addval = 0;
 
-      dualsol = BDconsGetDualsol(subproblem, conss[i]);
+      SCIPconsGetDualsol(subproblem, conss[i], &dualsol, &conssuccess);
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating optimality cut.\n");
+         return SCIP_OKAY;
+      }
 
       assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
 
@@ -142,9 +149,16 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
 
       if( SCIPisPositive(subproblem, dualsol) )
-         addval = dualsol*BDconsGetLhs(subproblem, conss[i]);
+         addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
       else if( SCIPisNegative(subproblem, dualsol) )
-         addval = dualsol*BDconsGetRhs(subproblem, conss[i]);
+         addval = dualsol*SCIPconsGetRhs(subproblem, conss[i], &conssuccess);
+
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating optimality cut.\n");
+         return SCIP_OKAY;
+      }
 
       lhs += addval;
 

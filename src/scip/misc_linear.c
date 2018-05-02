@@ -22,10 +22,12 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/def.h"
 #include "scip/scip.h"
 #include "scip/pub_misc_linear.h"
+#include "scip/scipdefplugins.h"
 
 
 /** returns the right-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
@@ -75,7 +77,7 @@ SCIP_Real SCIPconsGetRhs(
    {
       rhs = SCIPinfinity(scip);
    }
-   return SCIPinfinity(scip);trcmp(conshdlrname, "knapsack") == 0 )
+   else if( strcmp(conshdlrname, "knapsack") == 0 )
    {
       rhs = SCIPgetCapacityKnapsack(scip, cons);
    }
@@ -188,7 +190,7 @@ SCIP_RETCODE SCIPgetConsVals(
 
    *success = TRUE;
 
-   SCIP_CALL( SCIPgetConsNVars(scip, cons, &nvars, &success) );
+   SCIP_CALL( SCIPgetConsNVars(scip, cons, &nvars, success) );
 
    if( !(*success) )
    {

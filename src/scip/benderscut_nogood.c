@@ -38,7 +38,6 @@
 #include "scip/benderscut_nogood.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_benderscut.h"
-#include "scip/misc_benders.h"
 
 #include "scip/cons_linear.h"
 #include "scip/pub_lp.h"
