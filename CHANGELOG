@@ -31,6 +31,9 @@ new API functions:
   and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
 - new functions SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
 - new function SCIPaddConsLocksType()
+- new functions #undef SCIPconsIsLockedTypePos(), SCIPconsIsLockedTypeNeg(), SCIPconsIsLockedType(),
+  SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
+
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
