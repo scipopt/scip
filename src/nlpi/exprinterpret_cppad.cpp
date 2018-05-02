@@ -77,6 +77,15 @@ using CppAD::SCIPInterval;
 #endif
 #endif
 
+/* disable -Wshadow warnings for upcoming includes of CppAD if using some old GCC
+ * -Wshadow was too strict with some versions of GCC 4 (https://stackoverflow.com/questions/2958457/gcc-wshadow-is-too-strict)
+ */
+#ifdef __GNUC__
+#if __GNUC__ == 4
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
+#endif
+
 #include <cppad/cppad.hpp>
 #include <cppad/utility/error_handler.hpp>
 
