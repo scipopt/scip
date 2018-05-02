@@ -2116,7 +2116,7 @@ static
 SCIP_RETCODE addScenarioVarsAndConsToProb(
    SCIP*                 scip,               /**< the SCIP data structure of master problem */
    STOSCENARIO*          scenario,           /**< the current scenario */
-   SCIP_Bool             decomp
+   SCIP_Bool             decomp              /**< is the problem being decomposed */
    )
 {
    SCIP* scenarioscip;
