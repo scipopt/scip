@@ -46,6 +46,7 @@ deleted files:
 
 misc:
 - updated CppAD to version 20180000.0
+- add statistic that presents the number of resolves for instable LPs
 
 
 SCIP version 5.0.2
