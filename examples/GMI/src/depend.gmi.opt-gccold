@@ -1,6 +1,5 @@
 $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
- ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
- ../../src/scip/type_message.h ../../src/scip/struct_message.h \
+ ../../src/scip/type_retcode.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
  ../../src/scip/type_clock.h ../../src/scip/type_misc.h \
  ../../src/scip/type_timing.h ../../src/scip/type_scip.h \
@@ -32,6 +31,7 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
  ../../src/scip/type_set.h ../../src/lpi/type_lpi.h \
  ../../src/scip/struct_lp.h ../../src/scip/pub_nlp.h \
+ ../../src/scip/pub_message.h ../../src/scip/struct_message.h \
  ../../src/scip/pub_misc.h ../../src/scip/pub_misc_select.h \
  ../../src/scip/type_misc.h ../../src/scip/pub_misc_sort.h \
  ../../src/scip/struct_misc.h ../../src/scip/pub_nodesel.h \
@@ -86,11 +86,12 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
  ../../src/scip/heur_completesol.h ../../src/scip/heur_crossover.h \
  ../../src/scip/heur_dins.h ../../src/scip/heur_distributiondiving.h \
- ../../src/scip/heur_dualval.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_gins.h ../../src/scip/heur_guideddiving.h \
- ../../src/scip/heur_indicator.h ../../src/scip/heur_intdiving.h \
- ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_dualval.h ../../src/scip/heur_farkasdiving.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_gins.h \
+ ../../src/scip/heur_guideddiving.h ../../src/scip/heur_indicator.h \
+ ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
+ ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_locks.h \
  ../../src/scip/heur_lpface.h ../../src/scip/heur_alns.h \
  ../../src/scip/heur_multistart.h ../../src/scip/heur_mutation.h \
@@ -148,8 +149,7 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/nlpi/nlpi_ipopt.h ../../src/nlpi/nlpi_filtersqp.h \
  ../../src/nlpi/nlpi_worhp.h ../../src/nlpi/nlpi_all.h src/sepa_gmi.h
 $(OBJDIR)/sepa_gmi.o: src/sepa_gmi.c ../../src/scip/pub_misc.h ../../src/scip/def.h \
- ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
- ../../src/scip/type_message.h ../../src/scip/struct_message.h \
+ ../../src/scip/type_retcode.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_misc.h \
  ../../src/scip/type_var.h ../../src/scip/pub_misc_select.h \
  ../../src/scip/type_misc.h ../../src/scip/pub_misc_sort.h \
@@ -183,7 +183,8 @@ $(OBJDIR)/sepa_gmi.o: src/sepa_gmi.c ../../src/scip/pub_misc.h ../../src/scip/de
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_nodesel.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_nodesel.h \
  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \

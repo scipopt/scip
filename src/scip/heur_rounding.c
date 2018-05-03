@@ -247,7 +247,7 @@ SCIP_RETCODE selectRounding(
             if( direction * val < 0.0 )
             {
                /* rounding down */
-               nlocks = SCIPvarGetNLocksDown(var);
+               nlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
                if( nlocks <= minnlocks )
                {
                   roundval = SCIPfeasFloor(scip, solval);
@@ -266,7 +266,7 @@ SCIP_RETCODE selectRounding(
             {
                /* rounding up */
                assert(direction * val > 0.0);
-               nlocks = SCIPvarGetNLocksUp(var);
+               nlocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
                if( nlocks <= minnlocks )
                {
                   roundval = SCIPfeasCeil(scip, solval);
@@ -364,7 +364,7 @@ SCIP_RETCODE selectEssentialRounding(
          obj = SCIPvarGetObj(var);
 
          /* rounding down */
-         nlocks = SCIPvarGetNLocksUp(var);
+         nlocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
          if( nlocks >= maxnlocks )
          {
             roundval = SCIPfeasFloor(scip, solval);
@@ -380,7 +380,7 @@ SCIP_RETCODE selectEssentialRounding(
          }
 
          /* rounding up */
-         nlocks = SCIPvarGetNLocksDown(var);
+         nlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
          if( nlocks >= maxnlocks )
          {
             roundval = SCIPfeasCeil(scip, solval);

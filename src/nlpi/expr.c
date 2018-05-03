@@ -8976,6 +8976,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
 /** adds an expression to the root expression of the tree
  *
  *  The root is replaced with an SCIP_EXPR_PLUS expression which has the previous root and the given expression (or a copy of it) as children.
+ *  If no root existed yet, then the root is set to the given expression (or a copy of it).
  */
 SCIP_RETCODE SCIPexprtreeAddExpr(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -8984,7 +8985,6 @@ SCIP_RETCODE SCIPexprtreeAddExpr(
    )
 {
    assert(tree != NULL);
-   assert(tree->root != NULL);
 
    /* adding something to the tree may invalidate the interpreter data */
    SCIP_CALL( SCIPexprtreeFreeInterpreterData(tree) );
@@ -8994,7 +8994,14 @@ SCIP_RETCODE SCIPexprtreeAddExpr(
       SCIP_CALL( SCIPexprCopyDeep(tree->blkmem, &expr, expr) );
    }
 
-   SCIP_CALL( SCIPexprCreate(tree->blkmem, &tree->root, SCIP_EXPR_PLUS, tree->root, expr) );
+   if( tree->root == NULL )
+   {
+      tree->root = expr;
+   }
+   else
+   {
+      SCIP_CALL( SCIPexprCreate(tree->blkmem, &tree->root, SCIP_EXPR_PLUS, tree->root, expr) );
+   }
 
    return SCIP_OKAY;
 }
@@ -9011,7 +9018,16 @@ SCIP_RETCODE SCIPexprtreeCheckCurvature(
    SCIP_INTERVAL exprbounds;
 
    assert(tree != NULL);
-   assert(tree->root != NULL);
+
+   if( tree->root == NULL )
+   {
+      *curv = SCIP_EXPRCURV_LINEAR;
+
+      if( bounds != NULL )
+         SCIPintervalSet(bounds, 0.0);
+
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPexprCheckCurvature(tree->root, infinity, varbounds, tree->params, curv, &exprbounds) );
 
@@ -9032,7 +9048,9 @@ SCIP_RETCODE SCIPexprtreeSubstituteVars(
    )
 {
    assert(tree != NULL);
-   assert(tree->root != NULL);
+
+   if( tree->root == NULL )
+      return SCIP_OKAY;
 
    if( tree->root->op == SCIP_EXPR_VARIDX )
    {

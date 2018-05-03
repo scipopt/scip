@@ -2297,8 +2297,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
             var = SCIPmatrixGetVar(matrix,v);
 
-            if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, v) ||
-               SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, v) )
+            if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNUplocks(matrix, v) ||
+               SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNDownlocks(matrix, v) )
             {
                /* no fixing, locks not consistent */
                continue;

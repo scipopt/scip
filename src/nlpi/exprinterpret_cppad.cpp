@@ -77,6 +77,15 @@ using CppAD::SCIPInterval;
 #endif
 #endif
 
+/* disable -Wshadow warnings for upcoming includes of CppAD if using some old GCC
+ * -Wshadow was too strict with some versions of GCC 4 (https://stackoverflow.com/questions/2958457/gcc-wshadow-is-too-strict)
+ */
+#ifdef __GNUC__
+#if __GNUC__ == 4
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
+#endif
+
 #include <cppad/cppad.hpp>
 #include <cppad/utility/error_handler.hpp>
 
@@ -86,16 +95,12 @@ using CppAD::SCIPInterval;
  * To implement this, we follow the team_pthread example of CppAD, which uses pthread's thread-specific data management.
  */
 #ifndef NPARASCIP
-#include <pthread.h>
 
-/** mutex for locking in pthread case */
-static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
-
-/** key for accessing thread specific information */
-static pthread_key_t thread_specific_key;
+#include <atomic>
 
 /** currently registered number of threads */
-static size_t ncurthreads = 0;
+static std::atomic_size_t ncurthreads{0};
+static thread_local int thread_number{-1};
 
 /** CppAD callback function that indicates whether we are running in parallel mode */
 static
@@ -112,36 +117,15 @@ static
 size_t thread_num(void)
 {
    size_t threadnum;
-   void* specific;
 
-   specific = pthread_getspecific(thread_specific_key);
-
-   /* if no data for this thread yet, then assign a new thread number to the current thread
-    * we store the thread number incremented by one, to distinguish the absence of data (=0) from existing data
+   /* if no thread_number for this thread yet, then assign a new thread number to the current thread
     */
-   if( specific == NULL )
+   if( thread_number == -1 )
    {
-      pthread_mutex_lock(&cppadmutex);
-
-      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", (long unsigned int)ncurthreads, (void*)pthread_self());
-
-      pthread_setspecific(thread_specific_key, (void*)(ncurthreads + 1));
-
-      threadnum = ncurthreads;
-
-      ++ncurthreads;
-
-      pthread_mutex_unlock(&cppadmutex);
-
-      assert(pthread_getspecific(thread_specific_key) != NULL);
-      assert((size_t)pthread_getspecific(thread_specific_key) == threadnum + 1);
-   }
-   else
-   {
-      threadnum = (size_t)(specific) - 1;
+      thread_number = static_cast<int>(ncurthreads.fetch_add(1, std::memory_order_relaxed));
    }
 
-   assert(threadnum < ncurthreads);
+   threadnum = static_cast<size_t>(thread_number);
 
    return threadnum;
 }
@@ -153,8 +137,6 @@ size_t thread_num(void)
 static
 char init_parallel(void)
 {
-   pthread_key_create(&thread_specific_key, NULL);
-
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
    CppAD::parallel_ad<SCIPInterval>();

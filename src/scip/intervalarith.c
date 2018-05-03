@@ -3149,6 +3149,9 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL xneg;
 
    assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, sqrcoeff));
+   assert(!SCIPintervalIsEmpty(infinity, lincoeff));
+   assert(!SCIPintervalIsEmpty(infinity, rhs));
 
    /* special handling for lincoeff * x = rhs without 0 in lincoeff
     * rhs/lincoeff gives a good interval that we just have to intersect with xbnds
