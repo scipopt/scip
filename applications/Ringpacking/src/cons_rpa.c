@@ -648,7 +648,7 @@ SCIP_DECL_CONSLOCK(consLockRpa)
          assert(!conshdlrdata->locked[p]);
          assert(nlocksneg + nlockspos > 0);
 
-         SCIP_CALL( SCIPaddVarLocks(scip, cvars[p], SCIP_LOCKTYPE_MODEL, nlocksneg + nlockspos,
+         SCIP_CALL( SCIPaddVarLocksType(scip, cvars[p], SCIP_LOCKTYPE_MODEL, nlocksneg + nlockspos,
                nlocksneg + nlockspos) );
          conshdlrdata->locked[p] = TRUE;
          SCIPdebugMsg(scip, "lock %s\n", SCIPvarGetName(cvars[p]));
@@ -657,7 +657,7 @@ SCIP_DECL_CONSLOCK(consLockRpa)
       {
          assert(nlocksneg + nlockspos < 0);
 
-         SCIP_CALL( SCIPaddVarLocks(scip, cvars[p], SCIP_LOCKTYPE_MODEL, nlocksneg + nlockspos,
+         SCIP_CALL( SCIPaddVarLocksType(scip, cvars[p], SCIP_LOCKTYPE_MODEL, nlocksneg + nlockspos,
                nlocksneg + nlockspos) );
          conshdlrdata->locked[p] = FALSE;
          SCIPdebugMsg(scip, "unlock %s\n", SCIPvarGetName(cvars[p]));
