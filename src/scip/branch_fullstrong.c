@@ -260,7 +260,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    propagate = (maxproprounds != 0);
 
    /* if we don't do propagation, we cannot identify valid bounds in a probing-like fashion */
-   if( !propagate )
+   if( !propagate && maxproprounds > -3 )
       probingbounds = FALSE;
 
    /* create arrays for probing-like bound tightening */
@@ -363,6 +363,16 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
+         /* update pseudo cost values */
+         if( !downinf && downvalid )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
+         }
+         if( !upinf && upvalid )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+         }
+
          /* check if there are infeasible roundings */
          if( downinf || upinf )
          {
@@ -461,12 +471,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                }
             }
          }
-
-         /* update pseudo cost values */
-         assert(!downinf); /* otherwise, we would have terminated the initialization loop */
-         assert(!upinf);
-         SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
-         SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
       }
 
       /* check for a better score, if we are within the maximum priority candidates */
@@ -663,7 +667,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/fullstrong/maxproprounds",
          "maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)",
-         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
+         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -3, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/fullstrong/probingbounds",
          "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",

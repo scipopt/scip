@@ -1,7 +1,7 @@
 # Analyze infeasible multi-commodity flow IP/LP via indicator constraints
 # We relax the mutual capacity bounds.
 #
-#  Mutual capacity file (*.mut): 
+#  Mutual capacity file (*.mut):
 #
 #  < mutual capacity pointer > , < mutual capacity >
 #

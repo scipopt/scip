@@ -108,7 +108,7 @@ void SCIPincludeRelaxUnittest(void)
 /* TEST SUITES */
 /** setup of test run */
 static
-void setup(void) 
+void setup(void)
 {
    scip = NULL;
 

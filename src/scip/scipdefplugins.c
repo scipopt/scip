@@ -114,6 +114,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
+   SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
    SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleMultAggr(scip) );
    SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
@@ -128,6 +129,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurClique(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCompletesol(scip) );
+   SCIP_CALL( SCIPincludeHeurConflictdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
    SCIP_CALL( SCIPincludeHeurDins(scip) );
    SCIP_CALL( SCIPincludeHeurDistributiondiving(scip) );

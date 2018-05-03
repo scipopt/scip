@@ -534,8 +534,8 @@ SCIP_RETCODE SCIPmatrixCreate(
     */
    for( i = nvars - 1; i >= 0; --i )
    {
-      nnonzstmp += SCIPvarGetNLocksDown(vars[i]);
-      nnonzstmp += SCIPvarGetNLocksUp(vars[i]);
+      nnonzstmp += SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
+      nnonzstmp += SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
    }
 
    /* do nothing if we have no entries */
@@ -1620,7 +1620,7 @@ SCIP_Bool SCIPmatrixUplockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksUp(matrix->vars[col]) == matrix->nuplocks[col]);
+   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->nuplocks[col]);
 }
 
 /** get if conflicting downlocks of a specific variable present */
@@ -1632,5 +1632,5 @@ SCIP_Bool SCIPmatrixDownlockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksDown(matrix->vars[col]) == matrix->ndownlocks[col]);
+   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->ndownlocks[col]);
 }

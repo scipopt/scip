@@ -115,7 +115,7 @@ SCIP_RETCODE createObjRow(
          SCIP_CALL( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
                SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, sepadata->objvar) );
-         SCIP_CALL( SCIPaddVarLocks(scip, sepadata->objvar, +1, +1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, sepadata->objvar, SCIP_LOCKTYPE_MODEL, +1, +1) );
       }
       else
          attendobjvarbound = TRUE;

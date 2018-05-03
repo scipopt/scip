@@ -7,4 +7,3 @@ visual/bakfilename = "temp/tmp.bak"
 # should be output the external value of the objective?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
 visual/objextern = FALSE
-
