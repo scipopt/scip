@@ -40,12 +40,12 @@
  * introduce the Ryan/Foster branching rule and briefly discuss how that specific branching rule is realized within
  * the framework \SCIP.
  *
- * -# \ref BINPACKING_PROBLEM "Problem description"
- * -# \ref BINPACKING_READER "Parsing the input format and creating the problem"
- * -# \ref BINPACKING_PROBLEMDATA "Main problem data"
- * -# \ref BINPACKING_PRICER "Pricing new variables"
- * -# \ref BINPACKING_BRANCHING "Ryan/Foster branching"
- * -# \ref BINPACKING_MAKEFILE "The Makefile"
+ * -# @subpage BINPACKING_PROBLEM "Problem description"
+ * -# @subpage BINPACKING_READER "Parsing the input format and creating the problem"
+ * -# @subpage BINPACKING_PROBLEMDATA "Main problem data"
+ * -# @subpage BINPACKING_PRICER "Pricing new variables"
+ * -# @subpage BINPACKING_BRANCHING "Ryan/Foster branching"
+ * -# @subpage BINPACKING_MAKEFILE "The Makefile"
  *
  */
 

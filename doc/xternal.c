@@ -31,287 +31,21 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/** @page Overview
  *
- *
- * @section WHATISSCIP What is SCIP?
- *
- * \SCIP is a framework to solve constraint integer programs (CIPs) and mixed-integer nonlinear programs. In particular,
- *
- * - \SCIP incorporates a mixed-integer programming (MIP) solver as well as
- * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
- * - is a framework for branch-and-cut-and-price.
- *
- * \SCIP is developed together with
- * <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
- * <a href="http://www.am.uni-erlangen.de/wima/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
- * and has more than 500,000 lines of C code.
- *
- * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
- *
- * @section GETTINGSTARTED Getting started
- *
- * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
- * - \ref CMAKE   "Installation information using CMake"
- * - \ref MAKE    "Installation information using Makefiles"
- * - \ref LICENSE "License"
- *
- * - \ref SHELL       "Tutorial: the interactive shell"
- * - \ref FILEREADERS "Readable file formats"
- * - \ref START       "How to start a new project"
- * - \ref EXAMPLES    "Examples"
- * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
- * - \ref LPI         "Available LP solver interfaces"
- * - \ref NLPISOLVERS "Available implementations of the NLP solver interface"
- *
- * @section FURTHERINFORMATION References
- *
- * - \ref PUBLICAPI "List of callable functions"
- * - \ref PARAMETERS "List of all SCIP parameters"
- *
- * - \ref DOC     "How to search the documentation for interface methods"
- * - \ref FAQ     "Frequently asked questions (FAQ)"
- *
- *
- * @section PROGRAMMING Programming with SCIP
- *
- * @subsection CODINGBASICS Coding basics for SCIP
- *
- *   - \ref CODE    "Coding style guidelines"
- *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
- *   - \ref MEMORY  "Using the memory functions of SCIP"
- *   - \ref DEBUG   "Debugging"
- *
- * @subsection HOWTOADD How to add ...
- *
- *    Below you find for most plugin types a detailed description of how to implement and add them to \SCIP.
- *
- *   - \ref CONS    "Constraint handlers"
- *   - \ref PRICER  "Variable pricers"
- *   - \ref PRESOL  "Presolvers"
- *   - \ref SEPA    "Separators"
- *   - \ref PROP    "Propagators"
- *   - \ref BRANCH  "Branching rules"
- *   - \ref NODESEL "Node selectors"
- *   - \ref HEUR    "Primal heuristics"
- *      + \ref DIVINGHEUR "Diving heuristics"
- *   - \ref RELAX   "Relaxation handlers"
- *   - \ref READER  "File readers"
- *   - \ref DIALOG  "Dialogs"
- *   - \ref DISP    "Display columns"
- *   - \ref EVENT   "Event handler"
- *   - \ref NLPI    "Interface to NLP solvers"
- *   - \ref EXPRINT "Interfaces to expression interpreters"
- *   - \ref PARAM   "additional user parameters"
- *   - \ref TABLE   "Statistics tables"
- *
- * @subsection HOWTOUSESECTION How to use ...
- *
- *   - \ref CONF    "Conflict analysis"
- *   - \ref TEST    "How to run automated tests with SCIP"
- *   - \ref COUNTER "How to use SCIP to count feasible solutions"
- *   - \ref REOPT   "How to use reoptimization in SCIP"
- *   - \ref CONCSCIP "How to use the concurrent solving mode in SCIP"
- *
- *
- * @section FURTHERINFO Further information
- *
- * @subsection CHG Changes between different versions of SCIP
- * - \ref CHANGELOG    "Change log"
- * - \ref RELEASENOTES "Release notes"
- * - \ref CHG11        "Interface changes between version 5.0 and 5.1"
- * - \ref CHG10        "Interface changes between version 4.0 and 5.0"
- * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
- * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
- * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
- * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
- * - \ref CHG5         "Interface changes between version 2.0 and 2.1"
- * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
- * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
- * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
- * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
- *
- * @subsection AUTHORS SCIP Authors
- * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
- *
- * @version  5.0.1.4
- *
- * \image html scippy.png
- *
+ *  @subpage WHATISSCIP What is SCIP 
+ *  @subpage GETTINGSTARTED Getting started
+ *  @subpage FURTHERINFORMATION References
+ *  @subpage PROGRAMMING Programming with SCIP
+ *  @subpage HOWTOADD How to add ...
+ *  @subpage HOWTOUSESECTION How to use ...
+ *  @subpage FURTHERINFO Further information
  */
 
-/** @page EXAMPLES Example projects
- *
- *  \SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
- *  in the source code distribution.
- *
- *  @section BRANCHANDPRICE Branch-and-price
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref BINPACKING_MAIN "Binpacking"
- *  </td>
- *  <td>
- *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
- *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>
- *  </td>
- *  <td>
- *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
- *  programming algorithm.
- *  </td>
- *  </tr>
- *  </table>
- *
- *  @section BRANCHANDCUT Branch-and-cut
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref LOP_MAIN "Linear Ordering"
- *  </td>
- *  <td>
- *  An example for implementing a constraint handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  \ref TSP_MAIN "The TSP example"
- *  </td>
- *  <td>
- *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
- *  demonstrate the usage of \SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
- *  </td>
- *  </tr>
- *  </table>
- *
- *  @section CALLABLELIBRARY Callable library
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref CALLABLELIBRARY_MAIN "Callable Library Example"
- *  </td>
- *  <td>
- *  An example showing how to setup constraints (esp. nonlinear ones) when using \SCIP as callable library.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  \ref MIPSOLVER_MAIN "MIP solver"
- *  </td>
- *  <td>
- *  A minimal implementation for using \SCIP included into another source code
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/download/files/scip_intro_01.pdf"><b>Queens</b></a>
- *  </td>
- *  <td>
- *  An example showing the use of \SCIP as callable library.
- *  </td>
- *  </tr>
- *  </table>
- *
- *
- *  @section OTHERPLUGINS Other plugins
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref EVENTHDLR_MAIN "Event handler"
- *  </td>
- *  <td>
- *  A small example illustrating the use of an event handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  \ref GMI_MAIN "Gomory mixed integer cut example"
- *  </td>
- *  <td>
- *  An example about Gomory mixed-integer cuts.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  \ref RELAXATOR_MAIN "Relaxator example"
- *  </td>
- *  <td>
- *  An example about using custom relaxators.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
-
-/** @page APPLICATIONS Application projects
- *
- *  There are several extensions of \SCIP for particular applications included in the release. They are contained in the &quot;applications&quot; directory
- *  in the source code distribution.
- *
- *  <table>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a>
- *  </td>
- *  <td>
- *  An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/MinIISC"><b>MinIISC</b></a>
- *  </td>
- *  <td>
- *  A solver that computes irreducible infeasible subsystems using Benders decomposition
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>Scheduler</b></a>
- *  </td>
- *  <td>
- *  A solver for scheduling problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/STP"><b>Steiner Tree Problem</b></a>
- *  </td>
- *  <td>
- *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
- *  </td>
- *  <td>
- *  A solver for multi-objective optimization problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>Cycle Clustering</b></a>
- *  </td>
- *  <td>
- *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** @page LPI Available LP solver interfaces
+/** @page LPI Available LP solverSekretariat: MA 6-2, Antje Schulz interfaces
  *
  * SCIP provides a range of different interfaces to LP solvers:
  *
@@ -379,6 +113,117 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page WHATISSCIP What is SCIP?
+* 
+* \SCIP is a framework to solve constraint integer programs (CIPs) and mixed-integer nonlinear programs. In particular,
+*
+* - \SCIP incorporates a mixed-integer programming (MIP) solver as well as
+* - an LP based mixed-integer nonlinear programming (MINLP) solver, and
+* - is a framework for branch-and-cut-and-price.
+*
+* \SCIP is developed together with
+* <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
+* <a href="http://www.am.uni-erlangen.de/wima/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
+* and has more than 500,000 lines of C code.
+*
+* See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
+*/
+
+/**@page GETTINGSTARTED Getting started
+ * 
+ * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
+ * 
+ * - @subpage CMAKE   "Installation information using CMake"
+ * - @subpage MAKE    "Installation information using Makefiles"
+ * - @subpage LICENSE "License"
+ *
+ * - @subpage SHELL       "Tutorial: the interactive shell"
+ * - @subpage FILEREADERS "Readable file formats"
+ * - @subpage START       "How to start a new project"
+ * - @subpage EXAMPLES    "Examples"
+ * - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
+ * - @subpage LPI         "Available LP solver interfaces"
+ * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
+ */
+/**@page FURTHERINFORMATION References
+ *
+ * - @subpage PUBLICAPI "List of callable functions"
+ * - @subpage PARAMETERS "List of all SCIP parameters"
+ *
+ * - @subpage DOC     "How to search the documentation for interface methods"
+ * - @subpage FAQ     "Frequently asked questions (FAQ)"
+ */
+ /**@page PROGRAMMING Programming with SCIP
+ *
+ * - @subpage CODE    "Coding style guidelines"
+ * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
+ * - @subpage MEMORY  "Using the memory functions of SCIP"
+ * - @subpage DEBUG   "Debugging"
+ */
+/**@page HOWTOADD How to add ...
+ *
+ * Below you find for most plugin types a detailed description of how to implement and add them to \SCIP.
+ *
+ * - @subpage CONS    "Constraint handlers"
+ * - @subpage PRICER  "Variable pricers"
+ * - @subpage PRESOL  "Presolvers"
+ * - @subpage SEPA    "Separators"
+ * - @subpage PROP    "Propagators"
+ * - @subpage BRANCH  "Branching rules"
+ * - @subpage NODESEL "Node selectors"
+ * - @subpage HEUR    "Primal heuristics"
+ * - @subpage DIVINGHEUR "Diving heuristics"
+ * - @subpage RELAX   "Relaxation handlers"
+ * - @subpage READER  "File readers"
+ * - @subpage DIALOG  "Dialogs"
+ * - @subpage DISP    "Display columns"
+ * - @subpage EVENT   "Event handler"
+ * - @subpage NLPI    "Interface to NLP solvers"
+ * - @subpage EXPRINT "Interfaces to expression interpreters"
+ * - @subpage PARAM   "additional user parameters"
+ * - @subpage TABLE   "Statistics tables"
+ */
+/**@page HOWTOUSESECTION How to use ...
+ *
+ * - @subpage CONF    "Conflict analysis"
+ * - @subpage TEST    "How to run automated tests with SCIP"
+ * - @subpage COUNTER "How to use SCIP to count feasible solutions"
+ * - @subpage REOPT   "How to use reoptimization in SCIP"
+ * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
+ */
+
+/**@page FURTHERINFO Further information
+ *
+ * - @subpage CHG Changes between different versions of SCIP
+ * - @subpage AUTHORS SCIP Authors
+ *
+ */
+
+/**@page AUTHORS SCIP Authors
+ * <a class="el" href="http://scip.zib.de/#developers">Developers</a>
+ *
+ * @version  5.0.1.4
+ *
+ * \image html scippy.png
+ * 
+ */
+
+/**@page CHG Changes between different versions of SCIP
+ * - \subpage CHANGELOG    "Change log"
+ * - \subpage RELEASENOTES "Release notes"
+ * - \subpage CHG11        "Interface changes between version 5.0 and 5.1"
+ * - \subpage CHG10        "Interface changes between version 4.0 and 5.0"
+ * - \subpage CHG9         "Interface changes between version 3.2 and 4.0"
+ * - \subpage CHG8         "Interface changes between version 3.1 and 3.2"
+ * - \subpage CHG7         "Interface changes between version 3.0 and 3.1"
+ * - \subpage CHG6         "Interface changes between version 2.1 and 3.0"
+ * - \subpage CHG5         "Interface changes between version 2.0 and 2.1"
+ * - \subpage CHG4         "Interface changes between version 1.2 and 2.0"
+ * - \subpage CHG3         "Interface changes between version 1.1 and 1.2"
+ * - \subpage CHG2         "Interface changes between version 1.0 and 1.1"
+ * - \subpage CHG1         "Interface changes between version 0.9 and 1.0"
+ */
 
 /**@page WHATPROBLEMS What types of optimization problems does SCIP solve?
  *
@@ -1104,6 +949,185 @@
  *
  *
  */
+
+/**@page EXAMPLES Example projects
+ *
+ *  \SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
+ *  in the source code distribution.
+ *
+ *  @subpage BRANCHANDPRICE Branch-and-price
+ *  @subpage BRANCHANDCUT Branch-and-cut
+ *  @subpage CALLABLELIBRARY Callable library
+ *  @subpage OTHERPLUGINS Other plugins
+ */
+
+/**@page BRANCHANDPRICE Branch-and-price
+ * 
+ * <table>
+ *  <tr>
+ *  <td>
+ *  @subpage BINPACKING_MAIN "Binpacking"
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
+ *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
+ *  programming algorithm.
+ *  </td>
+ *  </tr>
+ *  </table>
+ * 
+ */
+
+/**@page BRANCHANDCUT Branch-and-cut
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage LOP_MAIN "Linear Ordering"
+ *  </td>
+ *  <td>
+ *  An example for implementing a constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage TSP_MAIN "The TSP example"
+ *  </td>
+ *  <td>
+ *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
+ *  demonstrate the usage of \SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
+ *  </td>
+ *  </tr>
+ *  </table>
+ * 
+ */
+
+/**@page CALLABLELIBRARY Callable library
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage CALLABLELIBRARY_MAIN "Callable Library Example"
+ *  </td>
+ *  <td>
+ *  An example showing how to setup constraints (esp. nonlinear ones) when using \SCIP as callable library.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage MIPSOLVER_MAIN "MIP solver"
+ *  </td>
+ *  <td>
+ *  A minimal implementation for using \SCIP included into another source code
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/download/files/scip_intro_01.pdf"><b>Queens</b></a>
+ *  </td>
+ *  <td>
+ *  An example showing the use of \SCIP as callable library.
+ *  </td>
+ *  </tr>
+ *  </table>
+ */
+
+ /**@page OTHERPLUGINS Other plugins
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage EVENTHDLR_MAIN "Event handler"
+ *  </td>
+ *  <td>
+ *  A small example illustrating the use of an event handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage GMI_MAIN "Gomory mixed integer cut example"
+ *  </td>
+ *  <td>
+ *  An example about Gomory mixed-integer cuts.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage RELAXATOR_MAIN "Relaxator example"
+ *  </td>
+ *  <td>
+ *  An example about using custom relaxators.
+ *  </td>
+ *  </tr>
+ *  </table>
+ */
+
+/** @page APPLICATIONS Application projects
+ *
+ *  There are several extensions of \SCIP for particular applications included in the release. They are contained in the &quot;applications&quot; directory
+ *  in the source code distribution.
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a>
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/MinIISC"><b>MinIISC</b></a>
+ *  </td>
+ *  <td>
+ *  A solver that computes irreducible infeasible subsystems using Benders decomposition
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>Scheduler</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for scheduling problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/STP"><b>Steiner Tree Problem</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for multi-objective optimization problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>Cycle Clustering</b></a>
+ *  </td>
+ *  <td>
+ *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ */
+
 
 /**@page SHELL Tutorial: the interactive shell
  *
