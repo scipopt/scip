@@ -438,8 +438,7 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxnnzobjfac",
          "maximal portion of nonzero objective coeffcients.",
-         &heurdata->maxnnzobjfac, TRUE, DEFAULT_MAXNNZOBJFAC
-      , 0.0, 1.0, NULL, NULL) );
+         &heurdata->maxnnzobjfac, TRUE, DEFAULT_MAXNNZOBJFAC, 0.0, 1.0, NULL, NULL) );
 
 
    return SCIP_OKAY;
