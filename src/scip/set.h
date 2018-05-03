@@ -1176,9 +1176,9 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
 
 /** modifies an initial seed value with the global shift of random seeds */
 extern
-int SCIPsetInitializeRandomSeed(
+unsigned int SCIPsetInitializeRandomSeed(
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   initialseedvalue    /**< initial seed value to be modified */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
    );
 
 /** returns value treated as infinity */

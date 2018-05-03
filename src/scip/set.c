@@ -7074,12 +7074,12 @@ void SCIPsetDebugMessagePrint(
 }
 
 /** modifies an initial seed value with the global shift of random seeds */
-int SCIPsetInitializeRandomSeed(
+unsigned int SCIPsetInitializeRandomSeed(
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   initialseedvalue    /**< initial seed value to be modified */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
    )
 {
    assert(set != NULL);
 
-   return (initialseedvalue + set->random_randomseedshift);
+   return (unsigned int)(initialseedvalue + (unsigned) set->random_randomseedshift);
 }

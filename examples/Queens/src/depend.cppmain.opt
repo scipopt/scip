@@ -1,7 +1,6 @@
 $(OBJDIR)/queens_main.o: src/queens_main.cpp src/queens.hpp ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -32,7 +31,8 @@ $(OBJDIR)/queens_main.o: src/queens_main.cpp src/queens.hpp ../../src/scip/scip.
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -87,11 +87,11 @@ $(OBJDIR)/queens_main.o: src/queens_main.cpp src/queens.hpp ../../src/scip/scip.
  ../../src/scip/heur_coefdiving.h ../../src/scip/heur_completesol.h \
  ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
  ../../src/scip/heur_distributiondiving.h ../../src/scip/heur_dualval.h \
- ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
- ../../src/scip/heur_fracdiving.h ../../src/scip/heur_gins.h \
- ../../src/scip/heur_guideddiving.h ../../src/scip/heur_indicator.h \
- ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
- ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_farkasdiving.h ../../src/scip/heur_feaspump.h \
+ ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
+ ../../src/scip/heur_gins.h ../../src/scip/heur_guideddiving.h \
+ ../../src/scip/heur_indicator.h ../../src/scip/heur_intdiving.h \
+ ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_locks.h \
  ../../src/scip/heur_lpface.h ../../src/scip/heur_alns.h \
  ../../src/scip/heur_multistart.h ../../src/scip/heur_mutation.h \
@@ -151,8 +151,7 @@ $(OBJDIR)/queens_main.o: src/queens_main.cpp src/queens.hpp ../../src/scip/scip.
  src/scip_exception.hpp
 $(OBJDIR)/queens.o: src/queens.cpp src/queens.hpp ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
- ../../src/scip/pub_message.h ../../src/scip/type_message.h \
- ../../src/scip/struct_message.h ../../src/blockmemshell/memory.h \
+ ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
  ../../src/scip/type_result.h ../../src/scip/type_clock.h \
  ../../src/scip/type_misc.h ../../src/scip/type_timing.h \
  ../../src/scip/type_scip.h ../../src/scip/type_paramset.h \
@@ -183,7 +182,8 @@ $(OBJDIR)/queens.o: src/queens.cpp src/queens.hpp ../../src/scip/scip.h \
  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
  ../../src/lpi/type_lpi.h ../../src/scip/struct_lp.h \
- ../../src/scip/pub_nlp.h ../../src/scip/pub_misc.h \
+ ../../src/scip/pub_nlp.h ../../src/scip/pub_message.h \
+ ../../src/scip/struct_message.h ../../src/scip/pub_misc.h \
  ../../src/scip/pub_misc_select.h ../../src/scip/type_misc.h \
  ../../src/scip/pub_misc_sort.h ../../src/scip/struct_misc.h \
  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
@@ -238,11 +238,11 @@ $(OBJDIR)/queens.o: src/queens.cpp src/queens.hpp ../../src/scip/scip.h \
  ../../src/scip/heur_coefdiving.h ../../src/scip/heur_completesol.h \
  ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
  ../../src/scip/heur_distributiondiving.h ../../src/scip/heur_dualval.h \
- ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
- ../../src/scip/heur_fracdiving.h ../../src/scip/heur_gins.h \
- ../../src/scip/heur_guideddiving.h ../../src/scip/heur_indicator.h \
- ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
- ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/heur_farkasdiving.h ../../src/scip/heur_feaspump.h \
+ ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
+ ../../src/scip/heur_gins.h ../../src/scip/heur_guideddiving.h \
+ ../../src/scip/heur_indicator.h ../../src/scip/heur_intdiving.h \
+ ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_locks.h \
  ../../src/scip/heur_lpface.h ../../src/scip/heur_alns.h \
  ../../src/scip/heur_multistart.h ../../src/scip/heur_mutation.h \
