@@ -4509,25 +4509,49 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* 1e-09 <= dval <= 1e-04 */
+      if (dval < 1e-09)
+         dval = 1e-09;
+      else if (dval > 1e-04)
+         dval = 1e-04;
+
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
       lpi->feastol = dval;
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* 1e-09 <= dval <= 1e-04 */
+      if (dval < 1e-09)
+         dval = 1e-09;
+      else if (dval > 1e-04)
+         dval = 1e-04;
+
       setDblParam(lpi, CPX_PARAM_EPOPT, dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      /* 1e-10 <= dval */
+      if (dval < 1e-10)
+         dval = 1e-10;
+
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
       if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
          setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
       else
          setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      /* dval non-negative */
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;
    case SCIP_LPPAR_MARKOWITZ:
+      /* 1e-04 <= dval <= .99999 */
+      if (dval < 1e-04)
+         dval = 1e-04;
+      else if (dval > .99999)
+         dval = .99999;
+
       setDblParam(lpi, CPX_PARAM_EPMRK, dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:

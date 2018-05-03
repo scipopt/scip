@@ -3765,18 +3765,26 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* 0 < dval < 1e10 */
+      if (dval > 1e+10)
+         dval = 1e+10;
       lpi->clp->setPrimalTolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* 0 < dval < 1e10 */
+      if (dval > 1e+10)
+         dval = 1e+10;
       lpi->clp->setDualTolerance(dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /* @todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
       lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      /* dval >= 0 (if not, set to -1) */
       lpi->clp->setMaximumSeconds(dval);
       break;
    default:

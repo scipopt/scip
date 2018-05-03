@@ -4367,21 +4367,30 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* 0 < dval */
+      if (dval < 0)
+         dval = 0;
       lpi->spx->setFeastol(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* 0 < dval */
+      if (dval < 0)
+         dval = 0;
       lpi->spx->setOpttol(dval);
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restrictions on dval */
       if ( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE )
          (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
       else
          (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      /* 0 < dval < DEFAULT_INFINITY (= 1e100) */
       (void) lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
+      /* REPRESENTATION_SWITCH vanished from soplex 3.x */
       assert(dval >= -1.5);
       if( dval < 0.0 )
          (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiInfinity(lpi));

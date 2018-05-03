@@ -4989,24 +4989,31 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
 #if SCIP_CONTROLS_TOLERANCES
    case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
+      /* 1e-9 <= dval <= inf */
       if (dval < 1e-9)
          dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
+      /* 1e-9 <= dval <= inf */
       if (dval < 1e-9)
-         return SCIP_PARAMETERUNKNOWN;
-      /*         dval = 1e-9; */
+      /*   return SCIP_PARAMETERUNKNOWN;*/
+         dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_S, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
+      /* 1e-14 <= dval <= inf */
+      if (dval < 1e-14)
+         dval = 1e-14;
+
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
 #endif
    case SCIP_LPPAR_OBJLIM:                    /* objective limit */
    {
+      /* no restriction on dval */
       MSKobjsensee objsen;
       MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
       if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
@@ -5020,9 +5027,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
+      /* no restriction on dval */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
-   case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */
+   /* case SCIP_LPPAR_MARKOWITZ: */                /* Markowitz tolerance */
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
