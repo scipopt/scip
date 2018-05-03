@@ -397,8 +397,8 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/restarts", 0) );
-      SCIP_CALL( SCIPfixParam(scip, "presolving/restarts") );
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
+      SCIP_CALL( SCIPfixParam(scip, "presolving/maxrestarts") );
    }
 
    SCIP_CALL( createBendersData(scip, subproblems, &bendersdata, nsubproblems) );
