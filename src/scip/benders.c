@@ -41,7 +41,6 @@
 #include "scip/struct_benderscut.h"
 
 #include "scip/benderscut.h"
-#include "scip/misc_benders.h"
 
 /* Defaults for parameters */
 #define SCIP_DEFAULT_TRANSFERCUTS          TRUE  /** Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
@@ -1909,7 +1908,7 @@ SCIP_RETCODE mergeSubproblemIntoMaster(
    SCIP* subproblem;
 
    assert(benders != NULL);
-   assert(probnumber != NULL);
+   assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
@@ -2571,7 +2570,6 @@ SCIP_RETCODE executeUserDefinedSolvesub(
       SCIPerrorMessage("the user-defined solving method for the Benders' decomposition <%s> returned objective value %g\n",
          benders->name, (*objective));
       return SCIP_ERROR;
-   }
    }
 
    /* if the result is SCIP_DIDNOTFIND, then an error is returned and SCIP will terminate. */
