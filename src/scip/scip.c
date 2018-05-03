@@ -6476,6 +6476,7 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
@@ -6496,7 +6497,7 @@ SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* check stages for both, SCIP and the requested subproblem data structure */
-   SCIP_CALL( checkStage(scip, "SCIPcheckBendersSubprobOptimality", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcheckBendersSubprobOptimality", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubprobOptimality",
          FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -46564,6 +46565,61 @@ void SCIPprintConcsolverStatistics(
                                SCIPconcsolverGetNTighterBnds(concsolvers[i]),
                                SCIPconcsolverGetNTighterIntBnds(concsolvers[i])
                               );
+      }
+   }
+}
+
+/** display Benders' decomposition statistics */
+void SCIPprintBendersStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   SCIP_BENDERS** benders;
+   int nbenders;
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintBendersStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPgetNActiveBenders(scip) )
+      return;
+
+   nbenders = SCIPgetNBenders(scip);
+   benders = SCIPgetBenders(scip);
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Benders Decomp     :   ExecTime  SetupTime      Calls      Found   Transfer\n");
+   for( i = 0; i < nbenders; ++i )
+   {
+      if( SCIPbendersIsActive(benders[i]) )
+      {
+         SCIP_BENDERSCUT** benderscuts;
+         int nbenderscuts;
+         int j;
+
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+            SCIPbendersGetName(scip->set->benders[i]),
+            SCIPbendersGetTime(scip->set->benders[i]),
+            SCIPbendersGetSetupTime(scip->set->benders[i]),
+            SCIPbendersGetNCalls(scip->set->benders[i]),
+            SCIPbendersGetNCutsFound(scip->set->benders[i]),
+            SCIPbendersGetNTransferredCuts(scip->set->benders[i]));
+
+
+         nbenderscuts = SCIPbendersGetNBenderscuts(scip->set->benders[i]);
+         benderscuts = SCIPbendersGetBenderscuts(scip->set->benders[i]);
+
+         for( j = 0; j < nbenderscuts; j++ )
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "    %-15.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          -\n",
+               SCIPbenderscutGetTime(benderscuts[j]),
+               SCIPbenderscutGetSetupTime(benderscuts[j]),
+               SCIPbenderscutGetName(benderscuts[j]),
+               SCIPbenderscutGetNCalls(benderscuts[j]),
+               SCIPbenderscutGetNFound(benderscuts[j]));
+         }
       }
    }
 }

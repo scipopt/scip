@@ -43,6 +43,8 @@ set(scipsources
     scip/concsolver_scip.c
     scip/cons_and.c
     scip/cons_bivariate.c
+    scip/cons_benders.c
+    scip/cons_benderslp.c
     scip/cons_bounddisjunction.c
     scip/cons_cardinality.c
     scip/cons_components.c
@@ -213,6 +215,7 @@ set(scipsources
     scip/table_default.c
     scip/benders.c
     scip/benderscut.c
+    scip/bendersdefcuts.c
     scip/boundstore.c
     scip/branch.c
     scip/clock.c
