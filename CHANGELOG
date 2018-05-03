@@ -25,9 +25,17 @@ deleted and modified API functions:
   of other components anymore
 - the seed of SCIPinitializeRandomSeed() is now an unsigned int
 - the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
+- added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model (check) constraints (SCIP_LOCKYPE_MODEL)
+  and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
+- new functions SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
+- new function SCIPaddConsLocksType()
+- new functions SCIPconsIsLockedTypePos(), SCIPconsIsLockedTypeNeg(), SCIPconsIsLockedType(),
+  SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
+
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
@@ -90,6 +98,7 @@ performance improvements:
 
 features:
 - allow output of lower bounds for visualization
+- new diving heuristic "conflictdiving"
 - add number of conflict constraints found by diving heuristics to statistics
 - added symmetry detection for linking constraints
 - SCIP executable handles the SIGTERM signal. If the process receives a SIGTERM, SCIP terminates the solution process with a new SCIP_STATUS code

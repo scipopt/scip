@@ -323,8 +323,11 @@ SCIP_RETCODE delPosConflict(
    conflictstore->ncbconflicts -= (SCIPsetIsInfinity(set, REALABS(conflictstore->confprimalbnds[pos])) ? 0 : 1);
 
 #ifdef SCIP_PRINT_DETAILS
-   SCIPsetDebugMsg(set, "-> remove conflict at pos=%d with age=%g\n", pos, SCIPconsGetAge(conflict));
+   SCIPsetDebugMsg(set, "-> remove conflict <%s> at pos=%d with age=%g\n", SCIPconsGetName(conflict), pos, SCIPconsGetAge(conflict));
 #endif
+
+   /* remove conflict locks */
+   SCIP_CALL( SCIPconsAddLocks(conflict, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
@@ -385,6 +388,9 @@ SCIP_RETCODE delPosDualray(
    SCIPsetDebugMsg(set, "-> remove dual proof (ray) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
 
+   /* remove conflict locks */
+   SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
+
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualproof) )
    {
@@ -442,6 +448,9 @@ SCIP_RETCODE delPosDualsol(
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "-> remove dual proof (sol) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
+
+   /* remove conflict locks */
+   SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualproof) )
@@ -960,6 +969,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    conflictstore->dualrayconfs[conflictstore->ndualrayconfs] = dualproof;
    ++conflictstore->ndualrayconfs;
 
+   /* add soft locks */
+   SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
+
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
    assert(success);
@@ -1034,6 +1046,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    conflictstore->scalefactors[conflictstore->ndualsolconfs] = scale;
    conflictstore->updateside[conflictstore->ndualsolconfs] = updateside;
    ++conflictstore->ndualsolconfs;
+
+   /* add soft locks */
+   SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
@@ -1127,6 +1142,9 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
 
    ++conflictstore->nconflicts;
    ++conflictstore->nconflictsfound;
+
+   /* add softlocks */
+   SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->nconflicts-1);

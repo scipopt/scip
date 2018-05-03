@@ -977,7 +977,7 @@ SCIP_RETCODE SCIPprobAddVar(
       /* set varlocks to ensure that no dual reduction can be performed */
       if( set->reopt_enable || !set->misc_allowdualreds )
       {
-         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, 1, 1) );
+         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_MODEL, 1, 1) );
       }
 
       /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all
@@ -1321,7 +1321,7 @@ SCIP_RETCODE SCIPprobAddCons(
       /* if constraint is a check-constraint, lock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
       {
-         SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
+         SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, +1, 0) );
       }
    }
 
@@ -1355,7 +1355,7 @@ SCIP_RETCODE SCIPprobDelCons(
       /* if constraint is a check-constraint, unlock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
       {
-         SCIP_CALL( SCIPconsAddLocks(cons, set, -1, 0) );
+         SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, -1, 0) );
       }
 
       /* deactivate constraint, if it is currently active */
