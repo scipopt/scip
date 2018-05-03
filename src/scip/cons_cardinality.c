@@ -2802,6 +2802,8 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2822,17 +2824,17 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
       /* if lower bound is negative, rounding down may violate constraint */
       if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
       if( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
 
       /* add lock on indicator variable; @todo write constraint handler to handle down locks */
-      SCIP_CALL( SCIPaddVarLocks(scip, indvar, nlockspos, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, indvar, locktype, nlockspos, nlockspos) );
    }
 
    return SCIP_OKAY;
@@ -2979,7 +2981,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       /* skip until beginning of weight */
       while ( *s != '\0' && *s != '(' )
          ++s;
- 
+
       if ( *s == '\0' )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
@@ -3023,12 +3025,12 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
             return SCIP_OKAY;
          }
          s = t;
-              
+
          SCIP_CALL( SCIPchgCardvalCardinality(scip, *cons, cardval));
       }
    }
    while ( *s != '\0' );
-  
+
    return SCIP_OKAY;
 }
 

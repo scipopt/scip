@@ -1667,9 +1667,9 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
  *  We assume we have only one global (void) constraint and lock all variables.
  *
  * - Orbisack constraints may get violated if the variables of the first column
- *   are rounded down, we therefor call SCIPaddVarLocks(..., nlockspos, nlocksneg).
+ *   are rounded down, we therefor call SCIPaddVarLocksType(..., nlockspos, nlocksneg).
  * - Orbisack constraints may get violated if the variables of the second column
- *   are rounded up , we therefor call SCIPaddVarLocks(..., nlocksneg, nlockspo ).
+ *   are rounded up , we therefor call SCIPaddVarLocksType(..., nlocksneg, nlockspo ).
  */
 static
 SCIP_DECL_CONSLOCK(consLockOrbisack)
@@ -1700,8 +1700,8 @@ SCIP_DECL_CONSLOCK(consLockOrbisack)
 
    for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, vars1[i], nlockspos, nlocksneg) );
-      SCIP_CALL( SCIPaddVarLocks(scip, vars2[i], nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars1[i], locktype, nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars2[i], locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

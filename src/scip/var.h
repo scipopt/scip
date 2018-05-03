@@ -625,6 +625,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    int                   addnlocksdown,      /**< increase in number of rounding down locks */
    int                   addnlocksup         /**< increase in number of rounding up locks */
    );
