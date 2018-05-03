@@ -118,6 +118,8 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
+
    /* rounding in both directions may violate the constraint */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
 
@@ -132,6 +134,8 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
+
    /* rounding in both directions may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
 
@@ -1785,16 +1789,18 @@ SCIP_DECL_CONSLOCK(consLockOr)
    SCIP_CONSDATA* consdata;
    int i;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* lock resultant variable */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->resvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocksType(scip, consdata->resvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* lock all operand variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

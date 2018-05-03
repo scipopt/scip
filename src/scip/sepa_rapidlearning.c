@@ -274,7 +274,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     {
        for( i = 0; i < nvars; i++ )
        {
-          SCIP_CALL( SCIPaddVarLocks(subscip, subvars[i], 1, 1 ) );
+          SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
        }
     }
 

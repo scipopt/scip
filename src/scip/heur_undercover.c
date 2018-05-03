@@ -1263,16 +1263,16 @@ SCIP_RETCODE createCoveringProblem(
    case 'l': /* number of locks */
       for( i = nvars-1; i >= 0; i-- )
       {
-         nlocksup = SCIPvarGetNLocksUp(vars[i]);
-         nlocksdown = SCIPvarGetNLocksDown(vars[i]);
+         nlocksup = SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
+         nlocksdown = SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], (SCIP_Real) (nlocksup+nlocksdown+1)) );
       }
       break;
    case 'm': /* min(up locks, down locks)+1 */
       for( i = nvars-1; i >= 0; i-- )
       {
-         nlocksup = SCIPvarGetNLocksUp(vars[i]);
-         nlocksdown = SCIPvarGetNLocksDown(vars[i]);
+         nlocksup = SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
+         nlocksdown = SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], (SCIP_Real) (MIN(nlocksup, nlocksdown)+1)) );
       }
       break;
@@ -2054,9 +2054,9 @@ SCIP_RETCODE roundFixingValue(
    /* round in the direction of least locks with fractionality as tie breaker */
    else if( locksrounding )
    {
-      if( SCIPvarGetNLocksDown(var) < SCIPvarGetNLocksUp(var) )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) < SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) )
          x = SCIPfeasFloor(scip, x);
-      else if( SCIPvarGetNLocksDown(var) > SCIPvarGetNLocksUp(var) )
+      else if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) )
          x = SCIPfeasCeil(scip, x);
       else
          x = SCIPfeasFrac(scip, x) < 0.5 ? SCIPfeasFloor(scip, x) : SCIPfeasCeil(scip, x);
@@ -2069,7 +2069,7 @@ SCIP_RETCODE roundFixingValue(
       else if( SCIPfeasFrac(scip, x) > 0.5 )
          x = SCIPfeasCeil(scip, x);
       else
-         x = SCIPvarGetNLocksDown(var) < SCIPvarGetNLocksUp(var) ? SCIPfeasFloor(scip, x) : SCIPfeasCeil(scip, x);
+         x = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) < SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) ? SCIPfeasFloor(scip, x) : SCIPfeasCeil(scip, x);
    }
 
    /* return rounded fixing value */
