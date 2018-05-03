@@ -566,7 +566,6 @@ void resetSubproblemObjectiveValue(
    }
 }
 
-
 /** compares two benders w. r. to their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPbendersComp)
 {  /*lint --e{715}*/
@@ -594,7 +593,49 @@ SCIP_DECL_PARAMCHGD(paramChgdBendersPriority)
    return SCIP_OKAY;
 }
 
-/** copies the given benders to a new scip */
+/** creates a variable mapping between the master problem variables of the source scip and the sub scip */
+static
+SCIP_RETCODE createMasterVarMapping(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             sourceset,          /**< global SCIP settings from the source SCIP */
+   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables; must not be NULL */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR* targetvar;
+   int nvars;
+   int i;
+   SCIP_RETCODE retcode;
+
+   assert(benders != NULL);
+   assert(sourceset != NULL);
+   assert(benders->iscopy);
+   assert(benders->mastervarsmap == NULL);
+
+   /* getting the master problem variable data */
+   vars = SCIPgetVars(sourceset->scip);
+   nvars = SCIPgetNVars(sourceset->scip);
+
+   /* creating the hashmap for the mapping between the master variable of the target and source scip */
+   SCIP_CALL( SCIPhashmapCreate(&benders->mastervarsmap, SCIPblkmem(sourceset->scip), nvars) );
+
+   for( i = 0; i < nvars; i++ )
+   {
+      /* getting the variable pointer for the target SCIP variables. The variable mapping returns the target SCIP
+       * varibale for a given source SCIP variable. */
+      targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+      if( targetvar != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsert(benders->mastervarsmap, targetvar, vars[i]) );
+         SCIP_CALL( SCIPcaptureVar(sourceset->scip, vars[i]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** copies the given Benders' decomposition to a new SCIP */
 SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_BENDERS*         benders,            /**< benders */
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
@@ -617,7 +658,10 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
    if( benders->benderscopy != NULL && targetset->benders_copybenders )
    {
-      /* TODO: call createMasterVarMapping() or similar here and remove below */
+      /* When the Benders' decomposition is copied then a variable mapping between the master problem variables is
+       * required. This variable mapping is used to transfer the cuts generated in the target SCIP to the source SCIP.
+       */
+      SCIP_CALL( createMasterVarMapping(benders, sourceset, varmap) );
 
       SCIPsetDebugMsg(targetset, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)targetset->scip);
       SCIP_CALL( benders->benderscopy(targetset->scip, benders) );
@@ -776,6 +820,42 @@ SCIP_RETCODE SCIPbendersCreate(
    return SCIP_OKAY;
 }
 
+
+/** releases the variables that have been captured in the hashmap */
+static
+SCIP_RETCODE releaseVarMappingHashmapVars(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   int nentries;
+   int i;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   assert(benders->mastervarsmap != NULL);
+
+   nentries = SCIPhashmapGetNEntries(benders->mastervarsmap);
+
+   for( i = 0; i < nentries; ++i )
+   {
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(benders->mastervarsmap, i);
+
+      if( entry != NULL )
+      {
+         SCIP_VAR* var;
+         var = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
+
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** calls destructor and frees memory of Benders' decomposition */
 SCIP_RETCODE SCIPbendersFree(
    SCIP_BENDERS**        benders,            /**< pointer to Benders' decomposition data structure */
@@ -793,6 +873,15 @@ SCIP_RETCODE SCIPbendersFree(
    if( (*benders)->bendersfree != NULL )
    {
       SCIP_CALL( (*benders)->bendersfree(set->scip, *benders) );
+   }
+
+   /* if the Benders' decomposition is a copy, then the variable map between the source and the target SCIP needs to be
+    * freed.
+    */
+   if( (*benders)->iscopy )
+   {
+      SCIP_CALL( releaseVarMappingHashmapVars((*benders)->sourcescip, (*benders)) );
+      SCIPhashmapFree(&(*benders)->mastervarsmap);
    }
 
    /* freeing the Benders' cuts */
@@ -984,54 +1073,6 @@ SCIP_RETCODE createSubproblems(
 }
 
 
-/** creates a variable mapping between the master problem variables of the source scip and the sub scip */
-static
-SCIP_RETCODE createMasterVarMapping(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   SCIP_VAR** vars;  /* the variables from the copied sub SCIP */
-   SCIP_VAR* sourcevar;
-   SCIP_VAR* origvar;
-   SCIP_Real scalar;
-   SCIP_Real constant;
-   int nvars;
-   int i;
-   SCIP_RETCODE retcode;
-
-   assert(benders != NULL);
-   assert(set != NULL);
-   assert(benders->iscopy);
-   assert(benders->mastervarsmap == NULL);
-
-   /* getting the master problem variable data */
-   vars = SCIPgetVars(set->scip);
-   nvars = SCIPgetNVars(set->scip);
-
-   /* creating the hashmap for the mapping between the master variable of the target and source scip */
-   SCIP_CALL( SCIPhashmapCreate(&benders->mastervarsmap, SCIPblkmem(set->scip), nvars) );
-
-   for( i = 0; i < nvars; i++ )
-   {
-      origvar = vars[i];
-
-      /* The variable needs to be transformed back into an original variable. If the variable is already original, then
-       * this function just returns the same variable */
-      SCIP_CALL_ABORT( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
-
-      sourcevar = SCIPfindVar(benders->sourcescip, SCIPvarGetName(origvar));
-      if( sourcevar != NULL )
-      {
-         SCIP_CALL( SCIPhashmapInsert(benders->mastervarsmap, vars[i], sourcevar) );
-         SCIP_CALL( SCIPcaptureVar(benders->sourcescip, sourcevar) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** initializes Benders' decomposition */
 SCIP_RETCODE SCIPbendersInit(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -1071,12 +1112,6 @@ SCIP_RETCODE SCIPbendersInit(
       SCIP_CALL( benders->bendersinit(set->scip, benders) );
    }
 
-   /* if the Benders' decomposition is a copy, then a variable mapping between the master problem variables is required */
-   if( benders->iscopy )
-   {
-      SCIP_CALL( createMasterVarMapping(benders, set) );
-   }
-
    /* initialising the Benders' cuts */
    SCIPbendersSortBenderscuts(benders);
    for( i = 0; i < benders->nbenderscuts; i++ )
@@ -1113,6 +1148,9 @@ SCIP_RETCODE createAndAddTransferredCut(
    SCIP_CONS* transfercons;         /* the constraint that is generated to transfer the constraints/cuts */
    SCIP_ROW* transfercut;           /* the cut that is generated to transfer the constraints/cuts */
    SCIP_VAR* sourcevar;             /* the source variable that will be added to the transferred cut */
+   SCIP_VAR* origvar;
+   SCIP_Real scalar;
+   SCIP_Real constant;
    char cutname[SCIP_MAXSTRLEN];    /* the name of the transferred cut */
    int i;
    SCIP_Bool fail;
@@ -1152,8 +1190,14 @@ SCIP_RETCODE createAndAddTransferredCut(
    fail = FALSE;
    for( i = 0; i < nvars; i++ )
    {
+      /* getting the original variable for the transformed variable */
+      origvar = vars[i];
+      scalar = 1.0;
+      constant = 0.0;
+      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+
       /* getting the source var from the hash map */
-      sourcevar = (SCIP_VAR*) SCIPhashmapGetImage(benders->mastervarsmap, vars[i]);
+      sourcevar = (SCIP_VAR*) SCIPhashmapGetImage(benders->mastervarsmap, origvar);
 
       /* if the source variable is not found, then the mapping in incomplete. So the constraint can not be
        * transferred. */
@@ -1305,41 +1349,6 @@ SCIP_RETCODE transferBendersCuts(
 }
 
 
-/** releases the variables that have been captured in the hashmap */
-static
-SCIP_RETCODE releaseVarMappingHashmapVars(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   )
-{
-   int nentries;
-   int i;
-
-   assert(scip != NULL);
-   assert(benders != NULL);
-
-   assert(benders->mastervarsmap != NULL);
-
-   nentries = SCIPhashmapGetNEntries(benders->mastervarsmap);
-
-   for( i = 0; i < nentries; ++i )
-   {
-      SCIP_HASHMAPENTRY* entry;
-      entry = SCIPhashmapGetEntry(benders->mastervarsmap, i);
-
-      if( entry != NULL )
-      {
-         SCIP_VAR* var;
-         var = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
-
-         SCIP_CALL( SCIPreleaseVar(scip, &var) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** calls exit method of Benders' decomposition */
 SCIP_RETCODE SCIPbendersExit(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -1366,9 +1375,7 @@ SCIP_RETCODE SCIPbendersExit(
       SCIP_CALL( benders->bendersexit(set->scip, benders) );
    }
 
-   /* if the Benders' decomposition is a copy, then
-    * - the generated cuts will be transferred to the source scip, and
-    * - the hash map must be freed */
+   /* if the Benders' decomposition is a copy, then the generated cuts will be transferred to the source scip */
    if( benders->iscopy )
    {
       SCIP_CALL( transferBendersCuts(benders->sourcescip, set->scip, benders) );
