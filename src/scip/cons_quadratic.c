@@ -10376,40 +10376,17 @@ SCIP_RETCODE propagateBoundsQuadVar(
       }
       return SCIP_OKAY;
    }
-   else if( SCIPvarGetLbLocal(var) >= 0.0 )
-   {
-      SCIP_INTERVAL a_;
-
-      /* need only positive solutions */
-      SCIPintervalSet(&a_, a);
-      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &newrange, a_, b, rhs);
-   }
-   else if( SCIPvarGetUbLocal(var) <= 0.0 )
-   {
-      /* need only negative solutions */
-      SCIP_INTERVAL a_;
-      SCIP_INTERVAL tmp;
-      SCIPintervalSet(&a_, a);
-      SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
-      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &tmp, a_, tmp, rhs);
-      if( SCIPintervalIsEmpty(intervalinfty, tmp) )
-      {
-         SCIPdebugMsg(scip, "found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
-         *result = SCIP_CUTOFF;
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         return SCIP_OKAY;
-      }
-      SCIPintervalSetBounds(&newrange, -SCIPintervalGetSup(tmp), -SCIPintervalGetInf(tmp));
-   }
    else
    {
-      /* need both positive and negative solution */
       SCIP_INTERVAL a_;
+      SCIP_INTERVAL xbnds;
+
       SCIPintervalSet(&a_, a);
-      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs);
+      SCIPintervalSetBounds(&xbnds, -infty2infty(SCIPinfinity(scip), intervalinfty, -SCIPvarGetLbLocal(var)), infty2infty(SCIPinfinity(scip), intervalinfty, SCIPvarGetUbLocal(var))); /*lint !e666*/
+      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs, xbnds);
    }
 
-   /* SCIPdebugMsg(scip, "%g x^2 + [%g, %g] x in [%g, %g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, newrange.inf, newrange.sup); */
+   /* SCIPdebugMsg(scip, "%g x^2 + [%g, %g] x in [%g, %g] and x in [%g,%g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), newrange.inf, newrange.sup); */
 
    if( SCIPisInfinity(scip, SCIPintervalGetInf(newrange)) || SCIPisInfinity(scip, -SCIPintervalGetSup(newrange)) )
    {
@@ -11254,6 +11231,20 @@ SCIP_RETCODE propagateBoundsCons(
                      }
 
                      SCIPintervalSetRoundingMode(roundmode);
+
+                     /* in theory, rhs2 should not be empty here
+                      * what we tried to do here is to remove the contribution of the k'th bilinear term (=bilinbounds) to [minquadactivity,maxquadactivity] from rhs2
+                      * however, quadactivity is computed differently (as x*(a1*y1+...+an*yn)) than bilinbounds (a*ak*yk) and since interval arithmetics do overestimation,
+                      * it can happen than bilinbounds is actually slightly larger than quadactivity, which results in rhs2 being (slightly) empty
+                      * a proper fix could be to compute the quadactivity also as x*a1*y1+...+x*an*yn in propagateBoundsGetQuadAcitivity if sqrcoef=0, but due to taking
+                      * also infinite bounds into account, this complicates the code even further
+                      * instead, I'll just work around this by turning an empty rhs2 into a small non-empty one
+                      */
+                     if( SCIPintervalIsEmpty(intervalinfty, rhs2) )
+                     {
+                        assert(SCIPisRelEQ(scip, rhs2.inf, rhs2.sup));
+                        SCIPswapReals(&rhs2.inf, &rhs2.sup);
+                     }
 
                      /* add tmp to lincoef */
                      SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);

@@ -620,7 +620,6 @@ SCIP_RETCODE applyRepair(
       {
          lb = value;
          varslack = lborig - value;
-         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
       }
       else
       {
@@ -632,7 +631,6 @@ SCIP_RETCODE applyRepair(
       {
          ub = value;
          varslack = uborig - value;
-         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
       }
       else
       {
@@ -657,7 +655,6 @@ SCIP_RETCODE applyRepair(
       if( !SCIPisFeasZero(scip, varslack) && SCIP_VARTYPE_BINARY == vartype )
       {
          vartype = SCIP_VARTYPE_INTEGER;
-         SCIP_CALL( SCIPchgVarType(subscip, subvars[i], vartype, &success) );
       }
 
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "sub_%s", SCIPvarGetName(vars[i]));
@@ -1219,7 +1216,6 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    {
       error = FALSE;
       retcode = SCIPreadSolFile(scip, heurdata->filename, heurdata->infsol, FALSE, NULL, &error);
-      assert(error || SCIP_OKAY == retcode);
    }
 
    if( SCIP_NOFILE == retcode )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sto.c
- * @brief  STO file reader
+ * @brief  STO file reader - the stochastic information of an instance in SMPS format
  * @author Stephen J. Maher
  */
+
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -25,8 +26,9 @@
 #include <ctype.h>
 
 #include "scip/scipdefplugins.h"
-#include "scip/reader_sto.h"
+#include "scip/reader_cor.h"
 #include "scip/reader_tim.h"
+#include "scip/reader_sto.h"
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_benders.h"
@@ -60,6 +62,7 @@ struct SCIP_ReaderData
 {
    SCIP_Bool             usebenders;
    STOSCENARIO*          scenariotree;       /**< the multi stage scenario tree */
+   int                   numscenarios;       /**< the total number of scenarios in the scenario tree */
 };
 
 
@@ -711,9 +714,7 @@ SCIP_RETCODE addScenariosToReaderdata(
 
    /* setting the number of scenarios per stage in the TIME reader data */
    for( i = 0; i < numscenariostages; i++ )
-      SCIPtimSetStageNScenarios(scip, i + 1, numscenarios[i]);
-
-
+      readerdata->numscenarios += numscenarios[i];
 
    return SCIP_OKAY;
 }
@@ -766,6 +767,8 @@ SCIP_RETCODE insertScenarioInReaderdata(
 
    /* adding the scenario as a child of the parent scenario */
    SCIP_CALL( scenarioAddChild(scip, &parentscen, scenario) );
+
+   readerdata->numscenarios++;
 
    return SCIP_OKAY;
 }
@@ -895,7 +898,7 @@ SCIP_RETCODE createScenariosFromBlocks(
    assert(scip != NULL);
    assert(blocks != NULL);
 
-   /* allocting the memory for the scenarios array */
+   /* allocating the memory for the scenarios array */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scenarios, numstages) );
    SCIP_CALL( SCIPallocBufferArray(scip, &numscenarios, numstages) );
    SCIP_CALL( SCIPallocBufferArray(scip, &scenariossize, numstages) );
@@ -906,7 +909,7 @@ SCIP_RETCODE createScenariosFromBlocks(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scenarios[i], scenariossize[i]) );
    }
 
-   /* allocting the memory for the block for scenario array */
+   /* allocating the memory for the block for scenario array */
    SCIP_CALL( SCIPallocBufferArray(scip, &blocksforscen, numblocks) );
 
    (void) SCIPsnprintf(periods, SCIP_MAXSTRLEN, "");
@@ -1237,8 +1240,10 @@ SCIP_Bool stoinputReadLine(
       len = (unsigned int) strlen(stoi->buf);
 
       for( i = 0; i < len; i++ )
+      {
          if( (stoi->buf[i] == '\t') || (stoi->buf[i] == '\n') || (stoi->buf[i] == '\r') )
             stoi->buf[i] = BLANK;
+      }
 
       if( len < 80 )
          clearFrom(stoi->buf, len);
@@ -1400,7 +1405,7 @@ SCIP_RETCODE readBlocks(
 
    stoinputSetStochtype(stoi, stoinputField1(stoi));
 
-   /* initialising the block data */
+   /* initializing the block data */
    numblocks = 0;
    blockssize = STO_DEFAULT_ARRAYSIZE;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks, STO_DEFAULT_ARRAYSIZE) );
@@ -1410,7 +1415,7 @@ SCIP_RETCODE readBlocks(
    blockindex = 0;
    blocknum = 0;
 
-   /* initialising the stage names record */
+   /* initializing the stage names record */
    numstages = 0;
    (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "");
 
@@ -1561,14 +1566,14 @@ SCIP_RETCODE readScenarios(
 
    stoinputSetStochtype(stoi, stoinputField1(stoi));
 
-   /* initialising the scen names record */
+   /* initializing the scen names record */
    numscenarios = 0;
    (void) SCIPsnprintf(scennames, SCIP_MAXSTRLEN, "ROOT");
 
    scenario = NULL;
    addscenario = FALSE;
 
-   /* initialising the root scenario in the reader data */
+   /* initializing the root scenario in the reader data */
    SCIP_CALL( setScenarioNum(scip, readerdata->scenariotree, 0) );
    SCIP_CALL( setScenarioStageNum(scip, readerdata->scenariotree, 0) );
 
@@ -1696,14 +1701,14 @@ SCIP_RETCODE readIndep(
 
    stoinputSetStochtype(stoi, stoinputField1(stoi));
 
-   /* initialising the block data */
+   /* initializing the block data */
    numblocks = 0;
    blockssize = STO_DEFAULT_ARRAYSIZE;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &numblocksperblock, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocksperblocksize, STO_DEFAULT_ARRAYSIZE) );
 
-   /* initialising the stage names record */
+   /* initializing the stage names record */
    numstages = 0;
    (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "");
 
@@ -1899,6 +1904,9 @@ SCIP_RETCODE addScenarioVarsToProb(
       SCIP_Real obj;
       SCIP_VARTYPE vartype;
 
+      SCIPdebugMessage("Original problem variable <%s> is being duplicated for scenario %d\n", SCIPvarGetName(vars[i]),
+         getScenarioNum(scip, scenario));
+
       if( SCIPvarIsDeleted(vars[i]) )
          continue;
 
@@ -1917,6 +1925,8 @@ SCIP_RETCODE addScenarioVarsToProb(
       SCIP_CALL( SCIPcreateVar(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
             obj, vartype, SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,
             NULL, NULL) );
+
+      SCIPdebugMessage("Adding variable <%s>\n", name);
 
       SCIP_CALL( SCIPaddVar(scip, var) );
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
@@ -2111,7 +2121,7 @@ static
 SCIP_RETCODE addScenarioVarsAndConsToProb(
    SCIP*                 scip,               /**< the SCIP data structure of master problem */
    STOSCENARIO*          scenario,           /**< the current scenario */
-   SCIP_Bool             decomp
+   SCIP_Bool             decomp              /**< is the problem being decomposed */
    )
 {
    SCIP* scenarioscip;
@@ -2386,22 +2396,7 @@ SCIP_RETCODE buildDecompProblem(
 }
 #endif
 
-
-/** Read LP in "STO File Format".
- *
- *  A specification of the STO format can be found at
- *
- *  http://plato.asu.edu/ftp/sto_format.txt,
- *  ftp://ftp.caam.rice.edu/pub/people/bixby/miplib/sto_format,
- *
- *  and in the
- *
- *  CPLEX Reference Manual
- *
- *  This routine should read all valid STO format files.
- *  What it will not do, is to find all cases where a file is ill formed.
- *  If this happens it may complain and read nothing or read "something".
- */
+/** Read the stochastic information of an SMPS file instance in "STO File Format". */
 static
 SCIP_RETCODE readSto(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2426,8 +2421,8 @@ SCIP_RETCODE readSto(
       return SCIP_NOFILE;
    }
 
-   SCIP_CALL( stoinputCreate(scip, &stoi, fp) );
-   SCIP_CALL( createReaderdata(scip, readerdata) );
+   SCIP_CALL_FINALLY( stoinputCreate(scip, &stoi, fp), SCIPfclose(fp) );
+   SCIP_CALL_TERMINATE( retcode, createReaderdata(scip, readerdata), TERMINATE );
 
    SCIP_CALL_TERMINATE( retcode, readStoch(scip, stoi), TERMINATE );
 
@@ -2447,7 +2442,7 @@ SCIP_RETCODE readSto(
 
       if( stoinputSection(stoi) == STO_SCENARIOS )
       {
-         /* if the number of stages exceeds 1, i.e. more than two stages, then the sto file is not read. */
+         /* if there are more than two stages, then the sto file is not read. */
          if( SCIPtimGetNStages(scip) > 2 )
          {
             SCIPinfoMessage(scip, NULL, "\nThe scenarios for the stochastic programs are defined in <%s> as SCENARIOS\n", filename);
@@ -2470,7 +2465,6 @@ SCIP_RETCODE readSto(
    if( !unsupported && stoinputSection(stoi) != STO_ENDATA )
       stoinputSyntaxerror(stoi);
 
-   SCIPfclose(fp);
 
    error = stoinputHasError(stoi);
 
@@ -2486,9 +2480,10 @@ SCIP_RETCODE readSto(
          SCIP_CALL_TERMINATE( retcode, buildFullProblem(scip, readerdata), TERMINATE );
    }
 
- /* cppcheck-suppress unusedLabel */
- TERMINATE:
+/* cppcheck-suppress unusedLabel */
+TERMINATE:
    stoinputFree(scip, &stoi);
+   SCIPfclose(fp);
 
    if( error )
       return SCIP_READERROR;
@@ -2502,7 +2497,6 @@ SCIP_RETCODE readSto(
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
-/**! [SnippetReaderCopySto] */
 static
 SCIP_DECL_READERCOPY(readerCopySto)
 {  /*lint --e{715}*/
@@ -2515,10 +2509,8 @@ SCIP_DECL_READERCOPY(readerCopySto)
 
    return SCIP_OKAY;
 }
-/**! [SnippetReaderCopySto] */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
-/**! [SnippetReaderFreeSto] */
 static
 SCIP_DECL_READERFREE(readerFreeSto)
 {
@@ -2532,32 +2524,54 @@ SCIP_DECL_READERFREE(readerFreeSto)
 
    return SCIP_OKAY;
 }
-/**! [SnippetReaderFreeSto] */
 
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadSto)
 {  /*lint --e{715}*/
+   SCIP_READER* correader;
+   SCIP_READER* timreader;
 
-   SCIP_CALL( SCIPreadSto(scip, reader, filename, result) );
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   correader = SCIPfindReader(scip, "correader");
+   timreader = SCIPfindReader(scip, "timreader");
+
+   if( correader == NULL )
+   {
+      SCIPwarningMessage(scip, "It is necessary to include the \"cor\" reader\n");
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   if( timreader == NULL )
+   {
+      SCIPwarningMessage(scip, "It is necessary to include the \"tim\" reader\n");
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /* checking whether the cor file has been read */
+   if( !SCIPcorHasRead(correader) )
+   {
+      SCIPwarningMessage(scip, "The core file must be read before the time and stochastic files.\n");
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /* checking whether the tim file has been read */
+   if( !SCIPtimHasRead(timreader) )
+   {
+      SCIPwarningMessage(scip, "The time file must be read before the stochastic files.\n");
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPreadSto(scip, filename, result) );
 
    return SCIP_OKAY;
 }
-
-
-/** problem writing method of reader */
-//static
-//SCIP_DECL_READERWRITE(readerWriteSto)
-//{  /*lint --e{715}*/
-   //assert(reader != NULL);
-   //assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
-
-   //SCIP_CALL( SCIPwriteSto(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         //nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
-
-   //return SCIP_OKAY;
-//}
-
 
 /*
  * sto file reader specific interface methods
@@ -2574,6 +2588,7 @@ SCIP_RETCODE SCIPincludeReaderSto(
    /* create reader data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
    readerdata->scenariotree = NULL;
+   readerdata->numscenarios = 0;
 
 
    /* include reader */
@@ -2595,22 +2610,22 @@ SCIP_RETCODE SCIPincludeReaderSto(
 }
 
 
-/** reads problem from file */
+/** reads the stochastic information for a stochastic program that is in SMPS format */
 SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {
+   SCIP_READER* reader;
    SCIP_READERDATA* readerdata;
    SCIP_RETCODE retcode;
 
-   assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
    readerdata = SCIPreaderGetData(reader);
 
    retcode = readSto(scip, filename, readerdata);
@@ -2626,4 +2641,23 @@ SCIP_RETCODE SCIPreadSto(
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
+}
+
+/** returns the total number of scenarios added to the problem */
+int SCIPstoGetNScenarios(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+
+   reader = SCIPfindReader(scip, READER_NAME);
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   return readerdata->numscenarios;
 }
