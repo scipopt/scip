@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPtableCreate(
                          name, desc, active, tablecopy,
                          tablefree, tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata,
                          position, earlieststage),
-                      SCIPtableFree(table, set));
+                      SCIPtableFree(table, set) );
 
    return SCIP_OKAY;
 }
