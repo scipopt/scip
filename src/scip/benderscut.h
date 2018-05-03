@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -161,6 +161,22 @@ extern
 void SCIPbenderscutSetExitsol(
    SCIP_BENDERSCUT*      benderscut,         /**< the Benders' decomposition cut */
    SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization callback of the Benders' decomposition cut */
+   );
+
+/** adds the generated constraint to the Benders cut storage */
+extern
+SCIP_RETCODE SCIPbenderscutStoreCons(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
+   );
+
+/** adds the generated cuts to the Benders' cut storage */
+extern
+SCIP_RETCODE SCIPbenderscutStoreCut(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
    );
 
 #ifdef __cplusplus

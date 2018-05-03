@@ -123,6 +123,12 @@ SCIP_RETCODE SCIPbenderscutGetAddedCuts(
    int*                  naddedcuts          /**< pointer to store the number of added cut, can be NULL */
    );
 
+/** returns whether the Benders' cut uses the LP information */
+EXTERN
+SCIP_Bool SCIPbenderscutIsLPCut(
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
+   );
+
 /* @} */
 
 #ifdef __cplusplus

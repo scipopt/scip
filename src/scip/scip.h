@@ -3144,8 +3144,6 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    int                   probnumber          /**< the number of the pricing problem */
    );
 
-/* @} */
-
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
  *  to include a Benders' cut algorithm if a Benders' decomposition has already been included
@@ -3310,6 +3308,22 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
    int                   priority            /**< new priority of the Benders' decomposition */
+   );
+
+/** adds the generated constraint to the Benders cut storage */
+EXTERN
+SCIP_RETCODE SCIPstoreBenderscutCons(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
+   );
+
+/** adds the generated cuts to the Benders' cut storage */
+EXTERN
+SCIP_RETCODE SCIPstoreBenderscutCut(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
    );
 
 /* @} */
@@ -10741,7 +10755,7 @@ SCIP_Bool SCIPallowObjProp(
 EXTERN
 unsigned int SCIPinitializeRandomSeed(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   initialseedvalue    /**< initial seed value to be modified */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
    );
 
 /** marks the variable that it must not be multi-aggregated

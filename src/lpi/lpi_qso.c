@@ -301,11 +301,12 @@ SCIP_RETCODE convertSides(
    const double* const   rhs                 /**< right hand side */
    )
 {
+   int state;
+   register int i;
+
    assert(lpi != NULL);
    assert(lhs != NULL);
    assert(rhs!= NULL);
-   int state;
-   register int i;
 
    for( i = 0 ; i < nrows ; ++i )
    {
@@ -1069,6 +1070,7 @@ SCIP_RETCODE SCIPlpiClear(
 
    name = QSget_probname(lpi->prob);
    (void) strncpy(savename, name, 1024);
+   name[1023] = '\0';
 
    QSfree_prob(lpi->prob);
    lpi->prob = QScreate_prob(savename, objsen);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -362,6 +362,7 @@ SCIP_RETCODE SCIPbenderscutExec(
 
    /* evaluate result */
    if( cutresult != SCIP_DIDNOTRUN
+      && cutresult != SCIP_DIDNOTFIND
       && cutresult != SCIP_CONSADDED
       && cutresult != SCIP_FEASIBLE
       && cutresult != SCIP_SEPARATED )
@@ -595,4 +596,75 @@ SCIP_RETCODE SCIPbenderscutGetAddedCuts(
       (*naddedcuts) = benderscut->naddedcuts;
 
    return SCIP_OKAY;
+}
+
+/** adds the generated constraint to the Benders' cut storage */
+SCIP_RETCODE SCIPbenderscutStoreCons(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
+   )
+{
+   assert(benderscut != NULL);
+   assert(set != NULL);
+   assert(cons != NULL);
+
+   /* ensuring the required memory is available for the added constraints array */
+   if( benderscut->addedconsssize < benderscut->naddedconss + 1 )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, benderscut->naddedconss + 1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedconss,
+            benderscut->addedconsssize, newsize) );
+      benderscut->addedconsssize = newsize;
+   }
+   assert(benderscut->addedconsssize >= benderscut->naddedconss + 1);
+
+   /* adding the constraint to the Benders' cut storage */
+   benderscut->addedconss[benderscut->naddedconss] = cons;
+   benderscut->naddedconss++;
+
+   return SCIP_OKAY;
+}
+
+/* adds the generated cuts to the Benders' cut storage */
+SCIP_RETCODE SCIPbenderscutStoreCut(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
+   )
+{
+   assert(benderscut != NULL);
+   assert(set != NULL);
+   assert(cut != NULL);
+
+   /* ensuring the required memory is available for the added cuts array */
+   if( benderscut->addedcutssize < benderscut->naddedcuts + 1 )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, benderscut->naddedcuts + 1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedcuts,
+            benderscut->addedcutssize, newsize) );
+
+      benderscut->addedcutssize = newsize;
+   }
+   assert(benderscut->addedcutssize >= benderscut->naddedcuts + 1);
+
+   /* adding the cuts to the Benders' cut storage */
+   benderscut->addedcuts[benderscut->naddedcuts] = cut;
+   benderscut->naddedcuts++;
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the Benders' cut uses the LP information */
+SCIP_Bool SCIPbenderscutIsLPCut(
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
+   )
+{
+   assert(benderscut != NULL);
+
+   return benderscut->islpcut;
 }
