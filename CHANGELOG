@@ -13,6 +13,7 @@ features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
 - new example brachistochrone in CallableLibrary examples collection
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
+- new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
 
 deleted and modified API functions:
 - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
@@ -25,9 +26,17 @@ deleted and modified API functions:
   of other components anymore
 - the seed of SCIPinitializeRandomSeed() is now an unsigned int
 - the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
+- added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model (check) constraints (SCIP_LOCKYPE_MODEL)
+  and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
+- new functions SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
+- new function SCIPaddConsLocksType()
+- new functions SCIPconsIsLockedTypePos(), SCIPconsIsLockedTypeNeg(), SCIPconsIsLockedType(),
+  SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
+
 
 features:
 - new miscellaneous methods for constraints that have a one-row linear representation in pub_misc_linear.h
@@ -93,6 +102,7 @@ performance improvements:
 
 features:
 - allow output of lower bounds for visualization
+- new diving heuristic "conflictdiving"
 - add number of conflict constraints found by diving heuristics to statistics
 - added symmetry detection for linking constraints
 - SCIP executable handles the SIGTERM signal. If the process receives a SIGTERM, SCIP terminates the solution process with a new SCIP_STATUS code

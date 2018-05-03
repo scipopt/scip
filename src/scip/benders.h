@@ -48,6 +48,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_BENDERS*         benders,            /**< benders */
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables; must not be NULL */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 

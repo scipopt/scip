@@ -1743,7 +1743,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          for( c = 0; c < nbinvars; ++c )
          {
             var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
-            if( SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0 )
+            if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0
+               || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0 )
                ++nbinwithoutlocks;
          }
       }
@@ -1754,7 +1755,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
             if( SCIPvarIsBinary(var) )
             {
-               if( SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0 )
+               if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0
+                  || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0 )
                   ++nbinwithoutlocks;
             }
          }
@@ -1777,7 +1779,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
 
             /* search for next variable which is not a binary variable without locks */
-            while( SCIPvarIsBinary(var) && (SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0) )
+            while( SCIPvarIsBinary(var) && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0
+               || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0) )
             {
                ++c;
                if( c >= nbinwithoutlocks )
@@ -1793,7 +1796,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                b = c + 1;
                binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
             }
-            while( !SCIPvarIsBinary(binvar) || (SCIPvarGetNLocksUp(binvar) > 0 && SCIPvarGetNLocksDown(binvar) > 0) )
+            while( !SCIPvarIsBinary(binvar) || (SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) > 0
+               && SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) > 0) )
             {
                ++b;
                assert(b < ndiscvars);
@@ -1815,8 +1819,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       for( c = 0; c < ndiscvars; ++c )
       {
          assert((c < nbinwithoutlocks) == (SCIPvarIsBinary(SCIPcolGetVar(heurdata->lpcols[permutation[c]]))
-               && (SCIPvarGetNLocksUp(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0
-                  || SCIPvarGetNLocksDown(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0)));
+               && (SCIPvarGetNLocksUpType(SCIPcolGetVar(heurdata->lpcols[permutation[c]]), SCIP_LOCKTYPE_MODEL) == 0
+                  || SCIPvarGetNLocksDownType(SCIPcolGetVar(heurdata->lpcols[permutation[c]]), SCIP_LOCKTYPE_MODEL) == 0)));
       }
 #endif
    }
@@ -1924,13 +1928,15 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       /* check whether the variable is binary and has no locks in one direction, so that we want to fix it to the
        * respective bound (only enabled by parameter)
        */
-      if( heurdata->fixbinlocks && SCIPvarIsBinary(var) && (SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0) )
+      if( heurdata->fixbinlocks && SCIPvarIsBinary(var)
+         && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0
+            || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0) )
       {
-         if( SCIPvarGetNLocksUp(var) == 0 )
+         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 )
             origsolval = SCIPvarGetUbLocal(var);
          else
          {
-            assert(SCIPvarGetNLocksDown(var) == 0);
+            assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0);
             origsolval = SCIPvarGetLbLocal(var);
          }
       }

@@ -77,6 +77,15 @@ enum SCIP_BoundchgType
 };
 typedef enum SCIP_BoundchgType SCIP_BOUNDCHGTYPE;
 
+/** types of variable locks */
+#define NLOCKTYPES 2                    /**< number of lock types */
+enum SCIP_LockType
+{
+   SCIP_LOCKTYPE_MODEL    = 0,          /**< variable locks for model and check constraints */
+   SCIP_LOCKTYPE_CONFLICT = 1           /**< variable locks for conflict constraints */
+};
+typedef enum SCIP_LockType SCIP_LOCKTYPE;
+
 typedef struct SCIP_DomChgBound SCIP_DOMCHGBOUND; /**< static domain change data for bound changes */
 typedef struct SCIP_DomChgBoth SCIP_DOMCHGBOTH;   /**< static domain change data for bound and hole changes */
 typedef struct SCIP_DomChgDyn SCIP_DOMCHGDYN;     /**< dynamic domain change data for bound and hole changes */

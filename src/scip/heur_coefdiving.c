@@ -199,8 +199,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
    else
    {
       /* the candidate may not be rounded */
-      int nlocksdown = SCIPvarGetNLocksDown(cand);
-      int nlocksup = SCIPvarGetNLocksUp(cand);
+      int nlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
+      int nlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
       *roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && candsfrac > 0.5));
    }
 
@@ -220,13 +220,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
-      *score = SCIPvarGetNLocksUp(cand);
+      *score = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
    }
    else
    {
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
-      *score = SCIPvarGetNLocksDown(cand);
+      *score = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
    }
 
 
