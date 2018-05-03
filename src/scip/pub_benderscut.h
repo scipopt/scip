@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPbenderscutGetCuts(
 
 /** returns the number of constraints that have been added by the Benders' cut plugin */
 EXTERN
-int SCIPbenderscutGetNAddedCons(
+int SCIPbenderscutGetNAddedConss(
    SCIP_BENDERSCUT*      benderscut         /**< Benders' decomposition cut */
    );
 
