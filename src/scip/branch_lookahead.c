@@ -3737,8 +3737,8 @@ SCIP_RETCODE executeBranchingRecursive(
    assert(config != NULL);
    assert(baselpsol != NULL);
    assert(candidate != NULL);
-   assert(binconsdata != NULL);
    assert(branchingresult != NULL);
+   assert(!config->usebincons || binconsdata != NULL);
 
    branchvar = candidate->branchvar;
    branchvalfrac = candidate->fracval;
