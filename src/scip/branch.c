@@ -1375,9 +1375,9 @@ SCIP_RETCODE SCIPbranchruleCreate(
    assert(name != NULL);
    assert(desc != NULL);
 
-   SCIP_CALL_FINALLY( doBranchruleCreate(branchrule, set, messagehdlr, blkmem, name, desc,
-                         priority, maxdepth, maxbounddist, NULL, NULL, NULL, NULL, NULL, NULL,
-                         NULL, NULL, NULL, branchruledata),
+   SCIP_CALL_FINALLY( doBranchruleCreate(branchrule, set, messagehdlr, blkmem, name, desc, priority, maxdepth,
+                         maxbounddist, branchcopy, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
+                         branchexeclp, branchexecext, branchexecps, branchruledata),
                       SCIPbranchruleFree(branchrule, set) );
 
    return SCIP_OKAY;
@@ -1403,8 +1403,8 @@ SCIP_RETCODE SCIPbranchruleFree(
 
    SCIPclockFree(&(*branchrule)->branchclock);
    SCIPclockFree(&(*branchrule)->setuptime);
-   BMSfreeMemoryArray(&(*branchrule)->name);
-   BMSfreeMemoryArray(&(*branchrule)->desc);
+   BMSfreeMemoryArrayNull(&(*branchrule)->name);
+   BMSfreeMemoryArrayNull(&(*branchrule)->desc);
    BMSfreeMemory(branchrule);
 
    return SCIP_OKAY;
