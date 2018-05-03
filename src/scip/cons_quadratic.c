@@ -1031,7 +1031,8 @@ SCIP_Bool hasQuadvarHpProperty(
    haslhs = !SCIPisInfinity(scip, -consdata->lhs);
    hasrhs = !SCIPisInfinity(scip, consdata->rhs);
 
-   return SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
+   return SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1
+      && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
       && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && ((quadcoef < 0.0 && !haslhs) || (quadcoef > 0.0 && !hasrhs));
 }
 
@@ -2024,6 +2025,7 @@ SCIP_RETCODE chgLinearCoefPos(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
    assert(!SCIPisZero(scip, newcoef));
 
    conshdlrdata = NULL;
@@ -10376,40 +10378,17 @@ SCIP_RETCODE propagateBoundsQuadVar(
       }
       return SCIP_OKAY;
    }
-   else if( SCIPvarGetLbLocal(var) >= 0.0 )
-   {
-      SCIP_INTERVAL a_;
-
-      /* need only positive solutions */
-      SCIPintervalSet(&a_, a);
-      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &newrange, a_, b, rhs);
-   }
-   else if( SCIPvarGetUbLocal(var) <= 0.0 )
-   {
-      /* need only negative solutions */
-      SCIP_INTERVAL a_;
-      SCIP_INTERVAL tmp;
-      SCIPintervalSet(&a_, a);
-      SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
-      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &tmp, a_, tmp, rhs);
-      if( SCIPintervalIsEmpty(intervalinfty, tmp) )
-      {
-         SCIPdebugMsg(scip, "found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
-         *result = SCIP_CUTOFF;
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         return SCIP_OKAY;
-      }
-      SCIPintervalSetBounds(&newrange, -SCIPintervalGetSup(tmp), -SCIPintervalGetInf(tmp));
-   }
    else
    {
-      /* need both positive and negative solution */
       SCIP_INTERVAL a_;
+      SCIP_INTERVAL xbnds;
+
       SCIPintervalSet(&a_, a);
-      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs);
+      SCIPintervalSetBounds(&xbnds, -infty2infty(SCIPinfinity(scip), intervalinfty, -SCIPvarGetLbLocal(var)), infty2infty(SCIPinfinity(scip), intervalinfty, SCIPvarGetUbLocal(var))); /*lint !e666*/
+      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs, xbnds);
    }
 
-   /* SCIPdebugMsg(scip, "%g x^2 + [%g, %g] x in [%g, %g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, newrange.inf, newrange.sup); */
+   /* SCIPdebugMsg(scip, "%g x^2 + [%g, %g] x in [%g, %g] and x in [%g,%g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), newrange.inf, newrange.sup); */
 
    if( SCIPisInfinity(scip, SCIPintervalGetInf(newrange)) || SCIPisInfinity(scip, -SCIPintervalGetSup(newrange)) )
    {
@@ -11255,6 +11234,20 @@ SCIP_RETCODE propagateBoundsCons(
 
                      SCIPintervalSetRoundingMode(roundmode);
 
+                     /* in theory, rhs2 should not be empty here
+                      * what we tried to do here is to remove the contribution of the k'th bilinear term (=bilinbounds) to [minquadactivity,maxquadactivity] from rhs2
+                      * however, quadactivity is computed differently (as x*(a1*y1+...+an*yn)) than bilinbounds (a*ak*yk) and since interval arithmetics do overestimation,
+                      * it can happen than bilinbounds is actually slightly larger than quadactivity, which results in rhs2 being (slightly) empty
+                      * a proper fix could be to compute the quadactivity also as x*a1*y1+...+x*an*yn in propagateBoundsGetQuadAcitivity if sqrcoef=0, but due to taking
+                      * also infinite bounds into account, this complicates the code even further
+                      * instead, I'll just work around this by turning an empty rhs2 into a small non-empty one
+                      */
+                     if( SCIPintervalIsEmpty(intervalinfty, rhs2) )
+                     {
+                        assert(SCIPisRelEQ(scip, rhs2.inf, rhs2.sup));
+                        SCIPswapReals(&rhs2.inf, &rhs2.sup);
+                     }
+
                      /* add tmp to lincoef */
                      SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
                   }
@@ -11390,7 +11383,7 @@ void consdataFindUnlockedLinearVar(
          neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
       }
 
-      if( SCIPvarGetNLocksDown(consdata->linvars[i]) - neglock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - neglock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -11399,7 +11392,7 @@ void consdataFindUnlockedLinearVar(
             consdata->linvar_maydecrease = i;
       }
 
-      if( SCIPvarGetNLocksDown(consdata->linvars[i]) - poslock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - poslock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -13285,6 +13278,7 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13298,22 +13292,22 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
       }
    }
@@ -13321,7 +13315,8 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       /* @todo try to be more clever, but variable locks that depend on the bounds of other variables are not trival to maintain */
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->quadvarterms[i].var, nlockspos+nlocksneg, nlockspos+nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->quadvarterms[i].var, SCIP_LOCKTYPE_MODEL, nlockspos+nlocksneg,
+         nlockspos+nlocksneg) );
    }
 
    return SCIP_OKAY;

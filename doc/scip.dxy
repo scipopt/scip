@@ -995,7 +995,8 @@ EXCLUDE_SYMBOLS        = Ipopt \
 EXAMPLE_PATH           = inc/ \
                          ../ \
                          ../release-notes/ \
-                         ../src
+                         ../src \
+                         ../check/instances/Stochastic/pltexpA2_6.smps
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and
