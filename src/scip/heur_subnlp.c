@@ -172,7 +172,6 @@ SCIP_RETCODE createSubSCIP(
          FALSE, /* tables */
          FALSE, /* dialogs */
          TRUE,  /* nlpis */
-         FALSE, /* benders */
          TRUE,  /* message handler */
          &success) );
    if( !success )

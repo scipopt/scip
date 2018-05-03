@@ -1542,7 +1542,11 @@ SCIP_RETCODE copyCuts(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *
  *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @note This method does not copy Benders' plugins. To this end, the method SCIPcopyBenders() must be called
+ *        separately.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1589,7 +1593,6 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
-   SCIP_Bool             copybenders,        /**< should the Benders' decomposition algorithms be copied */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
                                               *   handlers which do not need constraints were validly copied */
@@ -1613,7 +1616,76 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
          copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copynlpis,
-         copybenders, valid) );
+         valid) );
+
+   return SCIP_OKAY;
+}
+
+/** copies all Benders' decomposition plugins
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyBenders(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables; must not be NULL */
+   SCIP_Bool*            valid               /**< pointer to store whether all plugins were validly copied */
+   )
+{
+   /* TODO: If the benders is not copied, then cons_benders needs to be deactivated. */
+   SCIP_Bool copybendersvalid;
+   int p;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(sourcescip != targetscip);
+   assert(sourcescip->set != NULL);
+   assert(targetscip->set != NULL);
+   assert(varmap != NULL);
+   assert(valid != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+   *valid = TRUE;
+
+   if( sourcescip->set->benders != NULL )
+   {
+      for( p = sourcescip->set->nbenders - 1; p >= 0; --p )
+      {
+         copybendersvalid = FALSE;
+         SCIP_CALL( SCIPbendersCopyInclude(sourcescip->set->benders[p], sourcescip->set, targetscip->set, varmap, &copybendersvalid) );
+         *valid = *valid && copybendersvalid;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -3617,6 +3689,7 @@ SCIP_RETCODE doCopy(
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
    SCIP_Bool consscopyvalid;
+   SCIP_Bool benderscopyvalid;
    SCIP_Bool localvalid;
    SCIP_Bool msghdlrquiet;
    char name[SCIP_MAXSTRLEN];
@@ -3640,7 +3713,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
@@ -3717,6 +3790,13 @@ SCIP_RETCODE doCopy(
    SCIPdebugMsg(sourcescip, "Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
 
    localvalid = localvalid && consscopyvalid;
+
+   /* copy the Benders' decomposition plugins explicitly, because it requires the variable mapping hash map */
+   SCIP_CALL( SCIPcopyBenders(sourcescip, targetscip, localvarmap, &benderscopyvalid) );
+
+   SCIPdebugMsg(sourcescip, "Copying benders plugins was%s valid.\n", benderscopyvalid ? "" : " not");
+
+   localvalid = localvalid && benderscopyvalid;
 
    if( uselocalvarmap )
    {

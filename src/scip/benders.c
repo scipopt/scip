@@ -599,6 +599,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_BENDERS*         benders,            /**< benders */
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables; must not be NULL */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
@@ -607,6 +609,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
    assert(benders != NULL);
    assert(targetset != NULL);
+   assert(varmap != NULL);
    assert(valid != NULL);
    assert(targetset->scip != NULL);
 
@@ -614,6 +617,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
    if( benders->benderscopy != NULL && targetset->benders_copybenders )
    {
+      /* TODO: call createMasterVarMapping() or similar here and remove below */
+
       SCIPsetDebugMsg(targetset, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)targetset->scip);
       SCIP_CALL( benders->benderscopy(targetset->scip, benders) );
 
@@ -1066,14 +1071,11 @@ SCIP_RETCODE SCIPbendersInit(
       SCIP_CALL( benders->bendersinit(set->scip, benders) );
    }
 
-
    /* if the Benders' decomposition is a copy, then a variable mapping between the master problem variables is required */
    if( benders->iscopy )
    {
       SCIP_CALL( createMasterVarMapping(benders, set) );
    }
-
-
 
    /* initialising the Benders' cuts */
    SCIPbendersSortBenderscuts(benders);
