@@ -21,15 +21,15 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include "scip/scip.h"
 
+#include "scip/scip.h"
 #include "scip/cons_benderslp.h"
 #include "scip/cons_benders.h"
 
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "benderslp"
-#define CONSHDLR_DESC          "constraint handler for Benders' Decomposition to separate root node LP solutions"
+#define CONSHDLR_DESC          "constraint handler for Benders' Decomposition to separate LP solutions"
 #define CONSHDLR_ENFOPRIORITY  10000000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY 10000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
@@ -37,8 +37,8 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 
-
-#define DEFAULT_CONSBENDERSLP_MAXDEPTH      0
+#define DEFAULT_CONSBENDERSLP_MAXDEPTH 0/**< depth at which Benders' decomposition cuts are generated from the LP
+                                         *   solution (-2: never, -1: always, 0: only at root) */
 
 /*
  * Data structures
@@ -83,12 +83,10 @@ SCIP_DECL_CONSFREE(consFreeBenderslp)
    assert(conshdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   /* free memory for conshdlrdata*/
-   if( conshdlrdata != NULL )
-   {
-      SCIPfreeMemory(scip, &conshdlrdata);
-   }
+   /* freeing the constraint handler data */
+   SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -124,7 +122,6 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenderslp)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-
    if( conshdlrdata->maxdepth < -1 || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
       (*result) = SCIP_FEASIBLE;
    else
@@ -143,7 +140,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
    assert(conshdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
 
    if( conshdlrdata->maxdepth < -1 || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
       (*result) = SCIP_FEASIBLE;
@@ -171,9 +167,6 @@ SCIP_DECL_CONSCHECK(consCheckBenderslp)
 static
 SCIP_DECL_CONSLOCK(consLockBenderslp)
 {  /*lint --e{715}*/
-   //SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
-   //SCIPABORT(); /*lint --e{527}*/
-
    return SCIP_OKAY;
 }
 
@@ -209,13 +202,11 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenderslp) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenderslp) );
 
-
    /* add Benders' decomposition LP constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxdepth",
-         "The depth at which Benders' decomposition cuts are generated from the LP solution. (-2: never, -1: always, 0: only at root)",
+         "depth at which Benders' decomposition cuts are generated from the LP solution (-2: never, -1: always, 0: only at root)",
          &conshdlrdata->maxdepth, TRUE, DEFAULT_CONSBENDERSLP_MAXDEPTH, -2, SCIP_MAXTREEDEPTH, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

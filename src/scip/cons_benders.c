@@ -22,8 +22,8 @@
 
 #include <assert.h>
 #include <string.h>
-#include "scip/scip.h"
 
+#include "scip/scip.h"
 #include "scip/cons_benders.h"
 #include "scip/cons_benderslp.h"
 #include "scip/heur_trysol.h"
@@ -40,8 +40,7 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 
-
-#define DEFAULT_CHECKEDSOLSSIZE     20    /**< the initial size of the checked sols array */
+#define DEFAULT_CHECKEDSOLSSIZE      20 /**< initial size of the checked sols array */
 
 /*
  * Data structures
@@ -90,7 +89,7 @@ SCIP_RETCODE constructValidSolution(
    benders = SCIPgetBenders(scip);
    nactivebenders = SCIPgetNActiveBenders(scip);
 
-   /* if the solution is NULL, then we create the solution from the LP sol. */
+   /* if the solution is NULL, then we create the solution from the LP sol */
    if( sol != NULL )
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &newsol, sol) );
@@ -272,7 +271,7 @@ SCIP_DECL_CONSFREE(consFreeBenders)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* freeing the constrains handler data */
+   /* freeing the constraint handler data */
    SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
@@ -294,7 +293,6 @@ SCIP_DECL_CONSINIT(consInitBenders)
    conshdlrdata->ncheckedsols = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize) );
-
 
    return SCIP_OKAY;
 }
@@ -398,7 +396,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
       }
    }
 
-
    /* if the solution has not been checked before, then we must perform the check */
    if( performcheck && nactivebenders > 0 )
    {
@@ -434,7 +431,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
       if( (*result) == SCIP_DIDNOTRUN )
          (*result) = SCIP_FEASIBLE;
    }
-
 
    conshdlrdata->ncalls++;
 
