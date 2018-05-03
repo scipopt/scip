@@ -11455,7 +11455,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
-   SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
+   SCIP_CALL( lpSetRandomseed(lp, (int) SCIPsetInitializeRandomSeed(set, (unsigned) set->random_randomseed), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
    SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
 

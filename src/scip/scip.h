@@ -10120,7 +10120,7 @@ SCIP_Bool SCIPallowObjProp(
 EXTERN
 unsigned int SCIPinitializeRandomSeed(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   initialseedvalue    /**< initial seed value to be modified */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
    );
 
 /** marks the variable that it must not be multi-aggregated
