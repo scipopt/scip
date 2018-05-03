@@ -85,8 +85,9 @@ SCIP_RETCODE SCIPrelaxCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a relaxation handler */
-SCIP_RETCODE SCIPrelaxCreate(
+/** internal method for creating a relaxation handler */
+static
+SCIP_RETCODE doRelaxCreate(
    SCIP_RELAX**          relax,              /**< pointer to relaxation handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -115,6 +116,8 @@ SCIP_RETCODE SCIPrelaxCreate(
    assert(relaxexec != NULL);
 
    SCIP_ALLOC( BMSallocMemory(relax) );
+   BMSclearMemory(*relax);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*relax)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*relax)->desc, desc, strlen(desc)+1) );
    (*relax)->priority = priority;
@@ -147,6 +150,39 @@ SCIP_RETCODE SCIPrelaxCreate(
    return SCIP_OKAY;
 }
 
+/** creates a relaxation handler */
+SCIP_RETCODE SCIPrelaxCreate(
+   SCIP_RELAX**          relax,              /**< pointer to relaxation handler data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of relaxation handler */
+   const char*           desc,               /**< description of relaxation handler */
+   int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
+   int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
+   SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxation handler */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxation handler */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxation handler */
+   SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
+   SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
+   )
+{
+   assert(relax != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(freq >= -1);
+   assert(relaxexec != NULL);
+
+   SCIP_CALL_FINALLY( doRelaxCreate(relax, set, messagehdlr, blkmem, name, desc, priority, freq, relaxcopy, relaxfree,
+                         relaxinit, relaxexit, relaxinitsol, relaxexitsol, relaxexec, relaxdata),
+                      SCIPrelaxFree(relax, set) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of relaxation handler */
 SCIP_RETCODE SCIPrelaxFree(
    SCIP_RELAX**          relax,              /**< pointer to relaxation handler data structure */
@@ -154,7 +190,8 @@ SCIP_RETCODE SCIPrelaxFree(
    )
 {
    assert(relax != NULL);
-   assert(*relax != NULL);
+   if( *relax == NULL )
+      return SCIP_OKAY;
    assert(!(*relax)->initialized);
    assert(set != NULL);
 
@@ -166,8 +203,8 @@ SCIP_RETCODE SCIPrelaxFree(
 
    SCIPclockFree(&(*relax)->relaxclock);
    SCIPclockFree(&(*relax)->setuptime);
-   BMSfreeMemoryArray(&(*relax)->name);
-   BMSfreeMemoryArray(&(*relax)->desc);
+   BMSfreeMemoryArrayNull(&(*relax)->name);
+   BMSfreeMemoryArrayNull(&(*relax)->desc);
    BMSfreeMemory(relax);
 
    return SCIP_OKAY;

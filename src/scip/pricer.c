@@ -93,10 +93,9 @@ SCIP_RETCODE SCIPpricerCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a variable pricer
- *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
- */
-SCIP_RETCODE SCIPpricerCreate(
+/** internal method creating a variable pricer */
+static
+SCIP_RETCODE doPricerCreate(
    SCIP_PRICER**         pricer,             /**< pointer to variable pricer data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -126,6 +125,8 @@ SCIP_RETCODE SCIPpricerCreate(
    assert(pricerredcost != NULL);
 
    SCIP_ALLOC( BMSallocMemory(pricer) );
+   BMSclearMemory(*pricer);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*pricer)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*pricer)->desc, desc, strlen(desc)+1) );
    (*pricer)->priority = priority;
@@ -156,6 +157,43 @@ SCIP_RETCODE SCIPpricerCreate(
    return SCIP_OKAY;
 }
 
+/** creates a variable pricer
+ *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
+ */
+SCIP_RETCODE SCIPpricerCreate(
+   SCIP_PRICER**         pricer,             /**< pointer to variable pricer data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of variable pricer */
+   const char*           desc,               /**< description of variable pricer */
+   int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
+   SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
+   SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
+   SCIP_DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
+   SCIP_DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
+   SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
+   )
+{
+   assert(pricer != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(pricerredcost != NULL);
+
+   SCIP_CALL_FINALLY( doPricerCreate(pricer, set, messagehdlr, blkmem,
+                         name, desc, priority, delay, pricercopy, pricerfree, pricerinit,
+                         pricerexit, pricerinitsol, pricerexitsol, pricerredcost, pricerfarkas, pricerdata),
+                      SCIPpricerFree(pricer ,set) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of variable pricer */
 SCIP_RETCODE SCIPpricerFree(
    SCIP_PRICER**         pricer,             /**< pointer to variable pricer data structure */
@@ -163,7 +201,8 @@ SCIP_RETCODE SCIPpricerFree(
    )
 {
    assert(pricer != NULL);
-   assert(*pricer != NULL);
+   if( *pricer == NULL )
+      return SCIP_OKAY;
    assert(!(*pricer)->initialized);
    assert(set != NULL);
 
@@ -175,8 +214,8 @@ SCIP_RETCODE SCIPpricerFree(
 
    SCIPclockFree(&(*pricer)->pricerclock);
    SCIPclockFree(&(*pricer)->setuptime);
-   BMSfreeMemoryArray(&(*pricer)->name);
-   BMSfreeMemoryArray(&(*pricer)->desc);
+   BMSfreeMemoryArrayNull(&(*pricer)->name);
+   BMSfreeMemoryArrayNull(&(*pricer)->desc);
    BMSfreeMemory(pricer);
 
    return SCIP_OKAY;

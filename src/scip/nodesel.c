@@ -749,8 +749,9 @@ SCIP_RETCODE SCIPnodeselCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a node selector */
-SCIP_RETCODE SCIPnodeselCreate(
+/** internal method for creating a node selector */
+static
+SCIP_RETCODE doNodeselCreate(
    SCIP_NODESEL**        nodesel,            /**< pointer to store node selector */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -780,6 +781,8 @@ SCIP_RETCODE SCIPnodeselCreate(
    assert(nodeselcomp != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nodesel) );
+   BMSfreeMemory(*nodesel);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nodesel)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nodesel)->desc, desc, strlen(desc)+1) );
    (*nodesel)->stdpriority = stdpriority;
@@ -814,6 +817,41 @@ SCIP_RETCODE SCIPnodeselCreate(
    return SCIP_OKAY;
 }
 
+/** creates a node selector */
+SCIP_RETCODE SCIPnodeselCreate(
+   SCIP_NODESEL**        nodesel,            /**< pointer to store node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of node selector */
+   const char*           desc,               /**< description of node selector */
+   int                   stdpriority,        /**< priority of the node selector in standard mode */
+   int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy)),   /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
+   SCIP_DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
+   SCIP_DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
+   SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   )
+{
+   assert(nodesel != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(nodeselselect != NULL);
+   assert(nodeselcomp != NULL);
+
+   SCIP_CALL_FINALLY( doNodeselCreate(nodesel, set, messagehdlr, blkmem, name, desc, stdpriority,
+                         memsavepriority, nodeselcopy, nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
+                         nodeselselect, nodeselcomp, nodeseldata),
+                      SCIPnodeselFree(nodesel, set));
+
+   return SCIP_OKAY;
+}
+
 /** frees memory of node selector */
 SCIP_RETCODE SCIPnodeselFree(
    SCIP_NODESEL**        nodesel,            /**< pointer to node selector data structure */
@@ -821,7 +859,8 @@ SCIP_RETCODE SCIPnodeselFree(
    )
 {
    assert(nodesel != NULL);
-   assert(*nodesel != NULL);
+   if( *nodesel == NULL )
+      return SCIP_OKAY;
    assert(!(*nodesel)->initialized);
    assert(set != NULL);
 
@@ -835,8 +874,8 @@ SCIP_RETCODE SCIPnodeselFree(
    SCIPclockFree(&(*nodesel)->nodeseltime);
    SCIPclockFree(&(*nodesel)->setuptime);
 
-   BMSfreeMemoryArray(&(*nodesel)->name);
-   BMSfreeMemoryArray(&(*nodesel)->desc);
+   BMSfreeMemoryArrayNull(&(*nodesel)->name);
+   BMSfreeMemoryArrayNull(&(*nodesel)->desc);
    BMSfreeMemory(nodesel);
 
    return SCIP_OKAY;

@@ -378,8 +378,9 @@ SCIP_RETCODE SCIPconflicthdlrCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a conflict handler */
-SCIP_RETCODE SCIPconflicthdlrCreate(
+/** internal method for creating a conflict handler */
+static
+SCIP_RETCODE doConflicthdlrCreate(
    SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -405,6 +406,8 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    assert(desc != NULL);
 
    SCIP_ALLOC( BMSallocMemory(conflicthdlr) );
+   BMSclearMemory(*conflicthdlr);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conflicthdlr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conflicthdlr)->desc, desc, strlen(desc)+1) );
    (*conflicthdlr)->priority = priority;
@@ -430,6 +433,37 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    return SCIP_OKAY;
 }
 
+/** creates a conflict handler */
+SCIP_RETCODE SCIPconflicthdlrCreate(
+   SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of conflict handler */
+   const char*           desc,               /**< description of conflict handler */
+   int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol)),/**< solving process initialization method of conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol)),/**< solving process deinitialization method of conflict handler */
+   SCIP_DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+
+   SCIP_CALL_FINALLY( doConflicthdlrCreate(conflicthdlr, set, messagehdlr, blkmem, name, desc, priority,
+                         conflictcopy, conflictfree, conflictinit, conflictexit, conflictinitsol,
+                         conflictexitsol, conflictexec, conflicthdlrdata),
+                      SCIPconflicthdlrFree(conflicthdlr, set) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of conflict handler */
 SCIP_RETCODE SCIPconflicthdlrFree(
    SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
@@ -437,7 +471,8 @@ SCIP_RETCODE SCIPconflicthdlrFree(
    )
 {
    assert(conflicthdlr != NULL);
-   assert(*conflicthdlr != NULL);
+   if( *conflicthdlr == NULL )
+      return SCIP_OKAY;
    assert(!(*conflicthdlr)->initialized);
    assert(set != NULL);
 
@@ -450,8 +485,8 @@ SCIP_RETCODE SCIPconflicthdlrFree(
    SCIPclockFree(&(*conflicthdlr)->conflicttime);
    SCIPclockFree(&(*conflicthdlr)->setuptime);
 
-   BMSfreeMemoryArray(&(*conflicthdlr)->name);
-   BMSfreeMemoryArray(&(*conflicthdlr)->desc);
+   BMSfreeMemoryArrayNull(&(*conflicthdlr)->name);
+   BMSfreeMemoryArrayNull(&(*conflicthdlr)->desc);
    BMSfreeMemory(conflicthdlr);
 
    return SCIP_OKAY;

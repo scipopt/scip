@@ -1983,8 +1983,9 @@ SCIP_RETCODE SCIPconshdlrCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a constraint handler */
-SCIP_RETCODE SCIPconshdlrCreate(
+/** internal method for creating a constraint handler */
+static
+SCIP_RETCODE doConshdlrCreate(
    SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -2065,6 +2066,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    assert((consgetvars != NULL) == (consgetnvars != NULL));
 
    SCIP_ALLOC( BMSallocMemory(conshdlr) );
+   BMSclearMemory(*conshdlr);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conshdlr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conshdlr)->desc, desc, strlen(desc)+1) );
    (*conshdlr)->sepapriority = sepapriority;
@@ -2257,6 +2260,82 @@ SCIP_RETCODE SCIPconshdlrCreate(
          (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740 !e713*/
 
    return SCIP_OKAY;
+}
+
+/** creates a constraint handler */
+SCIP_RETCODE SCIPconshdlrCreate(
+   SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of constraint handler */
+   const char*           desc,               /**< description of constraint handler */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility (and propagation) */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+   SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the constraint handler's presolving method */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
+   SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
+   SCIP_DECL_CONSINITPRE ((*consinitpre)),   /**< presolving initialization method of constraint handler */
+   SCIP_DECL_CONSEXITPRE ((*consexitpre)),   /**< presolving deinitialization method of constraint handler */
+   SCIP_DECL_CONSINITSOL ((*consinitsol)),   /**< solving process initialization method of constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
+   SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
+   SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
+   SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
+   SCIP_DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
+   SCIP_DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   SCIP_DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
+   SCIP_DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
+   SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
+   SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars)),   /**< variable deletion method */
+   SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
+   SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
+   SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(conssepalp != NULL || conssepasol != NULL || sepafreq == -1);
+   assert(consprop != NULL || propfreq == -1);
+   assert(eagerfreq >= -1);
+   assert(!needscons || ((conshdlrcopy == NULL) == (conscopy == NULL)));
+
+   SCIP_CALL_FINALLY( doConshdlrCreate(conshdlr, set, messagehdlr, blkmem,
+                         name, desc, sepapriority, enfopriority, checkpriority, sepafreq, propfreq, eagerfreq, maxprerounds,
+                         delaysepa, delayprop, needscons, proptiming, presoltiming, conshdlrcopy, consfree, consinit, consexit,
+                         consinitpre, consexitpre, consinitsol, consexitsol, consdelete, constrans, consinitlp, conssepalp,
+                         conssepasol, consenfolp, consenforelax, consenfops, conscheck, consprop, conspresol, consresprop,
+                         conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
+                         conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
+                      SCIPconshdlrFree(conshdlr, set) );
+
+   return SCIP_OKAY;
 } /*lint !e715*/
 
 /** calls destructor and frees memory of constraint handler */
@@ -2266,7 +2345,8 @@ SCIP_RETCODE SCIPconshdlrFree(
    )
 {
    assert(conshdlr != NULL);
-   assert(*conshdlr != NULL);
+   if( *conshdlr == NULL )
+      return SCIP_OKAY;
    assert(!(*conshdlr)->initialized);
    assert((*conshdlr)->nconss == 0);
    assert(set != NULL);
@@ -2288,8 +2368,8 @@ SCIP_RETCODE SCIPconshdlrFree(
    SCIPclockFree(&(*conshdlr)->presoltime);
    SCIPclockFree(&(*conshdlr)->setuptime);
 
-   BMSfreeMemoryArray(&(*conshdlr)->name);
-   BMSfreeMemoryArray(&(*conshdlr)->desc);
+   BMSfreeMemoryArrayNull(&(*conshdlr)->name);
+   BMSfreeMemoryArrayNull(&(*conshdlr)->desc);
    BMSfreeMemoryArrayNull(&(*conshdlr)->conss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->initconss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->sepaconss);

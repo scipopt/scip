@@ -59,8 +59,9 @@ SCIP_RETCODE SCIPtableCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a statistics table */
-SCIP_RETCODE SCIPtableCreate(
+/** internal method for creating a statistics table */
+static
+SCIP_RETCODE doTableCreate(
    SCIP_TABLE**          table,              /**< pointer to store statistics table */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -89,6 +90,8 @@ SCIP_RETCODE SCIPtableCreate(
    assert(tableoutput != NULL);
 
    SCIP_ALLOC( BMSallocMemory(table) );
+   BMSclearMemory(*table);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*table)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*table)->desc, desc, strlen(desc)+1) );
    (*table)->tablecopy = tablecopy;
@@ -113,6 +116,41 @@ SCIP_RETCODE SCIPtableCreate(
    return SCIP_OKAY;
 }
 
+/** creates a statistics table */
+SCIP_RETCODE SCIPtableCreate(
+   SCIP_TABLE**          table,              /**< pointer to store statistics table */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of statistics table */
+   const char*           desc,               /**< description of statistics table */
+   SCIP_Bool             active,             /**< should the table be activated by default? */
+   SCIP_DECL_TABLECOPY   ((*tablecopy)),     /**< copy method of statistics table or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_TABLEFREE   ((*tablefree)),     /**< destructor of statistics table */
+   SCIP_DECL_TABLEINIT   ((*tableinit)),     /**< initialize statistics table */
+   SCIP_DECL_TABLEEXIT   ((*tableexit)),     /**< deinitialize statistics table */
+   SCIP_DECL_TABLEINITSOL ((*tableinitsol)), /**< solving process initialization method of statistics table */
+   SCIP_DECL_TABLEEXITSOL ((*tableexitsol)), /**< solving process deinitialization method of statistics table */
+   SCIP_DECL_TABLEOUTPUT ((*tableoutput)),   /**< output method */
+   SCIP_TABLEDATA*       tabledata,          /**< display statistics table */
+   int                   position,           /**< position of statistics table */
+   SCIP_STAGE            earlieststage       /**< output of the statistics table is only printed from this stage onwards */
+   )
+{
+   assert(table != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(tableoutput != NULL);
+
+   SCIP_CALL_FINALLY( doTableCreate(table, set, messagehdlr, blkmem,
+                         name, desc, active, tablecopy,
+                         tablefree, tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata,
+                         position, earlieststage),
+                      SCIPtableFree(table, set));
+
+   return SCIP_OKAY;
+}
+
 /** frees memory of statistics table */
 SCIP_RETCODE SCIPtableFree(
    SCIP_TABLE**          table,              /**< pointer to statistics table data structure */
@@ -120,7 +158,8 @@ SCIP_RETCODE SCIPtableFree(
    )
 {
    assert(table != NULL);
-   assert(*table != NULL);
+   if( *table == NULL )
+      return SCIP_OKAY;
    assert(!(*table)->initialized);
    assert(set != NULL);
 
@@ -130,8 +169,8 @@ SCIP_RETCODE SCIPtableFree(
       SCIP_CALL( (*table)->tablefree(set->scip, *table) );
    }
 
-   BMSfreeMemoryArray(&(*table)->name);
-   BMSfreeMemoryArray(&(*table)->desc);
+   BMSfreeMemoryArrayNull(&(*table)->name);
+   BMSfreeMemoryArrayNull(&(*table)->desc);
    BMSfreeMemory(table);
 
    return SCIP_OKAY;
