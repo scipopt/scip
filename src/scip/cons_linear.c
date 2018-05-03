@@ -5708,7 +5708,7 @@ SCIP_RETCODE analyzeConflictRangedRow(
  *  Example:
  *  c1: 12 x1 + 9  x2 - x3 = 1  with x1, x2 free and 1 <= x3 <= 2
  *
- *  The only posible value for x3 is 2, so the variable will be fixed.
+ *  The only possible value for x3 is 2, so the variable will be fixed.
  *
  *  @todo add holes if possible
  */

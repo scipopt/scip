@@ -4545,7 +4545,9 @@ SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@addtogroup PublicBanditAlgorithms
+/* @} */
+
+/**@addtogroup PublicBanditMethods
  *
  * @{
  */
@@ -4584,10 +4586,6 @@ SCIP_RETCODE SCIPresetBandit(
    SCIP_Real*            priorities,         /**< priorities for every action, or NULL if not needed */
    unsigned int          seed                /**< initial random seed for bandit selection */
    );
-
-/* @} */
-
-
 
 /* @} */
 
@@ -8655,34 +8653,6 @@ SCIP_RETCODE SCIPaddVarLocksType(
    int                   nlocksup            /**< modification in number of rounding up locks */
    );
 
-/** remove locks of type @p locktype of variable with respect to the lock status of the constraint and its negation;
- *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
- *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
- *  added or removed
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-EXTERN
-SCIP_RETCODE SCIPunlockVarConsType(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
-   SCIP_Bool             lockdown,           /**< should the rounding be unlocked in downwards direction? */
-   SCIP_Bool             lockup              /**< should the rounding be unlocked in upwards direction? */
-   );
 
 /** adds given values to lock numbers of variable for rounding
  *

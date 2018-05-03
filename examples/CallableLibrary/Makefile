@@ -35,7 +35,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAMES	=	string gastrans circle
+MAINNAMES	=	string gastrans circle brachistochrone
 MAINOBJ		=	$(addsuffix .o,$(MAINNAMES))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.$(OPT)
@@ -109,6 +109,10 @@ $(BINDIR)/gastrans.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBF
 $(BINDIR)/circle.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/circle.o
 		@echo "-> linking $@"
 		$(LINKCXX) $(OBJDIR)/circle.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
+
+$(BINDIR)/brachistochrone.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/brachistochrone.o
+		@echo "-> linking $@"
+		$(LINKCXX) $(OBJDIR)/brachistochrone.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

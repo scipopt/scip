@@ -39,6 +39,7 @@
 #include "xprs.h"
 #include "scip/bitencode.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 #include "lpi/lpi.h"
 
 #ifndef XPRS_LPQUICKPRESOLVE

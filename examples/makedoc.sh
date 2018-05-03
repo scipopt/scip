@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-#
-# run with bash -e makeall.sh to stop on errors
-#
+
+# stop on error
+set -e
 
 EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens TSP VRP)
 
@@ -10,9 +10,6 @@ do
     echo
     echo ===== $EXAMPLE =====
     echo
-    if (! make -C $EXAMPLE doc )
-    then
-	exit $STATUS
-    fi
+    make -C $EXAMPLE doc
     echo
 done

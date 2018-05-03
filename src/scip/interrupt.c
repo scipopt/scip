@@ -26,6 +26,7 @@
 #include <signal.h>
 
 #include "scip/def.h"
+#include "scip/pub_message.h"
 #include "blockmemshell/memory.h"
 #include "scip/interrupt.h"
 

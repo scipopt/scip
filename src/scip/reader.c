@@ -39,6 +39,7 @@
 #include "scip/var.h"
 #include "scip/pub_cons.h"
 #include "scip/cons.h"
+#include "scip/pub_message.h"
 
 #include "scip/struct_reader.h"
 
