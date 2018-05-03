@@ -91,34 +91,6 @@ SCIP_Bool shouldRun(
    if( SCIPgetNConflictConssFound(scip) == 0 )
       return FALSE;
 
-#if 0
-   *result = SCIP_DIDNOTRUN;
-
-   /* don't run if to many nonzero objective coefficients are present */
-   if( SCIPgetNObjVars(scip) < SCIPceil(scip, heurdata->maxnnzobjfac * SCIPgetNVars(scip)) )
-      return TRUE;
-
-   dualboundroot = SCIPgetDualboundRoot(scip);
-   firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
-
-   /* check whether the dual bound has not changed too much at the root node */
-   if( !SCIPisInfinity(scip, REALABS(firstdualboundroot)) )
-   {
-      if( SCIPisPositive(scip, dualboundroot) == SCIPisPositive(scip, firstdualboundroot) )
-      {
-         if( SCIPisZero(scip, dualboundroot) )
-         {
-            if( SCIPisZero(scip, firstdualboundroot) )
-               return TRUE;
-         }
-         else if( firstdualboundroot / dualboundroot < 1.005 && firstdualboundroot / dualboundroot > 0.995 )
-            return TRUE;
-      }
-   }
-
-   return FALSE;
-#endif
-
    return TRUE;
 }
 
