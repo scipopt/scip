@@ -210,8 +210,9 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    );
 
 /* sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
- * process. One example is when the three-phase method is employed, where the first phase solves the of both the master
- * and subproblems and by the third phase the integer subproblem is solved.
+ * process. One example is when the three-phase method is employed, where the first phase solves the convex relaxation
+ * of both the master and subproblems, the second phase reintroduces the integrality constraints to the master problem
+ * and the third phase then reintroduces integrality constraints to the subproblems.
  */
 EXTERN
 void SCIPbendersSetSubprobIsConvex(
