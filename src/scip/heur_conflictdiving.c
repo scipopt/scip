@@ -81,9 +81,6 @@ SCIP_Bool shouldRun(
    SCIP_RESULT*          result
    )
 {
-   SCIP_Real dualboundroot;
-   SCIP_Real firstdualboundroot;
-
    assert(heurdata != NULL);
 
    *result = SCIP_DELAYED;
