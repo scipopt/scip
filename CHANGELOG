@@ -5,6 +5,7 @@ performance improvements:
 - cuts generated from certain quadratic constraints with convex feasible region are now global
 
 features:
+- new miscellaneous methods for constraints that have a one-row linear representation in pub_misc_linear.h
 - a Benders' decomposition framework has been added. This framework provides the functionality for a user to solve a
   decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
   integer optimality cuts and no-good cuts.

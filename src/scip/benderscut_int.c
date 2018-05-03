@@ -16,6 +16,32 @@
 /**@file   benderscut_int.c
  * @brief  Generates a Laporte and Louveaux Benders' decomposition integer cut
  * @author Stephen J. Maher
+ *
+ * The classical Benders' decomposition algorithm is only applicable to problems with continuous second stage variables.
+ * Laporte and Louveaux (1993) developed a method for generating cuts when Benders' decomposition is applied to problem
+ * with discrete second stage variables. However, these cuts are only applicable when the master problem is a pure
+ * binary problem.
+ *
+ * The integer optimality cuts are a point-wise underestimator of the optimal subproblem objective function value.
+ * Similar to benderscuts_opt.c, an auxiliary variable, \f$\varphi\f$. is required in the master problem as a lower
+ * bound on the optimal objective function value for the Benders' decomposition subproblem.
+ *
+ * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
+ * \f[
+ * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \mbox{ integer}\}
+ * \f]
+ * If the subproblem is feasible, and \f$z(\bar{x}) > \varphi\f$ (indicating that the current underestimators are not
+ * optimal) then the Benders' decomposition integer optimality cut can be generated from the optimal solution of the
+ * subproblem. Let \f$S_{r}\f$ be the set of indicies for master problem variables that are 1 in \f$\bar{x}\f$ and
+ * \f$L\f$ a known lowerbound on the subproblem objective function value.
+ *
+ * The resulting cut is:
+ * \f[
+ * \varphi \geq (z(\bar{x}) - L)(\sum_{i \in S_{r}}(x_{i} - 1) + \sum_{i \notin S_{r}}x_{i} + 1)
+ * \f]
+ *
+ * Laporte, G. & Louveaux, F. V. The integer L-shaped method for stochastic integer programs with complete recourse
+ * Operations Research Letters, 1993, 13, 133-142
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

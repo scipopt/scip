@@ -16,6 +16,24 @@
 /**@file   benderscut_opt.c
  * @brief  Generates a standard Benders' decomposition optimality cut
  * @author Stephen J. Maher
+ *
+ * The classical Benders' decomposition optimality cuts arise from a feasible instance of the Benders' decomposition
+ * subproblem. The optimality cuts are an underestimator of the subproblem objective function value. Auxiliary
+ * variables, \f$\varphi\f$ are added to the master problem to compute the lower bound on the subproblem objective
+ * fucntion value.
+ *
+ * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
+ * \f[
+ * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \geq 0\}
+ * \f]
+ * If the subproblem is feasible, and \f$z(\bar{x}) > \varphi\f$ (indicating that the current underestimators are not
+ * optimal) then the Benders' decomposition optimality cut can be generated from the optimal dual solution of the
+ * subproblem. Let \f$w\f$ be the vector corresponding to the optimal dual solution of the Benders' decomposition
+ * subproblem. The resulting cut is:
+ * \f[
+ * \varphi \geq w^{T}(h - Hx)
+ * \f]
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,7 +44,7 @@
 #include "scip/benderscut_opt.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_benderscut.h"
-#include "scip/misc_benders.h"
+#include "scip/pub_misc_linear.h"
 
 #include "scip/cons_linear.h"
 #include "scip/pub_lp.h"
@@ -108,9 +126,16 @@ SCIP_RETCODE computeStandardOptimalityCut(
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
    {
+      SCIP_Bool conssuccess;
       addval = 0;
 
-      dualsol = BDconsGetDualsol(subproblem, conss[i]);
+      SCIPconsGetDualsol(subproblem, conss[i], &dualsol, &conssuccess);
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating optimality cut.\n");
+         return SCIP_OKAY;
+      }
 
       assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
 
@@ -124,14 +149,22 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
 
       if( SCIPisPositive(subproblem, dualsol) )
-         addval = dualsol*BDconsGetLhs(subproblem, conss[i]);
+         addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
       else if( SCIPisNegative(subproblem, dualsol) )
-         addval = dualsol*BDconsGetRhs(subproblem, conss[i]);
+         addval = dualsol*SCIPconsGetRhs(subproblem, conss[i], &conssuccess);
+
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating optimality cut.\n");
+         return SCIP_OKAY;
+      }
 
       lhs += addval;
 
       /* if the bound becomes infinite, then the cut generation terminates. */
-      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+         || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
       {
          (*success) = FALSE;
          SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");
@@ -207,7 +240,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
             lhs += addval;
 
             /* if the bound becomes infinite, then the cut generation terminates. */
-            if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+            if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+               || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
             {
                (*success) = FALSE;
                SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");

@@ -16,6 +16,20 @@
 /**@file   benderscut_feas.c
  * @brief  Standard feasibility cuts for Benders' decomposition
  * @author Stephen J. Maher
+ *
+ * The classical Benders' decomposition feasibility cuts arise from an infeasible instance of the Benders' decomposition
+ * subproblem.
+ * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
+ * \f[
+ * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \geq 0\}
+ * \f]
+ * If the subproblem is infeasible as a result of the solution \f$\bar{x}\f$, then the Benders' decomposition
+ * feasibility cut can be generated from the dual ray. Let \f$w\f$ be the vector corresponding to the dual ray of the
+ * Benders' decomposition subproblem. The resulting cut is:
+ * \f[
+ * 0 \geq w^{T}(h - Hx)
+ * \f]
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -25,7 +39,7 @@
 #include "scip/benderscut_feas.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_benderscut.h"
-#include "scip/misc_benders.h"
+#include "scip/pub_misc_linear.h"
 
 #include "scip/cons_linear.h"
 
@@ -97,26 +111,42 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
    {
-      addval = 0;
-      dualsol = BDconsGetDualfarkas(subproblem, conss[i]);
+      SCIP_Bool conssuccess;
 
-      if( SCIPisZero(subproblem, dualsol) )
+      addval = 0;
+      SCIPconsGetDualfarkas(subproblem, conss[i], &dualsol, &conssuccess);
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
+         return SCIP_OKAY;
+      }
+
+      if( SCIPisDualfeasZero(subproblem, dualsol) )
          continue;
 
       lhs = SCIPgetLhsLinear(masterprob, cut);
 
       SCIPdebugMessage("Constraint: <%s>: LHS = %g RHS = %g dualsol = %g\n", SCIPconsGetName(conss[i]),
-         BDconsGetLhs(subproblem, conss[i]), BDconsGetRhs(subproblem, conss[i]), dualsol);
+         SCIPconsGetLhs(subproblem, conss[i], &conssuccess), SCIPconsGetRhs(subproblem, conss[i], &conssuccess), dualsol);
 
       if( SCIPisPositive(subproblem, dualsol) )
-         addval = dualsol*BDconsGetLhs(subproblem, conss[i]);
+         addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
       else if( SCIPisNegative(subproblem, dualsol) )
-         addval = dualsol*BDconsGetRhs(subproblem, conss[i]);
+         addval = dualsol*SCIPconsGetRhs(subproblem, conss[i], &conssuccess);
+
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
+         return SCIP_OKAY;
+      }
 
       lhs += addval;
 
       /* if the bound becomes infinite, then the cut generation terminates. */
-      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+         || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
       {
          (*success) = FALSE;
          SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
@@ -130,11 +160,24 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       farkaslhs += addval;
 #endif
 
-      nconsvars = BDconsGetNVars(subproblem, conss[i]);
+      SCIP_CALL( SCIPgetConsNVars(subproblem, conss[i], &nconsvars, &conssuccess) );
       SCIP_CALL( SCIPallocBufferArray(subproblem, &consvars, nconsvars) );
       SCIP_CALL( SCIPallocBufferArray(subproblem, &consvals, nconsvars) );
-      SCIP_CALL( BDconsGetVars(subproblem, conss[i], consvars, nconsvars) );
-      SCIP_CALL( BDconsGetVals(subproblem, conss[i], consvals, nconsvars) );
+      SCIP_CALL( SCIPgetConsVars(subproblem, conss[i], consvars, nconsvars, &conssuccess) );
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
+         return SCIP_OKAY;
+      }
+
+      SCIP_CALL( SCIPgetConsVals(subproblem, conss[i], consvals, nconsvars, &conssuccess) );
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
+         return SCIP_OKAY;
+      }
 
 #ifndef NDEBUG
       /* loop over all variables with non-zero coefficient */
@@ -218,7 +261,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 #endif
 
          /* if the bound becomes infinite, then the cut generation terminates. */
-         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+            || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
          {
             (*success) = FALSE;
             SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
