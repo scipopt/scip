@@ -3170,6 +3170,16 @@ SCIP_Bool SCIPbendersGetMastervarsCont(
    return benders->mastervarscont[probnumber];
 }
 
+/** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */
+int SCIPbendersGetNTransferredCuts(
+   SCIP_BENDERS*         benders             /**< the Benders' decomposition data structure */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->ntransferred;
+}
+
 /** sets the sorted flags in the Benders' decomposition */
 void SCIPbendersSetBenderscutsSorted(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
