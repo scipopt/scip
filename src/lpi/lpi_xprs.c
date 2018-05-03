@@ -3630,18 +3630,23 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
    {
      int ival;
 
+     /* dval>0   If an integer solution has been found, stop MIP search after dval seconds, otherwise continue until an integer solution is finally found. */
+     /* dval<0   Stop in LP or MIP search after dval seconds. */
      /* if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
      if (dval >= INT_MAX)
        ival = 0;
@@ -3652,9 +3657,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
      break;
    }
    case SCIP_LPPAR_MARKOWITZ:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
    default:

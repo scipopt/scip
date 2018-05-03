@@ -4901,6 +4901,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       }
 #endif
 
+      /* 0 <= ival */
+      assert(ival >= 0);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads (0 => MOSEK chooses) */
