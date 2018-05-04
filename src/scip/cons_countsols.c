@@ -1807,7 +1807,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
    SCIP_Bool computesymmetrypresolved;
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "presolving/symmetry/computepresolved", &computesymmetrypresolved) );
+   if ( usesymmetry == 1 )
+   {
+      SCIP_CALL( SCIPgetBoolParam(scip, "presolving/symbreak/addconsstiming", &computesymmetrypresolved) );
+   }
+   else if ( usesymmetry == 2 )
+   {
+      SCIP_CALL( SCIPgetBoolParam(scip, "propagating/orbitalfixing/symcomptiming", &computesymmetrypresolved) );
+   }
 
    if ( usesymmetry != 0 )
    {
@@ -1917,7 +1924,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    }
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "presolving/symmetry/computepresolved", &computesymmetrypresolved) );
+   if ( usesymmetry == 1 )
+   {
+      SCIP_CALL( SCIPgetBoolParam(scip, "presolving/symbreak/addconsstiming", &computesymmetrypresolved) );
+   }
+   else if ( usesymmetry == 2 )
+   {
+      SCIP_CALL( SCIPgetBoolParam(scip, "propagating/orbitalfixing/symcomptiming", &computesymmetrypresolved) );
+   }
 
    if ( usesymmetry != 0 )
    {
