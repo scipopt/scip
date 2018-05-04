@@ -166,10 +166,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
 }
 
 
-/** feasibility check method of constraint handler for integral solutions */
-/*  This function checks the feasibility of the Benderslp' decomposition master problem. In the case that the problem is
- *  feasible, then the auxiliary variables must be updated with the subproblem objective function values. The update
- *  occurs in the solve subproblems function. */
+/** feasibility check method of constraint handler for integral solutions.
+ *  The feasibility check for Benders' decomposition is performed in cons_benders. As such, it is redundant to perform
+ *  the feasibility check here. As such, the solution is flagged as feasible, which will then be corrected in
+ *  cons_benders if the solution is infeasible with respect to the second stage constraints
+ */
 static
 SCIP_DECL_CONSCHECK(consCheckBenderslp)
 {  /*lint --e{715}*/
