@@ -4026,7 +4026,9 @@ SCIP_RETCODE SCIPwriteMps(
        * might happen that they only exist in non-linear constraints, which leads to no other line in the column section
        * and therefore do not mark the variable as an integer
        */
-      if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT || ((SCIPvarGetNLocksDown(var) == 0) && (SCIPvarGetNLocksUp(var) == 0)) )
+      if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT
+         || ((SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0)
+            && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0)) )
       {
          assert( matrix->nentries < matrix->sentries );
 

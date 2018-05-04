@@ -63,6 +63,7 @@ set(settings_MIP
     "solvingphases"
 #    "cloud"
     "uct_breadth_dualval"
+    "conflictdiving"
 )
 #
 # settings to run a reduced MIP test

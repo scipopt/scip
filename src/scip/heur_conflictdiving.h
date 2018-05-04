@@ -13,36 +13,36 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip/src/cppmain.cpp
- * @brief  main file for C++ compilation
- * @author Tobias Achterberg
+/**@file   heur_conflictdiving.h
+ * @ingroup PRIMALHEURISTICS
+ * @brief  LP diving heuristic that chooses fixings w.r.t. conflict locks
+ * @author Jakob Witzig
+ *
+ * Diving heuristic: Iteratively fixes some fractional variable and resolves the LP-relaxation, thereby simulating a
+ * depth-first-search in the tree. Conflict Diving chooses the variable with the fewest conflict locking number in any
+ * direction and rounds it into this direction.
  */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdio.h>
+#ifndef __SCIP_HEUR_CONFLICTDIVING_H__
+#define __SCIP_HEUR_CONFLICTDIVING_H__
+
 
 #include "scip/scip.h"
-#include "scip/scipshell.h"
 
-/** main method starting SCIP */
-int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
-   )
-{
-   SCIP_RETCODE retcode;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-   /* run interactive shell */
-   retcode = SCIPrunShell(argc, argv, "scip.set");
+/** creates the conflictdiving heuristic and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurConflictdiving(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
-   /* evaluate retrun code of the SCIP process */
-   if( retcode != SCIP_OKAY )
-   {
-      /* write error back trace */
-      SCIPprintError(retcode);
-      return -1;
-   }
-
-   return 0;
+#ifdef __cplusplus
 }
+#endif
+
+#endif

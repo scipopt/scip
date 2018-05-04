@@ -1209,15 +1209,15 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables */
+/** adds given values to lock status of the constraint and updates the locks of the given locktype of the involved variables */
 extern
 SCIP_RETCODE SCIPconsAddLocks(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LOCKTYPE         locktype,           /**< type of variable locks */
    int                   nlockspos,          /**< increase in number of rounding locks for constraint */
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    );
-
 
 /*
  * Hash functions

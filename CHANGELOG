@@ -23,9 +23,18 @@ deleted and modified API functions:
   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
 - removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
   of other components anymore
+- the seed of SCIPinitializeRandomSeed() is now an unsigned int
+- the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
+- added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model (check) constraints (SCIP_LOCKYPE_MODEL)
+  and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
+- new functions SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
+- new function SCIPaddConsLocksType()
+- new functions SCIPconsIsLockedTypePos(), SCIPconsIsLockedTypeNeg(), SCIPconsIsLockedType(),
+  SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
 - added SCIPstrncpy(), a safe version of strncpy()
 
 new parameters:
@@ -46,6 +55,7 @@ deleted files:
 
 misc:
 - updated CppAD to version 20180000.0
+- add statistic that presents the number of resolves for instable LPs
 
 
 SCIP version 5.0.2
@@ -88,6 +98,7 @@ performance improvements:
 
 features:
 - allow output of lower bounds for visualization
+- new diving heuristic "conflictdiving"
 - add number of conflict constraints found by diving heuristics to statistics
 - added symmetry detection for linking constraints
 - SCIP executable handles the SIGTERM signal. If the process receives a SIGTERM, SCIP terminates the solution process with a new SCIP_STATUS code
