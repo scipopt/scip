@@ -342,7 +342,7 @@ SCIP_DECL_EXPRGRAPHVARADDED( exprgraphVarAdded )
       );
    SCIPexprgraphSetVarNodeBounds(exprgraph, varnode, varbounds);
 
-   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, 1, 1) );
+   SCIP_CALL( SCIPaddVarLocksType(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, 1, 1) );
    SCIPdebugMessage("increased up- and downlocks of variable <%s>\n", SCIPvarGetName(var_));
 
    conshdlrdata->isremovedfixings &= SCIPvarIsActive(var_);
@@ -371,7 +371,7 @@ SCIP_DECL_EXPRGRAPHVARREMOVE( exprgraphVarRemove )
    SCIP_CALL( SCIPdropVarEvent(conshdlrdata->scip, var_, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, conshdlrdata->nonlinvareventhdlr, (SCIP_EVENTDATA*)varnode, -1) );
    SCIPdebugMessage("drop boundchange events on expression graph variable <%s>\n", SCIPvarGetName(var_));
 
-   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, -1, -1) );
+   SCIP_CALL( SCIPaddVarLocksType(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, -1, -1) );
    SCIPdebugMessage("decreased up- and downlocks of variable <%s>\n", SCIPvarGetName(var_));
 
    return SCIP_OKAY;
@@ -6310,14 +6310,14 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
             neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
          }
 
-         if( SCIPvarGetNLocksDown(consdata->z) - neglock == 0 )
+         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
          {
             /* for c*z + f(x,y) \in [lhs, rhs], we can decrease z without harming other constraints */
             consdata->maydecreasez = TRUE;
             SCIPdebugMsg(scip, "may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->z));
          }
 
-         if( SCIPvarGetNLocksDown(consdata->z) - poslock == 0 )
+         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
          {
             /* for c*x + f(x,y) \in [lhs, rhs], we can increase x without harming other constraints */
             consdata->mayincreasez = TRUE;
@@ -7059,6 +7059,7 @@ SCIP_DECL_CONSLOCK(consLockBivariate)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7069,22 +7070,22 @@ SCIP_DECL_CONSLOCK(consLockBivariate)
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
          if( !SCIPisInfinity(scip,  consdata->rhs) )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
          if( !SCIPisInfinity(scip,  consdata->rhs) )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
       }
    }

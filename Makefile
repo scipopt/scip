@@ -504,6 +504,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
+			scip/branch_lookahead.o \
 			scip/branch_mostinf.o \
 			scip/branch_multaggr.o \
 			scip/branch_nodereopt.o \
@@ -555,6 +556,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_completesol.o \
+			scip/heur_conflictdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \
@@ -642,6 +644,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
+			scip/reader_cor.o \
 			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
@@ -655,7 +658,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_pbm.o \
 			scip/reader_ppm.o \
 			scip/reader_rlp.o \
+			scip/reader_smps.o \
 			scip/reader_sol.o \
+			scip/reader_sto.o \
+			scip/reader_tim.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
 			scip/sepa_cgmip.o \

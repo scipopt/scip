@@ -152,4 +152,3 @@ Test(presol, checkPresolIsInitialized)
 
    cr_assert_eq(SCIPpresolIsInitialized(presol), TRUE, "was expecting the presolver to be initialized");
 }
-

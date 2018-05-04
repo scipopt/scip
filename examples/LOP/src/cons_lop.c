@@ -1038,7 +1038,7 @@ SCIP_DECL_CONSLOCK(consLockLOP)
 	 if (i != j)
 	 {
 	    /* the constaint may be violated in any way */
-	    SCIP_CALL( SCIPaddVarLocks(scip, vars[i][j], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+	    SCIP_CALL( SCIPaddVarLocksType(scip, vars[i][j], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 	 }
       }
    }

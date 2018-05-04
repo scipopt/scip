@@ -3392,7 +3392,7 @@ SCIP_RETCODE presolRoundIndicator(
                except by this indicator constraint. If more than one indicator constraint is
                effected, we have to hope that they are all fulfilled - in this case the last
                constraint will fix the binary variable to 1. */
-            if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+            if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
             {
                if ( SCIPvarGetUbGlobal(binvar) > 0.5 )
                {
@@ -3410,7 +3410,7 @@ SCIP_RETCODE presolRoundIndicator(
          {
             /* In this case we would like to fix the binary variable to 0, if it is not locked down
                (should also have been performed by other dual reductions). */
-            if ( SCIPvarGetNLocksDown(binvar) == 0 )
+            if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
             {
                if ( SCIPvarGetLbGlobal(binvar) < 0.5 )
                {
@@ -3462,8 +3462,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
          /* change binvary variable */
          consdata->binvar = var;
@@ -3513,8 +3513,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
@@ -3802,7 +3802,7 @@ SCIP_RETCODE propIndicator(
                   except by this indicator constraint. If more than one indicator constraint is
                   affected, we have to hope that they are all fulfilled - in this case the last
                   constraint will fix the binary variable to 1. */
-               if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+               if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                {
                   if ( SCIPvarGetUbLocal(binvar) > 0.5 )
                   {
@@ -3820,7 +3820,7 @@ SCIP_RETCODE propIndicator(
             {
                /* In this case we would like to fix the binary variable to 0, if it is not locked down
                   (should also have been performed by other dual reductions). */
-               if ( SCIPvarGetNLocksDown(binvar) == 0 )
+               if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
                {
                   if ( SCIPvarGetLbLocal(binvar) < 0.5 )
                   {
@@ -6457,12 +6457,13 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
    SCIPdebugMsg(scip, "%socking constraint <%s>.\n", (nlocksneg < 0) || (nlockspos < 0) ? "Unl" : "L", SCIPconsGetName(cons));
 #endif
 
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, nlocksneg, nlockspos) );
+   SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, locktype, nlocksneg, nlockspos) );
 
    if ( consdata->linconsactive )
    {
       assert( consdata->slackvar != NULL );
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, nlocksneg, nlockspos) );
+
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, locktype, nlocksneg, nlockspos) );
    }
    else
    {
@@ -6489,22 +6490,22 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
          {
             if ( haslhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlockspos, nlocksneg) );
             }
             if ( hasrhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlocksneg, nlockspos) );
             }
          }
          else
          {
             if ( haslhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlocksneg, nlockspos) );
             }
             if ( hasrhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlockspos, nlocksneg) );
             }
          }
       }
@@ -8123,7 +8124,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
                if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
                {
                   /* check whether variable only occurs in the current constraint */
-                  if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+                  if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                   {
                      SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                      *changed = TRUE;
@@ -8141,7 +8142,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             {
                /* setting variable to 0 does not increase objective -> check whether variable only occurs in the current constraint
                 * note: binary variables are only locked up */
-               if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+               if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) <= 0
+                  && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
                {
                   SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
                   *changed = TRUE;

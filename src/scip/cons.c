@@ -4087,7 +4087,7 @@ SCIP_RETCODE SCIPconshdlrLockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
-   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, +1, 0) );
+   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, SCIP_LOCKTYPE_MODEL, +1, 0) );
 
    return SCIP_OKAY;
 }
@@ -4102,7 +4102,7 @@ SCIP_RETCODE SCIPconshdlrUnlockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
-   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, -1, 0) );
+   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, SCIP_LOCKTYPE_MODEL, -1, 0) );
 
    return SCIP_OKAY;
 }
@@ -5755,6 +5755,8 @@ SCIP_RETCODE SCIPconsCreate(
    SCIP_Bool             deleteconsdata      /**< has the constraint data to be deleted if constraint is freed? */
    )
 {
+   int i;
+
    assert(cons != NULL);
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -5782,8 +5784,6 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->activedepth = -2;
    (*cons)->validdepth = (local ? -1 : 0);
    (*cons)->age = 0.0;
-   (*cons)->nlockspos = 0;
-   (*cons)->nlocksneg = 0;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
@@ -5821,6 +5821,12 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updateunmarkpropagate = FALSE;
    (*cons)->updatefree = FALSE;
    (*cons)->updateactfocus = FALSE;
+
+   for( i = 0; i < NLOCKTYPES; i++ )
+   {
+      (*cons)->nlockspos[i] = 0;
+      (*cons)->nlocksneg[i] = 0;
+   }
 
    /* capture constraint */
    SCIPconsCapture(*cons);
@@ -6489,11 +6495,11 @@ SCIP_RETCODE SCIPconsSetChecked(
          {
             if( cons->check )
             {
-               SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
+               SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, +1, 0) );
             }
             else
             {
-               SCIP_CALL( SCIPconsAddLocks(cons, set, -1, 0) );
+               SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, -1, 0) );
             }
          }
 
@@ -7153,10 +7159,11 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    return SCIP_OKAY;
 }
 
-/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables */
+/** adds given values to lock status of the constraint and updates the locks of the given locktype of the involved variables */
 SCIP_RETCODE SCIPconsAddLocks(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LOCKTYPE         locktype,           /**< type of variable locks */
    int                   nlockspos,          /**< increase in number of rounding locks for constraint */
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
@@ -7169,29 +7176,30 @@ SCIP_RETCODE SCIPconsAddLocks(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert(cons->nlockspos >= 0);
-   assert(cons->nlocksneg >= 0);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert(cons->nlockspos[locktype] >= 0);
+   assert(cons->nlocksneg[locktype] >= 0);
    assert(-2 <= nlockspos && nlockspos <= 2);
    assert(-2 <= nlocksneg && nlocksneg <= 2);
    assert(set != NULL);
    assert(cons->scip == set->scip);
 
    /* update the rounding locks */
-   oldnlockspos = cons->nlockspos;
-   oldnlocksneg = cons->nlocksneg;
-   cons->nlockspos += nlockspos;
-   cons->nlocksneg += nlocksneg;
-   assert(cons->nlockspos >= 0);
-   assert(cons->nlocksneg >= 0);
+   oldnlockspos = cons->nlockspos[locktype];
+   oldnlocksneg = cons->nlocksneg[locktype];
+   cons->nlockspos[locktype] += nlockspos;
+   cons->nlocksneg[locktype] += nlocksneg;
+   assert(cons->nlockspos[locktype] >= 0);
+   assert(cons->nlocksneg[locktype] >= 0);
 
    /* check, if the constraint switched from unlocked to locked, or from locked to unlocked */
-   updlockpos = (int)(cons->nlockspos > 0) - (int)(oldnlockspos > 0);
-   updlockneg = (int)(cons->nlocksneg > 0) - (int)(oldnlocksneg > 0);
+   updlockpos = (int)(cons->nlockspos[locktype] > 0) - (int)(oldnlockspos > 0);
+   updlockneg = (int)(cons->nlocksneg[locktype] > 0) - (int)(oldnlocksneg > 0);
 
    /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked */
    if( updlockpos != 0 || updlockneg != 0 )
    {
-      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, updlockpos, updlockneg) );
+      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, locktype, updlockpos, updlockneg) );
    }
 
    return SCIP_OKAY;
@@ -7974,6 +7982,11 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsLocked
 #undef SCIPconsGetNLocksPos
 #undef SCIPconsGetNLocksNeg
+#undef SCIPconsIsLockedTypePos
+#undef SCIPconsIsLockedTypeNeg
+#undef SCIPconsIsLockedType
+#undef SCIPconsGetNLocksTypePos
+#undef SCIPconsGetNLocksTypeNeg
 #undef SCIPconsIsAdded
 #undef SCIPconsGetNUpgradeLocks
 
@@ -8306,7 +8319,7 @@ SCIP_Bool SCIPconsIsLockedPos(
 {
    assert(cons != NULL);
 
-   return (cons->nlockspos > 0);
+   return (cons->nlockspos[SCIP_LOCKTYPE_MODEL] > 0);
 }
 
 /** returns TRUE iff roundings for variables in constraint's negation are locked */
@@ -8316,7 +8329,7 @@ SCIP_Bool SCIPconsIsLockedNeg(
 {
    assert(cons != NULL);
 
-   return (cons->nlocksneg > 0);
+   return (cons->nlocksneg[SCIP_LOCKTYPE_MODEL] > 0);
 }
 
 /** returns TRUE iff roundings for variables in constraint or in constraint's negation are locked */
@@ -8326,7 +8339,7 @@ SCIP_Bool SCIPconsIsLocked(
 {
    assert(cons != NULL);
 
-   return (cons->nlockspos > 0 || cons->nlocksneg > 0);
+   return (cons->nlockspos[SCIP_LOCKTYPE_MODEL] > 0 || cons->nlocksneg[SCIP_LOCKTYPE_MODEL] > 0);
 }
 
 /** get number of times the roundings for variables in constraint are locked */
@@ -8336,7 +8349,7 @@ int SCIPconsGetNLocksPos(
 {
    assert(cons != NULL);
 
-   return cons->nlockspos;
+   return cons->nlockspos[SCIP_LOCKTYPE_MODEL];
 }
 
 /** get number of times the roundings for variables in constraint's negation are locked */
@@ -8346,7 +8359,67 @@ int SCIPconsGetNLocksNeg(
 {
    assert(cons != NULL);
 
-   return cons->nlocksneg;
+   return cons->nlocksneg[SCIP_LOCKTYPE_MODEL];
+}
+
+/** returns TRUE iff roundings of the given locktype for variables in constraint are locked */
+SCIP_Bool SCIPconsIsLockedTypePos(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+
+   return (cons->nlockspos[locktype] > 0);
+}
+
+/** returns TRUE iff roundings of the given locktype for variables in constraint are locked */
+SCIP_Bool SCIPconsIsLockedTypeNeg(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+
+   return (cons->nlocksneg[locktype] > 0);
+}
+
+/** returns TRUE iff roundings of given locktype for variables in constraint or in constraint's negation are locked */
+SCIP_Bool SCIPconsIsLockedType(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+
+   return (cons->nlockspos[locktype] > 0 || cons->nlocksneg[locktype] > 0);
+}
+
+/** get number of times the roundings of given locktype for variables in constraint are locked */
+int SCIPconsGetNLocksTypePos(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+
+   return cons->nlockspos[locktype];
+}
+
+/** get number of times the roundings of given locktype for variables in constraint's negation are locked */
+int SCIPconsGetNLocksTypeNeg(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+
+   return cons->nlocksneg[locktype];
 }
 
 /** returns if the constraint was already added to a SCIP instance */

@@ -320,10 +320,10 @@
  * `spx`    | SoPlex
  * `cpx`    | IBM ILOG CPLEX
  * `xprs`   | FICO XPress
- * `grb`    | Gurobi (interface is in beta stage, version at least 7.0.2 required)
+ * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
- * `msk`    | Mosek (experimental)
+ * `msk`    | Mosek
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  *
@@ -7598,11 +7598,6 @@
 /**@page INSTALL Installation information
  * \verbinclude INSTALL
  */
-
-/**@page INSTALL_CMAKE Installation information (CMake)
- * \verbinclude INSTALL_CMAKE
- */
-
 
 /**@page RELEASENOTES Release notes
  *

@@ -2105,10 +2105,10 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
  *
  * - Symresack constraints may get violated if the variables with a negative coefficient
  *   in the FD inequality are rounded down, we therefor call
- *   SCIPaddVarLocks(..., nlockspos, nlocksneg).
+ *   SCIPaddVarLocksType(..., nlockspos, nlocksneg).
  * - Symresack constraints may get violated if the variables with a positive coefficient
  *   in the FD inequality are rounded up, we therefor call
- *   SCIPaddVarLocks(..., nlocksneg, nlockspo ).
+ *   SCIPaddVarLocksType(..., nlocksneg, nlockspo ).
  */
 static
 SCIP_DECL_CONSLOCK(consLockSymresack)
@@ -2148,11 +2148,11 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 
       if ( perm[i] > i )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[i], nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[i], locktype, nlockspos, nlocksneg) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[i], nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[i], locktype, nlocksneg, nlockspos) );
       }
    }
 
