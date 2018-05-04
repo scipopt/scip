@@ -62,8 +62,9 @@ SCIP_RETCODE SCIPreaderCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a reader */
-SCIP_RETCODE SCIPreaderCreate(
+/** internal method to create a reader */
+static
+SCIP_RETCODE doReaderCreate(
    SCIP_READER**         reader,             /**< pointer to store reader */
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
@@ -81,6 +82,8 @@ SCIP_RETCODE SCIPreaderCreate(
    assert(extension != NULL);
 
    SCIP_ALLOC( BMSallocMemory(reader) );
+   BMSclearMemory(*reader);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->desc, desc, strlen(desc)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->extension, extension, strlen(extension)+1) );
@@ -96,6 +99,33 @@ SCIP_RETCODE SCIPreaderCreate(
    return SCIP_OKAY;
 }
 
+/** creates a reader */
+SCIP_RETCODE SCIPreaderCreate(
+   SCIP_READER**         reader,             /**< pointer to store reader */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of reader */
+   const char*           desc,               /**< description of reader */
+   const char*           extension,          /**< file extension that reader processes */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
+   SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
+   SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
+   SCIP_READERDATA*      readerdata          /**< reader data */
+   )
+{
+   assert(reader != NULL);
+   assert(set != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(extension != NULL);
+
+   SCIP_CALL_FINALLY( doReaderCreate(reader, name, desc, extension,
+                        readercopy, readerfree, readerread, readerwrite, readerdata),
+                      SCIPreaderFree(reader, set) );
+
+   return SCIP_OKAY;
+}
+
 /** frees memory of reader */
 SCIP_RETCODE SCIPreaderFree(
    SCIP_READER**         reader,             /**< pointer to reader data structure */
@@ -103,8 +133,10 @@ SCIP_RETCODE SCIPreaderFree(
    )
 {
    assert(reader != NULL);
-   assert(*reader != NULL);
    assert(set != NULL);
+
+   if( *reader == NULL )
+      return SCIP_OKAY;
 
    /* call destructor of reader */
    if( (*reader)->readerfree != NULL )
@@ -112,12 +144,13 @@ SCIP_RETCODE SCIPreaderFree(
       SCIP_CALL( (*reader)->readerfree(set->scip, *reader) );
    }
 
+   BMSfreeMemoryArrayNull(&(*reader)->name);
+   BMSfreeMemoryArrayNull(&(*reader)->desc);
+   BMSfreeMemoryArrayNull(&(*reader)->extension);
+
    /* free clock */
    SCIPclockFree(&(*reader)->readingtime);
 
-   BMSfreeMemoryArray(&(*reader)->name);
-   BMSfreeMemoryArray(&(*reader)->desc);
-   BMSfreeMemoryArray(&(*reader)->extension);
    BMSfreeMemory(reader);
 
    return SCIP_OKAY;

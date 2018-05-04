@@ -5238,7 +5238,7 @@ SCIP_RETCODE SCIPincludeReader(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readercopy, readerfree, readerread, readerwrite, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, scip->set, name, desc, extension, readercopy, readerfree, readerread, readerwrite, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    return SCIP_OKAY;
@@ -5277,7 +5277,7 @@ SCIP_RETCODE SCIPincludeReaderBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, NULL, NULL, NULL, NULL, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, scip->set, name, desc, extension, NULL, NULL, NULL, NULL, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    if( readerptr != NULL )
