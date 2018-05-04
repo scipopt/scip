@@ -28,6 +28,7 @@ deleted and modified API functions:
   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
 - removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
   of other components anymore
+- additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
 - the seed of SCIPinitializeRandomSeed() is now an unsigned int
 - the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
 - added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
@@ -48,6 +49,7 @@ new parameters:
 - "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
 - "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
 - "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
+- "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts
 
 deleted and modified parameters:
 - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled

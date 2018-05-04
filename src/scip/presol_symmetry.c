@@ -1139,7 +1139,8 @@ SCIP_RETCODE computeSymmetryGroup(
       /* determine generators */
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
 
-      if ( ! SCIPisStopped(scip) && checksymmetries )
+      /* SCIPisStopped() might call SCIPgetGap() which is only available after initpresolve */
+      if ( checksymmetries && SCIPgetStage(scip) > SCIP_STAGE_INITPRESOLVE && ! SCIPisStopped(scip) )
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
@@ -1605,6 +1606,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
    SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
+   SCIP_Bool             recompute,          /**< Have symmetries already been computed? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -1634,6 +1636,29 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
+
+   /* free symmetry information if we recompute symmetries */
+   if ( recompute )
+   {
+      int i;
+
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
+      for (i = 0; i < presoldata->nperms; ++i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
+
+      /* reset settings */
+      presoldata->npermvars = 0;
+      presoldata->nperms = 0;
+      presoldata->nmaxperms = 0;
+      presoldata->norbitvars = 0;
+      presoldata->binvaraffected = FALSE;
+      presoldata->computedsym = FALSE;
+      presoldata->successful = FALSE;
+   }
 
    /* if not already done before, compute symmetries */
    if ( ! presoldata->computedsym )
