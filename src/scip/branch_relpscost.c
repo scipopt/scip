@@ -70,6 +70,8 @@
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
                                               *   infeasible and objective leaf counters? */
 
+#define _unused(x) ((void)(x))               /**< prevent Clang static analysis from flagging dead assignment */
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -109,7 +111,7 @@ struct SCIP_BranchruleData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   startrandseed;      /**< start random seed for random number generation */
    SCIP_Bool             usesmallweightsitlim; /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
-   SCIP_BRANCHTREEMODEL* treemodel;          /**< Parameters for the Treemodel branching rules */
+   SCIP_TREEMODEL*       treemodel;          /**< Parameters for the Treemodel branching rules */
 };
 
 /*
@@ -891,10 +893,10 @@ SCIP_RETCODE execRelpscost(
          }
 
          /* combine the five score values */
-         scoresfrompc[c] =  calcScore(scip, branchruledata, 0, avgconflictscore, 0, avgconflengthscore,
-                                      0, avginferencescore, 0, avgcutoffscore, pscostscore, avgpscostscore, 0, branchcandsfrac[c]);
+         scoresfrompc[c] =  calcScore(scip, branchruledata, 0.0, avgconflictscore, 0.0, avgconflengthscore,
+                                      0.0, avginferencescore, 0.0, avgcutoffscore, pscostscore, avgpscostscore, 0.0, branchcandsfrac[c]);
          scoresfromothers[c] = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-                                         inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0, avgpscostscore, nlscore, branchcandsfrac[c]);
+                                         inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c]);
          score = scoresfrompc[c] + scoresfromothers[c];
          scores[c] = score;
 
@@ -1321,10 +1323,10 @@ SCIP_RETCODE execRelpscost(
             cutoffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
-            scoresfrompc[c] =  calcScore(scip, branchruledata, 0, avgconflictscore, 0, avgconflengthscore,
-                                         0, avginferencescore, 0, avgcutoffscore, pscostscore, avgpscostscore, 0, branchcandsfrac[c]);
+            scoresfrompc[c] =  calcScore(scip, branchruledata, 0.0, avgconflictscore, 0.0, avgconflengthscore,
+                                         0.0, avginferencescore, 0.0, avgcutoffscore, pscostscore, avgpscostscore, 0.0, branchcandsfrac[c]);
             scoresfromothers[c] = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-                                            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0, avgpscostscore, nlscore, branchcandsfrac[c]);
+                                            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c]);
             score = scoresfrompc[c] + scoresfromothers[c];
             scores[c] = score;
 
@@ -1493,6 +1495,7 @@ SCIP_RETCODE execRelpscost(
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS),
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS),
          SCIPgetVarPseudocostScoreCurrentRun(scip, var, branchcandssol[bestcand]));
+      _unused(bestisstrongbranch);
       SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
       assert(downchild != NULL);
       assert(upchild != NULL);
@@ -1559,7 +1562,7 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
 
    /* free Treemodel parameter data structure */
-   SCIPtreemodelFree(scip, &branchruledata->treemodel);
+   SCIP_CALL( SCIPtreemodelFree(scip, &branchruledata->treemodel) );
 
    /* free branching rule data */
    SCIPfreeBlockMemory(scip, &branchruledata);
@@ -1807,7 +1810,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
 
    /** Initialise the Treemodel branching rules */
-   SCIPtreemodelInit(scip, &branchruledata->treemodel);
+   SCIP_CALL( SCIPtreemodelInit(scip, &branchruledata->treemodel) );
 
    return SCIP_OKAY;
 }

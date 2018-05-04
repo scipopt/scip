@@ -35,7 +35,7 @@
 /* DATA STRUCTURES */
 
 /** Parameters required by the Treemodel branching rules */
-struct SCIP_BranchTreemodel
+struct SCIP_Treemodel
 {
    SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel rule? */
    char                 highrule;            /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
@@ -234,7 +234,7 @@ Test(branch_treemodel, IsEnabled)
 {
    cr_assert_not_null(scip, "SCIP data structure is NULL");
 
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
 
    cr_assert_eq(SCIPtreemodelIsEnabled(scip, &treemodel), TRUE, "Treemodel is enabled, but isEnabled returned FALSE");
@@ -248,7 +248,7 @@ Test(branch_treemodel, InitFree)
 {
    cr_assert_not_null(scip, "SCIP data structure is NULL");
 
-   SCIP_BRANCHTREEMODEL* treemodel = NULL;
+   SCIP_TREEMODEL* treemodel = NULL;
    SCIPtreemodelInit(scip, &treemodel);
 
    cr_assert_not_null(treemodel, "Treemodel is NULL, but it should be initialized");
@@ -264,7 +264,7 @@ Test(branch_treemodel_select, SmallPseudocosts)
    int bestcand = 0;
 
    /** Enable Treemodel with small pseudocost threshold */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.1;
    treemodel.lowrule = 'r';
@@ -298,7 +298,7 @@ Test(branch_treemodel_select, RatioRule)
    int bestcand = 0;
 
    /** Enable Treemodel */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.0;
    treemodel.lowrule = 'r';
@@ -335,7 +335,7 @@ Test(branch_treemodel_select, SvtsRule1)
    int bestcand = 0;
 
    /** Enable Treemodel */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.0;
    treemodel.lowrule = 's';
@@ -373,7 +373,7 @@ Test(branch_treemodel_select, SvtsRule2)
    int bestcand = 0;
 
    /** Enable Treemodel */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.0;
    treemodel.lowrule = 's';
@@ -411,7 +411,7 @@ Test(branch_treemodel_select, SvtsRule3)
    int bestcand = 0;
 
    /** Enable Treemodel */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.0;
    treemodel.lowrule = 's';
@@ -449,7 +449,7 @@ Test(branch_treemodel_select, SamplingRule1)
    int bestcand = 0;
 
    /** Enable Treemodel */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.0;
    treemodel.lowrule = 't';
@@ -487,7 +487,7 @@ Test(branch_treemodel_select, SamplingRule2)
    int bestcand = 0;
 
    /** Enable Treemodel */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.0;
    treemodel.lowrule = 't';
@@ -525,7 +525,7 @@ Test(branch_treemodel_select, SvtsInfFallback)
    int bestcand = 0;
 
    /** Enable Treemodel */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.0;
    treemodel.lowrule = 's';
@@ -563,7 +563,7 @@ Test(branch_treemodel_select, SvtsNoPrimalFallback)
    int bestcand = 0;
 
    /** Enable Treemodel */
-   SCIP_BRANCHTREEMODEL treemodel;
+   SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
    treemodel.smallpscost = 0.0;
    treemodel.lowrule = 's';

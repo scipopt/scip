@@ -47,40 +47,40 @@ extern "C" {
 /** initialises the Treemodel parameter data structure */
 EXTERN
 SCIP_RETCODE SCIPtreemodelInit(
-   SCIP*                   scip,        /**< SCIP data structure */
-   SCIP_BRANCHTREEMODEL**  treemodel   /**< Treemodel parameter data structure */
-   );
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_TREEMODEL**      treemodel           /**< Treemodel parameter data structure */
+);
 
 /** frees the Treemodel parameter data structure */
 EXTERN
 SCIP_RETCODE SCIPtreemodelFree(
-   SCIP*                   scip,       /**< SCIP data structure */
-   SCIP_BRANCHTREEMODEL**  treemodel   /**< Treemodel parameter data structure */
-   );
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_TREEMODEL**      treemodel           /**< Treemodel parameter data structure */
+);
 
 /** returns TRUE if the Treemodel branching rules are enabled */
 EXTERN
 SCIP_Bool SCIPtreemodelIsEnabled(
-   SCIP*                   scip,               /**< SCIP data structure */
-   SCIP_BRANCHTREEMODEL*   treemodel           /**< Treemodel parameter data structure */
-   );
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_TREEMODEL*       treemodel           /**< Treemodel parameter data structure */
+);
 
 /** apply the Treemodel branching rules to attempt to select a better
  *  branching candidate than the one selected by pseudocost branching
  */
 EXTERN
 SCIP_RETCODE SCIPtreemodelSelectCandidate(
-   SCIP*                   scip,               /**< SCIP data structure */
-   SCIP_BRANCHTREEMODEL*   treemodel,          /**< Treemodel parameter data structure */
-   SCIP_VAR**              branchcands,        /**< branching candidate storage */
-   SCIP_Real*              mingains,           /**< minimum gain of rounding downwards or upwards */
-   SCIP_Real*              maxgains,           /**< maximum gain of rounding downwards or upwards */
-   SCIP_Real*              scoresfrompc,       /**< pseudocost scores of branching candidates */
-   SCIP_Real*              scoresfromothers,   /**< scores from other branching rules */
-   SCIP_Real               avgpscostscore,     /**< average pseudocost score of branching candidates */
-   int                     nbranchcands,       /**< the number of branching candidates */
-   int*                    bestcand            /**< the best branching candidate found by SCIP */
-   );
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_TREEMODEL*       treemodel,          /**< Treemodel parameter data structure */
+   SCIP_VAR**            branchcands,        /**< branching candidate storage */
+   SCIP_Real*            mingains,           /**< minimum gain of rounding downwards or upwards */
+   SCIP_Real*            maxgains,           /**< maximum gain of rounding downwards or upwards */
+   SCIP_Real*            scoresfrompc,       /**< pseudocost scores of branching candidates */
+   SCIP_Real*            scoresfromothers,   /**< scores from other branching rules */
+   SCIP_Real             avgpscostscore,     /**< average pseudocost score of branching candidates */
+   int                   nbranchcands,       /**< the number of branching candidates */
+   int*                  bestcand            /**< the best branching candidate found by SCIP */
+);
 
 #ifdef __cplusplus
 }
