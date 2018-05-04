@@ -1819,22 +1819,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
 {  /*lint --e{715}*/
    SCIP_Bool active;
    int usesymmetry;
-   SCIP_Bool computesymmetrypresolved;
+   int symcomptiming = 2;
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
    if ( usesymmetry == 1 )
    {
-      SCIP_CALL( SCIPgetBoolParam(scip, "presolving/symbreak/addconsstiming", &computesymmetrypresolved) );
+      SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/addconsstiming", &symcomptiming) );
    }
    else if ( usesymmetry == 2 )
    {
-      SCIP_CALL( SCIPgetBoolParam(scip, "propagating/orbitalfixing/symcomptiming", &computesymmetrypresolved) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/orbitalfixing/symcomptiming", &symcomptiming) );
    }
 
    if ( usesymmetry != 0 )
    {
-      if ( SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING ||
-           (SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE && ! computesymmetrypresolved) )
+      if ( symcomptiming < 2 &&
+           (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution couting are not compatible. " \
             "You might want to disable symmetry by setting parameter <misc/usesymmetry> to 0.\n");
@@ -1918,7 +1918,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int displayfeasST;
    int nrestarts;
    int usesymmetry;
-   SCIP_Bool computesymmetrypresolved;
+   int symcomptiming = 2;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1941,17 +1941,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
    if ( usesymmetry == 1 )
    {
-      SCIP_CALL( SCIPgetBoolParam(scip, "presolving/symbreak/addconsstiming", &computesymmetrypresolved) );
+      SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/addconsstiming", &symcomptiming) );
    }
    else if ( usesymmetry == 2 )
    {
-      SCIP_CALL( SCIPgetBoolParam(scip, "propagating/orbitalfixing/symcomptiming", &computesymmetrypresolved) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/orbitalfixing/symcomptiming", &symcomptiming) );
    }
 
    if ( usesymmetry != 0 )
    {
-      if ( SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING ||
-           (SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE && ! computesymmetrypresolved) )
+      if ( symcomptiming < 2 &&
+           (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution couting are not compatible. " \
             "You might want to disable symmetry by setting parameter <misc/usesymmetry> to 0.\n");
