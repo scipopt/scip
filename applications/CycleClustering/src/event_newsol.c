@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,7 +53,7 @@ SCIP_DECL_EVENTINIT(eventInitNewsol)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* notify SCIP that your event handler wants to react on the event type best solution found */
-   SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, NULL, NULL) );
+   SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -67,7 +67,7 @@ SCIP_DECL_EVENTEXIT(eventExitNewsol)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* notify SCIP that your event handler wants to drop the event type best solution found */
-   SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, NULL, -1) );
+   SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
@@ -82,20 +82,19 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(scip != NULL);
-   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND || SCIPeventGetType(event) == SCIP_EVENTTYPE_POORSOLFOUND);
+   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("exec method of event handler for newsol solution found\n");
+   SCIPdebugMsg(scip, "exec method of event handler for newsol solution found\n");
 
    newsol = SCIPeventGetSol(event);
    assert(newsol != NULL);
 
-   SCIPdebugMessage("catch event for solution %p with obj=%g.\n", (void*) newsol, SCIPgetSolOrigObj(scip, newsol));
+   SCIPdebugMsg(scip, "catch event for solution %p with obj=%g.\n", (void*) newsol, SCIPgetSolOrigObj(scip, newsol));
 
-   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND )
-      SCIP_CALL( addCandSolCyckerlin(scip, newsol) );
+   SCIP_CALL( addCandSolCyckerlin(scip, newsol) );
 
    return SCIP_OKAY;
 }
@@ -111,7 +110,9 @@ SCIP_RETCODE SCIPincludeEventHdlrNewsol(
 
    eventhdlr = NULL;
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecNewsol, eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+      eventExecNewsol, eventhdlrdata) );
+
    assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyNewsol) );

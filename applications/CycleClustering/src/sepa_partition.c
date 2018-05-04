@@ -34,25 +34,25 @@
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define MAXCUTS                    2000 /**< Maximal number of cuts that can be added to cut pool */
-#define MAXCUTSCREATED            10000 /**< Maximal number of cuts to select from */
-#define MAXROUNDS                    20
+#define MAXCUTS                    2000 /**< maximal number of cuts that can be added to cut pool */
+#define MAXCUTSCREATED            10000 /**< maximal number of cuts to select from */
+#define MAXROUNDS                    20 /**< maximal number of separation rounds per node */
 
 
 /** Given two partitions S, T creates the corresponding cut and adds it do SCIP */
 static
 SCIP_RETCODE createPartitionCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPA*            sepa,               /**< Separator */
-   SCIP_ROW***           cuts,               /**< Array to store generated cut */
-   int*                  cutsize,            /**< Size of the cut array */
-   int*                  ncutscreated,       /**< Number of created cuts */
-   int*                  firstpart,          /**< The first partition */
-   int*                  secondpart,         /**< The second partition */
-   int                   nfirst,             /**< Number of states in first partition */
-   int                   nsecond,            /**< Number of states in second partition */
-   SCIP_Real**           violations,         /**< Array to stor the violation of each cut */
-   SCIP_Real             violation           /**< Violation of the cut that should be created */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_ROW***           cuts,               /**< array to store generated cut */
+   int*                  cutsize,            /**< size of the cut array */
+   int*                  ncutscreated,       /**< number of created cuts */
+   int*                  firstpart,          /**< the first partition */
+   int*                  secondpart,         /**< the second partition */
+   int                   nfirst,             /**< number of states in first partition */
+   int                   nsecond,            /**< number of states in second partition */
+   SCIP_Real**           violations,         /**< array to stor the violation of each cut */
+   SCIP_Real             violation           /**< violation of the cut that should be created */
    )
 {
    SCIP_VAR**** edgevars;
@@ -69,15 +69,17 @@ SCIP_RETCODE createPartitionCut(
    if( *cutsize - 1 <= *ncutscreated )
    {
       *cutsize = *cutsize * 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, cuts, (int) *cutsize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, violations, (int) *cutsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, cuts, (int) *cutsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, violations, (int) *cutsize) );
    }
 
    (*violations)[*ncutscreated] = violation;
 
    /* create cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "PartitionCut_%d_%d", nfirst, nsecond);
-   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &((*cuts)[*ncutscreated]), sepa, cutname, -SCIPinfinity(scip), (SCIP_Real) MIN(nfirst, nsecond), FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &((*cuts)[*ncutscreated]), sepa, cutname, -SCIPinfinity(scip),
+      (SCIP_Real) MIN(nfirst, nsecond), FALSE, FALSE, TRUE) );
+
    SCIP_CALL( SCIPcacheRowExtensions(scip, (*cuts)[*ncutscreated]) );
 
    for( i = 0; i < nfirst; ++i )
@@ -89,6 +91,7 @@ SCIP_RETCODE createPartitionCut(
          SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], edgevars[inda][indb][0], -1.0) );
       }
    }
+
    for( i = 0; i < nsecond; ++i )
    {
       for( j = 0; j < i; ++j )
@@ -98,6 +101,7 @@ SCIP_RETCODE createPartitionCut(
          SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], edgevars[inda][indb][0], -1.0) );
       }
    }
+
    for( i = 0; i < nfirst; ++i )
    {
       for( j = 0; j < nsecond; ++j )
@@ -149,6 +153,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    int ncutsapplied;
    int* firstpart;
    int* secondpart;
+   int** successors;
+   int* nsuccessors;
    int nfirst;
    int nsecond;
    int nstates;
@@ -167,8 +173,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    rounds = SCIPsepaGetNCallsAtNode(sepa);
    cutsize = MAXCUTS;
    ncutscreated = 0;
-   SCIP_CALL( SCIPgetBoolParam(scip, "cycleclustering/usecutselection", &usecutselection) );
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "cycleclustering/usecutselection", &usecutselection) );
 
    assert(nstates > 0);
    assert(NULL != edgevars);
@@ -183,23 +189,27 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    }
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &fractionality, nstates) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &idx, nstates) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &firstpart, nstates) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &secondpart, nstates) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &cuts, cutsize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &violations, cutsize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &successors, 5) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &nsuccessors, 5) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &fractionality, nstates) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &idx, nstates) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &firstpart, nstates) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &secondpart, nstates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cuts, cutsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &violations, cutsize) );
 
    /* sort edges by decreasing fractionality of lp-solution */
    for( i = 0; i < nstates; ++i )
    {
       idx[i] = i;
       fractionality[i] = 0;
+      successors[0] = SCIPdigraphGetSuccessors(edgegraph, i);
+      nsuccessors[0] = SCIPdigraphGetNSuccessors(edgegraph, i);
 
-      for( j = 0; j < SCIPdigraphGetNSuccessors(edgegraph, i); ++j )
+      for( j = 0; j < nsuccessors[0]; ++j )
       {
          states[0] = i;
-         states[1] = SCIPdigraphGetSuccessors(edgegraph, i)[j];
+         states[1] = successors[0][j];
 
          assert(NULL != edgevars[states[0]][states[1]]);
 
@@ -216,20 +226,34 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    for( i = 0; i < nstates && ncutscreated < MAXCUTSCREATED; ++i )
    {
       states[0] = idx[i];
+      successors[0] = SCIPdigraphGetSuccessors(edgegraph, states[0]);
+      nsuccessors[0] = SCIPdigraphGetNSuccessors(edgegraph, states[0]);
 
-      for( j = 0; j < SCIPdigraphGetNSuccessors(edgegraph, states[0]) && ncutscreated < MAXCUTSCREATED; ++j )
+      for( j = 0; j < nsuccessors[0] && ncutscreated < MAXCUTSCREATED; ++j )
       {
-         states[1] = SCIPdigraphGetSuccessors(edgegraph, states[0])[j];
+         states[1] = successors[0][j];
+         successors[1] = SCIPdigraphGetSuccessors(edgegraph, states[1]);
+         nsuccessors[1] = SCIPdigraphGetNSuccessors(edgegraph, states[1]);
 
-         for( k = 0; k < SCIPdigraphGetNSuccessors(edgegraph, states[1]) && ncutscreated < MAXCUTSCREATED; ++k )
+         for( k = 0; k < nsuccessors[1] && ncutscreated < MAXCUTSCREATED; ++k )
          {
-            states[2] = SCIPdigraphGetSuccessors(edgegraph, states[1])[k];
+            states[2] = successors[1][k];
+            successors[2] = SCIPdigraphGetSuccessors(edgegraph, states[2]);
+            nsuccessors[2] = SCIPdigraphGetNSuccessors(edgegraph, states[2]);
 
-            if( NULL == edgevars[states[0]][states[1]] || NULL == edgevars[states[0]][states[2]] || NULL == edgevars[states[1]][states[2]] )
+            if( NULL == edgevars[states[0]][states[1]] || NULL == edgevars[states[0]][states[2]]
+               || NULL == edgevars[states[1]][states[2]] )
+            {
                continue;
+            }
+
+            assert(edgevars[states[0]][states[1]][1] != NULL);
+            assert(edgevars[states[0]][states[2]][1] != NULL);
 
             if( states[1] > states[2] )
             {
+               assert(edgevars[states[1]][states[2]][0]);
+
                /* first case, construct partition with 2 predecessors and 3 successors */
                nfirst = 1;
                firstpart[0] = states[0];
@@ -239,7 +263,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                secondpart[1] = states[2];
                secondpart[2] = -1;
 
-               /* Get violation of trianlge inequality for these three states */
+               /* get violation of trianlge inequality for these three states */
                violation = SCIPvarGetLPSol(edgevars[states[0]][states[1]][1]);
                violation += SCIPvarGetLPSol(edgevars[states[0]][states[2]][1]);
                violation -= SCIPvarGetLPSol(edgevars[states[1]][states[2]][0]);
@@ -252,9 +276,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   secondpart[2] = -1;
                   for( l = 0; l < SCIPdigraphGetNSuccessors(edgegraph, states[2]); ++l )
                   {
-                     states[3] = SCIPdigraphGetSuccessors(edgegraph, states[2])[l];
-                     if( NULL == edgevars[states[0]][states[3]] || NULL == edgevars[states[1]][states[3]] || NULL == edgevars[states[2]][states[3]] )
+                     states[3] = successors[2][l];
+                     if( NULL == edgevars[states[0]][states[3]] || NULL == edgevars[states[1]][states[3]]
+                        || NULL == edgevars[states[2]][states[3]] )
+                     {
                         continue;
+                     }
+
+                     assert(edgevars[states[0]][states[3]][1] != NULL);
+                     assert(edgevars[MAX(states[1],states[3])][MIN(states[1],states[3])][0] != NULL);
+                     assert(edgevars[MAX(states[2],states[3])][MIN(states[2],states[3])][0] != NULL);
 
                      violationchg = SCIPvarGetLPSol(edgevars[states[0]][states[3]][1]);
                      violationchg -= SCIPvarGetLPSol(edgevars[MAX(states[1],states[3])][MIN(states[1],states[3])][0]);
@@ -268,22 +299,32 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   }
 
                   states[3] = secondpart[2];
+                  successors[3] = SCIPdigraphGetSuccessors(edgegraph, states[3]);
+                  nsuccessors[3] = SCIPdigraphGetNSuccessors(edgegraph, states[3]);
 
                   /* if we did not find a state that we can add we can stop */
                   if( states[3] == -1 )
                      continue;
-                  nsecond++;
 
+                  nsecond++;
                   violation += bestvalue;
 
                   /* add one more state to first partition */
                   bestvalue = -SCIPinfinity(scip);
                   for( l = 0; l < SCIPdigraphGetNSuccessors(edgegraph, states[3]); ++l )
                   {
-                     states[4] = SCIPdigraphGetSuccessors(edgegraph, states[3])[l];
+                     states[4] = successors[3][l];
 
-                     if( NULL == edgevars[states[0]][states[4]] || NULL == edgevars[states[1]][states[4]] || NULL == edgevars[states[2]][states[4]] || NULL == edgevars[states[3]][states[4]] )
+                     if( NULL == edgevars[states[0]][states[4]] || NULL == edgevars[states[1]][states[4]]
+                        || NULL == edgevars[states[2]][states[4]] || NULL == edgevars[states[3]][states[4]] )
+                     {
                         continue;
+                     }
+
+                     assert(edgevars[states[4]][secondpart[0]][1] != NULL);
+                     assert(edgevars[states[4]][secondpart[1]][1] != NULL);
+                     assert(edgevars[states[4]][secondpart[2]][1] != NULL);
+                     assert(edgevars[MAX(states[0],states[4])][MIN(states[0],states[4])][0] != NULL);
 
                      /* compute what has changed from the violation of the 1-4 inequality */
                      violationchg = -SCIPvarGetLPSol(edgevars[MAX(states[0], states[4])][MIN(states[0],states[4])][0]) - 1.0;
@@ -296,7 +337,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                      {
                         firstpart[1] = states[4];
                         nfirst = 2;
-                        SCIP_CALL( createPartitionCut(scip, sepa, &cuts, &cutsize, &ncutscreated, firstpart, secondpart, nfirst, nsecond, &violations, violation + violationchg) );
+                        SCIP_CALL( createPartitionCut(scip, sepa, &cuts, &cutsize, &ncutscreated, firstpart, secondpart,
+                           nfirst, nsecond, &violations, violation + violationchg) );
+
                         break;
                      }
                   }
@@ -311,6 +354,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                secondpart[0] = states[0];
                secondpart[1] = -1;
 
+               assert(edgevars[states[1]][states[0]][1] != NULL && edgevars[states[2]][states[0]][1] != NULL);
+               assert(edgevars[states[1]][states[2]][0] != NULL);
+
                violation = SCIPvarGetLPSol(edgevars[states[1]][states[0]][1]);
                violation += SCIPvarGetLPSol(edgevars[states[2]][states[0]][1]);
                violation -= SCIPvarGetLPSol(edgevars[states[1]][states[2]][0]);
@@ -321,11 +367,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   /* add a state to second partition*/
                   bestvalue = -SCIPinfinity(scip);
                   firstpart[2] = -1;
-                  for( l = 0; l < SCIPdigraphGetNSuccessors(edgegraph, states[2]); ++l )
+                  for( l = 0; l < nsuccessors[2]; ++l )
                   {
-                     states[3] = SCIPdigraphGetSuccessors(edgegraph, states[2])[l];
-                     if( NULL == edgevars[states[0]][states[3]] || NULL == edgevars[states[1]][states[3]] || NULL == edgevars[states[2]][states[3]] )
+                     states[3] = successors[2][l];
+                     if( NULL == edgevars[states[0]][states[3]] || NULL == edgevars[states[1]][states[3]]
+                        || NULL == edgevars[states[2]][states[3]] )
+                     {
                         continue;
+                     }
+
+                     assert(edgevars[states[3]][states[0]][1] != NULL);
+                     assert(edgevars[MAX(states[1],states[3])][MIN(states[1],states[3])][0]);
+                     assert(edgevars[MAX(states[2],states[3])][MIN(states[2],states[3])][0]);
 
                      violationchg = SCIPvarGetLPSol(edgevars[states[3]][states[0]][1]);
                      violationchg -= SCIPvarGetLPSol(edgevars[MAX(states[1],states[3])][MIN(states[1],states[3])][0]);
@@ -348,12 +401,20 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
 
                   /* add one more state to second partition */
                   bestvalue = -SCIPinfinity(scip);
-                  for( l = 0; l < SCIPdigraphGetNSuccessors(edgegraph, states[3]); ++l )
+                  for( l = 0; l < nsuccessors[3]; ++l )
                   {
-                     states[4] = SCIPdigraphGetSuccessors(edgegraph, states[3])[l];
+                     states[4] = successors[3][l];
 
-                     if( NULL == edgevars[states[0]][states[4]] || NULL == edgevars[states[1]][states[4]] || NULL == edgevars[states[2]][states[4]] || NULL == edgevars[states[3]][states[4]] )
+                     if( NULL == edgevars[states[0]][states[4]] || NULL == edgevars[states[1]][states[4]]
+                        || NULL == edgevars[states[2]][states[4]] || NULL == edgevars[states[3]][states[4]] )
+                     {
                         continue;
+                     }
+
+                     assert(edgevars[firstpart[0]][states[4]][1] != NULL);
+                     assert(edgevars[firstpart[1]][states[4]][1] != NULL);
+                     assert(edgevars[firstpart[2]][states[4]][1] != NULL);
+                     assert(edgevars[MAX(states[0], states[4])][MIN(states[0],states[4])][0]);
 
                      violationchg = -SCIPvarGetLPSol(edgevars[MAX(states[0], states[4])][MIN(states[0],states[4])][0]) - 1.0;
                      violationchg += SCIPvarGetLPSol(edgevars[firstpart[0]][states[4]][1]);
@@ -364,7 +425,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                      {
                         secondpart[1] = states[4];
                         nsecond = 2;
-                        SCIP_CALL( createPartitionCut(scip, sepa, &cuts, &cutsize, &ncutscreated, firstpart, secondpart, nfirst, nsecond, &violations, violation + violationchg) );
+                        SCIP_CALL( createPartitionCut(scip, sepa, &cuts, &cutsize, &ncutscreated, firstpart, secondpart,
+                           nfirst, nsecond, &violations, violation + violationchg) );
+
                         break;
                      }
                   }
@@ -376,28 +439,36 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
 
    /* apply the cuts with the highest violation or use cut-selection */
    if( usecutselection )
-      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, 0.8, 0.0, 0.1, 0.5, 0.5, 1.0, 0.1, 0.1, ncutscreated, 0, MAXCUTS, &ncutsapplied ) );
+   {
+      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, 0.8, 0.0, 0.1, 0.5, 0.5, 1.0, 0.1, 0.1,
+         ncutscreated, 0, MAXCUTS, &ncutsapplied ) );
+   }
    else
    {
       SCIPsortDownRealPtr(violations, ((void **) cuts), ncutscreated);
       ncutsapplied = MIN(ncutscreated, MAXCUTS);
    }
+
    for( j = 0; j < ncutsapplied; ++j )
    {
       SCIP_CALL( SCIPaddPoolCut(scip, cuts[j]) );
       *result = SCIP_SEPARATED;
    }
 
-   SCIPfreeMemoryArray(scip, &fractionality);
-   SCIPfreeMemoryArray(scip, &idx);
-   SCIPfreeMemoryArray(scip, &firstpart);
-   SCIPfreeMemoryArray(scip, &secondpart);
+   SCIPfreeBlockMemoryArray(scip, &fractionality, nstates);
+   SCIPfreeBlockMemoryArray(scip, &idx, nstates);
+   SCIPfreeBlockMemoryArray(scip, &firstpart, nstates);
+   SCIPfreeBlockMemoryArray(scip, &secondpart, nstates);
+
    for( i = 0; i < ncutscreated; ++i )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(cuts[i])) );
    }
-   SCIPfreeMemoryArray(scip, &cuts);
-   SCIPfreeMemoryArray(scip, &violations);
+
+   SCIPfreeBufferArray(scip, &cuts);
+   SCIPfreeBufferArray(scip, &violations);
+   SCIPfreeMemoryArray(scip, &successors);
+   SCIPfreeMemoryArray(scip, &nsuccessors);
 
    return SCIP_OKAY;
 }
@@ -411,9 +482,7 @@ SCIP_RETCODE SCIPincludeSepaPartition(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
-      SEPA_USESSUBSCIP, SEPA_DELAY,
-      sepaExeclpPartition, NULL,
-      NULL) );
+      SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpPartition, NULL, NULL) );
 
    assert(sepa != NULL);
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,19 +34,27 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      TRUE          /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance? */
+
+#define DEFAULT_REDUCTIONRATE 0.75           /**< default percentile of transition that gets deleted */
+
+struct SCIP_HeurData
+{
+   SCIP_Real             reductionrate;      /**< percentile of transition that gets deleted */
+};
 
 /*
  * Local methods
  */
 
+/** Add incomplete solution to main scip */
 static
 SCIP_RETCODE SCIPcycAddIncompleteSol(
-   SCIP*                 scip,
-   SCIP*                 subscip,
-   SCIP_HEUR*            heur,
-   SCIP_SOL*             subsol,
-   SCIP_RESULT*          result
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of subscip */
+   SCIP_HEUR*            heur,               /**< pointer to heuristic */
+   SCIP_SOL*             subsol,             /**< solution of subscip */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    SCIP_VAR*** binvars;
@@ -79,6 +87,7 @@ SCIP_RETCODE SCIPcycAddIncompleteSol(
    SCIP_CALL( assignVars(scip, newsol, solclustering, nbins, ncluster) );
 
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
+
    if( feasible )
       *result = SCIP_FOUNDSOL;
 
@@ -86,18 +95,20 @@ SCIP_RETCODE SCIPcycAddIncompleteSol(
    {
       SCIPfreeBlockMemoryArray(scip, &solclustering[i], ncluster);
    }
+
    SCIPfreeBlockMemoryArray(scip, &solclustering, nbins);
 
    return SCIP_OKAY;
 }
+
 /** set all the given percentile of nonzeros to zero */
 static
 SCIP_RETCODE SCIPreduceMatrixSize(
-   SCIP*                scip,                /**< SCIP data structure                     */
-   SCIP_Real**          matrix,              /**< The matrix                              */
-   SCIP_Real            percentile,          /**< The percentile of entries to be deleted */
-   SCIP_Real            scale,               /**< Scaling between net flow and coherence  */
-   int                  size                 /**< The size of the matrix                  */
+   SCIP*                scip,                /**< SCIP data structure */
+   SCIP_Real**          matrix,              /**< the matrix */
+   SCIP_Real            percentile,          /**< the percentile of entries to be deleted */
+   SCIP_Real            scale,               /**< scaling between net flow and coherence */
+   int                  size                 /**< the size of the matrix */
 )
 {
    SCIP_Real* nonzeros;
@@ -159,14 +170,14 @@ SCIP_RETCODE SCIPreduceMatrixSize(
 /** main procedure of the heuristic, creates and solves a sub-SCIP */
 static
 SCIP_RETCODE SCIPapplyRedSize(
-   SCIP*                 scip,               /**< original SCIP data structure                                        */
-   SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
-   SCIP_RESULT*          result,             /**< result data structure                                               */
-   SCIP_Real             reductionrate,      /**< minimum percentage of integer variables that have to be fixed       */
-   SCIP_Longint          maxnodes            /**< maximum number of  nodes for the subproblem                         */
-)
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_RESULT*          result,             /**< result data structure */
+   SCIP_Real             reductionrate,      /**< minimum percentage of integer variables that have to be fixed */
+   SCIP_Longint          maxnodes            /**< maximum number of  nodes for the subproblem */
+   )
 {
-   SCIP* subscip;                            /* the subproblem created by RENS                  */
+   SCIP* subscip;
    SCIP_Real** cmatrix_orig;
    SCIP_Real** cmatrix_red;
    SCIP_SOL** subsols;
@@ -204,7 +215,7 @@ SCIP_RETCODE SCIPapplyRedSize(
 #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
 #else
    /* disable statistic timing inside sub SCIP and output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
@@ -233,8 +244,6 @@ SCIP_RETCODE SCIPapplyRedSize(
 
    /* set nodelimit */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
-
-   /* disable expensive techniques that merely work on the dual bound */
 
    /* disable cutting plane separation */
    SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
@@ -274,16 +283,14 @@ SCIP_RETCODE SCIPapplyRedSize(
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
-   /* check, whether a solution was found;
-    * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+   /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible -> try
+    * all solutions until one was accepted
     */
    nsubsols = SCIPgetNSols(subscip);
    subsols = SCIPgetSols(subscip);
 
    for( i = 0; i < nsubsols; ++i )
-   {
       SCIP_CALL( SCIPcycAddIncompleteSol(scip, subscip, heur, subsols[i], result) );
-   }
 
    SCIP_CALL( SCIPfree(&subscip) );
 
@@ -297,20 +304,62 @@ SCIP_RETCODE SCIPapplyRedSize(
    return SCIP_OKAY;
 }
 
+/*
+ * Callback methods of primal heuristic
+ */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyRedsize)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurRedsize(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeRedsize)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert( heur != NULL );
+   assert( scip != NULL );
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+
+   /* free heuristic data */
+   SCIPfreeBlockMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecRedsize)
 {  /*lint --e{715}*/
-
+   SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
+   heurdata = SCIPheurGetData(heur);
+
+   assert(heurdata != NULL);
+
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPapplyRedSize(scip, heur, result, 0.75, (SCIP_Longint) 1) );
+   SCIP_CALL( SCIPapplyRedSize(scip, heur, result, heurdata->reductionrate, (SCIP_Longint) 1) );
 
    return SCIP_OKAY;
 }
@@ -324,14 +373,27 @@ SCIP_RETCODE SCIPincludeHeurRedsize(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
+
+   /* create redsize primal heuristic data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
       HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-      HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRedsize, NULL) );
+      HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRedsize, heurdata) );
 
    assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRedsize) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRedsize) );
+
+   /* add param */
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/reduction-rate",
+         "percentile of transition probabilities that gets deleted in the submip",
+         &heurdata->reductionrate, FALSE, DEFAULT_REDUCTIONRATE, 0.0, 1.0, NULL , NULL) );
 
    return SCIP_OKAY;
 }

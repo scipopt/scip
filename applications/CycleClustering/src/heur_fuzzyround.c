@@ -82,12 +82,12 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    assert(binvars != NULL);
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering , nbins) );
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &binsincluster, ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &clustering , nbins) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &binsincluster, ncluster) );
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &clustering[i], ncluster) ); /*lint !e866*/
    }
 
    /* for each bin, set the assignment with the highest lp-value to 1, the rest to 0 */
@@ -105,7 +105,8 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
             maxcluster = k;
             binsincluster[k]++;
          }
-         else if( SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) && maxcluster != -1 && binsincluster[maxcluster] > binsincluster[k] )
+         else if( SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) && maxcluster != -1
+            && binsincluster[maxcluster] > binsincluster[k] )
          {
             binsincluster[maxcluster]--;
             binsincluster[k]++;
@@ -132,10 +133,10 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    /* free allocated memory */
    for( i = 0; i < nbins; ++i )
    {
-      SCIPfreeMemoryArray(scip, &clustering[i]);
+      SCIPfreeBufferArray(scip, &clustering[i]);
    }
-   SCIPfreeMemoryArray(scip, &clustering);
-   SCIPfreeMemoryArray(scip, &binsincluster);
+   SCIPfreeBufferArray(scip, &clustering);
+   SCIPfreeBufferArray(scip, &binsincluster);
 
    return SCIP_OKAY;
 }

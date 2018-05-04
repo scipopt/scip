@@ -32,7 +32,7 @@
 #include "probdata_cyc.h"
 
 #define READER_NAME             "cycreader"
-#define READER_DESC             "file reader for a .cyc-file representing a transition matrix for a cycle clustering problem"
+#define READER_DESC             "file reader for a .cyc-file with a transition matrix for a cycle clustering problem"
 #define READER_EXTENSION        "cyc"
 
 #define COL_MAX_LINELEN 10000
@@ -144,14 +144,18 @@ SCIP_RETCODE readCyc(
 
       if( i >= nbins )
       {
-         SCIPerrorMessage( "more lines than expected: expected %d many, but got already %d'th (non-duplicate) edge", nbins, i+1 );
+         SCIPerrorMessage( "more lines than expected: expected %d many, but got already %d'th (non-duplicate) edge",
+            nbins, i+1 );
+
          return SCIP_READERROR;
       }
+
       i++;
    }
 
    /* create problem data */
    SCIP_CALL( SCIPcreateProbCyc(scip, filename, nbins, ncluster, cmatrix) );
+
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
 
    for( i = nbins - 1; i >= 0; i-- )
@@ -160,6 +164,7 @@ SCIP_RETCODE readCyc(
    }
 
    SCIPfreeMemoryArray(scip, &cmatrix);
+
    SCIPfclose(fp);
 
    return SCIP_OKAY;
@@ -188,6 +193,7 @@ SCIP_DECL_READERREAD(readerReadCyc)
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
    assert( scip != NULL);
    assert(result != NULL);
+
    SCIP_CALL( readCyc( scip, filename) );
 
    *result = SCIP_SUCCESS;
@@ -217,9 +223,12 @@ SCIP_RETCODE SCIPincludeReaderCyc(
    SCIP_CALL( SCIPsetReaderCopy( scip, reader, readerCopyCyc) );
    SCIP_CALL( SCIPsetReaderRead( scip, reader, readerReadCyc ) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,"cycleclustering/scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
-   SCIP_CALL( SCIPaddCharParam(scip, "cycleclustering/model", "the model variant", NULL, FALSE, 's', "seqt", NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "cycleclustering/usecutselection", "true if cut selection should be used in cyc-separators", NULL, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,"cycleclustering/scale_coherence",
+      "factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
+   SCIP_CALL( SCIPaddCharParam(scip, "cycleclustering/model",
+      "the model variant", NULL, FALSE, 's', "seqt", NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cycleclustering/usecutselection",
+      "true if cut selection should be used in cyc-separators", NULL, FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
