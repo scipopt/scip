@@ -81,10 +81,7 @@ struct SCIP_PresolData
    SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
-   int                   oldmaxpreroundscomponents; /**< original value of parameter constraints/components/maxprerounds */
    int                   oldmaxroundsdomcol; /**< original value of parameter presolving/maxrounds/domcol */
-   int                   oldmaxpreroundsdualfix; /**< original value of parameter propagating/dualfix/maxprerounds */
-   int                   oldfreqdualfix;     /**< original value of parameter propagating/dualfix/freq */
    SCIP_Bool             changeddefaultparams; /**< whether default parameters were changed  */
 };
 
@@ -1408,18 +1405,11 @@ SCIP_RETCODE determineSymmetry(
 
       /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "   (%.1fs) turning off presolver <domcol>, constraint handler <components>, and propagator <dualfix> for remaining computations in order to avoid conflicts\n",
+         "   (%.1fs) turning off presolver <domcol> for remaining computations in order to avoid conflicts\n",
          SCIPgetSolvingTime(scip));
 
       /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods */
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-
-      /* components creates sub-SCIPs on which no symmetry handling is installed, thus turn this off */
-      SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", 0) );
-
-      /* dual fixing might interfere with symmetry handling methods, thus turn this off */
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", 0) );
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/freq", 0) );
 
       presoldata->changeddefaultparams = TRUE;
    }
@@ -1446,9 +1436,6 @@ SCIP_DECL_PRESOLINIT(presolInitSymmetry)
 
    /* initialize original values of changed parameters in case we do not enter determineSymmetry() */
    SCIP_CALL( SCIPgetIntParam(scip, "presolving/domcol/maxrounds", &(presoldata->oldmaxroundsdomcol)) );
-   SCIP_CALL( SCIPgetIntParam(scip, "constraints/components/maxprerounds", &(presoldata->oldmaxpreroundscomponents)) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/dualfix/maxprerounds", &(presoldata->oldmaxpreroundsdualfix)) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/dualfix/freq", &(presoldata->oldfreqdualfix)) );
 
    return SCIP_OKAY;
 }
@@ -1491,9 +1478,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    if ( presoldata->changeddefaultparams )
    {
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", presoldata->oldmaxroundsdomcol) );
-      SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", presoldata->oldmaxpreroundscomponents) );
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldmaxpreroundsdualfix) );
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldfreqdualfix) );
 
       presoldata->changeddefaultparams = FALSE;
    }
