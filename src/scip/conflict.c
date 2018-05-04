@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg

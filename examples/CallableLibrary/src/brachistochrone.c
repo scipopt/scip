@@ -16,24 +16,23 @@
 /**@file   brachistochrone.c
  * @brief  Minimum time for a particle to go from point A to B under gravity only.
  * @author Anass Meskini
- * 
- * This is an example that uses expressions and expression trees to set up non-linear constraints in SCIP when used as 
+ *
+ * This is an example that uses expressions and expression trees to set up non-linear constraints in SCIP when used as
  * a callable library. This example implements a discretized model to obtain the trajectory associated with the shortest
  * time to go from point A to B for a particle under gravity only.
- * 
+ *
  * The model:
- * 
+ *
  * Given \f$N\f$ number of points for the discretisation of the trajectory, we can approximate the time to go from
- * \f$(x_0,y_0)\f$ to \f$ (x_N,y_N)\f$ for a given trajectory by: \f$T = \sqrt{\frac{2}{g}} 
+ * \f$(x_0,y_0)\f$ to \f$ (x_N,y_N)\f$ for a given trajectory by: \f$T = \sqrt{\frac{2}{g}}
  * \sum_{0}^{N-1} \frac{\sqrt{(y_{i+1} - y_i)^2 + (x_{i+1} - x_i)^2}}{\sqrt{1-y_{i+1}} + \sqrt{1 - y_i}}\f$
- * 
+ *
  * The optimisation problem is \f$ \min\limits_{x_0,\dots x_N, y_0,\dots y_N } \sum_{i=0}^{N-1} t_i \f$, such that:
  * \f$t_i = \frac{\sqrt{(y_{i+1} - y_i)^2 + (x_{i+1} - x_i)^2}}{\sqrt{1-y_{i+1}} + \sqrt{1 - y_i}}\f$
- * 
+ *
  * A more detailed description of the model can be found in the brachistochrone directory in:
  *
  * http://scip.zib.de/workshop2018/pyscipopt-exercises.tgz
- * 
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -46,7 +45,7 @@
 #include "scip/scipdefplugins.h"
 
 /** default number of points for the discretization of trajectory */
-#define DEFAULT_NPOINTS 4
+#define DEFAULT_NPOINTS 3
 
 /* default start and end points */
 #define Y_START  1.0
@@ -62,7 +61,7 @@ SCIP_RETCODE setupProblem(
    SCIP_Real*            coord               /**< array containing [y(0), y(N), x(0), x(N)] */
    )
 {
-   /* variables: 
+   /* variables:
     * t[i] i=0..N-1, such that: value function=sum t[i]
     * y[i] i=0..N, projection of trajectory on y-axis
     * x[i] i=0..N, projection of trajectory on x-axis
@@ -70,7 +69,7 @@ SCIP_RETCODE setupProblem(
    SCIP_VAR** t;
    SCIP_VAR** y;
    SCIP_VAR** x;
- 
+
    char namet[SCIP_MAXSTRLEN];
    char namey[SCIP_MAXSTRLEN];
    char namex[SCIP_MAXSTRLEN];
@@ -143,7 +142,7 @@ SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPaddVar(scip, x[i]) );
    }
 
-   /* add constraint related to the linear formulation of the value function 
+   /* add constraint related to the linear formulation of the value function
     * f = sum{ t[i] }
     * t[i] =  sqrt( (y(i+1) - y(i))^2 +  (x(i+1) - x(i))^2 ) / ( sqrt(1 - y(i+1)) + sqrt(1 - y(i))  )
     * in the loop, create the i-th constraint
@@ -151,7 +150,7 @@ SCIP_RETCODE setupProblem(
    {
       SCIP_CONS* conslinfor;
 
-      /* child expressions: 
+      /* child expressions:
        * yplusexpr: expression for y[i+1]
        * yplusexprsec: second expression for y[i+1] (it appears twice in the constraint)
        * yexpr: expression for y[i]
@@ -180,7 +179,7 @@ SCIP_RETCODE setupProblem(
       SCIP_EXPR* expr10;
       SCIP_EXPR* expr11;
 
-      /* tree to hold the non-linear part of the constraint */ 
+      /* tree to hold the non-linear part of the constraint */
       SCIP_EXPRTREE* exprtree;
 
       SCIP_Real coef1[2] = {1.0, -1.0};
@@ -193,7 +192,7 @@ SCIP_RETCODE setupProblem(
          /* vars to be added to the exprtree in this step of the loop */
          SCIP_VAR* varstoadd[6] = { y[i+1], y[i+1], y[i], y[i], x[i+1], x[i] };
 
-         /* create expressions meant to be child expressions in the tree. give different indexes to the expressions to 
+         /* create expressions meant to be child expressions in the tree. give different indexes to the expressions to
           * assign the correct variables to them later
           */
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yplusexpr, SCIP_EXPR_VARIDX, 0) );
@@ -224,18 +223,18 @@ SCIP_RETCODE setupProblem(
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr4, SCIP_EXPR_SQUARE, expr2) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr5, SCIP_EXPR_PLUS, expr3, expr4) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr6, SCIP_EXPR_SQRT, expr5) );
-      
+
             SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &expr7, 1, &children3, &coef2, 1.0) );
             SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &expr8, 1, &children4, &coef2, 1.0) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr9, SCIP_EXPR_SQRT, expr7) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr10, SCIP_EXPR_SQRT, expr8) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr11, SCIP_EXPR_PLUS, expr9, expr10) );
-      
+
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_DIV, expr6, expr11) );
          }
          /* create the expression tree with expr as root */
          SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 0, 0, NULL) );
-   
+
          SCIP_CALL( SCIPexprtreeAddVars(exprtree, 6, varstoadd) );
          /* use the tree and a linear term to add  the constraint */
          SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &conslinfor, "Linear Formulation", 1, &t[i],
@@ -246,7 +245,7 @@ SCIP_RETCODE setupProblem(
          SCIP_CALL( SCIPreleaseCons(scip, &conslinfor) );
       }
    }
-   
+
    /* release problem variables */
    for( i = 0; i < n+1; ++i )
    {
@@ -287,6 +286,9 @@ SCIP_RETCODE runBrachistochrone(
 
    /* set gap at which SCIP will stop */
    SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 0.05) );
+
+   /* TODO: remove this time limit after formulation has been improved */
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 20.0) );
 
    /* Set larger constraint violation tolerence to speed up the solving process */
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", 1e-4) );
