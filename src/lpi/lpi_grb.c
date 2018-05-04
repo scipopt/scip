@@ -20,7 +20,7 @@
  * @author Tobias Achterberg
  * @author Michael Winkler
  *
- * This LPI is beta! It only works with Gurobi versions >= 7.0.2.
+ * This LPI only works with Gurobi versions >= 7.0.2.
  *
  * @todo Try quad-precision and concurrent runs.
  *
@@ -44,9 +44,6 @@
 #if ( GRB_VERSION_MAJOR < 6 || ( GRB_VERSION_MAJOR == 7 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2 ) )
 #error "The Gurobi intreface only works for Gurobi versions at least 7.0.2"
 #endif
-
-/* store whether we have already warned about the beta status of this interface */
-static unsigned char warnedbeta = 0;
 
 /* define infinity value of Gurobi */
 #define GRB_INFBOUND 1e+20
@@ -1380,12 +1377,6 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int) (*lpi)->pricing) );
-
-   if( !warnedbeta )
-   {
-      warnedbeta = 1;
-      SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
-   }
 
    checkRangeInfo(*lpi);
 
