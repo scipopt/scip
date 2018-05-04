@@ -836,7 +836,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
       /* check if any path-inequalities are violated and sepatare them */
       SCIP_CALL( addPathCuts(scip, sepa, adjacencymatrix, adjacencygraph, iscontracted, cyclelength, result, &ncuts) );
 
-      if( cyclelength == ncluster - 1 )
+      if( cyclelength == ncluster - 1 && FALSE )
       {
          SCIP_CALL( addTourCuts(scip, sepa, adjacencymatrix, adjacencygraph, iscontracted, cyclelength,
             result, &ncuts) );

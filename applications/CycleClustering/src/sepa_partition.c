@@ -274,7 +274,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   /* add a state to second partition*/
                   bestvalue = -SCIPinfinity(scip);
                   secondpart[2] = -1;
-                  for( l = 0; l < SCIPdigraphGetNSuccessors(edgegraph, states[2]); ++l )
+                  for( l = 0; l < nsuccessors[2]; ++l )
                   {
                      states[3] = successors[2][l];
                      if( NULL == edgevars[states[0]][states[3]] || NULL == edgevars[states[1]][states[3]]
@@ -299,19 +299,20 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   }
 
                   states[3] = secondpart[2];
-                  successors[3] = SCIPdigraphGetSuccessors(edgegraph, states[3]);
-                  nsuccessors[3] = SCIPdigraphGetNSuccessors(edgegraph, states[3]);
 
                   /* if we did not find a state that we can add we can stop */
                   if( states[3] == -1 )
                      continue;
+
+                  successors[3] = SCIPdigraphGetSuccessors(edgegraph, states[3]);
+                  nsuccessors[3] = SCIPdigraphGetNSuccessors(edgegraph, states[3]);
 
                   nsecond++;
                   violation += bestvalue;
 
                   /* add one more state to first partition */
                   bestvalue = -SCIPinfinity(scip);
-                  for( l = 0; l < SCIPdigraphGetNSuccessors(edgegraph, states[3]); ++l )
+                  for( l = 0; l < nsuccessors[3]; ++l )
                   {
                      states[4] = successors[3][l];
 

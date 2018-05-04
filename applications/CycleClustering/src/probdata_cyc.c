@@ -774,7 +774,7 @@ SCIP_RETCODE createProbQP(
       SCIP_CALL( SCIPreleaseVar(scip, &edgevars[i]) );
    }
 
-   SCIPfreeBlockMemoryArray(scip, &edgevars, 2 * ncluster);
+   SCIPfreeBlockMemoryArray(scip, &edgevars, (SCIP_Longint) 2 * ncluster);
 
    return SCIP_OKAY;
 }
@@ -1158,7 +1158,7 @@ SCIP_DECL_PROBCOPY(probcopyCyc)
    assert(targetdata != NULL);
 
    /* set up data */
-   SCIP_CALL( SCIPallocMemory(scip, targetdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, targetdata) );
 
    nbins = sourcedata->nbins;
    ncluster = sourcedata->ncluster;

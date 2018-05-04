@@ -179,9 +179,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    assert(ncluster > 0 && ncluster <= nbins);
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &score, nbins) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcands, nbins * ncluster) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcandssol, nbins * ncluster) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcandsfrac, nbins * ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcands, (SCIP_Longint) nbins * ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcandssol, (SCIP_Longint) nbins * ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcandsfrac, (SCIP_Longint) nbins * ncluster) );
 
    ncands = 0;
    /* get the candidates */
