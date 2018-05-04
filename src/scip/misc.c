@@ -10059,16 +10059,16 @@ int SCIPstrncpy(
 {
    int n;
 
-   if ( size <= 0 )
+   if( size <= 0 )
       return 0;
 
    /* decrease size by 1 to create space for terminating zero char */
    --size;
-   for (n = 0; n < size && *s != '\0'; n++)
+   for( n = 0; n < size && *s != '\0'; n++ )
       *(t++) = *(s++);
    *t = '\0';
 
-   if ( *s != '\0' )
+   if( *s != '\0' )
       ++n;
 
    return n;
