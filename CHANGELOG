@@ -142,6 +142,7 @@ fixed bugs:
 - fixed bug with NULL pointer handling in LPIs
 - fixed handling of infinite bounds in cons_sos1
 - fixed bug while scaling linear constraints
+- don't delete conflict constraints that were transformed into model constraints during a restart
 
 unit tests:
 - expanded unit tests of the lpis

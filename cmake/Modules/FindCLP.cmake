@@ -21,6 +21,16 @@ find_path(CLP_INCLUDE_DIR
                  "C:\\libs\\cbc\\include"
           )
 
+find_library( COIN_LIBRARY
+              NAMES CoinUtils
+              PATHS "${CLP_DIR}/lib"
+                    "${CBC_DIR}/lib"
+                    "/usr/lib"
+                    "/usr/lib/coin"
+                    "C:\\libs\\clp\\lib"
+                    "C:\\libs\\cbc\\lib"
+              )
+
 find_library( CLP_LIBRARY
               NAMES Clp
               PATHS "${CLP_DIR}/lib"
@@ -32,7 +42,7 @@ find_library( CLP_LIBRARY
               )
 
 set(CLP_INCLUDE_DIRS "${CLP_INCLUDE_DIR}" )
-set(CLP_LIBRARIES "${CLP_LIBRARY}" )
+set(CLP_LIBRARIES "${CLP_LIBRARY}" "${COIN_LIBRARY}")
 
 
 include(FindPackageHandleStandardArgs)

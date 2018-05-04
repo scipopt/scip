@@ -7969,10 +7969,10 @@ SCIP_RETCODE SCIPincludeConcsolverType(
    }
 
    SCIP_CALL( SCIPconcsolverTypeCreate(&concsolvertype, scip->set, scip->messagehdlr, scip->mem->setmem,
-                                       name, prefpriodefault, concsolvercreateinst, concsolverdestroyinst,
-                                       concsolverinitseeds, concsolverexec, concsolvercopysolvdata,
-                                       concsolverstop, concsolversyncwrite, concsolversyncread,
-                                       concsolvertypefreedata, data) );
+         name, prefpriodefault, concsolvercreateinst, concsolverdestroyinst,
+         concsolverinitseeds, concsolverexec, concsolvercopysolvdata,
+         concsolverstop, concsolversyncwrite, concsolversyncread,
+         concsolvertypefreedata, data) );
 
    SCIP_CALL( SCIPsetIncludeConcsolverType(scip->set, concsolvertype) );
 
@@ -10749,13 +10749,13 @@ SCIP_RETCODE SCIPpermuteProb(
    }
    else if( permuted && !SCIPisTransformed(scip) )
    {
-         assert(!SCIPprobIsPermuted(scip->origprob));
+      assert(!SCIPprobIsPermuted(scip->origprob));
 
-         /* mark original problem as permuted */
-         SCIPprobMarkPermuted(scip->origprob);
+      /* mark original problem as permuted */
+      SCIPprobMarkPermuted(scip->origprob);
 
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "permute original problem using random seed %u\n", randseed);
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         "permute original problem using random seed %u\n", randseed);
    }
 
    /* free random number generator */

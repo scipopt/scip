@@ -15243,7 +15243,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
                                               *   needed) */
    SCIP_Real             cutoffbound,        /**< cutoff bound */
-   SCIP_Bool             setobj,              /**< should the objective function be set? */
+   SCIP_Bool             setobj,             /**< should the objective function be set? */
    SCIP_Bool             onlyconvex          /**< filter only for convex constraints */
    );
 
@@ -18457,7 +18457,7 @@ EXTERN
 void SCIPupdateSolIntegralityViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real             absviol            /**< absolute violation */
+   SCIP_Real             absviol             /**< absolute violation */
    );
 
 /** update bound violation of a solution */
