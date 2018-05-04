@@ -302,6 +302,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          newlb = lhs/vals[0];
          SCIPvarAdjustLb(var, set, &newlb);
 
+         /* bound changes that improve the bound sufficiently are applicable */
          if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
             return TRUE;
       }
@@ -313,6 +314,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          newub = lhs/vals[0];
          SCIPvarAdjustUb(var, set, &newub);
 
+         /* bound changes that improve the bound sufficiently are applicable */
          if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
             return TRUE;
       }
@@ -331,6 +333,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          newub = rhs/vals[0];
          SCIPvarAdjustUb(var, set, &newub);
 
+         /* bound changes that improve the bound sufficiently are applicable */
          if( SCIPsetIsFeasLT(set, newub, oldlb) || SCIPsetIsLT(set, MAX(newub, oldlb), oldub) )
             return TRUE;
       }
@@ -342,6 +345,7 @@ SCIP_Bool sepastoreIsBdchgApplicable(
          newlb = rhs/vals[0];
          SCIPvarAdjustLb(var, set, &newlb);
 
+         /* bound changes that improve the bound sufficiently are applicable */
          if( SCIPsetIsFeasGT(set, newlb, oldub) || SCIPsetIsGT(set, MIN(newlb, oldub), oldlb) )
             return TRUE;
       }
@@ -563,7 +567,10 @@ SCIP_RETCODE sepastoreApplyLb(
          SCIPsetDebugMsg(set, " -> applying bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
 
-         if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
+         /* changing the lower bound to a value >= SCIPinfinity should result in a cutoff,
+          * since "infinite" values in solutions are reserved for another meaning
+          */
+         if( !SCIPsetIsInfinity(set, bound) && SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
          {
             SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob, tree,
                   reopt, lp, branchcand, eventqueue, cliquetable, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
@@ -587,7 +594,10 @@ SCIP_RETCODE sepastoreApplyLb(
          SCIPsetDebugMsg(set, " -> applying global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
 
-         if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)) )
+         /* changing the lower bound to a value >= SCIPinfinity should result in a cutoff,
+          * since "infinite" values in solutions are reserved for another meaning
+          */
+         if( !SCIPsetIsInfinity(set, bound) && SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)) )
          {
             SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob, tree, reopt,
                   lp, branchcand, eventqueue, cliquetable, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
@@ -648,7 +658,10 @@ SCIP_RETCODE sepastoreApplyUb(
          SCIPsetDebugMsg(set, " -> applying bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
 
-         if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
+         /* changing the upper bound to a value <= -SCIPinfinity should result in a cutoff,
+          * since "infinite" values in solutions are reserved for another meaning
+          */
+         if( !SCIPsetIsInfinity(set, -bound) && SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
          {
             SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob, tree,
                   reopt, lp, branchcand, eventqueue, cliquetable, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
@@ -672,7 +685,10 @@ SCIP_RETCODE sepastoreApplyUb(
          SCIPsetDebugMsg(set, " -> applying global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
 
-         if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)) )
+         /* changing the upper bound to a value <= -SCIPinfinity should result in a cutoff,
+          * since "infinite" values in solutions are reserved for another meaning
+          */
+         if( !SCIPsetIsInfinity(set, -bound) && SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)) )
          {
             SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob, tree, reopt,
                   lp, branchcand, eventqueue, cliquetable, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
