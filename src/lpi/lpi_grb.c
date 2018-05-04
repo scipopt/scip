@@ -5626,21 +5626,51 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* 1e-9 <= dval <= 1e-2 */
+      if (dval < 1e-9)
+         dval = 1e-9;
+      else if (dval > 1e-2)
+         dval = 1e-2;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_FEASIBILITYTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* 1e-9 <= dval <= 1e-2 */
+      if (dval < 1e-9)
+         dval = 1e-9;
+      else if (dval > 1e-2)
+         dval = 1e-2;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      /* 0 <= dval <= 1 */
+      if (dval < 0)
+         dval = 0;
+      else if (dval > 1)
+         dval = 1;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_BARCONVTOL, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
+      /* 0 <= dval */
+      if (dval < 0)
+         dval = 0;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
       break;
    case SCIP_LPPAR_MARKOWITZ:
+      /* 1e-4 <= dval <= 0.999 */
+      if (dval < 1e-4)
+         dval = 1e-4;
+      else if (dval > 0.999)
+         dval = 0.999;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:

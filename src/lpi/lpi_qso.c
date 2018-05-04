@@ -3535,6 +3535,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
+      /* ival > 0 */
+      if(ival < 0)
+         ival = 0;
+
       QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival) );
       break;
    default:
@@ -3602,6 +3606,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_LPTILIM:
+      /* no restriction on dval */
       QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
