@@ -252,12 +252,12 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
 /** solves the Benders' decomposition subproblem. */
 EXTERN
-SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
+SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvecip            /**< directly solve the CIP subproblem */
    );
 
 /** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */

@@ -103,7 +103,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBenderscutintConstant)
 }
 
 
-/** creates the benders cut data */
+/** creates the Benders' decomposition cut data */
 static
 SCIP_RETCODE createBenderscutData(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -311,11 +311,11 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    )
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
-   SCIP_CONSHDLR* consbenders;      /* the Benders' decomposition constraint handler */
-   SCIP_CONS* cons;                 /* the cut that will be generated from the solution to the pricing problem */
-   SCIP_ROW* row;                   /* the that is generated for the Benders' cut */
-   char cutname[SCIP_MAXSTRLEN];    /* the name of the generated cut */
-   SCIP_Bool optimal;               /* flag to indicate whether the current subproblem is optimal for the master */
+   SCIP_CONSHDLR* consbenders;
+   SCIP_CONS* cons;
+   SCIP_ROW* row;
+   char cutname[SCIP_MAXSTRLEN];
+   SCIP_Bool optimal;
    SCIP_Bool addcut;
    SCIP_Bool success;
 
@@ -327,7 +327,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    row = NULL;
    cons = NULL;
 
-   /* retreiving the Benders' cut data */
+   /* retrieving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
 
    /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be added
@@ -425,7 +425,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
             benderscutdata->subprobconstant[probnumber], probnumber, addcut, &success) );
    }
 
-   /* if success is FALSE, then there was an error in generating the integer optimaltiy cut. No cut will be added to
+   /* if success is FALSE, then there was an error in generating the integer optimality cut. No cut will be added to
     * the master problem. Otherwise, the constraint is added to the master problem.
     */
    if( !success )

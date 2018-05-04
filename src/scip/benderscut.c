@@ -316,7 +316,7 @@ SCIP_RETCODE SCIPbenderscutExitsol(
    assert(benderscut != NULL);
    assert(set != NULL);
 
-   /* call solving process deinitialization method of Benders' decompositioni cut */
+   /* call solving process deinitialization method of Benders' decomposition cut */
    if( benderscut->benderscutexitsol != NULL )
    {
       /* start timing */

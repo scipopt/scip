@@ -195,7 +195,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
       else
          var = fixedvars[i - nvars];
 
-      /* retreiving the master problem variable for the given subproblem variable. */
+      /* retrieving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
 
       redcost = SCIPgetVarRedcost(subproblem, var);
@@ -358,7 +358,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    row = NULL;
    cons = NULL;
 
-   /* retreiving the Benders' cut data */
+   /* retrieving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
 
    /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be
@@ -402,7 +402,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    /* computing the coefficients of the optimality cut */
    SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, cons, row, addcut, &success) );
 
-   /* if success is FALSE, then there was an error in generating the optimaltiy cut. No cut will be added to the master
+   /* if success is FALSE, then there was an error in generating the optimality cut. No cut will be added to the master
     * problem. Otherwise, the constraint is added to the master problem.
     */
    if( !success )

@@ -22,7 +22,7 @@
  * feasibility cuts (see benderscut_feas.c) will only cut off the solution \f$\bar{x}\f$ if the LP relaxation of the CIP
  * is infeasible.
  *
- * Consider a Benders' decomposition subproblem that is a CIP and it infeasible. Let \f$S_{r}\f$ be the set of indicies
+ * Consider a Benders' decomposition subproblem that is a CIP and it infeasible. Let \f$S_{r}\f$ be the set of indices
  * for master problem variables that are 1 in \f$\bar{x}\f$. The no-good cut is given by
  *
  * \f[
@@ -185,10 +185,10 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    row = NULL;
    cons = NULL;
 
-   /* retreiving the Benders' cut data */
+   /* retrieving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
 
-   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must bei
+   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be
     * added to the master problem.
     */
    if( SCIPgetStage(masterprob) < SCIP_STAGE_INITSOLVE )

@@ -190,7 +190,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          consvar = consvars[j];
          consval = consvals[j];
 
-         /* retreiving the master problem variable for the given subproblem variable. */
+         /* retrieving the master problem variable for the given subproblem variable. */
          SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, consvar, &mastervar) );
 
          /* update the coefficient in the farkas activity */
@@ -334,7 +334,8 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cut, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
 
    if( SCIPgetNLPIterations(subproblem) == 0 )
-      SCIPinfoMessage(masterprob, NULL, "No iterations in pricing problem %d\n", probnumber);
+      SCIPinfoMessage(masterprob, NULL, "There were no iterations in pricing problem %d. "
+        "A Benders' decomposition feasibility cut will be generated from the presolved LP data.\n", probnumber);
 
    /* computing the coefficients of the feasibility cut */
    SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, sol, cut, &success) );
