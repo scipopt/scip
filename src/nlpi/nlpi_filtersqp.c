@@ -35,6 +35,7 @@
 #endif
 
 #include "scip/misc.h"
+#include "scip/pub_message.h"
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"

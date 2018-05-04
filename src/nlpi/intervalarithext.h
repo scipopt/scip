@@ -54,6 +54,7 @@ public:
       SCIPintervalSetBounds(this, -SCIPInterval::infinity,SCIPInterval::infinity);
    }
 
+   // cppcheck-suppress noExplicitConstructor
    /** constructor for an SCIP_INTERVAL struct */
    SCIPInterval(
       const SCIP_INTERVAL& x                 /**< interval to copy */
@@ -71,6 +72,7 @@ public:
       SCIPintervalSetBounds(this, infinum, supremum);
    }
 
+   // cppcheck-suppress noExplicitConstructor
    /** constructor for a singleton */
    SCIPInterval(
       SCIP_Real          number              /**< number to be represented by interval */
@@ -368,6 +370,19 @@ SCIPInterval sqrt(
 /** absolute value of an interval */
 inline
 SCIPInterval abs(
+   const SCIPInterval&   x                   /**< operand */
+   )
+{
+   SCIPInterval resultant;
+
+   SCIPintervalAbs(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
+}
+
+/** absolute value of an interval */
+inline
+SCIPInterval fabs(
    const SCIPInterval&   x                   /**< operand */
    )
 {

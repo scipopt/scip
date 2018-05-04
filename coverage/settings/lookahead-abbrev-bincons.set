@@ -1,0 +1,26 @@
+# SCIP version 5.0.1.4
+
+# priority of branching rule <lookahead>
+# [type: int, advanced: FALSE, range: [-536870912,536870911], default: 0]
+branching/lookahead/priority = 1000000
+
+# maximal depth level, up to which branching rule <lookahead> should be used (-1 for no limit)
+# [type: int, advanced: FALSE, range: [-1,65534], default: -1]
+branching/lookahead/maxdepth = 5
+
+# should binary constraints be added as rows to the base LP? (0: no, 1: separate, 2: as initial rows)
+# [type: int, advanced: TRUE, range: [0,2], default: 0]
+branching/lookahead/addbinconsrow = 1
+
+# toggles the abbreviated LAB.
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+branching/lookahead/abbreviated = TRUE
+
+# add binary constraints with two variables found at the root node also as a clique
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+branching/lookahead/addclique = TRUE
+
+# scoring function to be used: 'd'efault, 'f'ullstrong branching or 's'caled cutoff score
+# [type: char, advanced: TRUE, range: {dfs}, default: d]
+branching/lookahead/scoringfunction = s
+

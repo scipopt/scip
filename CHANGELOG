@@ -1,5 +1,75 @@
+SCIP version NEXT
+=================
+
+performance improvements:
+- cuts generated from certain quadratic constraints with convex feasible region are now global
+- performance improvements for Adaptive Large Neighborhood Search heur_alns.c:
+    - all neighborhoods now start conservatively from maximum fixing rate
+    - new default parameter settings for bandit selection parameters
+    - no adjustment of minimum improvement by default
+- improved bound tightening for some quadratic equations
+
+features:
+- new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
+- new example brachistochrone in CallableLibrary examples collection
+- restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
+- new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
+- limits on the number of presolving rounds a presolver (maxrounds) or propagator/constraint handler (maxprerounds)
+  participates in are now compared to the number of calls of the particular presolving method, not the number of
+  presolving rounds in general, anymore
+- new price-and-branch application for the ringpacking problem
+
+deleted and modified API functions:
+- additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
+  weights that are simple averages or higher weights for more recent observations (the previous default).
+  The last two parameters are used for a finer control of the exponential decay.
+- functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
+  existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+- removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
+  of other components anymore
+- additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
+- the seed of SCIPinitializeRandomSeed() is now an unsigned int
+- the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
+- added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
+
+new API functions:
+- added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model (check) constraints (SCIP_LOCKYPE_MODEL)
+  and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
+- new functions SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
+- new function SCIPaddConsLocksType()
+- new functions SCIPconsIsLockedTypePos(), SCIPconsIsLockedTypeNeg(), SCIPconsIsLockedType(),
+  SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
+
+
+new parameters:
+- "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+- "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
+- "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
+- "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
+- "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
+- "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts
+
+deleted and modified parameters:
+- removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  directly by the target node limit within the heuristic
+- removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
+  of other components anymore
+
+deleted files:
+- presol_implfree removed
+
+misc:
+- updated CppAD to version 20180000.0
+- add statistic that presents the number of resolves for instable LPs
+
+
 SCIP version 5.0.2
-==================
+=================
+
+performance improvements:
+- deactivate gauge cuts
 
 fixed bugs:
 - suppress debug solution warnings during problem creation stage
@@ -10,6 +80,17 @@ fixed bugs:
 - fixed check of timing in heur_completesol
 - fixed wrong propagation in optcumulative constraint handler
 - fixed non-deterministic behavior in OBBT propagator
+- don't disable LP presolving when using Xpress as LP solver
+- fixed possible NULL pointer usage in cons_pseudoboolean
+- ensured that SCIPgetDualbound() returns global dual bound instead of the dual bound of the remaining search tree
+- fixed rare division-by-zero when solving bivariate quadratic interval equation
+- use total memory for triggering memory saving mode
+- fix parsing of version number in the CMake module for Ipopt
+- fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
+
+data structures:
+- expression interpreter objects are now stored in the block memory
+
 
 SCIP version 5.0.1
 ==================
@@ -18,12 +99,31 @@ performance improvements:
 - increased threshold when to scale up cuts that are generated by nonlinear constraint handlers
 - disable disaggregation of quadratic constraints by changing the default for constraints/quadratic/maxdisaggrsize to 1
   (disaggregation can still be very helpful on some instances, but also seems hurtful on others)
+- test additional scaling factors in CMIR cut generatio heuristic
+- cleaned up implementation of the cut selection procedure and added new cut quality measure
+- use random tie-breaking in cut selection
+
+features:
+- allow output of lower bounds for visualization
+- new diving heuristic "conflictdiving"
+- add number of conflict constraints found by diving heuristics to statistics
+- added symmetry detection for linking constraints
+- SCIP executable handles the SIGTERM signal. If the process receives a SIGTERM, SCIP terminates the solution process with a new SCIP_STATUS code
+   "SCIP_STATUS_TERMINATE" and displays all relevant statistics before exiting.
+
+new parameters:
+- new parameter "visual/displb" that enables output of lower bounds for visualization
+- new parameter: "presolving/symmetry/displaynorbitvars" (whether we display the number of affected variables in the statistics)
+- new parameter: "separating/efficacyfac" to change the weight of the efficacy in cut score calculation
+- new parameter: "separating/dircutoffdistfac" to change the weight of the directed cutoff distance in cut score calculation
 
 deleted and modified parameters:
 - rename parameter: "constraints/orbisack/orbisack/coverseparation" to "constraints/orbisack/coverseparation"
 
-new parameters:
-- new parameter: "presolving/symmetry/displaynorbitvars" (whether we display the number of affected variables in the statistics)
+new API functions:
+- new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and SCIPterminated() in scip/interrupt.h for handling
+   of SIGTERM signals.
+- new function SCIPselectCuts() to run SCIP's cut selection procedure on a given array of cuts
 
 fixed bugs:
 - fixed wrong cast in LP iteration limit computation in proximity search heuristic
@@ -208,7 +308,7 @@ new parameters:
 - new parameter: "presolving/symbreak/detectorbitopes" (whether it should be checked if some symmetries can be handled by orbitopes)
 - new parameter: "constraints/symresack/ppsymresack" (check whether symresacks can be strengthend by packing/partitining constraints)
 - new parameter: "constraints/symresack/checkalwaysfeas" (whether conscheck returns always SCIP_FEASIBLE)
-- new parameter: "constraints/orbisack/orbisack/coverseparation" (whether orbisack cover inequalities should be separated)
+- new parameter: "constraints/orbisack/coverseparation" (whether orbisack cover inequalities should be separated)
 - new parameter: "constraints/orbisack/orbiSeparation" (whether facet defining inequalities for orbisack should be separated)
 - new parameter: "constraints/orbisack/coeffbound" (maximal value of coefficients in orbisack facet inequalities)
 - new parameter: "constraints/orbisack/checkpporbisack" (check whether orbisacks can be strengthened by packing/partitioning constraints)
@@ -235,11 +335,9 @@ new parameters:
   clique table analysis
 - new parameters "propagating/vbounds/{maxcliquesmedium,maxcliquesexhaustive}" to limit the number of cliques relative to the
   number of binary variable for performing clique table analysis
-- added parameter "expbackoff" to all separators, which increases the frequency exponentially over the depth in the tree
+- added parameter "expbackoff" to all separators which increases the frequency exponentially over the depth in the tree
+- parameter "conflict/useboundlp" has new values 'd' (only dual solution analysis) and 'b' (both, conflict and dual solution analysis)
 - new parameter "conflict/prefinfproof" (prefer infeasibility proof to boundexceeding proof)
-- new parameters "heuristics/mpec/*"
-- new parameters "heuristics/alns/*"
-- new parameters "presolving/sparsify/*"
 
 fixed bugs:
 - fix wrong statistic display of diving leaf solutions
@@ -445,7 +543,6 @@ parameters:
 - new parameter "constraints/quadratic/projectedcuts" to enable convex quadratics to generate gradients cuts at the
   projection of the point onto the region described by the constraint, which is supporting
 - parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)
-- parameter "conflict/useboundlp" has new values 'd' (only dual solution analysis) and 'b' (both, conflict and dual solution analysis)
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
 - all parameters of the components presolver (starting with "presolving/components/") are now parameters of the components
   constraint handler (starting with "constraints/components/")

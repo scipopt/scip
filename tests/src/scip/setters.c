@@ -30,7 +30,7 @@
 
 /* GLOBAL VARIABLES */
 static SCIP* scip;
-       
+
 /** create unbounded problem */
 static
 void initProb(void)

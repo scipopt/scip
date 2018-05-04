@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPresetBandit(
    assert(scip != NULL);
    assert(bandit != NULL);
 
-   SCIP_CALL( SCIPbanditReset(SCIPbuffer(scip), bandit, priorities, SCIPinitializeRandomSeed(scip, (int)(seed % INT_MAX))) );
+   SCIP_CALL( SCIPbanditReset(SCIPbuffer(scip), bandit, priorities, SCIPinitializeRandomSeed(scip, seed)) );
 
    return SCIP_OKAY;
 }

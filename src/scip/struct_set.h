@@ -312,6 +312,7 @@ struct SCIP_Set
    SCIP_Real             lp_conditionlimit;  /**< maximum condition number of LP basis counted as stable (-1.0: no check) */
    SCIP_Bool             lp_checkprimfeas;   /**< should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur? */
    SCIP_Bool             lp_checkdualfeas;   /**< should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur? */
+   SCIP_Bool             lp_checkfarkas;     /**< should infeasibility proofs from the LP be checked? */
    int                   lp_fastmip;         /**< which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full */
    int                   lp_scaling;         /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
@@ -482,8 +483,10 @@ struct SCIP_Set
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
-   SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
-   SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in separation score calculation */
+   SCIP_Real             sepa_efficacyfac;   /**< factor to scale efficacy of cut in score calc. */
+   SCIP_Real             sepa_dircutoffdistfac;/**< factor to scale directed cutoff distance of cut in score calc. */
+   SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in score calc. */
+   SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in score calculation */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
                                                 *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
@@ -546,6 +549,7 @@ struct SCIP_Set
    char*                 visual_bakfilename; /**< name of the BAK tool output file, or - if no BAK output should be created */
    SCIP_Bool             visual_realtime;    /**< should the real solving time be used instead of time step counter in visualization? */
    SCIP_Bool             visual_dispsols;    /**< should the node where solutions are found be visualized? */
+   SCIP_Bool             visual_displb;      /**< should lower bound information be visualized? */
    SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
    /* Reading */

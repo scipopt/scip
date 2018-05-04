@@ -5815,6 +5815,13 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownRealIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealIntLong
@@ -10313,18 +10320,16 @@ SCIP_Real SCIPcomputeGap(
 {
    if( EPSEQ(primalbound, dualbound, eps) )
       return 0.0;
-   else if( EPSZ(dualbound, eps) ||
-            EPSZ(primalbound, eps) ||
-            REALABS(primalbound) >= inf ||
-            REALABS(dualbound) >= inf ||
-            primalbound * dualbound < 0.0 )
-      return inf;
    else
    {
       SCIP_Real absdual = REALABS(dualbound);
       SCIP_Real absprimal = REALABS(primalbound);
 
-      return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
+      if( EPSZ(dualbound, eps) || EPSZ(primalbound, eps) || absprimal >= inf || absdual >= inf ||
+         primalbound * dualbound < 0.0 )
+         return inf;
+      else
+         return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
    }
 }
 

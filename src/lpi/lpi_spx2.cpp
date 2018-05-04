@@ -221,6 +221,10 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+#if SOPLEX_APIVERSION >= 2
+      setBoolParam(SoPlex::ENSURERAY, true);
+#endif
+
 #ifdef WITH_LPSCHECK
       int cpxstat;
       _checknum = 0;
@@ -367,6 +371,7 @@ public:
       case SPxSolver::INFEASIBLE:
          return "INFEASIBLE";
       default:
+         /* since API version 3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
          return "UNKNOWN";
       }  /*lint !e788*/
    }
@@ -2365,6 +2370,7 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
    default:
+      /* since API version 3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
       return SCIP_LPERROR;
    }  /*lint !e788*/
 }
@@ -2516,6 +2522,9 @@ SCIP_RETCODE lpiStrongbranch(
       (void) spx->setIntParam(SoPlex::ITERLIMIT, itlim);
       do
       {
+#ifndef STRONGBRANCH_RESTOREBASIS
+         SCIP_Bool repeatstrongbranching;
+#endif
 #ifdef WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
@@ -2535,6 +2544,9 @@ SCIP_RETCODE lpiStrongbranch(
          case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
          case SPxSolver::ABORT_ITER:
          case SPxSolver::ABORT_CYCLING:
+#if SOPLEX_APIVERSION >= 3
+         case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
+#endif
             *down = spx->objValueReal();
             break;
          case SPxSolver::ABORT_VALUE:
@@ -2557,12 +2569,18 @@ SCIP_RETCODE lpiStrongbranch(
 #else
          /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
           * pre-strong-branching basis and try again with reduced iteration limit */
-         if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim )
+#if SOPLEX_APIVERSION >= 3
+         repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
+            || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim);
+#else
+         repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR)
+            && !fromparentbasis && spx->numIterations() < itlim);
+#endif
+         if( repeatstrongbranching )
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n",
                              itlim - spx->numIterations());
             spx->setIntParam(SoPlex::ITERLIMIT, itlim - spx->numIterations());
-            assert( ! spx->hasPreStrongbranchingBasis() );
             spx->restorePreStrongbranchingBasis();
             fromparentbasis = true;
             error = false;
@@ -2599,6 +2617,9 @@ SCIP_RETCODE lpiStrongbranch(
          (void) spx->setIntParam(SoPlex::ITERLIMIT, itlim);
          do
          {
+#ifndef STRONGBRANCH_RESTOREBASIS
+            SCIP_Bool repeatstrongbranching;
+#endif
 #ifdef WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
@@ -2618,6 +2639,9 @@ SCIP_RETCODE lpiStrongbranch(
             case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
             case SPxSolver::ABORT_ITER:
             case SPxSolver::ABORT_CYCLING:
+#if SOPLEX_APIVERSION >= 3
+            case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
+#endif
                *up = spx->objValueReal();
                break;
             case SPxSolver::ABORT_VALUE:
@@ -2640,10 +2664,16 @@ SCIP_RETCODE lpiStrongbranch(
 #else
             /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
              * pre-strong-branching basis and try again with reduced iteration limit */
-            else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim )
+#if SOPLEX_APIVERSION >= 3
+            repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
+               || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->numIterations() < itlim);
+#else
+            repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR)
+               && !fromparentbasis && spx->numIterations() < itlim);
+#endif
+            if( repeatstrongbranching )
             {
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->numIterations());
-               assert( ! spx->hasPreStrongbranchingBasis() );
                spx->restorePreStrongbranchingBasis();
                spx->setIntParam(SoPlex::ITERLIMIT, itlim - spx->numIterations());
                error = false;
@@ -2853,11 +2883,20 @@ SCIP_Bool SCIPlpiWasSolved(
    return lpi->solved;
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSolFeasibility()\n");
@@ -3047,7 +3086,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -3169,7 +3214,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */

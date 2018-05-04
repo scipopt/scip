@@ -31,6 +31,7 @@ set(scipsources
     scip/branch_fullstrong.c
     scip/branch_inference.c
     scip/branch_leastinf.c
+    scip/branch_lookahead.c
     scip/branch_mostinf.c
     scip/branch_multaggr.c
     scip/branch_nodereopt.c
@@ -80,10 +81,12 @@ set(scipsources
     scip/heur_clique.c
     scip/heur_coefdiving.c
     scip/heur_completesol.c
+    scip/heur_conflictdiving.c
     scip/heur_crossover.c
     scip/heur_dins.c
     scip/heur_distributiondiving.c
     scip/heur_dualval.c
+    scip/heur_farkasdiving.c
     scip/heur_feaspump.c
     scip/heur_fixandinfer.c
     scip/heur_fracdiving.c
@@ -143,7 +146,6 @@ set(scipsources
     scip/presol_dualcomp.c
     scip/presol_dualinfer.c
     scip/presol_gateextraction.c
-    scip/presol_implfree.c
     scip/presol_implics.c
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
@@ -169,6 +171,7 @@ set(scipsources
     scip/reader_ccg.c
     scip/reader_cip.c
     scip/reader_cnf.c
+    scip/reader_cor.c
     scip/reader_diff.c
     scip/reader_fix.c
     scip/reader_fzn.c
@@ -183,6 +186,9 @@ set(scipsources
     scip/reader_ppm.c
     scip/reader_rlp.c
     scip/reader_sol.c
+    scip/reader_sto.c
+    scip/reader_smps.c
+    scip/reader_tim.c
     scip/reader_wbo.c
     scip/reader_zpl.c
     scip/sepa_cgmip.c
@@ -375,6 +381,7 @@ set(scipheaders
     scip/branch.h
     scip/branch_inference.h
     scip/branch_leastinf.h
+    scip/branch_lookahead.h
     scip/branch_mostinf.h
     scip/branch_multaggr.h
     scip/branch_nodereopt.h
@@ -439,10 +446,12 @@ set(scipheaders
     scip/heur_clique.h
     scip/heur_coefdiving.h
     scip/heur_completesol.h
+    scip/heur_conflictdiving.h
     scip/heur_crossover.h
     scip/heur_dins.h
     scip/heur_distributiondiving.h
     scip/heur_dualval.h
+    scip/heur_farkasdiving.h
     scip/heur_feaspump.h
     scip/heur_fixandinfer.h
     scip/heur_fracdiving.h
@@ -516,7 +525,6 @@ set(scipheaders
     scip/presol_dualinfer.h
     scip/presol_gateextraction.h
     scip/presol.h
-    scip/presol_implfree.h
     scip/presol_implics.h
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
@@ -585,6 +593,7 @@ set(scipheaders
     scip/reader_ccg.h
     scip/reader_cip.h
     scip/reader_cnf.h
+    scip/reader_cor.h
     scip/reader_diff.h
     scip/reader_fix.h
     scip/reader_fzn.h
@@ -600,6 +609,9 @@ set(scipheaders
     scip/reader_ppm.h
     scip/reader_rlp.h
     scip/reader_sol.h
+    scip/reader_smps.h
+    scip/reader_sto.h
+    scip/reader_tim.h
     scip/reader_wbo.h
     scip/reader_zpl.h
     scip/relax.h
