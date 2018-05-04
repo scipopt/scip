@@ -3,7 +3,7 @@
 # This scripts generates the dependences for SCIP
 #
 
-APPLICATIONS=(Coloring CycleClustering MinIISC PolySCIP Scheduler STP)
+APPLICATIONS=(Coloring CycleClustering MinIISC PolySCIP Ringpacking Scheduler STP)
 OPTS=(opt dbg opt-gccold)
 
 for APPLICATION in ${APPLICATIONS[@]}
