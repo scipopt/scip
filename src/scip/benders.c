@@ -2330,7 +2330,6 @@ SCIP_RETCODE SCIPbendersExec(
    /* setting the first subproblem to check in this round of subproblem checks */
    benders->firstchecked = benders->lastchecked;
 
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &subprobsolved, nsubproblems) );
    /* sets the stored objective function values of the subproblems to infinity */
    resetSubproblemObjectiveValue(benders);
 
