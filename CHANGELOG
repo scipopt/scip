@@ -14,6 +14,7 @@ features:
 - new example brachistochrone in CallableLibrary examples collection
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
 - "lp/checkstability" is properly implemented for SoPlex LPI (spx2)
+- new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
 
 deleted and modified API functions:
 - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
