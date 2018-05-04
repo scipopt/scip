@@ -406,6 +406,21 @@ SCIP_RETCODE checkParameters(
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
    }
 
+   /* check if symmetry handling is turned off */
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &intvalue) );
+   if ( intvalue != 0 )
+   {
+      /* need to disabled symmetry handling since counting is not support if symmetry handling is enabled
+       */
+      SCIPwarningMessage(scip, "counting forces parameter <misc/usesymmetry> to 0\n");
+      if( SCIPisParamFixed(scip, "misc/usesymmetry") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "misc/usesymmetry") );
+      }
+
+      SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
+   }
+
    return SCIP_OKAY;
 }
 
