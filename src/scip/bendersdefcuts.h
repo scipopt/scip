@@ -13,10 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bendersdefcuts.h
- * @ingroup PUBLICCOREAPI
- * @brief  default SCIP plugins
- * @author Tobias Achterberg
+/**@file   bendersdefcuts.c
+ * @brief  default cuts for Benders' decomposition
+ * @author Stephen J. Maher
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,9 +25,7 @@
 
 #include "scip/scip.h"
 
-/* include header files here, such that the user only has to include
- * bendersdefcuts.h
- */
+/* include header files here, such that the user only has to include bendersdefcuts.h */
 #include "scip/benderscut_feas.h"
 #include "scip/benderscut_int.h"
 #include "scip/benderscut_nogood.h"
@@ -38,7 +35,7 @@
 extern "C" {
 #endif
 
-/** includes default SCIP plugins into SCIP */
+/** includes default Benders' decomposition cuts plugins into SCIP and the associated Benders' decomposition */
 EXTERN
 SCIP_RETCODE SCIPincludeBendersDefaultCuts(
    SCIP*                 scip,               /**< SCIP data structure */

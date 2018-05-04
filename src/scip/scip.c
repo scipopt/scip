@@ -46823,7 +46823,7 @@ void SCIPprintBendersStatistics(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPprintBendersStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( !SCIPgetNActiveBenders(scip) )
+   if( SCIPgetNActiveBenders(scip) == 0 )
       return;
 
    nbenders = SCIPgetNBenders(scip);
@@ -46846,16 +46846,15 @@ void SCIPprintBendersStatistics(
             SCIPbendersGetNCutsFound(scip->set->benders[i]),
             SCIPbendersGetNTransferredCuts(scip->set->benders[i]));
 
-
          nbenderscuts = SCIPbendersGetNBenderscuts(scip->set->benders[i]);
          benderscuts = SCIPbendersGetBenderscuts(scip->set->benders[i]);
 
          for( j = 0; j < nbenderscuts; j++ )
          {
             SCIPmessageFPrintInfo(scip->messagehdlr, file, "    %-15.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          -\n",
+               SCIPbenderscutGetName(benderscuts[j]),
                SCIPbenderscutGetTime(benderscuts[j]),
                SCIPbenderscutGetSetupTime(benderscuts[j]),
-               SCIPbenderscutGetName(benderscuts[j]),
                SCIPbenderscutGetNCalls(benderscuts[j]),
                SCIPbenderscutGetNFound(benderscuts[j]));
          }
