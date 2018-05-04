@@ -171,15 +171,15 @@ SCIP_RETCODE getSymmetries(
          propdata->permvarmap = NULL;
 
          /* recompute symmetries and update restart counter */
-         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, &(propdata->npermvars),
-               &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL, TRUE) );
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, TRUE,
+               &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
 
          propdata->lastrestart = SCIPgetNRuns(scip);
       }
       else
       {
-         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, &(propdata->npermvars),
-               &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL, FALSE) );
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE,
+               &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
       }
 
       if ( propdata->nperms == 0 )
