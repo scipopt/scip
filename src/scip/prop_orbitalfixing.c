@@ -56,6 +56,7 @@
 #define DEFAULT_SYMCOMPTIMING         2           /**< timing of symmetry computation for orbital fixing
                                                    *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING     FALSE       /**< Run orbital fixing during presolving? */
+#define DEFAULT_ENABLEDAFTERRESTARTS  FALSE       /**< Run orbital fixing after a restart has occured? */
 
 
 /* output table properties */
@@ -79,6 +80,7 @@ struct SCIP_PropData
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Bool             enabled;            /**< run orbital branching? */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
+   SCIP_Bool             enabledafterrestarts; /**< Run orbital fixing after a restart has occured? */
    int                   symcomptiming;      /**< timing of symmetry computation for orbital fixing
                                               *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
@@ -714,6 +716,10 @@ SCIP_DECL_PROPPRESOL(propPresolOrbitalFixing)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
+   /* check whether we run after a restart */
+   if ( propdata->enabled && ! propdata->enabledafterrestarts && SCIPgetNRuns(scip) > 1 )
+      propdata->enabled = FALSE;
+
    /* do not run if not enabled */
    if ( ! propdata->enabled )
       return SCIP_OKAY;
@@ -774,6 +780,10 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    /* get data */
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+
+   /* check whether we run after a restart */
+   if ( propdata->enabled && ! propdata->enabledafterrestarts && SCIPgetNRuns(scip) > 1 )
+      propdata->enabled = FALSE;
 
    /* do not run if not enabled */
    if ( ! propdata->enabled )
@@ -873,6 +883,11 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
          "propagating/" PROP_NAME "/performpresolving",
          "Run orbital fixing during presolving?",
          &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/enabledafterrestarts",
+         "Run orbital fixing after a restart has occured?",
+         &propdata->enabledafterrestarts, TRUE, DEFAULT_ENABLEDAFTERRESTARTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

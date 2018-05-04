@@ -45,6 +45,7 @@ new parameters:
 - "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
 - "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
 - "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
+- "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts
 
 deleted and modified parameters:
 - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
