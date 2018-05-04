@@ -5103,7 +5103,7 @@ SCIP_RETCODE SCIPreoptCreate(
    eventhdlr = NULL;
 
    /* include event handler into SCIP */
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL, eventInitsolReopt,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, set, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL, eventInitsolReopt,
          eventExitsolReopt, NULL, eventExecReopt, NULL) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, eventhdlr) );
    assert(eventhdlr != NULL);

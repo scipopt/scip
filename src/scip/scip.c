@@ -8589,7 +8589,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, scip->set, name, desc,
          eventcopy,
          eventfree, eventinit, eventexit, eventinitsol, eventexitsol, eventdelete, eventexec,
          eventhdlrdata) );
@@ -8625,7 +8625,7 @@ SCIP_RETCODE SCIPincludeEventhdlrBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, scip->set, name, desc,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventexec,
          eventhdlrdata) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
