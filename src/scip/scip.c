@@ -6380,7 +6380,10 @@ void SCIPsetBendersPriority(
 }
 
 /** calls the exec method of Benders' decomposition to solve the subproblems.
- *  This method is only called from the Benders' decomposition constraint handler
+ *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
+ *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
+ *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
+ *  solution feasibility.
  */
 SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */

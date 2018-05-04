@@ -1989,10 +1989,17 @@ SCIP_RETCODE generateBendersCuts(
    return SCIP_OKAY;
 }
 
-/** solves the subproblem using the current master problem solution. */
-/*  TODO: consider allowing the possibility to pass solution information back from the subproblems instead of the scip
+/** solves the subproblem using the current master problem solution.
+ *
+ *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
+ *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
+ *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
+ *  solution feasibility.
+ *
+ *  TODO: consider allowing the possibility to pass solution information back from the subproblems instead of the scip
  *  instance. This would allow the use of different solvers for the subproblems, more importantly allowing the use of an
- *  LP solver for LP subproblems. */
+ *  LP solver for LP subproblems.
+ */
 SCIP_RETCODE SCIPbendersExec(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */

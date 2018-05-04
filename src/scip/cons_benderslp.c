@@ -17,7 +17,7 @@
  * @brief  constraint handler for benderslp decomposition
  * @author Stephen J. Maher
  *
- * Two constriant handlers are implemented for the generation of Benders' decomposition
+ * Two constraint handlers are implemented for the generation of Benders' decomposition
  * cuts. When included in a problem, the Benders' decomposition constraint handlers
  * generate cuts during the enforcement of LP and relaxation solutions. Additionally,
  * Benders' decomposition cuts can be generated when checking the feasibility of
@@ -31,7 +31,7 @@
  *
  * A parameter is available to control the depth at which the non-integer LP solution are
  * enforced by solving the Benders' decomposition subproblems. This parameter is set to 0
- * by default, indiciating that non-integer LP solutions are enforced only at the root
+ * by default, indicating that non-integer LP solutions are enforced only at the root
  * node.
  */
 
@@ -193,7 +193,8 @@ SCIP_DECL_CONSLOCK(consLockBenderslp)
  * constraint specific interface methods
  */
 
-/** creates the handler for benderslp constraints and includes it in SCIP */
+/** creates the handler for executing the Benders' decomposition subproblem solve on fractional LP solution and
+ * includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrBenderslp(
    SCIP*                 scip                /**< SCIP data structure */
    )

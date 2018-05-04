@@ -17,7 +17,7 @@
  * @brief  constraint handler for benders decomposition
  * @author Stephen J. Maher
  *
- * Two constriant handlers are implemented for the generation of Benders' decomposition
+ * Two constraint handlers are implemented for the generation of Benders' decomposition
  * cuts. When included in a problem, the Benders' decomposition constraint handlers
  * generate cuts during the enforcement of LP and relaxation solutions. Additionally,
  * Benders' decomposition cuts can be generated when checking the feasibility of
@@ -171,7 +171,17 @@ SCIP_RETCODE constructValidSolution(
    return SCIP_OKAY;
 }
 
-/** the methods for the enforcement of solutions */
+/** the method for the enforcement of solutions
+ *  This method is called from cons_benderslp and cons_benders. If the method is called from cons_benderslp, then the
+ *  solutions are not guaranteed to be integer feasible. This is because the default priority is set greater than the
+ *  integer constraint handler. If this method is called from cons_benders, then, because the default enforcement
+ *  priority is set less than that of the integer constraint handler, then it can be assumed that the solutions are
+ *  integer feasible.
+ *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
+ *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
+ *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
+ *  solution feasibility.
+ */
 SCIP_RETCODE SCIPconsBendersEnforceSolution(
    SCIP*                 scip,               /**< the SCIP instance */
    SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
