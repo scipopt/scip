@@ -4344,9 +4344,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
           * the nlhdlr currently needs to recheck whether auxvar <= expr or auxvar >= expr is violated
           * and whether that corresponds to the relation that the nlhdlr tries to enforce
           */
-         if( expr->enfos[e]->auxvalue == SCIP_INVALID ||
+         if( expr->enfos[e]->auxvalue == SCIP_INVALID ||  /*lint !e777*/
             (SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
-            (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )  /*lint !e777*/
+            (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
          {
             SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &nlhdlrsuccess) );
             SCIPdebugMsg(scip, "branchscore of nlhdlr %s for expr %p (%s) with auxviolation %g: success = %d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), nlhdlrsuccess);
