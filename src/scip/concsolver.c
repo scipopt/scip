@@ -132,11 +132,9 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    assert(concsolversyncread != NULL);
 
    SCIP_CALL_FINALLY( doConcsolverTypeCreate(concsolvertype, set, messagehdlr, blkmem,
-                         name, prefpriodefault, concsolvercreateinst, concsolverdestroyinst,
-                         concsolverinitseeds, concsolverexec, concsolvercopysolvdata,
-                         concsolverstop, concsolversyncwrite, concsolversyncread,
-                         concsolvertypefreedata, data),
-                      SCIPconcsolverTypeFree(concsolvertype) );
+      name, prefpriodefault, concsolvercreateinst, concsolverdestroyinst, concsolverinitseeds, concsolverexec,
+      concsolvercopysolvdata, concsolverstop, concsolversyncwrite, concsolversyncread, concsolvertypefreedata, data),
+      SCIPconcsolverTypeFree(concsolvertype) );
 
    return SCIP_OKAY;
 }

@@ -844,10 +844,9 @@ SCIP_RETCODE SCIPnodeselCreate(
    assert(nodeselselect != NULL);
    assert(nodeselcomp != NULL);
 
-   SCIP_CALL_FINALLY( doNodeselCreate(nodesel, set, messagehdlr, blkmem, name, desc, stdpriority,
-                         memsavepriority, nodeselcopy, nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
-                         nodeselselect, nodeselcomp, nodeseldata),
-                      SCIPnodeselFree(nodesel, set));
+   SCIP_CALL_FINALLY( doNodeselCreate(nodesel, set, messagehdlr, blkmem, name, desc, stdpriority, memsavepriority,
+      nodeselcopy, nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol, nodeselselect, nodeselcomp,
+      nodeseldata), SCIPnodeselFree(nodesel, set));
 
    return SCIP_OKAY;
 }

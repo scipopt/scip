@@ -5238,7 +5238,8 @@ SCIP_RETCODE SCIPincludeReader(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, scip->set, name, desc, extension, readercopy, readerfree, readerread, readerwrite, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, scip->set, name, desc, extension, readercopy, readerfree, readerread,
+      readerwrite, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    return SCIP_OKAY;

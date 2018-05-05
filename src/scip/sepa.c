@@ -215,10 +215,9 @@ SCIP_RETCODE SCIPsepaCreate(
    assert(0.0 <= maxbounddist && maxbounddist <= 1.0);
    assert(sepaexeclp != NULL || sepaexecsol != NULL);
 
-   SCIP_CALL_FINALLY( doSepaCreate(sepa, set, messagehdlr, blkmem, name, desc, priority, freq, maxbounddist, usessubscip,
-                         delay, sepacopy, sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol,
-                         sepaexeclp, sepaexecsol, sepadata),
-                      SCIPsepaFree(sepa, set) );
+   SCIP_CALL_FINALLY( doSepaCreate(sepa, set, messagehdlr, blkmem, name, desc, priority, freq, maxbounddist,
+      usessubscip, delay, sepacopy, sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp,
+      sepaexecsol, sepadata), SCIPsepaFree(sepa, set) );
 
    return SCIP_OKAY;
 }

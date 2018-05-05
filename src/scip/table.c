@@ -142,11 +142,9 @@ SCIP_RETCODE SCIPtableCreate(
    assert(desc != NULL);
    assert(tableoutput != NULL);
 
-   SCIP_CALL_FINALLY( doTableCreate(table, set, messagehdlr, blkmem,
-                         name, desc, active, tablecopy,
-                         tablefree, tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata,
-                         position, earlieststage),
-                      SCIPtableFree(table, set) );
+   SCIP_CALL_FINALLY( doTableCreate(table, set, messagehdlr, blkmem, name, desc, active, tablecopy, tablefree,
+      tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata, position, earlieststage),
+      SCIPtableFree(table, set) );
 
    return SCIP_OKAY;
 }

@@ -191,10 +191,9 @@ SCIP_RETCODE SCIPpresolCreate(
    assert(name != NULL);
    assert(desc != NULL);
 
-   SCIP_CALL_FINALLY( doPresolCreate(presol, set, messagehdlr, blkmem, name, desc, priority,
-                         maxrounds, timing, presolcopy,
-                         presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata),
-                      SCIPpresolFree(presol, set) );
+   SCIP_CALL_FINALLY( doPresolCreate(presol, set, messagehdlr, blkmem, name, desc, priority, maxrounds, timing,
+      presolcopy, presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata), 
+      SCIPpresolFree(presol, set) );
 
    return SCIP_OKAY;
 }

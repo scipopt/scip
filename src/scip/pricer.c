@@ -186,10 +186,9 @@ SCIP_RETCODE SCIPpricerCreate(
    assert(desc != NULL);
    assert(pricerredcost != NULL);
 
-   SCIP_CALL_FINALLY( doPricerCreate(pricer, set, messagehdlr, blkmem,
-                         name, desc, priority, delay, pricercopy, pricerfree, pricerinit,
-                         pricerexit, pricerinitsol, pricerexitsol, pricerredcost, pricerfarkas, pricerdata),
-                      SCIPpricerFree(pricer ,set) );
+   SCIP_CALL_FINALLY( doPricerCreate(pricer, set, messagehdlr, blkmem, name, desc, priority, delay, pricercopy,
+      pricerfree, pricerinit, pricerexit, pricerinitsol, pricerexitsol, pricerredcost, pricerfarkas, pricerdata),
+      SCIPpricerFree(pricer ,set) );
 
    return SCIP_OKAY;
 }

@@ -263,11 +263,9 @@ SCIP_RETCODE SCIPpropCreate(
    assert(freq >= -1);
    assert(propexec != NULL);
 
-   SCIP_CALL_FINALLY( doPropCreate(prop, set, messagehdlr, blkmem,
-                         name, desc, priority, freq, delay, timingmask, presolpriority, presolmaxrounds, presoltiming,
-                         propcopy, propfree, propinit, propexit, propinitpre, propexitpre, propinitsol, propexitsol,
-                         proppresol, propexec, propresprop, propdata),
-                      SCIPpropFree(prop, set) );
+   SCIP_CALL_FINALLY( doPropCreate(prop, set, messagehdlr, blkmem, name, desc, priority, freq, delay, timingmask,
+      presolpriority, presolmaxrounds, presoltiming, propcopy, propfree, propinit, propexit, propinitpre, propexitpre,
+      propinitsol, propexitsol, proppresol, propexec, propresprop, propdata), SCIPpropFree(prop, set) );
 
    return SCIP_OKAY;
 }

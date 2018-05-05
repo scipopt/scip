@@ -167,11 +167,9 @@ SCIP_RETCODE SCIPdispCreate(
    assert(dispoutput != NULL);
    assert(width >= 0);
 
-   SCIP_CALL_FINALLY( doDispCreate(disp, set, messagehdlr, blkmem,
-                               name, desc, header, dispstatus, dispcopy,
-                               dispfree, dispinit, dispexit, dispinitsol, dispexitsol, dispoutput, dispdata,
-                               width, priority, position, stripline),
-                      SCIPdispFree(disp, set) );
+   SCIP_CALL_FINALLY( doDispCreate(disp, set, messagehdlr, blkmem, name, desc, header, dispstatus, dispcopy,
+      dispfree, dispinit, dispexit, dispinitsol, dispexitsol, dispoutput, dispdata, width, priority, position,
+      stripline), SCIPdispFree(disp, set) );
 
    return SCIP_OKAY;
 }

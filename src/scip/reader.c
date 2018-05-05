@@ -119,9 +119,8 @@ SCIP_RETCODE SCIPreaderCreate(
    assert(desc != NULL);
    assert(extension != NULL);
 
-   SCIP_CALL_FINALLY( doReaderCreate(reader, name, desc, extension,
-                        readercopy, readerfree, readerread, readerwrite, readerdata),
-                      SCIPreaderFree(reader, set) );
+   SCIP_CALL_FINALLY( doReaderCreate(reader, name, desc, extension, readercopy, readerfree, readerread, readerwrite,
+      readerdata), SCIPreaderFree(reader, set) );
 
    return SCIP_OKAY;
 }

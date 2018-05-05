@@ -249,7 +249,7 @@ SCIP_RETCODE SCIPbanditvtableCreate(
    assert(banditreset != NULL);
 
    SCIP_CALL_FINALLY( doBanditvtableCreate(banditvtable, name, banditfree, banditselect, banditupdate, banditreset),
-                      SCIPbanditvtableFree(banditvtable) );
+      SCIPbanditvtableFree(banditvtable) );
 
    return SCIP_OKAY;
 }

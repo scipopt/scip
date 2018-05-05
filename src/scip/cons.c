@@ -2326,14 +2326,13 @@ SCIP_RETCODE SCIPconshdlrCreate(
    assert(eagerfreq >= -1);
    assert(!needscons || ((conshdlrcopy == NULL) == (conscopy == NULL)));
 
-   SCIP_CALL_FINALLY( doConshdlrCreate(conshdlr, set, messagehdlr, blkmem,
-                         name, desc, sepapriority, enfopriority, checkpriority, sepafreq, propfreq, eagerfreq, maxprerounds,
-                         delaysepa, delayprop, needscons, proptiming, presoltiming, conshdlrcopy, consfree, consinit, consexit,
-                         consinitpre, consexitpre, consinitsol, consexitsol, consdelete, constrans, consinitlp, conssepalp,
-                         conssepasol, consenfolp, consenforelax, consenfops, conscheck, consprop, conspresol, consresprop,
-                         conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
-                         conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
-                      SCIPconshdlrFree(conshdlr, set) );
+   SCIP_CALL_FINALLY( doConshdlrCreate(conshdlr, set, messagehdlr, blkmem, name, desc, sepapriority, enfopriority,
+      checkpriority, sepafreq, propfreq, eagerfreq, maxprerounds, delaysepa, delayprop, needscons, proptiming,
+      presoltiming, conshdlrcopy, consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
+      consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck,
+      consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars,
+      consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
+      SCIPconshdlrFree(conshdlr, set) );
 
    return SCIP_OKAY;
 } /*lint !e715*/
