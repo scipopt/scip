@@ -4988,7 +4988,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
    if( expr->auxvar != NULL )
    {
       SCIP_RESULT separesult;
-      SCIP_Real violation;
       SCIP_Real auxvarvalue;
       SCIP_Bool underestimate;
       SCIP_Bool overestimate;
@@ -5008,36 +5007,17 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       /* compute violation and decide whether under- or overestimate is required */
       if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
       {
-         /* the expression could be evaluated, then look how much it is violation */
+         /* the expression could be evaluated, then look how much and on which side it is violated */
 
          /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
-         if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > 0.0 )
-         {
-            violation = auxvarvalue - expr->evalvalue;
-            overestimate = violation > sepadata->minviolation;
-         }
-         else
-         {
-            violation = 0.0;
-            overestimate = FALSE;
-         }
+         overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > sepadata->minviolation;
 
          /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
-         if( SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > 0.0 )
-         {
-            assert(!overestimate); /* because that would mean auxvarvalue - evalvalue > 0 */
-            violation = expr->evalvalue - auxvarvalue;
-            underestimate = violation > sepadata->minviolation;
-         }
-         else
-         {
-            underestimate = FALSE;
-         }
+         underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > sepadata->minviolation;
       }
       else
       {
          /* if expression could not be evaluated, then both under- and overestimate should be considered */
-         violation = SCIPinfinity(scip);
          overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
          underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
       }
