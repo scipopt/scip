@@ -4534,7 +4534,7 @@ SCIP_RETCODE registerBranchingCandidates(
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
             assert(var != NULL);
 
-            /* introduce all variables which do not have been fixed yet and appear in some violated expressions (=have a branching score > 0) */
+            /* introduce variable if it has not been fixed yet and has a branching score > 0 */
             if( !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
             {
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
@@ -4546,6 +4546,57 @@ SCIP_RETCODE registerBranchingCandidates(
 
    return SCIP_OKAY;
 }
+
+/** registers all unfixed variables in violated constraints as branching candidates */
+static
+SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   int c;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nnotify != NULL);
+
+   *nnotify = 0;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL && conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* consider only violated constraints */
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      /* register all variables that have not been fixed yet */
+      assert(consdata->varexprs != NULL);
+      for( i = 0; i < consdata->nvarexprs; ++i )
+      {
+         var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+         assert(var != NULL);
+
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+            ++(*nnotify);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** expression walk callback to install nlhdlrs in expressions */
 static
@@ -5379,12 +5430,23 @@ SCIP_RETCODE enforceConstraints(
 
    if( nnotify == 0 )
    {
-      SCIPwarningMessage(scip, "enforcement with max. violation %g, auxviolation %g, failed; cutting off node\n", maxviol, maxauxviolation);
+      SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
+
       /* could not find branching candidates even when looking at minimal violated (>eps) expressions
-       * for now, cut off the node
-       * @todo more fallbacks, e.g., branch on any unfixed nonlinear variable in a still violated constraint,
-       * then introduce linear constraints that are obtained by replacing all fixed non-linear variables (as it is done in cons_nonlinear)
+       * now look if we find any unfixed variable that we could still branch on
        */
+      SCIP_CALL( registerBranchingCandidatesAllUnfixed(scip, conshdlr, conss, nconss, &nnotify) );
+      SCIPdebugMsg(scip, "registered %d unfixed variables as branching candidates", nnotify);
+   }
+
+   if( nnotify == 0 )
+   {
+      /* if everything is fixed in violated constraints, then let's cut off the node
+       * either bound tightening failed to identify a possible cutoff due to tolerances
+       * or the LP solution that we try to enforce here is not within bounds (see st_e40)
+       * TODO if there is a gap left and LP solution is not within bounds, then pass modified LP solution to heur_trysol?
+       */
+      SCIPdebugMsg(scip, "enforcement with max. violation %g, auxviolation %g, failed; cutting off node\n", maxviol, maxauxviolation);
       *result = SCIP_CUTOFF;
    }
 
