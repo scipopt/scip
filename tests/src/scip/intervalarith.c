@@ -67,3 +67,47 @@ Test(intervalarith, issue1861)
       ybnds               /**< bounds on y */
       );
  }
+
+
+Test(intervalarith, issue2250)
+{
+   SCIP_Real             infinity;
+   SCIP_INTERVAL         resultant;
+   SCIP_Real             ax;
+   SCIP_Real             ay;
+   SCIP_Real             axy;
+   SCIP_Real             bx;
+   SCIP_Real             by;
+   SCIP_INTERVAL         rhs;
+   SCIP_INTERVAL         xbnds;
+   SCIP_INTERVAL         ybnds;
+
+   infinity = 1e43;
+   ax = 1;
+   ay = 0;
+   axy = 1;
+   bx = -2;
+   by = -6;
+   SCIPintervalSetBounds(&rhs, -infinity, 0.0);
+   SCIPintervalSetBounds(&xbnds, 0.0, infinity);
+   SCIPintervalSetBounds(&ybnds, 0.0, infinity);
+
+   /* x=y=4 is feasible for this equation, so x=4 should be part of the solution of this equation */
+   cr_assert(ax*4*4 + bx*4 + ay*4*4 + by*4 + axy*4*4 <= 1e-12);
+
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(
+      infinity,           /**< value for infinity in interval arithmetics */
+      &resultant,         /**< buffer where to store result of operation */
+      ax,                 /**< square coefficient of x */
+      ay,                 /**< square coefficient of y */
+      axy,                /**< bilinear coefficients */
+      bx,                 /**< linear coefficient of x */
+      by,                 /**< linear coefficient of y */
+      rhs,                /**< right-hand-side of equation */
+      xbnds,              /**< bounds on x */
+      ybnds               /**< bounds on y */
+      );
+
+   cr_assert(resultant.inf <= 4.0);
+   cr_assert(resultant.sup >= 4.0);
+}
