@@ -265,6 +265,7 @@ typedef struct
    SCIP_SOL*               sol;              /**< solution (NULL for current the LP solution) */
    SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger branching score */
    unsigned int            brscoretag;       /**< branching score tag */
+   SCIP_Bool               evalauxvalues;    /**< whether auxiliary values of expressions need to be evaluated */
 } BRSCORE_DATA;
 
 struct SCIP_ConsExpr_PrintDotData
@@ -4328,6 +4329,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
 
+         /* update auxvalue as corresponding to nlhdlr, if necessary */
+         if( brscoredata->evalauxvalues )
+         {
+            SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, brscoredata->sol) );
+         }
+
          /* if there is violation w.r.t. auxiliary variables, then call brscore of nlhdlr
           * the nlhdlr currently needs to recheck whether auxvar <= expr or auxvar >= expr is violated
           * and whether that corresponds to the relation that the nlhdlr tries to enforce
@@ -4406,6 +4413,7 @@ SCIP_RETCODE computeBranchingScores(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
+   SCIP_Bool             evalauxvalues,      /**< whether auxiliary values of expressions need to be evaluated */
    SCIP_SOL*             sol                 /**< solution to branch on (NULL for LP solution) */
    )
 {
@@ -4425,6 +4433,7 @@ SCIP_RETCODE computeBranchingScores(
    brscoredata.sol = sol;
    brscoredata.minviolation = minviolation;
    brscoredata.brscoretag = ++(conshdlrdata->lastbrscoretag);
+   brscoredata.evalauxvalues = evalauxvalues;
 
    /* call branching score callbacks for expressions in violated constraints */
    for( i = 0; i < nconss; ++i )
@@ -4471,6 +4480,7 @@ SCIP_RETCODE registerBranchingCandidates(
    int                   nconss,             /**< number of constraints to check */
    SCIP_SOL*             sol,                /**< solution to branch on (NULL for LP solution) */
    SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
+   SCIP_Bool             evalauxvalues,      /**< whether auxiliary values of expressions need to be evaluated */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -4490,7 +4500,7 @@ SCIP_RETCODE registerBranchingCandidates(
    *nnotify = 0;
 
    /* compute branching scores by considering violation of all expressions */
-   SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, minviolation, sol) );
+   SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, minviolation, evalauxvalues, sol) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5336,7 +5346,7 @@ SCIP_RETCODE enforceConstraints(
          return SCIP_OKAY;
 
       /* find branching candidates */
-      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, minviolation, &nnotify) );
+      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, minviolation, FALSE, &nnotify) );
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
       /* if no cut or branching candidate, then try less violated expressions
@@ -6189,10 +6199,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
       return SCIP_OKAY;
    }
 
-   /* FIXME auxvarvalues in expr enforcedata are not uptodate here, since no separation called! */
-
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, SCIPfeastol(scip), &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, SCIPfeastol(scip), TRUE, &nnotify) );
    SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
    *result = nnotify == 0 ? SCIP_SOLVELP : SCIP_INFEASIBLE;
