@@ -719,6 +719,7 @@ set(scipheaders
     scip/type_conflict.h
     scip/type_conflictstore.h
     scip/type_cons.h
+    scip/type_cons_expr.h
     scip/type_cutpool.h
     scip/type_cuts.h
     scip/type_dialog.h
