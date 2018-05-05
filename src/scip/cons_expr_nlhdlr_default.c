@@ -162,7 +162,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxDefault)
-{
+{ /*lint --e{715}*/
    assert(expr != NULL);
    assert(auxvalue != NULL);
 

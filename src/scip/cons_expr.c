@@ -4346,7 +4346,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
           */
          if( expr->enfos[e]->auxvalue == SCIP_INVALID ||
             (SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
-            (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
+            (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )  /*lint !e777*/
          {
             SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &nlhdlrsuccess) );
             SCIPdebugMsg(scip, "branchscore of nlhdlr %s for expr %p (%s) with auxviolation %g: success = %d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), nlhdlrsuccess);
@@ -5038,7 +5038,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sepadata->sol) );
 
          /* update maxauxviolation */
-         if( expr->enfos[e]->auxvalue == SCIP_INVALID )
+         if( expr->enfos[e]->auxvalue == SCIP_INVALID )  /*lint !e777*/
             sepadata->maxauxviolation = SCIPinfinity(scip);
          else if( overestimate && auxvarvalue - expr->enfos[e]->auxvalue > sepadata->maxauxviolation )
             sepadata->maxauxviolation = auxvarvalue - expr->enfos[e]->auxvalue;
@@ -5046,7 +5046,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             sepadata->maxauxviolation = expr->enfos[e]->auxvalue - auxvarvalue;
 
          /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
-         if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > sepadata->minviolation) )
+         if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > sepadata->minviolation) )  /*lint !e777*/
          {
             /* call the separation callback of the nonlinear handler for overestimation */
             SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
@@ -5062,7 +5062,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
                underestimate = FALSE;
          }
 
-         if( underestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > sepadata->minviolation) )
+         if( underestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > sepadata->minviolation) )  /*lint !e777*/
          {
             /* call the separation callback of the nonlinear handler for underestimation */
             SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
@@ -10078,7 +10078,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
    {
       SCIP_Real auxvaluetest;
       SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
-      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */
+      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
    }
 #endif
 
@@ -10176,7 +10176,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
    {
       SCIP_Real auxvaluetest;
       SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
-      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */
+      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
    }
 #endif
 

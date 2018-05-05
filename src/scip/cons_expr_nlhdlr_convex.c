@@ -169,7 +169,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 /** auxiliary evaluation callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
-{
+{ /*lint --e{715}*/
    assert(auxvalue != NULL);
    assert(expr != NULL);
 
@@ -217,7 +217,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
 
    /* compute g(x*) */
    constant = SCIPgetConsExprExprValue(expr);
-   assert(auxvalue == constant); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value */
+   assert(auxvalue == constant); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value */  /*lint !e777*/
 
    /* evaluation error or a too large constant -> skip */
    if( SCIPisInfinity(scip, REALABS(constant)) )
@@ -324,7 +324,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
    assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-   assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */
+   assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->varexprs != NULL);
    assert(nlhdlrexprdata->nvarexprs > 0);
