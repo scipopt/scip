@@ -1118,10 +1118,11 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
       SCIPfreeRowprep(scip, &cuts[i]);
    }
 
-   /* if we stopped due to infeasibilility, free remaining cuts */
+   /* if we stopped due to infeasibility, free remaining cuts */
    for( ; i < 4; ++i )
    {
-      SCIPfreeRowprep(scip, &cuts[i]);
+      if( cuts[i] != NULL )
+         SCIPfreeRowprep(scip, &cuts[i]);
    }
 
    return SCIP_OKAY;
