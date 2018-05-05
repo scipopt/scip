@@ -5029,6 +5029,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             violation = expr->evalvalue - auxvarvalue;
             underestimate = violation > sepadata->minviolation;
          }
+         else
+         {
+            underestimate = FALSE;
+         }
       }
       else
       {
