@@ -251,6 +251,7 @@ typedef struct
 {
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
    SCIP_SOL*               sol;              /**< solution to separate (NULL for separating the LP solution) */
+   unsigned int            soltag;           /**< tag of solution */
    SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger separation */
    SCIP_Real               mincutviolation;  /**< minimal violation of a cut if it should be added to the LP */
    SCIP_RESULT             result;           /**< buffer to store a result */
@@ -263,6 +264,7 @@ typedef struct
 typedef struct
 {
    SCIP_SOL*               sol;              /**< solution (NULL for current the LP solution) */
+   unsigned int            soltag;           /**< solution tag */
    SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger branching score */
    unsigned int            brscoretag;       /**< branching score tag */
    SCIP_Bool               evalauxvalues;    /**< whether auxiliary values of expressions need to be evaluated */
@@ -4296,6 +4298,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       return SCIP_OKAY;
    }
 
+   /* make sure expression has been evaluated, so evalvalue makes sense */
+   SCIP_CALL( SCIPevalConsExprExpr(scip, expr, brscoredata->sol, brscoredata->soltag) );
+
    auxvarvalue = SCIPgetSolVal(scip, brscoredata->sol, expr->auxvar);
 
    /* compute violation w.r.t. original variables */
@@ -4414,7 +4419,8 @@ SCIP_RETCODE computeBranchingScores(
    int                   nconss,             /**< number of constraints */
    SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
    SCIP_Bool             evalauxvalues,      /**< whether auxiliary values of expressions need to be evaluated */
-   SCIP_SOL*             sol                 /**< solution to branch on (NULL for LP solution) */
+   SCIP_SOL*             sol,                /**< solution to branch on (NULL for LP solution) */
+   unsigned int          soltag              /**< solution tag */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -4431,6 +4437,7 @@ SCIP_RETCODE computeBranchingScores(
    assert(conshdlrdata != NULL);
 
    brscoredata.sol = sol;
+   brscoredata.soltag = soltag;
    brscoredata.minviolation = minviolation;
    brscoredata.brscoretag = ++(conshdlrdata->lastbrscoretag);
    brscoredata.evalauxvalues = evalauxvalues;
@@ -4479,6 +4486,7 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
    SCIP_SOL*             sol,                /**< solution to branch on (NULL for LP solution) */
+   unsigned int          soltag,             /**< solution tag */
    SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
    SCIP_Bool             evalauxvalues,      /**< whether auxiliary values of expressions need to be evaluated */
    int*                  nnotify             /**< counter for number of notifications performed */
@@ -4500,7 +4508,7 @@ SCIP_RETCODE registerBranchingCandidates(
    *nnotify = 0;
 
    /* compute branching scores by considering violation of all expressions */
-   SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, minviolation, evalauxvalues, sol) );
+   SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, minviolation, evalauxvalues, sol, soltag) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4943,6 +4951,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
 
       auxvarvalue = SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
 
+      /* make sure that this expression has been evaluated */
+      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sepadata->sol, sepadata->soltag) );
+
       /* compute violation and decide whether under- or overestimate is required */
       if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
       {
@@ -5120,6 +5131,7 @@ SCIP_RETCODE separatePoint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   unsigned int          soltag,             /**< tag of solution */
    SCIP_Real             minviolation,       /**< minimal violation in an expression to call separation */
    SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
    SCIP_RESULT*          result,             /**< result of separation */
@@ -5145,6 +5157,7 @@ SCIP_RETCODE separatePoint(
    /* initialize separation data */
    sepadata.conshdlr = conshdlr;
    sepadata.sol = sol;
+   sepadata.soltag = soltag;
    sepadata.minviolation = minviolation;
    sepadata.mincutviolation = mincutviolation;
    sepadata.maxauxviolation = 0.0;
@@ -5157,11 +5170,14 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* skip constraints that are not enabled; skip non-violated constraints */
-      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c])
-         || SCIPisLE(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+      /* skip constraints that are not enabled */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
+
+      /* skip non-violated constraints */
+      if( SCIPisLE(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+         continue;
 
       #ifdef SEPA_DEBUG
       {
@@ -5296,6 +5312,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_Real maxauxviolation;
    SCIP_RESULT propresult;
    SCIP_Bool force;
+   unsigned int soltag;
    int nnotify;
    int nchgbds;
    int ndelconss;
@@ -5305,6 +5322,7 @@ SCIP_RETCODE enforceConstraints(
    assert(conshdlr != NULL);
 
    maxviol = 0.0;
+   soltag = ++conshdlrdata->lastsoltag;
 
    /* force tightenings when calling enforcement for the first time for a node */
    force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
@@ -5312,7 +5330,7 @@ SCIP_RETCODE enforceConstraints(
 
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
       consdata = SCIPconsGetData(conss[c]);
 
       /* compute max violation */
@@ -5340,13 +5358,13 @@ SCIP_RETCODE enforceConstraints(
    do
    {
       /* try to separate the LP solution */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minviolation, SCIPfeastol(scip), result, &maxauxviolation) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, minviolation, SCIPfeastol(scip), result, &maxauxviolation) );
 
       if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
          return SCIP_OKAY;
 
       /* find branching candidates */
-      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, minviolation, FALSE, &nnotify) );
+      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, soltag, minviolation, FALSE, &nnotify) );
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
       /* if no cut or branching candidate, then try less violated expressions
@@ -6093,21 +6111,28 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   unsigned int soltag;
    int c;
 
    *result = SCIP_DIDNOTFIND;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   soltag = ++conshdlrdata->lastsoltag;
 
    /* compute violations */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss[c] != NULL);
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
    }
 
    /* call separation
     * TODO revise minviolation, should it be larger than feastol?
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6117,21 +6142,28 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   unsigned int soltag;
    int c;
 
    *result = SCIP_DIDNOTFIND;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   soltag = ++conshdlrdata->lastsoltag;
 
    /* compute violations */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss[c] != NULL);
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
    }
 
    /* call separation
     * TODO revise minviolation, should it be larger than feastol?
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6163,6 +6195,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool force;
+   unsigned int soltag;
    int nchgbds;
    int ndelconss;
    int nnotify;
@@ -6172,10 +6205,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    force = conshdlrdata->lastenfopsnodenum == SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
    conshdlrdata->lastenfopsnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
+   soltag = ++conshdlrdata->lastsoltag;
+
    *result = SCIP_FEASIBLE;
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
 
       consdata = SCIPconsGetData(conss[c]);
       if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
@@ -6200,7 +6235,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    }
 
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, SCIPfeastol(scip), TRUE, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, soltag, SCIPfeastol(scip), TRUE, &nnotify) );
    SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
    *result = nnotify == 0 ? SCIP_SOLVELP : SCIP_INFEASIBLE;
