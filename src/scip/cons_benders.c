@@ -17,24 +17,20 @@
  * @brief  constraint handler for benders decomposition
  * @author Stephen J. Maher
  *
- * Two constraint handlers are implemented for the generation of Benders' decomposition
- * cuts. When included in a problem, the Benders' decomposition constraint handlers
- * generate cuts during the enforcement of LP and relaxation solutions. Additionally,
- * Benders' decomposition cuts can be generated when checking the feasibility of
- * solutions with respect to the subproblem constraints.
+ * Two constraint handlers are implemented for the generation of Benders' decomposition cuts. When included in a
+ * problem, the Benders' decomposition constraint handlers generate cuts during the enforcement of LP and relaxation
+ * solutions. Additionally, Benders' decomposition cuts can be generated when checking the feasibility of solutions with
+ * respect to the subproblem constraints.
  *
- * This constraint handler has an enforcement priority that is less than the integer
- * constraint handler. This means that only integer feasible solutions from the LP solver
- * are enforced by this constraint handler. This is the traditional behaviour of the
- * branch-and-check approach to Benders' decomposition. Additionally, the check priority
- * is set low, such that this expensive constraint handler is only called as a final check
- * on primal feasible solutions.
+ * This constraint handler has an enforcement priority that is less than the integer constraint handler. This means that
+ * only integer feasible solutions from the LP solver are enforced by this constraint handler. This is the traditional
+ * behaviour of the branch-and-check approach to Benders' decomposition. Additionally, the check priority is set low,
+ * such that this expensive constraint handler is only called as a final check on primal feasible solutions.
  *
- * This constraint handler in the standard constraint handler that should be added when
- * using Benders' decomposition. Additionally, there is a flag in
- * SCIPincludeConshdlrBenders that permits the addition of the LP constraint handler,
- * cons_benderslp. The use of both cons_benders and cons_benderslp allows the user to
- * perform a multiphase Benders' decomposition algorithm.
+ * This constraint handler in the standard constraint handler that should be added when using Benders' decomposition.
+ * Additionally, there is a flag in SCIPincludeConshdlrBenders that permits the addition of the LP constraint handler,
+ * cons_benderslp. The use of both cons_benders and cons_benderslp allows the user to perform a multiphase Benders'
+ * decomposition algorithm.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
