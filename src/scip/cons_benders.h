@@ -38,8 +38,7 @@ extern "C" {
  * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             twophase            /**< should the two phase method be used? */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@addtogroup CONSHDLRS

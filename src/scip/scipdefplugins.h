@@ -46,6 +46,8 @@
 #include "scip/compr_weakcompr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
+#include "scip/cons_benders.h"
+#include "scip/cons_benderslp.h"
 #include "scip/cons_bivariate.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_cardinality.h"
