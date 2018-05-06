@@ -14745,7 +14745,9 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
             goto TERMINATE;
          }
 
-         /* treat dual multipliers as zero that are zero within tolerances (see above) but slighty positive / negative */
+         /* dual multipliers, for which the corresponding row side in infinite, are treated as zero if they are zero
+          * within tolerances (see above) but slighty positive / negative
+          */
          if( (dualfarkas[r] > 0.0 && SCIPsetIsInfinity(set, -lpirows[r]->lhs))
             || (dualfarkas[r] < 0.0 && SCIPsetIsInfinity(set, lpirows[r]->rhs)) )
             continue;
