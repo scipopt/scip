@@ -68,7 +68,7 @@ struct SCIP_ConshdlrData
    int*                  checkedsols;        /**< an array of solutions that this constraint has already checked */
    int                   ncheckedsols;       /**< the number of checked solutions */
    int                   checkedsolssize;    /**< the size of the checked solutions array */
-   SCIP_Bool             active;             /**< is the constraint handler active? Changed by paramater setting. */
+   SCIP_Bool             active;             /**< is the constraint handler active? */
 };
 
 /*
@@ -169,12 +169,14 @@ SCIP_RETCODE constructValidSolution(
    return SCIP_OKAY;
 }
 
-/** the method for the enforcement of solutions
+/** enforces Benders' constraints for given solution
+ *
  *  This method is called from cons_benderslp and cons_benders. If the method is called from cons_benderslp, then the
  *  solutions are not guaranteed to be integer feasible. This is because the default priority is set greater than the
  *  integer constraint handler. If this method is called from cons_benders, then, because the default enforcement
  *  priority is set less than that of the integer constraint handler, then it can be assumed that the solutions are
  *  integer feasible.
+ *
  *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
  *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
  *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
@@ -412,10 +414,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenders)
 }
 
 
-/** feasibility check method of constraint handler for integral solutions */
-/*  This function checks the feasibility of the Benders' decomposition master problem. In the case that the problem is
+/** feasibility check method of constraint handler for integral solutions
+ *
+ *  This function checks the feasibility of the Benders' decomposition master problem. In the case that the problem is
  *  feasible, then the auxiliary variables must be updated with the subproblem objective function values. It is not
- *  possible to simply update the auxiliary variable values, so a new solution is created. */
+ *  possible to simply update the auxiliary variable values, so a new solution is created.
+ */
 static
 SCIP_DECL_CONSCHECK(consCheckBenders)
 {  /*lint --e{715}*/
@@ -507,8 +511,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 static
 SCIP_DECL_CONSLOCK(consLockBenders)
 {  /*lint --e{715}*/
-   //SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
-   //SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -547,6 +549,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenders) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenders) );
 
+   /* add Benders' decomposition constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition constraint handler active?",
          &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));

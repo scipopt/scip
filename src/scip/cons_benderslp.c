@@ -63,7 +63,7 @@
 struct SCIP_ConshdlrData
 {
    int                   maxdepth;           /**< the maximum depth at which Benders' cuts are generated from the LP */
-   SCIP_Bool             active;             /**< is the constraint handler active? Changed by paramater setting. */
+   SCIP_Bool             active;             /**< is the constraint handler active? */
 };
 
 
@@ -223,6 +223,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
          "constraints/" CONSHDLR_NAME "/maxdepth",
          "depth at which Benders' decomposition cuts are generated from the LP solution (-1: always, 0: only at root)",
          &conshdlrdata->maxdepth, TRUE, DEFAULT_CONSBENDERSLP_MAXDEPTH, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition LP cut constraint handler active?",
          &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
