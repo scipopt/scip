@@ -1377,7 +1377,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
 
    SCIP_CALL_FINALLY( doBranchruleCreate(branchrule, set, messagehdlr, blkmem, name, desc, priority, maxdepth,
       maxbounddist, branchcopy, branchfree, branchinit, branchexit, branchinitsol, branchexitsol, branchexeclp,
-      branchexecext, branchexecps, branchruledata), SCIPbranchruleFree(branchrule, set) );
+      branchexecext, branchexecps, branchruledata), (void) SCIPbranchruleFree(branchrule, set) );
 
    return SCIP_OKAY;
 }

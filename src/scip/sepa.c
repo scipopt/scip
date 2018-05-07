@@ -217,7 +217,7 @@ SCIP_RETCODE SCIPsepaCreate(
 
    SCIP_CALL_FINALLY( doSepaCreate(sepa, set, messagehdlr, blkmem, name, desc, priority, freq, maxbounddist,
       usessubscip, delay, sepacopy, sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp,
-      sepaexecsol, sepadata), SCIPsepaFree(sepa, set) );
+      sepaexecsol, sepadata), (void) SCIPsepaFree(sepa, set) );
 
    return SCIP_OKAY;
 }

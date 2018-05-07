@@ -120,7 +120,7 @@ SCIP_RETCODE SCIPreaderCreate(
    assert(extension != NULL);
 
    SCIP_CALL_FINALLY( doReaderCreate(reader, name, desc, extension, readercopy, readerfree, readerread, readerwrite,
-      readerdata), SCIPreaderFree(reader, set) );
+      readerdata), (void) SCIPreaderFree(reader, set) );
 
    return SCIP_OKAY;
 }

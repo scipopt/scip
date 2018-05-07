@@ -184,7 +184,7 @@ SCIP_RETCODE SCIPcomprCreate(
 
    SCIP_CALL_FINALLY( doComprCreate(compr, set, messagehdlr, blkmem, name, desc, priority, minnnodes,
       comprcopy, comprfree, comprinit, comprexit, comprinitsol, comprexitsol, comprexec, comprdata),
-      SCIPcomprFree(compr, set) );
+      (void) SCIPcomprFree(compr, set) );
 
    return SCIP_OKAY;
 }

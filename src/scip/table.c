@@ -144,7 +144,7 @@ SCIP_RETCODE SCIPtableCreate(
 
    SCIP_CALL_FINALLY( doTableCreate(table, set, messagehdlr, blkmem, name, desc, active, tablecopy, tablefree,
       tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata, position, earlieststage),
-      SCIPtableFree(table, set) );
+      (void) SCIPtableFree(table, set) );
 
    return SCIP_OKAY;
 }

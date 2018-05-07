@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPeventhdlrCreate(
    assert(set != NULL);
 
    SCIP_CALL_FINALLY( doEventhdlrCreate(eventhdlr, name, desc, eventcopy, eventfree, eventinit, eventexit,
-      eventinitsol, eventexitsol, eventdelete, eventexec, eventhdlrdata), SCIPeventhdlrFree(eventhdlr, set) );
+      eventinitsol, eventexitsol, eventdelete, eventexec, eventhdlrdata), (void) SCIPeventhdlrFree(eventhdlr, set) );
 
    return SCIP_OKAY;
 }

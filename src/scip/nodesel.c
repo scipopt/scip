@@ -846,7 +846,7 @@ SCIP_RETCODE SCIPnodeselCreate(
 
    SCIP_CALL_FINALLY( doNodeselCreate(nodesel, set, messagehdlr, blkmem, name, desc, stdpriority, memsavepriority,
       nodeselcopy, nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol, nodeselselect, nodeselcomp,
-      nodeseldata), SCIPnodeselFree(nodesel, set) );
+      nodeseldata), (void) SCIPnodeselFree(nodesel, set) );
 
    return SCIP_OKAY;
 }

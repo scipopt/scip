@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    assert(relaxexec != NULL);
 
    SCIP_CALL_FINALLY( doRelaxCreate(relax, set, messagehdlr, blkmem, name, desc, priority, freq, relaxcopy, relaxfree,
-      relaxinit, relaxexit, relaxinitsol, relaxexitsol, relaxexec, relaxdata), SCIPrelaxFree(relax, set) );
+      relaxinit, relaxexit, relaxinitsol, relaxexitsol, relaxexec, relaxdata), (void) SCIPrelaxFree(relax, set) );
 
    return SCIP_OKAY;
 }

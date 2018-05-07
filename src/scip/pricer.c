@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPpricerCreate(
 
    SCIP_CALL_FINALLY( doPricerCreate(pricer, set, messagehdlr, blkmem, name, desc, priority, delay, pricercopy,
       pricerfree, pricerinit, pricerexit, pricerinitsol, pricerexitsol, pricerredcost, pricerfarkas, pricerdata),
-      SCIPpricerFree(pricer ,set) );
+      (void) SCIPpricerFree(pricer ,set) );
 
    return SCIP_OKAY;
 }

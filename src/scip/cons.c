@@ -2036,7 +2036,6 @@ SCIP_RETCODE doConshdlrCreate(
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
    SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
-   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -2331,8 +2330,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
       presoltiming, conshdlrcopy, consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
       consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck,
       consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars,
-      consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
-      SCIPconshdlrFree(conshdlr, set) );
+      consprint, conscopy, consparse, consgetvars, consgetnvars, conshdlrdata),
+      (void) SCIPconshdlrFree(conshdlr, set) );
 
    return SCIP_OKAY;
 } /*lint !e715*/

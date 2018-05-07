@@ -823,7 +823,7 @@ SCIP_RETCODE SCIPheurCreate(
 
    SCIP_CALL_FINALLY( doHeurCreate(heur, set, messagehdlr, blkmem, name, desc, dispchar, priority, freq, freqofs,
       maxdepth, timingmask, usessubscip, heurcopy, heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec,
-      heurdata), SCIPheurFree(heur, set, blkmem) );
+      heurdata), (void) SCIPheurFree(heur, set, blkmem) );
 
    return SCIP_OKAY;
 }

@@ -169,7 +169,7 @@ SCIP_RETCODE SCIPdispCreate(
 
    SCIP_CALL_FINALLY( doDispCreate(disp, set, messagehdlr, blkmem, name, desc, header, dispstatus, dispcopy,
       dispfree, dispinit, dispexit, dispinitsol, dispexitsol, dispoutput, dispdata, width, priority, position,
-      stripline), SCIPdispFree(disp, set) );
+      stripline), (void) SCIPdispFree(disp, set) );
 
    return SCIP_OKAY;
 }

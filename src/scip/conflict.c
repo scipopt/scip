@@ -459,7 +459,7 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
 
    SCIP_CALL_FINALLY( doConflicthdlrCreate(conflicthdlr, set, messagehdlr, blkmem, name, desc, priority,
       conflictcopy, conflictfree, conflictinit, conflictexit, conflictinitsol, conflictexitsol, conflictexec,
-      conflicthdlrdata), SCIPconflicthdlrFree(conflicthdlr, set) );
+      conflicthdlrdata), (void) SCIPconflicthdlrFree(conflicthdlr, set) );
 
    return SCIP_OKAY;
 }

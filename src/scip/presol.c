@@ -193,7 +193,7 @@ SCIP_RETCODE SCIPpresolCreate(
 
    SCIP_CALL_FINALLY( doPresolCreate(presol, set, messagehdlr, blkmem, name, desc, priority, maxrounds, timing,
       presolcopy, presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata), 
-      SCIPpresolFree(presol, set) );
+      (void) SCIPpresolFree(presol, set) );
 
    return SCIP_OKAY;
 }
