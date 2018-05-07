@@ -898,8 +898,7 @@ SCIP_RETCODE readPolynomial(
          if( strcmp(pipinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            (void)strncpy(name, pipinput->tokenbuf, PIP_MAX_LINELEN);
-            name[PIP_MAX_LINELEN - 1] = '\0';
+            (void)SCIPstrncpy(name, pipinput->tokenbuf, PIP_MAX_LINELEN);
             SCIPdebugMsg(scip, "(line %d) read constraint name: '%s'\n", pipinput->linenumber, name);
          }
          else

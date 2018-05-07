@@ -514,8 +514,8 @@ public:
          spx_free(m_probname);
       len = (int) strlen(probname);
       spx_alloc(m_probname, len + 1);
-      strncpy(m_probname, probname, len); /*lint !e732*/
-      m_probname[len] = '\0';
+      /* safe to use strcpy */
+      (void)strcpy(m_probname, probname);
    }
 
    Real getObjLoLimit() const
