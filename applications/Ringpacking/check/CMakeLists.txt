@@ -4,7 +4,7 @@ include(CTest)
 # simple test instances for Ringpacking
 #
 set(instances
-  "circle6\;1"
+#  "circle6\;1"
   "ring1\;1"
   "ring2\;1"
   "ring3\;1"
