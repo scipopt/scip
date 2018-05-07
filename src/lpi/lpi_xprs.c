@@ -2787,7 +2787,6 @@ SCIP_RETCODE SCIPlpiGetIterations(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(lpi->solstat >= 0);
    assert(iterations != NULL);
 
    *iterations = lpi->iterations;
