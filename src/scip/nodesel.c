@@ -781,7 +781,7 @@ SCIP_RETCODE doNodeselCreate(
    assert(nodeselcomp != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nodesel) );
-   BMSfreeMemory(*nodesel);
+   BMSclearMemory(*nodesel);
 
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nodesel)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nodesel)->desc, desc, strlen(desc)+1) );
@@ -846,7 +846,7 @@ SCIP_RETCODE SCIPnodeselCreate(
 
    SCIP_CALL_FINALLY( doNodeselCreate(nodesel, set, messagehdlr, blkmem, name, desc, stdpriority, memsavepriority,
       nodeselcopy, nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol, nodeselselect, nodeselcomp,
-      nodeseldata), SCIPnodeselFree(nodesel, set));
+      nodeseldata), SCIPnodeselFree(nodesel, set) );
 
    return SCIP_OKAY;
 }
