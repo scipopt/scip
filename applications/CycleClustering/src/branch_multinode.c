@@ -130,7 +130,8 @@ SCIP_RETCODE branchOnBin(
    }
 
    /* create one child, were all the before upwards branched variables are now set to 0. Only do so if at least one
-    * upwards branching was done and if not all the variables were branched upwards */
+    * upwards branching was done and if not all the variables were branched upwards
+    */
    if( ncands > 0 && ncands < ncluster )
    {
       SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)ncands, minestzero) );

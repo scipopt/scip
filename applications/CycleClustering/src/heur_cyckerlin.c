@@ -68,7 +68,7 @@ SCIP_RETCODE addCandSolCyckerlin(
 
    heurdata = SCIPheurGetData(heur);
 
-   assert(heurdata != NULL );
+   assert(heurdata != NULL);
    assert(sol != NULL);
 
    /* realloc candidate array, if necessary */
@@ -109,7 +109,7 @@ SCIP_RETCODE getSolutionValues(
    binvars = SCIPcycGetBinvars(scip);
 
    assert(nbins > 0 && ncluster > 0 && nbins > ncluster);
-   assert(binvars != NULL );
+   assert(binvars != NULL);
 
    /* get the bin-variable values from the solution */
    for( i = 0; i < nbins; ++i )
@@ -566,8 +566,8 @@ SCIP_RETCODE permuteStartSolution(
    int* binsincluster;
    int **bins;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &binsincluster, ncluster) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &bins, ncluster) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binsincluster, ncluster) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bins, ncluster) );
 
    for( t = 0; t < ncluster; ++t )
    {
@@ -579,7 +579,7 @@ SCIP_RETCODE permuteStartSolution(
             binsincluster[t]++;
       }
 
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &bins[t], binsincluster[t]) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &bins[t], binsincluster[t]) ); /*lint !e866*/
 
       c = 0;
 
@@ -611,11 +611,11 @@ SCIP_RETCODE permuteStartSolution(
          pushed++;
       }
 
-      SCIPfreeMemoryArray(scip, &bins[t]);
+      SCIPfreeBufferArray(scip, &bins[t]);
    }
 
-   SCIPfreeMemoryArray(scip, &bins);
-   SCIPfreeMemoryArray(scip, &binsincluster);
+   SCIPfreeBufferArray(scip, &bins);
+   SCIPfreeBufferArray(scip, &binsincluster);
 
    return SCIP_OKAY;
 }
@@ -627,7 +627,7 @@ SCIP_RETCODE runCyckerlin(
    SCIP_HEUR*            heur,               /**< heuristic pointer */
    SCIP_SOL*             sol,                /**< given solution */
    SCIP_RESULT*          result              /**< result pointer */
-)
+   )
 {
    SCIP_Real** startclustering;
    SCIP_Bool** binfixed;
@@ -677,7 +677,7 @@ SCIP_RETCODE runCyckerlin(
       {
          SCIP_CALL( permuteStartSolution(scip, startclustering, rnd, nbins, ncluster) );
 
-         assert(isPartition(scip, startclustering, nbins, ncluster) );
+         assert(isPartition(scip, startclustering, nbins, ncluster));
 
          SCIP_CALL( createSwitchSolution(scip, heur, cmatrix, qmatrix, binfixed, startclustering, result, nbins, ncluster) );
       }

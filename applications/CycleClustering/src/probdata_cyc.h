@@ -83,7 +83,7 @@ SCIP_VAR**** SCIPcycGetEdgevars(
 extern
 SCIP_DIGRAPH* SCIPcycGetEdgeGraph(
    SCIP*                 scip                /**< SCIP data structure */
-);
+   );
 
 /** returns the number of scaling parameter */
 extern

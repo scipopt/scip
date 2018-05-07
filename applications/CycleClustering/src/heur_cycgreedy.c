@@ -107,7 +107,8 @@ void computeIrrevMat(
 }
 
 /** update the irreversibility matrix, after the clusterassignment[newcluster][newbin] was either set
- *  from 0 to 1 or from 1 to 0 */
+ *  from 0 to 1 or from 1 to 0
+ */
 static
 void updateIrrevMat(
    SCIP_Real**           clusterassignment,  /**< the matrix containing the (incomplete) clusterassignment */
@@ -148,7 +149,8 @@ void updateIrrevMat(
 }
 
 /** get the temporary objective value bound after newbin would be added to newcluster
- *  but dont not change anything with the clustering */
+ *  but dont not change anything with the clustering
+ */
 static
 SCIP_Real getTempObj(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -463,7 +465,7 @@ SCIP_DECL_HEUREXEC(heurExecCycGreedy)
    ncluster = SCIPcycGetNCluster(scip);
    binvars = SCIPcycGetBinvars(scip);
 
-   assert( nbins > 0 && ncluster > 0 );
+   assert(nbins > 0 && ncluster > 0);
 
    /* allocate memory for the assignment */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &clustering, nbins) );
@@ -488,7 +490,8 @@ SCIP_DECL_HEUREXEC(heurExecCycGreedy)
    }
 
    /* get the already fixed bin-variables from scip. An assignment of -1 one means unassigned.
-    * 0 is fixed to 0, 1 is fixed to 1 */
+    * 0 is fixed to 0, 1 is fixed to 1
+    */
    for( i = 0; i < nbins; ++i )
    {
       for( j = 0; j < ncluster; ++j )
@@ -552,7 +555,8 @@ SCIP_DECL_HEUREXEC(heurExecCycGreedy)
       }
 
       /* assert that the assignment is valid in the sense that it is a partition of the bins.
-       * Feasibility is not checked in this method */
+       * Feasibility is not checked in this method
+       */
       assert(isPartition(scip,clustering, nbins, ncluster));
 
       /* update the qmatrix */
@@ -593,7 +597,7 @@ SCIP_DECL_HEUREXEC(heurExecCycGreedy)
 /** creates the CycGreedy - primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurCycGreedy(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;

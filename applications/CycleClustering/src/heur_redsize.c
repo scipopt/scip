@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPreduceMatrixSize(
    SCIP_Real            percentile,          /**< the percentile of entries to be deleted */
    SCIP_Real            scale,               /**< scaling between net flow and coherence */
    int                  size                 /**< the size of the matrix */
-)
+   )
 {
    SCIP_Real* nonzeros;
    int*  idxnonzeros;
@@ -328,12 +328,12 @@ SCIP_DECL_HEURFREE(heurFreeRedsize)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* free heuristic data */
    SCIPfreeBlockMemory(scip, &heurdata);
@@ -371,7 +371,7 @@ SCIP_DECL_HEUREXEC(heurExecRedsize)
 /** creates the oneopt primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurRedsize(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;

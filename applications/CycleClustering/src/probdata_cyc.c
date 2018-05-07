@@ -118,7 +118,7 @@ SCIP_RETCODE assignVars(
                SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
             }
 
-            assert( SCIPisIntegral(scip, clustering[i][c]) );
+            assert(SCIPisIntegral(scip, clustering[i][c]));
          }
       }
 
@@ -455,7 +455,8 @@ SCIP_RETCODE createProbSimplified(
             continue;
 
          /* the general formulation is needed if there are more than 3 clusters. In the case of three clusters the
-          * formulation is simplified */
+          * formulation is simplified
+          */
          if( ncluster > 3 )
          {
             /* these edges are within a cluster */
@@ -529,7 +530,6 @@ SCIP_RETCODE createProbSimplified(
                SCIP_CALL( SCIPreleaseCons(scip, &temp) );
             }
          }
-
          /* some variables become obsolete with three clusters */
          else
          {
@@ -591,7 +591,9 @@ SCIP_RETCODE createProbSimplified(
          SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0) );
 
          for( c1 = 0; c1 < 2; ++c1 )
+         {
             SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1], 1.0) );
+         }
 
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][1], 1.0) );
 
@@ -607,7 +609,9 @@ SCIP_RETCODE createProbSimplified(
       SCIP_CALL( SCIPcreateConsBasicLogicor(scip, &temp, consname, 0, NULL) );
 
       for( i = 0; i < nbins; ++i )
+      {
          SCIP_CALL( SCIPaddCoefLogicor(scip, temp, probdata->binvars[i][c1]) );
+      }
 
       SCIP_CALL( SCIPaddCons(scip, temp) );
       SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -1281,7 +1285,7 @@ SCIP_RETCODE SCIPcreateProbCyc(
    char model;
 
    assert(nbins > 0);  /* at least one node */
-   assert( ncluster <= nbins);
+   assert(ncluster <= nbins);
 
    SCIP_CALL( SCIPcreateProbBasic(scip, name) );
 
@@ -1413,7 +1417,7 @@ SCIP_VAR*** SCIPcycGetBinvars(
 /** Returns the scaling parameter*/
 SCIP_Real SCIPcycGetScale(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_PROBDATA* probdata;
 
@@ -1446,7 +1450,7 @@ SCIP_VAR**** SCIPcycGetEdgevars(
 /** Returns the edge-graph */
 SCIP_DIGRAPH* SCIPcycGetEdgeGraph(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_PROBDATA* probdata;
 
@@ -1462,7 +1466,7 @@ SCIP_DIGRAPH* SCIPcycGetEdgeGraph(
 
 
 /** print the model-values like coherence in the clusters and transition-probabilities between clusters that are not
- * evident from the scip-solution
+ *  evident from the scip-solution
  */
 SCIP_RETCODE SCIPcycPrintSolutionValues(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1480,7 +1484,7 @@ SCIP_RETCODE SCIPcycPrintSolutionValues(
    int i;
    int j;
 
-   assert( scip!= NULL );
+   assert(scip!= NULL);
 
    probdata = SCIPgetProbData(scip);
 

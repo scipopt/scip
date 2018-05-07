@@ -98,7 +98,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
 
       for (k = 0; k < ncluster; ++k)
       {
-         assert( NULL != binvars[i][k]);
+         assert(NULL != binvars[i][k]);
          if( SCIPisGT(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) )
          {
             maxlpval = SCIPvarGetLPSol(binvars[i][k]);
