@@ -244,8 +244,8 @@ set(scipsources
     scip/matrix.c
     scip/mem.c
     scip/misc.c
-    scip/nlp.c
     scip/misc_linear.c
+    scip/nlp.c
     scip/nodesel.c
     scip/paramset.c
     scip/presol.c
