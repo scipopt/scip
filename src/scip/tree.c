@@ -6891,7 +6891,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occured an error
     * during resolving right above
     */
-   assert(!tree->probinglpwassolved || lp->solved || lp->resolvelperror);
+   assert(!tree->probinglpwassolved || !tree->probinglpwasflushed || lp->solved || lp->resolvelperror);
 
    /* if the LP was not solved before probing it should be marked unsolved now; this can occur if a probing LP was
     * solved in between

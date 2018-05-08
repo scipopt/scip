@@ -4025,7 +4025,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
 
    if( conshdlr->conspresol != NULL
       && (!conshdlr->needscons || conshdlr->nactiveconss > 0)
-      && (conshdlr->maxprerounds == -1 || nrounds < conshdlr->maxprerounds ) )
+      && (conshdlr->maxprerounds == -1 || conshdlr->npresolcalls < conshdlr->maxprerounds ) )
    {
       SCIPsetDebugMsg(set, "presolving %d constraints of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
 

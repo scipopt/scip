@@ -2981,7 +2981,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       /* skip until beginning of weight */
       while ( *s != '\0' && *s != '(' )
          ++s;
- 
+
       if ( *s == '\0' )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
@@ -3025,12 +3025,12 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
             return SCIP_OKAY;
          }
          s = t;
-              
+
          SCIP_CALL( SCIPchgCardvalCardinality(scip, *cons, cardval));
       }
    }
    while ( *s != '\0' );
-  
+
    return SCIP_OKAY;
 }
 

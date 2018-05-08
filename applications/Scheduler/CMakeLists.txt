@@ -18,7 +18,7 @@ add_executable(scheduler
 )
 
 target_link_libraries(scheduler ${SCIP_LIBRARIES})
-                                                 
+
 if( TARGET applications )
     add_dependencies( applications scheduler )
 endif()

@@ -239,7 +239,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # calculate depth
 
       # determine whether we are in an enum or struct (assume it is at the beginning of the line)
-      if ( $str =~ /^enum/ || $str =~ /^struct/ || $str =~ /\s*union/ )
+      if ( $str =~ /^enum/ || $str =~ /^struct/ || $str =~ /^typedef struct/ || $str =~ /\s*union/ )
       {
 	 ++($inenumstruct);
       }

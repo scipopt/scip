@@ -80,6 +80,8 @@ set(settings_fastMIP
     "cgmipviol"
     "presolving_off"
     "separating_off"
+    "lookahead-abbrev-bincons"
+    "lookahead-addclique-scaledcutoffscore"
   )
 set(settings_MINLP
     "minlp"
@@ -175,6 +177,7 @@ set(instances_MIP
 # Reduced set of MIP instances for more expensive settings
 #
 set(instances_fastMIP
+    "instances/MIP/bell5.mps\;8966406.49"
     "instances/MIP/egout.mps\;568.1007"
     "instances/MIP/gt2.mps\;21166"
     "instances/MIP/MANN_a9.clq.lp\;16"
@@ -683,7 +686,6 @@ if (UNIX)
     else ()
         set(timeoutcommand "timeout")
     endif (APPLE)
-
     add_test(NAME signal-handling-sigterm-blend2
             COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -f ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/blend2.mps
             )
