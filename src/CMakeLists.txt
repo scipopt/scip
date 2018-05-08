@@ -577,6 +577,8 @@ set(scipheaders
     scip/pub_bandit_epsgreedy.h
     scip/pub_bandit_exp3.h
     scip/pub_bandit_ucb.h
+    scip/pub_benders.h
+    scip/pub_benderscut.h
     scip/pub_compr.h
     scip/pub_conflict.h
     scip/pub_cons.h
@@ -667,6 +669,8 @@ set(scipheaders
     scip/solve.h
     scip/stat.h
     scip/struct_bandit.h
+    scip/struct_benders.h
+    scip/struct_benderscut.h
     scip/struct_branch.h
     scip/struct_clock.h
     scip/struct_compr.h
@@ -716,6 +720,8 @@ set(scipheaders
     scip/table.h
     scip/tree.h
     scip/type_bandit.h
+    scip/type_benders.h
+    scip/type_benderscut.h
     scip/type_branch.h
     scip/type_clock.h
     scip/type_compr.h
