@@ -2448,7 +2448,7 @@ SCIP_RETCODE SCIPbendersExec(
       SCIPerrorMessage("An error was found when generating all cuts for non-optimal subproblems of Benders' "
          "decomposition <%s>. The solution process will terminate.\n", SCIPbendersGetName(benders));
 
-      SCIPABORT();
+      /* TODO: It may be useful to have a SCIPABORT() here to break if an error is found during debug mode. */
       goto TERMINATE;
    }
 
