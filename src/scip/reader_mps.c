@@ -2437,6 +2437,7 @@ SCIP_RETCODE readIndicators(
       SCIPdebugMsg(scip, "created indicator constraint <%s>", mpsinputField2(mpsi));
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
    }
 
    return SCIP_OKAY;
