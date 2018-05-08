@@ -1638,6 +1638,7 @@ SCIP_RETCODE SCIPcopyPlugins(
  *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_FREE
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
  *        process was interrupted:
@@ -1668,8 +1669,8 @@ SCIP_RETCODE SCIPcopyBenders(
    assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyBenders", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyBenders", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    *valid = TRUE;
 
@@ -46807,61 +46808,6 @@ void SCIPprintConcsolverStatistics(
                                SCIPconcsolverGetNTighterBnds(concsolvers[i]),
                                SCIPconcsolverGetNTighterIntBnds(concsolvers[i])
                               );
-      }
-   }
-}
-
-/** display Benders' decomposition statistics */
-void SCIPprintBendersStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file */
-   )
-{
-   SCIP_BENDERS** benders;
-   int nbenders;
-   int i;
-
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintBendersStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   if( !SCIPgetNActiveBenders(scip) )
-      return;
-
-   nbenders = SCIPgetNBenders(scip);
-   benders = SCIPgetBenders(scip);
-
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Benders Decomp     :   ExecTime  SetupTime      Calls      Found   Transfer\n");
-   for( i = 0; i < nbenders; ++i )
-   {
-      if( SCIPbendersIsActive(benders[i]) )
-      {
-         SCIP_BENDERSCUT** benderscuts;
-         int nbenderscuts;
-         int j;
-
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
-            SCIPbendersGetName(scip->set->benders[i]),
-            SCIPbendersGetTime(scip->set->benders[i]),
-            SCIPbendersGetSetupTime(scip->set->benders[i]),
-            SCIPbendersGetNCalls(scip->set->benders[i]),
-            SCIPbendersGetNCutsFound(scip->set->benders[i]),
-            SCIPbendersGetNTransferredCuts(scip->set->benders[i]));
-
-
-         nbenderscuts = SCIPbendersGetNBenderscuts(scip->set->benders[i]);
-         benderscuts = SCIPbendersGetBenderscuts(scip->set->benders[i]);
-
-         for( j = 0; j < nbenderscuts; j++ )
-         {
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "    %-15.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          -\n",
-               SCIPbenderscutGetTime(benderscuts[j]),
-               SCIPbenderscutGetSetupTime(benderscuts[j]),
-               SCIPbenderscutGetName(benderscuts[j]),
-               SCIPbenderscutGetNCalls(benderscuts[j]),
-               SCIPbenderscutGetNFound(benderscuts[j]));
-         }
       }
    }
 }

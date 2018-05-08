@@ -2371,8 +2371,8 @@ SCIP_RETCODE buildDecompProblem(
    /* activating the Benders' constraint handler. The two-phase method is activated by default. If the user desires not
     * to use the two-phase method, then the setting in cons_benderslp must be explicitly changed.
     */
-   SCIP_CALL( SCIPsetBoolParam(scenarioscip, "constraints/benders/active", TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(scenarioscip, "constraints/benderslp/active", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benders/active", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benderslp/active", TRUE) );
 
    setScenarioScip(readerdata->scenariotree, scip);
 

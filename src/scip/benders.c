@@ -718,7 +718,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBendersPriority)
 /** creates a variable mapping between the master problem variables of the source scip and the sub scip */
 static
 SCIP_RETCODE createMasterVarMapping(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition of the target SCIP instance */
    SCIP_SET*             sourceset,          /**< global SCIP settings from the source SCIP */
    SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables; must not be NULL */
@@ -780,11 +780,6 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
    if( benders->benderscopy != NULL && targetset->benders_copybenders && SCIPbendersIsActive(benders) )
    {
-      /* When the Benders' decomposition is copied then a variable mapping between the master problem variables is
-       * required. This variable mapping is used to transfer the cuts generated in the target SCIP to the source SCIP.
-       */
-      SCIP_CALL( createMasterVarMapping(benders, sourceset, varmap) );
-
       SCIPsetDebugMsg(targetset, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)targetset->scip);
       SCIP_CALL( benders->benderscopy(targetset->scip, benders) );
 
@@ -803,6 +798,12 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       {
          SCIP_CALL( SCIPbenderscutCopyInclude(targetbenders, benders->benderscuts[i], targetset) );
       }
+
+      /* When the Benders' decomposition is copied then a variable mapping between the master problem variables is
+       * required. This variable mapping is used to transfer the cuts generated in the target SCIP to the source SCIP.
+       * The variable map is stored in the target Benders' decomposition. This will be freed when the sub-SCIP is freed.
+       */
+      SCIP_CALL( createMasterVarMapping(targetbenders, sourceset, varmap) );
    }
 
    /* if the Benders' decomposition is active, then copy is not valid. */
@@ -1500,8 +1501,6 @@ SCIP_RETCODE SCIPbendersExit(
    if( benders->iscopy )
    {
       SCIP_CALL( transferBendersCuts(benders->sourcescip, set->scip, benders) );
-      SCIP_CALL( releaseVarMappingHashmapVars(benders->sourcescip, benders) );
-      SCIPhashmapFree(&benders->mastervarsmap);
    }
 
    /* releasing all of the auxiliary variables */
@@ -2385,7 +2384,6 @@ SCIP_RETCODE SCIPbendersExec(
    if( benders->benderspresubsolve != NULL )
    {
       SCIP_Bool skipsolve;
-   }
 
       skipsolve = FALSE;
       SCIP_CALL( benders->benderspresubsolve(set->scip, benders, sol, type, checkint, &skipsolve, result) );
