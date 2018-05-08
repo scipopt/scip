@@ -27,6 +27,7 @@
 #include "scip/def.h"
 #include "scip/scip.h"
 #include "scip/pub_misc_linear.h"
+#include "scip/cons_setppc.h"
 #include "scip/scipdefplugins.h"
 
 
