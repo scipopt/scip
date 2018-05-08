@@ -1355,8 +1355,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       /* change to the directory of the ZIMPL file, s.t. paths of data files read by the ZIMPL model are relative to
        * the location of the ZIMPL file
        */
-      (void)strncpy(buffer, filename, SCIP_MAXSTRLEN-1);
-      buffer[SCIP_MAXSTRLEN-1] = '\0';
+      (void)SCIPstrncpy(buffer, filename, SCIP_MAXSTRLEN);
       SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
       if( compression != NULL )
          (void) SCIPsnprintf(compextension, SCIP_MAXSTRLEN, ".%s", compression);

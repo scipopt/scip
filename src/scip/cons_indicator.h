@@ -240,9 +240,9 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
  */
 EXTERN
 SCIP_RETCODE SCIPsetSlackVarUb(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_CONS*            cons,                /**< indicator constraint */
-   SCIP_Real             ub                   /**< upper bound for slack variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_Real             ub                  /**< upper bound for slack variable */
    );
 
 /** checks whether indicator constraint is violated w.r.t. sol */

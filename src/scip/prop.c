@@ -499,7 +499,7 @@ SCIP_RETCODE SCIPpropPresol(
       return SCIP_OKAY;
 
    /* check number of presolving rounds */
-   if( prop->maxprerounds >= 0 && nrounds >= prop->maxprerounds )
+   if( prop->maxprerounds >= 0 && prop->npresolcalls >= prop->maxprerounds )
       return SCIP_OKAY;
 
    /* check, if presolver should be delayed */

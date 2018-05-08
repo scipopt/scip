@@ -399,6 +399,7 @@ set(scipheaders
     scip/branch.h
     scip/branch_inference.h
     scip/branch_leastinf.h
+    scip/branch_lookahead.h
     scip/branch_mostinf.h
     scip/branch_multaggr.h
     scip/branch_nodereopt.h

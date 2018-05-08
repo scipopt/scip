@@ -386,7 +386,7 @@ SCIP_RETCODE SCIPpresolExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check number of presolving rounds */
-   if( presol->maxrounds >= 0 && nrounds >= presol->maxrounds )
+   if( presol->maxrounds >= 0 && presol->ncalls >= presol->maxrounds )
       return SCIP_OKAY;
 
    /* calculate the number of changes since last call */
