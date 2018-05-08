@@ -107,7 +107,8 @@ SCIP_RETCODE createPartitionCut(
    {
       for( j = 0; j < nsecond; ++j )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], getEdgevar(edgevars, firstpart[i], secondpart[j], 1), 1.0) );
+         SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated],
+            getEdgevar(edgevars, firstpart[i], secondpart[j], 1), 1.0) );
       }
    }
 
@@ -281,8 +282,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                         continue;
 
                      violationchg = SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[3], 1));
-                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[1],states[3]), MIN(states[1],states[3]), 0));
-                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[2],states[3]), MIN(states[2],states[3]), 0));
+                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars,
+                        MAX(states[1],states[3]), MIN(states[1],states[3]), 0));
+                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars,
+                        MAX(states[2],states[3]), MIN(states[2],states[3]), 0));
 
                      if( violationchg > bestvalue )
                      {
@@ -313,7 +316,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                         continue;
 
                      /* compute what has changed from the violation of the 1-4 inequality */
-                     violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
+                     violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars,
+                        MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[0], 1));
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[1], 1));
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[2], 1));
@@ -357,8 +361,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                         continue;
 
                      violationchg = SCIPvarGetLPSol(getEdgevar(edgevars, states[3], states[0], 1));
-                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[1],states[3]), MIN(states[1],states[3]), 0));
-                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[2],states[3]), MIN(states[2],states[3]), 0));
+                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars,
+                        MAX(states[1],states[3]), MIN(states[1],states[3]), 0));
+                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars,
+                        MAX(states[2],states[3]), MIN(states[2],states[3]), 0));
 
                      if( violationchg > bestvalue )
                      {
@@ -384,7 +390,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                      if( !edgesExist(edgevars, states, 5) )
                         continue;
 
-                     violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
+                     violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars,
+                        MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, firstpart[0], states[4], 1));
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, firstpart[1], states[4], 1));
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, firstpart[2], states[4], 1));
@@ -394,8 +401,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                      {
                         secondpart[1] = states[4];
                         nsecond = 2;
-                        SCIP_CALL( createPartitionCut(scip, sepa, &cuts, &cutsize, &ncutscreated, firstpart, secondpart,
-                           nfirst, nsecond, &violations, violation + violationchg) );
+                        SCIP_CALL( createPartitionCut(scip, sepa, &cuts, &cutsize, &ncutscreated, firstpart,
+                           secondpart, nfirst, nsecond, &violations, violation + violationchg) );
 
                         break;
                      }

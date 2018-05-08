@@ -240,8 +240,8 @@ SCIP_RETCODE addSubtourCuts(
             else
             {
                SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, currentnode, successor, 1), 1.0) );
-               if( SCIPvarGetLPSol(getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0)) > 0
-                  && liftabley > 0  )
+               if( SCIPvarGetLPSol(getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0))
+                  > 0 && liftabley > 0  )
                {
                   SCIP_CALL( SCIPaddVarToRow(scip, cut,
                      getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0), 1.0) );
@@ -323,8 +323,8 @@ SCIP_RETCODE addPathCuts(
          path[pathlength] = end;
 
          /* check if path-inequality is violated */
-         if( SCIPisGT(scip, getDist(adjacencymatrix, pathlength - 1, start, end) + getDist(adjacencymatrix, 0, start, end),
-            (SCIP_Real) pathlength) )
+         if( SCIPisGT(scip, getDist(adjacencymatrix, pathlength - 1, start, end)
+            + getDist(adjacencymatrix, 0, start, end), (SCIP_Real) pathlength) )
          {
             /*reconstruct the path */
             for( k = 0; k < pathlength - 1; ++k )
@@ -393,8 +393,8 @@ SCIP_RETCODE addPathCuts(
                      nz++;
                   }
 
-                  if( ny < pathlength - 2 && SCIPisPositive(scip,
-                     SCIPvarGetLPSol(getEdgevar(edgevars, MAX(currentnode, intermediate), MIN(currentnode, intermediate), 0))) )
+                  if( ny < pathlength - 2 && SCIPisPositive(scip, SCIPvarGetLPSol(
+                     getEdgevar(edgevars, MAX(currentnode, intermediate), MIN(currentnode, intermediate), 0))) )
                   {
                      SCIP_CALL( SCIPaddVarToRow(scip, cut,
                         getEdgevar(edgevars, MAX(currentnode, intermediate), MIN(currentnode, intermediate), 0), 1.0) );
@@ -405,8 +405,8 @@ SCIP_RETCODE addPathCuts(
                {
                   SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, currentnode, successor, 1), 1.0) );
 
-                  if( ny < pathlength - 2 && SCIPisPositive(scip,
-                     SCIPvarGetLPSol(getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0))) )
+                  if( ny < pathlength - 2 && SCIPisPositive(scip, SCIPvarGetLPSol(
+                     getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0))) )
                   {
                      SCIP_CALL( SCIPaddVarToRow(scip, cut,
                         getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0), 1.0) );
@@ -421,8 +421,8 @@ SCIP_RETCODE addPathCuts(
             if( iscontracted[start][end] != -1 )
             {
                SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, start, intermediate, 1), 1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, MAX(intermediate, end), MIN(intermediate, end), 0),
-                  1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars,
+                  MAX(intermediate, end), MIN(intermediate, end), 0), 1.0) );
             }
             else
             {
@@ -505,8 +505,8 @@ SCIP_RETCODE addTourCuts(
          tour[tourlength] = end;
 
          /* check if tour-inequality is violated */
-         if( SCIPisGT(scip, getDist(adjacencymatrix, tourlength - 1, start, end) - getDist(adjacencymatrix, 0, end, start),
-            (SCIP_Real) tourlength - 1) )
+         if( SCIPisGT(scip, getDist(adjacencymatrix, tourlength - 1, start, end)
+            - getDist(adjacencymatrix, 0, end, start), (SCIP_Real) tourlength - 1) )
          {
             /*reconstruct the tour */
             for( k = 0; k < tourlength - 1; ++k )
@@ -781,7 +781,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
             if( edgevars[state1][state2] == NULL || edgevars[state2][state3] == NULL || edgevars[state1][state3] == NULL )
                continue;
 
-            if( SCIPisLT( scip, getDist(adjacencymatrix, 0, state1, state3), SCIPvarGetLPSol(getEdgevar(edgevars, state1, state2, 1))
+            if( SCIPisLT( scip, getDist(adjacencymatrix, 0, state1, state3),
+               SCIPvarGetLPSol(getEdgevar(edgevars, state1, state2, 1))
                + SCIPvarGetLPSol(getEdgevar(edgevars, MAX(state2, state3), MIN(state2, state3), 0)) - 1) )
             {
                adjacencymatrix[0][state1][state3] = SCIPvarGetLPSol(getEdgevar(edgevars, state1, state2, 1))

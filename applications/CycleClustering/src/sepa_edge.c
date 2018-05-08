@@ -150,9 +150,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                   /* permute the minus sign */
                   for( l = 0; l < 3 ; ++l )
                   {
-                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[1], 1));
-                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[2], 1));
-                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[2], 0)) - 1;
+                     violation[ncutscreated] = sign[l][0]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[1], 1));
+                     violation[ncutscreated] += sign[l][1]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[2], 1));
+                     violation[ncutscreated] += sign[l][2]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[2], 0)) - 1;
 
                      if( violation[ncutscreated] > 0 )
                      {
@@ -162,9 +165,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                         SCIP_CALL( SCIPcacheRowExtensions(scip, cuts[ncutscreated]) );
 
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[1], states[2], 0), sign[l][2]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[0], states[1], 1), sign[l][0]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[0], states[2], 1), sign[l][1]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[1], states[2], 0), sign[l][2]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[0], states[1], 1), sign[l][0]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[0], states[2], 1), sign[l][1]) );
 
                         SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncutscreated]) );
 
@@ -178,9 +184,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                         ncutscreated++;
                      }
 
-                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[0], 1));
-                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(getEdgevar(edgevars, states[2], states[0], 1));
-                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[2], 0)) - 1;
+                     violation[ncutscreated] = sign[l][0]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[0], 1));
+                     violation[ncutscreated] += sign[l][1]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[2], states[0], 1));
+                     violation[ncutscreated] += sign[l][2]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[2], 0)) - 1;
 
                      if( violation[ncutscreated] > 0)
                      {
@@ -190,9 +199,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                         SCIP_CALL( SCIPcacheRowExtensions(scip, cuts[ncutscreated]) );
 
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[1], states[2], 0), sign[l][2]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[1], states[0], 1), sign[l][0]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[2], states[0], 1), sign[l][1]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[1], states[2], 0), sign[l][2]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[1], states[0], 1), sign[l][0]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[2], states[0], 1), sign[l][1]) );
 
                         SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncutscreated]) );
 
@@ -212,18 +224,24 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                {
                   for( l = 0; l < 3; ++l )
                   {
-                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[1], 0));
-                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[2], 0));
-                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[2], 0)) - 1;
+                     violation[ncutscreated] = sign[l][0]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[1], 0));
+                     violation[ncutscreated] += sign[l][1]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[2], 0));
+                     violation[ncutscreated] += sign[l][2]
+                        * SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[2], 0)) - 1;
 
                      if( violation[ncutscreated] > 0 )
                      {
                         (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", states[0], states[1], states[2]);
                         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &(cuts[ncutscreated]), sepa, cutname,
                            -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[0], states[1], 0), sign[l][0]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[0], states[2], 0), sign[l][1]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[1], states[2], 0), sign[l][2]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[0], states[1], 0), sign[l][0]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[0], states[2], 0), sign[l][1]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                           getEdgevar(edgevars, states[1], states[2], 0), sign[l][2]) );
 
                         if( ncutscreated >= size - 1 )
                         {
@@ -273,9 +291,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                   SCIP_CALL( SCIPcacheRowExtensions(scip, cuts[ncutscreated]) );
 
-                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[0], states[1], 1), 1.0) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[1], states[2], 1), 1.0) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, states[2], states[0], 1), -1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                     getEdgevar(edgevars, states[0], states[1], 1), 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                     getEdgevar(edgevars, states[1], states[2], 1), 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated],
+                     getEdgevar(edgevars, states[2], states[0], 1), -1.0) );
 
                   SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncutscreated]) );
 
