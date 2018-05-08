@@ -243,9 +243,9 @@ set(scipsources
     scip/lp.c
     scip/matrix.c
     scip/mem.c
-    scip/misc_linear.c
     scip/misc.c
     scip/nlp.c
+    scip/misc_linear.c
     scip/nodesel.c
     scip/paramset.c
     scip/presol.c
@@ -527,8 +527,8 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
-    scip/misc_linear.h
     scip/nlp.h
+    scip/misc_linear.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
     scip/nodesel_dfs.h

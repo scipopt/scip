@@ -1,4 +1,4 @@
-#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
@@ -687,7 +687,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/benderscut_int.o \
 			scip/benderscut_nogood.o \
 			scip/benderscut_opt.o \
-			scip/misc_linear.o \
 			scip/table_default.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
@@ -723,8 +722,8 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
-			scip/misc_linear.o \
 			scip/nlp.o \
+			scip/misc_linear.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
