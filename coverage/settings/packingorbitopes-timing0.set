@@ -3,4 +3,4 @@ presolving/symbreak/detectorbitopes = TRUE
 presolving/symbreak/addconsstiming = 0
 constraints/symresack/ppsymresack = TRUE
 constraints/orbisack/checkpporbisack = TRUE
-constraints/orbisack/checkpporbitope = TRUE
+constraints/orbitope/checkpporbitope = TRUE
