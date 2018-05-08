@@ -61,6 +61,21 @@ void printCycle(
 }
 #endif
 
+/** get distance of longest path between two states with exactly n arcs from the matrix */
+static
+SCIP_Real getDist(
+   SCIP_Real***          adjacencymatrix,    /**< the adjacency-matrices of all paths with 1,...,|Clutster| arcs */
+   int                   n,                  /**< length */
+   int                   state1,             /**< starting state */
+   int                   state2              /**< end state */
+   )
+{
+   assert(adjacencymatrix[n] != NULL);
+   assert(adjacencymatrix[n][state1] != NULL);
+
+   return adjacencymatrix[n][state1][state2];
+}
+
 /** After finding a violation, construct and add all violated subtour cuts to scip */
 static
 SCIP_RETCODE addSubtourCuts(
@@ -115,7 +130,7 @@ SCIP_RETCODE addSubtourCuts(
       ncontractions = 0;
 
       /* a cycle inequality is violated if the following is true */
-      if( SCIPisGT(scip, adjacencymatrix[cyclelength - 1][anchor][anchor], cyclelength - 1.0) )
+      if( SCIPisGT(scip, getDist(adjacencymatrix, cyclelength - 1, anchor, anchor), cyclelength - 1.0) )
       {
          subtours[anchor][0] = anchor;
          if( insubtour[anchor] == -1 )
@@ -139,9 +154,9 @@ SCIP_RETCODE addSubtourCuts(
                assert(0 <= successor && successor < nstates);
 
                /* check if this successor of the current node is the one in the cycle. If so add it. */
-               if( SCIPisEQ(scip, adjacencymatrix[0][currentnode][successor]
-                  + adjacencymatrix[cyclelength - (k + 2)][successor][anchor],
-                  adjacencymatrix[cyclelength - (k + 1)][currentnode][anchor]) )
+               if( SCIPisEQ(scip, getDist(adjacencymatrix, 0, currentnode, successor)
+                  + getDist(adjacencymatrix, cyclelength - (k + 2), successor, anchor),
+                  getDist(adjacencymatrix, cyclelength - (k + 1), currentnode, anchor)) )
                {
                   subtours[anchor][k + 1] = successor;
                   insubtour[successor] = anchor;
@@ -318,7 +333,7 @@ SCIP_RETCODE addPathCuts(
          path[pathlength] = end;
 
          /* check if path-inequality is violated */
-         if( SCIPisGT(scip, adjacencymatrix[pathlength - 1][start][end] + adjacencymatrix[0][start][end],
+         if( SCIPisGT(scip, getDist(adjacencymatrix, pathlength - 1, start, end) + getDist(adjacencymatrix, 0, start, end),
             (SCIP_Real) pathlength) )
          {
             /*reconstruct the path */
@@ -337,9 +352,9 @@ SCIP_RETCODE addPathCuts(
 
                   assert(0 <= successor && successor < nstates);
 
-                  if( SCIPisEQ(scip, adjacencymatrix[0][currentnode][successor]
-                     + adjacencymatrix[pathlength - (k + 2)][successor][end],
-                     adjacencymatrix[pathlength - (k + 1)][currentnode][end]) )
+                  if( SCIPisEQ(scip, getDist(adjacencymatrix, 0, currentnode, successor)
+                     + getDist(adjacencymatrix, pathlength - (k + 2), successor, end),
+                     getDist(adjacencymatrix, pathlength - (k + 1), currentnode, end)) )
                   {
                      path[k + 1] = successor;
 
@@ -510,7 +525,7 @@ SCIP_RETCODE addTourCuts(
          tour[tourlength] = end;
 
          /* check if tour-inequality is violated */
-         if( SCIPisGT(scip, adjacencymatrix[tourlength - 1][start][end] - adjacencymatrix[0][end][start],
+         if( SCIPisGT(scip, getDist(adjacencymatrix, tourlength - 1, start, end) - getDist(adjacencymatrix, 0, end, start),
             (SCIP_Real) tourlength - 1) )
          {
             /*reconstruct the tour */
@@ -524,9 +539,9 @@ SCIP_RETCODE addTourCuts(
                {
                   successor = successors[i];
 
-                  if( SCIPisEQ(scip, adjacencymatrix[0][currentnode][successor]
-                     + adjacencymatrix[tourlength - (k + 2)][successor][end]
-                     , adjacencymatrix[tourlength - (k + 1)][currentnode][end]) )
+                  if( SCIPisEQ(scip, getDist(adjacencymatrix, 0, currentnode, successor)
+                     + getDist(adjacencymatrix, tourlength - (k + 2), successor, end)
+                     , getDist(adjacencymatrix, tourlength - (k + 1), currentnode, end)) )
                   {
                      tour[k + 1] = successor;
 
@@ -653,15 +668,15 @@ SCIP_Bool computeNextAdjacency
 
          for( successor = 0; successor < nnodes; ++successor )
          {
-            if( SCIPisPositive(scip, adjacencymatrix[0][currentnode][intermediate])
-               && SCIPisPositive(scip, adjacencymatrix[narcs - 2][intermediate][successor]) )
+            if( SCIPisPositive(scip, getDist(adjacencymatrix, 0, currentnode, intermediate))
+               && SCIPisPositive(scip, getDist(adjacencymatrix, narcs - 2, intermediate, successor)) )
             {
-               if( SCIPisGT(scip, adjacencymatrix[0][currentnode][intermediate]
-                  + adjacencymatrix[narcs - 2][intermediate][successor],
-                  adjacencymatrix[narcs - 1][currentnode][successor]) )
+               if( SCIPisGT(scip, getDist(adjacencymatrix, 0, currentnode, intermediate)
+                  + getDist(adjacencymatrix, narcs - 2, intermediate, successor),
+                  getDist(adjacencymatrix, narcs - 1, currentnode, successor)) )
                {
-                  adjacencymatrix[narcs - 1][currentnode][successor] = adjacencymatrix[0][currentnode][intermediate]
-                     + adjacencymatrix[narcs - 2][intermediate][successor];
+                  adjacencymatrix[narcs - 1][currentnode][successor] = getDist(adjacencymatrix, 0, currentnode, intermediate)
+                     + getDist(adjacencymatrix, narcs - 2, intermediate, successor);
                }
             }
          }
@@ -671,7 +686,7 @@ SCIP_Bool computeNextAdjacency
    /* check if we have found a violated subtour constraint */
    for( currentnode = 0; currentnode < nnodes; ++currentnode )
    {
-      if( SCIPisGT(scip, adjacencymatrix[narcs - 1][currentnode][currentnode], narcs - 1.0) )
+      if( SCIPisGT(scip, getDist(adjacencymatrix, narcs - 1, currentnode, currentnode), narcs - 1.0) )
          foundviolation = TRUE;
    }
    return foundviolation;
@@ -792,7 +807,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
 
             assert(NULL != edgevars[state1][state2][1] && NULL != edgevars[MAX(state2, state3)][MIN(state2, state3)][0]);
 
-            if( SCIPisLT( scip, adjacencymatrix[0][state1][state3], SCIPvarGetLPSol(edgevars[state1][state2][1])
+            if( SCIPisLT( scip, getDist(adjacencymatrix, 0, state1, state3), SCIPvarGetLPSol(edgevars[state1][state2][1])
                + SCIPvarGetLPSol(edgevars[MAX(state2, state3)][MIN(state2, state3)][0]) - 1) )
             {
                adjacencymatrix[0][state1][state3] = SCIPvarGetLPSol(edgevars[state1][state2][1])
@@ -809,7 +824,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    {
       for( j = 0; j < nstates; ++j )
       {
-         if( !SCIPisZero(scip, adjacencymatrix[0][i][j]) )
+         if( !SCIPisZero(scip, getDist(adjacencymatrix, 0, i, j)) )
          {
             SCIP_CALL( SCIPdigraphAddArc(adjacencygraph, i , j, NULL) );
          }
