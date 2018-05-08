@@ -528,7 +528,6 @@ set(scipheaders
     scip/message.h
     scip/misc.h
     scip/nlp.h
-    scip/misc_linear.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
     scip/nodesel_dfs.h
@@ -593,6 +592,7 @@ set(scipheaders
     scip/pub_matrix.h
     scip/pub_message.h
     scip/pub_misc.h
+    scip/pub_misc_linear.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
     scip/pub_nlp.h
