@@ -40,7 +40,7 @@
  * cmain.c). This means \SCIP gets informed that this reader is available for reading input files. Therefore, the
  * function <code>SCIPincludeReader()</code> is called within this method which passes all necessary information of the
  * reader to SCIP. This information includes the name of the reader, a description, and the file extension for which the
- * file reader is in charge. In our case we selected the file extension "txt". This means that all files which have
+ * file reader is in charge. In our case we selected the file extension "cap". This means that all files which have
  * this file extension are passed to our reader for parsing. Besides these information the call
  * <code>SCIPincludeReader()</code> also passes for each callback of the reader a function pointers
  * (some of them might be NULL pointers). These function
@@ -100,10 +100,9 @@
 
 #define READER_NAME             "capreader"
 #define READER_DESC             "file reader for cap data format"
-#define READER_EXTENSION        "txt"
+#define READER_EXTENSION        "cap"
 
 
-//#define DEFAULT_USEBENDERS       TRUE
 #define DEFAULT_USEBENDERS       FALSE
 #define DEFAULT_NUMSCENARIOS      250
 

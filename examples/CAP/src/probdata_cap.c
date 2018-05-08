@@ -772,6 +772,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       /* including the Benders' decomposition plugin */
       SCIP_CALL( SCIPcreateBendersDefault(scip, subproblems, nscenarios) );
+
+      /* activating the Benders' decomposition constraint handlers */
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benders/active", TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benderslp/active", TRUE) );
    }
    else
    {

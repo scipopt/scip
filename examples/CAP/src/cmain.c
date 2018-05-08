@@ -54,9 +54,6 @@ SCIP_RETCODE runShell(
    /* include CAP reader */
    SCIP_CALL( SCIPincludeReaderCap(scip) );
 
-   /* include the Benders' decomposition constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrBenders(scip, TRUE) );
-
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
@@ -64,15 +61,10 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
 
    /* turn off all separation algorithms */
-   //SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-   //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
-   //SCIP_CALL( SCIPsetIntParam(scip, "benders/default/lnsmaxdepth", 10) );
-   //SCIP_CALL( SCIPsetIntParam(scip, "heuristics/proximity/priority", 10000) );
-   //SCIP_CALL( SCIPsetIntParam(scip, "heuristics/proximity/freq", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trysol/freq", 1) );
 
 
