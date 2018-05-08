@@ -14729,8 +14729,27 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       {
          assert(farkascoefs != NULL);
 
-         /* skip dual multipliers that are too close to zero */
-         if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
+         /* the infeasibility proof would be invalid if
+          *   (i)  dualfarkas[r] > 0 and lhs = -inf
+          *   (ii) dualfarkas[r] < 0 and rhs = inf
+          * however, due to numerics we accept slightly negative / positive values
+          */
+         if( (SCIPsetIsDualfeasGT(set, dualfarkas[r], 0.0) && SCIPsetIsInfinity(set, -lpirows[r]->lhs))
+            || (SCIPsetIsDualfeasLT(set, dualfarkas[r], 0.0) && SCIPsetIsInfinity(set, lpirows[r]->rhs)) )
+         {
+            SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
+               SCIProwGetName(lpirows[r]), lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, dualfarkas[r]);
+
+            *valid = FALSE; /*lint !e613*/
+
+            goto TERMINATE;
+         }
+
+         /* dual multipliers, for which the corresponding row side in infinite, are treated as zero if they are zero
+          * within tolerances (see above) but slighty positive / negative
+          */
+         if( (dualfarkas[r] > 0.0 && SCIPsetIsInfinity(set, -lpirows[r]->lhs))
+            || (dualfarkas[r] < 0.0 && SCIPsetIsInfinity(set, lpirows[r]->rhs)) )
             continue;
 
          /* iterate over all columns and scale with dual solution */
@@ -14749,30 +14768,14 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
          /* the row contributes with its left-hand side to the proof */
          if( dualfarkas[r] > 0.0 )
          {
-            if( SCIPsetIsInfinity(set, -lpirows[r]->lhs) )
-            {
-               SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
-                     SCIProwGetName(lpirows[r]), lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, dualfarkas[r]);
-
-               *valid = FALSE; /*lint !e613*/
-
-               goto TERMINATE;
-            }
+            assert(!SCIPsetIsInfinity(set, -lpirows[r]->lhs));
 
             farkaslhs += dualfarkas[r] * (lpirows[r]->lhs - lpirows[r]->constant);
          }
          /* the row contributes with its right-hand side to the proof */
          else if( dualfarkas[r] < 0.0 )
          {
-            if( SCIPsetIsInfinity(set, lpirows[r]->rhs) )
-            {
-               SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
-                     SCIProwGetName(lpirows[r]), lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, dualfarkas[r]);
-
-               *valid = FALSE; /*lint !e613*/
-
-               goto TERMINATE;
-            }
+            assert(!SCIPsetIsInfinity(set, lpirows[r]->rhs));
 
             farkaslhs += dualfarkas[r] * (lpirows[r]->rhs - lpirows[r]->constant);
          }

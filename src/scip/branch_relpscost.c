@@ -1385,7 +1385,7 @@ SCIP_RETCODE execRelpscost(
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
       assert(!SCIPisFeasIntegral(scip, branchcandssol[bestcand]));
-      assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
+      assert(!allcolsinlp || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
       assert(!bestsbdowncutoff && !bestsbupcutoff);
 
       var = branchcands[bestcand];

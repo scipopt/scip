@@ -385,7 +385,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
    SCIP_Bool success;
    int i;
-   int nvars;              /**< number of original problem's variables */
+   int nvars;              /* number of original problem's variables */
    SCIP_RETCODE retcode;
 
    assert(scip != NULL);

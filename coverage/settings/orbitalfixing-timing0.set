@@ -1,2 +1,2 @@
 misc/usesymmetry = 2
-propagating/orbitalfixing/oftiming = 0
+propagating/orbitalfixing/symcomptiming = 0

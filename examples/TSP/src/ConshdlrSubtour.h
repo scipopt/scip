@@ -222,7 +222,7 @@ public:
     *  Consider the linear constraint "3x -5y +2z <= 7" as an example. The variable rounding lock method of the
     *  linear constraint handler should call SCIPaddVarLocksType(scip, x, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos),
     *  SCIPaddVarLocksType(scip, y, SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) and
-    *  SCIPaddVarLocks(scip, z, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) to tell SCIP,
+    *  SCIPaddVarLocksType(scip, z, SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) to tell SCIP,
     *  that rounding up of x and z and rounding down of y can destroy the feasibility of the constraint, while rounding
     *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation "3x -5y +2z > 7".
     *  A linear constraint "2 <= 3x -5y +2z <= 7" should call
