@@ -278,6 +278,15 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  \ref RINGPACKING_MAIN "Ringpacking"
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the Ringpacking Problem. It includes a customized reader,
+ *  (global) problem data, variable data, and constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>Scheduler</b></a>
  *  </td>
  *  <td>
@@ -323,10 +332,10 @@
  * `spx`    | SoPlex
  * `cpx`    | IBM ILOG CPLEX
  * `xprs`   | FICO XPress
- * `grb`    | Gurobi (interface is in beta stage, version at least 7.0.2 required)
+ * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
- * `msk`    | Mosek (experimental)
+ * `msk`    | Mosek
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  *

@@ -276,7 +276,7 @@ struct SCIP_Conshdlr
    SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the constraint handler's presolving method */
 };
 
-/**< linear constraint classification statistics used for MIPLIB */
+/** linear constraint classification statistics used for MIPLIB */
 struct SCIP_LinConsStats
 {
    int                   counter[SCIP_NLINCONSTYPES]; /**< count statistics per type of linear constraint */

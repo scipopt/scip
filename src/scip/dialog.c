@@ -63,8 +63,7 @@ SCIP_RETCODE readLine(
    s = readline(prompt);
    if( s != NULL )
    {
-      (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], s,
-         (unsigned int)(dialoghdlr->buffersize - dialoghdlr->bufferpos));
+      (void)SCIPstrncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], s, dialoghdlr->buffersize - dialoghdlr->bufferpos);
       free(s);
       *endoffile = FALSE;
    }
@@ -282,9 +281,7 @@ SCIP_RETCODE readInputLine(
       SCIP_LINELIST* nextline;
 
       /* copy the next input line into the input buffer */
-      (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->inputlist->inputline,
-         (size_t)(dialoghdlr->buffersize - dialoghdlr->bufferpos)); /*lint !e571 !e776*/
-      dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
+      (void)SCIPstrncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->inputlist->inputline, dialoghdlr->buffersize - dialoghdlr->bufferpos);
 
       /* free the input line */
       nextline = dialoghdlr->inputlist->nextline;
@@ -733,14 +730,13 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
 
    /* generate the string to add to the history */
    s[SCIP_MAXSTRLEN-1] = '\0';
-   h[SCIP_MAXSTRLEN-1] = '\0';
 
    if( command != NULL )
    {
       if( escapecommand )
          SCIPescapeString(h, SCIP_MAXSTRLEN, command);
       else
-         (void)strncpy(h, command, SCIP_MAXSTRLEN-1);
+         (void)SCIPstrncpy(h, command, SCIP_MAXSTRLEN);
    }
    else
       h[0] = '\0';
@@ -748,11 +744,11 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
    while( dialog != NULL && dialog != dialoghdlr->rootdialog )
    {
       if( h[0] == '\0' )
-         (void)strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
+         (void)SCIPstrncpy(h, dialog->name, SCIP_MAXSTRLEN);
       else
       {
-         (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s %s", dialog->name, h);
-         (void)strncpy(h, s, SCIP_MAXSTRLEN-1);
+         (void)SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s %s", dialog->name, h);
+         (void)SCIPstrncpy(h, s, SCIP_MAXSTRLEN);
       }
       dialog = dialog->parent;
    }
@@ -1171,15 +1167,13 @@ void SCIPdialogGetPath(
 
    assert(dialog != NULL);
 
-   (void)strncpy(path, dialog->name, SCIP_MAXSTRLEN);
-   path[SCIP_MAXSTRLEN - 1] = '\0';
+   (void)SCIPstrncpy(path, dialog->name, SCIP_MAXSTRLEN);
 
    dialog = dialog->parent;
    while( dialog != NULL )
    {
       (void)SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
-      (void)strncpy(path, s, SCIP_MAXSTRLEN);
-      path[SCIP_MAXSTRLEN - 1] = '\0';
+      (void)SCIPstrncpy(path, s, SCIP_MAXSTRLEN);
       dialog = dialog->parent;
    }
 }

@@ -2326,7 +2326,7 @@ SCIP_RETCODE fixAlmostFixedX(
    int                   nconss,             /**< number of constraints */
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility was detected */
    SCIP_Bool*            reduceddom          /**< buffer to store whether some variable bound was tightened */
-)
+   )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real lb;
