@@ -5924,9 +5924,7 @@ SCIP_RETCODE SCIPincludeBenders(
    {
       SCIPerrorMessage("Benders' decomposition <%s> requires that if bendersFreesub%s is "
          "implemented at least one of bendersSolvesubconvex%s or bendersSolvesub%s are implemented, "
-         "or if bendersFreesub%s is not implemented, then none are implented.\n", SCIPbendersGetName(benders),
-         SCIPbendersGetName(benders), SCIPbendersGetName(benders), SCIPbendersGetName(benders),
-         SCIPbendersGetName(benders));
+         "or if bendersFreesub%s is not implemented, then none are implented.\n", name, name, name, name, name);
       return SCIP_INVALIDCALL;
    }
 
@@ -6593,10 +6591,6 @@ SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
 /** returns the value of the auxiliary variable for a given subproblem
  *
  *  @return the value of the auxiliary variable for the given subproblem
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6608,9 +6602,6 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    assert(scip != NULL);
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
-
-   /* check stages for SCIP */
-   SCIP_CALL( checkStage(scip, "SCIPgetBendersAuxiliaryVarVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPbendersGetAuxiliaryVarVal(benders, scip->set, sol, probnumber);
 }

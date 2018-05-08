@@ -327,6 +327,8 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    row = NULL;
    cons = NULL;
 
+   success = FALSE;
+
    /* retrieving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
 

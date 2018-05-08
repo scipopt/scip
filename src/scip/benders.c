@@ -728,7 +728,6 @@ SCIP_RETCODE createMasterVarMapping(
    SCIP_VAR* targetvar;
    int nvars;
    int i;
-   SCIP_RETCODE retcode;
 
    assert(benders != NULL);
    assert(sourceset != NULL);
@@ -1559,11 +1558,11 @@ SCIP_RETCODE computeSubproblemLowerbound(
    /* if the subproblem is independent, then the default SCIP settings are used. Otherwise, only the root node is solved
     * to compute a lower bound on the subproblem
     */
+   SCIP_CALL( SCIPgetLongintParam(subproblem, "limits/totalnodes", &totalnodes) );
+   SCIP_CALL( SCIPgetIntParam(subproblem, "lp/disablecutoff", &disablecutoff) );
    if( !independent )
    {
-      SCIP_CALL( SCIPgetLongintParam(subproblem, "limits/totalnodes", &totalnodes) );
-      SCIP_CALL( SCIPgetIntParam(subproblem, "lp/disablecutoff", &disablecutoff) );
-      SCIP_CALL( SCIPsetLongintParam(subproblem, "limits/totalnodes", 1) );
+      SCIP_CALL( SCIPsetLongintParam(subproblem, "limits/totalnodes", 1LL) );
       SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", 1) );
    }
 
@@ -1927,34 +1926,6 @@ SCIP_Bool SCIPbendersIsActive(
 
    return benders->active;
 }
-
-/** merges a subproblem back into the master problem. This process just adds a copy of the subproblem variables and
- *  constraints to the master problem, but keeps the subproblem stored in the Benders data structure. The reason for
- *  keeping the subproblem available is for when it is queried for solutions after the problem is solved.
- *
- *  Once the subproblem is merged back into the master problem, then the subproblem is flagged as disabled. This means
- *  that it will not be solved in the subsequent subproblem solving loops.
- *  Additionally, the auxiliary variable associated with the subproblem is fixed to zero.
- *  TODO: The auxiliary variable could be removed or the objective function coefficient is set to zero.
- */
-static
-SCIP_RETCODE mergeSubproblemIntoMaster(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   probnumber          /**< the subproblem number*/
-   )
-{
-   SCIP* subproblem;
-
-   assert(benders != NULL);
-   assert(probnumber >= 0 && probnumber < benders->nsubproblems);
-
-   subproblem = SCIPbendersSubproblem(benders, probnumber);
-
-
-   return SCIP_OKAY;
-}
-
 
 /** returns whether only the convex relaxations will be checked in this solve loop
  *  when Benders' is used in the LNS heuristics, only the convex relaxations of the master/subproblems are checked,
@@ -2347,6 +2318,8 @@ SCIP_RETCODE SCIPbendersExec(
 
    assert(benders != NULL);
    assert(result != NULL);
+   assert(infeasible != NULL);
+   assert(auxviol != NULL);
 
    /* if the Benders' decomposition is called from a sub-scip, it is assumed that this is an LNS heuristic. As such, the
     * check is not performed and the solution is assumed to be feasible
@@ -2432,7 +2405,7 @@ SCIP_RETCODE SCIPbendersExec(
             solveloop = SCIP_BENDERSSOLVELOOP_USERCIP;
       }
       else
-         solveloop = l;
+         solveloop = (SCIP_BENDERSSOLVELOOP)l;
 
 
       /* solving the subproblems for this round of enforcement/checking. */
@@ -2560,7 +2533,6 @@ SCIP_RETCODE executeUserDefinedSolvesub(
    int                   probnumber,         /**< the subproblem number */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Real*            objective,          /**< the objective function value of the subproblem */
    SCIP_RESULT*          result              /**< the result from solving the subproblem */
    )
@@ -2647,6 +2619,9 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
 
    SCIPdebugMessage("Benders decomposition: solving subproblem %d\n", probnumber);
 
+   result = SCIP_DIDNOTRUN;
+   objective = SCIPsetInfinity(set);
+
    /* initially setting the solved flag to FALSE */
    (*solved) = FALSE;
 
@@ -2655,8 +2630,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    {
       /* calls the user defined subproblem solving method. Only the convex relaxations are solved during the Large
        * Neighbourhood Benders' Search. */
-      SCIP_CALL( executeUserDefinedSolvesub(benders, set, sol, probnumber, solveloop, infeasible, type, &objective,
-            &result) );
+      SCIP_CALL( executeUserDefinedSolvesub(benders, set, sol, probnumber, solveloop, infeasible, &objective, &result) );
 
       /* if the result is DIDNOTRUN, then the subproblem was not solved */
       (*solved) = (result != SCIP_DIDNOTRUN);
@@ -3215,9 +3189,9 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
             /* if the subproblems were solved as part of an enforcement stage, then they will still be in probing mode. The
              * probing mode must first be finished and then the problem can be freed */
             if( SCIPgetStage(subproblem) >= SCIP_STAGE_TRANSFORMED && SCIPinProbing(subproblem) )
-         {
+            {
                SCIP_CALL( SCIPendProbing(subproblem) );
-         }
+            }
 
             SCIP_CALL( SCIPfreeTransform(subproblem) );
          }
@@ -3887,7 +3861,6 @@ SCIP_Bool SCIPbendersSubprobIsIndependent(
 /** sets whether the subproblem is enabled or disabled. A subproblem is disabled if it has been merged into the master
  * problem
  */
-extern
 void SCIPbendersSetSubprobEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -3901,7 +3874,6 @@ void SCIPbendersSetSubprobEnabled(
 }
 
 /** returns whether the subproblem is enabled */
-extern
 SCIP_Bool SCIPbendersSubprobIsEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */

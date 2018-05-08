@@ -288,7 +288,6 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
    SCIP_VAR* origvar;
    SCIP_Real scalar;
    SCIP_Real constant;
-   SCIP_RETCODE retcode;
 
    assert(scip != NULL);
    assert(benders != NULL);

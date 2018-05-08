@@ -82,13 +82,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIP_Real* consvals;
    int nconsvars;
 
-#ifndef NDEBUG
-   int j;
-   SCIP_Real* farkascoefs;    /* the coefficients of the farkas proof */
-   SCIP_Real farkasact = 0;   /* the activities of the farkas proof */
-   SCIP_Real farkaslhs = 0;   // the lhs of the farkas proof
-#endif
-
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
@@ -103,10 +96,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
    nconss = SCIPgetNConss(subproblem);
    conss = SCIPgetConss(subproblem);
-
-#ifndef NDEBUG
-   SCIP_CALL( SCIPallocClearBufferArray(subproblem, &farkascoefs, nvars + nfixedvars) );
-#endif
 
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
@@ -155,62 +144,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
       /* Update the lhs of the cut */
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
-
-#ifndef NDEBUG
-      farkaslhs += addval;
-#endif
-
-      SCIP_CALL( SCIPgetConsNVars(subproblem, conss[i], &nconsvars, &conssuccess) );
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &consvars, nconsvars) );
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &consvals, nconsvars) );
-      SCIP_CALL( SCIPgetConsVars(subproblem, conss[i], consvars, nconsvars, &conssuccess) );
-      if( !conssuccess )
-      {
-         (*success) = FALSE;
-         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
-         return SCIP_OKAY;
-      }
-
-      SCIP_CALL( SCIPgetConsVals(subproblem, conss[i], consvals, nconsvars, &conssuccess) );
-      if( !conssuccess )
-      {
-         (*success) = FALSE;
-         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
-         return SCIP_OKAY;
-      }
-
-#ifndef NDEBUG
-      /* loop over all variables with non-zero coefficient */
-      for( j = 0; j < nconsvars; j++ )
-      {
-         SCIP_VAR* mastervar;
-         SCIP_VAR* consvar;
-         SCIP_Real consval;
-
-         consvar = consvars[j];
-         consval = consvals[j];
-
-         /* retrieving the master problem variable for the given subproblem variable. */
-         SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, consvar, &mastervar) );
-
-         /* update the coefficient in the farkas activity */
-         farkascoefs[SCIPvarGetProbindex(consvar)] += dualsol * consval;
-
-         /* if the variable is a master variable, then it will be on the rhs of the constraint.
-          * In computing the contribution of the fixed variables, we don't need to solution value because this is
-          * given by the upper bound of the variable.
-          */
-         if( mastervar != NULL )
-         {
-            SCIPdebugMessage("Computing Farkas LHS: dualsol %g consval %g varUB %g varLB %g\n",
-               dualsol, consval, SCIPvarGetUbLocal(consvar), SCIPvarGetLbLocal(consvar));
-            farkaslhs -= dualsol * consval * SCIPvarGetUbLocal(consvar);
-         }
-      }
-#endif
-
-      SCIPfreeBufferArray(subproblem, &consvals);
-      SCIPfreeBufferArray(subproblem, &consvars);
    }
 
    /* looping over all variables to update the coefficients in the computed cut. */
@@ -256,10 +189,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
          lhs -= addval;
 
-#ifndef NDEBUG
-         farkasact -= addval;
-#endif
-
          /* if the bound becomes infinite, then the cut generation terminates. */
          if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
             || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
@@ -294,10 +223,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIPdebugPrintCons(masterprob, cut, NULL);
 
    (*success) = TRUE;
-
-#ifndef NDEBUG
-   SCIPfreeBufferArray(subproblem, &farkascoefs);
-#endif
 
    return SCIP_OKAY;
 }
