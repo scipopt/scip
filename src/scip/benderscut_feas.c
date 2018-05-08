@@ -78,10 +78,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIP_Real activity;
    int i;
 
-   SCIP_VAR** consvars;
-   SCIP_Real* consvals;
-   int nconsvars;
-
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
@@ -101,6 +97,10 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    for( i = 0; i < nconss; i++ )
    {
       SCIP_Bool conssuccess;
+#ifndef NDEBUG
+      SCIP_Real conslhs;
+      SCIP_Real consrhs;
+#endif
 
       addval = 0;
       SCIPconsGetDualfarkas(subproblem, conss[i], &dualsol, &conssuccess);
@@ -116,8 +116,12 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
       lhs = SCIPgetLhsLinear(masterprob, cut);
 
-      SCIPdebugMessage("Constraint: <%s>: LHS = %g RHS = %g dualsol = %g\n", SCIPconsGetName(conss[i]),
-         SCIPconsGetLhs(subproblem, conss[i], &conssuccess), SCIPconsGetRhs(subproblem, conss[i], &conssuccess), dualsol);
+#ifndef NDEBUG
+      conslhs = SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
+      consrhs = SCIPconsGetRhs(subproblem, conss[i], &conssuccess);
+      SCIPdebugMessage("Constraint: <%s>: LHS = %g RHS = %g dualsol = %g\n", SCIPconsGetName(conss[i]), conslhs,
+         consrhs, dualsol);
+#endif
 
       if( SCIPisPositive(subproblem, dualsol) )
          addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);

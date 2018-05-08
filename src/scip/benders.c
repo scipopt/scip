@@ -509,7 +509,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersNodesolved)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODESOLVED_EVENTHDLR_NAME) == 0);
 
-   benders = (SCIP_BENDERS*)SCIPeventhdlrGetData(eventhdlr);
+   benders = (SCIP_BENDERS*)SCIPeventhdlrGetData(eventhdlr);   /*lint !e826*/
 
    if( SCIPbendersGetNSubproblems(benders) > 0
       && SCIPbendersGetNSubproblems(benders) > SCIPbendersGetNConvexSubprobs(benders) )
@@ -533,7 +533,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersNodesolved)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODESOLVED_EVENTHDLR_NAME) == 0);
 
    /* getting the Benders' decomposition data structure */
-   benders = (SCIP_BENDERS*)SCIPeventhdlrGetData(eventhdlr);
+   benders = (SCIP_BENDERS*)SCIPeventhdlrGetData(eventhdlr);   /*lint !e826*/
 
    /* The event is only caught if there is an active Benders' decomposition */
    if( SCIPbendersIsActive(benders) && !SCIPbendersOnlyCheckConvexRelax(benders) )
@@ -2422,7 +2422,7 @@ SCIP_RETCODE SCIPbendersExec(
       else
       {
          /* if the problems are not infeasible, then the */
-         if( !infeasible && checkint && !SCIPbendersOnlyCheckConvexRelax(benders)
+         if( !(*infeasible) && checkint && !SCIPbendersOnlyCheckConvexRelax(benders)
             && SCIPbendersGetNConvexSubprobs(benders) < SCIPbendersGetNSubproblems(benders))
             nsolveloops = 2;
       }
@@ -2863,8 +2863,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
       else
          solveloop = SCIP_BENDERSSOLVELOOP_USERCONVEX;
 
-      SCIP_CALL( executeUserDefinedSolvesub(benders, set, sol, probnumber, solveloop, infeasible, type, &subobj,
-            &result) );
+      SCIP_CALL( executeUserDefinedSolvesub(benders, set, sol, probnumber, solveloop, infeasible, &subobj, &result) );
 
       if( objective != NULL )
          (*objective) = subobj;

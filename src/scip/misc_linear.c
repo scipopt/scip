@@ -245,8 +245,6 @@ SCIP_RETCODE SCIPgetConsVals(
    }
    else if( strcmp(conshdlrname, "varbound") == 0 )
    {
-      SCIP_Real vbdcoef;
-
       assert(nvars == 2);
 
       vals[0] = 1.0;
