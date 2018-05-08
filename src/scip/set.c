@@ -829,7 +829,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
-   SCIP_Bool             copybenders,        /**< should the Benders' decomposition algorithms be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
 {
@@ -1020,20 +1019,9 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-   /* copy all Benders' decomposition algorithms */
-   /* TODO: If the benders is not copied, then the cons_benders needs to be deactivated. */
-   if( copybenders && sourceset->benders != NULL )
-   {
-      for( p = sourceset->nbenders - 1; p >= 0; --p )
-      {
-         valid = FALSE;
-         SCIP_CALL( SCIPbendersCopyInclude(sourceset->benders[p], sourceset, targetset, &valid) );
-         *allvalid = *allvalid && valid;
-      }
-   }
-
    return SCIP_OKAY;
 }
+
 
 /** copies parameters from sourcescip to targetscip */
 SCIP_RETCODE SCIPsetCopyParams(

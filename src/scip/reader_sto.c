@@ -2166,7 +2166,10 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       /* include default SCIP plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(scenarioscip) );
 
-      SCIP_CALL( SCIPincludeConshdlrBenders(scenarioscip, FALSE) );
+      /* activating the Benders' constraint handler for the scenario stages.
+       * TODO: consider whether the two-phase method should be activated by default in the scenario stages.
+       */
+      SCIP_CALL( SCIPsetBoolParam(scenarioscip, "constraints/benders/active", TRUE) );
 
       /* allocating memory for the subproblems */
       if( getScenarioNChildren(scenario) > 0 )
@@ -2364,7 +2367,12 @@ SCIP_RETCODE buildDecompProblem(
    assert(readerdata != NULL);
 
    SCIP_CALL( createScenarioSubprobArray(scip, readerdata->scenariotree) );
-   SCIP_CALL( SCIPincludeConshdlrBenders(scip, TRUE) );
+
+   /* activating the Benders' constraint handler. The two-phase method is activated by default. If the user desires not
+    * to use the two-phase method, then the setting in cons_benderslp must be explicitly changed.
+    */
+   SCIP_CALL( SCIPsetBoolParam(scenarioscip, "constraints/benders/active", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scenarioscip, "constraints/benderslp/active", TRUE) );
 
    setScenarioScip(readerdata->scenariotree, scip);
 

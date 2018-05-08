@@ -591,7 +591,11 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
- *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @note Do not change the source SCIP environment during the copying process.
+ *
+ *  @note This method does not copy Benders' plugins. To this end, the method SCIPcopyBenders() must be called
+ *        separately.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -639,10 +643,48 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
-   SCIP_Bool             copybenders,        /**< should the Benders' decomposition algorithms be copied */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
                                               *   handlers which do not need constraints were validly copied */
+   );
+
+/** copies all Benders' decomposition plugins
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyBenders(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables; must not be NULL */
+   SCIP_Bool*            valid               /**< pointer to store whether all plugins were validly copied */
    );
 
 /** create a problem by copying the problem data of the source SCIP
@@ -2988,7 +3030,12 @@ void SCIPsetBendersPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** calls the exec method of Benders' decomposition to solve the subproblems */
+/** calls the exec method of Benders' decomposition to solve the subproblems.
+ *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
+ *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
+ *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
+ *  solution feasibility.
+ */
 EXTERN
 SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8940,6 +8987,17 @@ SCIP_Real SCIPgetRelaxSolObj(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** determine which branching direction should be evaluated first by strong branching
+ *
+ *  @return TRUE iff strong branching should first evaluate the down child
+ *
+ */
+EXTERN
+SCIP_Bool SCIPisStrongbranchDownFirst(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to determine the branching direction on */
+   );
+
 /** start strong branching - call before any strong branching
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -9179,6 +9237,43 @@ SCIP_RETCODE SCIPgetVarStrongbranchLast(
    SCIP_Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    );
 
+/** sets strong branching information for a column variable
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPsetVarStrongbranchData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to set last strong branching values for */
+   SCIP_Real             lpobjval,           /**< objective value of the current LP */
+   SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
+   SCIP_Real             down,               /**< dual bound after branching column down */
+   SCIP_Real             up,                 /**< dual bound after branching column up */
+   SCIP_Bool             downvalid,          /**< is the returned down value a valid dual bound? */
+   SCIP_Bool             upvalid,            /**< is the returned up value a valid dual bound? */
+   SCIP_Longint          iter,               /**< total number of strong branching iterations */
+   int                   itlim               /**< iteration limit applied to the strong branching call */
+   );
+
+/** rounds the current solution and tries it afterwards; if feasible, adds it to storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPtryStrongbranchLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            foundsol,           /**< stores whether solution was feasible and good enough to keep */
+   SCIP_Bool*            cutoff              /**< stores whether solution was cutoff due to exceeding the cutoffbound */
+   );
+
 /** gets node number of the last node in current branch and bound run, where strong branching was used on the
  *  given variable, or -1 if strong branching was never applied to the variable in current run
  *
@@ -9251,7 +9346,7 @@ int SCIPgetVarNStrongbranchs(
    SCIP_VAR*             var                 /**< variable to get last strong branching node for */
    );
 
-/** adds given values to lock numbers of variable for rounding
+/** adds given values to lock numbers of type @p locktype of variable for rounding
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -9270,14 +9365,46 @@ int SCIPgetVarNStrongbranchs(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-SCIP_RETCODE SCIPaddVarLocks(
+SCIP_RETCODE SCIPaddVarLocksType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    int                   nlocksdown,         /**< modification in number of rounding down locks */
    int                   nlocksup            /**< modification in number of rounding up locks */
    );
 
-/** locks rounding of variable with respect to the lock status of the constraint and its negation;
+
+/** adds given values to lock numbers of variable for rounding
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note This method will always add variable locks of type model
+ */
+EXTERN
+SCIP_RETCODE SCIPaddVarLocks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
+   int                   nlocksdown,         /**< modification in number of rounding down locks */
+   int                   nlocksup            /**< modification in number of rounding up locks */
+   );
+
+
+/** add locks of type @p locktype of variable with respect to the lock status of the constraint and its negation;
  *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
  *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
  *  added or removed
@@ -9305,7 +9432,7 @@ SCIP_RETCODE SCIPlockVarCons(
    SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
    );
 
-/** unlocks rounding of variable with respect to the lock status of the constraint and its negation;
+/** remove locks of type @p locktype of variable with respect to the lock status of the constraint and its negation;
  *  this method should be called whenever the lock status of a variable in a constraint changes, for example if
  *  the coefficient of the variable changed its sign or if the left or right hand sides of the constraint were
  *  added or removed
@@ -9329,8 +9456,8 @@ SCIP_RETCODE SCIPunlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
-   SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
+   SCIP_Bool             lockdown,           /**< should the rounding be unlocked in downwards direction? */
+   SCIP_Bool             lockup              /**< should the rounding be unlocked in upwards direction? */
    );
 
 /** changes variable's objective value
@@ -12598,6 +12725,31 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** adds given values to lock status of type @p locktype of the constraint and updates the rounding locks of the involved variables
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+EXTERN
+SCIP_RETCODE SCIPaddConsLocksType(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
+   int                   nlockspos,          /**< increase in number of rounding locks for constraint */
+   int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
+   );
+
 /** adds given values to lock status of the constraint and updates the rounding locks of the involved variables
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -12613,6 +12765,8 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note This methods always adds locks of type model
  */
 EXTERN
 SCIP_RETCODE SCIPaddConsLocks(

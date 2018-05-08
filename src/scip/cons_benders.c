@@ -16,14 +16,29 @@
 /**@file   cons_benders.c
  * @brief  constraint handler for benders decomposition
  * @author Stephen J. Maher
+ *
+ * Two constraint handlers are implemented for the generation of Benders' decomposition cuts. When included in a
+ * problem, the Benders' decomposition constraint handlers generate cuts during the enforcement of LP and relaxation
+ * solutions. Additionally, Benders' decomposition cuts can be generated when checking the feasibility of solutions with
+ * respect to the subproblem constraints.
+ *
+ * This constraint handler has an enforcement priority that is less than the integer constraint handler. This means that
+ * only integer feasible solutions from the LP solver are enforced by this constraint handler. This is the traditional
+ * behaviour of the branch-and-check approach to Benders' decomposition. Additionally, the check priority is set low,
+ * such that this expensive constraint handler is only called as a final check on primal feasible solutions.
+ *
+ * This constraint handler in the standard constraint handler that should be added when using Benders' decomposition.
+ * Additionally, there is a flag in SCIPincludeConshdlrBenders that permits the addition of the LP constraint handler,
+ * cons_benderslp. The use of both cons_benders and cons_benderslp allows the user to perform a multiphase Benders'
+ * decomposition algorithm.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
 #include <string.h>
-#include "scip/scip.h"
 
+#include "scip/scip.h"
 #include "scip/cons_benders.h"
 #include "scip/cons_benderslp.h"
 #include "scip/heur_trysol.h"
@@ -40,8 +55,8 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 
-
-#define DEFAULT_CHECKEDSOLSSIZE     20    /**< the initial size of the checked sols array */
+#define DEFAULT_CHECKEDSOLSSIZE      20 /**< initial size of the checked sols array */
+#define DEFAULT_ACTIVE            FALSE /**< is the constraint handler active? */
 
 /*
  * Data structures
@@ -50,10 +65,10 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   int                   ncalls;             /**< the number of calls to the constraint handler. */
    int*                  checkedsols;        /**< an array of solutions that this constraint has already checked */
    int                   ncheckedsols;       /**< the number of checked solutions */
    int                   checkedsolssize;    /**< the size of the checked solutions array */
+   SCIP_Bool             active;             /**< is the constraint handler active? */
 };
 
 /*
@@ -90,7 +105,7 @@ SCIP_RETCODE constructValidSolution(
    benders = SCIPgetBenders(scip);
    nactivebenders = SCIPgetNActiveBenders(scip);
 
-   /* if the solution is NULL, then we create the solution from the LP sol. */
+   /* if the solution is NULL, then we create the solution from the LP sol */
    if( sol != NULL )
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &newsol, sol) );
@@ -126,7 +141,9 @@ SCIP_RETCODE constructValidSolution(
 
       /* setting the auxiliary variable in the new solution */
       for( j = 0; j < nsubproblems; j++ )
+      {
          SCIP_CALL( SCIPsetSolVal(scip, newsol, auxiliaryvars[j], SCIPbendersGetSubprobObjval(benders[i], j)) );
+      }
    }
 
    /* getting the try solution heuristic */
@@ -152,17 +169,28 @@ SCIP_RETCODE constructValidSolution(
    return SCIP_OKAY;
 }
 
-/** the methods for the enforcement of solutions */
-SCIP_RETCODE SCIPconsBendersEnforceSolutions(
+/** enforces Benders' constraints for given solution
+ *
+ *  This method is called from cons_benderslp and cons_benders. If the method is called from cons_benderslp, then the
+ *  solutions are not guaranteed to be integer feasible. This is because the default priority is set greater than the
+ *  integer constraint handler. If this method is called from cons_benders, then, because the default enforcement
+ *  priority is set less than that of the integer constraint handler, then it can be assumed that the solutions are
+ *  integer feasible.
+ *
+ *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
+ *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
+ *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
+ *  solution feasibility.
+ */
+SCIP_RETCODE SCIPconsBendersEnforceSolution(
    SCIP*                 scip,               /**< the SCIP instance */
    SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
    SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler */
    SCIP_RESULT*          result,             /**< the result of the enforcement */
    SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
-   SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
+   SCIP_Bool             checkint            /**< should integrality be considered when checking the subproblems */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_BENDERS** benders;
    SCIP_Bool infeasible;
    SCIP_Bool auxviol;
@@ -176,8 +204,6 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    (*result) = SCIP_FEASIBLE;
    infeasible = FALSE;
    auxviol = FALSE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    benders = SCIPgetBenders(scip);
    nactivebenders = SCIPgetNActiveBenders(scip);
@@ -228,7 +254,9 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
          if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
          {
             if( !SCIPsolIsOriginal(sol) )
+            {
                SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
+            }
          }
 
          (*result) = SCIP_INFEASIBLE;
@@ -239,8 +267,6 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
     * indicates that no subproblems were checked */
    if( (*result) == SCIP_DIDNOTRUN )
       (*result) = SCIP_FEASIBLE;
-
-   conshdlrdata->ncalls++;
 
    return SCIP_OKAY;
 }
@@ -272,7 +298,7 @@ SCIP_DECL_CONSFREE(consFreeBenders)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* freeing the constrains handler data */
+   /* freeing the constraint handler data */
    SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
@@ -294,7 +320,6 @@ SCIP_DECL_CONSINIT(consInitBenders)
    conshdlrdata->ncheckedsols = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize) );
-
 
    return SCIP_OKAY;
 }
@@ -324,8 +349,20 @@ SCIP_DECL_CONSEXIT(consExitBenders)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, TRUE) );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->active )
+   {
+      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, TRUE) );
+   }
+   else
+      (*result) = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -335,8 +372,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, TRUE) );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->active )
+   {
+      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, TRUE) );
+   }
+   else
+      (*result) = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -346,17 +395,31 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsBenders)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, TRUE) );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->active )
+   {
+      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, TRUE) );
+   }
+   else
+      (*result) = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
 
 
-/** feasibility check method of constraint handler for integral solutions */
-/*  This function checks the feasibility of the Benders' decomposition master problem. In the case that the problem is
+/** feasibility check method of constraint handler for integral solutions
+ *
+ *  This function checks the feasibility of the Benders' decomposition master problem. In the case that the problem is
  *  feasible, then the auxiliary variables must be updated with the subproblem objective function values. It is not
- *  possible to simply update the auxiliary variable values, so a new solution is created. */
+ *  possible to simply update the auxiliary variable values, so a new solution is created.
+ */
 static
 SCIP_DECL_CONSCHECK(consCheckBenders)
 {  /*lint --e{715}*/
@@ -381,62 +444,64 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   benders = SCIPgetBenders(scip);
-   nactivebenders = SCIPgetNActiveBenders(scip);
-
-   /* checking if the solution was constructed by this constraint handler */
-   solindex = SCIPsolGetIndex(sol);
-   for( i = 0; i < conshdlrdata->ncheckedsols; i++ )
+   /* if the constraint handler is active, then the check must be performed.  */
+   if( conshdlrdata->active )
    {
-      if( conshdlrdata->checkedsols[i] == solindex )
+      benders = SCIPgetBenders(scip);
+      nactivebenders = SCIPgetNActiveBenders(scip);
+
+      /* checking if the solution was constructed by this constraint handler */
+      solindex = SCIPsolGetIndex(sol);
+      for( i = 0; i < conshdlrdata->ncheckedsols; i++ )
       {
-         conshdlrdata->checkedsols[0] = conshdlrdata->checkedsols[conshdlrdata->ncheckedsols - 1];
-         conshdlrdata->ncheckedsols--;
-
-         performcheck = FALSE;
-         break;
-      }
-   }
-
-
-   /* if the solution has not been checked before, then we must perform the check */
-   if( performcheck && nactivebenders > 0 )
-   {
-      for( i = 0; i < nactivebenders; i++ )
-      {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol,
-               SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
-
-         /* in the case of multiple Benders' decompositions, the subproblems are solved until a constriant is added or
-          * infeasibility is proven. So if the result is not SCIP_FEASIBLE, then the loop is exited */
-         if( (*result) != SCIP_FEASIBLE )
-            break;
-      }
-
-      /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
-       * still need to be updated. This is done by constructing a valid solution. */
-      if( (*result) == SCIP_FEASIBLE )
-      {
-         if( auxviol )
+         if( conshdlrdata->checkedsols[i] == solindex )
          {
-            if( !SCIPsolIsOriginal(sol) )
-               SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
+            conshdlrdata->checkedsols[0] = conshdlrdata->checkedsols[conshdlrdata->ncheckedsols - 1];
+            conshdlrdata->ncheckedsols--;
 
-            if( printreason )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "all subproblems are feasible but there is a violation in the auxiliary variables\n");
-
-            (*result) = SCIP_INFEASIBLE;
+            performcheck = FALSE;
+            break;
          }
       }
 
-      /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result
-       * indicates that no subproblems were checked */
-      if( (*result) == SCIP_DIDNOTRUN )
-         (*result) = SCIP_FEASIBLE;
+      /* if the solution has not been checked before, then we must perform the check */
+      if( performcheck && nactivebenders > 0 )
+      {
+         for( i = 0; i < nactivebenders; i++ )
+         {
+            SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol,
+                  SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
+
+            /* in the case of multiple Benders' decompositions, the subproblems are solved until a constriant is added or
+             * infeasibility is proven. So if the result is not SCIP_FEASIBLE, then the loop is exited */
+            if( (*result) != SCIP_FEASIBLE )
+               break;
+         }
+
+         /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
+          * still need to be updated. This is done by constructing a valid solution. */
+         if( (*result) == SCIP_FEASIBLE )
+         {
+            if( auxviol )
+            {
+               if( !SCIPsolIsOriginal(sol) )
+               {
+                  SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
+               }
+
+               if( printreason )
+                  SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "all subproblems are feasible but there is a violation in the auxiliary variables\n");
+
+               (*result) = SCIP_INFEASIBLE;
+            }
+         }
+
+         /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result
+          * indicates that no subproblems were checked */
+         if( (*result) == SCIP_DIDNOTRUN )
+            (*result) = SCIP_FEASIBLE;
+      }
    }
-
-
-   conshdlrdata->ncalls++;
 
    return SCIP_OKAY;
 }
@@ -446,8 +511,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 static
 SCIP_DECL_CONSLOCK(consLockBenders)
 {  /*lint --e{715}*/
-   //SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
-   //SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -459,8 +522,7 @@ SCIP_DECL_CONSLOCK(consLockBenders)
 
 /** creates the handler for benders constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             twophase            /**< should the two phase method be used? */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -470,7 +532,6 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
    conshdlrdata = NULL;
 
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
-   conshdlrdata->ncalls = 0;
 
    conshdlr = NULL;
 
@@ -488,95 +549,10 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenders) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenders) );
 
-   if( twophase )
-      SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a benders constraint
- *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- */
-SCIP_RETCODE SCIPcreateConsBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
-   SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs,                /**< right hand side of constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
-                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   )
-{
-   /* TODO: (optional) modify the definition of the SCIPcreateConsBenders() call, if you don't need all the information */
-
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527} --e{715}*/
-
-   /* find the benders constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if( conshdlr == NULL )
-   {
-      SCIPerrorMessage("benders constraint handler not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* create constraint data */
-   consdata = NULL;
-   /* TODO: create and store constraint specific data here */
-
-   /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a benders constraint with all its constraint flags set to their
- *  default values
- *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- */
-SCIP_RETCODE SCIPcreateConsBasicBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
-   SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs                 /**< right hand side of constraint */
-   )
-{
-   SCIP_CALL( SCIPcreateConsBenders(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   /* add Benders' decomposition constraint handler parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition constraint handler active?",
+         &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
 
    return SCIP_OKAY;
 }

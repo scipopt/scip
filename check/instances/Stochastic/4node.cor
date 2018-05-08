@@ -138,7 +138,7 @@ COLUMNS
     X9.0      PB9B      -8.0           OBJ       40.0
     X10.0     MLB       0.0            MLC       1.0
     X10.0     MLE       1.0
-    X10.0     CYB0      1.0            
+    X10.0     CYB0      1.0
 *    X10.0     CYE0      -1.0
     X10.0     MXFH0     9.0            MNFH0     9.0
     X10.0     PB10B     -8.0           OBJ       45.0
@@ -154,7 +154,7 @@ COLUMNS
     X13.0     MXFH0     10.0           MNFH0     10.0
     X13.0     PB13E     -8.0           OBJ       50.0
     X14.0     MLE       0.0            MLC       1.0
-    X14.0     MLB       1.0            
+    X14.0     MLB       1.0
 *    X14.0     CYE0      1.0
     X14.0     CYB0      -1.0
     X14.0     MXFH0     9.0            MNFH0     9.0
@@ -168,7 +168,7 @@ COLUMNS
     X16.0     MXFH0     16.0           MNFH0     16.0
     X16.0     PB16E     -8.0           OBJ       80.0
     X17.0     MLE       0.0            MLB       1.0
-    X17.0     MLC       1.0            
+    X17.0     MLC       1.0
 *    X17.0     CYE0      1.0
     X17.0     CYC0      -1.0
     X17.0     MXFH0     12.0           MNFH0     12.0
@@ -251,7 +251,7 @@ COLUMNS
     X9.1      PB9B      -6.0           OBJ       38.4
     X10.1     MLB       0.0            MLC       1.0
     X10.1     MLE       1.0
-    X10.1     CYB1      1.0            
+    X10.1     CYB1      1.0
 *    X10.1     CYE1      -1.0
     X10.1     MXFH1     10.8           MNFH1     10.8
     X10.1     PB10B     -6.0           OBJ       43.2
@@ -267,7 +267,7 @@ COLUMNS
     X13.1     MXFH1     12.0           MNFH1     12.0
     X13.1     PB13E     -6.0           OBJ       48.0
     X14.1     MLE       0.0            MLC       1.0
-    X14.1     MLB       1.0            
+    X14.1     MLB       1.0
 *    X14.1     CYE1      1.0
     X14.1     CYB1      -1.0
     X14.1     MXFH1     10.8           MNFH1     10.8
@@ -281,7 +281,7 @@ COLUMNS
     X16.1     MXFH1     19.2           MNFH1     19.2
     X16.1     PB16E     -6.0           OBJ       76.8
     X17.1     MLE       0.0            MLB       1.0
-    X17.1     MLC       1.0            
+    X17.1     MLC       1.0
 *    X17.1     CYE1      1.0
     X17.1     CYC1      -1.0
     X17.1     MXFH1     14.4           MNFH1     14.4
@@ -614,7 +614,7 @@ COLUMNS
     Z3A       PB3A      1.0            PB3C      -1.0
     Z3C       PB3C      1.0
     Z4A       PB4A      1.0            PB4C      -1.0
-    Z4C       PB4C      1.0 
+    Z4C       PB4C      1.0
     Z5A       PB5A      1.0            PB5C      -1.0
     Z5C       PB5C      1.0
     Z6B       PB6B      1.0            PB6A      -1.0
@@ -628,7 +628,7 @@ COLUMNS
     Z10B      PB10B     1.0            PB10C     -1.0
     Z10C      PB10C     1.0
     Z11B      PB11B     1.0            PB11E     -1.0
-    Z11E      PB11E     1.0 
+    Z11E      PB11E     1.0
     Z12B      PB12B     1.0            PB12E     -1.0
     Z12E      PB12E     1.0
     Z13E      PB13E     1.0            PB13C     -1.0

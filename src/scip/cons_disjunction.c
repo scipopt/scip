@@ -659,13 +659,15 @@ SCIP_DECL_CONSLOCK(consLockDisjunction)
    SCIP_CONSDATA* consdata;
    int c;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* lock sub constraints */
    for( c = 0; c < consdata->nconss; ++c )
    {
-      SCIP_CALL( SCIPaddConsLocks(scip, consdata->conss[c], nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddConsLocksType(scip, consdata->conss[c], locktype, nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;

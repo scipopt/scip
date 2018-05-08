@@ -424,10 +424,10 @@ SCIP_RETCODE createSubscip(
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
 #ifdef SCIP_MORE_DEBUG /* we print statistics later, so we need to copy statistics tables */
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, &success) );
 #endif
 
    /* the plugins were successfully copied */
@@ -1907,7 +1907,8 @@ SCIP_RETCODE findComponents(
          {
             assert(nunfixedvars <= v);
             sortedvars[nunfixedvars] = vars[v];
-            varlocks[nunfixedvars] = 4 * (SCIPvarGetNLocksDown(vars[v]) + SCIPvarGetNLocksUp(vars[v]));
+            varlocks[nunfixedvars] = 4 * (SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL)
+               + SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL));
             unfixedvarpos[v] = nunfixedvars;
             ++nunfixedvars;
          }
