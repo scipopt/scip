@@ -268,6 +268,13 @@ SCIP_RETCODE computeStandardOptimalityCut(
       rhs = SCIPgetRhsLinear(masterprob, cons);
 
    assert(SCIPisInfinity(masterprob, rhs));
+   /* if the rhs becomes infinite, then the cut generation terminates. This should never happen */
+   if( SCIPisInfinity(masterprob, rhs) || SCIPisInfinity(masterprob, -rhs) )
+   {
+      (*success) = FALSE;
+      SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");
+      return SCIP_OKAY;
+   }
 
 #ifndef NDEBUG
    if( addcut )
