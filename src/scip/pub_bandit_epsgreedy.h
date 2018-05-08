@@ -25,7 +25,9 @@
 #define SRC_SCIP_PUB_BANDIT_EPSGREEDY_H_
 
 
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_scip.h"
+#include "scip/type_bandit.h"
 
 #ifdef __cplusplus
 extern "C" {
