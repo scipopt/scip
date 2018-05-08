@@ -148,17 +148,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                   continue;
                if( (state1 != state2 && state1 != state3 && state2 > state3) )
                {
-                  assert(edgevars[state1][state2][1] != NULL && edgevars[state1][state3][1] != NULL);
-                  assert(edgevars[state2][state1][1] != NULL && edgevars[state3][state1][1] != NULL);
-                  assert(edgevars[state2][state3][1] != NULL && edgevars[state3][state2][1] != NULL);
-                  assert(edgevars[state2][state3][0] != NULL && edgevars[state3][state1][1] != NULL);
-
                   /* permute the minus sign */
                   for( l = 0; l < 3 ; ++l )
                   {
-                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(edgevars[state1][state2][1]);
-                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(edgevars[state1][state3][1]);
-                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(edgevars[state2][state3][0]) - 1;
+                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(getEdgevar(edgevars, state1, state2, 1));
+                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(getEdgevar(edgevars, state1, state3, 1));
+                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(getEdgevar(edgevars, state2, state3, 0)) - 1;
 
                      if( violation[ncutscreated] > 0)
                      {
@@ -168,9 +163,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                         SCIP_CALL( SCIPcacheRowExtensions(scip, cuts[ncutscreated]) );
 
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state2][state3][0], sign[l][2]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state1][state2][1], sign[l][0]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state1][state3][1], sign[l][1]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state2, state3, 0), sign[l][2]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state1, state2, 1), sign[l][0]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state1, state3, 1), sign[l][1]) );
 
                         SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncutscreated]) );
 
@@ -184,9 +179,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                         ncutscreated++;
                      }
 
-                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(edgevars[state2][state1][1]);
-                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(edgevars[state3][state1][1]);
-                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(edgevars[state2][state3][0]) - 1;
+                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(getEdgevar(edgevars, state2, state1, 1));
+                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(getEdgevar(edgevars, state3, state1, 1));
+                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(getEdgevar(edgevars, state2, state3, 0)) - 1;
 
                      if( violation[ncutscreated] > 0)
                      {
@@ -196,9 +191,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                         SCIP_CALL( SCIPcacheRowExtensions(scip, cuts[ncutscreated]) );
 
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state2][state3][0], sign[l][2]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state2][state1][1], sign[l][0]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state3][state1][1], sign[l][1]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state2, state3, 0), sign[l][2]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state2, state1, 1), sign[l][0]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state3, state1, 1), sign[l][1]) );
 
                         SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncutscreated]) );
 
@@ -218,18 +213,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                {
                   for( l = 0; l < 3; ++l )
                   {
-                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(edgevars[state1][state2][0]);
-                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(edgevars[state1][state3][0]);
-                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(edgevars[state2][state3][0]) - 1;
+                     violation[ncutscreated] = sign[l][0] * SCIPvarGetLPSol(getEdgevar(edgevars, state1, state2, 0));
+                     violation[ncutscreated] += sign[l][1] * SCIPvarGetLPSol(getEdgevar(edgevars, state1, state3, 0));
+                     violation[ncutscreated] += sign[l][2] * SCIPvarGetLPSol(getEdgevar(edgevars, state2, state3, 0)) - 1;
 
                      if( violation[ncutscreated] > 0 )
                      {
                         (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", state1, state2, state3);
                         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &(cuts[ncutscreated]), sepa, cutname,
                            -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state1][state2][0], sign[l][0]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state1][state3][0], sign[l][1]) );
-                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state2][state3][0], sign[l][2]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state1, state2, 0), sign[l][0]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state1, state3, 0), sign[l][1]) );
+                        SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state2, state3, 0), sign[l][2]) );
 
                         if( ncutscreated >= size - 1 )
                         {
@@ -267,9 +262,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                if( NULL == edgevars[state1][state2] || NULL == edgevars[state2][state3] || NULL == edgevars[state1][state3] )
                   continue;
 
-               violation[ncutscreated] = SCIPvarGetLPSol(edgevars[state1][state2][1]);
-               violation[ncutscreated] += SCIPvarGetLPSol(edgevars[state2][state3][1]);
-               violation[ncutscreated] -= SCIPvarGetLPSol(edgevars[state3][state1][1]) - 1;
+               violation[ncutscreated] = SCIPvarGetLPSol(getEdgevar(edgevars, state1, state2, 1));
+               violation[ncutscreated] += SCIPvarGetLPSol(getEdgevar(edgevars, state2, state3, 1));
+               violation[ncutscreated] -= SCIPvarGetLPSol(getEdgevar(edgevars, state3, state1, 1)) - 1;
 
                if( violation[ncutscreated] > 0 )
                {
@@ -279,9 +274,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                   SCIP_CALL( SCIPcacheRowExtensions(scip, cuts[ncutscreated]) );
 
-                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state1][state2][1], 1.0) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state2][state3][1], 1.0) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], edgevars[state3][state1][1], -1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state1, state2, 1), 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state2, state3, 1), 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncutscreated], getEdgevar(edgevars, state3, state1, 1), -1.0) );
 
                   SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncutscreated]) );
 

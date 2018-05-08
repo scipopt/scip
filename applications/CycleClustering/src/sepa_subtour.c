@@ -219,42 +219,32 @@ SCIP_RETCODE addSubtourCuts(
 
             if( intermediate != -1 )
             {
-               assert( NULL != edgevars[currentnode][intermediate][1]);
-               assert( NULL != edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0]);
-
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][intermediate][1], 1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, currentnode, intermediate, 1), 1.0) );
                SCIP_CALL( SCIPaddVarToRow(scip, cut,
-                  edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0], 1.0) );
+                  getEdgevar(edgevars, MAX(intermediate, successor), MIN(intermediate, successor), 0), 1.0) );
 
                greater = intermediate > currentnode ? intermediate : currentnode;
                smaller = intermediate < currentnode ? intermediate : currentnode;
 
-               assert(NULL != edgevars[greater][smaller][0]);
-
-               if( liftabley > 0 && SCIPvarGetLPSol(edgevars[greater][smaller][0]) > 0 )
+               if( liftabley > 0 && SCIPvarGetLPSol(getEdgevar(edgevars, greater, smaller, 0)) > 0 )
                {
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[greater][smaller][0], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, greater, smaller, 0), 1.0) );
                   liftabley--;
                }
-               if( liftablez > 0 && SCIPvarGetLPSol(edgevars[intermediate][successor][1]) > 0 )
+               if( liftablez > 0 && SCIPvarGetLPSol(getEdgevar(edgevars, intermediate, successor, 1)) > 0 )
                {
-                  assert(NULL != edgevars[intermediate][successor][1]);
-
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[intermediate][successor][1], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, intermediate, successor, 1), 1.0) );
                   liftablez--;
                }
             }
             else
             {
-               assert( NULL != edgevars[currentnode][successor][1]);
-               assert( NULL != edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0]);
-
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][successor][1], 1.0) );
-               if( SCIPvarGetLPSol(edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0]) > 0
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, currentnode, successor, 1), 1.0) );
+               if( SCIPvarGetLPSol(getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0)) > 0
                   && liftabley > 0  )
                {
                   SCIP_CALL( SCIPaddVarToRow(scip, cut,
-                     edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0], 1.0) );
+                     getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0), 1.0) );
                   liftabley--;
                }
             }
@@ -392,41 +382,34 @@ SCIP_RETCODE addPathCuts(
 
                if( intermediate != -1 )
                {
-                  assert(NULL != edgevars[currentnode][intermediate][1]);
-                  assert(NULL != edgevars[intermediate][successor][1]);
-                  assert(NULL != edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0]);
-                  assert(NULL != edgevars[MAX(currentnode, intermediate)][MIN(currentnode, intermediate)][0]);
-
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][intermediate][1], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, currentnode, intermediate, 1), 1.0) );
                   SCIP_CALL( SCIPaddVarToRow(scip, cut,
-                     edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0], 1.0) );
+                     getEdgevar(edgevars, MAX(intermediate, successor), MIN(intermediate, successor), 0), 1.0) );
 
                   if( nz < SCIPcycGetNCluster(scip)
-                     && SCIPisPositive(scip, SCIPvarGetLPSol(edgevars[intermediate][successor][1])) )
+                     && SCIPisPositive(scip, SCIPvarGetLPSol(getEdgevar(edgevars, intermediate, successor, 1))) )
                   {
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[intermediate][successor][1], 1.0) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, intermediate, successor, 1), 1.0) );
                      nz++;
                   }
 
                   if( ny < pathlength - 2 && SCIPisPositive(scip,
-                     SCIPvarGetLPSol(edgevars[MAX(currentnode, intermediate)][MIN(currentnode, intermediate)][0])) )
+                     SCIPvarGetLPSol(getEdgevar(edgevars, MAX(currentnode, intermediate), MIN(currentnode, intermediate), 0))) )
                   {
                      SCIP_CALL( SCIPaddVarToRow(scip, cut,
-                        edgevars[MAX(currentnode, intermediate)][MIN(currentnode, intermediate)][0], 1.0) );
+                        getEdgevar(edgevars, MAX(currentnode, intermediate), MIN(currentnode, intermediate), 0), 1.0) );
                      ny++;
                   }
                }
                else
                {
-                  assert(NULL != edgevars[currentnode][successor][1]);
-                  assert(NULL != edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0]);
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][successor][1], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, currentnode, successor, 1), 1.0) );
 
                   if( ny < pathlength - 2 && SCIPisPositive(scip,
-                     SCIPvarGetLPSol(edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0])) )
+                     SCIPvarGetLPSol(getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0))) )
                   {
                      SCIP_CALL( SCIPaddVarToRow(scip, cut,
-                        edgevars[MAX(currentnode, successor)][MIN(currentnode, successor)][0], 1.0) );
+                        getEdgevar(edgevars, MAX(currentnode, successor), MIN(currentnode, successor), 0), 1.0) );
                      ny++;
                   }
                }
@@ -437,18 +420,15 @@ SCIP_RETCODE addPathCuts(
 
             if( iscontracted[start][end] != -1 )
             {
-               assert(NULL != edgevars[start][intermediate][1]);
-               assert(NULL != edgevars[MAX(intermediate, end)][MIN(intermediate, end)][0]);
-
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[start][intermediate][1], 1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(intermediate, end)][MIN(intermediate, end)][0],
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, start, intermediate, 1), 1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, MAX(intermediate, end), MIN(intermediate, end), 0),
                   1.0) );
             }
             else
             {
-               assert( NULL != edgevars[start][end][1]);
+               assert( NULL != getEdgevar(edgevars, start, end, 1));
 
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[start][end][1], 1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, start, end, 1), 1.0) );
             }
 
             SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
@@ -574,18 +554,13 @@ SCIP_RETCODE addTourCuts(
 
                if( intermediate != -1 )
                {
-                  assert(NULL != edgevars[currentnode][intermediate][1]);
-                  assert(NULL != edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0]);
-
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][intermediate][1], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, currentnode, intermediate, 1), 1.0) );
                   SCIP_CALL( SCIPaddVarToRow(scip, cut,
-                     edgevars[MAX(intermediate, successor)][MIN(intermediate, successor)][0], 1.0) );
+                     getEdgevar(edgevars, MAX(intermediate, successor), MIN(intermediate, successor), 0), 1.0) );
                }
                else
                {
-                  assert( NULL != edgevars[currentnode][successor][1]);
-
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[currentnode][successor][1], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, currentnode, successor, 1), 1.0) );
                }
             }
 
@@ -593,18 +568,13 @@ SCIP_RETCODE addTourCuts(
             intermediate = iscontracted[end][start];
             if( iscontracted[end][start] != -1 )
             {
-               assert(NULL != edgevars[end][intermediate][1]);
-               assert(NULL != edgevars[MAX(intermediate, start)][MIN(intermediate, start)][0]);
-
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[end][intermediate][1], -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, end, intermediate, 1), -1.0) );
                SCIP_CALL( SCIPaddVarToRow(scip, cut,
-                  edgevars[MAX(intermediate, start)][MIN(intermediate, start)][0], 1.0) );
+                  getEdgevar(edgevars, MAX(intermediate, start), MIN(intermediate, start), 0), 1.0) );
             }
             else
             {
-               assert( NULL != edgevars[start][end][1]);
-
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[end][start][1], -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, getEdgevar(edgevars, end, start, 1), -1.0) );
             }
 
             SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
@@ -778,8 +748,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
       {
          iscontracted[i][j] = -1;
 
-         if( edgevars[i][j] != NULL && edgevars[i][j][1] != NULL )
-            adjacencymatrix[0][i][j] = SCIPvarGetLPSol(edgevars[i][j][1]);
+         if( edgevars[i][j] != NULL && getEdgevar(edgevars, i, j, 1) != NULL )
+            adjacencymatrix[0][i][j] = SCIPvarGetLPSol(getEdgevar(edgevars, i, j, 1));
       }
    }
 
@@ -805,13 +775,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
             if( edgevars[state1][state2] == NULL || edgevars[state2][state3] == NULL || edgevars[state1][state3] == NULL )
                continue;
 
-            assert(NULL != edgevars[state1][state2][1] && NULL != edgevars[MAX(state2, state3)][MIN(state2, state3)][0]);
-
-            if( SCIPisLT( scip, getDist(adjacencymatrix, 0, state1, state3), SCIPvarGetLPSol(edgevars[state1][state2][1])
-               + SCIPvarGetLPSol(edgevars[MAX(state2, state3)][MIN(state2, state3)][0]) - 1) )
+            if( SCIPisLT( scip, getDist(adjacencymatrix, 0, state1, state3), SCIPvarGetLPSol(getEdgevar(edgevars, state1, state2, 1))
+               + SCIPvarGetLPSol(getEdgevar(edgevars, MAX(state2, state3), MIN(state2, state3), 0)) - 1) )
             {
-               adjacencymatrix[0][state1][state3] = SCIPvarGetLPSol(edgevars[state1][state2][1])
-                  + SCIPvarGetLPSol(edgevars[MAX(state2, state3)][MIN(state2, state3)][0]) - 1;
+               adjacencymatrix[0][state1][state3] = SCIPvarGetLPSol(getEdgevar(edgevars, state1, state2, 1))
+                  + SCIPvarGetLPSol(getEdgevar(edgevars, MAX(state2, state3), MIN(state2, state3), 0)) - 1;
 
                iscontracted[state1][state3] = state2;
             }

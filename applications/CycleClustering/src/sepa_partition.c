@@ -89,7 +89,7 @@ SCIP_RETCODE createPartitionCut(
       {
          inda = MAX(firstpart[i], firstpart[j]);
          indb = MIN(firstpart[i], firstpart[j]);
-         SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], edgevars[inda][indb][0], -1.0) );
+         SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], getEdgevar(edgevars, inda, indb, 0), -1.0) );
       }
    }
 
@@ -99,7 +99,7 @@ SCIP_RETCODE createPartitionCut(
       {
          inda = MAX(secondpart[i], secondpart[j]);
          indb = MIN(secondpart[i], secondpart[j]);
-         SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], edgevars[inda][indb][0], -1.0) );
+         SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], getEdgevar(edgevars, inda, indb, 0), -1.0) );
       }
    }
 
@@ -107,7 +107,7 @@ SCIP_RETCODE createPartitionCut(
    {
       for( j = 0; j < nsecond; ++j )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], edgevars[firstpart[i]][secondpart[j]][1], 1.0) );
+         SCIP_CALL( SCIPaddVarToRow(scip, (*cuts)[*ncutscreated], getEdgevar(edgevars, firstpart[i], secondpart[j], 1), 1.0) );
       }
    }
 
@@ -220,10 +220,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
          states[0] = i;
          states[1] = successors[0][j];
 
-         assert(NULL != edgevars[states[0]][states[1]]);
-
-         lpvalforward = SCIPvarGetLPSol(edgevars[states[0]][states[1]][1]);
-         lpvalincluster = SCIPvarGetLPSol(edgevars[MAX(states[0],states[1])][MIN(states[0],states[1])][0]);
+         lpvalforward = SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[1], 1));
+         lpvalincluster = SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[0],states[1]), MIN(states[0],states[1]), 0));
          fractionality[states[0]] += MIN(lpvalforward, 1 - lpvalforward) + MIN(1 - lpvalincluster, lpvalincluster);
       }
    }
@@ -256,13 +254,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                continue;
             }
 
-            assert(edgevars[states[0]][states[1]] != NULL && edgevars[states[0]][states[1]][1] != NULL);
-            assert(edgevars[states[0]][states[2]] != NULL && edgevars[states[0]][states[2]][1] != NULL);
-
             if( states[1] > states[2] )
             {
-               assert(edgevars[states[1]][states[2]] != NULL && edgevars[states[1]][states[2]][0] != NULL);
-
                /* first case, construct partition with 2 predecessors and 3 successors */
                nfirst = 1;
                firstpart[0] = states[0];
@@ -273,9 +266,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                secondpart[2] = -1;
 
                /* get violation of trianlge inequality for these three states */
-               violation = SCIPvarGetLPSol(edgevars[states[0]][states[1]][1]);
-               violation += SCIPvarGetLPSol(edgevars[states[0]][states[2]][1]);
-               violation -= SCIPvarGetLPSol(edgevars[states[1]][states[2]][0]);
+               violation = SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[1], 1));
+               violation += SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[2], 1));
+               violation -= SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[2], 0));
                violation -= 1;
 
                if( SCIPisGE(scip, violation, MAXTRIANGLEDISTANCE) )
@@ -292,13 +285,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                         continue;
                      }
 
-                     assert(edgevars[states[0]][states[3]][1] != NULL);
-                     assert(edgevars[MAX(states[1],states[3])][MIN(states[1],states[3])][0] != NULL);
-                     assert(edgevars[MAX(states[2],states[3])][MIN(states[2],states[3])][0] != NULL);
-
-                     violationchg = SCIPvarGetLPSol(edgevars[states[0]][states[3]][1]);
-                     violationchg -= SCIPvarGetLPSol(edgevars[MAX(states[1],states[3])][MIN(states[1],states[3])][0]);
-                     violationchg -= SCIPvarGetLPSol(edgevars[MAX(states[2],states[3])][MIN(states[2],states[3])][0]);
+                     violationchg = SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[3], 1));
+                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[1],states[3]), MIN(states[1],states[3]), 0));
+                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[2],states[3]), MIN(states[2],states[3]), 0));
 
                      if( violationchg > bestvalue )
                      {
@@ -325,22 +314,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   {
                      states[4] = successors[3][l];
 
-                     if( NULL == edgevars[states[0]][states[4]] || NULL == edgevars[states[1]][states[4]]
-                        || NULL == edgevars[states[2]][states[4]] || NULL == edgevars[states[3]][states[4]] )
+                     if( NULL == edgevars[states[0]][states[4]] || NULL == edgevars[states[1]][states[4]] ||
+                        NULL == edgevars[states[2]][states[4]] || NULL == edgevars[states[3]][states[4]] )
                      {
                         continue;
                      }
 
-                     assert(edgevars[states[4]][secondpart[0]][1] != NULL);
-                     assert(edgevars[states[4]][secondpart[1]][1] != NULL);
-                     assert(edgevars[states[4]][secondpart[2]][1] != NULL);
-                     assert(edgevars[MAX(states[0],states[4])][MIN(states[0],states[4])][0] != NULL);
-
                      /* compute what has changed from the violation of the 1-4 inequality */
-                     violationchg = -SCIPvarGetLPSol(edgevars[MAX(states[0], states[4])][MIN(states[0],states[4])][0]) - 1.0;
-                     violationchg += SCIPvarGetLPSol(edgevars[states[4]][secondpart[0]][1]);
-                     violationchg += SCIPvarGetLPSol(edgevars[states[4]][secondpart[1]][1]);
-                     violationchg += SCIPvarGetLPSol(edgevars[states[4]][secondpart[2]][1]);
+                     violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
+                     violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[0], 1));
+                     violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[1], 1));
+                     violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[2], 1));
 
                      /* create cut if inequality is violated by lp-solution */
                      if( SCIPisPositive(scip, violation + violationchg) )
@@ -364,12 +348,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                secondpart[0] = states[0];
                secondpart[1] = -1;
 
-               assert(edgevars[states[1]][states[0]][1] != NULL && edgevars[states[2]][states[0]][1] != NULL);
-               assert(edgevars[states[1]][states[2]][0] != NULL);
-
-               violation = SCIPvarGetLPSol(edgevars[states[1]][states[0]][1]);
-               violation += SCIPvarGetLPSol(edgevars[states[2]][states[0]][1]);
-               violation -= SCIPvarGetLPSol(edgevars[states[1]][states[2]][0]);
+               violation = SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[0], 1));
+               violation += SCIPvarGetLPSol(getEdgevar(edgevars, states[2], states[0], 1));
+               violation -= SCIPvarGetLPSol(getEdgevar(edgevars, states[1], states[2], 0));
                violation -= 1;
 
                if( SCIPisGE(scip, violation, MAXTRIANGLEDISTANCE) )
@@ -386,13 +367,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                         continue;
                      }
 
-                     assert(edgevars[states[3]][states[0]][1] != NULL);
-                     assert(edgevars[MAX(states[1],states[3])][MIN(states[1],states[3])][0]);
-                     assert(edgevars[MAX(states[2],states[3])][MIN(states[2],states[3])][0]);
-
-                     violationchg = SCIPvarGetLPSol(edgevars[states[3]][states[0]][1]);
-                     violationchg -= SCIPvarGetLPSol(edgevars[MAX(states[1],states[3])][MIN(states[1],states[3])][0]);
-                     violationchg -= SCIPvarGetLPSol(edgevars[MAX(states[2],states[3])][MIN(states[2],states[3])][0]);
+                     violationchg = SCIPvarGetLPSol(getEdgevar(edgevars, states[3], states[0], 1));
+                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[1],states[3]), MIN(states[1],states[3]), 0));
+                     violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[2],states[3]), MIN(states[2],states[3]), 0));
 
                      if( violationchg > bestvalue )
                      {
@@ -421,14 +398,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                         continue;
                      }
 
-                     assert(edgevars[firstpart[0]][states[4]][1] != NULL);
-                     assert(edgevars[firstpart[1]][states[4]][1] != NULL);
-                     assert(edgevars[firstpart[2]][states[4]][1] != NULL);
-                     assert(edgevars[MAX(states[0], states[4])][MIN(states[0],states[4])][0]);
-
-                     violationchg = -SCIPvarGetLPSol(edgevars[MAX(states[0], states[4])][MIN(states[0],states[4])][0]) - 1.0;
-                     violationchg += SCIPvarGetLPSol(edgevars[firstpart[0]][states[4]][1]);
-                     violationchg += SCIPvarGetLPSol(edgevars[firstpart[1]][states[4]][1]);
+                     violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
+                     violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, firstpart[0], states[4], 1));
+                     violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, firstpart[1], states[4], 1));
+                     violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, firstpart[2], states[4], 1));
                      violationchg += SCIPvarGetLPSol(edgevars[firstpart[2]][states[4]][1]);
 
                      if( SCIPisPositive(scip, violation + violationchg) )
