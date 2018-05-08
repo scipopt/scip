@@ -309,7 +309,7 @@ extern "C" {
  *  - expr : expression
  *  - sol  : solution to be separated (NULL for the LP solution)
  *  - overestimate : whether the expression needs to be over- or underestimated
- *  - minviolation : minimal violation of a cut if it should be added to the LP
+ *  - mincutviolation : minimal violation of a cut if it should be added to the LP
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
  */
@@ -319,7 +319,7 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
    SCIP_Bool overestimate, \
-   SCIP_Real minviolation, \
+   SCIP_Real mincutviolation, \
    SCIP_RESULT* result, \
    int* ncuts)
 
@@ -626,6 +626,24 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_Bool* success, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
+/** auxiliary evaluation callback of nonlinear handler
+ *
+ * Evaluates the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any)
+ * The method is used to determine the violation of the relation that the nonlinear
+ * handler attempts to enforce. During enforcement, this violation value is used to
+ * decide whether separation or branching score callbacks should be called.
+ *
+ * It can be assumed that the expression itself has been evaluated in the given sol.
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLREVALAUX(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_Real* auxvalue, \
+   SCIP_SOL* sol)
+
+
 /** separation initialization method of a nonlinear handler (called during CONSINITLP)
  *
  *  input:
@@ -674,10 +692,11 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - sol  : solution to be separated (NULL for the LP solution)
+ *  - sol : solution to be separated (NULL for the LP solution)
+ *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - overestimate : whether the expression needs to be over- or underestimated
- *  - minviolation : minimal violation of a cut if it should be added to the LP
- *  - separated: whether another nonlinear handler already added a cut for this expression
+ *  - mincutviolation :  minimal violation of a cut if it should be added to the LP
+ *  - separated : whether another nonlinear handler already added a cut for this expression
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
  */
@@ -688,8 +707,9 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
+   SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
-   SCIP_Real minviolation, \
+   SCIP_Real mincutviolation, \
    SCIP_Bool separated, \
    SCIP_RESULT* result, \
    int* ncuts)
@@ -754,6 +774,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - expr : expression to be hashed
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
  *  - sol  : solution (NULL for the LP solution)
+ *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
  *  - success: buffer to store whether the branching score callback was successful
  */
@@ -763,6 +784,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
+   SCIP_Real auxvalue, \
    unsigned int brscoretag, \
    SCIP_Bool* success)
 

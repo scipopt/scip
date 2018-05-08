@@ -566,7 +566,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
  * It also implies that x^-2 < x^-1, but since, so far, we do not interpret x^-2 as (x^-1)^2, it is not a problem.
  */
 static
-SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
+SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata;
    SCIP_HASHMAP*  expridx;
@@ -773,6 +773,45 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    return SCIP_OKAY;
 }
 
+/** nonlinear handler auxiliary evaluation callback */
+static
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
+{  /*lint --e{715}*/
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(auxvalue != NULL);
+
+   /* TODO: is this okay or should the constant be stored at the moment of creation? */
+   *auxvalue = SCIPgetConsExprExprSumConstant(expr);
+
+   for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
+      *auxvalue += nlhdlrexprdata->lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[i]));
+
+   for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i ) /* quadratic terms */
+   {
+      SCIP_QUADEXPRTERM quadexprterm;
+      SCIP_Real solval;
+
+      quadexprterm = nlhdlrexprdata->quadexprterms[i];
+      solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm.expr));
+      *auxvalue += (quadexprterm.lincoef + quadexprterm.sqrcoef * solval) * solval;
+   }
+
+   for( i = 0; i < nlhdlrexprdata->nbilinexprterms; ++i ) /* bilinear terms */
+   {
+      SCIP_BILINEXPRTERM bilinexprterm;
+
+      bilinexprterm = nlhdlrexprdata->bilinexprterms[i];
+      *auxvalue += bilinexprterm.coef *
+         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr1)) *
+         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr2));
+   }
+
+   return SCIP_OKAY;
+}
+
 /** nonlinear handler separation callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
@@ -811,43 +850,17 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
     * TODO: maybe have a flag to know whether the expression is quadratic in the original variables
     */
    {
-      SCIP_Real activity;
       SCIP_Real side;
-      int i;
-
-      activity = SCIPgetConsExprExprSumConstant(expr); /* TODO: is this okay or should the constant be stored at the moment of creation? */
-      for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
-         activity += nlhdlrexprdata->lincoefs[i] *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[i]));
-
-      for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i ) /* quadratic terms */
-      {
-         SCIP_QUADEXPRTERM quadexprterm;
-         SCIP_Real solval;
-
-         quadexprterm = nlhdlrexprdata->quadexprterms[i];
-         solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm.expr));
-         activity += (quadexprterm.lincoef + quadexprterm.sqrcoef * solval) * solval;
-      }
-      for( i = 0; i < nlhdlrexprdata->nbilinexprterms; ++i ) /* bilinear terms */
-      {
-         SCIP_BILINEXPRTERM bilinexprterm;
-
-         bilinexprterm = nlhdlrexprdata->bilinexprterms[i];
-         activity += bilinexprterm.coef *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr1)) *
-            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr2));
-      }
 
       side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
 
-      SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", activity,
+      SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", auxvalue,
             SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
             "concave");
 
-      if( activity - side > minviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
+      if( auxvalue - side > mincutviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
          rowprep->sidetype = SCIP_SIDETYPE_RIGHT;
-      else if( minviolation < side - activity && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
+      else if( mincutviolation < side - auxvalue && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
          rowprep->sidetype = SCIP_SIDETYPE_LEFT;
       else
          goto CLEANUP;
@@ -930,7 +943,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
       if( !success )
          goto CLEANUP;
@@ -1275,7 +1288,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
 static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
 { /*lint --e{715}*/
-   SCIP_Real activity;
    SCIP_Real side;
    SCIP_Real violation;
    int i;
@@ -1297,35 +1309,9 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
 
    assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
 
-   /* evaluate expression w.r.t. auxiliary variables */
-   activity = SCIPgetConsExprExprSumConstant(expr);
-
-   for( i = 0; i < nlhdlrexprdata->nlinexprs; ++i ) /* linear exprs */
-      activity += nlhdlrexprdata->lincoefs[i] *
-      SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->linexprs[i]));
-
-   for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i ) /* quadratic terms */
-   {
-      SCIP_QUADEXPRTERM quadexprterm;
-      SCIP_Real solval;
-
-      quadexprterm = nlhdlrexprdata->quadexprterms[i];
-      solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm.expr));
-      activity += (quadexprterm.lincoef + quadexprterm.sqrcoef * solval) * solval;
-   }
-   for( i = 0; i < nlhdlrexprdata->nbilinexprterms; ++i ) /* bilinear terms */
-   {
-      SCIP_BILINEXPRTERM bilinexprterm;
-
-      bilinexprterm = nlhdlrexprdata->bilinexprterms[i];
-      activity += bilinexprterm.coef *
-         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr1)) *
-         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm.expr2));
-   }
-
    side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
 
-   SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", activity,
+   SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", auxvalue,
       SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
          "concave");
 
@@ -1333,16 +1319,18 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
     * if concave, then we enforce expr >= auxvar, so violation is auxvar - expr = side - activity, if positive
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
-      violation = MAX(0.0, activity - side);
+      violation = MAX(0.0, auxvalue - side);
    else /* nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE */
-      violation = MAX(0.0, side - activity);
+      violation = MAX(0.0, side - auxvalue);
 
    /* if there is violation, then add branchscore for all expr in quadratic part */
-   if( SCIPisPositive(scip, violation) )
+   if( violation > 0.0 )
+   {
       for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
          SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->quadexprterms[i].expr, brscoretag, violation);
 
-   *success = TRUE;
+      *success = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -1378,7 +1366,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    assert(consexprhdlr != NULL);
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY,
-            detectHdlrQuadratic, NULL) );
+            nlhdlrDetectQuadratic, nlhdlrEvalAuxQuadratic, NULL) );
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);

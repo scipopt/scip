@@ -328,6 +328,31 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(evalauxHdlr)
+{
+   SCIP_Real xval;
+   SCIP_Real yval;
+
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+   assert(auxvalue != NULL);
+
+   xval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->varx);
+   yval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vary);
+
+   *auxvalue = nlhdlrexprdata->constant;
+   *auxvalue += nlhdlrexprdata->xcoef * xval;
+   *auxvalue += nlhdlrexprdata->xxcoef * xval * xval;
+   *auxvalue += nlhdlrexprdata->ycoef * yval;
+   *auxvalue += nlhdlrexprdata->yycoef * yval * yval;
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
 {
    SCIP_VAR* auxvar;
@@ -389,7 +414,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       return SCIP_OKAY;
 
    /* check whether its violation and numerical properties are ok (and maybe improve) */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
    if( success )
    {
@@ -398,7 +423,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "testhdlrcut_cvx");
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, conshdlr) );
 
-      assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
+      assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= mincutviolation);
 
       /* add cut */
       SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
@@ -479,7 +504,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIP_CALL( SCIPallocClearMemory(targetscip, &nlhdlrdata) );
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
-      SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr), SCIPgetConsExprNlhdlrPriority(sourcenlhdlr), detectHdlr, nlhdlrdata) );
+      SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr), SCIPgetConsExprNlhdlrPriority(sourcenlhdlr), detectHdlr, evalauxHdlr, nlhdlrdata) );
    SCIPsetConsExprNlhdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
@@ -562,7 +587,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPallocClearMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, evalauxHdlr, nlhdlrdata) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);

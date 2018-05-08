@@ -463,8 +463,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
    {
       SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, TRUE, FALSE, NULL, NULL, &rows[2]) );
 
-      /* check whether violation >= minviolation */
-      if( rows[2] != NULL && -SCIPgetRowSolFeasibility(scip, rows[2], sol) < minviolation )
+      /* check whether violation >= mincutviolation */
+      if( rows[2] != NULL && -SCIPgetRowSolFeasibility(scip, rows[2], sol) < mincutviolation )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &rows[2]) );
       }
@@ -482,7 +482,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
          continue;
 
       violation = -SCIPgetRowSolFeasibility(scip, rows[i], sol);
-      if( SCIPisGE(scip, violation, minviolation) )
+      if( SCIPisGE(scip, violation, mincutviolation) )
       {
          SCIP_CALL( SCIPaddRow(scip, rows[i], FALSE, &infeasible) );
          *ncuts += 1;

@@ -164,6 +164,7 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLRINIT((*init));                  /**< initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit));                  /**< deinitialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect));              /**< structure detection callback */
+   SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux));            /**< auxiliary evaluation callback */
    SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa));          /**< separation initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa));                  /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa));          /**< separation deinitialization callback (can be NULL) */
@@ -178,6 +179,7 @@ struct SCIP_ConsExpr_ExprEnfo
    SCIP_CONSEXPR_NLHDLR*         nlhdlr;          /**< nonlinear handler */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;  /**< data of nonlinear handler */
    SCIP_Bool                     issepainit;      /**< was the initsepa callback of nlhdlr called */
+   SCIP_Real                     auxvalue;        /**< auxiliary value of expression w.r.t. currently enforced solution */
 };
 
 /** expression tree iterator */

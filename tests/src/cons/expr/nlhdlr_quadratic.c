@@ -131,7 +131,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
    providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
    cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
    cr_assert(enforcebelow);
@@ -205,7 +205,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
    providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
    cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
    cr_assert(enforcebelow);
@@ -377,7 +377,7 @@ Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
 
    /* shouldn't have detected anything -> provides nothing */
    cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
@@ -411,7 +411,7 @@ Test(nlhdlrquadratic, noproperquadratic2, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
 
    /* shouldn't have detected anything -> provides nothing */
    cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
@@ -461,7 +461,7 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
 
    cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
    cr_assert(!enforcebelow);
@@ -565,7 +565,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
 
    cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
    cr_assert(!enforcebelow);

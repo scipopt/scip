@@ -180,10 +180,6 @@ struct SCIP_ConshdlrData
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
 
-   /* separation parameters */
-   SCIP_Real                mincutviolationsepa;    /**< minimal violation of a cut in order to add it to relaxation during separation */
-   SCIP_Real                mincutviolationenfofac; /**< minimal target violation of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
-
    /* upgrade */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
    int                      exprconsupgradessize; /**< size of exprconsupgrades array */
@@ -255,9 +251,12 @@ typedef struct
 {
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
    SCIP_SOL*               sol;              /**< solution to separate (NULL for separating the LP solution) */
-   SCIP_Real               minviolation;     /**< minimal violation of a cut if it should be added to the LP */
+   unsigned int            soltag;           /**< tag of solution */
+   SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger separation */
+   SCIP_Real               mincutviolation;  /**< minimal violation of a cut if it should be added to the LP */
    SCIP_RESULT             result;           /**< buffer to store a result */
    int                     ncuts;            /**< buffer to store the total number of added cuts */
+   SCIP_Real               maxauxviolation;  /**< buffer to store maximal violation w.r.t. auxvars */
    unsigned int            sepatag;          /**< separation tag */
 } SEPA_DATA;
 
@@ -265,7 +264,10 @@ typedef struct
 typedef struct
 {
    SCIP_SOL*               sol;              /**< solution (NULL for current the LP solution) */
+   unsigned int            soltag;           /**< solution tag */
+   SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger branching score */
    unsigned int            brscoretag;       /**< branching score tag */
+   SCIP_Bool               evalauxvalues;    /**< whether auxiliary values of expressions need to be evaluated */
 } BRSCORE_DATA;
 
 struct SCIP_ConsExpr_PrintDotData
@@ -4273,6 +4275,7 @@ static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
 {
    BRSCORE_DATA* brscoredata;
+   SCIP_Real auxvarvalue;
    SCIP_Real violation;
 
    assert(expr != NULL);
@@ -4285,7 +4288,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    /* if no auxvar, then no need to compute branching score here (nothing can be violated) */
-   if( SCIPgetConsExprExprAuxVar(expr) == NULL )
+   if( expr->auxvar == NULL )
       return SCIP_OKAY;
 
    /* if having evaluated branching score already, then don't do again and don't enter subexpressions */
@@ -4295,26 +4298,35 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       return SCIP_OKAY;
    }
 
+   /* make sure expression has been evaluated, so evalvalue makes sense */
+   SCIP_CALL( SCIPevalConsExprExpr(scip, expr, brscoredata->sol, brscoredata->soltag) );
+
+   auxvarvalue = SCIPgetSolVal(scip, brscoredata->sol, expr->auxvar);
+
    /* compute violation w.r.t. original variables */
    if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
       violation = SCIPinfinity(scip);
    else
    {
-      violation = expr->evalvalue - SCIPgetSolVal(scip, brscoredata->sol, SCIPgetConsExprExprAuxVar(expr));
-      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && violation < 0.0 )
-         violation = -violation;
-      else if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
-         violation = 0.0;
+      violation = 0.0;
+
+      /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
+      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > 0.0 )
+         violation = auxvarvalue - expr->evalvalue;
+
+      /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
+      if( SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > 0.0 )
+         violation = expr->evalvalue - auxvarvalue;
    }
 
    /* if there is violation, then consider branching */
-   if( violation > 0.0 )
+   if( violation > brscoredata->minviolation )
    {
-      SCIP_Bool success;
+      /* SCIP_Bool success = FALSE; */
+      SCIP_Bool nlhdlrsuccess;
       int e;
 
       /* call branching score callbacks of all nlhdlrs */
-      success = FALSE;
       for( e = 0; e < expr->nenfos; ++e )
       {
          SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -4322,8 +4334,29 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
 
-         SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, brscoredata->brscoretag, &success) );
+         /* update auxvalue as corresponding to nlhdlr, if necessary */
+         if( brscoredata->evalauxvalues )
+         {
+            SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, brscoredata->sol) );
+         }
+
+         /* if there is violation w.r.t. auxiliary variables, then call brscore of nlhdlr
+          * the nlhdlr currently needs to recheck whether auxvar <= expr or auxvar >= expr is violated
+          * and whether that corresponds to the relation that the nlhdlr tries to enforce
+          */
+         if( expr->enfos[e]->auxvalue == SCIP_INVALID ||  /*lint !e777*/
+            (SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
+            (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
+         {
+            SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &nlhdlrsuccess) );
+            SCIPdebugMsg(scip, "branchscore of nlhdlr %s for expr %p (%s) with auxviolation %g: success = %d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), nlhdlrsuccess);
+            /* if( nlhdlrsuccess )
+               success = TRUE; */
+         }
       }
+      /* if noone had success, then the violation here is caused by a violation deeper down in the expression tree,
+       * so there was no need to add branching scores from this expression
+       */
    }
 
    /* remember that we computed branching scores for this expression */
@@ -4384,7 +4417,10 @@ SCIP_RETCODE computeBranchingScores(
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_SOL*             sol                 /**< solution to branch on (NULL for LP solution) */
+   SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
+   SCIP_Bool             evalauxvalues,      /**< whether auxiliary values of expressions need to be evaluated */
+   SCIP_SOL*             sol,                /**< solution to branch on (NULL for LP solution) */
+   unsigned int          soltag              /**< solution tag */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -4401,7 +4437,10 @@ SCIP_RETCODE computeBranchingScores(
    assert(conshdlrdata != NULL);
 
    brscoredata.sol = sol;
+   brscoredata.soltag = soltag;
+   brscoredata.minviolation = minviolation;
    brscoredata.brscoretag = ++(conshdlrdata->lastbrscoretag);
+   brscoredata.evalauxvalues = evalauxvalues;
 
    /* call branching score callbacks for expressions in violated constraints */
    for( i = 0; i < nconss; ++i )
@@ -4447,6 +4486,9 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
    SCIP_SOL*             sol,                /**< solution to branch on (NULL for LP solution) */
+   unsigned int          soltag,             /**< solution tag */
+   SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
+   SCIP_Bool             evalauxvalues,      /**< whether auxiliary values of expressions need to be evaluated */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -4466,7 +4508,7 @@ SCIP_RETCODE registerBranchingCandidates(
    *nnotify = 0;
 
    /* compute branching scores by considering violation of all expressions */
-   SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, sol) );
+   SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, minviolation, evalauxvalues, sol, soltag) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4492,9 +4534,8 @@ SCIP_RETCODE registerBranchingCandidates(
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
             assert(var != NULL);
 
-            /* introduce all variables which do not have been fixed yet and appear in some violated expressions (=have a branching score > feastol) */
-            if( SCIPisGT(scip, brscore, SCIPfeastol(scip))
-               && !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
+            /* introduce variable if it has not been fixed yet and has a branching score > 0 */
+            if( !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
             {
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
                ++(*nnotify);
@@ -4505,6 +4546,57 @@ SCIP_RETCODE registerBranchingCandidates(
 
    return SCIP_OKAY;
 }
+
+/** registers all unfixed variables in violated constraints as branching candidates */
+static
+SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   int c;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nnotify != NULL);
+
+   *nnotify = 0;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL && conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* consider only violated constraints */
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      /* register all variables that have not been fixed yet */
+      assert(consdata->varexprs != NULL);
+      for( i = 0; i < consdata->nvarexprs; ++i )
+      {
+         var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+         assert(var != NULL);
+
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+            ++(*nnotify);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** expression walk callback to install nlhdlrs in expressions */
 static
@@ -4896,7 +4988,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
    if( expr->auxvar != NULL )
    {
       SCIP_RESULT separesult;
-      SCIP_Real violation;
+      SCIP_Real auxvarvalue;
       SCIP_Bool underestimate;
       SCIP_Bool overestimate;
       SCIP_Bool separated;
@@ -4907,14 +4999,21 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       ncuts = 0;
       separated = FALSE;
 
+      auxvarvalue = SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
 
-      /* decide whether to under- or overestimate */
+      /* make sure that this expression has been evaluated */
+      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sepadata->sol, sepadata->soltag) );
+
+      /* compute violation and decide whether under- or overestimate is required */
       if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
       {
-         /* the expression could be evaluated, then look at sign of violation */
-         violation = expr->evalvalue - SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
-         overestimate = SCIPisLT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksNeg(expr) > 0;
-         underestimate = SCIPisGT(scip, violation, 0.0) && SCIPgetConsExprExprNLocksPos(expr) > 0;
+         /* the expression could be evaluated, then look how much and on which side it is violated */
+
+         /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
+         overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > sepadata->minviolation;
+
+         /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
+         underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > sepadata->minviolation;
       }
       else
       {
@@ -4923,7 +5022,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
       }
 
-      /* no violation w.r.t. the original variables -> skip expression */
+      /* no sufficient violation w.r.t. the original variables -> skip expression */
       if( !overestimate && !underestimate )
          return SCIP_OKAY;
 
@@ -4935,20 +5034,39 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          nlhdlr = expr->enfos[e]->nlhdlr;
          assert(nlhdlr != NULL);
 
-         /* call the separation callback of the nonlinear handler */
-         SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
-            overestimate, sepadata->minviolation, separated, &separesult, &ncuts) );
+         /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
+         SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sepadata->sol) );
 
-         assert(ncuts >= 0);
-         sepadata->ncuts += ncuts;
+         /* update maxauxviolation */
+         if( expr->enfos[e]->auxvalue == SCIP_INVALID )  /*lint !e777*/
+            sepadata->maxauxviolation = SCIPinfinity(scip);
+         else if( overestimate && auxvarvalue - expr->enfos[e]->auxvalue > sepadata->maxauxviolation )
+            sepadata->maxauxviolation = auxvarvalue - expr->enfos[e]->auxvalue;
+         else if( underestimate && expr->enfos[e]->auxvalue - auxvarvalue > sepadata->maxauxviolation )
+            sepadata->maxauxviolation = expr->enfos[e]->auxvalue - auxvarvalue;
 
-         if( underestimate && overestimate && separesult != SCIP_CUTOFF && separesult != SCIP_SEPARATED )
+         /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
+         if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > sepadata->minviolation) )  /*lint !e777*/
          {
-            /* call the separation callback of the nonlinear handler again for underestimation, if nothing found yet
-             * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error), see above
-             */
+            /* call the separation callback of the nonlinear handler for overestimation */
             SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
-               FALSE, sepadata->minviolation, separated, &separesult, &ncuts) );
+               expr->enfos[e]->auxvalue, TRUE, sepadata->mincutviolation, separated, &separesult, &ncuts) );
+
+            assert(ncuts >= 0);
+            sepadata->ncuts += ncuts;
+
+            /* if overestimation was successful, then no more need for underestimation
+             * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error) anyway
+             */
+            if( separesult == SCIP_CUTOFF || separesult == SCIP_SEPARATED )
+               underestimate = FALSE;
+         }
+
+         if( underestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > sepadata->minviolation) )  /*lint !e777*/
+         {
+            /* call the separation callback of the nonlinear handler for underestimation */
+            SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+               expr->enfos[e]->auxvalue, FALSE, sepadata->mincutviolation, separated, &separesult, &ncuts) );
 
             assert(ncuts >= 0);
             sepadata->ncuts += ncuts;
@@ -4962,7 +5080,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             *result = SCIP_CONSEXPREXPRWALK_ABORT;
             break;
          }
-         else if( separesult == SCIP_SEPARATED )
+
+         if( separesult == SCIP_SEPARATED )
          {
             assert(ncuts > 0);
             SCIPdebugMsg(scip, "found %d cuts by nlhdlr <%s> separating the current solution\n", ncuts, nlhdlr->name);
@@ -5047,8 +5166,11 @@ SCIP_RETCODE separatePoint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
-   SCIP_Real             minviolation,       /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_RESULT*          result              /**< result of separation */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Real             minviolation,       /**< minimal violation in an expression to call separation */
+   SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
+   SCIP_RESULT*          result,             /**< result of separation */
+   SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated > minviolation), or NULL if not of interest */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -5058,7 +5180,7 @@ SCIP_RETCODE separatePoint(
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= nusefulconss);
-   assert(minviolation >= 0.0);
+   assert(mincutviolation >= 0.0);
    assert(result != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5067,6 +5189,15 @@ SCIP_RETCODE separatePoint(
    /* increase separation tag; use the same tag for all constraints in this separatePoint() call */
    ++(conshdlrdata->lastsepatag);
 
+   /* initialize separation data */
+   sepadata.conshdlr = conshdlr;
+   sepadata.sol = sol;
+   sepadata.soltag = soltag;
+   sepadata.minviolation = minviolation;
+   sepadata.mincutviolation = mincutviolation;
+   sepadata.maxauxviolation = 0.0;
+   sepadata.sepatag = conshdlrdata->lastsepatag;
+
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL && conss[c] != NULL);
@@ -5074,19 +5205,14 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* skip constraints that are not enabled; skip non-violated constraints */
-      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c])
-         || SCIPisLE(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+      /* skip constraints that are not enabled */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
 
-      /* initialize separation data */
-      sepadata.conshdlr = conshdlr;
-      sepadata.sol = sol;
-      sepadata.minviolation = minviolation;
-      sepadata.result = SCIP_DIDNOTFIND;
-      sepadata.ncuts = 0;
-      sepadata.sepatag = conshdlrdata->lastsepatag;
+      /* skip non-violated constraints */
+      if( SCIPisLE(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+         continue;
 
       #ifdef SEPA_DEBUG
       {
@@ -5104,6 +5230,10 @@ SCIP_RETCODE separatePoint(
       }
       #endif
 
+      /* reset some sepadata */
+      sepadata.result = SCIP_DIDNOTFIND;
+      sepadata.ncuts = 0;
+
       /* walk through the expression tree and call separation callback functions */
       SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, separateSolEnterExpr, NULL, NULL, NULL, (void*)&sepadata) );
 
@@ -5113,7 +5243,7 @@ SCIP_RETCODE separatePoint(
          *result = sepadata.result;
 
          if( *result == SCIP_CUTOFF )
-            return SCIP_OKAY;
+            break;
       }
 
       /* enforce only useful constraints; others are only checked and enforced if we are still feasible or have not
@@ -5122,6 +5252,9 @@ SCIP_RETCODE separatePoint(
       if( c >= nusefulconss && *result == SCIP_SEPARATED )
          break;
    }
+
+   if( maxauxviolation != NULL )
+      *maxauxviolation = sepadata.maxauxviolation;
 
    return SCIP_OKAY;
 }
@@ -5197,7 +5330,7 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
 
 /** helper function to enforce constraints */
 static
-SCIP_RETCODE enforceConstraint(
+SCIP_RETCODE enforceConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
@@ -5209,10 +5342,12 @@ SCIP_RETCODE enforceConstraint(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_Real minviolation;
    SCIP_Real maxviol;
+   SCIP_Real minviolation;
+   SCIP_Real maxauxviolation;
    SCIP_RESULT propresult;
    SCIP_Bool force;
+   unsigned int soltag;
    int nnotify;
    int nchgbds;
    int ndelconss;
@@ -5222,6 +5357,7 @@ SCIP_RETCODE enforceConstraint(
    assert(conshdlr != NULL);
 
    maxviol = 0.0;
+   soltag = ++conshdlrdata->lastsoltag;
 
    /* force tightenings when calling enforcement for the first time for a node */
    force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
@@ -5229,7 +5365,7 @@ SCIP_RETCODE enforceConstraint(
 
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
       consdata = SCIPconsGetData(conss[c]);
 
       /* compute max violation */
@@ -5253,24 +5389,50 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   /* try to separate the LP solution */
-   minviolation = MIN(0.75*maxviol, conshdlrdata->mincutviolationenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   minviolation = MAX(minviolation, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minviolation, result) );
+   minviolation = SCIPfeastol(scip);
+   do
+   {
+      /* try to separate the LP solution */
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, minviolation, SCIPfeastol(scip), result, &maxauxviolation) );
 
-   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
-      return SCIP_OKAY;
+      if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
+         return SCIP_OKAY;
 
-   /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
-   SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
+      /* find branching candidates */
+      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, soltag, minviolation, FALSE, &nnotify) );
+      SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
-   /* all variables have been fixed -> cutoff node */
-   /* @todo If we do not branch on linear variables any more this should be changed. We need to introduce linear
-    * constraints which are obtained by replacing all fixed non-linear variables as it is done in cons_nonlinear.
-    */
+      /* if no cut or branching candidate, then try less violated expressions
+       * maxauxviolation tells us the maximal value we need to choose to have at least one violation in exprs with current violation > minviolation considered
+       * the latter condition means, however, that maxauxviolation = 0 is possible, that is, for all exprs with violation > minviolation, the auxviolation is 0
+       * TODO for now, just reduce minviolation by a factor of 10, though taking maxauxviolation into account would be nice
+       */
+      if( nnotify == 0 )
+         minviolation /= 10.0;
+   }
+   while( nnotify == 0 && minviolation > 1.0/SCIPinfinity(scip) ); /* stopping at SCIPepsilon is not sufficient for numerically difficult instances, but something like 1e-100 doesn't seem useful, too; use 1e-20 for now */
+
    if( nnotify == 0 )
+   {
+      SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
+
+      /* could not find branching candidates even when looking at minimal violated (>eps) expressions
+       * now look if we find any unfixed variable that we could still branch on
+       */
+      SCIP_CALL( registerBranchingCandidatesAllUnfixed(scip, conshdlr, conss, nconss, &nnotify) );
+      SCIPdebugMsg(scip, "registered %d unfixed variables as branching candidates", nnotify);
+   }
+
+   if( nnotify == 0 )
+   {
+      /* if everything is fixed in violated constraints, then let's cut off the node
+       * either bound tightening failed to identify a possible cutoff due to tolerances
+       * or the LP solution that we try to enforce here is not within bounds (see st_e40)
+       * TODO if there is a gap left and LP solution is not within bounds, then pass modified LP solution to heur_trysol?
+       */
+      SCIPdebugMsg(scip, "enforcement with max. violation %g, auxviolation %g, failed; cutting off node\n", maxviol, maxauxviolation);
       *result = SCIP_CUTOFF;
+   }
 
    return SCIP_OKAY;
 }
@@ -5996,23 +6158,27 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   unsigned int soltag;
    int c;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlr != NULL);
-
    *result = SCIP_DIDNOTFIND;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   soltag = ++conshdlrdata->lastsoltag;
 
    /* compute violations */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss[c] != NULL);
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
    }
 
-   /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutviolationsepa,
-         result) );
+   /* call separation
+    * TODO revise minviolation, should it be larger than feastol?
+    */
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6023,23 +6189,27 @@ static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   unsigned int soltag;
    int c;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlr != NULL);
-
    *result = SCIP_DIDNOTFIND;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   soltag = ++conshdlrdata->lastsoltag;
 
    /* compute violations */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss[c] != NULL);
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
    }
 
-   /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutviolationsepa,
-         result) );
+   /* call separation
+    * TODO revise minviolation, should it be larger than feastol?
+    */
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6049,7 +6219,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -6058,7 +6228,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -6071,6 +6241,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool force;
+   unsigned int soltag;
    int nchgbds;
    int ndelconss;
    int nnotify;
@@ -6080,10 +6251,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    force = conshdlrdata->lastenfopsnodenum == SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
    conshdlrdata->lastenfopsnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
+   soltag = ++conshdlrdata->lastsoltag;
+
    *result = SCIP_FEASIBLE;
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
 
       consdata = SCIPconsGetData(conss[c]);
       if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
@@ -6108,7 +6281,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    }
 
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, soltag, SCIPfeastol(scip), TRUE, &nnotify) );
    SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
    *result = nnotify == 0 ? SCIP_SOLVELP : SCIP_INFEASIBLE;
@@ -9015,14 +9188,6 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
          &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minviolationsepa",
-         "minimal violation for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutviolationsepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minviolationenfofac",
-         "minimal target violation of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutviolationenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
-
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
          "signals a bound change to an expression constraint", processVarEvent, NULL) );
@@ -9575,6 +9740,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
    unsigned int                priority,     /**< priority of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
    )
 {
@@ -9586,6 +9752,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    assert(nlhdlr != NULL);
    assert(name != NULL);
    assert(detect != NULL);
+   assert(evalaux != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -9601,6 +9768,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    (*nlhdlr)->priority = priority;
    (*nlhdlr)->data = data;
    (*nlhdlr)->detect = detect;
+   (*nlhdlr)->evalaux = evalaux;
 
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->detecttime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->sepatime) );
@@ -9823,6 +9991,17 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlr(
    return SCIP_OKAY;
 }
 
+/** call the auxiliary evaluation callback of a nonlinear handler */
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(SCIPevalauxConsExprNlhdlr)
+{
+   assert(nlhdlr != NULL);
+   assert(nlhdlr->evalaux != NULL);
+
+   SCIP_CALL( nlhdlr->evalaux(scip, nlhdlr, expr, nlhdlrexprdata, auxvalue, sol) );
+
+   return SCIP_OKAY;
+}
+
 /** calls the separation initialization callback of a nonlinear handler */
 SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
    SCIP*                         scip,             /**< SCIP data structure */
@@ -9880,19 +10059,7 @@ SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
 }
 
 /** calls the separation callback of a nonlinear handler */
-SCIP_RETCODE SCIPsepaConsExprNlhdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_SOL*                     sol,              /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Bool                     overestimate,     /**< whether the expression needs to be over- or underestimated */
-   SCIP_Real                     minviolation,     /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_Bool                     separated,        /**< whether another nonlinear handler already added a cut for this expression */
-   SCIP_RESULT*                  result,           /**< pointer to store the result */
-   int*                          ncuts             /**< pointer to store the number of added cuts */
-)
+SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -9906,8 +10073,17 @@ SCIP_RETCODE SCIPsepaConsExprNlhdlr(
       return SCIP_OKAY;
    }
 
+#ifndef NDEBUG
+   /* check that auxvalue is correct by reevaluating */
+   {
+      SCIP_Real auxvaluetest;
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
+      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
+   }
+#endif
+
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
-   SCIP_CALL( nlhdlr->sepa(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, overestimate, minviolation, separated, result, ncuts) );
+   SCIP_CALL( nlhdlr->sepa(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, ncuts) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
 
    /* update statistics */
@@ -9983,15 +10159,7 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
 }
 
 /** calls the nonlinear handler branching score callback */
-SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_SOL*                     sol,              /**< solution (NULL for the LP solution) */
-   unsigned int                  brscoretag,       /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
-   SCIP_Bool*                    success           /**< buffer to store whether the branching score callback was successful */
-)
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10003,7 +10171,16 @@ SCIP_RETCODE SCIPbranchscoreConsExprNlHdlr(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, nlhdlrexprdata, sol, brscoretag, success) );
+#ifndef NDEBUG
+   /* check that auxvalue is correct by reevaluating */
+   {
+      SCIP_Real auxvaluetest;
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
+      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
+   }
+#endif
+
+   SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, brscoretag, success) );
 
    return SCIP_OKAY;
 }

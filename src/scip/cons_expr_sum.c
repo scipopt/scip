@@ -1017,7 +1017,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    /* compute violation */
    violation = -SCIPgetRowSolFeasibility(scip, exprdata->row, sol);
 
-   if( SCIPisGE(scip, violation, minviolation) )
+   if( SCIPisGE(scip, violation, mincutviolation) )
    {
       SCIP_Bool infeasible;
 
