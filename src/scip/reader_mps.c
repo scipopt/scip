@@ -4707,6 +4707,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          lincons = SCIPgetLinearConsIndicator(cons);
          slackvar = SCIPgetSlackVarIndicator(cons);
 
+         /* linvars always contains slack variable, thus nlinvars >= 1 */
+         if( SCIPgetNVarsLinear(scip, lincons) <= 1 || SCIPconsIsDeleted(lincons) )
+            continue;
+
          /* create variable and value strings */
          if( SCIPvarIsNegated(binvar) )
          {
