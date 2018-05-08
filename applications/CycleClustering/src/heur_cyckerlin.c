@@ -597,7 +597,7 @@ SCIP_RETCODE permuteStartSolution(
    {
       pushed = 0;
 
-      while(SCIPisLT(scip, pushed, binsincluster[t] / 2)) /*lint !e771*/
+      while(pushed < binsincluster[t] / 2) /*lint !e771*/
       {
          rndcluster = bins[t][SCIPrandomGetInt(rnd, 0, binsincluster[t] - 1)];
 
