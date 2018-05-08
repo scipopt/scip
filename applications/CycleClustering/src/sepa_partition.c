@@ -248,11 +248,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
             successors[2] = SCIPdigraphGetSuccessors(edgegraph, states[2]);
             nsuccessors[2] = SCIPdigraphGetNSuccessors(edgegraph, states[2]);
 
-            if( NULL == edgevars[states[0]][states[1]] || NULL == edgevars[states[0]][states[2]]
-               || NULL == edgevars[states[1]][states[2]] )
-            {
+            /* check if all edges in triangle exist */
+            if( !edgesExist(edgevars, states, 3) )
                continue;
-            }
 
             if( states[1] > states[2] )
             {
@@ -279,11 +277,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   for( l = 0; l < nsuccessors[2]; ++l )
                   {
                      states[3] = successors[2][l];
-                     if( NULL == edgevars[states[0]][states[3]] || NULL == edgevars[states[1]][states[3]]
-                        || NULL == edgevars[states[2]][states[3]] )
-                     {
+                     if( !edgesExist(edgevars, states, 4) )
                         continue;
-                     }
 
                      violationchg = SCIPvarGetLPSol(getEdgevar(edgevars, states[0], states[3], 1));
                      violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[1],states[3]), MIN(states[1],states[3]), 0));
@@ -314,11 +309,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   {
                      states[4] = successors[3][l];
 
-                     if( NULL == edgevars[states[0]][states[4]] || NULL == edgevars[states[1]][states[4]] ||
-                        NULL == edgevars[states[2]][states[4]] || NULL == edgevars[states[3]][states[4]] )
-                     {
+                     if( !edgesExist(edgevars, states, 5) )
                         continue;
-                     }
 
                      /* compute what has changed from the violation of the 1-4 inequality */
                      violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
@@ -361,11 +353,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   for( l = 0; l < nsuccessors[2]; ++l )
                   {
                      states[3] = successors[2][l];
-                     if( NULL == edgevars[states[0]][states[3]] || NULL == edgevars[states[1]][states[3]]
-                        || NULL == edgevars[states[2]][states[3]] )
-                     {
+                     if( !edgesExist(edgevars, states, 4) )
                         continue;
-                     }
 
                      violationchg = SCIPvarGetLPSol(getEdgevar(edgevars, states[3], states[0], 1));
                      violationchg -= SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[1],states[3]), MIN(states[1],states[3]), 0));
@@ -392,11 +381,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   {
                      states[4] = successors[3][l];
 
-                     if( NULL == edgevars[states[0]][states[4]] || NULL == edgevars[states[1]][states[4]]
-                        || NULL == edgevars[states[2]][states[4]] || NULL == edgevars[states[3]][states[4]] )
-                     {
+                     if( !edgesExist(edgevars, states, 5) )
                         continue;
-                     }
 
                      violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars, MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, firstpart[0], states[4], 1));

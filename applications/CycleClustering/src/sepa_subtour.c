@@ -748,7 +748,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
       {
          iscontracted[i][j] = -1;
 
-         if( edgevars[i][j] != NULL && getEdgevar(edgevars, i, j, 1) != NULL )
+         if( edgevars[i] != NULL && edgevars[i][j] != NULL && getEdgevar(edgevars, i, j, 1) != NULL )
             adjacencymatrix[0][i][j] = SCIPvarGetLPSol(getEdgevar(edgevars, i, j, 1));
       }
    }
@@ -759,12 +759,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    for( i = 0; i < nstates; ++i )
    {
       state1 = i;
+
+      assert( edgevars[state1] != NULL);
+
       successors1 = SCIPdigraphGetSuccessors(edgegraph, state1);
       nsuccessors1 = SCIPdigraphGetNSuccessors(edgegraph, state1);
 
       for( j = 0; j < nsuccessors1; ++j )
       {
          state2 = successors1[j];
+
+         assert( edgevars[state2] != NULL);
+
          successors2 = SCIPdigraphGetSuccessors(edgegraph, state2);
          nsuccessors2 = SCIPdigraphGetNSuccessors(edgegraph, state2);
 
