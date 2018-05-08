@@ -93,6 +93,8 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    /* for each bin, set the assignment with the highest lp-value to 1, the rest to 0 */
    for( i = 0; i < nbins; ++i )
    {
+      assert(NULL != binvars[i]);
+
       maxlpval = 0;
       maxcluster = -1;
 

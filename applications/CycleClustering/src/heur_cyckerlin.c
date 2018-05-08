@@ -575,7 +575,7 @@ SCIP_RETCODE permuteStartSolution(
 
       for( i = 0; i < nbins; ++i )
       {
-         if( 0 < startclustering[i][t])
+         if( SCIPisPositive(scip, startclustering[i][t]) )
             binsincluster[t]++;
       }
 
@@ -585,7 +585,7 @@ SCIP_RETCODE permuteStartSolution(
 
       for( i = 0; i < nbins; ++i )
       {
-         if( 0 < startclustering[i][t])
+         if( SCIPisPositive(scip, startclustering[i][t]) )
          {
             bins[t][c] = i;
             c++;
@@ -597,13 +597,13 @@ SCIP_RETCODE permuteStartSolution(
    {
       pushed = 0;
 
-      while(pushed < binsincluster[t] / 2) /*lint !e771*/
+      while(SCIPisLT(scip, pushed, binsincluster[t] / 2.0)) /*lint !e771*/
       {
          rndcluster = bins[t][SCIPrandomGetInt(rnd, 0, binsincluster[t] - 1)];
 
          if( rndcluster == nbins -1 )
             continue;
-         if( startclustering[rndcluster][t] == 0 )
+         if( SCIPisZero(scip, startclustering[rndcluster][t]) )
             continue;
 
          startclustering[rndcluster][t] = 0;
