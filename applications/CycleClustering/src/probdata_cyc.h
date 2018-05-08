@@ -79,6 +79,15 @@ SCIP_VAR**** SCIPcycGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
+/** Return one specific edge variable */
+extern
+SCIP_VAR* getEdgevar(
+   SCIP_VAR****          edgevars,           /**< edgevar data structure*/
+   int                   state1,             /**< first state */
+   int                   state2,             /**< second state */
+   int                   direction           /**< direction, 0 = incluster, 1 = forward */
+   );
+
 /** returns the edge-graph */
 extern
 SCIP_DIGRAPH* SCIPcycGetEdgeGraph(

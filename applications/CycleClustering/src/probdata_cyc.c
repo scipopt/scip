@@ -1447,6 +1447,21 @@ SCIP_VAR**** SCIPcycGetEdgevars(
    return probdata->edgevars;
 }
 
+/** Return one specific edge variable */
+SCIP_VAR* getEdgevar(
+   SCIP_VAR****          edgevars,           /**< edgevar data structure*/
+   int                   state1,             /**< first state */
+   int                   state2,             /**< second state */
+   int                   direction           /**< direction, 0 = incluster, 1 = forward */
+   )
+{
+   assert(edgevars[state1] != NULL);
+   assert(edgevars[state1][state2] != NULL);
+   assert(edgevars[state1][state2][direction] != NULL);
+
+   return edgevars[state1][state2][direction];
+}
+
 /** Returns the edge-graph */
 SCIP_DIGRAPH* SCIPcycGetEdgeGraph(
    SCIP*                 scip                /**< SCIP data structure */
