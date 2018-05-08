@@ -61,6 +61,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
    SCIP_Real** sign;                         /* matrix of sign-permuations */
    SCIP_Real* violation;                     /* array of violations */
    SCIP_ROW** cuts;                          /* array of generated cuts */
+   SCIP_Real goodscorefac;                   /* parameters for cut-selection */
+   SCIP_Real badscorefac;
+   SCIP_Real goodmaxparall;
+   SCIP_Real maxparall;
+   SCIP_Real dircutoffdist;
+   SCIP_Real efficacyweight;
+   SCIP_Real objparalweight;
+   SCIP_Real intsuppweight;
    int* succs1;                              /* successors of first state */
    int* succs2;                              /* successors of second state */
    int nstates;                              /* number of states */
@@ -294,8 +302,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
    /* apply the cuts with the highest violation or use cut-selection */
    if( usecutselection )
    {
-      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, 0.8, 0.0, 0.1, 0.5, 0.5, 1.0, 0.1, 0.1,
-         ncutscreated, 0, MAXCUTS, &ncutsapplied ) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodscorefac", &goodscorefac) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/badscorefac", &badscorefac) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodmaxparall", &goodmaxparall) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/maxparall", &maxparall) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/dircutoffdist", &dircutoffdist) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/efficacyweight", &efficacyweight) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/objparalweight", &objparalweight) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/intsuppweight", &intsuppweight) );
+
+      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, goodscorefac, badscorefac, goodmaxparall, maxparall, dircutoffdist,
+         efficacyweight, objparalweight, intsuppweight, ncutscreated, 0, MAXCUTS, &ncutsapplied ) );
    }
    else
    {

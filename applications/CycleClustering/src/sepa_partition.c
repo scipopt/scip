@@ -37,6 +37,7 @@
 #define MAXCUTS                    2000 /**< maximal number of cuts that can be added to cut pool */
 #define MAXCUTSCREATED            10000 /**< maximal number of cuts to select from */
 #define MAXROUNDS                    20 /**< maximal number of separation rounds per node */
+#define MAXTRIANGLEDISTANCE        -0.2 /**< maximal negative violation of triangle-inequality to construct cut from */
 
 
 /** Given two partitions S, T creates the corresponding cut and adds it do SCIP */
@@ -146,6 +147,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    SCIP_Real bestvalue;
    SCIP_Real lpvalforward;
    SCIP_Real lpvalincluster;
+   SCIP_Real goodscorefac;
+   SCIP_Real badscorefac;
+   SCIP_Real goodmaxparall;
+   SCIP_Real maxparall;
+   SCIP_Real dircutoffdist;
+   SCIP_Real efficacyweight;
+   SCIP_Real objparalweight;
+   SCIP_Real intsuppweight;
    SCIP_Real* violations;
    SCIP_ROW** cuts;
    int cutsize;
@@ -189,8 +198,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    }
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &successors, 5) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &nsuccessors, 5) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &successors, 5) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nsuccessors, 5) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &fractionality, nstates) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &idx, nstates) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &firstpart, nstates) );
@@ -247,12 +256,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                continue;
             }
 
-            assert(edgevars[states[0]][states[1]][1] != NULL);
-            assert(edgevars[states[0]][states[2]][1] != NULL);
+            assert(edgevars[states[0]][states[1]] != NULL && edgevars[states[0]][states[1]][1] != NULL);
+            assert(edgevars[states[0]][states[2]] != NULL && edgevars[states[0]][states[2]][1] != NULL);
 
             if( states[1] > states[2] )
             {
-               assert(edgevars[states[1]][states[2]][0]);
+               assert(edgevars[states[1]][states[2]] != NULL && edgevars[states[1]][states[2]][0] != NULL);
 
                /* first case, construct partition with 2 predecessors and 3 successors */
                nfirst = 1;
@@ -269,7 +278,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                violation -= SCIPvarGetLPSol(edgevars[states[1]][states[2]][0]);
                violation -= 1;
 
-               if( SCIPisGE(scip, violation, -0.2) )
+               if( SCIPisGE(scip, violation, MAXTRIANGLEDISTANCE) )
                {
                   /* add a state to second partition*/
                   bestvalue = -SCIPinfinity(scip);
@@ -363,7 +372,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                violation -= SCIPvarGetLPSol(edgevars[states[1]][states[2]][0]);
                violation -= 1;
 
-               if( SCIPisGE(scip, violation, -0.2) )
+               if( SCIPisGE(scip, violation, MAXTRIANGLEDISTANCE) )
                {
                   /* add a state to second partition*/
                   bestvalue = -SCIPinfinity(scip);
@@ -441,8 +450,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    /* apply the cuts with the highest violation or use cut-selection */
    if( usecutselection )
    {
-      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, 0.8, 0.0, 0.1, 0.5, 0.5, 1.0, 0.1, 0.1,
-         ncutscreated, 0, MAXCUTS, &ncutsapplied ) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodscorefac", &goodscorefac) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/badscorefac", &badscorefac) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodmaxparall", &goodmaxparall) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/maxparall", &maxparall) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/dircutoffdist", &dircutoffdist) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/efficacyweight", &efficacyweight) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/objparalweight", &objparalweight) );
+      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/intsuppweight", &intsuppweight) );
+
+      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, goodscorefac, badscorefac, goodmaxparall, maxparall, dircutoffdist,
+         efficacyweight, objparalweight, intsuppweight, ncutscreated, 0, MAXCUTS, &ncutsapplied ) );
    }
    else
    {
@@ -468,8 +486,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
 
    SCIPfreeBufferArray(scip, &cuts);
    SCIPfreeBufferArray(scip, &violations);
-   SCIPfreeMemoryArray(scip, &successors);
-   SCIPfreeMemoryArray(scip, &nsuccessors);
+   SCIPfreeBufferArray(scip, &nsuccessors);
+   SCIPfreeBufferArray(scip, &successors);
 
    return SCIP_OKAY;
 }

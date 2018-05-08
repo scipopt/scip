@@ -178,7 +178,7 @@ SCIP_RETCODE readCyc(
 static
 SCIP_DECL_READERCOPY(readerCopyCyc)
 {
-   assert( scip != NULL);
+   assert(scip != NULL);
    assert(reader != NULL);
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
 
@@ -191,7 +191,7 @@ SCIP_DECL_READERREAD(readerReadCyc)
 {
    assert(reader != NULL);
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
-   assert( scip != NULL);
+   assert(scip != NULL);
    assert(result != NULL);
 
    SCIP_CALL( readCyc( scip, filename) );
@@ -229,6 +229,22 @@ SCIP_RETCODE SCIPincludeReaderCyc(
       "the model variant", NULL, FALSE, 's', "seqt", NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "cycleclustering/usecutselection",
       "true if cut selection should be used in cyc-separators", NULL, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/goodscorefac", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.8, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/badscorefac", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.0, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/goodmaxparall", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/maxparall", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.5, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/dircutoffdist", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.5, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/efficacyweight", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 1.0, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/objparalweight", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/intsuppweight", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
