@@ -29,7 +29,7 @@
 
 
 #define BRANCHRULE_NAME            "multinode"
-#define BRANCHRULE_DESC            "multinode branching introduces a child-node for every possible 1-assignment of a setpartitioning constraint"
+#define BRANCHRULE_DESC            "multinode branching creates a child for every variable of a setpartitioning constraint"
 #define BRANCHRULE_PRIORITY        10000000
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
@@ -40,14 +40,14 @@
 
 /* put your local methods here, and declare them static */
 
-/** Get the branching candidates viable for multinode branching */
+/** get the branching candidates viable for multinode branching */
 static
 SCIP_RETCODE getBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            branchcands,        /**< The address of the branching candidates */
-   SCIP_Real*            branchcandssol,     /**< Pointer to solution values of the candidates */
-   SCIP_Real*            branchcandsfrac,    /**< Pointer to fractionalities of the candidates */
-   int*                  ncands              /**< Number of branching candidates */
+   SCIP_VAR**            branchcands,        /**< the address of the branching candidates */
+   SCIP_Real*            branchcandssol,     /**< pointer to solution values of the candidates */
+   SCIP_Real*            branchcandsfrac,    /**< pointer to fractionalities of the candidates */
+   int*                  ncands              /**< number of branching candidates */
    )
 {
    SCIP_VAR*** binvars;
@@ -65,7 +65,8 @@ SCIP_RETCODE getBranchCands(
    {
       for( k = 0; k < ncluster; ++k )
       {
-         if( SCIPvarGetStatus(binvars[i][k]) ==  SCIP_VARSTATUS_COLUMN && !SCIPisFeasIntegral(scip, SCIPvarGetLPSol(binvars[i][k])) )
+         if( SCIPvarGetStatus(binvars[i][k]) ==  SCIP_VARSTATUS_COLUMN
+            && !SCIPisFeasIntegral(scip, SCIPvarGetLPSol(binvars[i][k])) )
          {
             (branchcands)[*ncands] = binvars[i][k];
             (branchcandssol)[*ncands] = SCIPvarGetLPSol(binvars[i][k]);
@@ -78,12 +79,12 @@ SCIP_RETCODE getBranchCands(
    return SCIP_OKAY;
 }
 
-/** Branch on a selected bin -> Create at most |Cluster| children */
+/** branch on a selected bin -> Create at most |Cluster| children */
 static
 SCIP_RETCODE branchOnBin(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   row,                /**< The row in the binvar-matrix (not lp-row) to be branched on */
-   SCIP_RESULT*          result              /**< Pointer to store result of branching */
+   int                   row,                /**< the row in the binvar-matrix (not lp-row) to be branched on */
+   SCIP_RESULT*          result              /**< pointer to store result of branching */
    )
 {
    SCIP_VAR*** binvars;
@@ -101,12 +102,14 @@ SCIP_RETCODE branchOnBin(
    ncluster = SCIPcycGetNCluster(scip);
    assert(NULL != binvars[row]);
 
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &branched, ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &branched, ncluster) );
 
    /* check all candidates */
    for( k = 0; k < ncluster; ++k )
    {
-      if( (SCIPvarGetStatus(binvars[row][k]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(binvars[row][k]) == SCIP_VARSTATUS_COLUMN) && !SCIPisZero(scip, SCIPvarGetLPSol(binvars[row][k])) && !SCIPisEQ(scip, SCIPvarGetLPSol(binvars[row][k]), 1.0) )
+      if( (SCIPvarGetStatus(binvars[row][k]) == SCIP_VARSTATUS_LOOSE ||
+         SCIPvarGetStatus(binvars[row][k]) == SCIP_VARSTATUS_COLUMN) &&
+         !SCIPisZero(scip, SCIPvarGetLPSol(binvars[row][k])) && !SCIPisEQ(scip, SCIPvarGetLPSol(binvars[row][k]), 1.0) )
       {
          ncands++;
          priority = SCIPcalcNodeselPriority(scip, binvars[row][k], SCIP_BRANCHDIR_UPWARDS, 1.0);
@@ -117,6 +120,7 @@ SCIP_RETCODE branchOnBin(
          /* branch all viable candidates upwards */
          SCIP_CALL( SCIPcreateChild(scip, &node, priority, estimate) );
          SCIP_CALL( SCIPchgVarLbNode(scip, node, binvars[row][k], 1.0) );
+
          branched[k] = TRUE;
 
          *result = SCIP_BRANCHED;
@@ -125,17 +129,23 @@ SCIP_RETCODE branchOnBin(
       }
    }
 
-   /* create one child, were all the before upwards branched variables are now set to 0. Only do so if at least one upwards branching was done and if not all the variables were branched upwards */
+   /* create one child, were all the before upwards branched variables are now set to 0. Only do so if at least one
+    * upwards branching was done and if not all the variables were branched upwards
+    */
    if( ncands > 0 && ncands < ncluster )
    {
       SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)ncands, minestzero) );
       for( k = 0; k < ncluster; ++k )
       {
          if( branched[k] )
+         {
             SCIP_CALL( SCIPchgVarUbNode(scip, node, binvars[row][k], 0.0) );
+         }
       }
    }
-   SCIPfreeMemoryArray(scip, &branched);
+
+   SCIPfreeBufferArray(scip, &branched);
+
    return SCIP_OKAY;
 }
 
@@ -169,10 +179,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    assert(nbins > 0);
    assert(ncluster > 0 && ncluster <= nbins);
 
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &score, nbins) );
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &branchcands, nbins * ncluster) );
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &branchcandssol, nbins * ncluster) );
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &branchcandsfrac, nbins * ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &score, nbins) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcands, (SCIP_Longint) nbins * ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcandssol, (SCIP_Longint) nbins * ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &branchcandsfrac, (SCIP_Longint) nbins * ncluster) );
 
    ncands = 0;
    /* get the candidates */
@@ -181,7 +191,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    {
       /* compute the relpcost for the candidates */
       SCIP_CALL( SCIPexecRelpscostBranching(scip, branchcands, branchcandssol, branchcandsfrac, ncands, FALSE,  result) );
+
       assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
+
       if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
       {
          maxrow = -1;
@@ -191,13 +203,25 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
          for( i = 0; i < nbins; ++i )
          {
             score[i] = 0;
+
             for( k = 0; k < ncluster; ++k )
             {
-               if( SCIPvarGetStatus(binvars[i][k]) == SCIP_VARSTATUS_COLUMN && !SCIPisZero(scip, SCIPvarGetLPSol(binvars[i][k])) && !SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), 1.0) )
+               /* Do not branch on variables that are already fixed locally */
+               if( SCIPisEQ(scip, SCIPvarGetUbLocal(binvars[i][k]), SCIPvarGetLbLocal(binvars[i][k])) )
+               {
+                  score[i] = -SCIPinfinity(scip);
+                  break;
+               }
+
+               if( SCIPvarGetStatus(binvars[i][k]) == SCIP_VARSTATUS_COLUMN &&
+                  !SCIPisZero(scip, SCIPvarGetLPSol(binvars[i][k])) &&
+                  !SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), 1.0) )
+               {
                   score[i] += SCIPgetVarPseudocostScore(scip, binvars[i][k], SCIPvarGetLPSol(binvars[i][k]));
+               }
             }
 
-            if( SCIPisLT(scip, max, score[i]) )
+            if( SCIPisLT(scip, max, score[i]) && !SCIPisInfinity(scip, -score[i]) )
             {
                max = score[i];
                maxrow = i;
@@ -205,15 +229,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
          }
 
          if( -1 != maxrow )
+         {
             SCIP_CALL( branchOnBin(scip, maxrow, result) );
+         }
       }
    }
 
    /* free memory */
-   SCIPfreeMemoryArray(scip, &score);
-   SCIPfreeMemoryArray(scip, &branchcands);
-   SCIPfreeMemoryArray(scip, &branchcandssol);
-   SCIPfreeMemoryArray(scip, &branchcandsfrac);
+   SCIPfreeBufferArray(scip, &score);
+   SCIPfreeBufferArray(scip, &branchcands);
+   SCIPfreeBufferArray(scip, &branchcandssol);
+   SCIPfreeBufferArray(scip, &branchcandsfrac);
 
    return SCIP_OKAY;
 }
@@ -233,8 +259,8 @@ SCIP_RETCODE SCIPincludeBranchruleMultinode(
    branchruledata = NULL;
 
    /* include branching rule */
-   /* use SCIPincludeBranchruleBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
+   /* use SCIPincludeBranchruleBasic() plus setter functions if you want to set callbacks one-by-one
+    * and your code should compile independent of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
       BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );

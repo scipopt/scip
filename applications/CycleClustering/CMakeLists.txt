@@ -15,7 +15,9 @@ add_executable(cycleclustering
     src/heur_cycgreedy.c
     src/heur_fuzzyround.c
     src/heur_cyckerlin.c
+    src/heur_redsize.c
     src/branch_multinode.c
+    src/event_newsol.c
     src/reader_cyc.c
     src/probdata_cyc.c
 )
