@@ -64,7 +64,7 @@ SCIP_Bool isPartition(
       {
          if( !SCIPisIntegral(scip, solclustering[i][j]) )
             return FALSE;
-         if( solclustering[i][j] )
+         if( !SCIPisZero(scip, solclustering[i][j]) )
             sum += solclustering[i][j];
       }
       if( !SCIPisEQ(scip, sum, 1.0) )
@@ -1447,7 +1447,7 @@ SCIP_VAR**** SCIPcycGetEdgevars(
    return probdata->edgevars;
 }
 
-/** Return one specific edge variable */
+/** return one specific edge variable */
 SCIP_VAR* getEdgevar(
    SCIP_VAR****          edgevars,           /**< edgevar data structure*/
    int                   state1,             /**< first state */
@@ -1455,11 +1455,44 @@ SCIP_VAR* getEdgevar(
    int                   direction           /**< direction, 0 = incluster, 1 = forward */
    )
 {
+   assert(edgevars != NULL);
    assert(edgevars[state1] != NULL);
    assert(edgevars[state1][state2] != NULL);
    assert(edgevars[state1][state2][direction] != NULL);
 
    return edgevars[state1][state2][direction];
+}
+
+/** check for an array of states, if all possible edge-combinations exist */
+SCIP_Bool edgesExist(
+   SCIP_VAR****          edgevars,           /**< edgevar data structure */
+   int*                  states,             /**< state array */
+   int                   nstates             /**< size of state array */
+   )
+{
+   int i;
+   int j;
+
+   assert(edgevars != NULL);
+   assert(states != NULL);
+
+   for( i = 0; i < nstates; ++i )
+   {
+      assert(edgevars[states[i]] != NULL);
+
+      for( j = 0; j < nstates; ++j )
+      {
+         if( j != i )
+         {
+            assert(edgevars[states[j]] != NULL);
+
+            if( edgevars[states[i]][states[j]] == NULL )
+               return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
 }
 
 /** Returns the edge-graph */

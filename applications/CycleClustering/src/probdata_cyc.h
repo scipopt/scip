@@ -88,6 +88,15 @@ SCIP_VAR* getEdgevar(
    int                   direction           /**< direction, 0 = incluster, 1 = forward */
    );
 
+/** check for an array of states, if all possible edge-combinations exist */
+extern
+SCIP_Bool edgesExist(
+   SCIP_VAR****          edgevars,           /**< edgevar data structure */
+   int*                  states,             /**< state array */
+   int                   nstates             /**< size of state array */
+   );
+
+
 /** returns the edge-graph */
 extern
 SCIP_DIGRAPH* SCIPcycGetEdgeGraph(
