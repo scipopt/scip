@@ -240,11 +240,11 @@ SCIP_RETCODE SCIPincludeReaderCyc(
    SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/dircutoffdist", "used for cut-selection in cycle-clustering",
       NULL, FALSE, 0.5, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/efficacyweight", "used for cut-selection in cycle-clustering",
-      NULL, FALSE, 1.0, 0.0, 1.0, NULL, NULL) );
+      NULL, FALSE, 0.4, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/objparalweight", "used for cut-selection in cycle-clustering",
       NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/intsuppweight", "used for cut-selection in cycle-clustering",
-      NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL) );
+      NULL, FALSE, 0.3, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
