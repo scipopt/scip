@@ -5773,9 +5773,11 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       return SCIP_OKAY;
    }
 
+   /**! [SnippetCodeStyleExample] */
    /* try, if row coefficients can be made integral by multiplying them by a power of 2 */
    twomultval = 1.0;
    twomult = (twomultval <= maxscale);
+
    for( c = 0; c < row->len && twomult; ++c )
    {
       /* don't look at continuous variables, if we don't have to */
@@ -5785,6 +5787,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       /* check, if the coefficient can be scaled with a simple scalar */
       val = row->vals[c];
       absval = REALABS(val);
+
       while( twomultval <= maxscale
          && (absval * twomultval < 0.5 || !isIntegralScalar(val, twomultval, mindelta, maxdelta, NULL)) )
       {
@@ -5796,13 +5799,17 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
                break;
             }
          }
+
          if( s >= nscalars )
             twomultval *= 2.0;
       }
+
       twomult = (twomultval <= maxscale);
       SCIPsetDebugMsg(set, " -> val=%g, twomult=%g, val*twomult=%g, twomultable=%u\n",
          val, twomultval, val*twomultval, twomult);
    }
+   /**! [SnippetCodeStyleExample] */
+
    if( twomult )
    {
       /* make row coefficients integral by multiplying them with a power of 2 */
