@@ -73,7 +73,7 @@ mkdir -p settings
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 # FORMAT:
-#    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
+#    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 
 RANDOMSEED=`date +%Y%m%d`
 
@@ -83,12 +83,12 @@ declare -A JOBS
 declare -A TRIGGER
 
 # jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
-JOBS[6,2]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
+JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
 TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipoptspx MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-next-release-pure-diff PERFORMANCE=performance"
+JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-next-release-pure-diff PERFORMANCE=performance"
 
 # symlink to SAP settings for the next release settings
 ln -fs ~/sap-next-release-pure-diff.set settings/.
@@ -114,9 +114,6 @@ declare -A TODAYS_JOBS
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results${RANDOMSEED}_${i}"
-
-  # append /bin/scip to executable
-  TODAYS_JOBS[$i]=`echo ${TODAYS_JOBS[$i]}|sed "s@\(scipopt[cs]px\)@\1/bin/scip@"`
 done
 
 # Print some information about what is happening
@@ -145,7 +142,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   ###################
 
   # build with soplex only if today we have some soplex runs scheduled
-  BUILD_DIR=scipoptspx
+  BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
   cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
@@ -164,7 +161,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   # MIP settings
 
   # MINLP settings
-  ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
+  ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set limits gap 1e-4 set diffsave settings/minlp_default.set q"
 
   # create more required symlinks
   ln -fs /optimi/kombadon/IP check/
@@ -176,7 +173,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
 
   for i in `seq 1 ${TODAYS_N_JOBS}`; do
     FLAGS=${TODAYS_JOBS[$i]}
-    for j in "EXECUTABLE MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+    for j in "EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
       unset $j
     done
     export ${FLAGS}

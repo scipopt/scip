@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cppmain.cpp
+/**@file   scip/src/cppmain.cpp
  * @brief  main file for C++ compilation
  * @author Tobias Achterberg
  */

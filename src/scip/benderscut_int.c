@@ -16,6 +16,32 @@
 /**@file   benderscut_int.c
  * @brief  Generates a Laporte and Louveaux Benders' decomposition integer cut
  * @author Stephen J. Maher
+ *
+ * The classical Benders' decomposition algorithm is only applicable to problems with continuous second stage variables.
+ * Laporte and Louveaux (1993) developed a method for generating cuts when Benders' decomposition is applied to problem
+ * with discrete second stage variables. However, these cuts are only applicable when the master problem is a pure
+ * binary problem.
+ *
+ * The integer optimality cuts are a point-wise underestimator of the optimal subproblem objective function value.
+ * Similar to benderscuts_opt.c, an auxiliary variable, \f$\varphi\f$. is required in the master problem as a lower
+ * bound on the optimal objective function value for the Benders' decomposition subproblem.
+ *
+ * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
+ * \f[
+ * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \mbox{ integer}\}
+ * \f]
+ * If the subproblem is feasible, and \f$z(\bar{x}) > \varphi\f$ (indicating that the current underestimators are not
+ * optimal) then the Benders' decomposition integer optimality cut can be generated from the optimal solution of the
+ * subproblem. Let \f$S_{r}\f$ be the set of indicies for master problem variables that are 1 in \f$\bar{x}\f$ and
+ * \f$L\f$ a known lowerbound on the subproblem objective function value.
+ *
+ * The resulting cut is:
+ * \f[
+ * \varphi \geq (z(\bar{x}) - L)(\sum_{i \in S_{r}}(x_{i} - 1) + \sum_{i \notin S_{r}}x_{i} + 1)
+ * \f]
+ *
+ * Laporte, G. & Louveaux, F. V. The integer L-shaped method for stochastic integer programs with complete recourse
+ * Operations Research Letters, 1993, 13, 133-142
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,7 +52,6 @@
 #include "scip/benderscut_int.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_benderscut.h"
-#include "scip/misc_benders.h"
 
 #include "scip/cons_linear.h"
 #include "scip/pub_lp.h"
@@ -78,7 +103,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBenderscutintConstant)
 }
 
 
-/** creates the benders cut data */
+/** creates the Benders' decomposition cut data */
 static
 SCIP_RETCODE createBenderscutData(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -286,11 +311,11 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    )
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
-   SCIP_CONSHDLR* consbenders;      /* the Benders' decomposition constraint handler */
-   SCIP_CONS* cons;                 /* the cut that will be generated from the solution to the pricing problem */
-   SCIP_ROW* row;                   /* the that is generated for the Benders' cut */
-   char cutname[SCIP_MAXSTRLEN];    /* the name of the generated cut */
-   SCIP_Bool optimal;               /* flag to indicate whether the current subproblem is optimal for the master */
+   SCIP_CONSHDLR* consbenders;
+   SCIP_CONS* cons;
+   SCIP_ROW* row;
+   char cutname[SCIP_MAXSTRLEN];
+   SCIP_Bool optimal;
    SCIP_Bool addcut;
    SCIP_Bool success;
 
@@ -302,7 +327,9 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    row = NULL;
    cons = NULL;
 
-   /* retreiving the Benders' cut data */
+   success = FALSE;
+
+   /* retrieving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
 
    /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be added
@@ -400,7 +427,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
             benderscutdata->subprobconstant[probnumber], probnumber, addcut, &success) );
    }
 
-   /* if success is FALSE, then there was an error in generating the integer optimaltiy cut. No cut will be added to
+   /* if success is FALSE, then there was an error in generating the integer optimality cut. No cut will be added to
     * the master problem. Otherwise, the constraint is added to the master problem.
     */
    if( !success )
@@ -437,9 +464,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
          SCIPinfoMessage(masterprob, NULL, ";\n");
 #endif
 
-         /* release the row */
-         SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
-
          (*result) = SCIP_SEPARATED;
       }
       else
@@ -451,12 +475,20 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 
          SCIPdebugPrintCons(masterprob, cons, NULL);
 
-         SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
-
          (*result) = SCIP_CONSADDED;
       }
    }
 
+   if( addcut )
+   {
+      /* release the row */
+      SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+   }
+   else
+   {
+      /* release the constraint */
+      SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -536,11 +568,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
    /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
    if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
    {
-      SCIPinfoMessage(scip, NULL, "The Laporte and Louveaux Benders' decomposition integer optimality cuts"
-         " can only be applied to problems with a pure binary master problem.\n"
-         "No integer optimality cuts will be generated for this problem. As such, your solution will be suboptimal.\n");
-
-      SCIPinfoMessage(scip, NULL, "The Laporte and Louveaux Benders' decomposition cuts will be disabled.\n");
+      SCIPinfoMessage(scip, NULL, "The integer optimality cuts can only be applied to problems with a "
+         "pure binary master problem. The integer optimality cuts will be disabled.\n");
 
       SCIPbenderscutSetEnabled(benderscut, FALSE);
 

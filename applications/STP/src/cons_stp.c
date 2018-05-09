@@ -1388,7 +1388,7 @@ SCIP_DECL_CONSLOCK(consLockStp)
    nvars = SCIPprobdataGetNVars(scip);
 
    for( v = 0; v < nvars; ++v )
-      SCIP_CALL( SCIPaddVarLocks(scip, vars[v], 1, 1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, 1, 1) );
 
    return SCIP_OKAY;
 }

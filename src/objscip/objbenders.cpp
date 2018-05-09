@@ -355,9 +355,6 @@ SCIP_RETCODE SCIPincludeObjBenders(
          bendersCreatesubObj, bendersPresubsolveObj, bendersSolvesubconvexObj, bendersSolvesubObj, bendersPostsolveObj,
          bendersFreesubObj, bendersdata) ); /*lint !e429*/
 
-   /* registering the Benders' decomposition structure pointer with the ObjBenders class */
-   objbenders->benders_ = SCIPfindBenders(scip, objbenders->scip_name_);
-
    return SCIP_OKAY; /*lint !e429*/
 }
 

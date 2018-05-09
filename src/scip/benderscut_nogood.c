@@ -16,6 +16,18 @@
 /**@file   benderscut_nogood.c
  * @brief  Generates a no good cut for integer solutions that are infeasible for the subproblems
  * @author Stephen J. Maher
+ *
+ * The no-good cut is generated for the Benders' decomposition master problem if an integer solution is identified as
+ * infeasible in at least one CIP subproblems. The no-good cut is required, because the classical Benders' decomposition
+ * feasibility cuts (see benderscut_feas.c) will only cut off the solution \f$\bar{x}\f$ if the LP relaxation of the CIP
+ * is infeasible.
+ *
+ * Consider a Benders' decomposition subproblem that is a CIP and it infeasible. Let \f$S_{r}\f$ be the set of indices
+ * for master problem variables that are 1 in \f$\bar{x}\f$. The no-good cut is given by
+ *
+ * \f[
+ * 1 \leq \sum_{i \in S_{r}}(1 - x_{i}) + \sum_{i \notin S_{r}}x_{i}
+ * \f]
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,7 +38,6 @@
 #include "scip/benderscut_nogood.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_benderscut.h"
-#include "scip/misc_benders.h"
 
 #include "scip/cons_linear.h"
 #include "scip/pub_lp.h"
@@ -174,10 +185,10 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    row = NULL;
    cons = NULL;
 
-   /* retreiving the Benders' cut data */
+   /* retrieving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
 
-   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must bei
+   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be
     * added to the master problem.
     */
    if( SCIPgetStage(masterprob) < SCIP_STAGE_INITSOLVE )
@@ -301,6 +312,17 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
    /* if a cut has been added in this Benders' decomposition call, then no more must be added */
    if( benderscutdata->cutadded )
       return SCIP_OKAY;
+
+   /* it is only possible to generate the no-good cut for pure binary master problems */
+   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
+   {
+      SCIPinfoMessage(scip, NULL, "The no-good cuts can only be applied to problems with a pure binary master problem. "
+         "The no-good Benders' decomposition cuts will be disabled.\n");
+
+      SCIPbenderscutSetEnabled(benderscut, FALSE);
+
+      return SCIP_OKAY;
+   }
 
    /* We can not rely on complete recourse for the subproblems. As such, the subproblems may be feasible for the LP, but
     * infeasible for the IP. As such, if one subproblem is infeasible, then a no good cut is generated.

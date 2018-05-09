@@ -52,9 +52,6 @@ public:
    /** SCIP data structure */
    SCIP* scip_;
 
-   /** Benders' decomposition data structure */
-   SCIP_BENDERS* benders_;
-
    /** name of the Benders' decomposition */
    char* scip_name_;
 
@@ -88,7 +85,6 @@ public:
       SCIP_Bool          shareauxvars        /**< should this Benders' use the highest priority Benders' aux vars */
       )
       : scip_(scip),
-        benders_(0),
         scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),

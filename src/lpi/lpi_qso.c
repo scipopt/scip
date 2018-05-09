@@ -301,11 +301,12 @@ SCIP_RETCODE convertSides(
    const double* const   rhs                 /**< right hand side */
    )
 {
+   int state;
+   register int i;
+
    assert(lpi != NULL);
    assert(lhs != NULL);
    assert(rhs!= NULL);
-   int state;
-   register int i;
 
    for( i = 0 ; i < nrows ; ++i )
    {
@@ -1068,7 +1069,8 @@ SCIP_RETCODE SCIPlpiClear(
    QS_CONDRET( QSget_objsense(lpi->prob, &objsen) );
 
    name = QSget_probname(lpi->prob);
-   (void) strncpy(savename, name, 1024);
+   (void)strncpy(savename, name, 1023);
+   name[1023] = '\0';
 
    QSfree_prob(lpi->prob);
    lpi->prob = QScreate_prob(savename, objsen);
@@ -2184,11 +2186,20 @@ SCIP_Bool SCIPlpiWasSolved(
    return (lpi->solstat != 0 && lpi->solstat != QS_LP_MODIFIED);
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    assert(lpi != NULL);
@@ -2366,7 +2377,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->solstat == QS_LP_OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2466,7 +2483,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */

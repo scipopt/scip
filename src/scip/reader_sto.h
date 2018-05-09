@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,7 +15,7 @@
 
 /**@file   reader_sto.h
  * @ingroup FILEREADERS
- * @brief  STO file reader
+ * @brief  STO file reader - the stochastic information of an instance in SMPS format
  * @author Stephen J. Maher
  *
  * This is a reader for the stochastic information of a stochastic programming instance in SMPS format.
@@ -60,11 +60,10 @@ SCIP_RETCODE SCIPincludeReaderSto(
  * @{
  */
 
-/** reads problem from file */
+/** reads the stochastic information for a stochastic program that is in SMPS format */
 EXTERN
 SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
@@ -89,6 +88,12 @@ SCIP_RETCODE SCIPwriteSto(
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
+   );
+
+/** returns the total number of scenarios added to the problem */
+EXTERN
+int SCIPstoGetNScenarios(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* @} */

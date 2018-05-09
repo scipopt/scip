@@ -3,4 +3,3 @@
 # should the event handler adapt the solver behavior?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
 solvingphases/enabled = TRUE
-

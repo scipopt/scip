@@ -985,6 +985,41 @@ SCIP_RETCODE releaseVarMappingHashmapVars(
 }
 
 
+/** releases the variables that have been captured in the hashmap */
+static
+SCIP_RETCODE releaseVarMappingHashmapVars(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   int nentries;
+   int i;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   assert(benders->mastervarsmap != NULL);
+
+   nentries = SCIPhashmapGetNEntries(benders->mastervarsmap);
+
+   for( i = 0; i < nentries; ++i )
+   {
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(benders->mastervarsmap, i);
+
+      if( entry != NULL )
+      {
+         SCIP_VAR* var;
+         var = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
+
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** calls destructor and frees memory of Benders' decomposition */
 SCIP_RETCODE SCIPbendersFree(
    SCIP_BENDERS**        benders,            /**< pointer to Benders' decomposition data structure */
@@ -1933,24 +1968,7 @@ SCIP_Bool SCIPbendersIsActive(
    return benders->active;
 }
 
-/** merges a subproblem back into the master problem. This process just adds a copy of the subproblem variables and
- *  constraints to the master problem, but keeps the subproblem stored in the Benders data structure. The reason for
- *  keeping the subproblem available is for when it is queried for solutions after the problem is solved.
  *
- *  Once the subproblem is merged back into the master problem, then the subproblem is flagged as disabled. This means
- *  that it will not be solved in the subsequent subproblem solving loops.
- *  Additionally, the auxiliary variable associated with the subproblem is fixed to zero.
- *
- *  TODO: The auxiliary variable could be removed or the objective function coefficient is set to zero.
- */
-static
-SCIP_RETCODE mergeSubproblemIntoMaster(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   probnumber          /**< the subproblem number*/
-   )
-{
-   SCIP* subproblem;
    SCIP_HASHMAP* subvartomastervar;
    SCIP_VAR** vars;
    SCIP_VAR* auxiliaryvar;

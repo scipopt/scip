@@ -624,12 +624,12 @@ SCIP_RETCODE lockRounding(
    if( SCIPisPositive(scip, val) )
    {
       SCIP_CALL( SCIPlockVarCons(scip, var, cons,
-            !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+         !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
    }
    else
    {
       SCIP_CALL( SCIPlockVarCons(scip, var, cons,
-            !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+         !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -656,13 +656,13 @@ SCIP_RETCODE unlockRounding(
 
    if( SCIPisPositive(scip, val) )
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons,
-            !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+         !SCIPisInfinity(scip, consdata->rhs)) );
    }
    else
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons,
-            !SCIPisInfinity(scip, consdata->rhs), !SCIPisInfinity(scip, -consdata->lhs)) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPisInfinity(scip, consdata->rhs),
+         !SCIPisInfinity(scip, -consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -3399,6 +3399,8 @@ SCIP_RETCODE chgLhs(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool locked;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3417,15 +3419,19 @@ SCIP_RETCODE chgLhs(
    if( SCIPisEQ(scip, consdata->lhs, lhs) )
       return SCIP_OKAY;
 
-   /* ensure that rhs >= lhs is satisfied without numerical tolerance */   
+   /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPisEQ(scip, lhs, consdata->rhs) )
    {
       consdata->rhs = lhs;
       assert(consdata->row == NULL);
    }
 
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
+
    /* if necessary, update the rounding locks of variables */
-   if( SCIPconsIsLocked(cons) )
+   if( locked )
    {
       if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -lhs) )
       {
@@ -3520,6 +3526,8 @@ SCIP_RETCODE chgRhs(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool locked;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3538,15 +3546,19 @@ SCIP_RETCODE chgRhs(
    if( SCIPisEQ(scip, consdata->rhs, rhs) )
       return SCIP_OKAY;
 
-   /* ensure that rhs >= lhs is satisfied without numerical tolerance */   
+   /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPisEQ(scip, rhs, consdata->lhs) )
    {
       consdata->lhs = rhs;
       assert(consdata->row == NULL);
    }
 
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
+
    /* if necessary, update the rounding locks of variables */
-   if( SCIPconsIsLocked(cons) )
+   if( locked )
    {
       assert(SCIPconsIsTransformed(cons));
 
@@ -3920,6 +3932,8 @@ SCIP_RETCODE chgCoefPos(
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    SCIP_Real val;
+   SCIP_Bool locked;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3935,8 +3949,12 @@ SCIP_RETCODE chgCoefPos(
    assert(var != NULL);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(var));
 
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
+
    /* if necessary, update the rounding locks of the variable */
-   if( SCIPconsIsLocked(cons) && newval * val < 0.0 )
+   if( locked && newval * val < 0.0 )
    {
       assert(SCIPconsIsTransformed(cons));
 
@@ -5690,7 +5708,7 @@ SCIP_RETCODE analyzeConflictRangedRow(
  *  Example:
  *  c1: 12 x1 + 9  x2 - x3 = 1  with x1, x2 free and 1 <= x3 <= 2
  *
- *  The only posible value for x3 is 2, so the variable will be fixed.
+ *  The only possible value for x3 is 2, so the variable will be fixed.
  *
  *  @todo add holes if possible
  */
@@ -9629,8 +9647,8 @@ SCIP_RETCODE convertLongEquality(
       assert(vals != NULL);
 
       var = vars[v];
-      assert(!SCIPconsIsChecked(cons) || SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
-      assert(!SCIPconsIsChecked(cons) || SCIPvarGetNLocksUp(var) >= 1);
+      assert(!SCIPconsIsChecked(cons) || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) >= 1); /* because variable is locked in this equality */
+      assert(!SCIPconsIsChecked(cons) || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= 1);
       varlb = SCIPvarGetLbGlobal(var);
       varub = SCIPvarGetUbGlobal(var);
 
@@ -9675,7 +9693,7 @@ SCIP_RETCODE convertLongEquality(
          continue;
 
       /* check, if variable is used in too many other constraints, even if this constraint could be deleted */
-      nlocks = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var);
+      nlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 
       if( nlocks > maxnlocksremove )
          continue;
@@ -10602,21 +10620,21 @@ SCIP_RETCODE dualPresolve(
        * a_i <= 0, c_i >= 0, rhs exists, nlocksdown(x_i) == 1:
        *  - constraint is the only one that forbids fixing the variable to its lower bound
        *  - fix x_i to the smallest value for this constraint: x_i := rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j
-       *       
+       *
        * but: all this is only applicable, if the aggregated value is inside x_i's bounds for all possible values
        *      of all x_j
        * furthermore: we only want to apply this, if no fill-in will be produced
        */
       agglhs = lhsexists
-         && ((val > 0.0 && !SCIPisNegative(scip, obj) && SCIPvarGetNLocksDown(var) == 1 
-               && SCIPvarGetNLocksUp(var) <= maxotherlocks)
-            || (val < 0.0 && !SCIPisPositive(scip, obj) && SCIPvarGetNLocksUp(var) == 1
-               && SCIPvarGetNLocksDown(var) <= maxotherlocks));
+         && ((val > 0.0 && !SCIPisNegative(scip, obj) && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1
+               && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) <= maxotherlocks)
+            || (val < 0.0 && !SCIPisPositive(scip, obj) && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 1
+               && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) <= maxotherlocks));
       aggrhs = rhsexists
-         && ((val > 0.0 && !SCIPisPositive(scip, obj) && SCIPvarGetNLocksUp(var) == 1 
-               && SCIPvarGetNLocksDown(var) <= maxotherlocks)            
-            || (val < 0.0 && !SCIPisNegative(scip, obj)  && SCIPvarGetNLocksDown(var) == 1 
-               && SCIPvarGetNLocksUp(var) <= maxotherlocks));
+         && ((val > 0.0 && !SCIPisPositive(scip, obj) && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 1
+               && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) <= maxotherlocks)
+            || (val < 0.0 && !SCIPisNegative(scip, obj)  && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1
+               && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) <= maxotherlocks));
       if( agglhs || aggrhs )
       {
          SCIP_Real minresactivity;
@@ -13897,8 +13915,8 @@ SCIP_RETCODE presolStuffing(
       {
          var = vars[v];
 
-         if( (SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1 &&
-            SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         if( (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1
+            && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
             break;
       }
    }
@@ -13931,8 +13949,8 @@ SCIP_RETCODE presolStuffing(
          assert(!SCIPisZero(scip, val));
 
          /* the variable is a singleton and continuous */
-         if( (SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1 &&
-            SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         if( (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1
+            && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
          {
             if( SCIPisNegative(scip, obj) && val > 0 )
             {
@@ -14056,7 +14074,8 @@ SCIP_RETCODE presolStuffing(
             if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
                break;
 
-            assert((SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1);
+            assert((SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL)
+               + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1);
             assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
             /* calculate the change in the row activities if this variable changes
@@ -14197,13 +14216,13 @@ SCIP_RETCODE presolStuffing(
 
          if( val > 0 )
          {
-            downlocks = SCIPvarGetNLocksDown(var);
-            uplocks = SCIPvarGetNLocksUp(var);
+            downlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
+            uplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
          }
          else
          {
-            downlocks = SCIPvarGetNLocksUp(var);
-            uplocks = SCIPvarGetNLocksDown(var);
+            downlocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+            uplocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
          }
 
          /* better ratio, update best candidate
@@ -14294,7 +14313,7 @@ SCIP_RETCODE presolStuffing(
 
             if( tryfixing )
             {
-               assert(SCIPvarGetNLocksUp(var) == 0);
+               assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0);
 
                if( SCIPisEQ(scip, lb + bounddelta, ub) )
                {
@@ -14331,7 +14350,7 @@ SCIP_RETCODE presolStuffing(
 
             if( tryfixing )
             {
-               assert(SCIPvarGetNLocksDown(var) == 0);
+               assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0);
 
                if( SCIPisEQ(scip, ub - bounddelta, lb) )
                {
@@ -14358,8 +14377,10 @@ SCIP_RETCODE presolStuffing(
             SCIPdebugMsg(scip, "cons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
             for( v = 0; v < nvars; ++v )
             {
-               SCIPdebugMsg(scip, "%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]),
-                  SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), SCIPvarGetNLocksUp(vars[v]),
+               SCIPdebugMsg(scip, "%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]),
+                  SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]),
+                  SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL),
+                  SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL),
                   SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? "C" : "I");
             }
             SCIPdebugMsg(scip, "<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
@@ -14371,14 +14392,16 @@ SCIP_RETCODE presolStuffing(
 
                if( factor * vals[v] < 0 )
                {
-                  assert(SCIPvarGetNLocksDown(vars[v]) == 1);
-                  SCIPdebugMsg(scip, "fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
+                  assert(SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL) == 1);
+                  SCIPdebugMsg(scip, "fix <%s> to its lower bound (%g)\n",
+                     SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
                   SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), cutoff, &tightened) );
                }
                else
                {
-                  assert(SCIPvarGetNLocksUp(vars[v]) == 1);
-                  SCIPdebugMsg(scip, "fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
+                  assert(SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL) == 1);
+                  SCIPdebugMsg(scip, "fix <%s> to its upper bound (%g)\n",
+                     SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
                   SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), cutoff, &tightened) );
                }
 
@@ -14749,8 +14772,8 @@ SCIP_RETCODE fullDualPresolve(
       SCIP_Bool tightened;
 
       assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY);
-      assert(SCIPvarGetNLocksDown(vars[v]) >= nlocksdown[v]);
-      assert(SCIPvarGetNLocksUp(vars[v]) >= nlocksup[v]);
+      assert(SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL) >= nlocksdown[v]);
+      assert(SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
 
       var = vars[v];
       obj = SCIPvarGetObj(var);
@@ -14760,7 +14783,7 @@ SCIP_RETCODE fullDualPresolve(
           * check if all down locks of the variables are due to linear constraints;
           * if largest bound to make constraints redundant is -infinity, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksDown(var) == nlocksdown[v]
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
             && !SCIPisInfinity(scip, -redlb[v])
             && redlb[v] < SCIPvarGetUbGlobal(var) )
          {
@@ -14787,7 +14810,7 @@ SCIP_RETCODE fullDualPresolve(
           * check if all up locks of the variables are due to linear constraints;
           * if smallest bound to make constraints redundant is +infinity, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksUp(var) == nlocksup[v]
+         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v]
             && !SCIPisInfinity(scip, redub[v])
             && redub[v] > SCIPvarGetLbGlobal(var) )
          {
@@ -14820,14 +14843,14 @@ SCIP_RETCODE fullDualPresolve(
       assert(var != NULL);
 
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
-      assert(SCIPvarGetNLocksDown(var) >= nlocksdown[v]);
-      assert(SCIPvarGetNLocksUp(var) >= nlocksup[v]);
+      assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) >= nlocksdown[v]);
+      assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
       assert(0 <= v - nintvars + nbinvars && v - nintvars + nbinvars < ncontvars);
 
       /* we can only conclude implied integrality if the variable appears in no other constraint */
       if( isimplint[v - nintvars + nbinvars]
-         && SCIPvarGetNLocksDown(var) == nlocksdown[v]
-         && SCIPvarGetNLocksUp(var) == nlocksup[v] )
+         && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )
       {
 
          /* since we locally copied the variable array we can change the variable type immediately */
@@ -16514,22 +16537,22 @@ SCIP_DECL_CONSLOCK(consLockLinear)
       {
          if( haslhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
          }
          if( hasrhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
          }
          if( hasrhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
          }
       }
    }
@@ -17039,8 +17062,8 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
    {
       /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
-      assert(SCIPvarGetNLocksDown(var) <= 1);
-      assert(SCIPvarGetNLocksUp(var) <= 1);
+      assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) <= 1);
+      assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) <= 1);
       consdata->presolved = FALSE;
    }
    else if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != 0 )

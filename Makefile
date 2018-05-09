@@ -1,4 +1,4 @@
-#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
@@ -504,6 +504,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
+			scip/branch_lookahead.o \
 			scip/branch_mostinf.o \
 			scip/branch_multaggr.o \
 			scip/branch_nodereopt.o \
@@ -557,10 +558,12 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_completesol.o \
+			scip/heur_conflictdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
+			scip/heur_farkasdiving.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
@@ -684,7 +687,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/benderscut_int.o \
 			scip/benderscut_nogood.o \
 			scip/benderscut_opt.o \
-			scip/misc_benders.o \
 			scip/table_default.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
@@ -720,6 +722,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
+			scip/misc_linear.o \
 			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \

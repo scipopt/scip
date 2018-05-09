@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
@@ -1359,16 +1358,18 @@ SCIP_Real calcBdchgScore(
    if( proofcoef > 0.0 )
    {
       if( col != NULL && SCIPcolGetNNonz(col) > 0 )
-         score += set->conf_uplockscorefac * (SCIP_Real)(SCIPvarGetNLocksUp(var))/(SCIP_Real)(SCIPcolGetNNonz(col));
+         score += set->conf_uplockscorefac
+            * (SCIP_Real)(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL))/(SCIP_Real)(SCIPcolGetNNonz(col));
       else
-         score += set->conf_uplockscorefac * SCIPvarGetNLocksUp(var);
+         score += set->conf_uplockscorefac * SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
    }
    else
    {
       if( col != NULL && SCIPcolGetNNonz(col) > 0 )
-         score += set->conf_downlockscorefac * (SCIP_Real)(SCIPvarGetNLocksDown(var))/(SCIP_Real)(SCIPcolGetNNonz(col));
+         score += set->conf_downlockscorefac
+            * (SCIP_Real)(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL))/(SCIP_Real)(SCIPcolGetNNonz(col));
       else
-         score += set->conf_downlockscorefac * SCIPvarGetNLocksDown(var);
+         score += set->conf_downlockscorefac * SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
    }
 
    return score;
@@ -5114,6 +5115,7 @@ SCIP_RETCODE conflictAnalyze(
 {
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_BDCHGINFO** firstuips;
+   SCIP_CONFTYPE conftype;
    int nfirstuips;
    int focusdepth;
    int currentdepth;
@@ -5366,8 +5368,14 @@ SCIP_RETCODE conflictAnalyze(
    /* free the temporary memory */
    SCIPsetFreeBufferArray(set, &firstuips);
 
+   /* store last conflict type */
+   conftype = conflict->conflictset->conflicttype;
+
    /* clear the conflict candidate queue and the conflict set */
    conflictClear(conflict);
+
+   /* restore last conflict type */
+   conflict->conflictset->conflicttype = conftype;
 
    return SCIP_OKAY;
 }
@@ -6960,7 +6968,6 @@ SCIP_RETCODE tightenDualproof(
    else
    {
       SCIP_CALL( proofsetCreate(&proofset, blkmem) );
-      SCIP_CALL( conflictInsertProofset(conflict, set, proofset) );
    }
 
    /* start with a proofset containing all variables with a non-zero coefficient in the dual proof */
@@ -7038,14 +7045,29 @@ SCIP_RETCODE tightenDualproof(
       SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
       assert(proofset->rhs - getMaxActivity(transprob, proofset->vals, proofset->inds, proofset->nnz, NULL, NULL) < eps);
 #endif
-      proofsetClear(proofset);
+      if( initialproof )
+      {
+         proofsetClear(proofset);
+      }
+      else
+      {
+         proofsetFree(&proofset, blkmem);
+      }
    }
-   else if( nchgcoefs > 0 )
+   else
    {
-      if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
-         proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
-      else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
-         proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+      if( !initialproof )
+      {
+         SCIP_CALL( conflictInsertProofset(conflict, set, proofset) );
+      }
+
+      if( nchgcoefs > 0 )
+      {
+         if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+            proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
+         else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+            proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+      }
    }
 
    return SCIP_OKAY;

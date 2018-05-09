@@ -73,10 +73,10 @@ SECTION: General Questions about SCIP
       <li><a href="http://soplex.zib.de/">SoPlex</a></li>
       <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
-      <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage, version at least 7.0.2 required)</li>
+      <li><a href="http://www.gurobi.com/">Gurobi</a> (version at least 7.0.2 required)</li>
       <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (interface currently sometimes produces wrong results)</li>
       <li><a href="https://github.com/google/or-tools">Glop, Google OR tools</a> (experimental, LPI contained in OR tools)</li>
-      <li><a href="http://www.mosek.com/">Mosek</a> (experimental)</li>
+      <li><a href="http://www.mosek.com/">Mosek</a></li>
       <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental)</li>
     </ul>
     <p>
@@ -525,6 +525,39 @@ SECTION: Using SCIP as a standalone solver
         supported by SCIP and the recommendations and links for MINLPs therein.
     </p>
 
+    QUESTION: Does SCIP handle symmetries inherent to my problem?
+    LABEL:symmetryhandlinggeneral
+    ANSWER:
+    <p>
+        SCIP provides two different mechanisms to handle symmetries on binary variables in mixed-integer programs.
+        The first approach is based on symmetry handling inequalities as well as the propagation of these constraints,
+        whereas the second approach is purely propagation based, so-called orbital fixing. To select which symmetry
+        handling approach is used, you can use
+        <ul>
+            <li><code> SCIP&gt; set misc usesymmetry 1</code> to use symmetry handling inequalities,</li>
+            <li><code> SCIP&gt; set misc usesymmetry 2</code> to use orbital fixing,</li>
+            <li><code> SCIP&gt; set misc usesymmetry 0</code> to deactivate symmetry handling.</li>
+        </ul>
+        A detailed description of both symmetry handling approaches can be found in the
+        <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6629"> release report of the SCIP
+        Optimization Suite 5.0</a>.
+    </p>
+    <p>
+        Symmetries of general integer or continuous variables in mixed-integer programs or symmetries in non-linear
+        programs, however, are currently not handled in SCIP.
+    </p>
+
+    QUESTION: Which symmetry handling method should I use?
+    LABEL:whichsymmetryhandling
+    ANSWER:
+    <p>
+        There is no clear answer to this question. The advantage of orbital fixing is that all symmetry handling
+        reductions are based on propagation decisions. Thus, symmetry handling does not increase the size of your
+        LP relaxations. Depending on the problem, however, additional symmetry handling inequalities might interact
+        with other cutting plane separators such that stronger cuts can be found. So, if you are dealing with a
+        class of optimization problems, you should test which of both methods performs better.
+    </p>
+
 
 SECTION: Using SCIP included in another source code
 
@@ -964,6 +997,15 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         and because dual information is not accessible (compare <a href="#scipaslpsolver">here</a>). Instead you can use SCIP's LP
         interface. For this you should include <code>lpi/lpi.h</code> and call the methods provided therein.
         Note that the LPI can be used independently from SCIP.
+    </p>
+
+    QUESTION: Can I write my own symmetry handling plugin for SCIP?
+    LABEL:customsymmetryhandling
+    ANSWER:
+    <p>
+        Yes, you can write your own symmetry handling plugin. To avoid conflicts with the internal symmetry handling methods
+        of SCIP, you should deactivate SCIP's symmetry handling routines by calling
+        <code>SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) )</code>.
     </p>
 
 SECTION: Specific questions about Column Generation and Branch-And-Price with SCIP

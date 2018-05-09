@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-#
-# run with bash -e makeallclean.sh to stop on errors
-#
 
-EXAMPLES=(Binpacking CallableLibrary CAP Eventhdlr GMI LOP MIPSolver Queens Relaxator TSP VRP)
+# stop on error
+set -e
+
+EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens Relaxator TSP VRP)
 LPSOLVERS=(spx2 cpx none)
 OPTS=(opt dbg)
 SHARED=(true false)
@@ -33,22 +33,19 @@ do
     echo
     echo ===== $EXAMPLE =====
     echo
-    cd $EXAMPLE
+    pushd $EXAMPLE > /dev/null
     echo
     for OPT in ${OPTS[@]}
     do
-	for LPS in ${LPSOLVERS[@]}
-	do
-	    for SHAREDVAL in ${SHARED[@]}
-	    do
-		echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
-		if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
-		then
-		    exit $STATUS
-		fi
-		echo
-	    done
-	done
+       for LPS in ${LPSOLVERS[@]}
+       do
+          for SHAREDVAL in ${SHARED[@]}
+          do
+             echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
+             make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
+             echo
+          done
+       done
     done
-    cd -
+    popd > /dev/null
 done

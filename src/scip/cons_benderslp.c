@@ -16,20 +16,34 @@
 /**@file   cons_benderslp.c
  * @brief  constraint handler for benderslp decomposition
  * @author Stephen J. Maher
+ *
+ * Two constraint handlers are implemented for the generation of Benders' decomposition cuts. When included in a
+ * problem, the Benders' decomposition constraint handlers generate cuts during the enforcement of LP and relaxation
+ * solutions. Additionally, Benders' decomposition cuts can be generated when checking the feasibility of solutions with
+ * respect to the subproblem constraints.
+ *
+ * This constraint handler has an enforcement priority that is greater than the integer constraint handler. This means
+ * that all LP solutions will be first checked for feasibility with respect to the Benders' decomposition second stage
+ * constraints before performing an integrality check. This is part of a multi-phase approach for solving mixed integer
+ * programs by Benders' decomposition.
+ *
+ * A parameter is available to control the depth at which the non-integer LP solution are enforced by solving the
+ * Benders' decomposition subproblems. This parameter is set to 0 by default, indicating that non-integer LP solutions
+ * are enforced only at the root node.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include "scip/scip.h"
 
+#include "scip/scip.h"
 #include "scip/cons_benderslp.h"
 #include "scip/cons_benders.h"
 
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "benderslp"
-#define CONSHDLR_DESC          "constraint handler for Benders' Decomposition to separate root node LP solutions"
+#define CONSHDLR_DESC          "constraint handler for Benders' Decomposition to separate LP solutions"
 #define CONSHDLR_ENFOPRIORITY  10000000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY 10000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
@@ -37,8 +51,9 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 
-
-#define DEFAULT_CONSBENDERSLP_MAXDEPTH      0
+#define DEFAULT_CONSBENDERSLP_MAXDEPTH 0/**< depth at which Benders' decomposition cuts are generated from the LP
+                                         *   solution (-1: always, 0: only at root) */
+#define DEFAULT_ACTIVE            FALSE /**< is the constraint handler active? */
 
 /*
  * Data structures
@@ -47,8 +62,8 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   int                   ncalls;             /**< the number of calls to the constraint handler. */
    int                   maxdepth;           /**< the maximum depth at which Benders' cuts are generated from the LP */
+   SCIP_Bool             active;             /**< is the constraint handler active? */
 };
 
 
@@ -83,12 +98,10 @@ SCIP_DECL_CONSFREE(consFreeBenderslp)
    assert(conshdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   /* free memory for conshdlrdata*/
-   if( conshdlrdata != NULL )
-   {
-      SCIPfreeMemory(scip, &conshdlrdata);
-   }
+   /* freeing the constraint handler data */
+   SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -105,10 +118,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   if( conshdlrdata->maxdepth < -1 || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
+   if( !conshdlrdata->active || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, FALSE) );
+      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -124,11 +137,10 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenderslp)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-
-   if( conshdlrdata->maxdepth < -1 || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
+   if( !conshdlrdata->active || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, FALSE) );
+      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -144,20 +156,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-
-   if( conshdlrdata->maxdepth < -1 || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
+   if( !conshdlrdata->active || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, FALSE) );
+      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, FALSE) );
 
    return SCIP_OKAY;
 }
 
 
-/** feasibility check method of constraint handler for integral solutions */
-/*  This function checks the feasibility of the Benderslp' decomposition master problem. In the case that the problem is
- *  feasible, then the auxiliary variables must be updated with the subproblem objective function values. The update
- *  occurs in the solve subproblems function. */
+/** feasibility check method of constraint handler for integral solutions.
+ *  The feasibility check for Benders' decomposition is performed in cons_benders. As such, it is redundant to perform
+ *  the feasibility check here. As such, the solution is flagged as feasible, which will then be corrected in
+ *  cons_benders if the solution is infeasible with respect to the second stage constraints
+ */
 static
 SCIP_DECL_CONSCHECK(consCheckBenderslp)
 {  /*lint --e{715}*/
@@ -171,9 +183,6 @@ SCIP_DECL_CONSCHECK(consCheckBenderslp)
 static
 SCIP_DECL_CONSLOCK(consLockBenderslp)
 {  /*lint --e{715}*/
-   //SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
-   //SCIPABORT(); /*lint --e{527}*/
-
    return SCIP_OKAY;
 }
 
@@ -183,7 +192,8 @@ SCIP_DECL_CONSLOCK(consLockBenderslp)
  * constraint specific interface methods
  */
 
-/** creates the handler for benderslp constraints and includes it in SCIP */
+/** creates the handler for executing the Benders' decomposition subproblem solve on fractional LP solution and
+ * includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrBenderslp(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -193,7 +203,6 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
 
    /* create benderslp constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
-   conshdlrdata->ncalls = 0;
 
    conshdlr = NULL;
 
@@ -209,100 +218,15 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenderslp) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenderslp) );
 
-
    /* add Benders' decomposition LP constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxdepth",
-         "The depth at which Benders' decomposition cuts are generated from the LP solution. (-2: never, -1: always, 0: only at root)",
-         &conshdlrdata->maxdepth, TRUE, DEFAULT_CONSBENDERSLP_MAXDEPTH, -2, SCIP_MAXTREEDEPTH, NULL, NULL) );
+         "depth at which Benders' decomposition cuts are generated from the LP solution (-1: always, 0: only at root)",
+         &conshdlrdata->maxdepth, TRUE, DEFAULT_CONSBENDERSLP_MAXDEPTH, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a benderslp constraint
- *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- */
-SCIP_RETCODE SCIPcreateConsBenderslp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
-   SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs,                /**< right hand side of constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
-                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   )
-{
-   /* TODO: (optional) modify the definition of the SCIPcreateConsBenderslp() call, if you don't need all the information */
-
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527} --e{715}*/
-
-   /* find the benderslp constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if( conshdlr == NULL )
-   {
-      SCIPerrorMessage("benderslp constraint handler not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* create constraint data */
-   consdata = NULL;
-   /* TODO: create and store constraint specific data here */
-
-   /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a benderslp constraint with all its constraint flags set to their
- *  default values
- *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- */
-SCIP_RETCODE SCIPcreateConsBasicBenderslp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
-   SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs                 /**< right hand side of constraint */
-   )
-{
-   SCIP_CALL( SCIPcreateConsBenderslp(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition LP cut constraint handler active?",
+         &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
 
    return SCIP_OKAY;
 }

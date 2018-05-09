@@ -39,6 +39,7 @@
 #include "xprs.h"
 #include "scip/bitencode.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 #include "lpi/lpi.h"
 
 #ifndef XPRS_LPQUICKPRESOLVE
@@ -753,7 +754,8 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_ALLOC( BMSallocMemory(lpi) );
 
    /* copy the problem name */
-   strncpy((*lpi)->name, name, 200);
+   (void)strncpy((*lpi)->name, name, 199);
+   (*lpi)->name[199] = '\0';
 
    (*lpi)->larray = NULL;
    (*lpi)->uarray = NULL;
@@ -2311,12 +2313,18 @@ SCIP_Bool SCIPlpiWasSolved(
 
 /** gets information about primal and dual feasibility of the current LP solution
  *
- *  here "true" should mean feasible, "false" should mean unknown
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
  */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    assert(lpi != NULL);
@@ -2546,7 +2554,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->solstat == XPRS_LP_OPTIMAL) || (lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2678,7 +2692,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
@@ -2770,7 +2788,6 @@ SCIP_RETCODE SCIPlpiGetIterations(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(lpi->solstat >= 0);
    assert(iterations != NULL);
 
    *iterations = lpi->iterations;

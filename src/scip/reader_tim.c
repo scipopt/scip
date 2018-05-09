@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_tim.c
- * @brief  TIM file reader
+ * @brief  TIM file reader - the stage information for a stochastic programming instance in SMPS format
  * @author Stephen J. Maher
  */
 
@@ -52,7 +52,6 @@ struct TimStage
    int                   nconss;
    int                   varssize;
    int                   conssize;
-   int                   nscenarios;         /**< the number of scenarios in this stage */
 };
 typedef struct TimStage TIMSTAGE;
 
@@ -642,7 +641,7 @@ SCIP_RETCODE readTime(
    TIMINPUT*             timi                /**< tim input structure */
    )
 {
-   SCIPdebugMsg(scip, "read problem name\n");
+   SCIPdebugMsg(scip, "read problem name from TIME section\n");
 
    /* This has to be the Line with the TIME section. */
    if( !timinputReadLine(timi) || timinputField0(timi) == NULL || strcmp(timinputField0(timi), "TIME") )
@@ -661,7 +660,7 @@ SCIP_RETCODE readTime(
       return SCIP_OKAY;
    }
 
-   if( !strncmp(timinputField0(timi), "PERIODS", 7) )
+   if( strncmp(timinputField0(timi), "PERIODS", 7) == 0 )
       timinputSetSection(timi, TIM_PERIODS);
    else
    {
@@ -685,9 +684,9 @@ SCIP_RETCODE readPeriods(
    {
       if( timinputField0(timi) != NULL )
       {
-         if( !strcmp(timinputField0(timi), "PERIODS") )
+         if( strcmp(timinputField0(timi), "PERIODS") == 0 )
             timinputSetSection(timi, TIM_PERIODS);
-         else if( !strcmp(timinputField0(timi), "ENDATA") )
+         else if( strcmp(timinputField0(timi), "ENDATA") == 0 )
             timinputSetSection(timi, TIM_ENDATA);
          else
             timinputSyntaxerror(timi);
@@ -735,10 +734,11 @@ SCIP_RETCODE readTim(
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       SCIPprintSysError(filename);
+
       return SCIP_NOFILE;
    }
 
-   SCIP_CALL( timinputCreate(scip, &timi, fp) );
+   SCIP_CALL_FINALLY( timinputCreate(scip, &timi, fp), SCIPfclose(fp) );
 
    SCIP_CALL_TERMINATE( retcode, readTime(scip, timi), TERMINATE );
 
@@ -748,8 +748,6 @@ SCIP_RETCODE readTim(
    }
    if( timinputSection(timi) != TIM_ENDATA )
       timinputSyntaxerror(timi);
-
-   SCIPfclose(fp);
 
    error = timinputHasError(timi);
 
@@ -761,6 +759,7 @@ SCIP_RETCODE readTim(
  /* cppcheck-suppress unusedLabel */
  TERMINATE:
    timinputFree(scip, &timi);
+   SCIPfclose(fp);
 
    if( error )
       return SCIP_READERROR;
@@ -773,7 +772,6 @@ SCIP_RETCODE readTim(
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
-/**! [SnippetReaderCopyTim] */
 static
 SCIP_DECL_READERCOPY(readerCopyTim)
 {  /*lint --e{715}*/
@@ -786,10 +784,8 @@ SCIP_DECL_READERCOPY(readerCopyTim)
 
    return SCIP_OKAY;
 }
-/**! [SnippetReaderCopyTim] */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
-/**! [SnippetReaderFreeTim] */
 static
 SCIP_DECL_READERFREE(readerFreeTim)
 {
@@ -797,15 +793,12 @@ SCIP_DECL_READERFREE(readerFreeTim)
 
    return SCIP_OKAY;
 }
-/**! [SnippetReaderFreeTim] */
 
-/** problem reading method of reader */
+/** reads the stage information for a stochastic programming instance in SMPS format */
 static
 SCIP_DECL_READERREAD(readerReadTim)
 {  /*lint --e{715}*/
    SCIP_READER* correader;
-   SCIP_READERDATA* readerdata;
-
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
@@ -827,18 +820,7 @@ SCIP_DECL_READERREAD(readerReadTim)
       return SCIP_OKAY;
    }
 
-   /* getting the reader data for the tim reader */
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-
-   SCIP_CALL( SCIPreadTim(scip, reader, filename, result) );
-
-   /* setting the read flag to TRUE */
-   if( (*result) == SCIP_SUCCESS )
-   {
-      SCIP_CALL( createStages(scip, reader, correader) );
-      readerdata->read = TRUE;
-   }
+   SCIP_CALL( SCIPreadTim(scip, filename, result) );
 
    return SCIP_OKAY;
 }
@@ -875,15 +857,19 @@ SCIP_RETCODE SCIPincludeReaderTim(
 /** reads problem from file */
 SCIP_RETCODE SCIPreadTim(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {
+   SCIP_READER* reader;
    SCIP_RETCODE retcode;
+   SCIP_READERDATA* readerdata;
 
    assert(scip != NULL);
    assert(result != NULL);
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
 
    retcode = readTim(scip, reader, filename);
 
@@ -895,6 +881,13 @@ SCIP_RETCODE SCIPreadTim(
 
    SCIP_CALL( retcode );
 
+   /* creating the stages */
+   SCIP_CALL( createStages(scip, reader, SCIPfindReader(scip, "correader")) );
+
+   /* setting the read flag to TRUE */
+   readerdata = SCIPreaderGetData(reader);
+   readerdata->read = TRUE;
+
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
@@ -903,6 +896,23 @@ SCIP_RETCODE SCIPreadTim(
 /*
  * Interface methods for the cor and sto files
  */
+
+/* return whether the tim file has been read */
+SCIP_Bool SCIPtimHasRead(
+   SCIP_READER*          reader              /**< the file reader itself */
+   )
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   return readerdata->read;
+}
+
 
 /* returns the number of stages */
 int SCIPtimGetNStages(
@@ -1094,47 +1104,4 @@ int SCIPtimGetStageNConss(
    assert(stagenum >= 0 && stagenum < readerdata->nstages);
 
    return readerdata->stages[stagenum]->nconss;
-}
-
-/* returns the number of scenarios for a given stage */
-int SCIPtimGetStageNScenarios(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   stagenum            /**< the number of the requested stage */
-   )
-{
-   SCIP_READER* reader;
-   SCIP_READERDATA* readerdata;
-
-   reader = SCIPfindReader(scip, READER_NAME);
-
-   assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
-
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-   assert(stagenum >= 0 && stagenum < readerdata->nstages);
-
-   return readerdata->stages[stagenum]->nscenarios;
-}
-
-/* sets the number of scenarios for a given stage */
-void SCIPtimSetStageNScenarios(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   stagenum,           /**< the number of the requested stage */
-   int                   nscenarios          /**< the number of scenarios to set the stage parameter to */
-   )
-{
-   SCIP_READER* reader;
-   SCIP_READERDATA* readerdata;
-
-   reader = SCIPfindReader(scip, READER_NAME);
-
-   assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
-
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-   assert(stagenum >= 0 && stagenum < readerdata->nstages);
-
-   readerdata->stages[stagenum]->nscenarios = nscenarios;
 }

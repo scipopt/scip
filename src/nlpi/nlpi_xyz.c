@@ -23,6 +23,7 @@
 
 #include "nlpi/nlpi_xyz.h"
 #include "nlpi/nlpi.h"
+#include "scip/pub_message.h"
 
 #define NLPI_NAME              "xyz"                       /* short concise name of solver */
 #define NLPI_DESC              "solver interface template" /* description of solver */

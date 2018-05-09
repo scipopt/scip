@@ -1145,10 +1145,12 @@ SCIP_RETCODE presolveDual(
    lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
    rhsexists = !SCIPisInfinity(scip,  consdata->rhs);
 
-   if( SCIPvarGetNLocksDown(consdata->x) == (lhsexists ? 1 : 0) &&
-       SCIPvarGetNLocksUp(consdata->x)   == (rhsexists ? 1 : 0) &&
-       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksDown(consdata->z) : SCIPvarGetNLocksUp(consdata->z)) == (lhsexists ? 1 : 0) &&
-       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksUp(consdata->z) : SCIPvarGetNLocksDown(consdata->z)) == (rhsexists ? 1 : 0) )
+   if( SCIPvarGetNLocksDownType(consdata->x, SCIP_LOCKTYPE_MODEL) == (lhsexists ? 1 : 0) &&
+       SCIPvarGetNLocksUpType(consdata->x, SCIP_LOCKTYPE_MODEL)   == (rhsexists ? 1 : 0) &&
+       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) :
+         SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL)) == (lhsexists ? 1 : 0) &&
+       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL) :
+         SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL)) == (rhsexists ? 1 : 0) )
    {
       /* x and z are only locked by cons, so we can fix them to an optimal solution of
        * min  xobj * x + zobj * z
@@ -2324,7 +2326,7 @@ SCIP_RETCODE fixAlmostFixedX(
    int                   nconss,             /**< number of constraints */
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility was detected */
    SCIP_Bool*            reduceddom          /**< buffer to store whether some variable bound was tightened */
-)
+   )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real lb;
@@ -6568,6 +6570,7 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6579,11 +6582,11 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
    {
       if( haslb )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->x, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->x, locktype, nlockspos, nlocksneg) );
       }
       if( hasub )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->x, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->x, locktype, nlocksneg, nlockspos) );
       }
    }
 
@@ -6593,22 +6596,22 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
       }
    }

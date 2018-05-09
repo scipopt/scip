@@ -24,6 +24,7 @@
 #include "nlpi/nlpi_all.h"
 #include "nlpi/nlpi.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 
 #include <string.h>
 

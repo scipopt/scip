@@ -16,6 +16,20 @@
 /**@file   benderscut_feas.c
  * @brief  Standard feasibility cuts for Benders' decomposition
  * @author Stephen J. Maher
+ *
+ * The classical Benders' decomposition feasibility cuts arise from an infeasible instance of the Benders' decomposition
+ * subproblem.
+ * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
+ * \f[
+ * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \geq 0\}
+ * \f]
+ * If the subproblem is infeasible as a result of the solution \f$\bar{x}\f$, then the Benders' decomposition
+ * feasibility cut can be generated from the dual ray. Let \f$w\f$ be the vector corresponding to the dual ray of the
+ * Benders' decomposition subproblem. The resulting cut is:
+ * \f[
+ * 0 \geq w^{T}(h - Hx)
+ * \f]
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -25,7 +39,7 @@
 #include "scip/benderscut_feas.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_benderscut.h"
-#include "scip/misc_benders.h"
+#include "scip/pub_misc_linear.h"
 
 #include "scip/cons_linear.h"
 
@@ -64,17 +78,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIP_Real activity;
    int i;
 
-   SCIP_VAR** consvars;
-   SCIP_Real* consvals;
-   int nconsvars;
-
-#ifndef NDEBUG
-   int j;
-   SCIP_Real* farkascoefs;    /* the coefficients of the farkas proof */
-   SCIP_Real farkasact = 0;   /* the activities of the farkas proof */
-   SCIP_Real farkaslhs = 0;   // the lhs of the farkas proof
-#endif
-
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
@@ -90,33 +93,42 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    nconss = SCIPgetNConss(subproblem);
    conss = SCIPgetConss(subproblem);
 
-#ifndef NDEBUG
-   SCIP_CALL( SCIPallocClearBufferArray(subproblem, &farkascoefs, nvars + nfixedvars) );
-#endif
-
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
    {
-      addval = 0;
-      dualsol = BDconsGetDualfarkas(subproblem, conss[i]);
+      SCIP_Bool conssuccess;
 
-      if( SCIPisZero(subproblem, dualsol) )
+      addval = 0;
+      SCIPconsGetDualfarkas(subproblem, conss[i], &dualsol, &conssuccess);
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
+         return SCIP_OKAY;
+      }
+
+      if( SCIPisDualfeasZero(subproblem, dualsol) )
          continue;
 
       lhs = SCIPgetLhsLinear(masterprob, cut);
 
-      SCIPdebugMessage("Constraint: <%s>: LHS = %g RHS = %g dualsol = %g\n", SCIPconsGetName(conss[i]),
-         BDconsGetLhs(subproblem, conss[i]), BDconsGetRhs(subproblem, conss[i]), dualsol);
-
       if( SCIPisPositive(subproblem, dualsol) )
-         addval = dualsol*BDconsGetLhs(subproblem, conss[i]);
+         addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
       else if( SCIPisNegative(subproblem, dualsol) )
-         addval = dualsol*BDconsGetRhs(subproblem, conss[i]);
+         addval = dualsol*SCIPconsGetRhs(subproblem, conss[i], &conssuccess);
+
+      if( !conssuccess )
+      {
+         (*success) = FALSE;
+         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
+         return SCIP_OKAY;
+      }
 
       lhs += addval;
 
       /* if the bound becomes infinite, then the cut generation terminates. */
-      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+         || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
       {
          (*success) = FALSE;
          SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
@@ -125,49 +137,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
       /* Update the lhs of the cut */
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
-
-#ifndef NDEBUG
-      farkaslhs += addval;
-#endif
-
-      nconsvars = BDconsGetNVars(subproblem, conss[i]);
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &consvars, nconsvars) );
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &consvals, nconsvars) );
-      SCIP_CALL( BDconsGetVars(subproblem, conss[i], consvars, nconsvars) );
-      SCIP_CALL( BDconsGetVals(subproblem, conss[i], consvals, nconsvars) );
-
-#ifndef NDEBUG
-      /* loop over all variables with non-zero coefficient */
-      for( j = 0; j < nconsvars; j++ )
-      {
-         SCIP_VAR* mastervar;
-         SCIP_VAR* consvar;
-         SCIP_Real consval;
-
-         consvar = consvars[j];
-         consval = consvals[j];
-
-         /* retreiving the master problem variable for the given subproblem variable. */
-         SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, consvar, &mastervar) );
-
-         /* update the coefficient in the farkas activity */
-         farkascoefs[SCIPvarGetProbindex(consvar)] += dualsol * consval;
-
-         /* if the variable is a master variable, then it will be on the rhs of the constraint.
-          * In computing the contribution of the fixed variables, we don't need to solution value because this is
-          * given by the upper bound of the variable.
-          */
-         if( mastervar != NULL )
-         {
-            SCIPdebugMessage("Computing Farkas LHS: dualsol %g consval %g varUB %g varLB %g\n",
-               dualsol, consval, SCIPvarGetUbLocal(consvar), SCIPvarGetLbLocal(consvar));
-            farkaslhs -= dualsol * consval * SCIPvarGetUbLocal(consvar);
-         }
-      }
-#endif
-
-      SCIPfreeBufferArray(subproblem, &consvals);
-      SCIPfreeBufferArray(subproblem, &consvars);
    }
 
    /* looping over all variables to update the coefficients in the computed cut. */
@@ -213,12 +182,9 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
          lhs -= addval;
 
-#ifndef NDEBUG
-         farkasact -= addval;
-#endif
-
          /* if the bound becomes infinite, then the cut generation terminates. */
-         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
+         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+            || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
          {
             (*success) = FALSE;
             SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
@@ -250,10 +216,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIPdebugPrintCons(masterprob, cut, NULL);
 
    (*success) = TRUE;
-
-#ifndef NDEBUG
-   SCIPfreeBufferArray(subproblem, &farkascoefs);
-#endif
 
    return SCIP_OKAY;
 }
@@ -290,7 +252,10 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cut, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
 
    if( SCIPgetNLPIterations(subproblem) == 0 )
-      SCIPinfoMessage(masterprob, NULL, "No iterations in pricing problem %d\n", probnumber);
+   {
+      SCIPverbMessage(masterprob, SCIP_VERBLEVEL_FULL, NULL, "There were no iterations in pricing problem %d. "
+        "A Benders' decomposition feasibility cut will be generated from the presolved LP data.\n", probnumber);
+   }
 
    /* computing the coefficients of the feasibility cut */
    SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, sol, cut, &success) );

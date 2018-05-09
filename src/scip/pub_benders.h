@@ -218,9 +218,11 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
- *  process. One example is when the three-phase method is employed, where the first phase solves the of both the master
- *  and subproblems and by the third phase the integer subproblem is solved. */
+/* sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
+ * process. One example is when the three-phase method is employed, where the first phase solves the convex relaxation
+ * of both the master and subproblems, the second phase reintroduces the integrality constraints to the master problem
+ * and the third phase then reintroduces integrality constraints to the subproblems.
+ */
 EXTERN
 void SCIPbendersSetSubprobIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -251,12 +253,12 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
 /** solves the Benders' decomposition subproblem. */
 EXTERN
-SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
+SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvecip            /**< directly solve the CIP subproblem */
    );
 
 /** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */

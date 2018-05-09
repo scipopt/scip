@@ -200,6 +200,7 @@ SCIP_RETCODE SCIPincludeObjBenderscut(
    SCIP_Bool             deleteobject        /**< should the Benders' decomposition cut object be deleted when benderscut is freed? */
    )
 {
+   SCIP_BENDERS* benders;
    SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert(scip != NULL);
@@ -211,8 +212,11 @@ SCIP_RETCODE SCIPincludeObjBenderscut(
    benderscutdata->objbenderscut = objbenderscut;
    benderscutdata->deleteobject = deleteobject;
 
+   benders = SCIPfindBenders(scip, objbenders->scip_name_);
+   assert(benders != NULL);
+
    /* include Benderscut' decomposition */
-   SCIP_CALL( SCIPincludeBenderscut(scip, objbenders->benders_, objbenderscut->scip_name_, objbenderscut->scip_desc_,
+   SCIP_CALL( SCIPincludeBenderscut(scip, benders, objbenderscut->scip_name_, objbenderscut->scip_desc_,
          objbenderscut->scip_priority_, objbenderscut->scip_islpcut_, benderscutCopyObj, benderscutFreeObj,
          benderscutInitObj, benderscutExitObj, benderscutInitsolObj, benderscutExitsolObj, benderscutExecObj,
          benderscutdata) ); /*lint !e429*/
@@ -226,10 +230,14 @@ scip::ObjBenderscut* SCIPfindObjBenderscut(
    const char*           name                /**< name of Benderscut' decomposition */
    )
 {
+   SCIP_BENDERS* benders;
    SCIP_BENDERSCUT* benderscut;
    SCIP_BENDERSCUTDATA* benderscutdata;
 
-   benderscut = SCIPfindBenderscut(objbenders->benders_, name);
+   benders = SCIPfindBenders(objbenders->scip_, objbenders->scip_name_);
+   assert(benders != NULL);
+
+   benderscut = SCIPfindBenderscut(benders, name);
    if( benderscut == NULL )
       return 0;
 

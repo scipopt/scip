@@ -48,6 +48,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_BENDERS*         benders,            /**< benders */
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables; must not be NULL */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
@@ -154,7 +156,13 @@ void SCIPbendersEnableOrDisableClocks(
    SCIP_Bool             enable              /**< should the clocks of the benders be enabled? */
    );
 
-/** solves the subproblem using the current master problem solution. */
+/** solves the subproblem using the current master problem solution.
+ *
+ *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
+ *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
+ *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
+ *  solution feasibility.
+ */
 extern
 SCIP_RETCODE SCIPbendersExec(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -200,7 +208,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip,           /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
 

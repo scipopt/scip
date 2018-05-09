@@ -38,8 +38,7 @@ extern "C" {
  * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             twophase            /**< should the two phase method be used? */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@addtogroup CONSHDLRS
@@ -48,75 +47,45 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
  *
  * @name Benders Constraints
  *
+ * Two constraint handlers are implemented for the generation of Benders' decomposition cuts. When included in a
+ * problem, the Benders' decomposition constraint handlers generate cuts during the enforcement of LP and relaxation
+ * solutions. Additionally, Benders' decomposition cuts can be generated when checking the feasibility of solutions with
+ * respect to the subproblem constraints.
+ *
+ * This constraint handler has an enforcement priority that is less than the integer constraint handler. This means that
+ * only integer feasible solutions from the LP solver are enforced by this constraint handler. This is the traditional
+ * behaviour of the branch-and-check approach to Benders' decomposition. Additionally, the check priority is set low,
+ * such that this expensive constraint handler is only called as a final check on primal feasible solutions.
+ *
+ * This constraint handler in the standard constraint handler that should be added when using Benders' decomposition.
+ * Additionally, there is a flag in SCIPincludeConshdlrBenders that permits the addition of the LP constraint handler,
+ * cons_benderslp. The use of both cons_benders and cons_benderslp allows the user to perform a multiphase Benders'
+ * decomposition algorithm.
+ *
  * @{
  */
 
-/** creates and captures a benders constraint
+/** enforces Benders' constraints for given solution
  *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *  This method is called from cons_benderslp and cons_benders. If the method is called from cons_benderslp, then the
+ *  solutions are not guaranteed to be integer feasible. This is because the default priority is set greater than the
+ *  integer constraint handler. If this method is called from cons_benders, then, because the default enforcement
+ *  priority is set less than that of the integer constraint handler, then it can be assumed that the solutions are
+ *  integer feasible.
+ *
+ *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
+ *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
+ *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
+ *  solution feasibility.
  */
 EXTERN
-SCIP_RETCODE SCIPcreateConsBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
-   SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs,                /**< right hand side of constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
-                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   );
-
-/** creates and captures a benders constraint with all its constraint flags set to their
- *  default values
- *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- */
-EXTERN
-SCIP_RETCODE SCIPcreateConsBasicBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
-   SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs                 /**< right hand side of constraint */
-   );
-
-
-/** the methods for the enforcement of solutions */
-EXTERN
-SCIP_RETCODE SCIPconsBendersEnforceSolutions(
+SCIP_RETCODE SCIPconsBendersEnforceSolution(
    SCIP*                 scip,               /**< the SCIP instance */
-  SCIP_SOL*              sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
+   SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
    SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler */
    SCIP_RESULT*          result,             /**< the result of the enforcement */
    SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
-   SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
+   SCIP_Bool             checkint            /**< should integrality be considered when checking the subproblems */
    );
 
 /* @} */
