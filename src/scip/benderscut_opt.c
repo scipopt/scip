@@ -441,9 +441,6 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          /* storing the generated cut */
          SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
 
-         /* release the row */
-         SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
-
          (*result) = SCIP_SEPARATED;
       }
       else
@@ -455,10 +452,19 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          /* storing the generated cut */
          SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
 
-         SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
-
          (*result) = SCIP_CONSADDED;
       }
+   }
+
+   if( addcut )
+   {
+      /* release the row */
+      SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+   }
+   else
+   {
+      /* release the constraint */
+      SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
    }
 
    return SCIP_OKAY;

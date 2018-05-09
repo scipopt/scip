@@ -2453,6 +2453,7 @@ SCIP_RETCODE SCIPbendersExec(
          "decomposition <%s>.\n", SCIPbendersGetName(benders));
 
       /* TODO: It may be useful to have a SCIPABORT() here to break if an error is found during debug mode. */
+      SCIPABORT();
       goto TERMINATE;
    }
 
