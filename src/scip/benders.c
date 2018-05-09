@@ -2405,7 +2405,7 @@ SCIP_RETCODE SCIPbendersExec(
             solveloop = SCIP_BENDERSSOLVELOOP_USERCIP;
       }
       else
-         solveloop = (SCIP_BENDERSSOLVELOOP)l;
+         solveloop = (SCIP_BENDERSSOLVELOOP) l;
 
 
       /* solving the subproblems for this round of enforcement/checking. */
@@ -2444,11 +2444,16 @@ SCIP_RETCODE SCIPbendersExec(
     */
    if( (*result) == SCIP_DIDNOTFIND )
    {
-      (*result) = SCIP_SOLVELP;
+      if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
+         (*result) = SCIP_SOLVELP;
+      else
+         (*result) = SCIP_INFEASIBLE;
+
       SCIPerrorMessage("An error was found when generating all cuts for non-optimal subproblems of Benders' "
-         "decomposition <%s>. The solution process will terminate.\n", SCIPbendersGetName(benders));
+         "decomposition <%s>.\n", SCIPbendersGetName(benders));
 
       /* TODO: It may be useful to have a SCIPABORT() here to break if an error is found during debug mode. */
+      SCIPABORT();
       goto TERMINATE;
    }
 
