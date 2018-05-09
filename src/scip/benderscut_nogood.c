@@ -22,7 +22,7 @@
  * feasibility cuts (see benderscut_feas.c) will only cut off the solution \f$\bar{x}\f$ if the LP relaxation of the CIP
  * is infeasible.
  *
- * Consider a Benders' decomposition subproblem that is a CIP and it infeasible. Let \f$S_{r}\f$ be the set of indicies
+ * Consider a Benders' decomposition subproblem that is a CIP and it infeasible. Let \f$S_{r}\f$ be the set of indices
  * for master problem variables that are 1 in \f$\bar{x}\f$. The no-good cut is given by
  *
  * \f[
@@ -45,8 +45,8 @@
 
 #define BENDERSCUT_NAME             "nogood"
 #define BENDERSCUT_DESC             "no good Benders' decomposition integer cut"
-#define BENDERSCUT_PRIORITY         0
-#define BENDERSCUT_LPCUT            FALSE
+#define BENDERSCUT_PRIORITY       500
+#define BENDERSCUT_LPCUT        FALSE
 
 
 
@@ -109,35 +109,28 @@ SCIP_RETCODE computeNogoodCut(
    /* looping over all master problem variables to update the coefficients in the computed cut. */
    for( i = 0; i < nvars; i++ )
    {
-      SCIP_VAR* subprobvar;
       SCIP_Real coef;
 
       if( !SCIPvarIsBinary(vars[i]) )
          continue;
 
-      SCIP_CALL( SCIPgetBendersSubproblemVar(masterprob, benders, vars[i], &subprobvar, 0) );
-
-      /* if there is a corresponding subproblem variable, then the variable will not be NULL. */
-      if( subprobvar != NULL )
+      /* if the variable is on its upper bound, then the subproblem objective value is added to the cut */
+      if( SCIPisFeasEQ(masterprob, SCIPgetSolVal(masterprob, sol, vars[i]), 1.0) )
       {
-         /* if the variable is on its upper bound, then the subproblem objective value is added to the cut */
-         if( SCIPisFeasEQ(masterprob, SCIPgetSolVal(masterprob, sol, vars[i]), 1.0) )
-         {
-            coef = -1.0;
-            lhs -= 1.0;
-         }
-         else
-            coef = 1.0;
+         coef = -1.0;
+         lhs -= 1.0;
+      }
+      else
+         coef = 1.0;
 
-         /* adding the variable to the cut. The coefficient is the subproblem objective value */
-         if( addcut )
-         {
-            SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[i], coef) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[i], coef) );
-         }
+      /* adding the variable to the cut. The coefficient is the subproblem objective value */
+      if( addcut )
+      {
+         SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[i], coef) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[i], coef) );
       }
    }
 
@@ -192,10 +185,10 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    row = NULL;
    cons = NULL;
 
-   /* retreiving the Benders' cut data */
+   /* retrieving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
 
-   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must bei
+   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be
     * added to the master problem.
     */
    if( SCIPgetStage(masterprob) < SCIP_STAGE_INITSOLVE )

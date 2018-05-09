@@ -129,6 +129,13 @@ SCIP_Bool SCIPbenderscutIsLPCut(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
+/** sets the enabled flag of the Benders' decomposition cut method */
+EXTERN
+void SCIPbenderscutSetEnabled(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_Bool             enabled             /**< flag to indicate whether the Benders' decomposition cut is enabled */
+   );
+
 /* @} */
 
 #ifdef __cplusplus

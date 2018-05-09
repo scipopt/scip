@@ -243,8 +243,8 @@ set(scipsources
     scip/lp.c
     scip/matrix.c
     scip/mem.c
-    scip/misc_linear.c
     scip/misc.c
+    scip/misc_linear.c
     scip/nlp.c
     scip/nodesel.c
     scip/paramset.c
@@ -285,6 +285,8 @@ set(scipsources
 )
 
 set(objscipsources
+    objscip/objbenders.cpp
+    objscip/objbenderscut.cpp
     objscip/objbranchrule.cpp
     objscip/objconshdlr.cpp
     objscip/objdialog.cpp
@@ -417,6 +419,8 @@ set(scipheaders
     scip/conflictstore.h
     scip/cons_abspower.h
     scip/cons_and.h
+    scip/cons_benders.h
+    scip/cons_benderslp.h
     scip/cons_bivariate.h
     scip/cons_bounddisjunction.h
     scip/cons_cardinality.h
@@ -525,7 +529,6 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
-    scip/misc_benders.h
     scip/nlp.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
@@ -576,6 +579,8 @@ set(scipheaders
     scip/pub_bandit_epsgreedy.h
     scip/pub_bandit_exp3.h
     scip/pub_bandit_ucb.h
+    scip/pub_benders.h
+    scip/pub_benderscut.h
     scip/pub_compr.h
     scip/pub_conflict.h
     scip/pub_cons.h
@@ -591,6 +596,7 @@ set(scipheaders
     scip/pub_matrix.h
     scip/pub_message.h
     scip/pub_misc.h
+    scip/pub_misc_linear.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
     scip/pub_nlp.h
@@ -665,6 +671,8 @@ set(scipheaders
     scip/solve.h
     scip/stat.h
     scip/struct_bandit.h
+    scip/struct_benders.h
+    scip/struct_benderscut.h
     scip/struct_branch.h
     scip/struct_clock.h
     scip/struct_compr.h
@@ -714,6 +722,8 @@ set(scipheaders
     scip/table.h
     scip/tree.h
     scip/type_bandit.h
+    scip/type_benders.h
+    scip/type_benderscut.h
     scip/type_branch.h
     scip/type_clock.h
     scip/type_compr.h

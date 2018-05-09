@@ -45,11 +45,16 @@ new API functions:
 
 features:
 - new miscellaneous methods for constraints that have a one-row linear representation in pub_misc_linear.h
+- a Benders' decomposition framework has been added. This framework provides the functionality for a user to solve a
+  decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
+  integer optimality cuts and no-good cuts.
 
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
 - "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
+- "misc/alwaysgetduals" ensure that the dual solutions are always computed from the recent LP solve.
+- "display/relevantstats" indicates whether the small relevant statistics are displayed at the end of solving.
 - "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
 - "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
 - "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts

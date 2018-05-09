@@ -232,9 +232,29 @@ SCIP_DECL_BENDERSPRESUBSOLVE(bendersPresubsolveXyz)
 #define bendersPresubsolveXyz NULL
 #endif
 
+/** the solving method for a convex subproblem for Benders' decomposition. In this method the subproblem is setup with
+ *  the given solution and then solved.
+ *  NOTE: if either bendersSolvesubconvexXyz or bendersSolvesubXyz callbacks are implemented then the bendersFreesubXyz
+ *  callback must be implemented
+ */
+#if 0
+static
+SCIP_DECL_BENDERSSOLVESUBCONVEX(bendersSolvesubconvexXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz Benders' decomposition not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define bendersSolvesubconvexXyz NULL
+#endif
+
 /** the subproblem solving method for Benders' decomposition. In this method the subproblem is setup with the given
  *  solution and then solved.
- *  NOTE: if the bendersSolvesubXyz callback is implemented then the bendersFreesubXyz callback must be implemented */
+ *  NOTE: if either bendersSolvesubconvexXyz or bendersSolvesubXyz callbacks are implemented then the bendersFreesubXyz
+ *  callback must be implemented
+ */
 #if 0
 static
 SCIP_DECL_BENDERSSOLVESUB(bendersSolvesubXyz)
@@ -309,7 +329,8 @@ SCIP_RETCODE SCIPincludeBendersXyz(
    SCIP_CALL( SCIPincludeBenders(scip, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP, BENDERS_CUTPSEUDO,
          BENDERS_CUTRELAX, bendersCopyXyz, bendersFreeXyz, bendersInitXyz, bendersExitXyz, bendersInitpreXyz,
          bendersExitpreXyz, bendersInitsolXyz, bendersExitsolXyz, bendersGetvarXyz, bendersPresubsolveXyz,
-         bendersCreatesubXyz, bendersSolvesubXyz, bendersPostsolveXyz, bendersFreesubXyz, bendersdata) );
+         bendersCreatesubXyz, bendersSolvesubconvexXyz, bendersSolvesubXyz, bendersPostsolveXyz, bendersFreesubXyz,
+         bendersdata) );
 #else
    /* use SCIPincludeBendersBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
@@ -329,7 +350,8 @@ SCIP_RETCODE SCIPincludeBendersXyz(
    SCIP_CALL( SCIPsetBendersInitsol(scip, benders, bendersInitsolXyz) );
    SCIP_CALL( SCIPsetBendersExitsol(scip, benders, bendersExitsolXyz) );
    SCIP_CALL( SCIPsetBendersPresubsolve(scip, benders, bendersPresubsolveXyz) );
-   SCIP_CALL( SCIPsetBendersSolveAndFreesub(scip, benders, bendersSolvesubXyz, bendersFreesubXyz) );
+   SCIP_CALL( SCIPsetBendersSolveAndFreesub(scip, benders, bendersSolvesubconvexXyz, bendersSolvesubXyz,
+         bendersFreesubXyz) );
    SCIP_CALL( SCIPsetBendersPostsolve(scip, benders, bendersPostsolveXyz) );
 #endif
 

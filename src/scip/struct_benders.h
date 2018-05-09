@@ -86,6 +86,7 @@ struct SCIP_Benders
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
    SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */
    SCIP_Real*            bestsubprobobjval;  /**< the best objective value of the subproblem */
+   SCIP_Real*            subproblowerbound;  /**< a lower bound on the subproblem - used for the integer cuts */
    int                   naddedsubprobs;     /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
    SCIP_Bool*            subprobisconvex;    /**< is the subproblem convex? This implies that the dual sol can be used for cuts */
@@ -95,6 +96,8 @@ struct SCIP_Benders
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
                                                to continuous variables. */
    SCIP_Bool*            subprobsetup;       /**< flag to indicate whether the subproblem has been set up. */
+   SCIP_Bool*            indepsubprob;       /**< flag to indicate if a subproblem is independent of the master prob */
+   SCIP_Bool*            subprobenabled;     /**< flag to indicate whether the subproblem is enabled */
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 

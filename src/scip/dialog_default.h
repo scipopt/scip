@@ -69,6 +69,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph);
 
+/** dialog execution method for the display benders command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBenders);
+
 /** dialog execution method for the display branching command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching);
@@ -152,6 +156,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDualSolution);
 /** dialog execution method for the display of solutions in the pool command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool);
+
+/** dialog execution method for the display subproblem command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem);
+
+/** dialog execution method for the display subsolution command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution);
 
 /** dialog execution method for the display statistics command */
 EXTERN

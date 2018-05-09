@@ -1,4 +1,4 @@
-#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
@@ -516,6 +516,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/compr_weakcompr.o \
 			scip/concsolver_scip.o \
 			scip/cons_and.o \
+			scip/cons_benders.o \
+			scip/cons_benderslp.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_cardinality.o \
@@ -680,6 +682,11 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
+			scip/benders_default.o \
+			scip/benderscut_feas.o \
+			scip/benderscut_int.o \
+			scip/benderscut_nogood.o \
+			scip/benderscut_opt.o \
 			scip/table_default.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
@@ -690,6 +697,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/bandit_ucb.o \
 			scip/benders.o \
 			scip/benderscut.o \
+			scip/bendersdefcuts.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
@@ -787,7 +795,9 @@ SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
 
 OBJSCIPLIBSHORTNAME=	objscip
 OBJSCIPLIBNAME	=	$(OBJSCIPLIBSHORTNAME)-$(VERSION)
-OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
+OBJSCIPLIBOBJ	=	objscip/objbenders.o \
+			objscip/objbenderscut.o \
+			objscip/objbranchrule.o \
 			objscip/objconshdlr.o \
 			objscip/objdialog.o \
 			objscip/objdisp.o \
