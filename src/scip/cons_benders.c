@@ -281,7 +281,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBenders)
 {  /*lint --e{715}*/
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPincludeConshdlrBenders(scip, FALSE) );
+   SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
 
    return SCIP_OKAY;
 }
