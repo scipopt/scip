@@ -3545,7 +3545,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       SCIPintervalSet(&ax_, ax);
       SCIPintervalSet(&bx_, bx);
       SCIPintervalSub(infinity, &rhs, rhs, ytermbounds);
-      SCIPintervalSolveUnivariateQuadExpression(infinity, resultant, ax_, bx_, rhs);
+      SCIPintervalSolveUnivariateQuadExpression(infinity, resultant, ax_, bx_, rhs, xbnds);
 
       return;
    }
