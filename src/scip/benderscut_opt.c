@@ -385,6 +385,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    if( optimal )
    {
+      (*result) = SCIP_FEASIBLE;
       SCIPdebugMsg(masterprob, "No cut added for subproblem %d\n", probnumber);
       return SCIP_OKAY;
    }
