@@ -82,14 +82,14 @@
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack? */
 
-#define AWAY                      0.005 /**< minimal fractionality of a basic variable in order to try GMI cut - default */
-#define MIN_VIOLATION              0.00 /**< minimal violation to accept cut - default */
-#define EPS_COEFF                 1e-11 /**< tolerance for zeroing out small coefficients - default */
-#define EPS_RELAX_ABS             1e-11 /**< absolute cut rhs relaxation - default */
-#define EPS_RELAX_REL             1e-13 /**< relative cut rhs relaxation - default */
-#define MAX_DYN                  1.0e+6 /**< maximal valid range max(|weights|)/min(|weights|) of cut coefficients - default */
-#define MAX_SUPP_ABS               1000 /**< maximum cut support - absolute value in the formula - default */
-#define MAX_SUPP_REL                0.1 /**< maximum cut support - relative value in the formula - default */
+#define DEFAULT_AWAY              0.005 /**< minimal fractionality of a basic variable in order to try GMI cut - default */
+#define DEFAULT_MIN_VIOLATION      0.00 /**< minimal violation to accept cut - default */
+#define DEFAULT_EPS_COEFF         1e-11 /**< tolerance for zeroing out small coefficients - default */
+#define DEFAULT_EPS_RELAX_ABS     1e-11 /**< absolute cut rhs relaxation - default */
+#define DEFAULT_EPS_RELAX_REL     1e-13 /**< relative cut rhs relaxation - default */
+#define DEFAULT_MAX_DYN          1.0e+6 /**< maximal valid range max(|weights|)/min(|weights|) of cut coefficients - default */
+#define DEFAULT_MAX_SUPP_ABS       1000 /**< maximum cut support - absolute value in the formula - default */
+#define DEFAULT_MAX_SUPP_REL        0.1 /**< maximum cut support - relative value in the formula - default */
 
 
 /** separator data */
@@ -868,35 +868,35 @@ SCIP_RETCODE SCIPincludeSepaGMI(
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gmi/away",
          "minimal fractionality of a basic variable in order to try GMI cut",
-         &sepadata->away, FALSE, AWAY, 0.0, 0.5, NULL, NULL) );
+         &sepadata->away, FALSE, DEFAULT_AWAY, 0.0, 0.5, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gmi/minviolation",
          "minimal violation to accept cut",
-         &sepadata->minviolation, FALSE, MIN_VIOLATION, 0.0, 1.0, NULL, NULL) );
+         &sepadata->minviolation, FALSE, DEFAULT_MIN_VIOLATION, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gmi/epscoeff",
          "tolerance for zeroing out small coefficients",
-         &sepadata->epscoeff, FALSE, EPS_COEFF, 0.0, 0.01, NULL, NULL) );
+         &sepadata->epscoeff, FALSE, DEFAULT_EPS_COEFF, 0.0, 0.01, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gmi/epsrelaxabs",
          "absolute cut rhs relaxation",
-         &sepadata->epsrelaxabs, FALSE, EPS_RELAX_ABS, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->epsrelaxabs, FALSE, DEFAULT_EPS_RELAX_ABS, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gmi/epsrelaxrel",
          "relative cut rhs relaxation",
-         &sepadata->epsrelaxrel, FALSE, EPS_RELAX_REL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->epsrelaxrel, FALSE, DEFAULT_EPS_RELAX_REL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gmi/maxdynamism",
          "maximal valid range max(|weights|)/min(|weights|) of cut coefficients",
-         &sepadata->maxdynamism, FALSE, MAX_DYN, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->maxdynamism, FALSE, DEFAULT_MAX_DYN, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gmi/maxsuppabs",
          "maximum cut support - absolute value in the formula",
-         &sepadata->maxsuppabs, FALSE, MAX_SUPP_ABS, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxsuppabs, FALSE, DEFAULT_MAX_SUPP_ABS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gmi/maxsupprel",
          "maximum cut support - relative value in the formula",
-         &sepadata->maxsupprel, FALSE, MAX_SUPP_REL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->maxsupprel, FALSE, DEFAULT_MAX_SUPP_REL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
