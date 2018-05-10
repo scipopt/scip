@@ -351,6 +351,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 
    if( optimal )
    {
+      (*result) = SCIP_FEASIBLE;
       SCIPdebugMsg(masterprob, "No <%s> cut added. Current Master Problem Obj: %g\n", BENDERSCUT_NAME,
          SCIPgetSolOrigObj(masterprob, NULL));
       return SCIP_OKAY;
