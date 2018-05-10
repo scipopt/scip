@@ -207,9 +207,9 @@ SCIP_Bool checkNumerics(
    SCIP_COL**            cols,               /**< columns of the LP */
    SCIP_Real*            cutcoefs,           /**< cut in sparse format */
    int*                  cutind,             /**< cut indices in sparse format */
-   int*                  cutnz,              /**< number of nonzero elements in the cut in sparse format */
-   SCIP_Real*            cutrhs,             /**< rhs of the cut */
-   SCIP_Real*            cutact              /**< activity of the cut at the current LP optimum will go here on output */
+   int                   cutnz,              /**< number of nonzero elements in the cut in sparse format */
+   SCIP_Real             cutrhs,             /**< rhs of the cut */
+   SCIP_Real*            cutact              /**< pointer to store activity of the cut at the current LP optimum will go here on output */
    )
 {
    SCIP_Real violation;
@@ -221,15 +221,13 @@ SCIP_Bool checkNumerics(
    assert(cols != NULL);
    assert(cutcoefs != NULL);
    assert(cutind != NULL);
-   assert(cutnz != NULL);
-   assert(cutrhs != NULL);
    assert(cutact != NULL);
-   assert(*cutnz > 0);
+   assert(cutnz > 0);
 
    /* Check maximum support */
-   if( *cutnz > (ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs )
+   if( cutnz > ncols * sepadata->maxsupprel + sepadata->maxsuppabs )
    {
-      SCIPdebugMsg(scip, "Cut too dense (%d > %d).\n", *cutnz, (int) ((ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs));
+      SCIPdebugMsg(scip, "Cut too dense (%d > %d).\n", cutnz, (int) (ncols * sepadata->maxsupprel + sepadata->maxsuppabs));
       return FALSE;
    }
 
@@ -238,7 +236,7 @@ SCIP_Bool checkNumerics(
    maxcoef = 0.0;
    *cutact = 0.0;
 
-   for( i = 0; i < *cutnz; ++i )
+   for( i = 0; i < cutnz; ++i )
    {
       mincoef = MIN(mincoef, REALABS(cutcoefs[i])); /*lint !e666*/
       maxcoef = MAX(maxcoef, REALABS(cutcoefs[i])); /*lint !e666*/
@@ -253,9 +251,9 @@ SCIP_Bool checkNumerics(
    }
 
    /* Check minimum violation */
-   violation = *cutact - *cutrhs;
-   if( REALABS(*cutrhs) > 1.0 )
-      violation /= REALABS(*cutrhs);
+   violation = *cutact - cutrhs;
+   if( REALABS(cutrhs) > 1.0 )
+      violation /= REALABS(cutrhs);
 
    return (violation >= sepadata->minviolation) ? TRUE : FALSE;
 }
@@ -510,7 +508,7 @@ SCIP_Bool getGMIFromRow(
    success = modifyAndPackCut(scip, sepadata, ncols, cols, workcoefs, cutcoefs, cutind, cutnz, cutrhs);
    if ( success )
    {
-      success = checkNumerics(scip, sepadata, ncols, cols, cutcoefs, cutind, cutnz, cutrhs, cutact);
+      success = checkNumerics(scip, sepadata, ncols, cols, cutcoefs, cutind, *cutnz, *cutrhs, cutact);
       SCIPdebugMsg(scip, "checkNumerics returned: %u.\n", success);
       return success;
    }
