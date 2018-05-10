@@ -709,15 +709,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          SCIP_Bool success;
          SCIP_Bool cutislocal;
 
-         /* dummy data structures for sparsity information */
-         int* inds = NULL;
-         int ninds = -1;
-
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
-         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
+         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, NULL, NULL) );
 
          /* get the tableau row for this basic integer variable with fractional solution value */
-         SCIP_CALL( SCIPgetLPBInvARow(scip, i, binvrow, binvarow, inds, &ninds) );
+         SCIP_CALL( SCIPgetLPBInvARow(scip, i, binvrow, binvarow, NULL, NULL) );
 
          /* this is an approximation (one could also pass over coefficients and check whether local rows have been used): */
          cutislocal = (depth != 0) ? TRUE : FALSE;
