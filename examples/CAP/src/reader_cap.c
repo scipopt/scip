@@ -111,7 +111,7 @@
 struct SCIP_ReaderData
 {
    SCIP_Bool             usebenders;         /**< should Benders' decomposition be used to solve the problem */
-   int                   nscenarios;       /**< the number of scenarios */
+   int                   nscenarios;         /**< the number of scenarios */
 };
 
 /**@} */
@@ -290,8 +290,8 @@ SCIP_DECL_READERREAD(readerReadCap)
 
    for( i = 0; i < nfacilities; i++ )
    {
-      capacity[i] = 0;
-      fixedcost[i] = 0;
+      capacity[i] = 0.0;
+      fixedcost[i] = 0.0;
    }
 
    error = FALSE;
