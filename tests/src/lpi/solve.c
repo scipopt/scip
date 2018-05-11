@@ -161,7 +161,8 @@ SCIP_RETCODE solveTest(
       /* It seems that we cannot guarantee that the primal is shown to be unbounded. */
       /* cr_assert( SCIPlpiIsPrimalUnbounded(lpi) ); */
 
-      cr_assert( SCIPlpiExistsPrimalRay(lpi) );
+      /* primal ray should exist if the primal simplex ran */
+      cr_assert( ! solveprimal || SCIPlpiExistsPrimalRay(lpi) );
       cr_assert( ! SCIPlpiIsPrimalInfeasible(lpi) );
       break;
 
@@ -199,7 +200,8 @@ SCIP_RETCODE solveTest(
       /* It seems that we cannot guarantee that the dual is shown to be unbounded. */
       /* cr_assert( SCIPlpiIsDualUnbounded(lpi) ); */
 
-      cr_assert( SCIPlpiExistsDualRay(lpi) );
+      /* dual ray should exist if the dual simplex ran */
+      cr_assert( solveprimal || SCIPlpiExistsDualRay(lpi) );
       cr_assert( ! SCIPlpiIsDualInfeasible(lpi) );
       break;
 
