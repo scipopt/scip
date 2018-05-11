@@ -2471,7 +2471,7 @@ SCIP_RETCODE SCIPwriteGms(
             if( !SCIPisInfinity(scip, ub) )
                SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfeasFloor(scip, ub));
             else
-               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPinfinity(scip)); /* sorry, +inf not allowed in gams file here (unless pf4=0) */
+               SCIPinfoMessage(scip, file, " %s.up = +inf;\n", varname);
             nondefbounds = TRUE;
          }
       }
