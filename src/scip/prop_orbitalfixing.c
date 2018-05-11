@@ -40,6 +40,8 @@
 #include "presol_symmetry.h"
 #include "presol_symbreak.h"
 
+#include <string.h>
+
 /* propagator properties */
 #define PROP_NAME              "orbitalfixing"
 #define PROP_DESC              "propagator for orbital fixing"
@@ -58,6 +60,9 @@
 #define DEFAULT_PERFORMPRESOLVING     FALSE       /**< Run orbital fixing during presolving? */
 #define DEFAULT_ENABLEDAFTERRESTARTS  FALSE       /**< Run orbital fixing after a restart has occured? */
 
+/* event handler properties */
+#define EVENTHDLR_ORBITALFIXING_NAME    "orbitalfixing"
+#define EVENTHDLR_ORBITALFIXING_DESC    "filter global variable fixing event handler for orbital fixing"
 
 /* output table properties */
 #define TABLE_NAME_ORBITALFIXING        "orbitalfixing"
@@ -78,6 +83,7 @@ struct SCIP_PropData
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
    int                   nperms;             /**< pointer to store number of permutations */
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   int*                  inactiveperms;      /**< array to store whether permutations are active (0), locally inactive (1), globally inactive (2) */
    SCIP_Bool             enabled;            /**< run orbital branching? */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
    SCIP_Bool             enabledafterrestarts; /**< Run orbital fixing after a restart has occured? */
@@ -87,6 +93,7 @@ struct SCIP_PropData
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for handling global variable fixings */
 };
 
 
@@ -138,6 +145,102 @@ SCIP_DECL_TABLEFREE(tableFreeOrbitalfixing)
 
    return SCIP_OKAY;
 }
+
+
+/*
+ * Event handler callback methods
+ */
+
+/** exec the event handler for handling global variable lower bound changes
+ *
+ *  Global variable fixings during the solving process might arise because parts of the tree are pruned. Since these
+ *  fixings might be caused by orbital fixing, they can be in conflict with the symmetry handling decisions of orbital
+ *  fixing in the part of the tree that is not pruned.  Thus, we have to take global fixings into account when filtering
+ *  out symmetries. Here, we possibly turn some permutations to be inactive.
+ *
+ *  Note that the code below only inactivates permutations. Since there are only few cases in which permutations are
+ *  inactivated, this seems to be o.k.
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
+{
+   SCIP_PROPDATA* propdata;
+   SCIP_VAR** permvars;
+   SCIP_VAR* var;
+#ifndef NDEBUG
+   SCIP_Real oldbound;
+   SCIP_Real newbound;
+#endif
+   int** perms;
+   int* inactiveperms;
+   int nperms;
+   int varidx;
+   int p;
+
+   assert( eventhdlr != NULL );
+   assert( eventdata != NULL );
+   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_ORBITALFIXING_NAME) == 0 );
+   assert( event != NULL );
+
+   propdata = (SCIP_PROPDATA*)eventdata;
+   assert( propdata != NULL );
+   assert( propdata->permvarmap != NULL );
+   assert( propdata->inactiveperms != NULL );
+   assert( propdata->perms != NULL );
+   assert( propdata->nperms > 0 );
+   assert( propdata->permvars != NULL );
+   assert( propdata->npermvars > 0 );
+
+   inactiveperms = propdata->inactiveperms;
+   permvars = propdata->permvars;
+   nperms = propdata->nperms;
+   perms = propdata->perms;
+
+#ifndef NDEBUG
+   oldbound = SCIPeventGetOldbound(event);
+   newbound = SCIPeventGetNewbound(event);
+#endif
+
+   /* get fixed variable */
+   var = SCIPeventGetVar(event);
+   assert( var != NULL );
+   assert( SCIPvarIsBinary(var) );
+
+   if ( ! SCIPhashmapExists(propdata->permvarmap, (void*) var) )
+   {
+      SCIPerrorMessage("Invalid variable.\n");
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+   varidx = (int) (size_t) SCIPhashmapGetImage(propdata->permvarmap, (void*) var);
+   assert( 0 <= varidx && varidx < propdata->npermvars );
+
+   /* we only catch global lower bound changes */
+   assert( SCIPeventGetType(event) == SCIP_EVENTTYPE_GLBCHANGED );
+
+   /* variable is fixed to 1 -> filter out permutations that map it to an unfixed variable */
+   assert( SCIPisEQ(scip, newbound, 1.0) );
+   assert( SCIPisEQ(scip, oldbound, 0.0) );
+   for (p = 0; p < nperms; ++p)
+   {
+      int img;
+
+      /* skip inactive permutations that have been marked earlier */
+      if ( inactiveperms[p] == 2 )
+         continue;
+
+      assert( perms[p] != NULL );
+      img = perms[p][varidx];
+      assert( 0 <= img && img < propdata->npermvars );
+
+      /* mark permutation as globally inactive */
+      if ( SCIPvarGetLbGlobal(permvars[img]) < 0.5 )
+         inactiveperms[p] = 2;
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Local methods
@@ -191,11 +294,25 @@ SCIP_RETCODE getSymmetries(
       assert( propdata->permvarmap == NULL );
       SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
 
-      /* insert variables */
+      /* insert variables into hashmap and catch event */
+      assert( propdata->eventhdlr != NULL );
       for (v = 0; v < propdata->npermvars; ++v)
       {
          SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[v], (void*) (size_t) v) );
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[v]) );
+
+         /* only catch binary variables, since integer variables should be fixed pointwise */
+         if ( SCIPvarIsBinary(propdata->permvars[v]) )
+         {
+            /* catch whether lower bounds are changed, i.e., binary variables are fixed to 1 */
+            SCIP_CALL( SCIPcatchVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED, propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, NULL) );
+         }
       }
+
+      /* prepare array for active permutations */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inactiveperms, propdata->nperms) );
+      for (v = 0; v < propdata->nperms; ++v)
+         propdata->inactiveperms[v] = 0;
    }
 
    return SCIP_OKAY;
@@ -237,8 +354,6 @@ SCIP_RETCODE performOrbitalFixing(
    *infeasible = FALSE;
    *nfixedzero = 0;
    *nfixedone = 0;
-
-   SCIPdebugMsg(scip, "Perform orbital fixing on %d orbits.\n", norbits);
 
    /* check all orbits */
    for (i = 0; i < norbits; ++i)
@@ -350,6 +465,8 @@ SCIP_RETCODE computeBranchingVariables(
    int                   nvars,              /**< number of variables */
    SCIP_HASHMAP*         varmap,             /**< map of variables to indices in vars array */
    SCIP_Shortbool*       b1,                 /**< bitset marking the variables branched to 1 */
+   int*                  b1list,             /**< array to store the variable indices branched to 1 */
+   int*                  nb1,                /**< pointer to store the number of variables branched to 1 */
    SCIP_Bool*            success             /**< pointer to store whether branching variables were computed successfully */
    )
 {
@@ -358,8 +475,11 @@ SCIP_RETCODE computeBranchingVariables(
    assert( scip != NULL );
    assert( varmap != NULL );
    assert( b1 != NULL );
+   assert( b1list != NULL );
+   assert( nb1 != NULL );
    assert( success != NULL );
 
+   *nb1 = 0;
    *success = TRUE;
 
    /* get current node */
@@ -415,6 +535,7 @@ SCIP_RETCODE computeBranchingVariables(
                branchvaridx = (int) (size_t) SCIPhashmapGetImage(varmap, (void*) branchvar);
                assert( branchvaridx < nvars );
                b1[branchvaridx] = TRUE;
+               b1list[(*nb1)++] = branchvaridx;
             }
          }
       }
@@ -435,21 +556,25 @@ SCIP_RETCODE propagateOrbitalFixing(
    int*                  nprop               /**< pointer to store the number of propagations */
    )
 {
-   SCIP_Shortbool* activeperms;
    SCIP_Shortbool* b1;
    SCIP_Bool success = TRUE;
    SCIP_VAR** permvars;
+   int* inactiveperms;
    int* orbitbegins;
    int* orbits;
 #ifndef NDEBUG
-   SCIP_Real* permvarsobj;
+   SCIP_Real* permvarsobj = NULL;
 #endif
+   int* b1list;
+   int nb1;
+   int nactiveperms;
    int norbits;
    int npermvars;
    int** perms;
    int nperms;
    int p;
    int v;
+   int j;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -462,51 +587,76 @@ SCIP_RETCODE propagateOrbitalFixing(
    /* possibly get symmetries */
    SCIP_CALL( getSymmetries(scip, propdata) );
 
-   permvars = propdata->permvars;
-   npermvars = propdata->npermvars;
-   perms = propdata->perms;
-   nperms = propdata->nperms;
-
    /* return if there is no symmetry available */
-   if ( nperms == 0 )
+   nperms = propdata->nperms;
+   if ( nperms <= 0 )
       return SCIP_OKAY;
 
    assert( propdata->permvars != NULL );
    assert( propdata->npermvars > 0 );
    assert( propdata->permvarmap != NULL );
    assert( propdata->perms != NULL );
+   assert( propdata->inactiveperms != NULL );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &activeperms, nperms) );
+   permvars = propdata->permvars;
+   npermvars = propdata->npermvars;
+   perms = propdata->perms;
+   inactiveperms = propdata->inactiveperms;
 
    /* init bitset for marking variables branched to 1 */
-   SCIP_CALL( SCIPallocBufferArray(scip, &b1, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &b1list, npermvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &b1, npermvars) );
+#ifndef NDEBUG
    for (v = 0; v < npermvars; ++v)
-      b1[v] = FALSE;
+      assert( ! b1[v] );
+#endif
 
    /* get branching variables */
-   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, b1, &success) );
+   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, b1, b1list, &nb1, &success) );
 
    if ( ! success )
    {
-      SCIPfreeBufferArray(scip, &b1);
-      SCIPfreeBufferArray(scip, &activeperms);
+      /* clean b1 */
+      for (j = 0; j < nb1; ++j)
+         b1[b1list[j]] = FALSE;
+      SCIPfreeCleanBufferArray(scip, &b1);
+      SCIPfreeBufferArray(scip, &b1list);
       return SCIP_OKAY;
    }
 
 #ifndef NDEBUG
    SCIP_CALL( SCIPgetPermvarsObjSymmetry(scip, &permvarsobj) );
-#endif
    assert( permvarsobj != NULL );
+#endif
+
+   /* init active permutations */
+   nactiveperms = nperms;
+   for (j = 0; j < nperms; ++j)
+   {
+      /* if locally inactive from last call -> reset to active */
+      if ( propdata->inactiveperms[j] == 1 )
+         propdata->inactiveperms[j] = 0;
+      /* if globally inactive reduce number of active perms */
+      else if ( propdata->inactiveperms[j] == 2 )
+         --nactiveperms;
+   }
 
    /* filter out permutations that move variables that are fixed to different values */
-   for (p = 0; p < nperms; ++p)
+   for (j = 0; j < nb1 && nactiveperms > 0; ++j)
    {
-      assert( perms[p] != NULL );
+      v = b1list[j];
+      assert( 0 <= v && v < npermvars );
+      assert( b1[v] );
 
-      for (v = 0; v < npermvars; ++v)
+      for (p = 0; p < nperms; ++p)
       {
          int img;
 
+         /* skip permutations already marked as inactive */
+         if ( inactiveperms[p] > 0 )
+            continue;
+
+         assert( perms[p] != NULL );
          img = perms[p][v];
 
          if ( img != v )
@@ -524,44 +674,36 @@ SCIP_RETCODE propagateOrbitalFixing(
                (SCIPvarGetType(varv) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(varimg) == SCIP_VARTYPE_IMPLINT &&
                   SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
                   SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) );
-#endif
             assert( SCIPisEQ(scip, permvarsobj[v], permvarsobj[img]) );
+#endif
 
-            /* we are moving a variable branched to 1 to another variable */
-            if ( b1[v] && ! b1[img] )
-               break;
-
-            /* Global variable fixings during the solving process might arise because parts of the tree are
-             * pruned. Since these fixings might be caused by orbital fixing, they can be in conflict with
-             * the symmetry handling decisions of orbital fixing in the part of the tree that is not pruned.
-             * Thus, we have to take global fixings into account when filtering out symmetries.
-             */
-            if ( (SCIPvarGetLbGlobal(permvars[v]) > 0.5 && SCIPvarGetLbGlobal(permvars[img]) < 0.5) ||
-               (SCIPvarGetLbGlobal(permvars[v]) < 0.5 && SCIPvarGetLbGlobal(permvars[img]) > 0.5) )
-               break;
+            /* we are moving a variable branched to 1 to a variable not branched to 1 */
+            if ( ! b1[img] )
+            {
+               inactiveperms[p] = 1; /* mark as locally inactive */
+               --nactiveperms;
+            }
          }
       }
-
-      if ( v >= npermvars )
-         activeperms[p] = TRUE;
-      else
-         activeperms[p] = FALSE;
    }
 
-   SCIPfreeBufferArray(scip, &b1);
+   /* clean b1 list - need to do this after the main loop! */
+   for (j = 0; j < nb1; ++j)
+      b1[b1list[j]] = FALSE;
+   SCIPfreeCleanBufferArray(scip, &b1);
+   SCIPfreeBufferArray(scip, &b1list);
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, activeperms, orbits, orbitbegins, &norbits) );
-
-   SCIPfreeBufferArray(scip, &activeperms);
+   SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, inactiveperms, orbits, orbitbegins, &norbits) );
 
    if ( norbits > 0 )
    {
       int nfixedzero = 0;
       int nfixedone = 0;
 
+      SCIPdebugMsg(scip, "Perform orbital fixing on %d orbits (%d active perms).\n", norbits, nactiveperms);
       SCIP_CALL( performOrbitalFixing(scip, permvars, npermvars, orbits, orbitbegins, norbits, infeasible, &nfixedzero, &nfixedone) );
 
       propdata->nfixedzero += nfixedzero;
@@ -636,6 +778,7 @@ static
 SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   int v;
 
    assert( prop != NULL );
 
@@ -652,12 +795,25 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
 
+   for (v = 0; v < propdata->npermvars; ++v)
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
+      if ( SCIPvarIsBinary(propdata->permvars[v]) )
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED, propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
+      }
+   }
+
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
+
    propdata->nperms = -1;
    propdata->perms = NULL;
    propdata->permvars = NULL;
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
    propdata->lastrestart = 0;
+
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
 
    return SCIP_OKAY;
 }
@@ -853,7 +1009,14 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->permvars = NULL;
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
+   propdata->inactiveperms = NULL;
+   propdata->eventhdlr = NULL;
    propdata->lastrestart = 0;
+
+   /* create event handler */
+   propdata->eventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(propdata->eventhdlr), EVENTHDLR_ORBITALFIXING_NAME, EVENTHDLR_ORBITALFIXING_DESC, eventExecOrbitalFixing, NULL) );
+   assert( propdata->eventhdlr != NULL );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, propExecOrbitalfixing, propdata) );

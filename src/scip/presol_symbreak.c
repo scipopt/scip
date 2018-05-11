@@ -1390,7 +1390,7 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
-   SCIP_Shortbool*       activeperms,        /**< array for marking active permutations (or NULL) */
+   int*                  inactiveperms,      /**< array for marking inactive (if > 0) permutations (or NULL) */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
    int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
@@ -1442,7 +1442,7 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
 
             for (p = 0; p < nperms; ++p)
             {
-               if ( activeperms == NULL || activeperms[p] )
+               if ( inactiveperms == NULL || inactiveperms[p] == 0 )
                {
                   image = perms[p][curelem];
 
