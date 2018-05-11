@@ -196,18 +196,12 @@ SCIP_RETCODE createOriginalproblem(
       /* storing the variable in the facility variable list */
       facilityvars[i] = var;
 
-      /* capturing the variable since it is stored in the probdata */
-      SCIP_CALL( SCIPcaptureVar(scip, var) );
-
       /* adding the variable to the capacity constraints */
       for( j = 0; j < nscenarios; j++ )
          SCIP_CALL( SCIPaddCoefLinear(scip, capconss[i][j], var, -capacity[i]) );
 
       /* adding the variable to the sufficient capacity constraints */
       SCIP_CALL( SCIPaddCoefLinear(scip, (*sufficientcap), var, capacity[i]) );
-
-      /* releases the variable */
-      SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
 
    /* adding the customer variables to the scenario */
@@ -226,9 +220,6 @@ SCIP_RETCODE createOriginalproblem(
             /* storing the customer variable in the list */
             customervars[i][j][k] = var;
 
-            /* capturing the variable since it is stored in the probdata */
-            SCIP_CALL( SCIPcaptureVar(scip, var) );
-
             if( costs[i][j] > 0 )
             {
                /* adding the variable to the capacity constraints */
@@ -237,9 +228,6 @@ SCIP_RETCODE createOriginalproblem(
                /* adding the variable to the demand constraints */
                SCIP_CALL( SCIPaddCoefLinear(scip, demandconss[i][k], customervars[i][j][k], 1.0) );
             }
-
-            /* releases the variable */
-            SCIP_CALL( SCIPreleaseVar(scip, &var) );
          }
       }
    }
@@ -297,14 +285,8 @@ SCIP_RETCODE createMasterproblem(
       /* storing the variable in the facility variable list */
       facilityvars[i] = var;
 
-      /* capturing the variable since it is stored in the probdata */
-      SCIP_CALL( SCIPcaptureVar(scip, var) );
-
       /* adding the variable to the sufficient capacity constraints */
       SCIP_CALL( SCIPaddCoefLinear(scip, (*sufficientcap), var, capacity[i]) );
-
-      /* releases the variable */
-      SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
 
    return SCIP_OKAY;
@@ -378,14 +360,8 @@ SCIP_RETCODE createSubproblems(
          /* storing the variable in the facility variable list */
          subfacilityvars[i][j] = var;
 
-         /* capturing the variable since it is stored in the probdata */
-         SCIP_CALL( SCIPcaptureVar(subproblems[j], var) );
-
          /* adding the variable to the capacity constraints */
          SCIP_CALL( SCIPaddCoefLinear(subproblems[j], capconss[i][j], subfacilityvars[i][j], -capacity[i]) );
-
-         /* releases the variable */
-         SCIP_CALL( SCIPreleaseVar(subproblems[j], &var) );
       }
    }
 
@@ -405,9 +381,6 @@ SCIP_RETCODE createSubproblems(
             /* storing the customer variable in the list */
             customervars[i][j][k] = var;
 
-            /* capturing the variable since it is stored in the probdata */
-            SCIP_CALL( SCIPcaptureVar(subproblems[k], var) );
-
             if( costs[i][j] > 0 )
             {
                /* adding the variable to the capacity constraints */
@@ -416,9 +389,6 @@ SCIP_RETCODE createSubproblems(
                /* adding the variable to the demand constraints */
                SCIP_CALL( SCIPaddCoefLinear(subproblems[k], demandconss[i][k], customervars[i][j][k], 1.0) );
             }
-
-            /* releases the variable */
-            SCIP_CALL( SCIPreleaseVar(subproblems[k], &var) );
          }
       }
    }
@@ -669,10 +639,6 @@ SCIP_DECL_PROBDELTRANS(probdeltransCap)
 {
    SCIPdebugMsg(scip, "free transformed problem data\n");
 
-#if 0
-   SCIP_CALL( probdataFree(scip, probdata) );
-#endif
-
    return SCIP_OKAY;
 }
 
@@ -850,47 +816,5 @@ SCIP_VAR** SCIPprobdataGetFacilityVars(
 
    return probdata->facilityvars;
 }
-
-#if 0
-/** returns the capacity of the facilities */
-SCIP_Longint SCIPprobdataGetCapacity(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   )
-{
-   assert(probdata != NULL);
-
-   return probdata->capacity;
-}
-
-/** returns the customer costs*/
-SCIP_Real** SCIPprobdataGetCosts(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   )
-{
-   assert(probdata != NULL);
-
-   return probdata->costs;
-}
-
-/** returns the customer demands */
-SCIP_Real* SCIPprobdataGetDemands(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   )
-{
-   assert(probdata != NULL);
-
-   return probdata->demands;
-}
-
-/** returns the facilitty fixed cost */
-SCIP_Real SCIPprobdataGetFixedCost(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   )
-{
-   assert(probdata != NULL);
-
-   return probdata->fixedcost;
-}
-#endif
 
 /**@} */

@@ -328,6 +328,7 @@ SCIP_DECL_READERREAD(readerReadCap)
    SCIP_CALL( SCIPallocBufferArray(scip, &demands, ncustomers) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costs, ncustomers) );
 
+   /* TODO: convert the 2D arrays into contiguous arrays. This has benefits from a memory management point of view. */
    for( i = 0; i < ncustomers; i++ )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &costs[i], nfacilities) );
