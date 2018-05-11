@@ -35,7 +35,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real**           costs,              /**< the transportation costs from a facility to a customer */
    SCIP_Real**           demands,            /**< the customer demands */
    SCIP_Real*            capacity,           /**< the capacity of each facility */
-   SCIP_Real*            fixedcost,          /**< the fixed cost of openning a facility */
+   SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
    int                   nsubproblems,       /**< the number of Benders' decomposition subproblems */
