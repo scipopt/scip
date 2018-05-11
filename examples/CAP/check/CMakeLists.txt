@@ -4,9 +4,8 @@ include(CTest)
 # instances of varying size in the CAP data set.
 #
 set(instances
-    "cap81\;9"
-    "cap82\;17"
-    "cap83\;27" #TODO fix objective values, add other instances
+    "cap41\;1.04955083265000e+06"
+    "cap42\;1.11455083265000e+06"
 )
 
 add_test(NAME examples-cap-build
