@@ -92,6 +92,7 @@
 
 #include "probdata_cap.h"
 #include "reader_cap.h"
+#include "scip/misc.h"
 
 /**@name Reader properties
  *
@@ -105,6 +106,7 @@
 
 #define DEFAULT_USEBENDERS       FALSE
 #define DEFAULT_NUMSCENARIOS      250
+#define DEFAULT_RANDOMSEED          1
 
 #define MAXNCOSTS                   7
 
@@ -112,6 +114,7 @@ struct SCIP_ReaderData
 {
    SCIP_Bool             usebenders;         /**< should Benders' decomposition be used to solve the problem */
    int                   nscenarios;         /**< the number of scenarios */
+   int                   randomseed;         /**< the random seed used to generate the scenarios */
 };
 
 /**@} */
@@ -242,10 +245,10 @@ SCIP_DECL_READERREAD(readerReadCap)
    int i;
    int j;
 
-   /* creating the random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randomgen, 1) );
-
    readerdata = SCIPreaderGetData(reader);
+
+   /* creating the random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randomgen, SCIPblkmem(scip), readerdata->randomseed) );
 
    nscenarios = readerdata->nscenarios;
 
@@ -489,6 +492,11 @@ SCIP_RETCODE SCIPincludeReaderCap(
          "reading/" READER_NAME "/numscenarios",
          "the number of scenarios that will be randomly generated",
          &readerdata->nscenarios, FALSE, DEFAULT_NUMSCENARIOS, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "reading/" READER_NAME "/randomseed",
+         "the random seed used to generate the scenarios",
+         &readerdata->randomseed, FALSE, DEFAULT_RANDOMSEED, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

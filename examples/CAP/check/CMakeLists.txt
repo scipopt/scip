@@ -8,10 +8,10 @@ set(instances
     "cap42\;+1.29554371937500e+06"
     "cap43\;+1.36054371937500e+06"
     "cap44\;+1.45804371937500e+06"
-    "cap61\;+1.03826090187500e+06"
-    "cap62\;+1.08543370562500e+06"
-    "cap63\;+1.12391676875000e+06"
-    "cap64\;+1.17209372125000e+06"
+    #"cap61\;+1.03826090187500e+06"
+    #"cap62\;+1.08543370562500e+06"
+    #"cap63\;+1.12391676875000e+06"
+    #"cap64\;+1.17209372125000e+06"
 )
 
 add_test(NAME examples-cap-build
@@ -36,7 +36,7 @@ foreach(instance ${instances})
     # call the CAP binary and validate the solve with the given objective value
     #
     add_test(NAME "examples-cap-${basename}"
-            COMMAND $<TARGET_FILE:cap> -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+            COMMAND $<TARGET_FILE:cap> -c "set reading capreader numscenarios 20 read ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap opt disp stat q" -o ${optval} ${optval}
             )
     set_tests_properties("examples-cap-${basename}"
                         PROPERTIES
@@ -48,7 +48,7 @@ foreach(instance ${instances})
     # call the CAP binary and set usebenders to TRUE and validate the solve with the given objective value
     #
     add_test(NAME "examples-capbenders-${basename}"
-            COMMAND $<TARGET_FILE:cap> -c "set reading capreader usebenders TRUE read ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap opt disp stat q" -o ${optval} ${optval}
+            COMMAND $<TARGET_FILE:cap> -c "set reading capreader numscenarios 20 set reading capreader usebenders TRUE read ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap opt disp stat q" -o ${optval} ${optval}
             )
     set_tests_properties("examples-capbenders-${basename}"
                         PROPERTIES
