@@ -10,8 +10,13 @@ add_executable(cap
    src/probdata_cap.c
    src/reader_cap.c )
 
-target_link_libraries(cap ${SCIP_LIBRARIES})
-target_link_libraries(cap m)
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
+target_link_libraries(cap ${SCIP_LIBRARIES} ${LIBM})
 if( TARGET examples )
     add_dependencies( examples cap )
 endif()
