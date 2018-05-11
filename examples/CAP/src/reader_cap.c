@@ -446,7 +446,7 @@ SCIP_DECL_READERREAD(readerReadCap)
    SCIPfreeBufferArray(scip, &capacity);
 
    /* freeing the random number generator */
-   SCIPfreeRandom(scip, &randomgen);
+   SCIPrandomFree(&randomgen, SCIPblkmem(scip));
 
    if( error )
       return SCIP_READERROR;
