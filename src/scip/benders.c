@@ -2941,7 +2941,7 @@ SCIP_RETCODE storeOrigSubprobParams(
    SCIP_CALL( SCIPgetIntParam(scip, "lp/scaling", &origparams->lp_scaling) );
    SCIP_CALL( SCIPgetCharParam(scip, "lp/initalgorithm", &origparams->lp_initalg) );
    SCIP_CALL( SCIPgetCharParam(scip, "lp/resolvealgorithm", &origparams->lp_resolvealg) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/alwaysgetduals", &origparams->misc_alwaysgetduals) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "lp/alwaysgetduals", &origparams->lp_alwaysgetduals) );
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/scaleobj", &origparams->misc_scaleobj) );
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/catchctrlc", &origparams->misc_catchctrlc) );
    SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxrounds", &origparams->prop_maxrounds) );
@@ -2974,7 +2974,7 @@ SCIP_RETCODE setSubprobParams(
    SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", 'd') );
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/alwaysgetduals", TRUE) );
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", FALSE) );
 
    /* do not abort subproblem on CTRL-C */
@@ -3005,7 +3005,7 @@ SCIP_RETCODE resetOrigSubprobParams(
    SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", origparams->lp_scaling) );
    SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", origparams->lp_initalg) );
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", origparams->lp_resolvealg) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", origparams->misc_alwaysgetduals) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/alwaysgetduals", origparams->lp_alwaysgetduals) );
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", origparams->misc_scaleobj) );
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", origparams->misc_catchctrlc) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", origparams->prop_maxrounds) );

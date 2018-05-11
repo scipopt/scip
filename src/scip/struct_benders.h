@@ -121,7 +121,7 @@ struct SCIP_SubprobParams
    char lp_initalg;
    char lp_resolvealg;
    SCIP_Bool conflict_enable;
-   SCIP_Bool misc_alwaysgetduals;
+   SCIP_Bool lp_alwaysgetduals;
    SCIP_Bool misc_catchctrlc;
    SCIP_Bool misc_scaleobj;
 };
