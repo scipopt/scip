@@ -132,9 +132,6 @@ SCIP_RETCODE solveTest(
    /* check feasibility status */
    SCIP_CALL( SCIPlpiGetSolFeasibility(lpi, &primalfeasible, &dualfeasible) );
 
-   /* CPLEX has a strange definition of stability such that we cannot use the test here. */
-   /* cr_assert( SCIPlpiIsStable(lpi) ); */
-
    /* if we are feasible, we should be optimal */
    if ( exp_primalfeas == SCIPfeas && exp_dualfeas == SCIPfeas )
    {
@@ -161,7 +158,8 @@ SCIP_RETCODE solveTest(
       /* It seems that we cannot guarantee that the primal is shown to be unbounded. */
       /* cr_assert( SCIPlpiIsPrimalUnbounded(lpi) ); */
 
-      cr_assert( SCIPlpiExistsPrimalRay(lpi) );
+      /* primal ray should exist if the primal simplex ran */
+      cr_assert( ! solveprimal || SCIPlpiExistsPrimalRay(lpi) );
       cr_assert( ! SCIPlpiIsPrimalInfeasible(lpi) );
       break;
 
@@ -199,7 +197,8 @@ SCIP_RETCODE solveTest(
       /* It seems that we cannot guarantee that the dual is shown to be unbounded. */
       /* cr_assert( SCIPlpiIsDualUnbounded(lpi) ); */
 
-      cr_assert( SCIPlpiExistsDualRay(lpi) );
+      /* dual ray should exist if the dual simplex ran */
+      cr_assert( solveprimal || SCIPlpiExistsDualRay(lpi) );
       cr_assert( ! SCIPlpiIsDualInfeasible(lpi) );
       break;
 
@@ -279,6 +278,7 @@ SCIP_RETCODE solveTest(
    else if ( exp_dualfeas == SCIPunbounded )
    {
       assert( exp_dualsol != NULL );
+
       if ( SCIPlpiHasDualRay(lpi) )
       {
          SCIP_Real scalingfactor = 1.0;
