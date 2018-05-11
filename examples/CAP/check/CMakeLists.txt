@@ -37,4 +37,16 @@ foreach(instance ${instances})
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
                             DEPENDS examples-cap-build
                         )
+
+    #
+    # call the CAP binary and set usebenders to TRUE and validate the solve with the given objective value
+    #
+    add_test(NAME "examples-capbenders-${basename}"
+            COMMAND $<TARGET_FILE:cap> -c "set reading capreader usebenders TRUE read ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap opt disp stat q" -o ${optval} ${optval}
+            )
+    set_tests_properties("examples-capbenders-${basename}"
+                        PROPERTIES
+                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            DEPENDS examples-cap-build
+                        )
 endforeach()
