@@ -4,8 +4,14 @@ include(CTest)
 # instances of varying size in the CAP data set.
 #
 set(instances
-    "cap41\;1.04955083265000e+06"
-    "cap42\;1.11455083265000e+06"
+    "cap41\;1.04674430187500e+06"
+    "cap42\;1.10674430187500e+06"
+    "cap43\;1.16674430187500e+06"
+    "cap44\;1.25674430187500e+06"
+    "cap61\;9.31099854374999e+05"
+    "cap62\;9.75512641874999e+05"
+    "cap63\;1.01182379000000e+06"
+    "cap64\;1.05217570812500e+06"
 )
 
 add_test(NAME examples-cap-build
