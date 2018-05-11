@@ -2426,11 +2426,16 @@ SCIP_RETCODE SCIPbendersExec(
        * relaxations or the LP
        */
       if( type != SCIP_BENDERSENFOTYPE_PSEUDO )
+      {
          SCIP_CALL( generateBendersCuts(benders, set, sol, result, type, solveloop, checkint, nchecked,
                subprobsolved, &nsolveloops) );
+      }
       else
       {
-         /* if the problems are not infeasible, then the */
+         /* The first solving loop solves the convex subproblems and the convex relaxations of the CIP subproblems. The
+          * second solving loop solves the CIP subproblems. The second solving loop is only called if the integer
+          * feasibility is being checked and if the convex subproblems and convex relaxations are not infeasible.
+          */
          if( !(*infeasible) && checkint && !SCIPbendersOnlyCheckConvexRelax(benders)
             && SCIPbendersGetNConvexSubprobs(benders) < SCIPbendersGetNSubproblems(benders))
             nsolveloops = 2;
