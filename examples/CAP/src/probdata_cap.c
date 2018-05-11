@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   probdata_cap.c
- * @brief  Problem data for cap problem
+ * @brief  Problem data for Stochastic Capacitated Facility Location problem
  * @author Stephen J. Maher
  *
  * This file handles the main problem data used in that project. For more details see \ref CAP_PROBLEMDATA page.

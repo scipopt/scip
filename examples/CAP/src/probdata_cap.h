@@ -13,18 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   probdata_binpacking.h
- * @brief  Problem data for binpacking problem
- * @author Timo Berthold
- * @author Stefan Heinz
+/**@file   probdata_cap.h
+ * @brief  Problem data for Stochastic Capacitated Facility Location problem
+ * @author Stephen J. Maher
  *
- * This file handles the main problem data used in that project. For more details see \ref BINPACKING_PROBLEMDATA page.
+ * This file handles the main problem data used in that project. For more details see \ref CAP_PROBLEMDATA page.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PROBDATA_BINPACKING__
-#define __SCIP_PROBDATA_BINPACKING__
+#ifndef __SCIP_PROBDATA_CAP__
+#define __SCIP_PROBDATA_CAP__
 
 #include "scip/scip.h"
 
@@ -60,32 +59,5 @@ extern
 SCIP_VAR** SCIPprobdataGetFacilityVars(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
-
-#if 0
-/** returns the capacity of the facilities */
-extern
-SCIP_Longint SCIPprobdataGetCapacity(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
-
-/** returns the customer costs*/
-extern
-SCIP_Real** SCIPprobdataGetCosts(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
-
-/** returns the customer demands */
-extern
-SCIP_Real* SCIPprobdataGetDemands(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
-
-/** returns the facilitty fixed cost */
-extern
-SCIP_Real SCIPprobdataGetFixedCost(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
-#endif
-
 
 #endif
