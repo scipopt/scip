@@ -365,7 +365,9 @@ SCIP_RETCODE SCIPbenderscutExec(
 
    /* call the Benders' decomposition cut if it is enabled */
    if( benderscut->enabled )
+   {
       SCIP_CALL( benderscut->benderscutexec(set->scip, benders, benderscut, sol, probnumber, type, &cutresult) );
+   }
 
    /* stop timing */
    SCIPclockStop(benderscut->benderscutclock, set);

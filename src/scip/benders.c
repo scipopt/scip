@@ -1590,7 +1590,7 @@ SCIP_RETCODE computeSubproblemLowerbound(
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", verblevel) );
 
    /* the subproblem must be freed so that it is reset for the subsequent Benders' decomposition solves. If the
-    * subproblems are independent, they are not freed. SCIPfreeBendersSubproblem must still be called, tbut in this
+    * subproblems are independent, they are not freed. SCIPfreeBendersSubproblem must still be called, but in this
     * function the independent subproblems are not freed. However, they will still be freed at the end of the
     * solving process for the master problem.
     */

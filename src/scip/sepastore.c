@@ -516,7 +516,8 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    }
 
    /* If the duals need to be collected, then the infeasible flag is set to FALSE. This ensures that the LP is solved */
-   (*infeasible) = (*infeasible) && !(set->misc_alwaysgetduals && sepastore->initiallp);
+   if( set->misc_alwaysgetduals && sepastore->initiallp )
+      (*infeasible) = FALSE;
 
    return SCIP_OKAY;
 }
