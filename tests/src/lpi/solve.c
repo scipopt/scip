@@ -132,9 +132,6 @@ SCIP_RETCODE solveTest(
    /* check feasibility status */
    SCIP_CALL( SCIPlpiGetSolFeasibility(lpi, &primalfeasible, &dualfeasible) );
 
-   /* CPLEX has a strange definition of stability such that we cannot use the test here. */
-   /* cr_assert( SCIPlpiIsStable(lpi) ); */
-
    /* if we are feasible, we should be optimal */
    if ( exp_primalfeas == SCIPfeas && exp_dualfeas == SCIPfeas )
    {
@@ -281,6 +278,7 @@ SCIP_RETCODE solveTest(
    else if ( exp_dualfeas == SCIPunbounded )
    {
       assert( exp_dualsol != NULL );
+
       if ( SCIPlpiHasDualRay(lpi) )
       {
          SCIP_Real scalingfactor = 1.0;
