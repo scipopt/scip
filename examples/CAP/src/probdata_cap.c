@@ -45,7 +45,7 @@
  *    SCIP_Real**           costs;              **< the transportation costs to a customer from a facility *
  *    SCIP_Real**           demands;            **< the customer demands per scenario *
  *    SCIP_Real*            capacity;           **< the capacity of each facility *
- *    SCIP_Real*            fixedcost;          **< the fixed cost of openning each facility *
+ *    SCIP_Real*            fixedcost;          **< the fixed cost of opening each facility *
  *    int                   ncustomers;         **< the number of customers *
  *    int                   nfacilities;        **< the number of facilities *
  *    int                   nscenarios;         **< the number of scenarios *
@@ -99,7 +99,7 @@ struct SCIP_ProbData
    SCIP_Real**           costs;              /**< the transportation costs to a customer from a facility */
    SCIP_Real**           demands;            /**< the customer demands per scenario */
    SCIP_Real*            capacity;           /**< the capacity of each facility */
-   SCIP_Real*            fixedcost;          /**< the fixed cost of openning each facility */
+   SCIP_Real*            fixedcost;          /**< the fixed cost of opening each facility */
    int                   ncustomers;         /**< the number of customers */
    int                   nfacilities;        /**< the number of facilities */
    int                   nscenarios;         /**< the number of scenarios */
@@ -125,7 +125,7 @@ SCIP_RETCODE createOriginalproblem(
    SCIP_Real**           costs,              /**< the transportation costs from a facility to a customer */
    SCIP_Real**           demands,            /**< the customer demands */
    SCIP_Real*            capacity,           /**< the capacity of each facility */
-   SCIP_Real*            fixedcost,          /**< the fixed cost of openning a facility */
+   SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
    int                   nscenarios          /**< the number of scenarios */
@@ -199,11 +199,11 @@ SCIP_RETCODE createOriginalproblem(
       /* capturing the variable since it is stored in the probdata */
       SCIP_CALL( SCIPcaptureVar(scip, var) );
 
-      /* adding the variable to the capacity constriants */
+      /* adding the variable to the capacity constraints */
       for( j = 0; j < nscenarios; j++ )
          SCIP_CALL( SCIPaddCoefLinear(scip, capconss[i][j], var, -capacity[i]) );
 
-      /* adding the variable to the sufficient capacity constriants */
+      /* adding the variable to the sufficient capacity constraints */
       SCIP_CALL( SCIPaddCoefLinear(scip, (*sufficientcap), var, capacity[i]) );
 
       /* releases the variable */
@@ -231,7 +231,7 @@ SCIP_RETCODE createOriginalproblem(
 
             if( costs[i][j] > 0 )
             {
-               /* adding the variable to the capacity constriants */
+               /* adding the variable to the capacity constraints */
                SCIP_CALL( SCIPaddCoefLinear(scip, capconss[j][k], customervars[i][j][k], 1.0) );
 
                /* adding the variable to the demand constraints */
@@ -254,7 +254,7 @@ SCIP_RETCODE createMasterproblem(
    SCIP_VAR**            facilityvars,       /**< all variables representing facilities */
    SCIP_CONS**           sufficientcap,      /**< ensuring sufficient capacity is provided to satisfy demand */
    SCIP_Real*            capacity,           /**< the capacity of each facility */
-   SCIP_Real*            fixedcost,          /**< the fixed cost of openning a facility */
+   SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    SCIP_Real**           demands,            /**< the customer demands */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
@@ -300,7 +300,7 @@ SCIP_RETCODE createMasterproblem(
       /* capturing the variable since it is stored in the probdata */
       SCIP_CALL( SCIPcaptureVar(scip, var) );
 
-      /* adding the variable to the sufficient capacity constriants */
+      /* adding the variable to the sufficient capacity constraints */
       SCIP_CALL( SCIPaddCoefLinear(scip, (*sufficientcap), var, capacity[i]) );
 
       /* releases the variable */
@@ -323,7 +323,7 @@ SCIP_RETCODE createSubproblems(
    SCIP_Real**           costs,              /**< the transportation costs from a facility to a customer */
    SCIP_Real**           demands,            /**< the customer demands */
    SCIP_Real*            capacity,           /**< the capacity of each facility */
-   SCIP_Real*            fixedcost,          /**< the fixed cost of openning a facility */
+   SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
    int                   nscenarios          /**< the number of scenarios */
@@ -381,7 +381,7 @@ SCIP_RETCODE createSubproblems(
          /* capturing the variable since it is stored in the probdata */
          SCIP_CALL( SCIPcaptureVar(subproblems[j], var) );
 
-         /* adding the variable to the capacity constriants */
+         /* adding the variable to the capacity constraints */
          SCIP_CALL( SCIPaddCoefLinear(subproblems[j], capconss[i][j], subfacilityvars[i][j], -capacity[i]) );
 
          /* releases the variable */
@@ -410,7 +410,7 @@ SCIP_RETCODE createSubproblems(
 
             if( costs[i][j] > 0 )
             {
-               /* adding the variable to the capacity constriants */
+               /* adding the variable to the capacity constraints */
                SCIP_CALL( SCIPaddCoefLinear(subproblems[k], capconss[j][k], customervars[i][j][k], 1.0) );
 
                /* adding the variable to the demand constraints */
@@ -442,7 +442,7 @@ SCIP_RETCODE probdataCreate(
    SCIP_Real**           costs,              /**< the transportation costs to a customer from a facility */
    SCIP_Real**           demands,            /**< the customer demands per scenario */
    SCIP_Real*            capacity,           /**< the capacity of each facility */
-   SCIP_Real*            fixedcost,          /**< the fixed cost of openning a facility */
+   SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
    int                   nscenarios,         /**< the number of scenarios */
@@ -691,7 +691,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real**           costs,              /**< the transportation costs from a facility to a customer */
    SCIP_Real**           demands,            /**< the customer demands */
    SCIP_Real*            capacity,           /**< the capacity of each facility */
-   SCIP_Real*            fixedcost,          /**< the fixed cost of openning a facility */
+   SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
    int                   nscenarios,       /**< the number of Benders' decomposition scenarios */
