@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -119,6 +119,7 @@ struct SCIP_ReaderData
 /** generates a normally distributed random number */
 static
 SCIP_Real generateGaussianNoise(
+   SCIP_RANDNUMGEN*      randomgen,          /**< the random number generator */
    SCIP_Real             mean,               /**< the mean of the normal distribution */
    SCIP_Real             stdDev,             /**< the standard deviation of the normal distribution */
    SCIP_Real*            spare,              /**< the spare value that has been collected */
@@ -138,8 +139,8 @@ SCIP_Real generateGaussianNoise(
 
    (*hasspare) = TRUE;
    do {
-      u = (rand() / ((double) RAND_MAX)) * 2.0 - 1.0;
-      v = (rand() / ((double) RAND_MAX)) * 2.0 - 1.0;
+      u = SCIPrandomGetReal(randomgen, 0.0, 1.0);
+      v = SCIPrandomGetReal(randomgen, 0.0, 1.0);
       s = u * u + v * v;
    }
    while( (s >= 1.0) || (s == 0.0) );
@@ -212,6 +213,8 @@ SCIP_DECL_READERREAD(readerReadCap)
 {  /*lint --e{715}*/
    SCIP_READERDATA* readerdata;
 
+   SCIP_RANDNUMGEN* randomgen;
+
    SCIP_FILE* file;
    SCIP_Bool error;
 
@@ -239,8 +242,8 @@ SCIP_DECL_READERREAD(readerReadCap)
    int i;
    int j;
 
-   /* setting the random seed */
-   srand(1);
+   /* creating the random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &randomgen, 1) );
 
    readerdata = SCIPreaderGetData(reader);
 
@@ -408,11 +411,11 @@ SCIP_DECL_READERREAD(readerReadCap)
       for( i = 0; i < ncustomers; i++ )
       {
          mean = detdemands[i];
-         stdDev = (rand() / ((SCIP_Real) RAND_MAX)) * (0.2 * mean) + (0.1 * mean);
+         stdDev = SCIPrandomGetReal(randomgen, 0.1*mean, 0.2*mean);
          hasspare = FALSE;
          for( j = 0; j < nscenarios; j++ )
          {
-            demands[i][j] = SCIPround(scip, generateGaussianNoise(mean, stdDev, &spare, &hasspare));
+            demands[i][j] = SCIPround(scip, generateGaussianNoise(randomgen, mean, stdDev, &spare, &hasspare));
 
             SCIPdebugMsg(scip, "Scenario %d: customer %d demand <%f>\n", j, i, demands[i][j]);
          }
@@ -437,6 +440,9 @@ SCIP_DECL_READERREAD(readerReadCap)
 
    SCIPfreeBufferArray(scip, &fixedcost);
    SCIPfreeBufferArray(scip, &capacity);
+
+   /* freeing the random number generator */
+   SCIPfreeRandom(scip, &randomgen);
 
    if( error )
       return SCIP_READERROR;
