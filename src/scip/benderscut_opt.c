@@ -167,7 +167,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
          || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
       {
          (*success) = FALSE;
-         SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");
+         SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut. lhs = %g addval = %g.\n", lhs, addval);
          return SCIP_OKAY;
       }
 
@@ -268,11 +268,11 @@ SCIP_RETCODE computeStandardOptimalityCut(
       rhs = SCIPgetRhsLinear(masterprob, cons);
 
    assert(SCIPisInfinity(masterprob, rhs));
-   /* if the rhs becomes infinite, then the cut generation terminates. This should never happen */
-   if( SCIPisInfinity(masterprob, rhs) || SCIPisInfinity(masterprob, -rhs) )
+   /* the rhs should be infinite. If it changes, then there is an error */
+   if( !SCIPisInfinity(masterprob, rhs) )
    {
       (*success) = FALSE;
-      SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut.\n");
+      SCIPdebugMsg(masterprob, "RHS is not infinite. rhs = %g.\n", rhs);
       return SCIP_OKAY;
    }
 
@@ -441,9 +441,6 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          /* storing the generated cut */
          SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
 
-         /* release the row */
-         SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
-
          (*result) = SCIP_SEPARATED;
       }
       else
@@ -455,10 +452,19 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          /* storing the generated cut */
          SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
 
-         SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
-
          (*result) = SCIP_CONSADDED;
       }
+   }
+
+   if( addcut )
+   {
+      /* release the row */
+      SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+   }
+   else
+   {
+      /* release the constraint */
+      SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
    }
 
    return SCIP_OKAY;

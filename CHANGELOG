@@ -58,6 +58,11 @@ new parameters:
 - "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
 - "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
 - "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts
+- "benders/*" new submenu for Benders' decomposition related settings. This includes the settings related to the
+  included Benders' decompositions and the general Benders' decomposition settings.
+- "benders/<decompname>/benderscuts/*" submenu within each included Benders' decomposition to control the Benders'
+  decomposition cuts. The cuts are added to each decomposition separately, so the setting are unique to each
+  decomposition.
 
 deleted and modified parameters:
 - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled

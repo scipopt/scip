@@ -464,9 +464,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
          SCIPinfoMessage(masterprob, NULL, ";\n");
 #endif
 
-         /* release the row */
-         SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
-
          (*result) = SCIP_SEPARATED;
       }
       else
@@ -478,12 +475,20 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 
          SCIPdebugPrintCons(masterprob, cons, NULL);
 
-         SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
-
          (*result) = SCIP_CONSADDED;
       }
    }
 
+   if( addcut )
+   {
+      /* release the row */
+      SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+   }
+   else
+   {
+      /* release the constraint */
+      SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -563,11 +568,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
    /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
    if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
    {
-      SCIPinfoMessage(scip, NULL, "The Laporte and Louveaux Benders' decomposition integer optimality cuts"
-         " can only be applied to problems with a pure binary master problem.\n"
-         "No integer optimality cuts will be generated for this problem. As such, your solution will be suboptimal.\n");
-
-      SCIPinfoMessage(scip, NULL, "The Laporte and Louveaux Benders' decomposition cuts will be disabled.\n");
+      SCIPinfoMessage(scip, NULL, "The integer optimality cuts can only be applied to problems with a "
+         "pure binary master problem. The integer optimality cuts will be disabled.\n");
 
       SCIPbenderscutSetEnabled(benderscut, FALSE);
 

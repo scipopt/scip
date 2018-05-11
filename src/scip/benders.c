@@ -485,7 +485,7 @@ SCIP_RETCODE updateSubproblemLowerbound(
       /* solving the probing LP to get a lower bound on the auxiliary variables */
       SCIP_CALL( SCIPsolveProbingLP(masterprob, -1, &lperror, &cutoff) );
 
-      if( SCIPisGT(masterprob, SCIPgetSolTransObj(masterprob, NULL), -SCIPinfinity(masterprob)) )
+      if( !SCIPisInfinity(masterprob, -SCIPgetSolTransObj(masterprob, NULL)) )
          SCIPbendersUpdateSubprobLowerbound(benders, i, SCIPgetSolTransObj(masterprob, NULL));
 
       SCIPdebugMsg(masterprob, "Cut constant for subproblem %d: %g\n", i,
@@ -1590,7 +1590,9 @@ SCIP_RETCODE computeSubproblemLowerbound(
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", verblevel) );
 
    /* the subproblem must be freed so that it is reset for the subsequent Benders' decomposition solves. If the
-    * subproblems are independent, they are not freed. This is handled in SCIPbendersFreeSubproblem.
+    * subproblems are independent, they are not freed. SCIPfreeBendersSubproblem must still be called, but in this
+    * function the independent subproblems are not freed. However, they will still be freed at the end of the
+    * solving process for the master problem.
     */
    SCIP_CALL( SCIPfreeBendersSubproblem(scip, benders, probnumber) );
 
@@ -1624,24 +1626,31 @@ SCIP_RETCODE checkSubproblemIndependenceAndLowerbound(
    /* looping over all subproblems to check whether there exists at least one master problem variable */
    for( i = 0; i < nsubproblems; i++ )
    {
-      SCIP_Bool independent = TRUE;
-      for( j = 0; j < nvars; j++ )
+      /* if there are user defined solving or freeing functions, then it is not possible to declare the independence of
+       * the subproblems.
+       */
+      if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
+         && benders->bendersfreesub == NULL )
       {
-         SCIP_VAR* subprobvar;
-
-         /* getting the subproblem problem variable corresponding to the master problem variable */
-         SCIP_CALL( SCIPgetBendersSubproblemVar(scip, benders, vars[j], &subprobvar, i) );
-
-         /* if the subporblem variable is not NULL, then the subproblem depends on the master problem */
-         if( subprobvar != NULL )
+         SCIP_Bool independent = TRUE;
+         for( j = 0; j < nvars; j++ )
          {
-            independent = FALSE;
-            break;
-         }
-      }
+            SCIP_VAR* subprobvar;
 
-      /* setting the independent flag */
-      SCIPbendersSetSubprobIsIndependent(benders, i, independent);
+            /* getting the subproblem problem variable corresponding to the master problem variable */
+            SCIP_CALL( SCIPgetBendersSubproblemVar(scip, benders, vars[j], &subprobvar, i) );
+
+            /* if the subporblem variable is not NULL, then the subproblem depends on the master problem */
+            if( subprobvar != NULL )
+            {
+               independent = FALSE;
+               break;
+            }
+         }
+
+         /* setting the independent flag */
+         SCIPbendersSetSubprobIsIndependent(benders, i, independent);
+      }
 
       /* the lower bound is computed for all subproblems. If the subproblem is independent, then the lower bound is the
        * optimal objective of the subproblem
@@ -2196,7 +2205,6 @@ SCIP_RETCODE generateBendersCuts(
    if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED && type != SCIP_BENDERSENFOTYPE_CHECK )
    {
       /* This is done in two loops. The first is by subproblem and the second is by cut type. */
-      //for( i = 0; i < nsubproblems; i++ )
       i = benders->firstchecked;
       subproblemcount = 0;
       while( subproblemcount < nchecked )
@@ -2405,7 +2413,7 @@ SCIP_RETCODE SCIPbendersExec(
             solveloop = SCIP_BENDERSSOLVELOOP_USERCIP;
       }
       else
-         solveloop = (SCIP_BENDERSSOLVELOOP)l;
+         solveloop = (SCIP_BENDERSSOLVELOOP) l;
 
 
       /* solving the subproblems for this round of enforcement/checking. */
@@ -2417,11 +2425,16 @@ SCIP_RETCODE SCIPbendersExec(
        * relaxations or the LP
        */
       if( type != SCIP_BENDERSENFOTYPE_PSEUDO )
+      {
          SCIP_CALL( generateBendersCuts(benders, set, sol, result, type, solveloop, checkint, nchecked,
                subprobsolved, &nsolveloops) );
+      }
       else
       {
-         /* if the problems are not infeasible, then the */
+         /* The first solving loop solves the convex subproblems and the convex relaxations of the CIP subproblems. The
+          * second solving loop solves the CIP subproblems. The second solving loop is only called if the integer
+          * feasibility is being checked and if the convex subproblems and convex relaxations are not infeasible.
+          */
          if( !(*infeasible) && checkint && !SCIPbendersOnlyCheckConvexRelax(benders)
             && SCIPbendersGetNConvexSubprobs(benders) < SCIPbendersGetNSubproblems(benders))
             nsolveloops = 2;
@@ -2444,11 +2457,15 @@ SCIP_RETCODE SCIPbendersExec(
     */
    if( (*result) == SCIP_DIDNOTFIND )
    {
-      (*result) = SCIP_SOLVELP;
-      SCIPerrorMessage("An error was found when generating all cuts for non-optimal subproblems of Benders' "
-         "decomposition <%s>. The solution process will terminate.\n", SCIPbendersGetName(benders));
+      if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
+         (*result) = SCIP_SOLVELP;
+      else
+         (*result) = SCIP_INFEASIBLE;
 
-      /* TODO: It may be useful to have a SCIPABORT() here to break if an error is found during debug mode. */
+      SCIPerrorMessage("An error was found when generating all cuts for non-optimal subproblems of Benders' "
+         "decomposition <%s>.\n", SCIPbendersGetName(benders));
+
+      SCIPABORT();
       goto TERMINATE;
    }
 
@@ -2924,7 +2941,7 @@ SCIP_RETCODE storeOrigSubprobParams(
    SCIP_CALL( SCIPgetIntParam(scip, "lp/scaling", &origparams->lp_scaling) );
    SCIP_CALL( SCIPgetCharParam(scip, "lp/initalgorithm", &origparams->lp_initalg) );
    SCIP_CALL( SCIPgetCharParam(scip, "lp/resolvealgorithm", &origparams->lp_resolvealg) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/alwaysgetduals", &origparams->misc_alwaysgetduals) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "lp/alwaysgetduals", &origparams->lp_alwaysgetduals) );
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/scaleobj", &origparams->misc_scaleobj) );
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/catchctrlc", &origparams->misc_catchctrlc) );
    SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxrounds", &origparams->prop_maxrounds) );
@@ -2957,7 +2974,7 @@ SCIP_RETCODE setSubprobParams(
    SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", 'd') );
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/alwaysgetduals", TRUE) );
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", FALSE) );
 
    /* do not abort subproblem on CTRL-C */
@@ -2988,7 +3005,7 @@ SCIP_RETCODE resetOrigSubprobParams(
    SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", origparams->lp_scaling) );
    SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", origparams->lp_initalg) );
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", origparams->lp_resolvealg) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/alwaysgetduals", origparams->misc_alwaysgetduals) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/alwaysgetduals", origparams->lp_alwaysgetduals) );
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", origparams->misc_scaleobj) );
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", origparams->misc_catchctrlc) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", origparams->prop_maxrounds) );
@@ -3456,7 +3473,7 @@ const char* SCIPbendersGetName(
 
 /** gets description of Benders' decomposition */
 const char* SCIPbendersGetDesc(
-   SCIP_BENDERS*         benders             /**< Benders' dnumberecomposition */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -3842,7 +3859,19 @@ void SCIPbendersSetSubprobIsIndependent(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
-   benders->indepsubprob[probnumber] = isindep;
+   /* if the user has defined solving or freeing functions, then it is not possible to declare a subproblem as
+    * independent. This is because declaring a subproblem as independent changes the solving loop, so it would change
+    * the expected behaviour of the user defined plugin. If a user calls this function, then an error will be returned.
+    */
+   if( benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL || benders->bendersfreesub != NULL )
+   {
+      SCIPerrorMessage("The user has defined either bendersSolvesubconvex%d, bendersSolvesub%d or bendersFreesub%s. "
+         "Thus, it is not possible to declare the independence of a subproblem.\n", benders->name, benders->name,
+         benders->name);
+      SCIPABORT();
+   }
+   else
+      benders->indepsubprob[probnumber] = isindep;
 }
 
 /** returns whether the subproblem is independent */

@@ -12403,7 +12403,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve || set->misc_alwaysgetduals )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve || set->lp_alwaysgetduals )
          {
             if( SCIPlpiHasDualRay(lp->lpi) )
             {
