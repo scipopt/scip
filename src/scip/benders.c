@@ -1590,7 +1590,9 @@ SCIP_RETCODE computeSubproblemLowerbound(
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", verblevel) );
 
    /* the subproblem must be freed so that it is reset for the subsequent Benders' decomposition solves. If the
-    * subproblems are independent, they are not freed. This is handled in SCIPbendersFreeSubproblem.
+    * subproblems are independent, they are not freed. SCIPfreeBendersSubproblem must still be called, tbut in this
+    * function the independent subproblems are not freed. However, they will still be freed at the end of the
+    * solving process for the master problem.
     */
    SCIP_CALL( SCIPfreeBendersSubproblem(scip, benders, probnumber) );
 
@@ -1624,24 +1626,31 @@ SCIP_RETCODE checkSubproblemIndependenceAndLowerbound(
    /* looping over all subproblems to check whether there exists at least one master problem variable */
    for( i = 0; i < nsubproblems; i++ )
    {
-      SCIP_Bool independent = TRUE;
-      for( j = 0; j < nvars; j++ )
+      /* if there are user defined solving or freeing functions, then it is not possible to declare the independence of
+       * the subproblems.
+       */
+      if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
+         && benders->bendersfreesub == NULL )
       {
-         SCIP_VAR* subprobvar;
-
-         /* getting the subproblem problem variable corresponding to the master problem variable */
-         SCIP_CALL( SCIPgetBendersSubproblemVar(scip, benders, vars[j], &subprobvar, i) );
-
-         /* if the subporblem variable is not NULL, then the subproblem depends on the master problem */
-         if( subprobvar != NULL )
+         SCIP_Bool independent = TRUE;
+         for( j = 0; j < nvars; j++ )
          {
-            independent = FALSE;
-            break;
-         }
-      }
+            SCIP_VAR* subprobvar;
 
-      /* setting the independent flag */
-      SCIPbendersSetSubprobIsIndependent(benders, i, independent);
+            /* getting the subproblem problem variable corresponding to the master problem variable */
+            SCIP_CALL( SCIPgetBendersSubproblemVar(scip, benders, vars[j], &subprobvar, i) );
+
+            /* if the subporblem variable is not NULL, then the subproblem depends on the master problem */
+            if( subprobvar != NULL )
+            {
+               independent = FALSE;
+               break;
+            }
+         }
+
+         /* setting the independent flag */
+         SCIPbendersSetSubprobIsIndependent(benders, i, independent);
+      }
 
       /* the lower bound is computed for all subproblems. If the subproblem is independent, then the lower bound is the
        * optimal objective of the subproblem
@@ -3847,7 +3856,19 @@ void SCIPbendersSetSubprobIsIndependent(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
-   benders->indepsubprob[probnumber] = isindep;
+   /* if the user has defined solving or freeing functions, then it is not possible to declare a subproblem as
+    * independent. This is because declaring a subproblem as independent changes the solving loop, so it would change
+    * the expected behaviour of the user defined plugin. If a user calls this function, then an error will be returned.
+    */
+   if( benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL || benders->bendersfreesub != NULL )
+   {
+      SCIPerrorMessage("The user has defined either bendersSolvesubconvex%d, bendersSolvesub%d or bendersFreesub%s. "
+         "Thus, it is not possible to declare the independence of a subproblem.\n", benders->name, benders->name,
+         benders->name);
+      SCIPABORT();
+   }
+   else
+      benders->indepsubprob[probnumber] = isindep;
 }
 
 /** returns whether the subproblem is independent */
