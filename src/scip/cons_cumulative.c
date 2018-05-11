@@ -7744,8 +7744,7 @@ SCIP_RETCODE computeAlternativeBounds(
       if( local )
       {
          SCIP_PROFILE* profile;
-
-         SCIP_RETCODE retcode = SCIP_OKAY;
+         SCIP_RETCODE retcode;
 
          /* create empty resource profile with infinity resource capacity */
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
