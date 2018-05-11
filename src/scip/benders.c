@@ -485,7 +485,7 @@ SCIP_RETCODE updateSubproblemLowerbound(
       /* solving the probing LP to get a lower bound on the auxiliary variables */
       SCIP_CALL( SCIPsolveProbingLP(masterprob, -1, &lperror, &cutoff) );
 
-      if( SCIPisGT(masterprob, SCIPgetSolTransObj(masterprob, NULL), -SCIPinfinity(masterprob)) )
+      if( !SCIPisInfinity(masterprob, -SCIPgetSolTransObj(masterprob, NULL)) )
          SCIPbendersUpdateSubprobLowerbound(benders, i, SCIPgetSolTransObj(masterprob, NULL));
 
       SCIPdebugMsg(masterprob, "Cut constant for subproblem %d: %g\n", i,
@@ -2205,7 +2205,6 @@ SCIP_RETCODE generateBendersCuts(
    if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED && type != SCIP_BENDERSENFOTYPE_CHECK )
    {
       /* This is done in two loops. The first is by subproblem and the second is by cut type. */
-      //for( i = 0; i < nsubproblems; i++ )
       i = benders->firstchecked;
       subproblemcount = 0;
       while( subproblemcount < nchecked )
@@ -2466,7 +2465,6 @@ SCIP_RETCODE SCIPbendersExec(
       SCIPerrorMessage("An error was found when generating all cuts for non-optimal subproblems of Benders' "
          "decomposition <%s>.\n", SCIPbendersGetName(benders));
 
-      /* TODO: It may be useful to have a SCIPABORT() here to break if an error is found during debug mode. */
       SCIPABORT();
       goto TERMINATE;
    }
@@ -3475,7 +3473,7 @@ const char* SCIPbendersGetName(
 
 /** gets description of Benders' decomposition */
 const char* SCIPbendersGetDesc(
-   SCIP_BENDERS*         benders             /**< Benders' dnumberecomposition */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);

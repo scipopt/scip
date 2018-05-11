@@ -128,7 +128,7 @@ public:
       return SCIP_OKAY;
    }
 
-   /** solving process initialization method of Benders' decomposition cutsc (called when branch and bound process is about to begin)
+   /** solving process initialization method of Benders' decomposition cuts (called when branch and bound process is about to begin)
     *
     *  @see SCIP_DECL_BENDERSCUTINITSOL(x) in @ref type_benders.h
     */
@@ -165,7 +165,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyBenderscut* mybenderscut = new MyBenderscut(...);
