@@ -93,6 +93,7 @@ struct SCIP_PropData
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for handling global variable fixings */
+   SCIP_Bool             updateinactive;     /**< whether a global fixing of a variable appeared and the active perms have to be updated */
 };
 
 
@@ -164,17 +165,8 @@ static
 SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
 {
    SCIP_PROPDATA* propdata;
-   SCIP_VAR** permvars;
    SCIP_VAR* var;
-#ifndef NDEBUG
-   SCIP_Real oldbound;
-   SCIP_Real newbound;
-#endif
-   int** permstrans;
-   int* inactiveperms;
-   int nperms;
    int varidx;
-   int p;
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
@@ -189,16 +181,6 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
    assert( propdata->nperms > 0 );
    assert( propdata->permvars != NULL );
    assert( propdata->npermvars > 0 );
-
-   inactiveperms = propdata->inactiveperms;
-   permvars = propdata->permvars;
-   nperms = propdata->nperms;
-   permstrans = propdata->permstrans;
-
-#ifndef NDEBUG
-   oldbound = SCIPeventGetOldbound(event);
-   newbound = SCIPeventGetNewbound(event);
-#endif
 
    /* get fixed variable */
    var = SCIPeventGetVar(event);
@@ -218,24 +200,12 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
    assert( SCIPeventGetType(event) == SCIP_EVENTTYPE_GLBCHANGED );
 
    /* variable is fixed to 1 -> filter out permutations that map it to an unfixed variable */
-   assert( SCIPisEQ(scip, newbound, 1.0) );
-   assert( SCIPisEQ(scip, oldbound, 0.0) );
-   for (p = 0; p < nperms; ++p)
-   {
-      int img;
+   assert( SCIPisEQ(scip, SCIPeventGetNewbound(event), 1.0) );
+   assert( SCIPisEQ(scip, SCIPeventGetOldbound(event), 0.0) );
 
-      /* skip inactive permutations that have been marked earlier */
-      if ( inactiveperms[p] == 2 )
-         continue;
-
-      assert( permstrans[p] != NULL );
-      img = permstrans[varidx][p];
-      assert( 0 <= img && img < propdata->npermvars );
-
-      /* mark permutation as globally inactive */
-      if ( SCIPvarGetLbGlobal(permvars[img]) < 0.5 )
-         inactiveperms[p] = 2;
-   }
+   /* mark that the inactive permutations have to be recomputed */
+   SCIPdebugMsg(scip, "Mark update of inactive permutations because of global fixing of variable <%s>.\n", SCIPvarGetName(var));
+   propdata->updateinactive = TRUE;
 
    return SCIP_OKAY;
 }
@@ -778,16 +748,57 @@ SCIP_RETCODE propagateOrbitalFixing(
    assert( permvarsobj != NULL );
 #endif
 
-   /* init active permutations */
+   /* treat active permutations */
    nactiveperms = nperms;
-   for (j = 0; j < nperms; ++j)
+
+   /* update inactive permutations based on global variable fixings if required */
+   if ( propdata->updateinactive )
    {
-      /* if locally inactive from last call -> reset to active */
-      if ( propdata->inactiveperms[j] == 1 )
-         propdata->inactiveperms[j] = 0;
-      /* if globally inactive reduce number of active perms */
-      else if ( propdata->inactiveperms[j] == 2 )
-         --nactiveperms;
+      SCIPdebugMsg(scip, "Updating inactive permuations based on global variable fixings.\n");
+      propdata->updateinactive = FALSE;
+
+      /* init inactive permutations */
+      for (p = 0; p < nperms; ++p)
+         inactiveperms[p] = 0;
+
+      for (j = 0; j < npermvars; ++j)
+      {
+         int* pt;
+
+         if ( ! SCIPvarIsBinary(permvars[j]) )
+            continue;
+
+         pt = propdata->permstrans[j];
+         for (p = 0; p < nperms; ++p)
+         {
+            int img;
+
+            if ( inactiveperms[p] < 2 )
+            {
+               img = pt[p];
+               assert( 0 <= img && img < npermvars );
+
+               /* mark permutation as globally inactive */
+               if ( SCIPvarGetLbGlobal(permvars[j]) > 0.5 && SCIPvarGetLbGlobal(permvars[img]) < 0.5 )
+               {
+                  inactiveperms[p] = 2;
+                  --nactiveperms;
+               }
+            }
+         }
+      }
+   }
+   else
+   {
+      for (p = 0; p < nperms; ++p)
+      {
+         /* if locally inactive from last call -> reset to active */
+         if ( propdata->inactiveperms[p] == 1 )
+            propdata->inactiveperms[p] = 0;
+         /* if globally inactive reduce number of active perms */
+         else if ( propdata->inactiveperms[p] == 2 )
+            --nactiveperms;
+      }
    }
 
    /* filter out permutations that move variables that are fixed to different values */
@@ -966,6 +977,7 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
    propdata->lastrestart = 0;
+   propdata->updateinactive = FALSE;
 
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
 
@@ -1166,6 +1178,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->inactiveperms = NULL;
    propdata->eventhdlr = NULL;
    propdata->lastrestart = 0;
+   propdata->updateinactive = FALSE;
 
    /* create event handler */
    propdata->eventhdlr = NULL;
