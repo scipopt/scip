@@ -322,6 +322,11 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
          SCIPaddConsExprExprBranchScore(scip, SCIPgetConsExprExprChildren(expr)[c], brscoretag, REALABS(violation));
 
       *success = TRUE;
+
+      /* count this branchscore as belonging to the exprhdlr, too
+       * thus, it will be counted for the default nlhdlr, but also for this exprhdlr
+       */
+      SCIPincrementConsExprExprHdlrNBranchScore(SCIPgetConsExprExprHdlr(expr));
    }
 
    return SCIP_OKAY;

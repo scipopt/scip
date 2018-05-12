@@ -402,6 +402,12 @@ SCIP_RETCODE SCIPbranchscoreConsExprExprHdlr(
    SCIP_Bool*                 success       /**< buffer to store whether the branching score callback was successful */
    );
 
+/** increments the branching score count of an expression handler */
+extern
+void SCIPincrementConsExprExprHdlrNBranchScore(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr
+   );
+
 /** @} */
 
 /**@name Expression Methods */

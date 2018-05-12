@@ -5454,8 +5454,8 @@ void printExprHdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "SimplCalls", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
+   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "SimplCalls", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
 
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -5469,6 +5469,7 @@ void printExprHdlrStatistics(
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ndomreds);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nbranchscores);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->sepatime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->proptime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->intevaltime));
@@ -5494,7 +5495,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "DetectTime", "SepaTime", "PropTime", "IntEvalTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "DetectTime", "SepaTime", "PropTime", "IntEvalTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -5508,6 +5509,7 @@ void printNlhdlrStatistics(
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndomreds);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nbranchscores);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->detecttime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->sepatime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->proptime));
@@ -5864,6 +5866,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       exprhdlr->ncutsfound = 0;
       exprhdlr->ncutoffs = 0;
       exprhdlr->ndomreds = 0;
+      exprhdlr->nbranchscores = 0;
       exprhdlr->nsimplifycalls = 0;
 
       SCIP_CALL( SCIPresetClock(scip, exprhdlr->sepatime) );
@@ -5883,6 +5886,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       nlhdlr->ncutsfound = 0;
       nlhdlr->ncutoffs = 0;
       nlhdlr->ndomreds = 0;
+      nlhdlr->nbranchscores = 0;
       nlhdlr->ndetections = 0;
 
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
@@ -7569,9 +7573,23 @@ SCIP_RETCODE SCIPbranchscoreConsExprExprHdlr(
    if( SCIPhasConsExprExprHdlrBranchingScore(expr->exprhdlr) )
    {
       SCIP_CALL( expr->exprhdlr->brscore(scip, expr, sol, brscoretag, success) );
+
+      if( *success )
+         SCIPincrementConsExprExprHdlrNBranchScore(expr->exprhdlr);
    }
 
    return SCIP_OKAY;
+}
+
+/** increments the branching score count of an expression handler */
+extern
+void SCIPincrementConsExprExprHdlrNBranchScore(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr
+   )
+{
+   assert(exprhdlr != NULL);
+
+   ++exprhdlr->nbranchscores;
 }
 
 /** creates and captures an expression with given expression data and children */
@@ -10181,6 +10199,9 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
 #endif
 
    SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, brscoretag, success) );
+
+   if( *success )
+      ++nlhdlr->nbranchscores;
 
    return SCIP_OKAY;
 }
