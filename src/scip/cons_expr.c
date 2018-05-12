@@ -180,6 +180,10 @@ struct SCIP_ConshdlrData
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
 
+   SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
+   SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
+   SCIP_Longint             nforcelp;        /**< number of times we forced solving the LP when enforcing a pseudo solution */
+
    /* upgrade */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
    int                      exprconsupgradessize; /**< size of exprconsupgrades array */
@@ -5412,27 +5416,32 @@ SCIP_RETCODE enforceConstraints(
    }
    while( nnotify == 0 && minviolation > 1.0/SCIPinfinity(scip) ); /* stopping at SCIPepsilon is not sufficient for numerically difficult instances, but something like 1e-100 doesn't seem useful, too; use 1e-20 for now */
 
-   if( nnotify == 0 )
-   {
-      SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
+   if( nnotify > 0 )
+      return SCIP_OKAY;
 
-      /* could not find branching candidates even when looking at minimal violated (>eps) expressions
-       * now look if we find any unfixed variable that we could still branch on
-       */
-      SCIP_CALL( registerBranchingCandidatesAllUnfixed(scip, conshdlr, conss, nconss, &nnotify) );
+   SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
+
+   /* could not find branching candidates even when looking at minimal violated (>eps) expressions
+    * now look if we find any unfixed variable that we could still branch on
+    */
+   SCIP_CALL( registerBranchingCandidatesAllUnfixed(scip, conshdlr, conss, nconss, &nnotify) );
+
+   if( nnotify > 0 )
+   {
       SCIPdebugMsg(scip, "registered %d unfixed variables as branching candidates", nnotify);
+      ++conshdlrdata->ndesperatebranch;
+
+      return SCIP_OKAY;
    }
 
-   if( nnotify == 0 )
-   {
-      /* if everything is fixed in violated constraints, then let's cut off the node
-       * either bound tightening failed to identify a possible cutoff due to tolerances
-       * or the LP solution that we try to enforce here is not within bounds (see st_e40)
-       * TODO if there is a gap left and LP solution is not within bounds, then pass modified LP solution to heur_trysol?
-       */
-      SCIPdebugMsg(scip, "enforcement with max. violation %g, auxviolation %g, failed; cutting off node\n", maxviol, maxauxviolation);
-      *result = SCIP_CUTOFF;
-   }
+   /* if everything is fixed in violated constraints, then let's cut off the node
+    * either bound tightening failed to identify a possible cutoff due to tolerances
+    * or the LP solution that we try to enforce here is not within bounds (see st_e40)
+    * TODO if there is a gap left and LP solution is not within bounds, then pass modified LP solution to heur_trysol?
+    */
+   SCIPdebugMsg(scip, "enforcement with max. violation %g, auxviolation %g, failed; cutting off node\n", maxviol, maxauxviolation);
+   *result = SCIP_CUTOFF;
+   ++conshdlrdata->ndesperatecutoff;
 
    return SCIP_OKAY;
 }
@@ -5516,6 +5525,30 @@ void printNlhdlrStatistics(
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->intevaltime));
       SCIPinfoMessage(scip, file, "\n");
    }
+}
+
+/** print statistics for constraint handlers */
+static
+void printConshdlrStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   FILE*                 file                /**< file handle, or NULL for standard out */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPinfoMessage(scip, file, "Cons-Expr Hdlr     : %10s %10s %10s\n", "DespBranch", "DespCutoff", "ForceLP");
+   SCIPinfoMessage(scip, file, "  %-17s:", "enforcement");
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatebranch);
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
+   SCIPinfoMessage(scip, file, "\n");
 }
 
 /** @} */
@@ -5894,6 +5927,11 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
    }
+
+   /* reset statistics in constraint handler */
+   conshdlrdata->ndesperatebranch = 0;
+   conshdlrdata->ndesperatecutoff = 0;
+   conshdlrdata->nforcelp = 0;
 
    return SCIP_OKAY;
 }
@@ -6286,9 +6324,16 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, soltag, SCIPfeastol(scip), TRUE, &nnotify) );
-   SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
+   if( nnotify > 0 )
+   {
+      SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
-   *result = nnotify == 0 ? SCIP_SOLVELP : SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "could not find branching candidates, forcing to solve LP\n");
+   *result = SCIP_SOLVELP;
+   ++conshdlrdata->nforcelp;
 
    return SCIP_OKAY;
 }
@@ -6832,6 +6877,9 @@ SCIP_DECL_TABLEOUTPUT(tableOutputExpr)
 
    /* print statistics for nonlinear handlers */
    printNlhdlrStatistics(scip, conshdlr, file);
+
+   /* print statistics for constraint handler */
+   printConshdlrStatistics(scip, conshdlr, file);
 
    return SCIP_OKAY;
 }
