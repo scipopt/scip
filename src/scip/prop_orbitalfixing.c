@@ -38,7 +38,6 @@
 #include <scip/pub_table.h>
 
 #include "presol_symmetry.h"
-#include "presol_symbreak.h"
 
 #include <string.h>
 
@@ -245,6 +244,123 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
 /*
  * Local methods
  */
+
+/** compute non-trivial orbits of symmetry group using filtered generators
+ *
+ *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ */
+static
+SCIP_RETCODE SCIPcomputeGroupOrbitsFilterSymbreak(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
+   int                   npermvars,          /**< length of a permutation array */
+   int**                 permstrans,         /**< transposed matrix containing in each column a permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   int*                  inactiveperms,      /**< array for marking inactive (if > 0) permutations (or NULL) */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
+   )
+{
+   SCIP_Shortbool* varadded;
+   int orbitidx = 0;
+   int i;
+
+   assert( scip != NULL );
+   assert( permvars != NULL );
+   assert( permstrans != NULL );
+   assert( nperms > 0 );
+   assert( npermvars > 0 );
+   assert( inactiveperms != NULL );
+   assert( orbits != NULL );
+   assert( norbits != NULL );
+
+   /* init data structures*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
+
+   /* initially, every variable is contained in no orbit */
+   for (i = 0; i < npermvars; ++i)
+      varadded[i] = FALSE;
+
+   /* find variable orbits */
+   *norbits = 0;
+   for (i = 0; i < npermvars; ++i)
+   {
+      /* if variable is not contained in an orbit of a previous variable */
+      if ( ! varadded[i] )
+      {
+         int beginorbitidx;
+         int j;
+
+         /* store first variable */
+         beginorbitidx = orbitidx;
+         orbits[orbitidx++] = i;
+         varadded[i] = TRUE;
+
+         /* iterate over variables in curorbit and compute their images */
+         j = beginorbitidx;
+         while ( j < orbitidx )
+         {
+            int* pt;
+            int curelem;
+            int image;
+            int p;
+
+            curelem = orbits[j];
+
+            pt = permstrans[curelem];
+            for (p = 0; p < nperms; ++p)
+            {
+               if ( inactiveperms[p] == 0 )
+               {
+                  image = pt[p];
+
+                  /* found new element of the orbit of i */
+                  if ( ! varadded[image] )
+                  {
+                     orbits[orbitidx++] = image;
+                     assert( orbitidx <= npermvars );
+                     varadded[image] = TRUE;
+                  }
+               }
+            }
+            ++j;
+         }
+
+         /* if the orbit is trivial, reset storage, otherwise store orbit */
+         if ( orbitidx <= beginorbitidx + 1 )
+            orbitidx = beginorbitidx;
+         else
+            orbitbegins[(*norbits)++] = beginorbitidx;
+      }
+   }
+
+   /* store end in "last" orbitbegins entry */
+   assert( *norbits < npermvars );
+   orbitbegins[*norbits] = orbitidx;
+
+#ifdef SCIP_OUTPUT
+   printf("Orbits (total number: %d):\n", *norbits);
+   for (i = 0; i < *norbits; ++i)
+   {
+      int j;
+
+      printf("%d: ", i);
+      for (j = orbitbegins[i]; j < orbitbegins[i+1]; ++j)
+         printf("%d ", orbits[j]);
+      printf("\n");
+   }
+#endif
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &varadded);
+
+   return SCIP_OKAY;
+}
 
 
 /** possibly get symmetries */

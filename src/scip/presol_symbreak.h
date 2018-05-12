@@ -57,27 +57,6 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
    );
 
-/** compute non-trivial orbits of symmetry group using filtered generators
- *
- *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
- *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
- *  consecutively in the orbits array. The variables of the i-th orbit have indices
- *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
- *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
- */
-EXTERN
-SCIP_RETCODE SCIPcomputeGroupOrbitsFilterSymbreak(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
-   int                   npermvars,          /**< length of a permutation array */
-   int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
-   int                   nperms,             /**< number of permutations encoded in perms */
-   int*                  inactiveperms,      /**< array for marking inactive (if > 0) permutations (or NULL) */
-   int*                  orbits,             /**< array of non-trivial orbits */
-   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
-   int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
-   );
-
 #ifdef __cplusplus
 }
 #endif
