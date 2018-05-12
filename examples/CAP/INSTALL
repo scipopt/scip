@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -53,17 +53,17 @@ as LP solver, you would have the following names:
 
 -----------------------------------------------------------------------------
 
-Here is what you have to do to get the binpacking example project
+Here is what you have to do to get the CAP example project
 using SCIP as a library running:
 
 1. Install and compile SCIP as described in the INSTALL file of SCIP's main
    directory, and make sure to create the necessary softlinks in SCIP's lib
    directory
 
-2. In the directory Binpacking edit the variable SCIPDIR if necessary - it should
+2. In the directory CAP edit the variable SCIPDIR if necessary - it should
    point to the directory that contains SCIP.
 
-3. Compile the binpacking example project:
+3. Compile the CAP example project:
    In the main directory Binpacking, enter "make OPT=<...> LPS=<...> COMP=<...>"
    with the following options:
    - "OPT=opt"       to use optimized compilation mode (default)
@@ -77,8 +77,8 @@ using SCIP as a library running:
    - "COMP=gnu"      to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
-4. To run the program enter "bin/binpacking.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
-   (e.g. "bin/binpacking.linux.x86.gnu.opt.spx") or "bin/binpacking" which is a link
+4. To run the program enter "bin/cap.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+   (e.g. "bin/cap.linux.x86.gnu.opt.spx") or "bin/cap" which is a link
    to last compiled version
 
 5. To generate the documentation, you need to have doxygen installed, and
