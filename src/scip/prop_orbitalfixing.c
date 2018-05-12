@@ -165,8 +165,10 @@ static
 SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
 {
    SCIP_PROPDATA* propdata;
+#ifndef NDEBUG
    SCIP_VAR* var;
    int varidx;
+#endif
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
@@ -182,6 +184,7 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
    assert( propdata->permvars != NULL );
    assert( propdata->npermvars > 0 );
 
+#ifndef NDEBUG
    /* get fixed variable */
    var = SCIPeventGetVar(event);
    assert( var != NULL );
@@ -202,9 +205,10 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
    /* variable is fixed to 1 -> filter out permutations that map it to an unfixed variable */
    assert( SCIPisEQ(scip, SCIPeventGetNewbound(event), 1.0) );
    assert( SCIPisEQ(scip, SCIPeventGetOldbound(event), 0.0) );
+#endif
 
    /* mark that the inactive permutations have to be recomputed */
-   SCIPdebugMsg(scip, "Mark update of inactive permutations because of global fixing of variable <%s>.\n", SCIPvarGetName(var));
+   SCIPdebugMsg(scip, "Mark update of inactive permutations because of global fixing of variable <%s>.\n", SCIPvarGetName(SCIPeventGetVar(event)));
    propdata->updateinactive = TRUE;
 
    return SCIP_OKAY;
