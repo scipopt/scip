@@ -254,6 +254,7 @@ SCIP_RETCODE getSymmetries(
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
+   SCIP_VAR** permvars;
    int v;
 
    assert( scip != NULL );
@@ -269,6 +270,18 @@ SCIP_RETCODE getSymmetries(
          {
             SCIPhashmapFree(&propdata->permvarmap);
          }
+
+         /* free variables */
+         for (v = 0; v < propdata->npermvars; ++v)
+         {
+            if ( SCIPvarIsBinary(propdata->permvars[v]) )
+            {
+               SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED, propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
+            }
+            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
+         }
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
+
          propdata->nperms = -1;
          propdata->perms = NULL;
          propdata->permvars = NULL;
@@ -277,14 +290,14 @@ SCIP_RETCODE getSymmetries(
 
          /* recompute symmetries and update restart counter */
          SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, TRUE,
-               &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
+               &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->perms), NULL, NULL) );
 
          propdata->lastrestart = SCIPgetNRuns(scip);
       }
       else
       {
          SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE,
-               &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
+               &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->perms), NULL, NULL) );
       }
 
       if ( propdata->nperms == 0 )
@@ -293,6 +306,9 @@ SCIP_RETCODE getSymmetries(
       /* create hashmap for storing the indices of variables */
       assert( propdata->permvarmap == NULL );
       SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
+
+      /* copy variables */
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->permvars, permvars, propdata->npermvars) );
 
       /* insert variables into hashmap and catch event */
       assert( propdata->eventhdlr != NULL );
@@ -797,12 +813,13 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
 
    for (v = 0; v < propdata->npermvars; ++v)
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
       if ( SCIPvarIsBinary(propdata->permvars[v]) )
       {
          SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED, propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
       }
+      SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
    }
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
 
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
 
