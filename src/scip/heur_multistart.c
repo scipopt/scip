@@ -974,7 +974,7 @@ SCIP_DECL_HEURINIT(heurInitMultistart)
    assert(heurdata != NULL);
 
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    /* try to find sub-NLP heuristic */
    heurdata->heursubnlp = SCIPfindHeur(scip, "subnlp");

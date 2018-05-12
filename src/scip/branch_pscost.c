@@ -743,7 +743,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    assert(branchrule != NULL);
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
-         BRANCHRULE_RANDSEED_DEFAULT) );
+         BRANCHRULE_RANDSEED_DEFAULT, TRUE) );
 
    /* set non-fundamental callbacks via specific setter functions*/
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );

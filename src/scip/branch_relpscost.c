@@ -1479,7 +1479,7 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
-         (unsigned int)branchruledata->startrandseed) );
+         (unsigned int)branchruledata->startrandseed, TRUE) );
 
    return SCIP_OKAY;
 }

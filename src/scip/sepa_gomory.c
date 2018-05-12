@@ -200,7 +200,7 @@ SCIP_DECL_SEPAINIT(sepaInitGomory)
    assert(sepadata != NULL);
 
    /* create and initialize random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

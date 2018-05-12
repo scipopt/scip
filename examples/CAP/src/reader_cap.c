@@ -92,7 +92,6 @@
 
 #include "probdata_cap.h"
 #include "reader_cap.h"
-#include "scip/misc.h"
 
 /**@name Reader properties
  *
@@ -248,7 +247,7 @@ SCIP_DECL_READERREAD(readerReadCap)
    readerdata = SCIPreaderGetData(reader);
 
    /* creating the random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randomgen, SCIPblkmem(scip), readerdata->randomseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randomgen, readerdata->randomseed, FALSE) );
 
    nscenarios = readerdata->nscenarios;
 
@@ -446,7 +445,7 @@ SCIP_DECL_READERREAD(readerReadCap)
    SCIPfreeBufferArray(scip, &capacity);
 
    /* freeing the random number generator */
-   SCIPrandomFree(&randomgen, SCIPblkmem(scip));
+   SCIPfreeRandom(scip, &randomgen);
 
    if( error )
       return SCIP_READERROR;

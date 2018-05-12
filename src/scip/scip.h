@@ -24025,7 +24025,8 @@ EXTERN
 SCIP_RETCODE SCIPcreateRandom(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   unsigned int          initialseed         /**< initial random seed */
+   unsigned int          initialseed,        /**< initial random seed */
+   SCIP_Bool             useglobalseed       /**< should SCIP's global seed be used to initialise the supplied seed? */
    );
 
 /** frees a random number generator */

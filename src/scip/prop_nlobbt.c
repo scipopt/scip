@@ -622,7 +622,7 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
    propdata->genvboundprop = SCIPfindProp(scip, "genvbounds");
 
    SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
    SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &propdata->nlpstatistics) );
    propdata->lastnode = -1;
 
