@@ -6289,6 +6289,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    int nnotify;
    int c;
 
+   /* TODO call enforceConstraints here, maybe with some flag to indicate ENFOPS? */
+
    /* force tightenings when calling enforcement for the first time for a node */
    force = conshdlrdata->lastenfopsnodenum == SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
    conshdlrdata->lastenfopsnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
@@ -6330,6 +6332,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
       return SCIP_OKAY;
    }
+
+   /* TODO try registerBranchingCandidatesAllUnfixed ? */
 
    SCIPdebugMsg(scip, "could not find branching candidates, forcing to solve LP\n");
    *result = SCIP_SOLVELP;
