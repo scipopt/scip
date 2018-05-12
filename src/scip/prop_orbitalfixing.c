@@ -57,7 +57,7 @@
 #define DEFAULT_SYMCOMPTIMING         2           /**< timing of symmetry computation for orbital fixing
                                                    *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING     FALSE       /**< Run orbital fixing during presolving? */
-#define DEFAULT_ENABLEDAFTERRESTARTS  FALSE       /**< Run orbital fixing after a restart has occured? */
+#define DEFAULT_ENABLEAFTERRESTART    FALSE       /**< Run orbital fixing after a restart has occured? */
 
 /* event handler properties */
 #define EVENTHDLR_ORBITALFIXING_NAME    "orbitalfixing"
@@ -85,7 +85,7 @@ struct SCIP_PropData
    int*                  inactiveperms;      /**< array to store whether permutations are active (0), locally inactive (1), globally inactive (2) */
    SCIP_Bool             enabled;            /**< run orbital branching? */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
-   SCIP_Bool             enabledafterrestarts; /**< Run orbital fixing after a restart has occured? */
+   SCIP_Bool             enableafterrestart; /**< Run orbital fixing after a restart has occured? */
    int                   symcomptiming;      /**< timing of symmetry computation for orbital fixing
                                               *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
@@ -1024,7 +1024,7 @@ SCIP_DECL_PROPPRESOL(propPresolOrbitalFixing)
    assert( propdata != NULL );
 
    /* check whether we run after a restart */
-   if ( propdata->enabled && ! propdata->enabledafterrestarts && SCIPgetNRuns(scip) > 1 )
+   if ( propdata->enabled && ! propdata->enableafterrestart && SCIPgetNRuns(scip) > 1 )
       propdata->enabled = FALSE;
 
    /* do not run if not enabled */
@@ -1089,7 +1089,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    assert( propdata != NULL );
 
    /* check whether we run after a restart */
-   if ( propdata->enabled && ! propdata->enabledafterrestarts && SCIPgetNRuns(scip) > 1 )
+   if ( propdata->enabled && ! propdata->enableafterrestart && SCIPgetNRuns(scip) > 1 )
       propdata->enabled = FALSE;
 
    /* do not run if not enabled */
@@ -1199,9 +1199,9 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
          &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/enabledafterrestarts",
+         "propagating/" PROP_NAME "/enableafterrestart",
          "Run orbital fixing after a restart has occured?",
-         &propdata->enabledafterrestarts, TRUE, DEFAULT_ENABLEDAFTERRESTARTS, NULL, NULL) );
+         &propdata->enableafterrestart, TRUE, DEFAULT_ENABLEAFTERRESTART, NULL, NULL) );
 
    return SCIP_OKAY;
 }
