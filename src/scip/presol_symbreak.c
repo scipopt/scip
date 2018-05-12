@@ -1017,7 +1017,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
 
-            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
+            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms,
                   presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
          }
 
@@ -1390,7 +1390,6 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
-   int*                  inactiveperms,      /**< array for marking inactive (if > 0) permutations (or NULL) */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
    int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
@@ -1412,6 +1411,118 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
 
    /* init data structures*/
    SCIP_CALL( SCIPallocBufferArray(scip, &curorbit, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
+
+   /* initially, every variable is contained in no orbit */
+   for (i = 0; i < npermvars; ++i)
+      varadded[i] = FALSE;
+
+   /* find variable orbits */
+   *norbits = 0;
+   for (i = 0; i < npermvars; ++i)
+   {
+      /* if variable is not contained in an orbit of a previous variable */
+      if ( ! varadded[i] )
+      {
+         int j;
+         int p;
+         int curelem;
+         int image;
+
+         /* compute and store orbit if it is non-trivial */
+         curorbit[0] = i;
+         curorbitsize = 1;
+         varadded[i] = TRUE;
+
+         /* iterate over variables in curorbit and compute their images */
+         for (j = 0; j < curorbitsize; ++j)
+         {
+            curelem = curorbit[j];
+
+            for (p = 0; p < nperms; ++p)
+            {
+               image = perms[p][curelem];
+
+               /* found new element of the orbit of i */
+               if ( ! varadded[image] )
+               {
+                  curorbit[curorbitsize++] = image;
+                  varadded[image] = TRUE;
+               }
+            }
+         }
+
+         if ( curorbitsize > 1 )
+         {
+            orbitbegins[*norbits] = beginneworbit;
+            for (j = 0; j < curorbitsize; ++j)
+               orbits[beginneworbit++] = curorbit[j];
+
+            ++(*norbits);
+         }
+      }
+   }
+
+   /* store end in "last" orbitbegins entry */
+   assert( *norbits < npermvars );
+   orbitbegins[*norbits] = beginneworbit;
+
+#ifdef SCIP_OUTPUT
+   printf("Orbits (total number: %d):\n", *norbits);
+   for (i = 0; i < *norbits; ++i)
+   {
+      int j;
+
+      printf("%d: ", i);
+      for (j = orbitbegins[i]; j < orbitbegins[i+1]; ++j)
+         printf("%d ", orbits[j]);
+      printf("\n");
+   }
+#endif
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &varadded);
+   SCIPfreeBufferArray(scip, &curorbit);
+
+   return SCIP_OKAY;
+}
+
+
+/** compute non-trivial orbits of symmetry group using filtered generators
+ *
+ *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ */
+SCIP_RETCODE SCIPcomputeGroupOrbitsFilterSymbreak(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
+   int                   npermvars,          /**< length of a permutation array */
+   int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   int*                  inactiveperms,      /**< array for marking inactive (if > 0) permutations (or NULL) */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
+   )
+{
+   SCIP_Shortbool* varadded;
+   int curorbitsize;
+   int orbitidx = 0;
+   int i;
+
+   assert( scip != NULL );
+   assert( permvars != NULL );
+   assert( perms != NULL );
+   assert( nperms > 0 );
+   assert( npermvars > 0 );
+   assert( inactiveperms != NULL );
+   assert( orbits != NULL );
+   assert( norbits != NULL );
+
+   /* init data structures*/
    SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
 
    /* initially, every variable is contained in no orbit */
