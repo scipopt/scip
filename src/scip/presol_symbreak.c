@@ -1396,10 +1396,8 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    )
 {
    SCIP_Shortbool* varadded;
-   int* curorbit;
+   int orbitidx = 0;
    int i;
-   int curorbitsize;
-   int beginneworbit = 0;
 
    assert( scip != NULL );
    assert( permvars != NULL );
@@ -1410,7 +1408,6 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    assert( norbits != NULL );
 
    /* init data structures*/
-   SCIP_CALL( SCIPallocBufferArray(scip, &curorbit, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
 
    /* initially, every variable is contained in no orbit */
@@ -1424,20 +1421,23 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
       /* if variable is not contained in an orbit of a previous variable */
       if ( ! varadded[i] )
       {
+         int beginorbitidx;
          int j;
-         int p;
-         int curelem;
-         int image;
 
-         /* compute and store orbit if it is non-trivial */
-         curorbit[0] = i;
-         curorbitsize = 1;
+         /* store first variable */
+         beginorbitidx = orbitidx;
+         orbits[orbitidx++] = i;
          varadded[i] = TRUE;
 
          /* iterate over variables in curorbit and compute their images */
-         for (j = 0; j < curorbitsize; ++j)
+         j = beginorbitidx;
+         while ( j < orbitidx )
          {
-            curelem = curorbit[j];
+            int curelem;
+            int image;
+            int p;
+
+            curelem = orbits[j];
 
             for (p = 0; p < nperms; ++p)
             {
@@ -1446,26 +1446,25 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
                /* found new element of the orbit of i */
                if ( ! varadded[image] )
                {
-                  curorbit[curorbitsize++] = image;
+                  orbits[orbitidx++] = image;
+                  assert( orbitidx <= npermvars );
                   varadded[image] = TRUE;
                }
             }
+            ++j;
          }
 
-         if ( curorbitsize > 1 )
-         {
-            orbitbegins[*norbits] = beginneworbit;
-            for (j = 0; j < curorbitsize; ++j)
-               orbits[beginneworbit++] = curorbit[j];
-
-            ++(*norbits);
-         }
+         /* if the orbit is trivial, reset storage, otherwise store orbit */
+         if ( orbitidx <= beginorbitidx + 1 )
+            orbitidx = beginorbitidx;
+         else
+            orbitbegins[(*norbits)++] = beginorbitidx;
       }
    }
 
    /* store end in "last" orbitbegins entry */
    assert( *norbits < npermvars );
-   orbitbegins[*norbits] = beginneworbit;
+   orbitbegins[*norbits] = orbitidx;
 
 #ifdef SCIP_OUTPUT
    printf("Orbits (total number: %d):\n", *norbits);
@@ -1482,7 +1481,6 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
 
    /* free memory */
    SCIPfreeBufferArray(scip, &varadded);
-   SCIPfreeBufferArray(scip, &curorbit);
 
    return SCIP_OKAY;
 }
