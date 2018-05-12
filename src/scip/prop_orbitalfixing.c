@@ -420,7 +420,10 @@ SCIP_RETCODE getSymmetries(
       }
 
       if ( propdata->nperms == 0 )
+      {
+         propdata->npermvars = -1;
          return SCIP_OKAY;
+      }
 
       /* create transposed perms matrix */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permstrans, propdata->npermvars) );
