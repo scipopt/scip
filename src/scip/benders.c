@@ -1627,6 +1627,7 @@ SCIP_RETCODE checkSubproblemIndependenceAndLowerbound(
    for( i = 0; i < nsubproblems; i++ )
    {
       SCIP_Bool independent = FALSE;
+
       /* if there are user defined solving or freeing functions, then it is not possible to declare the independence of
        * the subproblems.
        */
@@ -1634,6 +1635,7 @@ SCIP_RETCODE checkSubproblemIndependenceAndLowerbound(
          && benders->bendersfreesub == NULL )
       {
          independent = TRUE;
+
          for( j = 0; j < nvars; j++ )
          {
             SCIP_VAR* subprobvar;
