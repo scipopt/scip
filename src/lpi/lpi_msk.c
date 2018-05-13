@@ -2063,9 +2063,11 @@ SCIP_RETCODE SolveWSimplex(
    invalidateSolution(lpi);
    lpi->lastsolvetype = MSK_SOL_BAS;
 
+   /* store original settings */
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, &presolve) );
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, &maxiter) );
 
+   /* set some paramters */
 #if DEBUG_EASY_REPRODUCE
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_AUTO_SORT_A_BEFORE_OPT, MSK_ON) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_OFF) );
@@ -2076,7 +2078,6 @@ SCIP_RETCODE SolveWSimplex(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_AUTO_UPDATE_SOL_INFO, MSK_OFF) );
 
 #if FORCE_MOSEK_LOG
-
    if( optimizecount > WRITE_ABOVE )
    {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_ON) );
@@ -2110,10 +2111,10 @@ SCIP_RETCODE SolveWSimplex(
    if( gotbasicsol && maxiter < 20000 )
    {
       /* Since max iter often is set, we switch off restricted pricing */
-      MOSEK_CALL( MSK_putintparam(lpi->task,  MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
    }
 
-#if FORCE_NO_MAXITER >  0
+#if FORCE_NO_MAXITER > 0
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, 2000000000) );
 #endif
 
@@ -2135,8 +2136,10 @@ SCIP_RETCODE SolveWSimplex(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 100) );
 #endif
 
+   /* perform actual optimization */
    MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
+   /* resolve with aggresive scaling if the maximal number of setbacks has been reached */
    if( lpi->termcode == MSK_RES_TRM_MAX_NUM_SETBACKS )
    {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
@@ -2160,22 +2163,22 @@ SCIP_RETCODE SolveWSimplex(
    SCIP_CALL( scip_checkdata(lpi, "End optimize with simplex") );
 #endif
 
+   /* set paramaters to their original values */
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, presolve) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, maxiter) );
 
+   /* obtain iteration count */
    MOSEK_CALL( MSK_getintinf(lpi->task, MSK_IINF_SIM_PRIMAL_ITER, &itercount_primal) );
    MOSEK_CALL( MSK_getintinf(lpi->task, MSK_IINF_SIM_DUAL_ITER, &itercount_dual) );
 
    lpi->itercount = itercount_primal + itercount_dual;
 
+   /* get solution information */
    MOSEK_CALL( MSK_getprimalobj(lpi->task, MSK_SOL_BAS, &pobj) );
    MOSEK_CALL( MSK_getdualobj(lpi->task, MSK_SOL_BAS, &dobj) );
-   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta) );
 
-#if DEBUG_PRINT_STAT
-   SCIPdebugMessage("maxiter = %d, termcode = %d, prosta = %d, solsta = %d, objval = %g : %g, iter = %d+%d\n",
-      maxiter, lpi->termcode, prosta, solsta, pobj, dobj, itercount_primal, itercount_dual);
-#endif
+   /* should be replaced by MSK_getprosta() and MS_getsolsta() for newer Mosek versions */
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta) );
 
    SCIPdebugMessage("maxiter = %d, termcode = %d, prosta = %d, solsta = %d, objval = %g : %g, iter = %d+%d\n",
       maxiter, lpi->termcode, prosta, solsta, pobj, dobj, itercount_primal, itercount_dual);
