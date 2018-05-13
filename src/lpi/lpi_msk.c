@@ -841,7 +841,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const int*            ind,                /**< row indices of constraint matrix entries */
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
-{  /*lint --e{715}*/
+{
    int* aptre;
    MSKboundkeye* bkc;
    MSKboundkeye* bkx;
@@ -952,7 +952,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    const int*            ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
-{  /*lint --e{715}*/
+{
 #if MSK_VERSION_MAJOR < 7
    const int* aptrb;
 #endif
@@ -1137,7 +1137,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    const int*            ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
-{  /*lint --e{715}*/
+{
    int* aptre;
    MSKboundkeye* bkc;
    int oldrows;
