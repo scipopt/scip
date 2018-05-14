@@ -1775,10 +1775,10 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->lp_refactorinterval, TRUE, SCIP_DEFAULT_LP_REFACTORINTERVAL, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "lp/alwaysgetduals",
-            "should the Farkas duals always be collected when an LP is found to be infeasible?",
-            &(*set)->lp_alwaysgetduals, FALSE, SCIP_DEFAULT_LP_ALWAYSGETDUALS,
-            NULL, NULL) );
+         "lp/alwaysgetduals",
+         "should the Farkas duals always be collected when an LP is found to be infeasible?",
+         &(*set)->lp_alwaysgetduals, FALSE, SCIP_DEFAULT_LP_ALWAYSGETDUALS,
+         NULL, NULL) );
 
    /* NLP parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,

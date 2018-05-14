@@ -53,7 +53,7 @@ new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
 - "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
-- "misc/alwaysgetduals" ensure that the dual solutions are always computed from the recent LP solve.
+- "lp/alwaysgetduals" ensure that the dual solutions are always computed from the recent LP solve.
 - "display/relevantstats" indicates whether the small relevant statistics are displayed at the end of solving.
 - "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
 - "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
