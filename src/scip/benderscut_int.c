@@ -132,7 +132,7 @@ SCIP_RETCODE createBenderscutData(
  * Local methods
  */
 
-/* computing as standard Benders' optimality cut from the dual solutions of the LP */
+/** computes a standard Benders' optimality cut from the dual solutions of the LP */
 static
 SCIP_RETCODE computeStandardIntegerOptCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */

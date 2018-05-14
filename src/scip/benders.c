@@ -667,7 +667,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
    return SCIP_OKAY;
 }
 
-/* sets the subproblem objective value array to -infinity */
+/** sets the subproblem objective value array to -infinity */
 static
 void resetSubproblemObjectiveValue(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
@@ -3018,7 +3018,10 @@ SCIP_RETCODE resetOrigSubprobParams(
    return SCIP_OKAY;
 }
 
-/** solves the LP of the Benders' decomposition subproblem. This requires that the subproblem is in probing mode */
+/** solves the LP of the Benders' decomposition subproblem
+ *
+ *  This requires that the subproblem is in probing mode.
+ */
 SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
@@ -3712,10 +3715,12 @@ SCIP_Real SCIPbendersGetSubprobObjval(
    return benders->subprobobjval[probnumber];
 }
 
-/* sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
- * process. One example is when the three-phase method is employed, where the first phase solves the convex relaxation
- * of both the master and subproblems, the second phase reintroduces the integrality constraints to the master problem
- * and the third phase then reintroduces integrality constraints to the subproblems.
+/** sets the flag indicating whether a subproblem is convex
+ *
+ *  It is possible that this can change during the solving process. One example is when the three-phase method is
+ *  employed, where the first phase solves the convex relaxation of both the master and subproblems, the second phase
+ *  reintroduces the integrality constraints to the master problem and the third phase then reintroduces integrality
+ *  constraints to the subproblems.
  */
 void SCIPbendersSetSubprobIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -3736,7 +3741,10 @@ void SCIPbendersSetSubprobIsConvex(
    assert(benders->nconvexsubprobs >= 0 && benders->nconvexsubprobs <= benders->nsubproblems);
 }
 
-/* returns whether the subproblem is convex. This means that the dual solution can be used to generate cuts. */
+/** returns whether the subproblem is convex
+ *
+ *  This means that the dual solution can be used to generate cuts.
+ */
 SCIP_Bool SCIPbendersSubprobIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
