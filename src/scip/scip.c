@@ -13655,6 +13655,7 @@ SCIP_RETCODE checkSolOrig(
    int v;
    int c;
    int h;
+   int conshdlrschecked;
 
    assert(scip != NULL);
    assert(sol != NULL);
@@ -13707,19 +13708,26 @@ SCIP_RETCODE checkSolOrig(
    /* call constraint handlers with positive or zero check priority that don't need constraints */
    for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h])
-         && SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
+      if( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
       {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, completely, &result) );
-
-         if( result != SCIP_FEASIBLE )
+         if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
          {
-            *feasible = FALSE;
+            SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+                  checkintegrality, checklprows, printreason, completely, &result) );
 
-            if( !completely )
-               return SCIP_OKAY;
+            if( result != SCIP_FEASIBLE )
+            {
+               *feasible = FALSE;
+
+               if( !completely )
+                  return SCIP_OKAY;
+            }
          }
+      }
+      else
+      {
+         conshdlrschecked = h;
+         break;
       }
    }
 
@@ -13748,10 +13756,10 @@ SCIP_RETCODE checkSolOrig(
    }
 
    /* call constraint handlers with negative check priority that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   for( h = conshdlrschecked; h < scip->set->nconshdlrs; ++h )
    {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h])
-         && SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0 )
+      assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
       {
          SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
                checkintegrality, checklprows, printreason, completely, &result) );
