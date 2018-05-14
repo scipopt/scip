@@ -773,13 +773,13 @@ SCIP_RETCODE propagateOrbitalFixing(
          if ( ! SCIPvarIsBinary(permvars[j]) )
             continue;
 
-         pt = propdata->permstrans[j];
+         pt = permstrans[j];
          for (p = 0; p < nperms; ++p)
          {
-            int img;
-
             if ( inactiveperms[p] < 2 )
             {
+               int img;
+
                img = pt[p];
                assert( 0 <= img && img < npermvars );
 
@@ -824,7 +824,7 @@ SCIP_RETCODE propagateOrbitalFixing(
          if ( inactiveperms[p] > 0 )
             continue;
 
-         assert( permstrans[p] != NULL );
+         assert( pt[p] != NULL );
          img = pt[p];
 
          if ( img != v )
