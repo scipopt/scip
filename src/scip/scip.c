@@ -6384,6 +6384,17 @@ void SCIPsetBendersPriority(
  *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
  *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
  *  solution feasibility.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6400,6 +6411,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    assert(scip->set != NULL);
    assert(benders != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPsolveBendersSubproblems", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersExec(benders, scip->set, sol, result, infeasible, auxviol, type, checkint) );
 
    return SCIP_OKAY;
@@ -6407,6 +6420,17 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
 
 /** returns the master problem variable for the given subproblem variable.
  *  This function is used as part of the cut generation process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPgetBendersMasterVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6421,6 +6445,8 @@ SCIP_RETCODE SCIPgetBendersMasterVar(
    assert(var != NULL);
    assert(mappedvar != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPgetBendersMasterVar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersGetVar(benders, scip->set, var, mappedvar, -1) );
 
    return SCIP_OKAY;
@@ -6428,6 +6454,17 @@ SCIP_RETCODE SCIPgetBendersMasterVar(
 
 /** returns the subproblem problem variable for the given master variable.
  *  This function is used as part of the cut generation process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPgetBendersSubproblemVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6444,12 +6481,25 @@ SCIP_RETCODE SCIPgetBendersSubproblemVar(
    assert(mappedvar != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
+   SCIP_CALL( checkStage(scip, "SCIPgetBendersSubproblemVar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersGetVar(benders, scip->set, var, mappedvar, probnumber) );
 
    return SCIP_OKAY;
 }
 
-/** returns the number of subproblems that are stored in the given Benders' decomposition */
+/** returns the number of subproblems that are stored in the given Benders' decomposition
+ *
+ *  @return the number of subproblems in the Benders' decomposition
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetBendersNSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -6457,6 +6507,8 @@ int SCIPgetBendersNSubproblems(
 {
    assert(scip != NULL);
    assert(benders != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetBendersNSubproblems", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIPbendersGetNSubproblems(benders);
 }
@@ -6489,6 +6541,17 @@ SCIP_RETCODE SCIPaddBendersSubproblem(
 /** calls the generic subproblem setup method for a Benders' decomposition subproblem. This is called if the user
  *  requires to solve the Benders' decomposition subproblem separately from the main Benders' solving loop. This could be
  *  in the case of enhancement techniques.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6502,6 +6565,8 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
+   SCIP_CALL( checkStage(scip, "SCIPsetupBendersSubproblem", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersSetupSubproblem(benders, scip->set, sol, probnumber) );
 
    return SCIP_OKAY;
@@ -6510,6 +6575,17 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
 /** calls the solving method for a single Benders' decomposition subproblem. The method either calls the users solve
  *  subproblem method or calls the generic method. In the case of the generic method, the user must set up the
  *  subproblem prior to calling this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6527,7 +6603,9 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvecip, objective) );
+   SCIP_CALL( checkStage(scip, "SCIPsolveBendersSubproblem", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+  SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvecip, objective) );
 
    return SCIP_OKAY;
 }
@@ -6535,6 +6613,19 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
 /** frees the subproblem after calling the solve subproblem method. This will either call the user defined free
  *  subproblem callback for Benders' decomposition or the default freeing methods. In the default case, if the
  *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is a MIP, then SCIPfreeTransform is called.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_RETCODE SCIPfreeBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6546,6 +6637,8 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
    assert(scip->set != NULL);
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
+
+   SCIP_CALL( checkStage(scip, "SCIPfreeBendersSubproblem", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersFreeSubproblem(benders, scip->set, probnumber) );
 
