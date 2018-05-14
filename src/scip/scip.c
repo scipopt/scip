@@ -13633,9 +13633,10 @@ SCIP_RETCODE SCIPchgChildPrio(
 /** checks solution for feasibility in original problem without adding it to the solution store; to improve the
  *  performance we use the following order when checking for violations:
  *
- *  1. constraint handlers which don't need constraints (e.g. integral constraint handler)
- *  2. variable bounds
+ *  1. variable bounds
+ *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
  *  3. original constraints
+ *  4. constraint handlers with negative priority that don't need constraints (e.g. Benders' decomposition constraint handler)
  */
 static
 SCIP_RETCODE checkSolOrig(
@@ -13703,10 +13704,11 @@ SCIP_RETCODE checkSolOrig(
       }
    }
 
-   /* call constraint handlers that don't need constraints */
+   /* call constraint handlers with positive or zero check priority that don't need constraints */
    for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h])
+         && SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
       {
          SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
                checkintegrality, checklprows, printreason, completely, &result) );
@@ -13734,6 +13736,25 @@ SCIP_RETCODE checkSolOrig(
          /* check solution */
          SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
                checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers with negative check priority that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h])
+         && SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0 )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
 
          if( result != SCIP_FEASIBLE )
          {
