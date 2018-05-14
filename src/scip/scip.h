@@ -3142,11 +3142,36 @@ SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    );
 
 /** returns the value of the auxiliary variable for a given subproblem */
+EXTERN
 SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
    int                   probnumber          /**< the number of the pricing problem */
+   );
+
+/** merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
+ *  constraints to the master problem, but keeps the subproblem stored in the Benders data structure. The reason for
+ *  keeping the subproblem available is for when it is queried for solutions after the problem is solved.
+ *
+ *  Once the subproblem is merged into the master problem, then the subproblem is flagged as disabled. This means that
+ *  it will not be solved in the subsequent subproblem solving loops.
+ *
+ *  The associated auxiliary variables are kept in the master problem. The objective function of the merged subproblem
+ *  is added as an underestimator constraint.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of subproblem variables corresponding
+                                              *   to the newly created master variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of subproblem constraints to the
+                                                  corresponding newly created constraints, or NULL */
+   int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    );
 
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition

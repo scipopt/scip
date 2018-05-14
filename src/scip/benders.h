@@ -239,6 +239,27 @@ SCIP_Real SCIPbendersGetAuxiliaryVarVal(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
+ *  constraints to the master problem, but keeps the subproblem stored in the Benders data structure. The reason for
+ *  keeping the subproblem available is for when it is queried for solutions after the problem is solved.
+ *
+ *  Once the subproblem is merged into the master problem, then the subproblem is flagged as disabled. This means that
+ *  it will not be solved in the subsequent subproblem solving loops.
+ *
+ *  The associated auxiliary variables are kept in the master problem. The objective function of the merged subproblem
+ *  is added as an underestimator constraint.
+ */
+extern
+SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of subproblem variables corresponding
+                                              *   to the newly created master variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of subproblem constraints to the
+                                                  corresponding newly created constraints, or NULL */
+   int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
+   );
+
 /** sets priority of Benders' decomposition */
 extern
 void SCIPbendersSetPriority(
@@ -397,13 +418,6 @@ void SCIPbendersSetSubprobEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             enabled             /**< flag to indicate whether the subproblem is enabled */
-   );
-
-/** returns whether the subproblem is enabled */
-extern
-SCIP_Bool SCIPbendersSubprobIsEnabled(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber          /**< the subproblem number */
    );
 
 /** changes all of the master problem variables in the given subproblem to continuous */

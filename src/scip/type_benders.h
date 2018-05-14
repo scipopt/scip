@@ -50,6 +50,15 @@ enum SCIP_BendersSolveLoop
 };
 typedef enum SCIP_BendersSolveLoop SCIP_BENDERSSOLVELOOP;   /**< identifies the type of problem solved in each solve loop */
 
+enum SCIP_BendersSubStatus
+{
+   SCIP_BENDERSSUBSTATUS_UNKNOWN    = 0,     /**< the subsystem status is unknown */
+   SCIP_BENDERSSUBSTATUS_OPTIMAL    = 1,     /**< the subsystem is solved to be optimal */
+   SCIP_BENDERSSUBSTATUS_AUXVIOL    = 2,     /**< the subproblem is optimal, but the auxiliary variable is violated */
+   SCIP_BENDERSSUBSTATUS_INFEAS     = 3      /**< the subproblem is solved to be infeasible */
+};
+typedef enum SCIP_BendersSubStatus SCIP_BENDERSSUBSTATUS;
+
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */
 
@@ -265,17 +274,28 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  * iteration.
  * The user has full access to the master and subproblems in this callback. So it is possible to construct solution for
  * the master problem in the method.
+ * Additionally, if there are any subproblems that are infeasibility and this can not be resolved, then the it is
+ * possible to merge these subproblems into the master problem. The subproblem indices are given in the mergecands
+ * array. The merging can be perform by a user defined function or by calling SCIPmergeBendersSubprobIntoMaster. If a
+ * subproblem was merged into the master problem, then the merged flag must be set to TRUE.
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition data structure
  *  - sol             : the solution that was checked by solving the subproblems. Can be NULL.
  *  - type            : the enforcement type that called the Benders' decomposition solve.
+ *  - mergecands      : the subproblems that are candidates for merging into the master problem, the first
+ *                      npriomergecands are the priority candidates (they should be merged). The remaining
+ *                      (nmergecands - npriomergecands) are subproblems that could be merged if desired.
+ *  - npriomergecands : the number of priority merge candidates.
+ *  - nmergecands     : the total number of subproblems that are candidates for merging into the master problem
  *  - checkint        : should the integer subproblems be checked.
  *  - infeasible      : indicates whether at least one subproblem is infeasible
+ *  - merged          : flag to indicate whether a subproblem was merged into the master problem.
  */
 #define SCIP_DECL_BENDERSPOSTSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol,\
-   SCIP_BENDERSENFOTYPE type, SCIP_Bool checkint, SCIP_Bool infeasible)
+   SCIP_BENDERSENFOTYPE type, int* mergecands, int npriomergecands, int nmergecands, SCIP_Bool checkint,\
+   SCIP_Bool infeasible, SCIP_Bool* merged)
 
 /** frees the subproblem so that it can be resolved in the next iteration. As stated above, it is not necessary to
  *  implement this callback. If the callback is implemented, the subproblems should be freed by calling

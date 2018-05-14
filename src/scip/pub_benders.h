@@ -282,6 +282,13 @@ SCIP_Real SCIPbendersGetSubprobLowerbound(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** returns whether the subproblem is enabled */
+extern
+SCIP_Bool SCIPbendersSubprobIsEnabled(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /* @} */
 
 #ifdef __cplusplus

@@ -282,7 +282,8 @@ SCIP_DECL_BENDERSPOSTSOLVE(bendersPostsolveObj)
    assert(bendersdata->objbenders != NULL);
 
    /* call virtual method of benders object */
-   SCIP_CALL( bendersdata->objbenders->scip_postsolve(scip, benders, sol, type, checkint, infeasible) );
+   SCIP_CALL( bendersdata->objbenders->scip_postsolve(scip, benders, sol, type, mergecands, npriomergecands,
+         nmergecands, checkint, infeasible, merged) );
 
    return SCIP_OKAY;
 }
