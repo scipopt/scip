@@ -90,6 +90,7 @@ fixed bugs:
 - use total memory for triggering memory saving mode
 - fix parsing of version number in the CMake module for Ipopt
 - fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
+- added workaround for bug when solving certain bivariate quadratic interval equations with unbounded second variable
 
 data structures:
 - expression interpreter objects are now stored in the block memory

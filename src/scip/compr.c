@@ -89,8 +89,9 @@ SCIP_RETCODE SCIPcomprCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a tree compression */
-SCIP_RETCODE SCIPcomprCreate(
+/** internal method for creating a tree compression */
+static
+SCIP_RETCODE doComprCreate(
    SCIP_COMPR**          compr,              /**< pointer to tree compression data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -118,6 +119,8 @@ SCIP_RETCODE SCIPcomprCreate(
    assert(comprexec != NULL);
 
    SCIP_ALLOC( BMSallocMemory(compr) );
+   BMSclearMemory(*compr);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*compr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*compr)->desc, desc, strlen(desc)+1) );
    (*compr)->priority = priority;
@@ -153,6 +156,39 @@ SCIP_RETCODE SCIPcomprCreate(
    return SCIP_OKAY;
 }
 
+/** creates a tree compression */
+SCIP_RETCODE SCIPcomprCreate(
+   SCIP_COMPR**          compr,              /**< pointer to tree compression data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of tree compression */
+   const char*           desc,               /**< description of tree compression */
+   int                   priority,           /**< priority of the tree compression */
+   int                   minnnodes,          /**< minimal number of nodes for calling compression */
+   SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy
+                                              *   your plugin into sub-SCIPs */
+   SCIP_DECL_COMPRFREE   ((*comprfree)),     /**< destructor of tree compression */
+   SCIP_DECL_COMPRINIT   ((*comprinit)),     /**< initialize tree compression */
+   SCIP_DECL_COMPREXIT   ((*comprexit)),     /**< deinitialize tree compression */
+   SCIP_DECL_COMPRINITSOL ((*comprinitsol)), /**< solving process initialization method of tree compression */
+   SCIP_DECL_COMPREXITSOL ((*comprexitsol)), /**< solving process deinitialization method of tree compression */
+   SCIP_DECL_COMPREXEC   ((*comprexec)),     /**< execution method of tree compression */
+   SCIP_COMPRDATA*       comprdata           /**< tree compression data */
+   )
+{
+   assert(compr != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(comprexec != NULL);
+
+   SCIP_CALL_FINALLY( doComprCreate(compr, set, messagehdlr, blkmem, name, desc, priority, minnnodes,
+      comprcopy, comprfree, comprinit, comprexit, comprinitsol, comprexitsol, comprexec, comprdata),
+      (void) SCIPcomprFree(compr, set) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of tree compression */
 SCIP_RETCODE SCIPcomprFree(
    SCIP_COMPR**          compr,              /**< pointer to tree compression data structure */
@@ -160,7 +196,8 @@ SCIP_RETCODE SCIPcomprFree(
    )
 {
    assert(compr != NULL);
-   assert(*compr != NULL);
+   if( *compr == NULL )
+      return SCIP_OKAY;
    assert(!(*compr)->initialized);
    assert(set != NULL);
 
@@ -172,8 +209,8 @@ SCIP_RETCODE SCIPcomprFree(
 
    SCIPclockFree(&(*compr)->comprclock);
    SCIPclockFree(&(*compr)->setuptime);
-   BMSfreeMemoryArray(&(*compr)->name);
-   BMSfreeMemoryArray(&(*compr)->desc);
+   BMSfreeMemoryArrayNull(&(*compr)->name);
+   BMSfreeMemoryArrayNull(&(*compr)->desc);
    BMSfreeMemory(compr);
 
    return SCIP_OKAY;
