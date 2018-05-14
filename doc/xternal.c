@@ -31,21 +31,21 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** @page Overview
+/** @mainpage Overview
  *
- *  @subpage WHATISSCIP What is SCIP 
- *  @subpage GETTINGSTARTED Getting started
- *  @subpage FURTHERINFORMATION References
- *  @subpage PROGRAMMING Programming with SCIP
- *  @subpage HOWTOADD How to add ...
- *  @subpage HOWTOUSESECTION How to use ...
- *  @subpage FURTHERINFO Further information
+ *  - @subpage WHATISSCIP
+ *  - @subpage GETTINGSTARTED
+ *  - @subpage FURTHERINFORMATION
+ *  - @subpage PROGRAMMING
+ *  - @subpage HOWTOADD
+ *  - @subpage HOWTOUSESECTION
+ *  - @subpage FURTHERINFO
  */
 
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** @page LPI Available LP solverSekretariat: MA 6-2, Antje Schulz interfaces
+/** @page LPI Available implementations of the LP solver interface
  *
  * SCIP provides a range of different interfaces to LP solvers:
  *
@@ -140,12 +140,14 @@
  *
  * - @subpage SHELL       "Tutorial: the interactive shell"
  * - @subpage FILEREADERS "Readable file formats"
+ * - @subpage INTERFACES "Interfaces"
  * - @subpage START       "How to start a new project"
  * - @subpage EXAMPLES    "Examples"
  * - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
  * - @subpage LPI         "Available LP solver interfaces"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
  */
+
 /**@page FURTHERINFORMATION References
  *
  * - @subpage PUBLICAPI "List of callable functions"
@@ -913,14 +915,14 @@
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *   <br>
  *   We suggest the use one of the following examples:
- *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *     - The @ref VRP_MAIN "VRP example" is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example
+ *     - The @ref BINPACKING_MAIN "Binpacking example"
  *       and the <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a> application are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The \ref TSP_MAIN "TSP example"
+ *     - The @ref TSP_MAIN "TSP example"
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The \ref LOP_MAIN LOP-example
+ *     - The @ref LOP_MAIN "LOP example"
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
  *     .
  * - Copy one of the examples in the <code>examples</code> directory (in the \SCIP root
@@ -955,10 +957,10 @@
  *  \SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
  *  in the source code distribution.
  *
- *  @subpage BRANCHANDPRICE Branch-and-price
- *  @subpage BRANCHANDCUT Branch-and-cut
- *  @subpage CALLABLELIBRARY Callable library
- *  @subpage OTHERPLUGINS Other plugins
+ *  - @subpage OTHERPLUGINS Extending SCIP by custom plugins
+ *  - @subpage BRANCHANDPRICE Branch-and-price
+ *  - @subpage BRANCHANDCUT Branch-and-cut
+ *  - @subpage CALLABLELIBRARY Callable library
  */
 
 /**@page BRANCHANDPRICE Branch-and-price
@@ -975,7 +977,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>
+ *  @subpage VRP_MAIN Vehicle Routing
  *  </td>
  *  <td>
  *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
@@ -1040,7 +1042,7 @@
  *  </table>
  */
 
- /**@page OTHERPLUGINS Other plugins
+ /**@page OTHERPLUGINS Extending SCIP by custom plugins
  *
  *  <table>
  *  <tr>
@@ -7617,10 +7619,6 @@
 
 /**@page FAQ Frequently Asked Questions (FAQ)
  * \htmlinclude faq.inc
- */
-
-/**@page INSTALL Installation information
- * \verbinclude INSTALL
  */
 
 /**@page RELEASENOTES Release notes

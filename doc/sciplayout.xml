@@ -19,9 +19,6 @@
       <tab type="namespaces" visible="no" title=""/>
       <tab type="namespacemembers" visible="no" title=""/>
     </tab>
-    <tab type="user" url="@ref INTERFACES" title="Interfaces"/>
-    <tab type="user" url="@ref EXAMPLES" title="Examples"/>
-    <tab type="user" url="@ref APPLICATIONS" title="Applications"/>
     <tab type="user" url="@ref FAQ" title="FAQ"/>
   </navindex>
 

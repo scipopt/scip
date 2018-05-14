@@ -21,7 +21,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page BINPACKING_MAIN Overview
+/**@page BINPACKING_MAIN Binpacking
  * @author Timo Berthold
  * @author Stefan Heinz
  *
