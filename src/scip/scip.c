@@ -13725,11 +13725,9 @@ SCIP_RETCODE checkSolOrig(
          }
       }
       else
-      {
-         conshdlrschecked = h;
          break;
-      }
    }
+   conshdlrschecked = h;
 
    /* check original constraints
     *
