@@ -297,7 +297,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
 }
 
 
-/** adds the auxiliary variable to the generated cut. If this is the first optimality cut for the subproblem, then the
+/** Adds the auxiliary variable to the generated cut. If this is the first optimality cut for the subproblem, then the
  *  auxiliary variable is first created and added to the master problem.
  */
 static

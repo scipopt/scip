@@ -115,7 +115,7 @@ SCIP_Real SCIPbendersGetTime(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** is Benders' decomposition initialized? */
+/** Is Benders' decomposition initialized? */
 EXTERN
 SCIP_Bool SCIPbendersIsInitialized(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -126,7 +126,7 @@ SCIP_Bool SCIPbendersIsActive(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
    );
 
-/** returns whether only the convex relaxations will be checked in this solve loop
+/** Returns whether only the convex relaxations will be checked in this solve loop
  *  when Benders' is used in the LNS heuristics, only the convex relaxations of the master/subproblems are checked,
  *  i.e. no integer cuts are generated. In this case, then Benders' decomposition is performed under the assumption
  *  that all subproblems are convex relaxations.
@@ -135,25 +135,25 @@ SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** are Benders' cuts generated from the LP solutions? */
+/** Are Benders' cuts generated from the LP solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutLP(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** are Benders' cuts generated from the pseudo solutions? */
+/** Are Benders' cuts generated from the pseudo solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutPseudo(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** are Benders' cuts generated from the relaxation solutions? */
+/** Are Benders' cuts generated from the relaxation solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutRelaxation(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** should this Benders' use the auxiliary variables from the highest priority Benders' */
+/** Should this Benders' use the auxiliary variables from the highest priority Benders'? */
 EXTERN
 SCIP_Bool SCIPbendersShareAuxVars(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -261,7 +261,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
    );
 
-/** solves the Benders' decomposition subproblem. */
+/** solves the Benders' decomposition subproblem */
 EXTERN
 SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
