@@ -1173,7 +1173,6 @@ SCIP_RETCODE createSubproblems(
             SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersMipnodefocus) );
             assert(eventhdlr != NULL);
 
-
             /* include the upper bound interrupt event handler into the subproblem */
             SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, UPPERBOUND_EVENTHDLR_NAME,
                   UPPERBOUND_EVENTHDLR_DESC, eventExecBendersUpperbound, eventhdlrdata_upperbound) );
@@ -1710,7 +1709,6 @@ SCIP_RETCODE SCIPbendersInitpre(
       SCIP_CALL( assignAuxiliaryVariables(set->scip, benders) );
    }
 
-
    /* call presolving initialization method of Benders' decomposition */
    if( benders->bendersinitpre != NULL )
    {
@@ -2129,7 +2127,6 @@ SCIP_RETCODE solveBendersSubproblems(
                      || onlyconvexcheck )
                      (*nverified)++;
 
-
                   if( !subproboptimal )
                   {
                      numnotopt++;
@@ -2417,11 +2414,9 @@ SCIP_RETCODE SCIPbendersExec(
       else
          solveloop = (SCIP_BENDERSSOLVELOOP) l;
 
-
       /* solving the subproblems for this round of enforcement/checking. */
       SCIP_CALL( solveBendersSubproblems(benders, set, sol, type, solveloop, checkint, &nchecked, &nverified,
             subprobsolved, subisinfeas, infeasible, &optimal) );
-
 
       /* Generating cuts for the subproblems. Cuts are only generated when the solution is from primal heuristics,
        * relaxations or the LP
@@ -2665,7 +2660,6 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       {
          SCIP_CALL( updateEventhdlrUpperbound(benders, probnumber, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) );
       }
-
 
       /* solving the subproblem
        * the LP of the subproblem is solved in the first solveloop.
@@ -3037,7 +3031,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    assert(SCIPbendersSubprobIsSetup(benders, probnumber));
 
    (*infeasible) = FALSE;
-
 
    /* TODO: This should be solved just as an LP, so as a MIP. There is too much overhead with the MIP.
     * Need to change status check for checking the LP. */
