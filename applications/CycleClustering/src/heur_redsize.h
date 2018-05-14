@@ -13,16 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_cyckerlin.h
+/**@file   heur_redsize.h
  * @ingroup PRIMALHEURISTICS
- * @brief  Improvement heuristic that trades bin-variables between clusters
+ * @brief  primal heuristic that solves the problem with a sparser matrix as a submip
  * @author Leon Eifler
  */
 
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#ifndef __SCIP_HEUR_REDSIZE_H__
+#define __SCIP_HEUR_REDSIZE_H__
 
-#ifndef __SCIP_HEUR_CYCKERLIN_H__
-#define __SCIP_HEUR_CYCKERLIN_H__
 
 #include "scip/scip.h"
 
@@ -30,17 +29,10 @@
 extern "C" {
 #endif
 
-/** creates the oneopt primal heuristic and includes it in SCIP */
+/** creates the fuzzy rounding primal heuristic and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludeHeurCycKerlin(
+SCIP_RETCODE SCIPincludeHeurRedsize(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** External method that adds a solution to the list of candidate-solutions that should be improved */
-EXTERN
-SCIP_RETCODE addCandSolCyckerlin(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< The given solution */
    );
 
 #ifdef __cplusplus

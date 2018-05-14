@@ -13,16 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_cyckerlin.h
- * @ingroup PRIMALHEURISTICS
- * @brief  Improvement heuristic that trades bin-variables between clusters
+/**@file   event_newsol.h
+ * @ingroup EVENTS
+ * @brief  eventhdlr that adds new solutions to the candidate pool for the exchange heuristic
  * @author Leon Eifler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_HEUR_CYCKERLIN_H__
-#define __SCIP_HEUR_CYCKERLIN_H__
+#ifndef __SCIP_EVENT_NEWSOL_H__
+#define __SCIP_EVENT_NEWSOL_H__
+
 
 #include "scip/scip.h"
 
@@ -30,17 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the oneopt primal heuristic and includes it in SCIP */
+/** creates event handler for newsol event */
 EXTERN
-SCIP_RETCODE SCIPincludeHeurCycKerlin(
+SCIP_RETCODE SCIPincludeEventHdlrNewsol(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** External method that adds a solution to the list of candidate-solutions that should be improved */
-EXTERN
-SCIP_RETCODE addCandSolCyckerlin(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< The given solution */
    );
 
 #ifdef __cplusplus

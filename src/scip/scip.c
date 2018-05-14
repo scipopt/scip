@@ -5323,7 +5323,8 @@ SCIP_RETCODE SCIPincludeReader(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readercopy, readerfree, readerread, readerwrite, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, scip->set, name, desc, extension, readercopy, readerfree, readerread,
+      readerwrite, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    return SCIP_OKAY;
@@ -5362,7 +5363,7 @@ SCIP_RETCODE SCIPincludeReaderBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, NULL, NULL, NULL, NULL, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, scip->set, name, desc, extension, NULL, NULL, NULL, NULL, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    if( readerptr != NULL )
@@ -9725,7 +9726,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, scip->set, name, desc,
          eventcopy,
          eventfree, eventinit, eventexit, eventinitsol, eventexitsol, eventdelete, eventexec,
          eventhdlrdata) );
@@ -9761,7 +9762,7 @@ SCIP_RETCODE SCIPincludeEventhdlrBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, scip->set, name, desc,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventexec,
          eventhdlrdata) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
@@ -20654,25 +20655,10 @@ SCIP_Real SCIPgetVarLbAtIndex(
    )
 {
    SCIP_VARSTATUS varstatus;
+   SCIP_BDCHGINFO* bdchginfo;
    assert(var != NULL);
 
    varstatus = SCIPvarGetStatus(var);
-
-   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
-   {
-      if( bdchgidx == NULL )
-         return SCIPvarGetLbLocal(var);
-      else
-      {
-         SCIP_BDCHGINFO* bdchginfo;
-
-         bdchginfo = SCIPvarGetLbchgInfo(var, bdchgidx, after);
-         if( bdchginfo != NULL )
-            return SCIPbdchginfoGetNewbound(bdchginfo);
-         else
-            return var->glbdom.lb;
-      }
-   }
 
    /* get bounds of attached variables */
    switch( varstatus )
@@ -20680,6 +20666,19 @@ SCIP_Real SCIPgetVarLbAtIndex(
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
       return SCIPgetVarLbAtIndex(scip, var->data.original.transvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      if( bdchgidx == NULL )
+         return SCIPvarGetLbLocal(var);
+      else
+      {
+         bdchginfo = SCIPvarGetLbchgInfo(var, bdchgidx, after);
+         if( bdchginfo != NULL )
+            return SCIPbdchginfoGetNewbound(bdchginfo);
+         else
+            return var->glbdom.lb;
+      }
 
    case SCIP_VARSTATUS_FIXED:
       return var->glbdom.lb;
@@ -20774,8 +20773,6 @@ SCIP_Real SCIPgetVarLbAtIndex(
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPgetVarUbAtIndex(scip, var->negatedvar, bdchgidx, after);
 
-   case SCIP_VARSTATUS_COLUMN: /* for lint */
-   case SCIP_VARSTATUS_LOOSE: /* for lint */
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
@@ -20794,25 +20791,10 @@ SCIP_Real SCIPgetVarUbAtIndex(
    )
 {
    SCIP_VARSTATUS varstatus;
+   SCIP_BDCHGINFO* bdchginfo;
    assert(var != NULL);
 
    varstatus = SCIPvarGetStatus(var);
-
-   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
-   {
-      if( bdchgidx == NULL )
-         return SCIPvarGetUbLocal(var);
-      else
-      {
-         SCIP_BDCHGINFO* bdchginfo;
-
-         bdchginfo = SCIPvarGetUbchgInfo(var, bdchgidx, after);
-         if( bdchginfo != NULL )
-            return SCIPbdchginfoGetNewbound(bdchginfo);
-         else
-            return var->glbdom.ub;
-      }
-   }
 
    /* get bounds of attached variables */
    switch( varstatus )
@@ -20820,6 +20802,19 @@ SCIP_Real SCIPgetVarUbAtIndex(
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
       return SCIPgetVarUbAtIndex(scip, var->data.original.transvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      if( bdchgidx == NULL )
+         return SCIPvarGetUbLocal(var);
+      else
+      {
+         bdchginfo = SCIPvarGetUbchgInfo(var, bdchgidx, after);
+         if( bdchginfo != NULL )
+            return SCIPbdchginfoGetNewbound(bdchginfo);
+         else
+            return var->glbdom.ub;
+      }
 
    case SCIP_VARSTATUS_FIXED:
       return var->glbdom.ub;
@@ -20914,8 +20909,6 @@ SCIP_Real SCIPgetVarUbAtIndex(
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPgetVarLbAtIndex(scip, var->negatedvar, bdchgidx, after);
 
-   case SCIP_VARSTATUS_COLUMN: /* for lint */
-   case SCIP_VARSTATUS_LOOSE: /* for lint */
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();

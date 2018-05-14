@@ -2999,8 +2999,10 @@ SCIP_RETCODE SCIPlpiGetBase(
 
    if( cstat != NULL )
    {
+#ifndef NDEBUG
       const double* lb = clp->getColLower();
       const double* ub = clp->getColUpper();
+#endif
 
       for( int j = 0; j < clp->numberColumns(); ++j )
       {
