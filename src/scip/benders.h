@@ -199,7 +199,7 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    );
 
 /** Solve a Benders' decomposition subproblems. This will either call the user defined method or the generic solving
- * methods. If the generic method is called, then the subproblem must be set up before calling this method. */
+ *  methods. If the generic method is called, then the subproblem must be set up before calling this method. */
 extern
 SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -212,7 +212,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
 
-/** frees the subproblems. */
+/** frees the subproblems */
 extern
 SCIP_RETCODE SCIPbendersFreeSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -336,8 +336,8 @@ void SCIPbendersSetFreesub(
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the freeing callback for the subproblem */
    );
 
-/** returns the corresponding master or subproblem variable for the given variable.
- * This provides a call back for the variable mapping between the master and subproblems */
+/** Returns the corresponding master or subproblem variable for the given variable.
+ *  This provides a call back for the variable mapping between the master and subproblems. */
 extern
 SCIP_RETCODE SCIPbendersGetVar(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -347,14 +347,14 @@ SCIP_RETCODE SCIPbendersGetVar(
    int                   probnumber          /**< the problem number for the desired variable, -1 for the master problem */
    );
 
-/** Adds a subproblem to the Benders' decomposition data */
+/** adds a subproblem to the Benders' decomposition data */
 extern
 SCIP_RETCODE SCIPbendersAddSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP*                 subproblem          /**< subproblem to be added to the data storage */
    );
 
-/** Removes the subproblems from the Benders' decomposition data */
+/** removes the subproblems from the Benders' decomposition data */
 void SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
@@ -389,8 +389,8 @@ SCIP_Bool SCIPbendersSubprobIsIndependent(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** sets whether the subproblem is enabled or disabled. A subproblem is disabled if it has been merged into the master
- * problem
+/** Sets whether the subproblem is enabled or disabled. A subproblem is disabled if it has been merged into the master
+ *  problem.
  */
 extern
 void SCIPbendersSetSubprobEnabled(
