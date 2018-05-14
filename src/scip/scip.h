@@ -2714,6 +2714,7 @@ SCIP_RETCODE SCIPdeactivatePricer(
  */
 
 /** creates a Benders' decomposition and includes it in SCIP
+ *
  *  To use the Benders' decomposition for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
  *  This should be done during the problem creation stage.
  *
@@ -2756,10 +2757,11 @@ SCIP_RETCODE SCIPincludeBenders(
    SCIP_BENDERSDATA*     bendersdata         /**< Benders' decomposition data */
    );
 
-/** creates a Benders' decomposition and includes it in SCIP with all non-fundamental callbacks set to NULL;
- *  if needed, these can be added afterwards via setter functions SCIPsetBendersCopy(), SCIPsetBendersFree(),
- *  SCIPsetBendersInity(), SCIPsetBendersExit(), SCIPsetBendersInitsol(), SCIPsetBendersExitsol(),
- *  SCIPsetBendersFarkas();
+/** creates a Benders' decomposition and includes it in SCIP with all non-fundamental callbacks set to NULL
+ *
+ *  If needed, the non-fundamental callbacks can be added afterwards via setter functions SCIPsetBendersCopy(),
+ *  SCIPsetBendersFree(), SCIPsetBendersInity(), SCIPsetBendersExit(), SCIPsetBendersInitsol(), SCIPsetBendersExitsol(),
+ *  SCIPsetBendersFarkas().
  *
  *  To use the Benders' decomposition for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
  *  This should be done during the problem creation stage.
@@ -2992,9 +2994,11 @@ int SCIPgetNActiveBenders(
    );
 
 /** activates the Benders' decomposition to be used for the current problem
+ *
  *  This method should be called during the problem creation stage for all pricers that are necessary to solve
  *  the problem model.
- *  The Benders' decompositions are automatically deactivated when the problem is freed.
+ *
+ *  @note The Benders' decompositions are automatically deactivated when the problem is freed.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -3030,7 +3034,8 @@ void SCIPsetBendersPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** calls the exec method of Benders' decomposition to solve the subproblems.
+/** calls the exec method of Benders' decomposition to solve the subproblems
+ *
  *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
  *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
  *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
@@ -3048,8 +3053,9 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
    );
 
-/** returns the master problem variable for the given subproblem variable.
- *  This function is used as part of the cut generation process
+/** returns the master problem variable for the given subproblem variable
+ *
+ *  This function is used as part of the cut generation process.
  */
 EXTERN
 SCIP_RETCODE SCIPgetBendersMasterVar(
@@ -3059,8 +3065,9 @@ SCIP_RETCODE SCIPgetBendersMasterVar(
    SCIP_VAR**            mappedvar           /**< pointer to store the master variable that var is mapped to */
    );
 
-/** returns the subproblem problem variable for the given master variable.
- *  This function is used as part of the cut generation process
+/** returns the subproblem problem variable for the given master variable
+ *
+ *  This function is used as part of the cut generation process.
  */
 EXTERN
 SCIP_RETCODE SCIPgetBendersSubproblemVar(
