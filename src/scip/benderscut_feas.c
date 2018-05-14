@@ -54,6 +54,7 @@
  */
 
 /** computing as standard Benders' feasibility cut from the dual solutions of the LP
+ *
  *  NOTE: The cut must be created before being passed to this function
  */
 static

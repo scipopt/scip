@@ -602,7 +602,6 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
    SCIP_BENDERSCUT* benderscut;
    char paramname[SCIP_MAXSTRLEN];
 
-
    assert(benders != NULL);
 
    /* create int Benders' decomposition cuts data */

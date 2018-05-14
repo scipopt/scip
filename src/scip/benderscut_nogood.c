@@ -351,7 +351,6 @@ SCIP_RETCODE SCIPincludeBenderscutNogood(
    SCIP_BENDERSCUT* benderscut;
    char paramname[SCIP_MAXSTRLEN];
 
-
    assert(benders != NULL);
 
    /* create nogood Benders' decomposition cuts data */
