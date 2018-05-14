@@ -39,7 +39,6 @@
 #define READER_EXTENSION        "sto"
 
 #define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
-#define BENDERSBRANCH
 
 /*
  * sto reader internal methods
@@ -238,7 +237,6 @@ SCIP* getScenarioScip(
    return scenario->scip;
 }
 
-#ifdef BENDERSBRANCH
 /** creates the subproblem array. This array will be the same size as the number of children */
 static
 SCIP_RETCODE createScenarioSubprobArray(
@@ -253,7 +251,6 @@ SCIP_RETCODE createScenarioSubprobArray(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** adds a scenario to the subproblem array */
 static
@@ -271,7 +268,6 @@ void addScenarioSubproblem(
    scenario->nsubproblems++;
 }
 
-#ifdef BENDERSBRANCH
 /** returns the subproblem array for the scenario */
 static
 SCIP** getScenarioSubprobArray(
@@ -282,7 +278,6 @@ SCIP** getScenarioSubprobArray(
 
    return scenario->subproblems;
 }
-#endif
 
 /** returns the number of children for a given scenario */
 static
@@ -2150,7 +2145,6 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    nvars = SCIPtimGetStageNVars(scip, stagenum);
 
    /* this if 0 will be removed when the stochastic reader is merged with the Benders' branch */
-#ifdef BENDERSBRANCH
    if( decomp )
    {
       SCIP_CALL( SCIPcreate(&scenarioscip) );
@@ -2176,9 +2170,6 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          SCIP_CALL( createScenarioSubprobArray(scenarioscip, scenario) );
    }
    else
-#else
-   assert(!decomp);
-#endif
       scenarioscip = scip;
 
    /* adding the scenarioscip to the scenario */
@@ -2202,10 +2193,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    }
 
    /* adding the Benders' decomposition */
-#ifdef BENDERSBRANCH
    if( decomp && getScenarioNChildren(scenario) > 0 )
       SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubprobArray(scenario), getScenarioNChildren(scenario)) );
-#endif
 
    /* computing the probability for the scenario */
    probability = computeScenarioProbability(scenarioscip, scenario);
@@ -2352,9 +2341,7 @@ SCIP_RETCODE buildFullProblem(
 }
 
 
-/* this if 0 will be removed when the stochastic reader is merged with the Benders' branch */
-#ifdef BENDERSBRANCH
-/* build the stochastic program completely as a MIP, i.e. no decomposition */
+/** builds the stochastic program using Benders' decomposition */
 static
 SCIP_RETCODE buildDecompProblem(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -2402,7 +2389,6 @@ SCIP_RETCODE buildDecompProblem(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** Read the stochastic information of an SMPS file instance in "STO File Format". */
 static
@@ -2478,14 +2464,14 @@ SCIP_RETCODE readSto(
 
    if( !error && !unsupported )
    {
-#ifdef BENDERSBRANCH
       if( readerdata->usebenders )
+      {
          SCIP_CALL_TERMINATE( retcode, buildDecompProblem(scip, readerdata), TERMINATE );
+      }
       else
-#else
-      assert(!readerdata->usebenders);
-#endif
+      {
          SCIP_CALL_TERMINATE( retcode, buildFullProblem(scip, readerdata), TERMINATE );
+      }
    }
 
 /* cppcheck-suppress unusedLabel */
