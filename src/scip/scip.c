@@ -13655,7 +13655,6 @@ SCIP_RETCODE checkSolOrig(
    int v;
    int c;
    int h;
-   int conshdlrschecked;
 
    assert(scip != NULL);
    assert(sol != NULL);
@@ -13724,10 +13723,10 @@ SCIP_RETCODE checkSolOrig(
             }
          }
       }
+      /* constraint handlers are sorted by priority, so we can break when reaching the first one with negative priority */
       else
          break;
    }
-   conshdlrschecked = h;
 
    /* check original constraints
     *
@@ -13753,8 +13752,9 @@ SCIP_RETCODE checkSolOrig(
       }
    }
 
-   /* call constraint handlers with negative check priority that don't need constraints */
-   for( h = conshdlrschecked; h < scip->set->nconshdlrs; ++h )
+   /* call constraint handlers with negative check priority that don't need constraints;
+    * continue with the first constraint handler with negative priority which caused us to break in the above loop */
+   for( ; h < scip->set->nconshdlrs; ++h )
    {
       assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
       if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
