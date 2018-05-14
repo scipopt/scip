@@ -49935,7 +49935,7 @@ SCIP_RETCODE SCIPcreateRandom(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    unsigned int          initialseed,        /**< initial random seed */
-   SCIP_Bool             useglobalseed       /**< should SCIP's global seed be used to initialise the supplied seed? */
+   SCIP_Bool             useglobalseed       /**< should the supplied seed be initialized by SCIP's global seed shift */
    )
 {
    unsigned int modifiedseed;
