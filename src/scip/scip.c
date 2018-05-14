@@ -6947,7 +6947,15 @@ SCIP_RETCODE SCIPsetBenderscutExitsol(
    return SCIP_OKAY;
 }
 
-/** sets the priority of a Benders' decomposition cut algorithm */
+/** sets the priority of a Benders' decomposition cut algorithm
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 SCIP_RETCODE SCIPsetBenderscutPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
@@ -6962,6 +6970,8 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    assert(scip->set != NULL);
    assert(benderscut != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPsetBenderscutPriority", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIPbenderscutSetPriority(benderscut, priority);
 
    /* DIRTY: This is not a good fix */
@@ -6975,7 +6985,18 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    return SCIP_OKAY;
 }
 
-/** adds the generated constraint to the Benders cut storage */
+/** adds the generated constraint to the Benders cut storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPstoreBenderscutCons(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
@@ -6986,6 +7007,8 @@ SCIP_RETCODE SCIPstoreBenderscutCons(
    assert(benderscut != NULL);
    assert(cons != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPstoreBenderscutCons", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbenderscutStoreCons(benderscut, scip->set, cons) );
 
    /* capturing the stored constraint */
@@ -6994,7 +7017,18 @@ SCIP_RETCODE SCIPstoreBenderscutCons(
    return SCIP_OKAY;
 }
 
-/** adds the generated cuts to the Benders' cut storage */
+/** adds the generated cuts to the Benders' cut storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPstoreBenderscutCut(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
@@ -7004,6 +7038,8 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    assert(scip != NULL);
    assert(benderscut != NULL);
    assert(cut != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPstoreBenderscutCut", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, cut) );
 

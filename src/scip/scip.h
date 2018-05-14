@@ -3408,7 +3408,15 @@ SCIP_RETCODE SCIPsetBenderscutExitsol(
    SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization method of benderscut */
    );
 
-/** sets the priority of a Benders' decomposition cut algorithm */
+/** sets the priority of a Benders' decomposition cut algorithm
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetBenderscutPriority(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3416,7 +3424,18 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** adds the generated constraint to the Benders cut storage */
+/** adds the generated constraint to the Benders cut storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPstoreBenderscutCons(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -3424,7 +3443,18 @@ SCIP_RETCODE SCIPstoreBenderscutCons(
    SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
    );
 
-/** adds the generated cuts to the Benders' cut storage */
+/** adds the generated cuts to the Benders' cut storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPstoreBenderscutCut(
    SCIP*                 scip,               /**< the SCIP data structure */
