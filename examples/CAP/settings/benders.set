@@ -6,4 +6,4 @@ reading/capreader/usebenders = TRUE
 
 # the number of scenarios that will be randomly generated
 # [type: int, advanced: FALSE, range: [1,2147483647], default: 250]
-reading/capreader/numscenarios = 20
+reading/capreader/numscenarios = 5
