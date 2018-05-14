@@ -14,8 +14,28 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benders_default.c
- * @brief  default Benders' decomposition algorithm
+ * @brief  default Benders' decomposition plugin
  * @author Stephen J. Maher
+ *
+ * The default Benders' decomposition plugin is provided to simplify the interaction the Benders' decomposition
+ * framework within SCIP. This plugin is included in the SCIP package by default. Using the default Benders'
+ * decomposition plugin, a problem can be solved by Benders' decomposition by calling
+ *
+ * SCIPcreateBendersDefault(master problem, array of subproblems, number of subproblems)
+ *
+ * where "master problem" is a SCIP instance of the master problem, "array of subproblems" is an array of SCIP instances
+ * that are the Benders' decomposition subproblems and "number of subproblems" is an integer indicating the number of
+ * subproblems for this decomposition.
+ *
+ * A key feature of the default Benders' decomposition plugin is the automatic generation of the variable mapping
+ * between the variables of the master problem and the subproblems.
+ *
+ * In the traditional application of Benders' decomposition, master problem variables are fixed to a solution value and
+ * modify the RHS of the second stage constraints. The implementation within SCIP requires that a variable is created
+ * in the subproblem for every master problem variable that appears in the subproblem constraints. This variable MUST
+ * have the same name as the corresponding variable in the master problem. This name is used to automatically generate
+ * the mapping between the master problem and the corresponding subproblem variables.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -24,6 +44,7 @@
 
 #include "scip/benders_default.h"
 #include "scip/pub_benders.h"
+#include "scip/bendersdefcuts.h"
 
 
 #define BENDERS_NAME                "default"
@@ -86,7 +107,12 @@ SCIP_RETCODE createBendersData(
 }
 
 
-/** Creates the variable mappings between the  */
+/** Creates the variable mappings between the master problem and the corresponding variable in the subproblem.
+ *
+ *  TODO: add the functionality to allow the user to provide an array of hashmaps for mapping between the master problem
+ *  variables and the corresponding subproblem variables.
+ *  TODO: check for uniqueness of names in this function.
+ */
 static
 SCIP_RETCODE createVariableMappings(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -262,7 +288,6 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
    SCIP_VAR* origvar;
    SCIP_Real scalar;
    SCIP_Real constant;
-   SCIP_RETCODE retcode;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -335,7 +360,15 @@ SCIP_DECL_BENDERSCREATESUB(bendersCreatesubDefault)
  * Benders' decomposition specific interface methods
  */
 
-/** Creates a default Benders' decomposition algorithm and activates it in SCIP */
+/** Creates a default Benders' decomposition algorithm and activates it in SCIP
+ *
+ * @note Every variable that appears in the subproblem constraints must be created in the corresponding subproblem with
+ * the same name as in the master problem.
+ *
+ * @note The default Benders' decomposition implementation relies on unique variable names in the master problem and in
+ * each of the subproblems. This is required because a variable mapping is made between the master problem variables and
+ * the counterparts in the subproblems. This mapping is created using the variable names.
+ */
 SCIP_RETCODE SCIPcreateBendersDefault(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP**                subproblems,        /**< the Benders' decomposition subproblems */
@@ -363,8 +396,8 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/restarts", 0) );
-      SCIP_CALL( SCIPfixParam(scip, "presolving/restarts") );
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
+      SCIP_CALL( SCIPfixParam(scip, "presolving/maxrestarts") );
    }
 
    SCIP_CALL( createBendersData(scip, subproblems, &bendersdata, nsubproblems) );
@@ -400,6 +433,9 @@ SCIP_RETCODE SCIPincludeBendersDefault(
    SCIP_CALL( SCIPsetBendersCopy(scip, benders, bendersCopyDefault) );
    SCIP_CALL( SCIPsetBendersFree(scip, benders, bendersFreeDefault) );
    SCIP_CALL( SCIPsetBendersInit(scip, benders, bendersInitDefault) );
+
+   /* OPTIONAL: including the default cuts for Benders' decomposition */
+   SCIP_CALL( SCIPincludeBendersDefaultCuts(scip, benders) );
 
    return SCIP_OKAY;
 }

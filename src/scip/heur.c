@@ -701,8 +701,9 @@ SCIP_RETCODE SCIPheurCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a primal heuristic */
-SCIP_RETCODE SCIPheurCreate(
+/** internal method for creating a primal heuristic */
+static
+SCIP_RETCODE doHeurCreate(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -737,6 +738,8 @@ SCIP_RETCODE SCIPheurCreate(
    assert(heurexec != NULL);
 
    SCIP_ALLOC( BMSallocMemory(heur) );
+   BMSclearMemory(*heur);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*heur)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*heur)->desc, desc, strlen(desc)+1) );
    (*heur)->dispchar = dispchar;
@@ -786,6 +789,45 @@ SCIP_RETCODE SCIPheurCreate(
    return SCIP_OKAY;
 }
 
+/** creates a primal heuristic */
+SCIP_RETCODE SCIPheurCreate(
+   SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of primal heuristic */
+   const char*           desc,               /**< description of primal heuristic */
+   char                  dispchar,           /**< display character of primal heuristic */
+   int                   priority,           /**< priority of the primal heuristic */
+   int                   freq,               /**< frequency for calling primal heuristic */
+   int                   freqofs,            /**< frequency offset for calling primal heuristic */
+   int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
+   SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
+   )
+{
+   assert(heur != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(freq >= -1);
+   assert(freqofs >= 0);
+   assert(heurexec != NULL);
+
+   SCIP_CALL_FINALLY( doHeurCreate(heur, set, messagehdlr, blkmem, name, desc, dispchar, priority, freq, freqofs,
+      maxdepth, timingmask, usessubscip, heurcopy, heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec,
+      heurdata), (void) SCIPheurFree(heur, set, blkmem) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of primal heuristic */
 SCIP_RETCODE SCIPheurFree(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
@@ -795,7 +837,8 @@ SCIP_RETCODE SCIPheurFree(
 {
    int d;
    assert(heur != NULL);
-   assert(*heur != NULL);
+   if( *heur == NULL )
+      return SCIP_OKAY;
    assert(!(*heur)->initialized);
    assert(set != NULL);
    assert((*heur)->divesets != NULL || (*heur)->ndivesets == 0);
@@ -814,8 +857,8 @@ SCIP_RETCODE SCIPheurFree(
    BMSfreeMemoryArrayNull(&(*heur)->divesets);
    SCIPclockFree(&(*heur)->heurclock);
    SCIPclockFree(&(*heur)->setuptime);
-   BMSfreeMemoryArray(&(*heur)->name);
-   BMSfreeMemoryArray(&(*heur)->desc);
+   BMSfreeMemoryArrayNull(&(*heur)->name);
+   BMSfreeMemoryArrayNull(&(*heur)->desc);
    BMSfreeMemory(heur);
 
    return SCIP_OKAY;

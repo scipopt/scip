@@ -2933,7 +2933,7 @@ SCIP_DECL_PROPINITSOL(propInitsolObbt)
    SCIPdebugMsg(scip, "creating genvbounds: %s\n", propdata->genvboundprop != NULL ? "true" : "false");
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

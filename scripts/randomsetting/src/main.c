@@ -474,7 +474,7 @@ SCIP_RETCODE createSettingsFile(
    }
 
    /* generate random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randgen, seed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randgen, seed, TRUE) );
 
    /* generate random setting and write it to file */
    SCIP_CALL( generateRandomSettings(scip, randgen, MAX_CHANGE, CHANGE_ADVANCED) );

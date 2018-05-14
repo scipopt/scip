@@ -38,6 +38,9 @@
 
 #define BENDERSCUT_ARRAYSIZE        10    /**< the initial size of the added constraints/cuts arrays */
 
+/* default parameter settings for the Benders' decomposition cuts */
+#define SCIP_DEFAULT_ENABLED        TRUE
+
 /** compares two Benders' cuts w. r. to their delay positions and their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPbenderscutComp)
 {  /*lint --e{715}*/
@@ -150,6 +153,12 @@ SCIP_RETCODE SCIPbenderscutCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*benderscut)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4,
                   paramChgdBenderscutPriority, (SCIP_PARAMDATA*)(*benderscut)) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/enabled", SCIPbendersGetName(benders), name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+        "is this Benders' decomposition cut method used to generate cuts?", &(*benderscut)->enabled, FALSE,
+        SCIP_DEFAULT_ENABLED, NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
@@ -206,13 +215,13 @@ SCIP_RETCODE SCIPbenderscutInit(
    /* allocating memory for the added constraint/cut arrays */
    if( benderscut->addedconsssize == 0 )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedconss, BENDERSCUT_ARRAYSIZE) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedconss, BENDERSCUT_ARRAYSIZE) );
       benderscut->addedconsssize = BENDERSCUT_ARRAYSIZE;
    }
 
    if( benderscut->addedcutssize == 0 )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&benderscut->addedcuts, BENDERSCUT_ARRAYSIZE) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedcuts, BENDERSCUT_ARRAYSIZE) );
       benderscut->addedcutssize = BENDERSCUT_ARRAYSIZE;
    }
 
@@ -259,8 +268,8 @@ SCIP_RETCODE SCIPbenderscutExit(
       SCIP_CALL( SCIPreleaseCons(set->scip, &benderscut->addedconss[i]) );
    }
 
-   BMSfreeMemoryArray(&benderscut->addedcuts);
-   BMSfreeMemoryArray(&benderscut->addedconss);
+   BMSfreeBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedcuts, benderscut->addedcutssize);
+   BMSfreeBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedconss, benderscut->addedconsssize);
    benderscut->addedconsssize = 0;
    benderscut->addedcutssize = 0;
    benderscut->naddedconss = 0;
@@ -314,7 +323,7 @@ SCIP_RETCODE SCIPbenderscutExitsol(
    assert(benderscut != NULL);
    assert(set != NULL);
 
-   /* call solving process deinitialization method of Benders' decompositioni cut */
+   /* call solving process deinitialization method of Benders' decomposition cut */
    if( benderscut->benderscutexitsol != NULL )
    {
       /* start timing */
@@ -354,8 +363,11 @@ SCIP_RETCODE SCIPbenderscutExec(
    /* start timing */
    SCIPclockStart(benderscut->benderscutclock, set);
 
-   /* call external method */
-   SCIP_CALL( benderscut->benderscutexec(set->scip, benders, benderscut, sol, probnumber, type, &cutresult) );
+   /* call the Benders' decomposition cut if it is enabled */
+   if( benderscut->enabled )
+   {
+      SCIP_CALL( benderscut->benderscutexec(set->scip, benders, benderscut, sol, probnumber, type, &cutresult) );
+   }
 
    /* stop timing */
    SCIPclockStop(benderscut->benderscutclock, set);
@@ -667,4 +679,15 @@ SCIP_Bool SCIPbenderscutIsLPCut(
    assert(benderscut != NULL);
 
    return benderscut->islpcut;
+}
+
+/** sets the enabled flag of the Benders' decomposition cut method */
+void SCIPbenderscutSetEnabled(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_Bool             enabled             /**< flag to indicate whether the Benders' decomposition cut is enabled */
+   )
+{
+   assert(benderscut != NULL);
+
+   benderscut->enabled = enabled;
 }

@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip,           /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
 
@@ -374,6 +374,38 @@ SCIP_Bool SCIPbendersSubprobIsSetup(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** sets the independent subproblem flag */
+extern
+void SCIPbendersSetSubprobIsIndependent(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             isindep             /**< flag to indicate whether the subproblem is independent */
+   );
+
+/** returns whether the subproblem is independent */
+extern
+SCIP_Bool SCIPbendersSubprobIsIndependent(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
+/** sets whether the subproblem is enabled or disabled. A subproblem is disabled if it has been merged into the master
+ * problem
+ */
+extern
+void SCIPbendersSetSubprobEnabled(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             enabled             /**< flag to indicate whether the subproblem is enabled */
+   );
+
+/** returns whether the subproblem is enabled */
+extern
+SCIP_Bool SCIPbendersSubprobIsEnabled(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /** changes all of the master problem variables in the given subproblem to continuous */
 extern
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
@@ -412,13 +444,13 @@ void SCIPbendersSetBenderscutsSorted(
    SCIP_Bool             sorted              /**< the value to set the sorted flag to */
    );
 
-/** sorts Benders' cuts plugins by priorities */
+/** sorts benders cuts by priorities */
 extern
 void SCIPbendersSortBenderscuts(
    SCIP_BENDERS*         benders             /**< benders */
    );
 
-/** sorts Benders' cuts plugins by name */
+/** sorts benders cuts by name */
 extern
 void SCIPbendersSortBenderscutsName(
    SCIP_BENDERS*         benders             /**< benders */

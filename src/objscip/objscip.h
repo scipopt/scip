@@ -24,6 +24,8 @@
 #define __SCIP_OBJSCIP_H__
 
 
+#include "objscip/objbenders.h"
+#include "objscip/objbenderscut.h"
 #include "objscip/objbranchrule.h"
 #include "objscip/objconshdlr.h"
 #include "objscip/objdialog.h"

@@ -26,7 +26,6 @@
 
 
 #include "scip/def.h"
-#include "scip/cons_setppc.h"
 #include "scip/type_retcode.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"

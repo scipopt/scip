@@ -264,7 +264,9 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
    }
 
    /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result
-    * indicates that no subproblems were checked */
+    * indicates that no subproblems were checked or that cuts were disabled, so that it is not guaranteed that this
+    * solution is feasible.
+    */
    if( (*result) == SCIP_DIDNOTRUN )
       (*result) = SCIP_FEASIBLE;
 
@@ -497,7 +499,9 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
          }
 
          /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result
-          * indicates that no subproblems were checked */
+          * indicates that no subproblems were checked or that cuts were disabled, so that it is not guaranteed that this
+          * solution is feasible.
+          */
          if( (*result) == SCIP_DIDNOTRUN )
             (*result) = SCIP_FEASIBLE;
       }
