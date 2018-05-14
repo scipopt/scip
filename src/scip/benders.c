@@ -1524,8 +1524,7 @@ SCIP_RETCODE computeSubproblemLowerbound(
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
-   //SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
-   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_HIGH) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
    /* if the subproblem is independent, then the default SCIP settings are used. Otherwise, only the root node is solved
     * to compute a lower bound on the subproblem
