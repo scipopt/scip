@@ -36,7 +36,7 @@ foreach(instance ${instances})
     # call the CAP binary and validate the solve with the given objective value
     #
     add_test(NAME "examples-cap-${basename}"
-            COMMAND $<TARGET_FILE:cap> -s ${CMAKE_CURRENT_SOURCE_DIR}/../data/nobenders.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+            COMMAND $<TARGET_FILE:cap> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/nobenders.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
             )
     set_tests_properties("examples-cap-${basename}"
                         PROPERTIES
@@ -48,7 +48,7 @@ foreach(instance ${instances})
     # call the CAP binary and validate the solve with the given objective value
     #
     add_test(NAME "examples-capbenders-${basename}"
-            COMMAND $<TARGET_FILE:cap> -s ${CMAKE_CURRENT_SOURCE_DIR}/../data/benders.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+            COMMAND $<TARGET_FILE:cap> -s ${CMAKE_CURRENT_SOURCE_DIR}/../setting/benders.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
             )
     set_tests_properties("examples-capbenders-${basename}"
                         PROPERTIES
