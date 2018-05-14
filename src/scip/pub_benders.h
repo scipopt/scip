@@ -187,7 +187,9 @@ SCIP_Real SCIPbendersGetSubprobObjval(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** Public functions associated with Benders' cuts */
+/*
+ * Public functions associated with Benders' cuts
+ */
 
 /** returns the Benders' cut of the given name, or NULL if not existing */
 EXTERN
@@ -218,10 +220,12 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/* sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
- * process. One example is when the three-phase method is employed, where the first phase solves the convex relaxation
- * of both the master and subproblems, the second phase reintroduces the integrality constraints to the master problem
- * and the third phase then reintroduces integrality constraints to the subproblems.
+/** sets the flag indicating whether a subproblem is convex
+ *
+ *  It is possible that this can change during the solving process. One example is when the three-phase method is
+ *  employed, where the first phase solves the convex relaxation of both the master and subproblems, the second phase
+ *  reintroduces the integrality constraints to the master problem and the third phase then reintroduces integrality
+ *  constraints to the subproblems.
  */
 EXTERN
 void SCIPbendersSetSubprobIsConvex(
@@ -230,7 +234,10 @@ void SCIPbendersSetSubprobIsConvex(
    SCIP_Bool             isconvex            /**< flag to indicate whether the subproblem is convex */
    );
 
-/** returns whether the subproblem is convex. This means that the dual solution can be used to generate cuts. */
+/** returns whether the subproblem is convex
+ *
+ *  This means that the dual solution can be used to generate cuts.
+ */
 EXTERN
 SCIP_Bool SCIPbendersSubprobIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -243,7 +250,10 @@ int SCIPbendersGetNConvexSubprobs(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** solves the LP of the Benders' decomposition subproblem. This requires that the subproblem is in probing mode */
+/** solves the LP of the Benders' decomposition subproblem
+ *
+ *  This requires that the subproblem is in probing mode.
+ */
 EXTERN
 SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */

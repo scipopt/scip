@@ -361,7 +361,7 @@ SCIP_Real SCIPgetProbabilityExp3(
    return (1.0 - banditdata->gamma) * banditdata->weights[action] / banditdata->weightsum + banditdata->gamma / (SCIP_Real)SCIPbanditGetNActions(exp3);
 }
 
-/* include virtual function table for Exp.3 bandit algorithms */
+/** include virtual function table for Exp.3 bandit algorithms */
 SCIP_RETCODE SCIPincludeBanditvtableExp3(
    SCIP*                 scip                /**< SCIP data structure */
    )

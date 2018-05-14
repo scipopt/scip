@@ -2379,7 +2379,6 @@ SCIP_RETCODE buildDecompProblem(
    SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
 
    /* changing settings that are required for Benders' decomposition */
-   //SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
@@ -2592,7 +2591,6 @@ SCIP_RETCODE SCIPincludeReaderSto(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopySto) );
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeSto) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadSto) );
-   //SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteSto) );
 
    /* add decomposition parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

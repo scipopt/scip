@@ -6534,9 +6534,10 @@ SCIP_RETCODE SCIPaddBendersSubproblem(
    return SCIP_OKAY;
 }
 
-/** calls the generic subproblem setup method for a Benders' decomposition subproblem. This is called if the user
- *  requires to solve the Benders' decomposition subproblem separately from the main Benders' solving loop. This could be
- *  in the case of enhancement techniques.
+/** calls the generic subproblem setup method for a Benders' decomposition subproblem
+ *
+ *  This is called if the user requires to solve the Benders' decomposition subproblem separately from the main Benders'
+ *  solving loop. This could be in the case of enhancement techniques.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6568,9 +6569,10 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    return SCIP_OKAY;
 }
 
-/** calls the solving method for a single Benders' decomposition subproblem. The method either calls the users solve
- *  subproblem method or calls the generic method. In the case of the generic method, the user must set up the
- *  subproblem prior to calling this method.
+/** calls the solving method for a single Benders' decomposition subproblem
+ *
+ *  The method either calls the users solve subproblem method or calls the generic method. In the case of the generic
+ *  method, the user must set up the subproblem prior to calling this method.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6606,7 +6608,9 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    return SCIP_OKAY;
 }
 
-/** frees the subproblem after calling the solve subproblem method. This will either call the user defined free
+/** frees the subproblem after calling the solve subproblem method
+ *
+ *  This will either call the user defined free
  *  subproblem callback for Benders' decomposition or the default freeing methods. In the default case, if the
  *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is a MIP, then SCIPfreeTransform is called.
  *
@@ -6641,8 +6645,8 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
    return SCIP_OKAY;
 }
 
-/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
- * value of the corresponding auxiliary variable
+/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value against the
+ *  value of the corresponding auxiliary variable
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6697,6 +6701,7 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
 }
 
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
+ *
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
  *  to include a Benders' cut algorithm if a Benders' decomposition has already been included
  *  This should be done during the problem creation stage.
@@ -6748,9 +6753,11 @@ SCIP_RETCODE SCIPincludeBenderscut(
    return SCIP_OKAY;
 }
 
-/** creates a Benders' cut and includes it an associated Benders' decomposition with all non-fundamental callbacks set to NULL;
- *  if needed, these can be added afterwards via setter functions SCIPsetBenderscutCopy(), SCIPsetBenderscutFree(),
- *  SCIPsetBenderscutInit(), SCIPsetBenderscutExit(), SCIPsetBenderscutInitsol(), SCIPsetBenderscutExitsol();
+/** creates a Benders' cut and includes it an associated Benders' decomposition with all non-fundamental callbacks set to NULL
+ *
+ *  If needed, the non-fundamental callbacks can be added afterwards via setter functions SCIPsetBenderscutCopy(),
+ *  SCIPsetBenderscutFree(), SCIPsetBenderscutInit(), SCIPsetBenderscutExit(), SCIPsetBenderscutInitsol(),
+ *  SCIPsetBenderscutExitsol().
  *
  *  This should be done during the problem creation stage.
  *

@@ -640,7 +640,7 @@ SCIP_RETCODE SCIPbenderscutStoreCons(
    return SCIP_OKAY;
 }
 
-/* adds the generated cuts to the Benders' cut storage */
+/** adds the generated cuts to the Benders' cut storage */
 SCIP_RETCODE SCIPbenderscutStoreCut(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set,                /**< global SCIP settings */
