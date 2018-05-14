@@ -149,6 +149,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolXyz)
 #define heurExitsolXyz NULL
 #endif
 
+/**! [SnippetCodeStyleBlanks] */
 
 /** execution method of primal heuristic */
 static
@@ -177,6 +178,8 @@ SCIP_RETCODE SCIPincludeHeurXyz(
    heurdata = NULL;
 
    heur = NULL;
+
+/**! [SnippetCodeStyleBlanks] */
 
    /* include primal heuristic */
 #if 0

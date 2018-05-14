@@ -22491,6 +22491,8 @@ SCIP_Bool SCIPisSumRelGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/**! [SnippetCodeStyleNaming] */
+
 /** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
 EXTERN
 SCIP_Bool SCIPisSumRelGE(
@@ -22507,6 +22509,8 @@ int SCIPconvertRealToInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             real                /**< double bound to convert */
    );
+
+/**! [SnippetCodeStyleNaming] */
 
 /** converts the given real number representing an integer to a long integer; in optimized mode the function gets inlined for
  *  performance; in debug mode we check some additional conditions
@@ -22859,6 +22863,8 @@ void SCIPprintMemoryDiagnostic(
  * @{
  */
 
+/**! [SnippetCodeStyleComment] */
+
 /** creates a dynamic array of real values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -22869,6 +22875,8 @@ SCIP_RETCODE SCIPcreateRealarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY**      realarray           /**< pointer to store the real array */
    );
+
+/**! [SnippetCodeStyleComment] */
 
 /** frees a dynamic array of real values
  *

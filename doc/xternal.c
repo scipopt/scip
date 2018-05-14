@@ -608,61 +608,59 @@
  *
  * We follow the following coding style guidelines and recommend them for all developers.
  *
- * \par Spacing:
+ * @section CODESPACING Spacing:
  *
  * - Indentation is 3 spaces. No tabs anywhere in the code.
- * - Always only one declaration in a line.
- * - Braces are on a new line and not indented.
+ * - Every opening parenthesis requires an additional indentation of 3 spaces.
+ *
+ *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleParenIndent}
+ *
  * - Spaces around all operators.
+ * - Spaces around the arguments inside an if/for/while-statement, as well as inside macros (e.g., SCIP_CALL).
  * - No spaces between control structure keywords like "if", "for", "while", "switch" and the corresponding brackets.
- *   Spaces around the argument inside an if/for/while-statement, as well as inside a SCIP_CALL.
  * - No spaces between a function name and the parenthesis in both the definition and function calls.
+ * - Braces are on a new line and not indented.
+ *
+ *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleIfFor}
+ *
+ * - In function declarations, every parameter is on a new line. The name of the parameter starts at column 26,
+ *   the comment starts at column 46 (if column-count starts with 1).
  * - Maximal line length is 120 characters.
- * - In function declaration, every parameter is on a new line. The name of the parameter starts at column 26,
- *   the comment starts at column 46.
- * - Blank lines after closed brackets, asserts, and where it improves readability.
- * - No multiple blank lines anywhere.
+ * - Always only one declaration in a line.
+ * - Variable names should be all lower case.
  *
- * \par  Naming:
+ *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleDeclaration}
  *
- * - Use assert() to show preconditions for the parameters, invariants and postconditions.
+ * - Blank lines are inserted where it improves readability.
+ * - Multiple blank lines are used to structure the code where single blank lines are insufficient,
+ *   e.g., between differrent sections of the code.
+ *
+ *   @refsnippet{src/scip/heur_xyz.c,SnippetCodeStyleBlanks}
+ *
+ * @section CODENAMING  Naming:
+ *
+ * - Use assert() to show preconditions for the parameters, invariants, and postconditions.
+ * - Make all functions that are not used outside the module 'static'.
+ * - Naming should start with a lower case letter.
+ *
+ *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleStaticAsserts}
+ *
  * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a method name
  *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPisFeasEQ().
- * - Make all functions that are not used outside the module 'static'. Naming should start with a lower case letter.
- * - Variable names should be all lower case.
+ *
+ *   @refsnippet{src/scip/scip.h,SnippetCodeStyleNaming}
+ *
  * - For each structure there is a typedef with the name in all upper case.
  * - Defines should be named all upper case.
  *
- * \par  Documentation:
+ *   @refsnippet{src/scip/type_set.h,SnippetCodeStyleExample}
+ *
+ * @section CODEDOC Documentation:
  *
  * - Document functions, parameters, and variables in a doxygen conformed way.
- * - Comments start with lower case, multiline comments have the ending slash on a new line.
+ * - Multiline comments have the ending slash on a new line.
  *
- *
- *
- * As an example, have a look at tree.c and see the examples below. We also provide settings for
- * \ref XEMACS "(x)emacs" and \ref ECLIPSE "eclipse".
- *
- *
- * @section CODEEXAMPLES Examples
- *
- * In this section we state a few examples illustrating the \SCIP code style.
- *
- * - Function declarations
- * - asserts
- * - SCIP_CALLs
- * - comment style
- * - if/else/switch statements:
- *
- * @refsnippet{src/scip/conflict.c,SnippetCodeStyleExample}
- *
- * - For/while loops:
- *
- * @refsnippet{src/scip/lp.c,SnippetCodeStyleExample}
- *
- * - Type definition:
- *
- * @refsnippet{src/scip/type_set.h,SnippetCodeStyleExample}
+ *   @refsnippet{src/scip/scip.h,SnippetCodeStyleComment}
  *
  *
  * @section XEMACS Customize (x)emacs

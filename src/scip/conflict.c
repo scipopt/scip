@@ -4387,7 +4387,7 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
 
    return SCIP_OKAY;
 }
-/**! [SnippetCodeStyleExample] */
+
 /** checks if the given variable is already part of the current conflict set or queued for resolving with the same or
  *  even stronger bound
  */
@@ -4447,7 +4447,6 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
 
    return SCIP_OKAY;
 }
-/**! [SnippetCodeStyleExample] */
 
 /** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
  *  bound
