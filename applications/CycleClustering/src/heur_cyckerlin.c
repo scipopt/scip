@@ -707,7 +707,7 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
    nbins = SCIPcycGetNBins(scip);
    ncluster = SCIPcycGetNCluster(scip);
    cmatrix = SCIPcycGetCmatrix(scip);
-   SCIP_CALL( SCIPcreateRandom(scip, &rnd, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &rnd, DEFAULT_RANDSEED, TRUE) );
 
    /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
     * in case of a (ideally) full reversible problem there cannot be a better solution, in the other case, i.e., the

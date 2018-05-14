@@ -11776,7 +11776,7 @@ SCIP_RETCODE SCIPpermuteProb(
    assert(nconshdlrs == 0 || conshdlrs != NULL);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed, TRUE) );
 
    /* The constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
     * that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
@@ -17699,7 +17699,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
        */
       SCIPselectDownRealInt(prios, solvertypes, nthreads, ncandsolvertypes);
 
-      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, (unsigned) scip->set->concurrent_initseed) );
+      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, (unsigned) scip->set->concurrent_initseed, TRUE) );
       for( i = 0; i < nthreads; ++i )
       {
          SCIP_CONCSOLVER* concsolver;
@@ -49941,7 +49941,8 @@ SCIP_RETCODE SCIPcopyDigraph(
 SCIP_RETCODE SCIPcreateRandom(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   unsigned int          initialseed         /**< initial random seed */
+   unsigned int          initialseed,        /**< initial random seed */
+   SCIP_Bool             useglobalseed       /**< should SCIP's global seed be used to initialise the supplied seed? */
    )
 {
    unsigned int modifiedseed;
@@ -49949,7 +49950,10 @@ SCIP_RETCODE SCIPcreateRandom(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+   if( useglobalseed )
+      modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+   else
+      modifiedseed = initialseed;
 
    SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
 

@@ -31,7 +31,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0, TRUE) );
 }
 
 static

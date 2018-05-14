@@ -79,7 +79,7 @@ void setup(void)
    SCIP_CALL( SCIPallocMemoryArray(scip, &profits, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &solitems, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &nonsolitems, MEMSIZE) );
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, INITIALSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, INITIALSEED, TRUE) );
    cr_assert_not_null(items);
    cr_assert_not_null(weights);
    cr_assert_not_null(profits);
