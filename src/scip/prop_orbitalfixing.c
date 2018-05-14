@@ -175,7 +175,7 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_ORBITALFIXING_NAME) == 0 );
    assert( event != NULL );
 
-   propdata = (SCIP_PROPDATA*)eventdata;
+   propdata = (SCIP_PROPDATA*) eventdata;
    assert( propdata != NULL );
    assert( propdata->permvarmap != NULL );
    assert( propdata->inactiveperms != NULL );
@@ -367,7 +367,8 @@ SCIP_RETCODE getSymmetries(
          {
             if ( SCIPvarIsBinary(propdata->permvars[v]) )
             {
-               SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED, propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
+               SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED, propdata->eventhdlr,
+                     (SCIP_EVENTDATA*) propdata, -1) );
             }
             SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
             SCIPfreeBlockMemoryArrayNull(scip, &propdata->permstrans[v], propdata->nperms);
@@ -1186,7 +1187,8 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
 
    /* create event handler */
    propdata->eventhdlr = NULL;
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(propdata->eventhdlr), EVENTHDLR_ORBITALFIXING_NAME, EVENTHDLR_ORBITALFIXING_DESC, eventExecOrbitalFixing, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(propdata->eventhdlr), EVENTHDLR_ORBITALFIXING_NAME, EVENTHDLR_ORBITALFIXING_DESC,
+         eventExecOrbitalFixing, NULL) );
    assert( propdata->eventhdlr != NULL );
 
    /* include propagator */
