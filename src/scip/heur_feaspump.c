@@ -619,7 +619,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

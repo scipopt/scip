@@ -34,6 +34,8 @@ deleted and modified API functions:
 - the seed of SCIPinitializeRandomSeed() is now an unsigned int
 - the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
 - added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
+- new parameter for SCIPcreateRandom() to specify whether the global random seed shift should be used in the creation of
+  the random number generator
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
@@ -45,13 +47,26 @@ new API functions:
   SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
 - added SCIPstrncpy(), a safe version of strncpy()
 
+features:
+- new miscellaneous methods for constraints that have a one-row linear representation in pub_misc_linear.h
+- a Benders' decomposition framework has been added. This framework provides the functionality for a user to solve a
+  decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
+  integer optimality cuts and no-good cuts.
+
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
 - "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
+- "lp/alwaysgetduals" ensure that the dual solutions are always computed from the recent LP solve
+- "display/relevantstats" indicates whether the small relevant statistics are displayed at the end of solving
 - "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
 - "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
 - "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts
+- "benders/*" new submenu for Benders' decomposition related settings. This includes the settings related to the
+  included Benders' decompositions and the general Benders' decomposition settings.
+- "benders/<decompname>/benderscuts/*" submenu within each included Benders' decomposition to control the Benders'
+  decomposition cuts. The cuts are added to each decomposition separately, so the setting are unique to each
+  decomposition.
 
 deleted and modified parameters:
 - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled

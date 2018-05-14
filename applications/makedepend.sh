@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This scripts generates the dependences for SCIP
+# This scripts generates the dependencies for the SCIP applications
 #
 
 APPLICATIONS=(Coloring CycleClustering MinIISC PolySCIP Ringpacking Scheduler STP)

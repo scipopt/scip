@@ -2113,7 +2113,7 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolZerohalf)
    assert(sepadata != NULL);
 
    assert(sepadata->randnumgen == NULL);
-   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, (unsigned int)sepadata->initseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, (unsigned int)sepadata->initseed, TRUE) );
 
    return SCIP_OKAY;
 }

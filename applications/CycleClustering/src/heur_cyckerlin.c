@@ -645,7 +645,7 @@ SCIP_RETCODE runCyckerlin(
    nbins = SCIPcycGetNBins(scip);
    ncluster = SCIPcycGetNCluster(scip);
    cmatrix = SCIPcycGetCmatrix(scip);
-   SCIP_CALL( SCIPcreateRandom(scip, &rnd, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &rnd, DEFAULT_RANDSEED, TRUE) );
 
    assert(nbins >= 0);
    assert(ncluster >= 0);

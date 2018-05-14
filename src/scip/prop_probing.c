@@ -752,7 +752,7 @@ SCIP_DECL_PROPINIT(propInitProbing)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
-      DEFAULT_RANDSEED) );
+      DEFAULT_RANDSEED, TRUE) );
 
 
    return SCIP_OKAY;

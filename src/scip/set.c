@@ -53,6 +53,7 @@
 #include "scip/sepa.h"
 #include "scip/table.h"
 #include "scip/prop.h"
+#include "scip/benders.h"
 #include "nlpi/nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
@@ -167,6 +168,7 @@
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
 #define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
 #define SCIP_DEFAULT_DISP_ALLVIOLS        FALSE /**< display all violations of the best solution after the solving process finished? */
+#define SCIP_DEFAULT_DISP_RELEVANTSTATS    TRUE /**< should the relevant statistics be displayed at the end of solving? */
 
 /* History */
 
@@ -240,6 +242,7 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     3 /**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
 #define SCIP_DEFAULT_LP_REFACTORINTERVAL      0 /**< LP refactorization interval (0: automatic) */
+#define SCIP_DEFAULT_LP_ALWAYSGETDUALS    FALSE /**< should the dual solution always be collected */
 
 /* NLP */
 
@@ -280,7 +283,7 @@
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
 #define SCIP_DEFAULT_MISC_USESYMMETRY         2 /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
-
+#define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 #ifdef WITH_DEBUG_SOLUTION
 #define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
@@ -328,6 +331,11 @@
                                                  *   in case they are not present in the LP anymore? */
 #define SCIP_DEFAULT_PRICE_DELVARSROOT    FALSE /**< should variables created at the root node be deleted when the root is solved
                                                  *   in case they are not present in the LP anymore? */
+
+/* Benders' decomposition */
+#define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
+#define SCIP_DEFAULT_BENDERS_CUTLPSOL      TRUE /**< should Benders' cuts be generated from the LP solution? */
+#define SCIP_DEFAULT_BENDERS_COPYBENDERS   TRUE /**< should Benders' decomposition be copied for sub-SCIPs? */
 
 /* Reoptimization */
 
@@ -1014,6 +1022,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    return SCIP_OKAY;
 }
 
+
 /** copies parameters from sourcescip to targetscip */
 SCIP_RETCODE SCIPsetCopyParams(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
@@ -1071,6 +1080,12 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrssize = 0;
    (*set)->conflicthdlrssorted = FALSE;
    (*set)->conflicthdlrsnamesorted = FALSE;
+   (*set)->benders = NULL;
+   (*set)->nbenders = 0;
+   (*set)->nactivebenders = 0;
+   (*set)->benderssize = 0;
+   (*set)->benderssorted = FALSE;
+   (*set)->bendersnamesorted = FALSE;
 
    (*set)->debugsoldata = NULL;
    SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) ); /*lint !e506 !e774*/
@@ -1485,6 +1500,11 @@ SCIP_RETCODE SCIPsetCreate(
          "display all violations for a given start solution / the best solution after the solving process?",
          &(*set)->disp_allviols, FALSE, SCIP_DEFAULT_DISP_ALLVIOLS,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "display/relevantstats",
+         "should the relevant statistics be displayed at the end of solving?",
+         &(*set)->disp_relevantstats, FALSE, SCIP_DEFAULT_DISP_RELEVANTSTATS,
+         NULL, NULL) );
 
    /* history parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1754,6 +1774,11 @@ SCIP_RETCODE SCIPsetCreate(
          "LP refactorization interval (0: auto)",
          &(*set)->lp_refactorinterval, TRUE, SCIP_DEFAULT_LP_REFACTORINTERVAL, 0, INT_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "lp/alwaysgetduals",
+         "should the Farkas duals always be collected when an LP is found to be infeasible?",
+         &(*set)->lp_alwaysgetduals, FALSE, SCIP_DEFAULT_LP_ALWAYSGETDUALS,
+         NULL, NULL) );
 
    /* NLP parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
@@ -1890,6 +1915,11 @@ SCIP_RETCODE SCIPsetCreate(
             "misc/allowobjprop",
             "should propagation to the current objective be allowed in propagation methods?",
             &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/scaleobj",
+            "should the objective function be scaled so that it is always integer?",
+            &(*set)->misc_scaleobj, FALSE, SCIP_DEFAULT_MISC_SCALEOBJ,
             NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2091,6 +2121,23 @@ SCIP_RETCODE SCIPsetCreate(
          "pricing/delvarsroot",
          "should variables created at the root node be deleted when the root is solved in case they are not present in the LP anymore?",
          &(*set)->price_delvarsroot, FALSE, SCIP_DEFAULT_PRICE_DELVARSROOT,
+         NULL, NULL) );
+
+   /* Benders' decomposition parameters */
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "benders/solutiontol",
+         "the tolerance used for checking optimality in Benders' decomposition. tol where optimality is given by LB + tol > UB.",
+         &(*set)->benders_soltol, FALSE, SCIP_DEFAULT_BENDERS_SOLTOL, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "benders/cutlpsol",
+         "should Benders' cuts be generated from the solution to the LP relaxation?",
+         &(*set)->benders_cutlpsol, FALSE, SCIP_DEFAULT_BENDERS_CUTLPSOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "benders/copybenders",
+         "should Benders' decomposition be copied for use in sub-SCIPs?",
+         &(*set)->benders_copybenders, FALSE, SCIP_DEFAULT_BENDERS_COPYBENDERS,
          NULL, NULL) );
 
    /* propagation parameters */
@@ -2587,6 +2634,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPpricerFree(&(*set)->pricers[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->pricers);
+
+   /* free Benders' decomposition */
+   for( i = 0; i < (*set)->nbenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersFree(&(*set)->benders[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->benders);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
@@ -3543,6 +3597,79 @@ void SCIPsetSortPricersName(
       SCIPsortPtr((void**)set->pricers, SCIPpricerCompName, set->npricers);
       set->pricerssorted = FALSE;
       set->pricersnamesorted = TRUE;
+   }
+}
+
+/** inserts variable benders in variable benders list */
+SCIP_RETCODE SCIPsetIncludeBenders(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition structure */
+   )
+{
+   assert(set != NULL);
+   assert(benders != NULL);
+
+   if( set->nbenders >= set->benderssize )
+   {
+      set->benderssize = SCIPsetCalcMemGrowSize(set, set->nbenders+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->benders, set->benderssize) );
+   }
+   assert(set->nbenders < set->benderssize);
+
+   set->benders[set->nbenders] = benders;
+   set->nbenders++;
+   set->benderssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the variable benders of the given name, or NULL if not existing */
+SCIP_BENDERS* SCIPsetFindBenders(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of the Benders' decomposition */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nbenders; ++i )
+   {
+      if( strcmp(SCIPbendersGetName(set->benders[i]), name) == 0 )
+         return set->benders[i];
+   }
+
+   return NULL;
+}
+
+/** sorts benders by priorities */
+void SCIPsetSortBenders(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->benderssorted )
+   {
+      SCIPsortPtr((void**)set->benders, SCIPbendersComp, set->nbenders);
+      set->benderssorted = TRUE;
+      set->bendersnamesorted = FALSE;
+   }
+}
+
+/** sorts benders by name */
+void SCIPsetSortBendersName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->bendersnamesorted )
+   {
+      SCIPsortPtr((void**)set->benders, SCIPbendersCompName, set->nbenders);
+      set->benderssorted = FALSE;
+      set->bendersnamesorted = TRUE;
    }
 }
 
@@ -4841,6 +4968,13 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPpricerInit(set->pricers[i], set) );
    }
 
+   /* Benders' decomposition algorithm */
+   SCIPsetSortBenders(set);
+   for( i = 0; i < set->nactivebenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersInit(set->benders[i], set) );
+   }
+
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
@@ -4941,6 +5075,13 @@ SCIP_RETCODE SCIPsetExitPlugins(
       SCIP_CALL( SCIPpricerExit(set->pricers[i], set) );
    }
 
+   /* Benders' decomposition */
+   SCIPsetSortBenders(set);
+   for( i = 0; i < set->nactivebenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersExit(set->benders[i], set) );
+   }
+
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
@@ -5033,22 +5174,28 @@ SCIP_RETCODE SCIPsetInitprePlugins(
 
    assert(set != NULL);
 
-   /* inform presolvers that the presolving is abound to begin */
+   /* inform presolvers that the presolving is about to begin */
    for( i = 0; i < set->npresols; ++i )
    {
       SCIP_CALL( SCIPpresolInitpre(set->presols[i], set) );
    }
 
-   /* inform propagators that the presolving is abound to begin */
+   /* inform propagators that the presolving is about to begin */
    for( i = 0; i < set->nprops; ++i )
    {
       SCIP_CALL( SCIPpropInitpre(set->props[i], set) );
    }
 
-   /* inform constraint handlers that the presolving is abound to begin */
+   /* inform constraint handlers that the presolving is about to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
       SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat) );
+   }
+
+   /* inform Benders' decomposition that the presolving is about to begin */
+   for( i = 0; i < set->nactivebenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersInitpre(set->benders[i], set, stat) );
    }
 
    return SCIP_OKAY;
@@ -5065,22 +5212,28 @@ SCIP_RETCODE SCIPsetExitprePlugins(
 
    assert(set != NULL);
 
-   /* inform presolvers that the presolving is abound to begin */
+   /* inform presolvers that the presolving is about to end */
    for( i = 0; i < set->npresols; ++i )
    {
       SCIP_CALL( SCIPpresolExitpre(set->presols[i], set) );
    }
 
-   /* inform propagators that the presolving is abound to begin */
+   /* inform propagators that the presolving is about to end */
    for( i = 0; i < set->nprops; ++i )
    {
       SCIP_CALL( SCIPpropExitpre(set->props[i], set) );
    }
 
-   /* inform constraint handlers that the presolving is abound to begin */
+   /* inform constraint handlers that the presolving is about to end */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
       SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat) );
+   }
+
+   /* inform Benders' decomposition that the presolving is about to end */
+   for( i = 0; i < set->nactivebenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersExitpre(set->benders[i], set, stat) );
    }
 
    return SCIP_OKAY;
@@ -5111,6 +5264,13 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
    for( i = 0; i < set->nactivepricers; ++i )
    {
       SCIP_CALL( SCIPpricerInitsol(set->pricers[i], set) );
+   }
+
+   /* Benders' decomposition */
+   SCIPsetSortBenders(set);
+   for( i = 0; i < set->nactivebenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersInitsol(set->benders[i], set) );
    }
 
    /* constraint handlers */
@@ -5199,6 +5359,13 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nactivepricers; ++i )
    {
       SCIP_CALL( SCIPpricerExitsol(set->pricers[i], set) );
+   }
+
+   /* Benders' decomposition */
+   SCIPsetSortBenders(set);
+   for( i = 0; i < set->nactivebenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersExitsol(set->benders[i], set) );
    }
 
    /* constraint handlers */
