@@ -5645,10 +5645,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /* 0 <= dval <= 1 */
-      if (dval < 0)
-         dval = 0;
-      else if (dval > 1)
-         dval = 1;
+      if (dval < 0.0)
+         dval = 0.0;
+      else if (dval > 1.0)
+         dval = 1.0;
 
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_BARCONVTOL, dval) );
       break;
@@ -5659,8 +5659,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       /* 0 <= dval */
-      if (dval < 0)
-         dval = 0;
+      if (dval < 0.0)
+         dval = 0.0;
 
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
       break;

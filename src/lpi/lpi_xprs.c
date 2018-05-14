@@ -3645,11 +3645,13 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
      int ival;
 
-     /* dval>0   If an integer solution has been found, stop MIP search after dval seconds, otherwise continue until an integer solution is finally found. */
-     /* dval<0   Stop in LP or MIP search after dval seconds. */
-     /* if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
+     /* dval>0   If an integer solution has been found, stop MIP search after dval seconds, otherwise continue until an integer solution is finally found.
+      * dval<0   Stop in LP or MIP search after dval seconds.
+      * if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
      if (dval >= INT_MAX)
-       ival = 0;
+       ival = 0.0;
+     else if (dval < 0.0)
+        dval = 0.0;
      else
        ival = (int) floor(dval);
 

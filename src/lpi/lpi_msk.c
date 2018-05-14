@@ -5000,7 +5000,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
       /* 1e-9 <= dval <= inf */
       if (dval < 1e-9)
-      /*   return SCIP_PARAMETERUNKNOWN;*/
          dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_S, dval) );
@@ -5029,10 +5028,12 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
-      /* no restriction on dval */
+      /* 0 <= dval */
+      if (dval < 0.0)
+         dval = 0.0;
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
-   /* case SCIP_LPPAR_MARKOWITZ: */                /* Markowitz tolerance */
+   case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

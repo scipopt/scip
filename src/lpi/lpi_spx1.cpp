@@ -5302,15 +5302,16 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       /* 0 < dval */
-      if (dval < 0)
-         dval = 0;
+      if (dval < 0.0)
+         dval = 0.0;
       lpi->spx->setFeastol(dval);
       break;
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       /* 0 < dval */
-      if (dval < 0)
-         dval = 0;
+      if (dval < 0.0)
+         dval = 0.0;
+
       lpi->spx->setOpttol(dval);
       break;
 #endif
@@ -5321,9 +5322,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
          lpi->spx->setObjLoLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      /* 0 < dval */
-      /* if (dval < 0)
-         dval = infinity; */
+      /* 0 <= dval */
+      if (dval < 0.0)
+         dval = 0.0;
       lpi->spx->setTerminationTime(dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:

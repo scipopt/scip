@@ -3784,7 +3784,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      /* dval >= 0 (if not, set to -1) */
+      /* no information on restrictions on dval */
+      if (dval < 0.0)
+         dval = 0.0;
+
       lpi->clp->setMaximumSeconds(dval);
       break;
    default:

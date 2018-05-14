@@ -4543,6 +4543,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       /* dval non-negative */
+      if (dval < 0.0)
+         dval = 0.0;
+
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;
    case SCIP_LPPAR_MARKOWITZ:

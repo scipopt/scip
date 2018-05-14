@@ -4368,14 +4368,20 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       /* 0 < dval */
-      if (dval < 0)
-         dval = 0;
+      if (dval < 0.0)
+      {
+         /* however, strictly positive values are required */
+         dval = 0.0;
+      }
       lpi->spx->setFeastol(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       /* 0 < dval */
-      if (dval < 0)
-         dval = 0;
+      if (dval < 0.0)
+      {
+         /* however, strictly positive values are required */
+         dval = 0.0;
+      }
       lpi->spx->setOpttol(dval);
       break;
    case SCIP_LPPAR_OBJLIM:
@@ -4387,6 +4393,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       /* 0 < dval < DEFAULT_INFINITY (= 1e100) */
+      if (dval < 0.0)
+         dval = 0.0;
       (void) lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
