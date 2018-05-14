@@ -25,17 +25,22 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "scip/scipdefplugins.h"
 #include "scip/reader_cor.h"
 #include "scip/reader_tim.h"
 #include "scip/reader_sto.h"
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_benders.h"
+#include "scip/benders_default.h"
 
 #define READER_NAME             "storeader"
 #define READER_DESC             "file reader for stochastic information of stochastic programs in the SMPS file format"
 #define READER_EXTENSION        "sto"
 
 #define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
+#define BENDERSBRANCH
+
 /*
  * sto reader internal methods
  */
@@ -2366,8 +2371,8 @@ SCIP_RETCODE buildDecompProblem(
    /* activating the Benders' constraint handler. The two-phase method is activated by default. If the user desires not
     * to use the two-phase method, then the setting in cons_benderslp must be explicitly changed.
     */
-   SCIP_CALL( SCIPsetBoolParam(scenarioscip, "constraints/benders/active", TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(scenarioscip, "constraints/benderslp/active", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benders/active", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benderslp/active", TRUE) );
 
    setScenarioScip(readerdata->scenariotree, scip);
 

@@ -60,6 +60,9 @@ struct SCIP_Benderscut
    int                   addedcutssize;      /**< the size of the added cuts array */
    int                   naddedconss;        /**< the number of the added constraint */
    int                   naddedcuts;         /**< the number of the added cuts */
+
+   /* additional Benders' decomposition cuts parameters */
+   SCIP_Bool             enabled;            /**< is this Benders' decomposition cut enabled? */
 };
 
 #ifdef __cplusplus

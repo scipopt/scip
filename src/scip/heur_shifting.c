@@ -581,7 +581,7 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    SCIPheurSetData(heur, heurdata);
 

@@ -114,7 +114,7 @@ SCIP_RETCODE runCircle(void)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed, TRUE) );
 
    SCIP_CALL( setupProblem(scip, randnumgen) );
 

@@ -126,6 +126,15 @@ SCIP_Bool SCIPbendersIsActive(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
    );
 
+/** returns whether only the convex relaxations will be checked in this solve loop
+ *  when Benders' is used in the LNS heuristics, only the convex relaxations of the master/subproblems are checked,
+ *  i.e. no integer cuts are generated. In this case, then Benders' decomposition is performed under the assumption
+ *  that all subproblems are convex relaxations.
+ */
+SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** are Benders' cuts generated from the LP solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutLP(
@@ -244,18 +253,33 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
 /** solves the Benders' decomposition subproblem. */
 EXTERN
-SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
+SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvecip            /**< directly solve the CIP subproblem */
    );
 
 /** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */
 EXTERN
 int SCIPbendersGetNTransferredCuts(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition data structure */
+   );
+
+/** updates the lower bound for the subproblem. If the lower bound is not greater than the previously stored lowerbound,
+ * then no update occurs.
+ */
+void SCIPbendersUpdateSubprobLowerbound(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Real             lowerbound          /**< the lower bound */
+   );
+
+/** returns the stored lower bound for the given subproblem */
+SCIP_Real SCIPbendersGetSubprobLowerbound(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
    );
 
 /* @} */

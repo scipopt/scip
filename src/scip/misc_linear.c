@@ -27,6 +27,7 @@
 #include "scip/def.h"
 #include "scip/scip.h"
 #include "scip/pub_misc_linear.h"
+#include "scip/cons_setppc.h"
 #include "scip/scipdefplugins.h"
 
 
@@ -245,8 +246,6 @@ SCIP_RETCODE SCIPgetConsVals(
    }
    else if( strcmp(conshdlrname, "varbound") == 0 )
    {
-      SCIP_Real vbdcoef;
-
       assert(nvars == 2);
 
       vals[0] = 1.0;

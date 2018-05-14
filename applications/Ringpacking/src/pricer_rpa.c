@@ -771,7 +771,7 @@ SCIP_DECL_PRICERINIT(pricerInitRingpacking)
    assert(pricerdata->randnumgen == NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &pricerdata->randnumgen, 0) );
+   SCIP_CALL( SCIPcreateRandom(scip, &pricerdata->randnumgen, 0, TRUE) );
 
    return SCIP_OKAY;
 }

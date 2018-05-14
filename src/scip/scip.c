@@ -1638,6 +1638,7 @@ SCIP_RETCODE SCIPcopyPlugins(
  *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_FREE
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
  *        process was interrupted:
@@ -1668,8 +1669,8 @@ SCIP_RETCODE SCIPcopyBenders(
    assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyBenders", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyBenders", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    *valid = TRUE;
 
@@ -5924,9 +5925,7 @@ SCIP_RETCODE SCIPincludeBenders(
    {
       SCIPerrorMessage("Benders' decomposition <%s> requires that if bendersFreesub%s is "
          "implemented at least one of bendersSolvesubconvex%s or bendersSolvesub%s are implemented, "
-         "or if bendersFreesub%s is not implemented, then none are implented.\n", SCIPbendersGetName(benders),
-         SCIPbendersGetName(benders), SCIPbendersGetName(benders), SCIPbendersGetName(benders),
-         SCIPbendersGetName(benders));
+         "or if bendersFreesub%s is not implemented, then none are implented.\n", name, name, name, name, name);
       return SCIP_INVALIDCALL;
    }
 
@@ -6519,7 +6518,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip,           /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    )
 {
@@ -6528,7 +6527,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvemip, objective) );
+   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvecip, objective) );
 
    return SCIP_OKAY;
 }
@@ -6593,10 +6592,6 @@ SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
 /** returns the value of the auxiliary variable for a given subproblem
  *
  *  @return the value of the auxiliary variable for the given subproblem
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6608,9 +6603,6 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    assert(scip != NULL);
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
-
-   /* check stages for SCIP */
-   SCIP_CALL( checkStage(scip, "SCIPgetBendersAuxiliaryVarVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPbendersGetAuxiliaryVarVal(benders, scip->set, sol, probnumber);
 }
@@ -11785,7 +11777,7 @@ SCIP_RETCODE SCIPpermuteProb(
    assert(nconshdlrs == 0 || conshdlrs != NULL);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed, TRUE) );
 
    /* The constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
     * that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
@@ -16828,7 +16820,7 @@ SCIP_RETCODE displayRelevantStats(
    assert(scip != NULL);
 
    /* display most relevant statistics */
-   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
+   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL && scip->set->disp_relevantstats )
    {
       SCIP_Bool objlimitreached = FALSE;
 
@@ -17708,7 +17700,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
        */
       SCIPselectDownRealInt(prios, solvertypes, nthreads, ncandsolvertypes);
 
-      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, (unsigned) scip->set->concurrent_initseed) );
+      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, (unsigned) scip->set->concurrent_initseed, TRUE) );
       for( i = 0; i < nthreads; ++i )
       {
          SCIP_CONCSOLVER* concsolver;
@@ -31519,13 +31511,14 @@ SCIP_Real SCIPgetColRedcost(
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetColFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
@@ -49941,7 +49934,8 @@ SCIP_RETCODE SCIPcopyDigraph(
 SCIP_RETCODE SCIPcreateRandom(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   unsigned int          initialseed         /**< initial random seed */
+   unsigned int          initialseed,        /**< initial random seed */
+   SCIP_Bool             useglobalseed       /**< should SCIP's global seed be used to initialise the supplied seed? */
    )
 {
    unsigned int modifiedseed;
@@ -49949,7 +49943,10 @@ SCIP_RETCODE SCIPcreateRandom(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+   if( useglobalseed )
+      modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+   else
+      modifiedseed = initialseed;
 
    SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
 

@@ -30,6 +30,7 @@
  *  - scip            : SCIP main data structure
  */
 #define SCIP_DECL_OBJCLONEABLECLONE(x) x (SCIP* scip) const
+#define SCIP_DECL_BENDERSCUTCLONE(x) x (SCIP* scip) const
 #define SCIP_DECL_BRANCHCLONE(x) x (SCIP* scip) const
 #define SCIP_DECL_DIALOGCLONE(x) x (SCIP* scip) const
 #define SCIP_DECL_DISPCLONE(x) x (SCIP* scip) const
@@ -48,6 +49,7 @@
  *  return value      : whether object is copyable
  */
 #define SCIP_DECL_OBJCLONEABLEISCLONEABLE(x) SCIP_Bool x (void) const
+#define SCIP_DECL_BENDERSCUTISCLONEABLE(x) SCIP_Bool x (void) const
 #define SCIP_DECL_BRANCHISCLONEABLE(x) SCIP_Bool x (void) const
 #define SCIP_DECL_DIALOGISCLONEABLE(x) SCIP_Bool x (void) const
 #define SCIP_DECL_DISPISCLONEABLE(x) SCIP_Bool x (void) const

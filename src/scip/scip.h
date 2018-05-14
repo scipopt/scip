@@ -3115,7 +3115,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_Bool             solvemip,           /**< directly solve the MIP subproblem */
+   SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
 
@@ -24025,7 +24025,8 @@ EXTERN
 SCIP_RETCODE SCIPcreateRandom(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   unsigned int          initialseed         /**< initial random seed */
+   unsigned int          initialseed,        /**< initial random seed */
+   SCIP_Bool             useglobalseed       /**< should SCIP's global seed be used to initialise the supplied seed? */
    );
 
 /** frees a random number generator */

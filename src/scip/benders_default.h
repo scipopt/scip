@@ -15,7 +15,7 @@
 
 /**@file   benders_default.h
  * @ingroup BENDERS
- * @brief  default Benders' decomposition
+ * @brief  default Benders' decomposition plugin
  * @author Stephen J. Maher
  */
 

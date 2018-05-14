@@ -264,6 +264,7 @@ struct SCIP_Set
    int                   disp_headerfreq;    /**< frequency for displaying header lines (every n'th node information line) */
    SCIP_Bool             disp_lpinfo;        /**< should the LP solver display status messages? */
    SCIP_Bool             disp_allviols;      /**< display all violations of the best solution after the solving process finished? */
+   SCIP_Bool             disp_relevantstats; /**< should the relevant statistics be displayed at the end of solving? */
 
    /* history settings */
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
@@ -337,6 +338,7 @@ struct SCIP_Set
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
    int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
    int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
+   SCIP_Bool             lp_alwaysgetduals;  /**< should the dual solution always be collected for LP solutions. */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
@@ -375,7 +377,6 @@ struct SCIP_Set
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
    int                   misc_usesymmetry;   /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
    char*                 misc_debugsol;      /**< path to a debug solution */
-   SCIP_Bool             misc_alwaysgetduals;/**< should the dual solution always be collected for LP solutions. */
    SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
 
    /* randomization parameters */
