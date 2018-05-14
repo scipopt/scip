@@ -74,6 +74,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBenderscutPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given Benders' decomposition cut to a new scip */
 SCIP_RETCODE SCIPbenderscutCopyInclude(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition that the cuts are copied to */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
@@ -337,6 +338,7 @@ SCIP_RETCODE SCIPbenderscutExitsol(
 
    return SCIP_OKAY;
 }
+
 /** calls execution method of the Benders' decomposition cut */
 SCIP_RETCODE SCIPbenderscutExec(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
