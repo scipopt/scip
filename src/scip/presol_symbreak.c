@@ -1418,48 +1418,48 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    *norbits = 0;
    for (i = 0; i < npermvars; ++i)
    {
-      /* if variable is not contained in an orbit of a previous variable */
-      if ( ! varadded[i] )
+      int beginorbitidx;
+      int j;
+
+      /* skip variable already contained in an orbit of a previous variable */
+      if ( varadded[i] )
+         continue;
+
+      /* store first variable */
+      beginorbitidx = orbitidx;
+      orbits[orbitidx++] = i;
+      varadded[i] = TRUE;
+
+      /* iterate over variables in curorbit and compute their images */
+      j = beginorbitidx;
+      while ( j < orbitidx )
       {
-         int beginorbitidx;
-         int j;
+         int curelem;
+         int image;
+         int p;
 
-         /* store first variable */
-         beginorbitidx = orbitidx;
-         orbits[orbitidx++] = i;
-         varadded[i] = TRUE;
+         curelem = orbits[j];
 
-         /* iterate over variables in curorbit and compute their images */
-         j = beginorbitidx;
-         while ( j < orbitidx )
+         for (p = 0; p < nperms; ++p)
          {
-            int curelem;
-            int image;
-            int p;
+            image = perms[p][curelem];
 
-            curelem = orbits[j];
-
-            for (p = 0; p < nperms; ++p)
+            /* found new element of the orbit of i */
+            if ( ! varadded[image] )
             {
-               image = perms[p][curelem];
-
-               /* found new element of the orbit of i */
-               if ( ! varadded[image] )
-               {
-                  orbits[orbitidx++] = image;
-                  assert( orbitidx <= npermvars );
-                  varadded[image] = TRUE;
-               }
+               orbits[orbitidx++] = image;
+               assert( orbitidx <= npermvars );
+               varadded[image] = TRUE;
             }
-            ++j;
          }
-
-         /* if the orbit is trivial, reset storage, otherwise store orbit */
-         if ( orbitidx <= beginorbitidx + 1 )
-            orbitidx = beginorbitidx;
-         else
-            orbitbegins[(*norbits)++] = beginorbitidx;
+         ++j;
       }
+
+      /* if the orbit is trivial, reset storage, otherwise store orbit */
+      if ( orbitidx <= beginorbitidx + 1 )
+         orbitidx = beginorbitidx;
+      else
+         orbitbegins[(*norbits)++] = beginorbitidx;
    }
 
    /* store end in "last" orbitbegins entry */
