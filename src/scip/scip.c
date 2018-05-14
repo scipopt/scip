@@ -6416,7 +6416,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    assert(scip->set != NULL);
    assert(benders != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPsolveBendersSubproblems", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsolveBendersSubproblems", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersExec(benders, scip->set, sol, result, infeasible, auxviol, type, checkint) );
 
@@ -6452,7 +6452,7 @@ SCIP_RETCODE SCIPgetBendersMasterVar(
    assert(var != NULL);
    assert(mappedvar != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetBendersMasterVar", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetBendersMasterVar", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersGetVar(benders, scip->set, var, mappedvar, -1) );
 
@@ -6490,7 +6490,7 @@ SCIP_RETCODE SCIPgetBendersSubproblemVar(
    assert(mappedvar != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( checkStage(scip, "SCIPgetBendersSubproblemVar", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetBendersSubproblemVar", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersGetVar(benders, scip->set, var, mappedvar, probnumber) );
 
@@ -6566,7 +6566,7 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( checkStage(scip, "SCIPsetupBendersSubproblem", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetupBendersSubproblem", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersSetupSubproblem(benders, scip->set, sol, probnumber) );
 
@@ -6606,7 +6606,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( checkStage(scip, "SCIPsolveBendersSubproblem", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsolveBendersSubproblem", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvecip, objective) );
 
@@ -7015,7 +7015,7 @@ SCIP_RETCODE SCIPstoreBenderscutCons(
    assert(benderscut != NULL);
    assert(cons != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPstoreBenderscutCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPstoreBenderscutCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbenderscutStoreCons(benderscut, scip->set, cons) );
 
@@ -7048,7 +7048,7 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    assert(benderscut != NULL);
    assert(cut != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPstoreBenderscutCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPstoreBenderscutCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, cut) );
 
