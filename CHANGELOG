@@ -32,6 +32,8 @@ deleted and modified API functions:
 - the seed of SCIPinitializeRandomSeed() is now an unsigned int
 - the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
 - added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
+- new parameter for SCIPcreateRandom() to specify whether the global random seed should be used in the creation of the
+  random number generator.
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
