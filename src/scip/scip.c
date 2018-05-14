@@ -6497,14 +6497,6 @@ SCIP_RETCODE SCIPgetBendersSubproblemVar(
 /** returns the number of subproblems that are stored in the given Benders' decomposition
  *
  *  @return the number of subproblems in the Benders' decomposition
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
  */
 int SCIPgetBendersNSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6513,8 +6505,6 @@ int SCIPgetBendersNSubproblems(
 {
    assert(scip != NULL);
    assert(benders != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPgetBendersNSubproblems", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIPbendersGetNSubproblems(benders);
 }
