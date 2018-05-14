@@ -8,6 +8,8 @@ performance improvements:
     - new default parameter settings for bandit selection parameters
     - no adjustment of minimum improvement by default
 - improved bound tightening for some quadratic equations
+- constraint handler checking order for original solutions has been modified to check those with negative check priority
+  that don't need constraints after all other constraint handlers and constraints have been checked
 
 features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
