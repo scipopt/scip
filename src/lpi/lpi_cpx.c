@@ -4544,6 +4544,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_LPTILIM:
       /* dval non-negative */
       if (dval < 0.0)
+         /* what to do here? */
          dval = 0.0;
 
       setDblParam(lpi, CPX_PARAM_TILIM, dval);

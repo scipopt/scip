@@ -3767,12 +3767,14 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_FEASTOL:
       /* 0 < dval < 1e10 */
       if (dval > 1e+10)
+         /* however dval is required to be strictly less than 1e+10 */
          dval = 1e+10;
       lpi->clp->setPrimalTolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       /* 0 < dval < 1e10 */
       if (dval > 1e+10)
+         /* however dval is required to be strictly less than 1e+10 */
          dval = 1e+10;
       lpi->clp->setDualTolerance(dval);
       break;
@@ -3784,10 +3786,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      /* no information on restrictions on dval */
       if (dval < 0.0)
          dval = 0.0;
 
+      /* no restrictions on dval (clp handles the case dval < 0 internally and sets param to -1.) */
       lpi->clp->setMaximumSeconds(dval);
       break;
    default:

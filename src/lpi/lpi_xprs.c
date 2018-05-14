@@ -3630,7 +3630,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      /* no restriction on dval */
+      /* no restriction on dval, its absolute value is used as tolerance */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
@@ -3647,11 +3647,12 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 
      /* dval>0   If an integer solution has been found, stop MIP search after dval seconds, otherwise continue until an integer solution is finally found.
       * dval<0   Stop in LP or MIP search after dval seconds.
+      * dval=0   No time limit
       * if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
      if (dval >= INT_MAX)
        ival = 0.0;
      else if (dval < 0.0)
-        dval = 0.0;
+       dval = 0.0;
      else
        ival = (int) floor(dval);
 
