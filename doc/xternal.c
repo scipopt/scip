@@ -7940,6 +7940,11 @@
  *  between nodes of a graph. Disjoint Set is also known as Union Find.
  */
 
+/**@defgroup PublicDynamicArrayMethods Dynamic Arrays
+ * @ingroup DataStructures
+ * @brief methods for the creation and access of dynamic arrays
+ */
+
 /**@defgroup DirectedGraph Directed Graph
  * @ingroup DataStructures
  * @brief graph structure with common algorithms for directed and undirected graphs
@@ -7950,6 +7955,11 @@
  * @brief commonly used methods from different categories
  *
  * Below you find a list of miscellaneous methods grouped by different categories
+ */
+
+/**@defgroup PublicValidationMethods Validation
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods for validating the correctness of a solving process
  */
 
 /**@defgroup PublicMemoryMethods Memory Management

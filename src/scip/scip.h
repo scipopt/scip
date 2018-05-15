@@ -23675,9 +23675,7 @@ void SCIPprintMemoryDiagnostic(
  * dynamic arrays
  */
 
-/**@defgroup PublicDynamicArrayMethods Dynamic Arrays
- * @ingroup DataStructures
- * @brief methods for the creation and access of dynamic arrays
+/**@addtogroup PublicDynamicArrayMethods
  *
  * @{
  */
@@ -24114,9 +24112,7 @@ SCIP_RETCODE SCIPcopyDigraph(
 
 /**@} */
 
-/**@defgroup PublicValidationMethods Validation
- * @ingroup PUBLICCOREAPI
- * @brief  methods for validating the correctness of a solving process
+/**@addtogroup PublicValidationMethods
  *
  * @{
  */
