@@ -48,7 +48,7 @@ enum SCIP_LPParam
    SCIP_LPPAR_DUALFEASTOL    =  7,      /**< feasibility tolerance for dual variables and reduced costs, strictly positive */
    SCIP_LPPAR_BARRIERCONVTOL =  8,      /**< convergence tolerance used in barrier algorithm */
    SCIP_LPPAR_OBJLIM         =  9,      /**< objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
-   SCIP_LPPAR_LPITLIM        = 10,      /**< LP iteration limit */
+   SCIP_LPPAR_LPITLIM        = 10,      /**< LP iteration limit, greater than or equal -1 */
    SCIP_LPPAR_LPTILIM        = 11,      /**< LP time limit, non-negative */
    SCIP_LPPAR_MARKOWITZ      = 12,      /**< Markowitz tolerance */
    SCIP_LPPAR_ROWREPSWITCH   = 13,      /**< simplex algorithm shall use row representation of the basis

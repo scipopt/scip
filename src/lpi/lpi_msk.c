@@ -4754,6 +4754,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->lpinfo;
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
+      /* 0 <= ival */
+      assert( ival >= -1 );
+      if( ival == -1 )
+         ival = 0;
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads */
@@ -4902,7 +4906,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 #endif
 
       /* 0 <= ival */
-      assert(ival >= 0);
+      assert( ival >= 0 );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads (0 => MOSEK chooses) */
@@ -4993,7 +4997,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
       assert( dval > 0 );
       /* 1e-9 <= dval <= inf */
-      if (dval < 1e-9)
+      if( dval < 1e-9 )
          dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
@@ -5001,14 +5005,14 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
       assert( dval > 0 );
       /* 1e-9 <= dval <= inf */
-      if (dval < 1e-9)
+      if( dval < 1e-9 )
          dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_S, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
       /* 1e-14 <= dval <= inf */
-      if (dval < 1e-14)
+      if( dval < 1e-14 )
          dval = 1e-14;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );

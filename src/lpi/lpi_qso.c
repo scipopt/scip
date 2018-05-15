@@ -3535,10 +3535,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
-      /* ival > 0 */
-      if(ival < 0)
+      /* The maximum number of pivots allowed in the algorithm can be set with the QS_PARAM_SIMPLEX_MAX_ITERATIONS parameter.
+       * ival any positive integer */
+      assert( ival >= -10 );
+      if( ival == -1 )
          ival = 0;
-
       QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival) );
       break;
    default:

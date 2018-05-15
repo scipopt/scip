@@ -5178,7 +5178,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setLpInfo(bool(ival));
       break;
    case SCIP_LPPAR_LPITLIM:
-      assert(ival >= -1);
+      assert( ival >= -1 );
+      /* -1 <= ival */
       lpi->spx->setIterationLimit(ival);
       break;
    case SCIP_LPPAR_PRESOLVING:

@@ -3696,6 +3696,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          lpi->clp->setLogLevel(0);
       break;
    case SCIP_LPPAR_LPITLIM:
+      assert( ival >= -1 );
+      /* ival >= 0 */
+      if( ival == -1 )
+         ival = 0;
       lpi->clp->setMaximumIterations(ival);
       break;
    case SCIP_LPPAR_FASTMIP:
@@ -3767,7 +3771,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_FEASTOL:
       assert( dval > 0 );
       /* 0 < dval < 1e10 */
-      if (dval > 1e+10)
+      if( dval > 1e+10 )
       {
          /* however dval is required to be strictly less than 1e+10 */
          dval = 9e+9;
@@ -3778,10 +3782,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:
       assert( dval > 0 );
       /* 0 < dval < 1e10 */
-      if (dval > 1e+10)
+      if( dval > 1e+10 )
       {
          /* however dval is required to be strictly less than 1e+10 */
-         dval = 1e+10;
+         dval = 9e+9;
       }
 
       lpi->clp->setDualTolerance(dval);
