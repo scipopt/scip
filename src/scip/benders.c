@@ -19,7 +19,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 //#define SCIP_MOREDEBUG
 #include <assert.h>
 #include <string.h>
@@ -118,7 +118,7 @@ SCIP_RETCODE initsolEventhandler(
    return SCIP_OKAY;
 }
 
-/** the exit method for the event handlers */
+/** the exit sol method for the event handlers */
 static
 SCIP_RETCODE exitsolEventhandler(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -138,6 +138,23 @@ SCIP_RETCODE exitsolEventhandler(
       SCIP_CALL(SCIPdropEvent(scip, eventtype, eventhdlr, NULL, eventhdlrdata->filterpos));
       eventhdlrdata->filterpos = -1;
    }
+
+   return SCIP_OKAY;
+}
+
+/** the exit method for the event handlers */
+static
+SCIP_RETCODE exitEventhandler(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the event handlers data structure */
+   )
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
    /* reinitialise the event handler data */
    SCIP_CALL( initialiseEventhandlerData(scip, eventhdlrdata) );
@@ -221,6 +238,19 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersNodefocus)
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 static
+SCIP_DECL_EVENTEXIT(eventExitBendersNodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( exitEventhandler(scip, eventhdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
 SCIP_DECL_EVENTFREE(eventFreeBendersNodefocus)
 {
    assert(scip != NULL);
@@ -289,6 +319,19 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersMipnodefocus)
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 static
+SCIP_DECL_EVENTEXIT(eventExitBendersMipnodefocus)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( exitEventhandler(scip, eventhdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
 SCIP_DECL_EVENTFREE(eventFreeBendersMipnodefocus)
 {
    assert(scip != NULL);
@@ -349,6 +392,19 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersUpperbound)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
 
    SCIP_CALL( exitsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_BESTSOLFOUND) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
+SCIP_DECL_EVENTEXIT(eventExitBendersUpperbound)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( exitEventhandler(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -1054,6 +1110,7 @@ SCIP_RETCODE initialiseLPSubproblem(
          eventExecBendersNodefocus, eventhdlrdata) );
    SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersNodefocus) );
    SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersNodefocus) );
+   SCIP_CALL( SCIPsetEventhdlrExit(subproblem, eventhdlr, eventExitBendersNodefocus) );
    SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersNodefocus) );
    assert(eventhdlr != NULL);
 
@@ -1143,6 +1200,7 @@ SCIP_RETCODE createSubproblems(
                   MIPNODEFOCUS_EVENTHDLR_DESC, eventExecBendersMipnodefocus, eventhdlrdata_mipnodefocus) );
             SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersMipnodefocus) );
             SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersMipnodefocus) );
+            SCIP_CALL( SCIPsetEventhdlrExit(subproblem, eventhdlr, eventExitBendersMipnodefocus) );
             SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersMipnodefocus) );
             assert(eventhdlr != NULL);
 
@@ -1152,6 +1210,7 @@ SCIP_RETCODE createSubproblems(
                   UPPERBOUND_EVENTHDLR_DESC, eventExecBendersUpperbound, eventhdlrdata_upperbound) );
             SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersUpperbound) );
             SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersUpperbound) );
+            SCIP_CALL( SCIPsetEventhdlrExit(subproblem, eventhdlr, eventExitBendersUpperbound) );
             SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersUpperbound) );
             assert(eventhdlr != NULL);
          }
@@ -1522,6 +1581,8 @@ SCIP_RETCODE computeSubproblemLowerbound(
 
    /* getting the subproblem to evaluate */
    subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Computing the lower bound for subproblem %d\n", probnumber);
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
@@ -2042,6 +2103,7 @@ SCIP_RETCODE solveBendersSubproblems(
          {
             /* NOTE: There is no need to update the optimal flag. This is because optimal is always TRUE until a
              * non-optimal subproblem is found. */
+            SCIPdebugMessage("Benders decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
 
             (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
             (*subprobsolved)[i] = TRUE;
@@ -2526,7 +2588,7 @@ SCIP_RETCODE SCIPbendersExec(
       else
          (*result) = SCIP_INFEASIBLE;
 
-      SCIPerrorMessage("An error was found when generating all cuts for non-optimal subproblems of Benders' "
+      SCIPerrorMessage("An error was found when generating cuts for non-optimal subproblems of Benders' "
          "decomposition <%s>.\n", SCIPbendersGetName(benders));
 
       /* TODO: It may be useful to have a SCIPABORT() here to break if an error is found during debug mode. */
@@ -2580,7 +2642,10 @@ TERMINATE:
             checkint, (*infeasible), &merged) );
 
       if( merged )
+      {
+         SCIP_CALL( SCIPrestartSolve(set->scip) );
          (*result) = SCIP_CONSADDED;
+      }
    }
 
    /* freeing the subproblems after the cuts are generated */
@@ -3452,8 +3517,6 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
          /* adding the variable to the master problem */
          SCIP_CALL( SCIPaddVar(set->scip, mastervar) );
 
-         SCIP_CALL( SCIPcaptureVar(set->scip, mastervar) );
-
          /* adds the variable to the objective function constraint */
          SCIP_CALL( SCIPaddCoefLinear(set->scip, objcons, mastervar, SCIPvarGetObj(origvar)) );
 
@@ -3463,7 +3526,6 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
 
       /* creating the mapping betwen the subproblem var and the master var for the constraint copying */
       SCIP_CALL( SCIPhashmapInsert(localvarmap, vars[i], mastervar) );
-
 
       /* releasing the variable */
       if( releasevar )
@@ -3480,16 +3542,26 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
    for( i = 0; i < nconss; i++ )
    {
       SCIP_CONS* targetcons;
+      SCIP_Bool initial;
       SCIP_Bool valid;
 
+      /* NOTE: adding all subproblem constraints appears to cause an error when resolving the LP, which results in the
+       * current incumbent being reported as optimal. To avoid this, only half of the subproblem constraints are added
+       * the master problem. The remaining half are marked as lazy and are separated as required. */
+      initial = (i < nconss/2);
+
       SCIP_CALL( SCIPgetConsCopy(subproblem, set->scip, conss[i], &targetcons, SCIPconsGetHdlr(conss[i]),
-            localvarmap, localconsmap, NULL, SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]),
+            //localvarmap, localconsmap, NULL, SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]),
+            localvarmap, localconsmap, NULL, initial, SCIPconsIsSeparated(conss[i]),
             SCIPconsIsEnforced(conss[i]), SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE,
             SCIPconsIsModifiable(conss[i]), SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]),
             FALSE, TRUE, &valid) );
+      assert(SCIPconsIsInitial(conss[i]));
       assert(valid);
 
       SCIP_CALL( SCIPaddCons(set->scip, targetcons) );
+
+      SCIP_CALL( SCIPreleaseCons(set->scip, &targetcons) );
    }
 
    /* freeing the hashmaps */
@@ -3511,6 +3583,8 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
 
    /* adding the objective function constraint to the master problem */
    SCIP_CALL( SCIPaddCons(set->scip, objcons) );
+
+   SCIP_CALL( SCIPreleaseCons(set->scip, &objcons) );
 
    /* the merged subproblem is no longer solved. This is indicated by setting the subproblem as disabled. The
     * subproblem still exists, but it is not solved in the solving loop.
