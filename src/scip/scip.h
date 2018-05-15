@@ -4027,7 +4027,7 @@ int SCIPgetNConshdlrs(
 
 /* @} */
 
-/**@addtogroup PublicConflictMethods
+/**@addtogroup PublicConflicthdlrMethods
  *
  * @{
  */
