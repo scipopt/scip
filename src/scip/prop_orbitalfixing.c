@@ -816,6 +816,7 @@ SCIP_RETCODE propagateOrbitalFixing(
       assert( b1[v] );
 
       pt = permstrans[v];
+      assert( pt != NULL );
       for (p = 0; p < nperms; ++p)
       {
          int img;
@@ -824,7 +825,6 @@ SCIP_RETCODE propagateOrbitalFixing(
          if ( inactiveperms[p] > 0 )
             continue;
 
-         assert( pt[p] != NULL );
          img = pt[p];
 
          if ( img != v )
