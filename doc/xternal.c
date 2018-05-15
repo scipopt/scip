@@ -33,7 +33,38 @@
 
 /** @mainpage Overview
  *
- *  - @subpage WHATISSCIP
+ * @section WHATISSCIP What is SCIP?
+ *
+ * \SCIP is a framework to solve constraint integer programs (CIPs) and mixed-integer nonlinear programs. In particular,
+ *
+ * - \SCIP incorporates a mixed-integer programming (MIP) solver as well as
+ * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
+ * - is a framework for branch-and-cut-and-price.
+ *
+ * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
+ *
+ * @section QUICKSTART Quickstart
+ *
+ *  Let's consider the following minimal example in LP format. A 4-variable problem with a single, general integer
+ *  variable and three linear constraints
+ *
+ *  \verbinclude simple.lp
+ *
+ *  Saving this file as "simple.lp" allows to read it into SCIP and solve it.
+ *
+ * ```
+ * scip -c "read simple.lp optimize quit"
+ * ```
+ * reads and optimizes this model in no time:
+ *
+ * \verbinclude output.log
+ *
+ *
+ *
+ *
+ *
+ *
+ *
  *  - @subpage GETTINGSTARTED
  *  - @subpage FURTHERINFORMATION
  *  - @subpage PROGRAMMING
@@ -113,22 +144,6 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/**@page WHATISSCIP What is SCIP?
-* 
-* \SCIP is a framework to solve constraint integer programs (CIPs) and mixed-integer nonlinear programs. In particular,
-*
-* - \SCIP incorporates a mixed-integer programming (MIP) solver as well as
-* - an LP based mixed-integer nonlinear programming (MINLP) solver, and
-* - is a framework for branch-and-cut-and-price.
-*
-* \SCIP is developed together with
-* <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
-* <a href="http://www.am.uni-erlangen.de/wima/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
-* and has more than 500,000 lines of C code.
-*
-* See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
-*/
 
 /**@page GETTINGSTARTED Getting started
  * 
