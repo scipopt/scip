@@ -1076,7 +1076,7 @@
  *   depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *   <br>
- *   We suggest the use one of the following examples:
+ *   We suggest the use of one of the following examples:
  *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example
@@ -1095,6 +1095,8 @@
  *   from the \SCIP root directory for copying the content of the <code>Binpacking</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the \SCIP root directory and jumping to
  *   the new SCIPProject directory rightafter.
+ *
+ * For building with Make:
  * - Open the <code>Makefile</code>  via
  *    \verbatim
  > kate Makefile
@@ -1109,6 +1111,17 @@
  *   compile your code, see \ref MAKE.
  *   Note that you need to update the dependency files before compiling your project via <code>make depend</code>.
  *
+ * For building with CMake:
+ * - Open the <code>CMakeLists</code> via
+ *    \verbatim
+ > kate CMakeLists.txt & kate check/CMakeLists.txt
+     \endverbatim
+ *    and replace all instances of the copied project's name (e.g. <code>binpacking</code>) with your project name.
+ * - Create a new subdirectory, jump to the new directory and use cmake specifying your \SCIP directory. For instance, type
+ *    \verbatim
+ > mkdir Release ; cd Release ; cmake .. -DSCIP_DIR=../scip/Release
+     \endverbatim
+ * and compile using the <code>make</code> command. For the CMake equivalents of all the flags that can be used in \SCIP, see \ref CMAKE.
  *
  *
  *
