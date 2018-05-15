@@ -3630,11 +3630,17 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      /* no restriction on dval, its absolute value is used as tolerance */
+      /* Xpress does not pose any restriction on dval, its absolute value is used as tolerance.
+       * For consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
-      /* no restriction on dval */
+      /* Xpress does not pose any restriction on dval,
+       * however for consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
@@ -3648,16 +3654,18 @@ SCIP_RETCODE SCIPlpiSetRealpar(
      /* dval>0   If an integer solution has been found, stop MIP search after dval seconds, otherwise continue until an integer solution is finally found.
       * dval<0   Stop in LP or MIP search after dval seconds.
       * dval=0   No time limit
-      * if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
-     if (dval >= INT_MAX)
-       ival = 0.0;
-     else if (dval < 0.0)
-       dval = 0.0;
-     else
-       ival = (int) floor(dval);
+      * if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit.
+      */
+      assert( dval >= 0 );
+      if( dval >= INT_MAX )
+         ival = 0;
+      else if( dval == 0.0 )
+         ival = 0;
+      else
+         ival = (int) -floor(dval);
 
-     CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
-     break;
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
+      break;
    }
    case SCIP_LPPAR_MARKOWITZ:
       /* no restriction on dval */

@@ -4509,6 +4509,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      assert( dval > 0 );
       /* 1e-09 <= dval <= 1e-04 */
       if (dval < 1e-09)
          dval = 1e-09;
@@ -4519,6 +4520,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->feastol = dval;
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      assert( dval > 0 );
       /* 1e-09 <= dval <= 1e-04 */
       if (dval < 1e-09)
          dval = 1e-09;
@@ -4542,11 +4544,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
          setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval >= 0 );
       /* dval non-negative */
-      if (dval < 0.0)
-         /* what to do here? */
-         dval = 0.0;
-
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;
    case SCIP_LPPAR_MARKOWITZ:

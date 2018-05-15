@@ -4368,25 +4368,16 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       /* 0 < dval */
-      if (dval < 0.0)
-      {
-         /* however, strictly positive values are required */
-         dval = 0.0;
-      }
+      assert( dval > 0 );
       lpi->spx->setFeastol(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       /* 0 < dval */
-      if (dval < 0.0)
-      {
-         /* however, strictly positive values are required */
-         dval = 0.0;
-      }
+      assert( dval > 0 );
       lpi->spx->setOpttol(dval);
       break;
    case SCIP_LPPAR_OBJLIM:
       /* no restrictions on dval */
-      /* spx->setRealParam(OBJLIMIT_UPPER/LOWER) does not do anything at the moment? */
       if ( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE )
          (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
       else
@@ -4394,15 +4385,12 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       /* 0 < dval < DEFAULT_INFINITY (= 1e100) */
-      if (dval < 0.0)
-         dval = 0.0;
+      assert( dval >= 0 );
       (void) lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       /* 0 <= dval <= inf */
-      /* REPRESENTATION_SWITCH vanished from soplex 3.x */
-      /* spx->setRealParam(REPRESENTATION_SWITCH) does not do anything at the moment? */
-      assert(dval >= -1.5);
+      assert( dval >= -1.5 );
       if( dval < 0.0 )
          (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiInfinity(lpi));
       else
