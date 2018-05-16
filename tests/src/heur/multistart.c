@@ -79,7 +79,7 @@ void setup(void)
    cr_assert( heursubnlp != NULL );
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randumgen, 777) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randumgen, 777, TRUE) );
 }
 
 static

@@ -37,16 +37,16 @@
 /** free memory allocated for an nxn matrix */
 extern
 SCIP_RETCODE freeMatrix(
-   SCIP_Real**           matrix,             /**< The matrix to be freed */
-   int                   nbins               /**< The size*/
+   SCIP_Real**           matrix,             /**< the matrix to be freed */
+   int                   nbins               /**< the size*/
    );
 
 /** gets the minmal non-zero value in a n x n matrix */
 extern
 SCIP_Real getMinNonZero(
    SCIP*                 scip,               /**< SCIP data structure*/
-   SCIP_Real**           matrix,             /**< The matrix*/
-   int                   size                /**< The matrix-size*/
+   SCIP_Real**           matrix,             /**< the matrix*/
+   int                   size                /**< the matrix-size*/
    );
 
 /** getter methods for the probdata */
@@ -79,6 +79,30 @@ SCIP_VAR**** SCIPcycGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
+/** Return one specific edge variable */
+extern
+SCIP_VAR* getEdgevar(
+   SCIP_VAR****          edgevars,           /**< edgevar data structure*/
+   int                   state1,             /**< first state */
+   int                   state2,             /**< second state */
+   int                   direction           /**< direction, 0 = incluster, 1 = forward */
+   );
+
+/** check for an array of states, if all possible edge-combinations exist */
+extern
+SCIP_Bool edgesExist(
+   SCIP_VAR****          edgevars,           /**< edgevar data structure */
+   int*                  states,             /**< state array */
+   int                   nstates             /**< size of state array */
+   );
+
+
+/** returns the edge-graph */
+extern
+SCIP_DIGRAPH* SCIPcycGetEdgeGraph(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns the number of scaling parameter */
 extern
 SCIP_Real SCIPcycGetScale(
@@ -89,10 +113,10 @@ SCIP_Real SCIPcycGetScale(
 extern
 SCIP_RETCODE SCIPcycPrintSolutionValues(
    SCIP*               scip,                 /**< SCIP data structure*/
-   SCIP_SOL*           sol                   /**< The solution containing the values*/
+   SCIP_SOL*           sol                   /**< the solution containing the values*/
    );
 
-/** Create the probdata for a cycle clustering problem */
+/** create the probdata for a cycle clustering problem */
 extern
 SCIP_RETCODE SCIPcreateProbCyc(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -102,37 +126,37 @@ SCIP_RETCODE SCIPcreateProbCyc(
    SCIP_Real**           cmatrix             /**< the transition matrix */
    );
 
-/** Function that returns the successive cluster along the cycle */
+/** function that returns the successive cluster along the cycle */
 extern
 int phi(
    int                   k,                  /**< the cluster */
    int                   ncluster            /**< the number of clusters*/
    );
 
-/** Function that returns the previous cluster along the cycle */
+/** function that returns the previous cluster along the cycle */
 extern
 int phiinv(
    int                   k,                  /**< the cluster */
    int                   ncluster            /**< the number of clusters*/
    );
 
-/** Assign the variables in scip according to the found clustering. */
+/** assign the variables in scip according to the found clustering. */
 extern
 SCIP_RETCODE assignVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< The SCIP solution */
-   SCIP_Real**           clustering,         /**< The matrix with the clusterassignment */
-   int                   nbins,              /**< The number of bins */
-   int                   ncluster            /**< The number of cluster */
+   SCIP_SOL*             sol,                /**< the SCIP solution */
+   SCIP_Real**           clustering,         /**< the matrix with the clusterassignment */
+   int                   nbins,              /**< the number of bins */
+   int                   ncluster            /**< the number of cluster */
    );
 
-/** Check if the clustering has exactly one state in every cluster. */
+/** check if the clustering has exactly one state in every cluster. */
 extern
 SCIP_Bool isPartition(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real**           solclustering,      /**< Matrix with the clustering */
-   int                   nbins,              /**< The number of bins */
-   int                   ncluster            /**< The number of clusters */
+   SCIP_Real**           solclustering,      /**< matrix with the clustering */
+   int                   nbins,              /**< the number of bins */
+   int                   ncluster            /**< the number of clusters */
    );
 
 #endif

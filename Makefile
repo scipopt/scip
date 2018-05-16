@@ -1,4 +1,4 @@
-# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
@@ -498,7 +498,12 @@ endif
 
 SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
-SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
+SCIPPLUGINLIBOBJ=	scip/benders_default.o \
+			scip/benderscut_feas.o \
+			scip/benderscut_int.o \
+			scip/benderscut_nogood.o \
+			scip/benderscut_opt.o \
+			scip/branch_allfullstrong.o \
 			scip/branch_cloud.o \
 			scip/branch_distribution.o \
 			scip/branch_fullstrong.o \
@@ -682,11 +687,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
-			scip/benders_default.o \
-			scip/benderscut_feas.o \
-			scip/benderscut_int.o \
-			scip/benderscut_nogood.o \
-			scip/benderscut_opt.o \
 			scip/table_default.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \

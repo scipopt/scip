@@ -419,6 +419,8 @@ set(scipheaders
     scip/conflictstore.h
     scip/cons_abspower.h
     scip/cons_and.h
+    scip/cons_benders.h
+    scip/cons_benderslp.h
     scip/cons_bivariate.h
     scip/cons_bounddisjunction.h
     scip/cons_cardinality.h

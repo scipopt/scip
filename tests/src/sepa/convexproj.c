@@ -268,7 +268,6 @@ void setup_sepadata(void)
    cr_assert_eq(sepadata->nnlrows, 3, "error: received %d nlrows", sepadata->nnlrows);
 
    /* initialize some of the sepadata */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(sepadata->constraintviolation), 3) );
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &sepadata->exprinterpreter) );
    sepadata->nlpinvars = SCIPgetNVars(scip);
    cr_assert_eq(sepadata->nlpinvars, 2, "error: received %d vars", sepadata->nlpinvars);

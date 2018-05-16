@@ -7858,7 +7858,7 @@
 
 /**@defgroup PublicRowMethods LP Row
  * @ingroup PublicLPMethods
- * @brief methods for LP rows
+ * @brief public methods for LP rows
  */
 
 /**@defgroup PublicCutMethods Cuts and Cutpools
@@ -7869,6 +7869,11 @@
 /**@defgroup PublicLPDivingMethods LP Diving
  * @ingroup PublicLPMethods
  * @brief methods to initiate and conduct LP diving
+ */
+
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PublicSolveMethods
+ * @brief public methods for conflict analysis
  */
 
 /**@defgroup PublicNLPMethods NLP Relaxation
@@ -7940,6 +7945,11 @@
  *  between nodes of a graph. Disjoint Set is also known as Union Find.
  */
 
+/**@defgroup PublicDynamicArrayMethods Dynamic Arrays
+ * @ingroup DataStructures
+ * @brief methods for the creation and access of dynamic arrays
+ */
+
 /**@defgroup DirectedGraph Directed Graph
  * @ingroup DataStructures
  * @brief graph structure with common algorithms for directed and undirected graphs
@@ -7950,6 +7960,11 @@
  * @brief commonly used methods from different categories
  *
  * Below you find a list of miscellaneous methods grouped by different categories
+ */
+
+/**@defgroup PublicValidationMethods Validation
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods for validating the correctness of a solving process
  */
 
 /**@defgroup PublicMemoryMethods Memory Management
@@ -8002,9 +8017,9 @@
  * @brief  public methods for tree compressions
  */
 
-/**@defgroup PublicConflictMethods Conflict Analysis
+/**@defgroup PublicConflicthdlrMethods Conflict Analysis
  * @ingroup PluginManagementMethods
- * @brief public methods related to conflict analysis
+ * @brief public methods for conflict handlers
  */
 
 /**@defgroup PublicConshdlrMethods Constraint handlers

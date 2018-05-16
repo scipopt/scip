@@ -2827,7 +2827,7 @@ DECL_NHINIT(nhInitCrossover)
 
    data->selsol = NULL;
 
-   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, CROSSOVERSEED + (unsigned int)SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, CROSSOVERSEED + (unsigned int)SCIPgetNVars(scip), TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2972,7 +2972,7 @@ DECL_NHINIT(nhInitMutation)
    data = neighborhood->data.mutation;
    assert(data != NULL);
 
-   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, MUTATIONSEED + (unsigned int)SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, MUTATIONSEED + (unsigned int)SCIPgetNVars(scip), TRUE) );
 
    return SCIP_OKAY;
 }

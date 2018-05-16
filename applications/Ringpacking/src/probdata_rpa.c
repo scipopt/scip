@@ -185,7 +185,7 @@ SCIP_RETCODE probdataCreate(
    }
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &(*probdata)->randnumgen, 0) );
+   SCIP_CALL( SCIPcreateRandom(scip, &(*probdata)->randnumgen, 0, TRUE) );
 
    (*probdata)->ntypes = ntypes;
    (*probdata)->width = width;

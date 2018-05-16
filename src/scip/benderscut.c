@@ -74,6 +74,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBenderscutPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given Benders' decomposition cut to a new scip */
 SCIP_RETCODE SCIPbenderscutCopyInclude(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition that the cuts are copied to */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
@@ -337,6 +338,7 @@ SCIP_RETCODE SCIPbenderscutExitsol(
 
    return SCIP_OKAY;
 }
+
 /** calls execution method of the Benders' decomposition cut */
 SCIP_RETCODE SCIPbenderscutExec(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
@@ -365,7 +367,9 @@ SCIP_RETCODE SCIPbenderscutExec(
 
    /* call the Benders' decomposition cut if it is enabled */
    if( benderscut->enabled )
+   {
       SCIP_CALL( benderscut->benderscutexec(set->scip, benders, benderscut, sol, probnumber, type, &cutresult) );
+   }
 
    /* stop timing */
    SCIPclockStop(benderscut->benderscutclock, set);
@@ -638,7 +642,7 @@ SCIP_RETCODE SCIPbenderscutStoreCons(
    return SCIP_OKAY;
 }
 
-/* adds the generated cuts to the Benders' cut storage */
+/** adds the generated cuts to the Benders' cut storage */
 SCIP_RETCODE SCIPbenderscutStoreCut(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_SET*             set,                /**< global SCIP settings */

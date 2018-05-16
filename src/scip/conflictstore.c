@@ -766,7 +766,7 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    /* create event handler for LP events */
    if( (*conflictstore)->eventhdlr == NULL )
    {
-      SCIP_CALL( SCIPeventhdlrCreate(&(*conflictstore)->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL,
+      SCIP_CALL( SCIPeventhdlrCreate(&(*conflictstore)->eventhdlr, set, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL,
             NULL, NULL, eventInitsolConflictstore, eventExitsolConflictstore, NULL, eventExecConflictstore, NULL) );
       SCIP_CALL( SCIPsetIncludeEventhdlr(set, (*conflictstore)->eventhdlr) );
    }

@@ -76,7 +76,7 @@ struct SCIP_BenderscutData
  * Local methods
  */
 
-/* computing as standard Benders' optimality cut from the dual solutions of the LP */
+/** computes a standard Benders' optimality cut from the dual solutions of the LP */
 static
 SCIP_RETCODE computeStandardOptimalityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
@@ -297,7 +297,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
 }
 
 
-/** adds the auxiliary variable to the generated cut. If this is the first optimality cut for the subproblem, then the
+/** Adds the auxiliary variable to the generated cut. If this is the first optimality cut for the subproblem, then the
  *  auxiliary variable is first created and added to the master problem.
  */
 static

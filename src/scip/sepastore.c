@@ -432,7 +432,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    }
 
    /* the cut will be forced to enter the LP if the dual must be collected and the initial LP is being constructed */
-   forcecut = forcecut || (set->misc_alwaysgetduals && sepastore->initiallp);
+   forcecut = forcecut || (set->lp_alwaysgetduals && sepastore->initiallp);
 
    /* in the root node, every local cut is a global cut, and global cuts are nicer in many ways ... */
    if( root && SCIProwIsLocal(cut) )
@@ -516,7 +516,8 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    }
 
    /* If the duals need to be collected, then the infeasible flag is set to FALSE. This ensures that the LP is solved */
-   (*infeasible) = (*infeasible) && !(set->misc_alwaysgetduals && sepastore->initiallp);
+   if( set->lp_alwaysgetduals && sepastore->initiallp )
+      (*infeasible) = FALSE;
 
    return SCIP_OKAY;
 }

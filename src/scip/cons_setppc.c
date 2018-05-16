@@ -362,7 +362,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &(*conshdlrdata)->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

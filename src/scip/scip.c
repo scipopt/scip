@@ -1611,8 +1611,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copynlpis,
-         valid) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copynlpis, valid) );
 
    return SCIP_OKAY;
 }
@@ -5323,7 +5322,8 @@ SCIP_RETCODE SCIPincludeReader(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readercopy, readerfree, readerread, readerwrite, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, scip->set, name, desc, extension, readercopy, readerfree, readerread,
+      readerwrite, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    return SCIP_OKAY;
@@ -5362,7 +5362,7 @@ SCIP_RETCODE SCIPincludeReaderBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, NULL, NULL, NULL, NULL, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, scip->set, name, desc, extension, NULL, NULL, NULL, NULL, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    if( readerptr != NULL )
@@ -5866,6 +5866,7 @@ SCIP_RETCODE SCIPdeactivatePricer(
 }
 
 /** creates a Benders' decomposition and includes it in SCIP
+ *
  *  To use the Benders' decomposition for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
  *  This should be done during the problem creation stage.
  *
@@ -5937,10 +5938,11 @@ SCIP_RETCODE SCIPincludeBenders(
    return SCIP_OKAY;
 }
 
-/** creates a Benders' decomposition and includes it in SCIP with all non-fundamental callbacks set to NULL;
- *  if needed, these can be added afterwards via setter functions SCIPsetBendersCopy(), SCIPsetBendersFree(),
- *  SCIPsetBendersInit(), SCIPsetBendersExit(), SCIPsetBendersInitpre(), SCIPsetBendersExitpre(),
- *  SCIPsetBendersInitsol(), SCIPsetBendersExitsol(), SCIPsetBendersPostsolve()
+/** creates a Benders' decomposition and includes it in SCIP with all non-fundamental callbacks set to NULL
+ *
+ *  If needed, the non-fundamental callbacks can be added afterwards via setter functions SCIPsetBendersCopy(),
+ *  SCIPsetBendersFree(), SCIPsetBendersInity(), SCIPsetBendersExit(), SCIPsetBendersInitsol(), SCIPsetBendersExitsol(),
+ *  SCIPsetBendersFarkas().
  *
  *  To use the Benders' decomposition for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
  *  This should be done during the problem creation stage.
@@ -6320,9 +6322,11 @@ int SCIPgetNActiveBenders(
 }
 
 /** activates the Benders' decomposition to be used for the current problem
+ *
  *  This method should be called during the problem creation stage for all pricers that are necessary to solve
  *  the problem model.
- *  The Benders' decompositions are automatically deactivated when the problem is freed.
+ *
+ *  @note The Benders' decompositions are automatically deactivated when the problem is freed.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6378,11 +6382,24 @@ void SCIPsetBendersPriority(
    SCIPbendersSetPriority(benders, scip->set, priority);
 }
 
-/** calls the exec method of Benders' decomposition to solve the subproblems.
+/** calls the exec method of Benders' decomposition to solve the subproblems
+ *
  *  The checkint flag indicates whether integer feasibility can be assumed. If it is not assumed, i.e. checkint ==
  *  FALSE, then only the convex relaxations of the subproblems are solved. If integer feasibility is assumed, i.e.
  *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
  *  solution feasibility.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6399,13 +6416,28 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    assert(scip->set != NULL);
    assert(benders != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPsolveBendersSubproblems", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersExec(benders, scip->set, sol, result, infeasible, auxviol, type, checkint) );
 
    return SCIP_OKAY;
 }
 
-/** returns the master problem variable for the given subproblem variable.
- *  This function is used as part of the cut generation process
+/** returns the master problem variable for the given subproblem variable
+ *
+ *  This function is used as part of the cut generation process.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPgetBendersMasterVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6420,13 +6452,28 @@ SCIP_RETCODE SCIPgetBendersMasterVar(
    assert(var != NULL);
    assert(mappedvar != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPgetBendersMasterVar", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersGetVar(benders, scip->set, var, mappedvar, -1) );
 
    return SCIP_OKAY;
 }
 
-/** returns the subproblem problem variable for the given master variable.
- *  This function is used as part of the cut generation process
+/** returns the subproblem problem variable for the given master variable
+ *
+ *  This function is used as part of the cut generation process.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPgetBendersSubproblemVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6443,12 +6490,17 @@ SCIP_RETCODE SCIPgetBendersSubproblemVar(
    assert(mappedvar != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
+   SCIP_CALL( checkStage(scip, "SCIPgetBendersSubproblemVar", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersGetVar(benders, scip->set, var, mappedvar, probnumber) );
 
    return SCIP_OKAY;
 }
 
-/** returns the number of subproblems that are stored in the given Benders' decomposition */
+/** returns the number of subproblems that are stored in the given Benders' decomposition
+ *
+ *  @return the number of subproblems in the Benders' decomposition
+ */
 int SCIPgetBendersNSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -6460,7 +6512,7 @@ int SCIPgetBendersNSubproblems(
    return SCIPbendersGetNSubproblems(benders);
 }
 
-/** registers the Benders' decomposition subproblem with the Benders' decomposition struct.
+/** registers the Benders' decomposition subproblem with the Benders' decomposition struct
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6485,9 +6537,22 @@ SCIP_RETCODE SCIPaddBendersSubproblem(
    return SCIP_OKAY;
 }
 
-/** calls the generic subproblem setup method for a Benders' decomposition subproblem. This is called if the user
- *  requires to solve the Benders' decomposition subproblem separately from the main Benders' solving loop. This could be
- *  in the case of enhancement techniques.
+/** calls the generic subproblem setup method for a Benders' decomposition subproblem
+ *
+ *  This is called if the user requires to solve the Benders' decomposition subproblem separately from the main Benders'
+ *  solving loop. This could be in the case of enhancement techniques.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6501,14 +6566,29 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
+   SCIP_CALL( checkStage(scip, "SCIPsetupBendersSubproblem", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersSetupSubproblem(benders, scip->set, sol, probnumber) );
 
    return SCIP_OKAY;
 }
 
-/** calls the solving method for a single Benders' decomposition subproblem. The method either calls the users solve
- *  subproblem method or calls the generic method. In the case of the generic method, the user must set up the
- *  subproblem prior to calling this method.
+/** calls the solving method for a single Benders' decomposition subproblem
+ *
+ *  The method either calls the users solve subproblem method or calls the generic method. In the case of the generic
+ *  method, the user must set up the subproblem prior to calling this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6526,14 +6606,32 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvecip, objective) );
+   SCIP_CALL( checkStage(scip, "SCIPsolveBendersSubproblem", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+  SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvecip, objective) );
 
    return SCIP_OKAY;
 }
 
-/** frees the subproblem after calling the solve subproblem method. This will either call the user defined free
+/** frees the subproblem after calling the solve subproblem method
+ *
+ *  This will either call the user defined free
  *  subproblem callback for Benders' decomposition or the default freeing methods. In the default case, if the
  *  subproblem is an LP, then SCIPendProbing is called. If the subproblem is a MIP, then SCIPfreeTransform is called.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_RETCODE SCIPfreeBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6546,18 +6644,21 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
+   SCIP_CALL( checkStage(scip, "SCIPfreeBendersSubproblem", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbendersFreeSubproblem(benders, scip->set, probnumber) );
 
    return SCIP_OKAY;
 }
 
-/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
- * value of the corresponding auxiliary variable
+/** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value against the
+ *  value of the corresponding auxiliary variable
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
@@ -6579,7 +6680,7 @@ SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* check stages for both, SCIP and the requested subproblem data structure */
-   SCIP_CALL( checkStage(scip, "SCIPcheckBendersSubprobOptimality", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcheckBendersSubprobOptimality", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubprobOptimality",
          FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -6639,6 +6740,7 @@ SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
 }
 
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
+ *
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
  *  to include a Benders' cut algorithm if a Benders' decomposition has already been included
  *  This should be done during the problem creation stage.
@@ -6690,9 +6792,11 @@ SCIP_RETCODE SCIPincludeBenderscut(
    return SCIP_OKAY;
 }
 
-/** creates a Benders' cut and includes it an associated Benders' decomposition with all non-fundamental callbacks set to NULL;
- *  if needed, these can be added afterwards via setter functions SCIPsetBenderscutCopy(), SCIPsetBenderscutFree(),
- *  SCIPsetBenderscutInit(), SCIPsetBenderscutExit(), SCIPsetBenderscutInitsol(), SCIPsetBenderscutExitsol();
+/** creates a Benders' cut and includes it an associated Benders' decomposition with all non-fundamental callbacks set to NULL
+ *
+ *  If needed, the non-fundamental callbacks can be added afterwards via setter functions SCIPsetBenderscutCopy(),
+ *  SCIPsetBenderscutFree(), SCIPsetBenderscutInit(), SCIPsetBenderscutExit(), SCIPsetBenderscutInitsol(),
+ *  SCIPsetBenderscutExitsol().
  *
  *  This should be done during the problem creation stage.
  *
@@ -6882,7 +6986,15 @@ SCIP_RETCODE SCIPsetBenderscutExitsol(
    return SCIP_OKAY;
 }
 
-/** sets the priority of a Benders' decomposition cut algorithm */
+/** sets the priority of a Benders' decomposition cut algorithm
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 SCIP_RETCODE SCIPsetBenderscutPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
@@ -6897,6 +7009,8 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    assert(scip->set != NULL);
    assert(benderscut != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPsetBenderscutPriority", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIPbenderscutSetPriority(benderscut, priority);
 
    /* DIRTY: This is not a good fix */
@@ -6910,7 +7024,19 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    return SCIP_OKAY;
 }
 
-/** adds the generated constraint to the Benders cut storage */
+/** adds the generated constraint to the Benders cut storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPstoreBenderscutCons(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
@@ -6921,6 +7047,8 @@ SCIP_RETCODE SCIPstoreBenderscutCons(
    assert(benderscut != NULL);
    assert(cons != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPstoreBenderscutCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIPbenderscutStoreCons(benderscut, scip->set, cons) );
 
    /* capturing the stored constraint */
@@ -6929,7 +7057,19 @@ SCIP_RETCODE SCIPstoreBenderscutCons(
    return SCIP_OKAY;
 }
 
-/** adds the generated cuts to the Benders' cut storage */
+/** adds the generated cuts to the Benders' cut storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPstoreBenderscutCut(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
@@ -6939,6 +7079,8 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    assert(scip != NULL);
    assert(benderscut != NULL);
    assert(cut != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPstoreBenderscutCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, cut) );
 
@@ -9757,7 +9899,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, scip->set, name, desc,
          eventcopy,
          eventfree, eventinit, eventexit, eventinitsol, eventexitsol, eventdelete, eventexec,
          eventhdlrdata) );
@@ -9793,7 +9935,7 @@ SCIP_RETCODE SCIPincludeEventhdlrBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, scip->set, name, desc,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventexec,
          eventhdlrdata) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
@@ -11808,7 +11950,7 @@ SCIP_RETCODE SCIPpermuteProb(
    assert(nconshdlrs == 0 || conshdlrs != NULL);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed, TRUE) );
 
    /* The constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
     * that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
@@ -14808,9 +14950,10 @@ SCIP_RETCODE SCIPchgChildPrio(
 /** checks solution for feasibility in original problem without adding it to the solution store; to improve the
  *  performance we use the following order when checking for violations:
  *
- *  1. constraint handlers which don't need constraints (e.g. integral constraint handler)
- *  2. variable bounds
+ *  1. variable bounds
+ *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
  *  3. original constraints
+ *  4. constraint handlers with negative priority that don't need constraints (e.g. Benders' decomposition constraint handler)
  */
 static
 SCIP_RETCODE checkSolOrig(
@@ -14878,22 +15021,28 @@ SCIP_RETCODE checkSolOrig(
       }
    }
 
-   /* call constraint handlers that don't need constraints */
+   /* call constraint handlers with positive or zero check priority that don't need constraints */
    for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      if( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
       {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, completely, &result) );
-
-         if( result != SCIP_FEASIBLE )
+         if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
          {
-            *feasible = FALSE;
+            SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+                  checkintegrality, checklprows, printreason, completely, &result) );
 
-            if( !completely )
-               return SCIP_OKAY;
+            if( result != SCIP_FEASIBLE )
+            {
+               *feasible = FALSE;
+
+               if( !completely )
+                  return SCIP_OKAY;
+            }
          }
       }
+      /* constraint handlers are sorted by priority, so we can break when reaching the first one with negative priority */
+      else
+         break;
    }
 
    /* check original constraints
@@ -14909,6 +15058,26 @@ SCIP_RETCODE checkSolOrig(
          /* check solution */
          SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
                checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers with negative check priority that don't need constraints;
+    * continue with the first constraint handler with negative priority which caused us to break in the above loop */
+   for( ; h < scip->set->nconshdlrs; ++h )
+   {
+      assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
 
          if( result != SCIP_FEASIBLE )
          {
@@ -17731,7 +17900,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
        */
       SCIPselectDownRealInt(prios, solvertypes, nthreads, ncandsolvertypes);
 
-      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, (unsigned) scip->set->concurrent_initseed) );
+      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, (unsigned) scip->set->concurrent_initseed, TRUE) );
       for( i = 0; i < nthreads; ++i )
       {
          SCIP_CONCSOLVER* concsolver;
@@ -20686,25 +20855,10 @@ SCIP_Real SCIPgetVarLbAtIndex(
    )
 {
    SCIP_VARSTATUS varstatus;
+   SCIP_BDCHGINFO* bdchginfo;
    assert(var != NULL);
 
    varstatus = SCIPvarGetStatus(var);
-
-   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
-   {
-      if( bdchgidx == NULL )
-         return SCIPvarGetLbLocal(var);
-      else
-      {
-         SCIP_BDCHGINFO* bdchginfo;
-
-         bdchginfo = SCIPvarGetLbchgInfo(var, bdchgidx, after);
-         if( bdchginfo != NULL )
-            return SCIPbdchginfoGetNewbound(bdchginfo);
-         else
-            return var->glbdom.lb;
-      }
-   }
 
    /* get bounds of attached variables */
    switch( varstatus )
@@ -20712,6 +20866,19 @@ SCIP_Real SCIPgetVarLbAtIndex(
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
       return SCIPgetVarLbAtIndex(scip, var->data.original.transvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      if( bdchgidx == NULL )
+         return SCIPvarGetLbLocal(var);
+      else
+      {
+         bdchginfo = SCIPvarGetLbchgInfo(var, bdchgidx, after);
+         if( bdchginfo != NULL )
+            return SCIPbdchginfoGetNewbound(bdchginfo);
+         else
+            return var->glbdom.lb;
+      }
 
    case SCIP_VARSTATUS_FIXED:
       return var->glbdom.lb;
@@ -20806,8 +20973,6 @@ SCIP_Real SCIPgetVarLbAtIndex(
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPgetVarUbAtIndex(scip, var->negatedvar, bdchgidx, after);
 
-   case SCIP_VARSTATUS_COLUMN: /* for lint */
-   case SCIP_VARSTATUS_LOOSE: /* for lint */
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
@@ -20826,25 +20991,10 @@ SCIP_Real SCIPgetVarUbAtIndex(
    )
 {
    SCIP_VARSTATUS varstatus;
+   SCIP_BDCHGINFO* bdchginfo;
    assert(var != NULL);
 
    varstatus = SCIPvarGetStatus(var);
-
-   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
-   {
-      if( bdchgidx == NULL )
-         return SCIPvarGetUbLocal(var);
-      else
-      {
-         SCIP_BDCHGINFO* bdchginfo;
-
-         bdchginfo = SCIPvarGetUbchgInfo(var, bdchgidx, after);
-         if( bdchginfo != NULL )
-            return SCIPbdchginfoGetNewbound(bdchginfo);
-         else
-            return var->glbdom.ub;
-      }
-   }
 
    /* get bounds of attached variables */
    switch( varstatus )
@@ -20852,6 +21002,19 @@ SCIP_Real SCIPgetVarUbAtIndex(
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
       return SCIPgetVarUbAtIndex(scip, var->data.original.transvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      if( bdchgidx == NULL )
+         return SCIPvarGetUbLocal(var);
+      else
+      {
+         bdchginfo = SCIPvarGetUbchgInfo(var, bdchgidx, after);
+         if( bdchginfo != NULL )
+            return SCIPbdchginfoGetNewbound(bdchginfo);
+         else
+            return var->glbdom.ub;
+      }
 
    case SCIP_VARSTATUS_FIXED:
       return var->glbdom.ub;
@@ -20946,8 +21109,6 @@ SCIP_Real SCIPgetVarUbAtIndex(
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPgetVarLbAtIndex(scip, var->negatedvar, bdchgidx, after);
 
-   case SCIP_VARSTATUS_COLUMN: /* for lint */
-   case SCIP_VARSTATUS_LOOSE: /* for lint */
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
@@ -31550,13 +31711,14 @@ SCIP_Real SCIPgetColRedcost(
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetColFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
    )
 {
-   //SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
@@ -49972,7 +50134,8 @@ SCIP_RETCODE SCIPcopyDigraph(
 SCIP_RETCODE SCIPcreateRandom(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   unsigned int          initialseed         /**< initial random seed */
+   unsigned int          initialseed,        /**< initial random seed */
+   SCIP_Bool             useglobalseed       /**< should the supplied seed be initialized by SCIP's global seed shift? */
    )
 {
    unsigned int modifiedseed;
@@ -49980,7 +50143,10 @@ SCIP_RETCODE SCIPcreateRandom(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+   if( useglobalseed )
+      modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+   else
+      modifiedseed = initialseed;
 
    SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
 

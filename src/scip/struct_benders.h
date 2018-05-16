@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -122,7 +122,7 @@ struct SCIP_SubprobParams
    char lp_initalg;
    char lp_resolvealg;
    SCIP_Bool conflict_enable;
-   SCIP_Bool misc_alwaysgetduals;
+   SCIP_Bool lp_alwaysgetduals;
    SCIP_Bool misc_catchctrlc;
    SCIP_Bool misc_scaleobj;
 };

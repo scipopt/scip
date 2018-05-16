@@ -49,6 +49,7 @@ SCIP_RETCODE SCIPreaderCopyInclude(
 extern
 SCIP_RETCODE SCIPreaderCreate(
    SCIP_READER**         reader,             /**< pointer to store reader */
+   SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */

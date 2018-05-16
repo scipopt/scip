@@ -242,6 +242,7 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     3 /**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
 #define SCIP_DEFAULT_LP_REFACTORINTERVAL      0 /**< LP refactorization interval (0: automatic) */
+#define SCIP_DEFAULT_LP_ALWAYSGETDUALS    FALSE /**< should the dual solution always be collected */
 
 /* NLP */
 
@@ -282,7 +283,6 @@
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
 #define SCIP_DEFAULT_MISC_USESYMMETRY         2 /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
-#define SCIP_DEFAULT_MISC_ALWAYSGETDUALS  FALSE /**< should the dual solution always be collected */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -1774,6 +1774,11 @@ SCIP_RETCODE SCIPsetCreate(
          "LP refactorization interval (0: auto)",
          &(*set)->lp_refactorinterval, TRUE, SCIP_DEFAULT_LP_REFACTORINTERVAL, 0, INT_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "lp/alwaysgetduals",
+         "should the Farkas duals always be collected when an LP is found to be infeasible?",
+         &(*set)->lp_alwaysgetduals, FALSE, SCIP_DEFAULT_LP_ALWAYSGETDUALS,
+         NULL, NULL) );
 
    /* NLP parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
@@ -1910,11 +1915,6 @@ SCIP_RETCODE SCIPsetCreate(
             "misc/allowobjprop",
             "should propagation to the current objective be allowed in propagation methods?",
             &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
-            NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/alwaysgetduals",
-            "should the Farkas duals always be collected when an LP is found to be infeasible?",
-            &(*set)->misc_alwaysgetduals, FALSE, SCIP_DEFAULT_MISC_ALWAYSGETDUALS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
             "misc/scaleobj",

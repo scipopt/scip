@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -115,7 +115,7 @@ SCIP_Real SCIPbendersGetTime(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** is Benders' decomposition initialized? */
+/** Is Benders' decomposition initialized? */
 EXTERN
 SCIP_Bool SCIPbendersIsInitialized(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -126,7 +126,7 @@ SCIP_Bool SCIPbendersIsActive(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
    );
 
-/** returns whether only the convex relaxations will be checked in this solve loop
+/** Returns whether only the convex relaxations will be checked in this solve loop
  *  when Benders' is used in the LNS heuristics, only the convex relaxations of the master/subproblems are checked,
  *  i.e. no integer cuts are generated. In this case, then Benders' decomposition is performed under the assumption
  *  that all subproblems are convex relaxations.
@@ -135,25 +135,25 @@ SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** are Benders' cuts generated from the LP solutions? */
+/** Are Benders' cuts generated from the LP solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutLP(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** are Benders' cuts generated from the pseudo solutions? */
+/** Are Benders' cuts generated from the pseudo solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutPseudo(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** are Benders' cuts generated from the relaxation solutions? */
+/** Are Benders' cuts generated from the relaxation solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutRelaxation(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** should this Benders' use the auxiliary variables from the highest priority Benders' */
+/** Should this Benders' use the auxiliary variables from the highest priority Benders'? */
 EXTERN
 SCIP_Bool SCIPbendersShareAuxVars(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -187,7 +187,9 @@ SCIP_Real SCIPbendersGetSubprobObjval(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** Public functions associated with Benders' cuts */
+/*
+ * Public functions associated with Benders' cuts
+ */
 
 /** returns the Benders' cut of the given name, or NULL if not existing */
 EXTERN
@@ -218,10 +220,12 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/* sets the flag indicating whether a subproblem is convex. It is possible that this can change during the solving
- * process. One example is when the three-phase method is employed, where the first phase solves the convex relaxation
- * of both the master and subproblems, the second phase reintroduces the integrality constraints to the master problem
- * and the third phase then reintroduces integrality constraints to the subproblems.
+/** sets the flag indicating whether a subproblem is convex
+ *
+ *  It is possible that this can change during the solving process. One example is when the three-phase method is
+ *  employed, where the first phase solves the convex relaxation of both the master and subproblems, the second phase
+ *  reintroduces the integrality constraints to the master problem and the third phase then reintroduces integrality
+ *  constraints to the subproblems.
  */
 EXTERN
 void SCIPbendersSetSubprobIsConvex(
@@ -230,7 +234,10 @@ void SCIPbendersSetSubprobIsConvex(
    SCIP_Bool             isconvex            /**< flag to indicate whether the subproblem is convex */
    );
 
-/** returns whether the subproblem is convex. This means that the dual solution can be used to generate cuts. */
+/** returns whether the subproblem is convex
+ *
+ *  This means that the dual solution can be used to generate cuts.
+ */
 EXTERN
 SCIP_Bool SCIPbendersSubprobIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -243,7 +250,10 @@ int SCIPbendersGetNConvexSubprobs(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** solves the LP of the Benders' decomposition subproblem. This requires that the subproblem is in probing mode */
+/** solves the LP of the Benders' decomposition subproblem
+ *
+ *  This requires that the subproblem is in probing mode.
+ */
 EXTERN
 SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
@@ -251,7 +261,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
    );
 
-/** solves the Benders' decomposition subproblem. */
+/** solves the Benders' decomposition subproblem */
 EXTERN
 SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
