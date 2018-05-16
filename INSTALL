@@ -532,10 +532,6 @@ make[1]: Leaving directory `/sw/scip'
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
    fix the corresponding machine dependent makefile in the make subdirectory.
 
-   If you encounter problems including rational.h from spxinc/ you should
-   recompile with "make SPX_LEGACY=true ..." to use the compatibility mode
-   of SoPlex. In this case you should also have compiled SoPlex with LEGACY=true.
-
 
 3. Instructions for manually creating the soft-links, if the query script fails:
 

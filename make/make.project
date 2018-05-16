@@ -134,7 +134,6 @@ IPOPTOPT	=	opt
 WORHPOPT	=	opt
 LPSCHECK        =	false
 GAMS		=	false
-SPX_LEGACY  	=	false
 
 # compiler and linker parameters
 CC		=	gcc
