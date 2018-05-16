@@ -52,7 +52,8 @@ enum SCIP_LPParam
    SCIP_LPPAR_LPTILIM        = 11,      /**< LP time limit, non-negative */
    SCIP_LPPAR_MARKOWITZ      = 12,      /**< Markowitz tolerance */
    SCIP_LPPAR_ROWREPSWITCH   = 13,      /**< simplex algorithm shall use row representation of the basis
-                                         *   if number of rows divided by number of columns exceeds this value */
+                                         *   if number of rows divided by number of columns exceeds this value
+                                         *   (-1.5 <= value; if negative, this change never occurs) */
    SCIP_LPPAR_THREADS        = 14,      /**< number of threads used to solve the LP */
    SCIP_LPPAR_CONDITIONLIMIT = 15,      /**< maximum condition number of LP basis counted as stable */
    SCIP_LPPAR_TIMING         = 16,      /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
