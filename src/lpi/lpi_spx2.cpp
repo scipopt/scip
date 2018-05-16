@@ -4228,8 +4228,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setLpInfo(bool(ival));
       break;
    case SCIP_LPPAR_LPITLIM:
-      assert( ival >= -1 );
-      /* -1 <= ival */
+      assert( ival >= 0 );
+      /* -1 <= ival, -1 meaning no time limit */
+      if( ival > INT_MAX )
+         ival = -1;
       (void) lpi->spx->setIntParam(SoPlex::ITERLIMIT, ival);
       break;
    case SCIP_LPPAR_PRESOLVING:

@@ -3696,10 +3696,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          lpi->clp->setLogLevel(0);
       break;
    case SCIP_LPPAR_LPITLIM:
-      assert( ival >= -1 );
+      assert( ival >= 0 );
       /* ival >= 0 */
-      if( ival == -1 )
-         ival = 0;
       lpi->clp->setMaximumIterations(ival);
       break;
    case SCIP_LPPAR_FASTMIP:

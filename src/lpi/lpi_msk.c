@@ -4755,9 +4755,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
       /* 0 <= ival */
-      assert( ival >= -1 );
-      if( ival == -1 )
-         ival = 0;
+      assert( ival >= 0 );
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads */
