@@ -1133,6 +1133,7 @@ SCIP_RETCODE createSubproblems(
       subproblem = SCIPbendersSubproblem(benders, i);
 
       assert(subproblem != NULL);
+      assert(SCIPgetStage(subproblem) == SCIP_STAGE_PROBLEM);
 
       /* setting global limits for the subproblems. This overwrites the limits set by the user */
       SCIP_CALL( SCIPsetIntParam(subproblem, "limits/maxorigsol", 0) );
@@ -1146,8 +1147,6 @@ SCIP_RETCODE createSubproblems(
        */
       for( j = 0; j < nvars; j++ )
       {
-         assert(SCIPgetStage(subproblem) == SCIP_STAGE_PROBLEM);
-
          /* retrieving the master problem variable */
          SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
 
