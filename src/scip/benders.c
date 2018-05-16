@@ -48,7 +48,6 @@
 #define SCIP_DEFAULT_LNSCHECK              TRUE  /** should the Benders' decomposition be used in LNS heuristics */
 #define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** the maximum depth at which the LNS check is performed */
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** the fraction of subproblems that are solved in each iteration */
-#define SCIP_DEFAULT_MERGESUBPROBS        FALSE  /** should the subproblems be merged into the master problem if infeasibilities can not be resolved?*/
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
 
@@ -956,11 +955,6 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
          "The fraction of subproblems that are solved in each iteration.", &(*benders)->subprobfrac, FALSE,
          SCIP_DEFAULT_SUBPROBFRAC, 0.0, 1.0, NULL, NULL) ); /*lint !e740*/
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/mergesubprob", name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-        "Should subproblems be merged into the master problem if infeasibilities can be resolved?",
-        &(*benders)->mergesubprobs, FALSE, SCIP_DEFAULT_MERGESUBPROBS, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
