@@ -3555,8 +3555,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
       /* 0 <= ival */
-      if( ival == 0 )
-         ival = INT_MAX;
       ival = MIN(ival, XPRS_MAXINT); /*lint !e685*/
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;

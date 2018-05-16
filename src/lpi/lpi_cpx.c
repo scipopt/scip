@@ -4424,8 +4424,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
       /* 0 <= ival */
-      if( ival == 0 )
-         ival = INT_MAX;
 #if (CPX_VERSION <= 1230)
       ival = MIN(ival, CPX_INT_MAX);
 #endif

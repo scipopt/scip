@@ -5180,7 +5180,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
       /* -1 <= ival, -1 meaning no time limit */
-      if( ival >= INT_MAX || ival == 0 )
+      if( ival >= INT_MAX )
          ival = -1;
       lpi->spx->setIterationLimit(ival);
       break;
