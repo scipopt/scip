@@ -4393,7 +4393,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       /* 0 <= dval <= inf */
-      assert( dval >= -1.5 );
+      assert( dval >= 0 || dval == -1 );
       if( dval < 0.0 )
          (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiInfinity(lpi));
       else

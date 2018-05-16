@@ -5327,7 +5327,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->spx->setTerminationTime(dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
-      assert( dval >= -1.5 );
+      assert( dval >= 0 || dval == -1 );
       lpi->rowrepswitch = dval;
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
