@@ -1149,15 +1149,15 @@ SCIP_RETCODE computeSymmetryGroup(
    /* transpose symmetries matrix here if necessary */
    if ( transposedperms )
    {
-      int** transposedperms;
+      int** transposedpermsmatrix;
       int p;
 
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedperms, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, nvars) );
       for (j = 0; j < nvars; ++j)
       {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedperms[j], *nmaxperms) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[j], *nmaxperms) );
          for (p = 0; p < *nperms; ++p)
-            transposedperms[j][p] = (*perms)[p][j];
+            transposedpermsmatrix[j][p] = (*perms)[p][j];
       }
 
       /* free original perms matrix */
@@ -1167,7 +1167,7 @@ SCIP_RETCODE computeSymmetryGroup(
       }
       SCIPfreeBlockMemoryArrayNull(scip, perms, *nmaxperms);
 
-      *perms = transposedperms;
+      *perms = transposedpermsmatrix;
    }
 
    /* free matrix data */
