@@ -6717,6 +6717,14 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
  *  The associated auxiliary variables are kept in the master problem. The objective function of the merged subproblem
  *  is added as an underestimator constraint.
  *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
@@ -6733,6 +6741,8 @@ SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
    assert(scip != NULL);
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
+
+   SCIP_CALL( checkStage(scip, "SCIPmergeBendersSubprobIntoMaster", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersMergeSubprobIntoMaster(benders, scip->set, varmap, consmap, probnumber) );
 
