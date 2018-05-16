@@ -1094,7 +1094,6 @@ SCIP_RETCODE initialiseLPSubproblem(
    return SCIP_OKAY;
 }
 
-
 /** creates the subproblems and registers it with the Benders' decomposition struct */
 static
 SCIP_RETCODE createSubproblems(
@@ -1104,11 +1103,15 @@ SCIP_RETCODE createSubproblems(
 {
    SCIP* subproblem;
    SCIP_EVENTHDLR* eventhdlr;
+   SCIP_VAR* mastervar;
+   SCIP_VAR** vars;
+   int nvars;
    int nbinvars;
    int nintvars;
    int nimplintvars;
    int nsubproblems;
    int i;
+   int j;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -1130,12 +1133,32 @@ SCIP_RETCODE createSubproblems(
       subproblem = SCIPbendersSubproblem(benders, i);
 
       assert(subproblem != NULL);
+      assert(SCIPgetStage(subproblem) == SCIP_STAGE_PROBLEM);
 
       /* setting global limits for the subproblems. This overwrites the limits set by the user */
       SCIP_CALL( SCIPsetIntParam(subproblem, "limits/maxorigsol", 0) );
 
       /* getting the number of integer and binary variables to determine the problem type */
-      SCIP_CALL( SCIPgetVarsData(subproblem, NULL, NULL, &nbinvars, &nintvars, &nimplintvars, NULL) );
+      SCIP_CALL( SCIPgetVarsData(subproblem, &vars, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
+
+      /* The objective function coefficients of the master problem are set to zero. This is necessary for the Benders'
+       * decomposition algorithm, since the cut methods and the objective function check assumes that the objective
+       * coefficients of the master problem variables are zero.
+       */
+      for( j = 0; j < nvars; j++ )
+      {
+         /* retrieving the master problem variable */
+         SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
+
+         /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
+         if( mastervar != NULL )
+         {
+            SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Changing the objective coefficient of copy of master"
+              " problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
+            /* changing the subproblem variable objective coefficient to zero */
+            SCIP_CALL( SCIPchgVarObj(subproblem, vars[j], 0.0) );
+         }
+      }
 
       /* if there are no binary and integer variables, then the subproblem is an LP.
        * In this case, the SCIP instance is put into probing mode via the use of an event handler. */
@@ -1224,14 +1247,16 @@ SCIP_RETCODE SCIPbendersInit(
    /* start timing */
    SCIPclockStart(benders->setuptime, set);
 
-   /* creates the subproblems and sets up the probing mode for LP subproblems. This function calls the benderscreatesub
-    * callback. */
-   SCIP_CALL( createSubproblems(benders, set) );
-
    if( benders->bendersinit != NULL )
    {
       SCIP_CALL( benders->bendersinit(set->scip, benders) );
    }
+
+   benders->initialized = TRUE;
+
+   /* creates the subproblems and sets up the probing mode for LP subproblems. This function calls the benderscreatesub
+    * callback. */
+   SCIP_CALL( createSubproblems(benders, set) );
 
    /* initialising the Benders' cuts */
    SCIPbendersSortBenderscuts(benders);
@@ -1239,8 +1264,6 @@ SCIP_RETCODE SCIPbendersInit(
    {
       SCIP_CALL( SCIPbenderscutInit(benders->benderscuts[i], set) );
    }
-
-   benders->initialized = TRUE;
 
    /* stop timing */
    SCIPclockStop(benders->setuptime, set);
@@ -3762,7 +3785,7 @@ int SCIPbendersGetNConvexSubprobs(
    return benders->nconvexsubprobs;
 }
 
-/** changes all of the master problem variables in the given subproblem to continuous */
+/** changes all of the master problem variables in the given subproblem to continuous. */
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3789,6 +3812,8 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    /* only set the master problem variable to continuous if they have not already been changed. */
    if( !SCIPbendersGetMastervarsCont(benders, probnumber) )
    {
+      SCIP_VAR* mastervar;
+
       /* retrieving the variable data */
       SCIP_CALL( SCIPgetVarsData(subproblem, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
 
@@ -3800,12 +3825,11 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
       i = 0;
       while( i < nbinvars + nintvars + nimplvars )
       {
-         SCIP_VAR* mastervar;
-
          SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
 
          if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && mastervar != NULL )
          {
+            /* changing the type of the subproblem variable corresponding to mastervar to CONTINUOUS */
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
 
             assert(!infeasible);
