@@ -75,7 +75,9 @@ struct SCIP_PresolData
    SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
-   int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
+   SCIP_Bool             transposedsymmatrix;/**< whether transposed symmetry matrix should be computed
+                                              *   (i.e., npermvars x nperms) */
+   int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix or transposed */
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
    int                   norbitvars;         /**< number of vars that are contained in a non-trivial orbit */
    SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
@@ -646,6 +648,8 @@ SCIP_RETCODE computeSymmetryGroup(
    SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
    SCIP_Bool             local,              /**< Use local variable bounds? */
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
+   SCIP_Bool             transposedsymmatrix,/**< whether transposed symmetry matrix (npermvars x nperms)
+                                              *   should be computed */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    SCIP_Real**           permvarsobj,        /**< objective values of permuted variables */
@@ -1144,6 +1148,30 @@ SCIP_RETCODE computeSymmetryGroup(
    }
    *success = TRUE;
 
+   /* transpose symmetries matrix here if necessary */
+   if ( transposedsymmatrix )
+   {
+      int** transposedperms;
+      int p;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedperms, nvars) );
+      for (j = 0; j < nvars; ++j)
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedperms[j], *nmaxperms) );
+         for (p = 0; p < *nperms; ++p)
+            transposedperms[j][p] = (*perms)[p][j];
+      }
+
+      /* free original perms matrix */
+      for (p = 0; p < *nperms; ++p)
+      {
+         SCIPfreeBlockMemoryArray(scip, &(*perms)[p], nvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, perms, *nmaxperms);
+
+      *perms = transposedperms;
+   }
+
    /* free matrix data */
    SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
 
@@ -1247,7 +1275,9 @@ SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
-   SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
+   SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
+   SCIP_Bool             transposedsymmatrix /**< whether transposed symmetry matrix (npermvars x nperms)
+                                              *   should be computed */
    )
 {
    int maxgenerators;
@@ -1349,9 +1379,15 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = presoldata->maxgenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
-   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, presoldata->checksymmetries,
+   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, presoldata->checksymmetries, transposedsymmatrix,
          &presoldata->npermvars, &presoldata->permvars, &presoldata->permvarsobj, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms,
          &presoldata->log10groupsize, &presoldata->successful) );
+
+   /* store which kind of symmetry matrix has been computed */
+   if ( transposedsymmatrix )
+      presoldata->transposedsymmatrix = TRUE;
+   else
+      presoldata->transposedsymmatrix = FALSE;
 
    /* output statistics */
    if ( ! presoldata->successful )
@@ -1459,11 +1495,23 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
 
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
-   for (i = 0; i < presoldata->nperms; ++i)
+
+   if ( presoldata->transposedsymmatrix )
    {
-      SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
+      for (i = 0; i < presoldata->npermvars; ++i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->nmaxperms);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->npermvars);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
+   else
+   {
+      for (i = 0; i < presoldata->nperms; ++i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
+   }
 
    /* reset settings */
    presoldata->npermvars = 0;
@@ -1591,10 +1639,13 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
    SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
    SCIP_Bool             recompute,          /**< Have symmetries already been computed? */
+   SCIP_Bool             transposedsymmatrix,/**< whether transposed symmetry matrix (npermvars x nperms)
+                                              *   should be computed */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
-   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix
+                                              *   (or transposed matrix) */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of group size (or NULL) */
    SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
    )
@@ -1656,7 +1707,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       }
 
       /* determine symmetry here */
-      SCIP_CALL( determineSymmetry(scip, presoldata, symspecrequire, symspecrequirefixed) );
+      SCIP_CALL( determineSymmetry(scip, presoldata, symspecrequire, symspecrequirefixed, transposedsymmatrix) );
    }
 
    *npermvars = presoldata->npermvars;
