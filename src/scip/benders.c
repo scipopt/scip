@@ -3829,10 +3829,7 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
 
          if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && mastervar != NULL )
          {
-            /* changing the objective coefficient of the variable to zero */
-            SCIP_CALL( SCIPchgVarObj(subproblem, vars[i], 0.0) );
-
-            /* changing the master variable type to CONTINUOUS */
+            /* changing the type of the subproblem variable corresponding to mastervar to CONTINUOUS */
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
 
             assert(!infeasible);
