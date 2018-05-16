@@ -5549,6 +5549,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
       /* 0 <= ival */
+      if( ival == 0 )
+         ival = INT_MAX;
       {
          double itlim;
          itlim = (ival >= INT_MAX ? GRB_INFINITY : ival);

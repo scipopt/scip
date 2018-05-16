@@ -4754,8 +4754,6 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->lpinfo;
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
-      /* 0 <= ival */
-      assert( ival >= 0 );
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads */
@@ -4902,9 +4900,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          SCIPdebugMessage("Setting max iter to : %d\n", ival);
       }
 #endif
-
       /* 0 <= ival */
       assert( ival >= 0 );
+      if( ival == 0 )
+         ival = INT_MAX;
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads (0 => MOSEK chooses) */
