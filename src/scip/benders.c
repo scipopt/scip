@@ -4235,7 +4235,7 @@ void SCIPbendersSetSubprobEnabled(
    benders->subprobenabled[probnumber] = enabled;
 }
 
-/** returns whether the subproblem is enabled */
+/** returns whether the subproblem is enabled, i.e. the subproblem is still solved in the solving loop. */
 SCIP_Bool SCIPbendersSubprobIsEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
