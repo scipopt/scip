@@ -130,7 +130,11 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
 #define SCIP_DECL_BENDERSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
 /** the method for creating the Benders' decomposition subproblem. This method is called during the initialisation stage
- *  (after the master problem was transformed)
+ *  (after the master problem was transformed).
+ *
+ *  NOTE: When the create subproblem callback is invoked, the mapping between the  master problem and subproblem
+ *  variables must be available. The create subproblem callback is invoked immediately after BENDERSINIT. So, it is
+ *  possible to construct the variable mapping within the BENDERSINIT callback.
  *
  *  This method must register the SCIP instance for the subproblem with the Benders' decomposition core by calling
  *  SCIPaddBendersSubproblem. Typically, the user must create the SCIP instances for the subproblems. These can be
