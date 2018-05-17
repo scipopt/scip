@@ -1603,7 +1603,7 @@ SCIP_RETCODE computeSubproblemLowerbound(
    /* getting the subproblem to evaluate */
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Computing the lower bound for subproblem %d\n", probnumber);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Computing the lower bound for subproblem %d\n", probnumber);
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
