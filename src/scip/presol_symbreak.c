@@ -70,6 +70,7 @@ struct SCIP_PresolData
    int                   nperms;             /**< number of permutations in perms */
    int                   npermvars;          /**< number of variables affected by permutations */
    SCIP_Real             log10groupsize;     /**< log10 of group size */
+   SCIP_Bool             binvaraffected;     /**< whether binary variables are affected */
    SCIP_VAR**            permvars;           /**< array of variables on which permutations act */
    SCIP_Bool             addedconss;         /**< whether we already added symmetry breaking constraints */
    SCIP_Bool             computedsymmetry;   /**< whether symmetry has been computed already */
@@ -628,7 +629,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_Bool* usedperm;
       int** orbitopevaridx;
       int* columnorder;
-      int ntwocyclescomp = -1;
+      int ntwocyclescomp = INT_MAX;
       int nfilledcols;
       int nusedperms;
       int* nusedelems;
@@ -648,7 +649,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
          /* if we are checking the first permutation */
-         if ( ntwocyclescomp == - 1 )
+         if ( ntwocyclescomp == INT_MAX )
             ntwocyclescomp = ntwocyclesperm;
 
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
@@ -663,6 +664,7 @@ SCIP_RETCODE detectOrbitopes(
       if ( ! isorbitope )
          continue;
       assert( ntwocyclescomp > 0 );
+      assert( ntwocyclescomp < INT_MAX );
 
       /* iterate over permutations and check whether for each permutation there exists
        * another permutation whose 2-cycles intersect pairwise in exactly one element */
@@ -943,7 +945,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
    assert( presoldata != NULL );
 
    /* exit if no or only trivial symmetry group is available */
-   if ( presoldata->nperms < 1 )
+   if ( presoldata->nperms < 1 || ! presoldata->binvaraffected )
       return SCIP_OKAY;
 
    if ( presoldata->addsymresacks )
@@ -1080,6 +1082,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    presoldata->early = FALSE;
    presoldata->nperms = -1;
    presoldata->log10groupsize = -1.0;
+   presoldata->binvaraffected = FALSE;
    presoldata->norbitopes = 0;
    presoldata->nsymresacks = 0;
 
@@ -1174,7 +1177,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
       /* get symmetries */
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(presoldata->npermvars), &(presoldata->permvars),
-            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize)) );
+            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
 
       presoldata->computedsymmetry = TRUE;
 
@@ -1282,6 +1285,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->genconss = NULL;
    presoldata->nperms = -1;
    presoldata->log10groupsize = -1.0;
+   presoldata->binvaraffected = FALSE;
    presoldata->norbits = -1;
    presoldata->orbits = NULL;
    presoldata->orbitbegins = NULL;

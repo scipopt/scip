@@ -3804,6 +3804,7 @@ GENERALUPG:
             for( j = 0; j <= lhsnvars; ++j )
                SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[j]) );
 
+            *nupgdconss = 0;
             goto cleanup;
          }
          lhsnvars++;
@@ -3828,6 +3829,7 @@ GENERALUPG:
             SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[j]) );
          }
 
+         *nupgdconss = 0;
          goto cleanup;
       }
 
@@ -4471,14 +4473,8 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       if( printreason )
       {
-         SCIP_Real unscaledviol;
-
-         unscaledviol  = consdata->lhsval;
-         if( !SCIPisInfinity(scip, unscaledviol) )
-            unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
-
          SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
-         SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
+         SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g\n", consdata->violation);
       }
 
       /* if we do linear feasibility shifting, then try to adjust solution */

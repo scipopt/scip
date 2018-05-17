@@ -1675,6 +1675,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
 #endif
 }
 
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return FALSE;
+}
+
 /**@} */
 
 
@@ -3121,7 +3145,6 @@ SCIP_RETCODE lpiStrongbranch(
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n", itlim - spx->iterations());
             spx->setIterationLimit(itlim - spx->iterations());
-            assert( ! spx->hasPreStrongbranchingBasis() );
             spx->restorePreStrongbranchingBasis();
             fromparentbasis = true;
             error = false;
@@ -3195,10 +3218,9 @@ SCIP_RETCODE lpiStrongbranch(
 #else
             /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
              * pre-strong-branching basis and try again with reduced iteration limit */
-            else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
+            if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
             {
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->iterations());
-               assert( ! spx->hasPreStrongbranchingBasis() );
                spx->restorePreStrongbranchingBasis();
                spx->setIterationLimit(itlim - spx->iterations());
                error = false;

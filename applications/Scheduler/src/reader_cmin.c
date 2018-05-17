@@ -1216,7 +1216,7 @@ SCIP_RETCODE readFile(
          /* get job cost */
          if( !getNextToken(cmininput) )
          {
-            syntaxError(scip, cmininput, "missing job duration\n");
+            syntaxError(scip, cmininput, "missing job cost\n");
             break;
          }
          assert(cmininput->haserror == FALSE);

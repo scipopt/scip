@@ -4277,8 +4277,6 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(*node == NULL || !(*node)->active);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert(!postponed || *node == NULL);
-   assert(!postponed || tree->focusnode != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
    assert(cutoff != NULL);
@@ -4395,6 +4393,10 @@ SCIP_RETCODE SCIPnodeFocus(
     * if the node was postponed, make it a leaf.
     */
    childrenlpstatefork = tree->focuslpstatefork;
+
+   assert(!postponed || *node == NULL);
+   assert(!postponed || tree->focusnode != NULL);
+
    if( postponed )
    {
       assert(tree->nchildren == 0);

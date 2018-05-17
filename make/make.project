@@ -78,7 +78,7 @@ CLUSTERNODES    =       all
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	5.0.1.3
+SCIP_VERSION	=	5.0.1.4
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -320,7 +320,9 @@ endif
 ifeq ($(PARASCIP),false)
 FLAGS		+=	-DNPARASCIP
 else
+ifeq ($(FILTERSQP),true)
 LDFLAGS 	+=	-lpthread
+endif
 endif
 
 #-----------------------------------------------------------------------------

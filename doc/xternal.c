@@ -119,6 +119,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG11        "Interface changes between version 5.0 and 5.1"
  * - \ref CHG10        "Interface changes between version 4.0 and 5.0"
  * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
@@ -133,7 +134,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  5.0.1.3
+ * @version  5.0.1.4
  *
  * \image html scippy.png
  *
@@ -7435,6 +7436,40 @@
   */
 
  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG11 Interface changes between SCIP 5.0 and SCIP 5.1
+  *
+  *
+  * @section CHGCALLBACKS11 New and changed callbacks
+  *
+  *
+  * <br>
+  * @section CHGINTERFUNC11 Changed interface methods
+  *
+  *   <b>Data structures</b>
+  *    - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between weights that are simple averages or higher weights for more recent observations (the previous default).
+  *      The last two parameters are used for a finer control of the exponential decay.
+  * - Functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+  *   and SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() require additional argument to specify already
+  *   existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+  *
+  * <br>
+  *
+  *   <b>SCIP Status</b>
+  *   - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and
+  *     SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
+  *
+  * <br>
+  * @section CHGPARAMS11 Changed parameters
+  *
+  *   <b>Removed parameters</b>
+  *    - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  *      directly by the target node limit within the heuristic.
+  *
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -7562,6 +7597,12 @@
 
 
 /**@page RELEASENOTES Release notes
+ *
+ * Please consult the <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6629">release report</a> for version 5.0 that explains many of the new features in detail.
+ *
+ * \verbinclude SCIP-release-notes-5.0.1
+ *
+ * \verbinclude SCIP-release-notes-5.0
  *
  * A release report with an in-depth description of many of the new features in version 4.0 is available on <a href="http://www.optimization-online.org/DB_HTML/2017/03/5895.html">Optimization Online</a>.
  *

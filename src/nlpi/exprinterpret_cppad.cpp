@@ -86,16 +86,12 @@ using CppAD::SCIPInterval;
  * To implement this, we follow the team_pthread example of CppAD, which uses pthread's thread-specific data management.
  */
 #ifndef NPARASCIP
-#include <pthread.h>
 
-/** mutex for locking in pthread case */
-static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
-
-/** key for accessing thread specific information */
-static pthread_key_t thread_specific_key;
+#include <atomic>
 
 /** currently registered number of threads */
-static size_t ncurthreads = 0;
+static std::atomic_size_t ncurthreads{0};
+static thread_local int thread_number{-1};
 
 /** CppAD callback function that indicates whether we are running in parallel mode */
 static
@@ -112,36 +108,15 @@ static
 size_t thread_num(void)
 {
    size_t threadnum;
-   void* specific;
 
-   specific = pthread_getspecific(thread_specific_key);
-
-   /* if no data for this thread yet, then assign a new thread number to the current thread
-    * we store the thread number incremented by one, to distinguish the absence of data (=0) from existing data
+   /* if no thread_number for this thread yet, then assign a new thread number to the current thread
     */
-   if( specific == NULL )
+   if( thread_number == -1 )
    {
-      pthread_mutex_lock(&cppadmutex);
-
-      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", (long unsigned int)ncurthreads, (void*)pthread_self());
-
-      pthread_setspecific(thread_specific_key, (void*)(ncurthreads + 1));
-
-      threadnum = ncurthreads;
-
-      ++ncurthreads;
-
-      pthread_mutex_unlock(&cppadmutex);
-
-      assert(pthread_getspecific(thread_specific_key) != NULL);
-      assert((size_t)pthread_getspecific(thread_specific_key) == threadnum + 1);
-   }
-   else
-   {
-      threadnum = (size_t)(specific) - 1;
+      thread_number = static_cast<int>(ncurthreads.fetch_add(1, std::memory_order_relaxed));
    }
 
-   assert(threadnum < ncurthreads);
+   threadnum = static_cast<size_t>(thread_number);
 
    return threadnum;
 }
@@ -153,8 +128,6 @@ size_t thread_num(void)
 static
 char init_parallel(void)
 {
-   pthread_key_create(&thread_specific_key, NULL);
-
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
    CppAD::parallel_ad<SCIPInterval>();
@@ -469,8 +442,9 @@ private:
    /** stores exponent value corresponding to next call to forward or reverse
     *
     * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
     */
-   virtual void set_id(size_t id)
+   virtual void set_old(size_t id)
    {
       exponent = (int) id;
    }
@@ -725,9 +699,10 @@ private:
 
    /** stores exponent corresponding to next call to forward or reverse
     *
-    *  How is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * How is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
     */
-   virtual void set_id(size_t id)
+   virtual void set_old(size_t id)
    {
       exponent = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
    }
@@ -943,7 +918,7 @@ template<>
 class atomic_signpower<SCIPInterval> : public CppAD::atomic_base<SCIPInterval>
 {
 public:
-   atomic_signpower()
+   atomic_signpower<SCIPInterval>()
    : CppAD::atomic_base<SCIPInterval>("signpowerint"),
      exponent(0.0)
    {
@@ -957,9 +932,10 @@ private:
 
    /** stores exponent corresponding to next call to forward or reverse
     *
-    *  How is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * How is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
     */
-   virtual void set_id(size_t id)
+   virtual void set_old(size_t id)
    {
       exponent = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
    }
@@ -1246,8 +1222,9 @@ private:
    /** stores user expression corresponding to next call to forward or reverse
     *
     * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
     */
-   virtual void set_id(size_t id)
+   virtual void set_old(size_t id)
    {
       expr = (SCIP_EXPR*)(void*)id;
       assert(SCIPexprGetOperator(expr) == SCIP_EXPR_USER);
@@ -2176,7 +2153,7 @@ SCIP_RETCODE SCIPexprintCreate(
    assert(blkmem  != NULL);
    assert(exprint != NULL);
 
-   if( BMSallocMemory(exprint) == NULL )
+   if( BMSallocBlockMemory(blkmem, exprint) == NULL )
       return SCIP_NOMEMORY;
 
    (*exprint)->blkmem = blkmem;
@@ -2192,7 +2169,7 @@ SCIP_RETCODE SCIPexprintFree(
    assert( exprint != NULL);
    assert(*exprint != NULL);
 
-   BMSfreeMemory(exprint);
+   BMSfreeBlockMemory((*exprint)->blkmem, exprint);
 
    return SCIP_OKAY;
 }
@@ -2499,7 +2476,7 @@ SCIP_RETCODE SCIPexprintGradInt(
 {
    assert(exprint  != NULL);
    assert(tree     != NULL);
-   assert(varvals  != NULL || new_varvals == false);
+   assert(varvals  != NULL || new_varvals == FALSE);
    assert(val      != NULL);
    assert(gradient != NULL);
 

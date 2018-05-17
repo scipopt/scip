@@ -266,7 +266,7 @@ SCIP_RETCODE SCIPincludeReaderLOP(
 {
    SCIP_READER* reader;
 
-   /* include binpacking reader */
+   /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
    assert( reader != NULL );
 

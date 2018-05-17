@@ -560,6 +560,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
+			scip/heur_farkasdiving.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
@@ -618,7 +619,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_dualcomp.o\
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
-			scip/presol_implfree.o\
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_qpkktref.o \
@@ -1523,7 +1523,7 @@ endif
 endif
 ifneq ($(WORHP),true)
 ifneq ($(WORHP),false)
-		$(error invalid WORHP flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+		$(error invalid WORHP flag selected: WORHP=$(WORHP). Possible options are: true false)
 endif
 endif
 ifneq ($(READLINE),true)

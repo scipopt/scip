@@ -50,6 +50,8 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
 
+   SCIP_CALL( SCIPincludeTableDefault(scip) );
+
    /** project plugins */
    SCIP_CALL( SCIPincludePricerColoring(scip) );
 
