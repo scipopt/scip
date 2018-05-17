@@ -271,6 +271,7 @@ SCIP_RETCODE getSymmetries(
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
+   SCIP_VAR** permvars;
    int v;
 
    assert( scip != NULL );
@@ -292,6 +293,7 @@ SCIP_RETCODE getSymmetries(
          {
             SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
          }
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
          SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
 
          propdata->nperms = -1;
@@ -302,14 +304,14 @@ SCIP_RETCODE getSymmetries(
 
          /* recompute symmetries and update restart counter */
          SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, TRUE, TRUE,
-               &(propdata->npermvars), &propdata->permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
+               &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
 
          propdata->lastrestart = SCIPgetNRuns(scip);
       }
       else
       {
          SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE, TRUE,
-               &(propdata->npermvars), &propdata->permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
+               &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
       }
 
       if ( propdata->nperms == 0 )
@@ -323,6 +325,7 @@ SCIP_RETCODE getSymmetries(
       SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
 
       /* insert variables into hashmap and capture variables */
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->permvars, permvars, propdata->npermvars) );
       for (v = 0; v < propdata->npermvars; ++v)
       {
          SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[v], (void*) (size_t) v) );
@@ -815,6 +818,7 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
    {
       SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
    }
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
 
    propdata->nperms = -1;
