@@ -2661,19 +2661,15 @@ void createBinaryConstraintName(
    assert(constraintname != NULL);
    assert(binaryvars[0] != NULL);
 
-   sprintf(constraintname, "lookahead_bin_%s", SCIPvarGetName(binaryvars[0]));
+   SCIPsnprintf(constraintname, SCIP_MAXSTRLEN, "lookahead_bin_%s", SCIPvarGetName(binaryvars[0]));
 
    for( i = 1; i < nbinaryvars; i++ )
    {
       SCIP_VAR* var = binaryvars[i];
-      char prevconstraintname[SCIP_MAXSTRLEN];
       assert(var != NULL);
 
-      /* we need to store the constraint name built till this point, as 'sprintf''s behaviour is undefined, if one of
-       * the format params is also the target string */
-      strcpy(prevconstraintname, constraintname);
-
-      sprintf(constraintname, "%s_%s", prevconstraintname, SCIPvarGetName(var));
+      (void) strncat(constraintname, "_", SCIP_MAXSTRLEN-1);
+      (void) strncat(constraintname, SCIPvarGetName(var), SCIP_MAXSTRLEN-1);
    }
 }
 
