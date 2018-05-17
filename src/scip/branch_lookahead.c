@@ -2665,11 +2665,13 @@ void createBinaryConstraintName(
 
    for( i = 1; i < nbinaryvars; i++ )
    {
+      size_t oldlen;
       SCIP_VAR* var = binaryvars[i];
       assert(var != NULL);
 
-      (void) strncat(constraintname, "_", SCIP_MAXSTRLEN-1);
-      (void) strncat(constraintname, SCIPvarGetName(var), SCIP_MAXSTRLEN-1);
+      oldlen = strlen(constraintname);
+      (void) strncat(constraintname, "_", SCIP_MAXSTRLEN-oldlen);
+      (void) strncat(constraintname, SCIPvarGetName(var), SCIP_MAXSTRLEN-oldlen-1);
    }
 }
 
