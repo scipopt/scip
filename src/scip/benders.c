@@ -2461,11 +2461,11 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_BENDERSSUBSTATUS* substatus;
    SCIP_Bool optimal;
    SCIP_Bool allverified;
-   SCIP_Bool error;
+   SCIP_Bool success;
    int i;
    int l;
 
-   error = FALSE;
+   success = TRUE;
 
    SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
 
@@ -2631,7 +2631,10 @@ SCIP_RETCODE SCIPbendersExec(
       SCIPerrorMessage("An error was found when generating cuts for non-optimal subproblems of Benders' "
          "decomposition <%s>. Consider merging the infeasible subproblems into the master problem.\n", SCIPbendersGetName(benders));
 
-      error = TRUE;
+      /* since no other cuts are generated, then this error will result in a crash. It is possible to avoid the error,
+       * by merging the affected subproblem into the master problem.
+       */
+      success = FALSE;
 
       goto TERMINATE;
    }
@@ -2689,9 +2692,9 @@ TERMINATE:
          /* since subproblems have been merged, then constraints have been added. This could resolve the unresolved
           * infeasibility, so the error has been corrected.
           */
-         error = FALSE;
+         success = TRUE;
       }
-      else if( error )
+      else if( !success )
       {
          SCIPerrorMessage("An error occurred during Benders' decomposition cut generations and no merging had been "
             "performed. It is not possible to continue solving the problem by Benders' decomposition\n");
@@ -2725,7 +2728,7 @@ TERMINATE:
    SCIPfreeBlockMemoryArray(set->scip, &substatus, nsubproblems);
    SCIPfreeBlockMemoryArray(set->scip, &subprobsolved, nsubproblems);
 
-   if( error )
+   if( !success )
       return SCIP_ERROR;
    else
       return SCIP_OKAY;
