@@ -316,15 +316,15 @@ public:
    // @todo member variable?
    void setProbname(const char* probname)
    {
-      int len;
+      size_t len;
 
       assert(probname != NULL);
       if( _probname != NULL )
          spx_free(_probname);
-      len = (int)strlen(probname);
+
+      len = strlen(probname);
       spx_alloc(_probname, len + 1);
-      strncpy(_probname, probname, len); /*lint !e732*/
-      _probname[len] = '\0';
+      memcpy(_probname, probname, len + 1);
    }
 
    void setRep(SPxSolver::Representation p_rep)
