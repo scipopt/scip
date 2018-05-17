@@ -597,6 +597,16 @@
  *    </td>
  *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
  * </tr>
+ * <tr>
+ *    <td>Mixed-integer semidefinite program (MISDP)</td>
+ *    <td>\f{align*}{
+ *         \text{inf} \quad \thinspace & b^T y \\
+ *         \text{s.t.} \quad & \sum_{j=1}^m A_j\, y_j - A_0 \succeq 0 \\
+ *         & y_j \in \mathbb{Z} && \forall\, j \in \mathcal{I}
+ *        \f}
+ *    </td>
+ *    <td colspan="3"> see the <a href="http://www.opt.tu-darmstadt.de/scipsdp/">SCIP-SDP web page</a></td>
+ * </tr>
  * </table>
  *
  *
