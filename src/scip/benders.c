@@ -3466,7 +3466,7 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
    assert(set != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Infeasibility of subproblem %d can't be resolved. "
+   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "Infeasibility of subproblem %d can't be resolved. "
      "Subproblem %d is being merged into the master problem.\n", probnumber, probnumber);
 
    /* freeing the subproblem because it will be flagged as independent. Since the subproblem is flagged as independent,
