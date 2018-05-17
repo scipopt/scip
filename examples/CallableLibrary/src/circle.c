@@ -124,8 +124,6 @@ SCIP_RETCODE runCircle(void)
    SCIPinfoMessage(scip, NULL, "\nSolving...\n");
    SCIP_CALL( SCIPsolve(scip) );
 
-   SCIP_CALL( SCIPfreeTransform(scip) );
-
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIPinfoMessage(scip, NULL, "\nSolution:\n");
