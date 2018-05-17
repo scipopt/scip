@@ -37,10 +37,10 @@
 /* Model parameters */
 
 /** Number of possible circles **/
-#define nCircles 6
+#define nCircles 5
 
 /** Radius **/
-static const SCIP_Real r[] = {0.25, 0.25, 0.4, 0.7, 0.1, 0.3};
+static const SCIP_Real r[] = {0.25, 0.25, 0.4, 0.7, 0.1};
 
 /** sets up problem */
 static SCIP_RETCODE setupProblem(
@@ -186,6 +186,9 @@ static SCIP_RETCODE runPacking(void)
 
 	SCIPinfoMessage(scip, NULL, "Original problem:\n");
 	SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
+
+	/* closing the last bit of the gap can take very long */
+	SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-4) );
 
 	SCIPinfoMessage(scip, NULL, "\nSolving...\n");
 	SCIP_CALL( SCIPsolve(scip) );
