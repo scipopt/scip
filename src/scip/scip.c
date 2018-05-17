@@ -6707,7 +6707,7 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    return SCIPbendersGetAuxiliaryVarVal(benders, scip->set, sol, probnumber);
 }
 
-/** merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
+/** Merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
  *  constraints to the master problem, but keeps the subproblem stored in the Benders data structure. The reason for
  *  keeping the subproblem available is for when it is queried for solutions after the problem is solved.
  *

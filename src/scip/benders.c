@@ -79,7 +79,7 @@ struct SCIP_EventhdlrData
 
 /** initialises the members of the eventhandler data */
 static
-SCIP_RETCODE initialiseEventhandlerData(
+SCIP_RETCODE initEventhandlerData(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< the event handler data */
    )
@@ -154,7 +154,7 @@ SCIP_RETCODE exitEventhandler(
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
    /* reinitialise the event handler data */
-   SCIP_CALL( initialiseEventhandlerData(scip, eventhdlrdata) );
+   SCIP_CALL( initEventhandlerData(scip, eventhdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -1096,7 +1096,7 @@ SCIP_RETCODE initialiseLPSubproblem(
    /* include event handler into SCIP */
    SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata) );
 
-   SCIP_CALL( initialiseEventhandlerData(subproblem, eventhdlrdata) );
+   SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata) );
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, NODEFOCUS_EVENTHDLR_NAME, NODEFOCUS_EVENTHDLR_DESC,
          eventExecBendersNodefocus, eventhdlrdata) );
@@ -1184,8 +1184,8 @@ SCIP_RETCODE createSubproblems(
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
 
-            SCIP_CALL( initialiseEventhandlerData(subproblem, eventhdlrdata_mipnodefocus) );
-            SCIP_CALL( initialiseEventhandlerData(subproblem, eventhdlrdata_upperbound) );
+            SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_mipnodefocus) );
+            SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_upperbound) );
 
             /* include the first LP solved event handler into the subproblem */
             SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, MIPNODEFOCUS_EVENTHDLR_NAME,
@@ -1589,7 +1589,6 @@ SCIP_RETCODE computeSubproblemLowerbound(
       SCIP_CALL( SCIPsetLongintParam(subproblem, "limits/totalnodes", 1LL) );
       SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", 1) );
    }
-
 
    /* if the subproblem not independent and is convex, then the probing LP is solve. Otherwise, the MIP is solved */
    if( !independent && SCIPbendersSubprobIsConvex(benders, probnumber) )
@@ -2104,8 +2103,9 @@ SCIP_RETCODE solveBendersSubproblems(
          if( !subproblemIsActive(benders, i) )
          {
             /* NOTE: There is no need to update the optimal flag. This is because optimal is always TRUE until a
-             * non-optimal subproblem is found. */
-            SCIPdebugMessage("Benders decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
+             * non-optimal subproblem is found.
+             */
+            SCIPsetDebugMsg(set, "Benders decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
 
             (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
             (*subprobsolved)[i] = TRUE;
@@ -2555,7 +2555,7 @@ SCIP_RETCODE SCIPbendersExec(
       if( type != SCIP_BENDERSENFOTYPE_PSEUDO )
       {
          SCIP_CALL( generateBendersCuts(benders, set, sol, result, type, solveloop, checkint, nchecked,
-               subprobsolved, substatus, &mergecands, &npriomergecands, &nmergecands, &nsolveloops) );
+            subprobsolved, substatus, &mergecands, &npriomergecands, &nmergecands, &nsolveloops) );
       }
       else
       {
@@ -2667,7 +2667,6 @@ TERMINATE:
    i = benders->firstchecked;
    subproblemcount = 0;
    while( subproblemcount < nchecked )
-   /*for( i = 0; i < benders->nsubproblems; i++ )*/
    {
       SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, i) );
 
@@ -3427,7 +3426,7 @@ SCIP_Real SCIPbendersGetAuxiliaryVarVal(
    return SCIPgetSolVal(set->scip, sol, auxiliaryvar);
 }
 
-/** merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
+/** Merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
  *  constraints to the master problem, but keeps the subproblem stored in the Benders data structure. The reason for
  *  keeping the subproblem available is for when it is queried for solutions after the problem is solved.
  *
@@ -3467,7 +3466,7 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
    assert(set != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
-   SCIPerrorMessage("Infeasibility of subproblem %d can't be resolved. "
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Infeasibility of subproblem %d can't be resolved. "
      "Subproblem %d is being merged into the master problem.\n", probnumber, probnumber);
 
    /* freeing the subproblem because it will be flagged as independent. Since the subproblem is flagged as independent,
@@ -3512,8 +3511,10 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
       SCIP_Bool releasevar = FALSE;
 
       SCIP_CALL( SCIPgetBendersMasterVar(set->scip, benders, vars[i], &mastervar) );
+
       /* if the master problem variable is not NULL, then there is a corresponding variable in the master problem for
-       * the given subproblem variable. In this case, the variable is added to the hashmap. */
+       * the given subproblem variable. In this case, the variable is added to the hashmap.
+       */
       if( mastervar == NULL )
       {
          SCIP_VAR* origvar;
@@ -3521,8 +3522,11 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
          SCIP_Real constant;
 
          /* This is following the same process as in createVariableMappings. The original variable is used to map
-          * between the subproblem and the master problem */
+          * between the subproblem and the master problem
+          */
          origvar = vars[i];
+         scalar = 1.0;
+         constant = 0.0;
          SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
          /* retrieving the var name */
@@ -3531,7 +3535,7 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
 
          /* creating and adding the variable to the Benders' decomposition master problem */
          SCIP_CALL( SCIPcreateVarBasic(set->scip, &mastervar, varname, SCIPvarGetLbOriginal(origvar),
-               SCIPvarGetUbOriginal(origvar), 0.0, SCIPvarGetType(origvar)) );
+            SCIPvarGetUbOriginal(origvar), 0.0, SCIPvarGetType(origvar)) );
 
          /* adding the variable to the master problem */
          SCIP_CALL( SCIPaddVar(set->scip, mastervar) );
@@ -3566,15 +3570,15 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
 
       /* NOTE: adding all subproblem constraints appears to cause an error when resolving the LP, which results in the
        * current incumbent being reported as optimal. To avoid this, only half of the subproblem constraints are added
-       * the master problem. The remaining half are marked as lazy and are separated as required. */
+       * the master problem. The remaining half are marked as lazy and are separated as required.
+       */
       initial = (i < nconss/2);
 
       SCIP_CALL( SCIPgetConsCopy(subproblem, set->scip, conss[i], &targetcons, SCIPconsGetHdlr(conss[i]),
-            //localvarmap, localconsmap, NULL, SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]),
-            localvarmap, localconsmap, NULL, initial, SCIPconsIsSeparated(conss[i]),
-            SCIPconsIsEnforced(conss[i]), SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE,
-            SCIPconsIsModifiable(conss[i]), SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]),
-            FALSE, TRUE, &valid) );
+         localvarmap, localconsmap, NULL, initial, SCIPconsIsSeparated(conss[i]),
+         SCIPconsIsEnforced(conss[i]), SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE,
+         SCIPconsIsModifiable(conss[i]), SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]),
+         FALSE, TRUE, &valid) );
       assert(SCIPconsIsInitial(conss[i]));
       assert(valid);
 
