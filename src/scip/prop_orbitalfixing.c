@@ -942,6 +942,10 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    if ( SCIPinProbing(scip) )
       return SCIP_OKAY;
 
+   /* do not run again in repropagation, since the path to the root might have changed */
+   if ( SCIPinRepropagation(scip) )
+      return SCIP_OKAY;
+
    /* get data */
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
