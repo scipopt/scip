@@ -23511,8 +23511,13 @@ SCIP_Bool SCIPparseReal(
  * memory management
  */
 
-/**@name Standard Memory Management Macros */
-/**@{ */
+
+/**@addtogroup PublicMemoryMethods
+ *
+ * @{
+ */
+
+/* Standard Memory Management Macros */
 
 #define SCIPallocMemory(scip,ptr)               ( (BMSallocMemory((ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
@@ -23536,16 +23541,9 @@ SCIP_Bool SCIPparseReal(
 #define SCIPfreeMemoryArrayNull(scip,ptr)       BMSfreeMemoryArrayNull(ptr)
 #define SCIPfreeMemorySize(scip,ptr)            BMSfreeMemorySize(ptr)
 #define SCIPfreeMemorySizeNull(scip,ptr)        BMSfreeMemorySizeNull(ptr)
-/**@} */
 
-
-/**@addtogroup PublicMemoryMethods
+/* Block Memory Management Macros
  *
- * @{
- */
-
-/**@name Block Memory Management Macros
- * @{
  */
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (BMSallocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
@@ -23572,12 +23570,10 @@ SCIP_Bool SCIPparseReal(
 #define SCIPfreeBlockMemorySize(scip,ptr,size)  BMSfreeBlockMemorySize(SCIPblkmem(scip), (ptr), (size))
 #define SCIPfreeBlockMemorySizeNull(scip,ptr,size) BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
 
-/**@} */
 
-
-/**@name Buffer Memory Management Macros
+/* Buffer Memory Management Macros
  *
- * @{
+ *
  */
 
 
@@ -23608,12 +23604,10 @@ SCIP_Bool SCIPparseReal(
 #define SCIPfreeCleanBufferArray(scip,ptr)      BMSfreeBufferMemoryArray(SCIPcleanbuffer(scip), (ptr))
 #define SCIPfreeCleanBufferArrayNull(scip,ptr)  BMSfreeBufferMemoryArrayNull(SCIPcleanbuffer(scip), (ptr))
 
-/**@} */
 
-
-/**@name Memory Management Functions
+/* Memory Management Functions
  *
- * @{
+ *
  */
 
 /** returns block memory to use at the current time
@@ -23700,8 +23694,6 @@ EXTERN
 void SCIPprintMemoryDiagnostic(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-/* @} */
 
 /* @} */
 
