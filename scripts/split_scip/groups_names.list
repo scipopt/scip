@@ -16,7 +16,7 @@ PublicPropagatorMethods prop
 PublicConcsolverTypeMethods concurrent
 PublicHeuristicMethods heur
 PublicCompressionMethods compr
-PublicDivesetMethods diveset
+PublicDivesetMethods heur
 PublicEventHandlerMethods event
 PublicNodeSelectorMethods nodesel
 PublicBanditMethods bandit
@@ -51,10 +51,10 @@ PublicParallelMethods concurrent
 PublicReoptimizationMethods reopt
 PublicSolvingStatsMethods solvingstats
 PublicTimingMethods timing
-PublicToleranceMethods tol
+PublicToleranceMethods numerics
 PublicMemoryMethods mem
-PublicDynamicArrayMethods data_structures
-DisjointSet data_structures
-DirectedGraph data_structures
+PublicDynamicArrayMethods datastructures
+DisjointSet datastructures
+DirectedGraph datastructures
 PublicValidationMethods validation
 RandomNumbers randnumgen
