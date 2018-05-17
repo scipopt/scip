@@ -1133,7 +1133,6 @@ SCIP_RETCODE createSubproblems(
       subproblem = SCIPbendersSubproblem(benders, i);
 
       assert(subproblem != NULL);
-      assert(SCIPgetStage(subproblem) == SCIP_STAGE_PROBLEM);
 
       /* setting global limits for the subproblems. This overwrites the limits set by the user */
       SCIP_CALL( SCIPsetIntParam(subproblem, "limits/maxorigsol", 0) );
@@ -1144,19 +1143,26 @@ SCIP_RETCODE createSubproblems(
       /* The objective function coefficients of the master problem are set to zero. This is necessary for the Benders'
        * decomposition algorithm, since the cut methods and the objective function check assumes that the objective
        * coefficients of the master problem variables are zero.
+       *
+       * This only occurs if the Benders' decomposition is not a copy. It is assumed that the correct objective
+       * coefficients are given during the first subproblem creation.
        */
-      for( j = 0; j < nvars; j++ )
+      if( !benders->iscopy )
       {
-         /* retrieving the master problem variable */
-         SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
-
-         /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
-         if( mastervar != NULL )
+         assert(SCIPgetStage(subproblem) == SCIP_STAGE_PROBLEM);
+         for( j = 0; j < nvars; j++ )
          {
-            SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Changing the objective coefficient of copy of master"
-              " problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
-            /* changing the subproblem variable objective coefficient to zero */
-            SCIP_CALL( SCIPchgVarObj(subproblem, vars[j], 0.0) );
+            /* retrieving the master problem variable */
+            SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
+
+            /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
+            if( mastervar != NULL )
+            {
+               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Changing the objective coefficient of copy of master"
+                 " problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
+               /* changing the subproblem variable objective coefficient to zero */
+               SCIP_CALL( SCIPchgVarObj(subproblem, vars[j], 0.0) );
+            }
          }
       }
 
