@@ -72,6 +72,15 @@
 #undef SCIP_DEBUG
 #endif
 
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+ * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
+ */
+#ifdef __GNUC__
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
 /* include SoPlex solver */
 #include "spxsolver.h"
 
@@ -507,15 +516,15 @@ public:
 
    void setProbname(const char* probname)
    {
-      int len;
+      size_t len;
 
       assert(probname != NULL);
       if( m_probname != NULL )
          spx_free(m_probname);
-      len = (int) strlen(probname);
+
+      len = strlen(probname);
       spx_alloc(m_probname, len + 1);
-      /* safe to use strcpy */
-      (void)strcpy(m_probname, probname);
+      memcpy(m_probname, probname, len + 1);
    }
 
    Real getObjLoLimit() const
