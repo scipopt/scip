@@ -2661,7 +2661,7 @@ void createBinaryConstraintName(
    assert(constraintname != NULL);
    assert(binaryvars[0] != NULL);
 
-   SCIPsnprintf(constraintname, SCIP_MAXSTRLEN, "lookahead_bin_%s", SCIPvarGetName(binaryvars[0]));
+   (void) SCIPsnprintf(constraintname, SCIP_MAXSTRLEN, "lookahead_bin_%s", SCIPvarGetName(binaryvars[0]));
 
    for( i = 1; i < nbinaryvars; i++ )
    {
