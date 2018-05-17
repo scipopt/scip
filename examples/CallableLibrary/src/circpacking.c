@@ -42,17 +42,18 @@
 /** Radius **/
 static const SCIP_Real r[] = {0.25, 0.25, 0.4, 0.7, 0.1};
 
+/* variables */
+SCIP_VAR* x[nCircles]; /**< x coordinates */
+SCIP_VAR* y[nCircles]; /**< y coordinates */
+SCIP_VAR* a;           /**< area of rectangle */
+SCIP_VAR* w;           /**< width of rectangle */
+SCIP_VAR* h;           /**< height of rectangle */
+
 /** sets up problem */
 static SCIP_RETCODE setupProblem(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-	SCIP_VAR* x[nCircles]; /* x coordinates */
-	SCIP_VAR* y[nCircles]; /* y coordinates */
-	SCIP_VAR* a;           /* area of rectangle */
-	SCIP_VAR* w;           /* width of rectangle */
-	SCIP_VAR* h;           /* height of rectangle */
-
 	SCIP_CONS* xrw[nCircles];
 	SCIP_CONS* yrh[nCircles];
 	SCIP_CONS* wha;
@@ -145,16 +146,11 @@ static SCIP_RETCODE setupProblem(
 		}
 	}
 
-	/* release variables and constraints
+	/* release constraints
 	 * the problem has them captured, and we do not require them anymore
 	 */
-	SCIP_CALL( SCIPreleaseVar(scip, &a) );
-	SCIP_CALL( SCIPreleaseVar(scip, &w) );
-	SCIP_CALL( SCIPreleaseVar(scip, &h) );
 	for( i = 0; i < nCircles; ++i )
 	{
-		SCIP_CALL( SCIPreleaseVar(scip, &x[i]) );
-		SCIP_CALL( SCIPreleaseVar(scip, &y[i]) );
 		SCIP_CALL( SCIPreleaseCons(scip, &xrw[i]) );
 		SCIP_CALL( SCIPreleaseCons(scip, &yrh[i]) );
 
@@ -168,10 +164,65 @@ static SCIP_RETCODE setupProblem(
 	return SCIP_OKAY;
 }
 
+/** plots solution by use of Python/Matplotlib */
+static
+void visualizeSolutionMatplotlib(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< solution to plot */
+)
+{
+#if _POSIX_C_SOURCE < 2
+   SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
+#else
+   FILE* stream;
+   int i;
+
+   stream = popen("python2", "w");
+   if( stream == NULL )
+   {
+      SCIPerrorMessage("Could not open pipe to python.\n");
+      return;
+   }
+
+   fputs("import numpy as np\n"
+      "import matplotlib\n"
+      "import matplotlib.pyplot as plt\n",
+      stream);
+
+   fputs("fig, ax = plt.subplots()\n"
+      "patches = []\n",
+      stream);
+
+   for( i = 0; i < nCircles; ++i )
+   {
+      fprintf(stream, "patches.append(matplotlib.patches.Circle((%g, %g), %g))\n",
+         SCIPgetSolVal(scip, sol, x[i]),
+         SCIPgetSolVal(scip, sol, y[i]),
+         r[i]);
+   }
+
+   fputs("colors = 100*np.random.rand(len(patches))\n"
+       "p = matplotlib.collections.PatchCollection(patches, alpha=0.4)\n"
+       "p.set_array(np.array(colors))\n"
+       "ax.add_collection(p)\n",
+       stream);
+
+   fprintf(stream, "plt.xlim(xmax=%g)\n", SCIPgetSolVal(scip, sol, w));
+   fprintf(stream, "plt.ylim(ymax=%g)\n", SCIPgetSolVal(scip, sol, h));
+   fprintf(stream, "plt.title('Area = %.4f')\n", SCIPgetSolVal(scip, sol, a));
+   fputs("plt.gca().set_aspect(1)\n", stream);
+   fputs("plt.show()\n", stream);
+
+   pclose(stream);
+#endif
+}
+
+
 /* runs packing circles */
 static SCIP_RETCODE runPacking(void)
 {
 	SCIP* scip;
+	int i;
 
 	SCIP_CALL( SCIPcreate(&scip) );
 	SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
@@ -199,13 +250,25 @@ static SCIP_RETCODE runPacking(void)
 		SCIPinfoMessage(scip, NULL, "Name: Packing Circles\n");
 		SCIPinfoMessage(scip, NULL, "N %d\n", nCircles);
 		SCIPinfoMessage(scip, NULL, "r ");
-		for( int i = 0; i < nCircles; ++i )
+		for( i = 0; i < nCircles; ++i )
 		{
 			SCIPinfoMessage(scip, NULL, "%f ", r[i]);
 		}
 		SCIPinfoMessage(scip, NULL, "\n");
 		SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), NULL, FALSE) );
+
+		visualizeSolutionMatplotlib(scip, SCIPgetBestSol(scip));
 	}
+
+   /* release variables */
+   SCIP_CALL( SCIPreleaseVar(scip, &a) );
+   SCIP_CALL( SCIPreleaseVar(scip, &w) );
+   SCIP_CALL( SCIPreleaseVar(scip, &h) );
+   for( i = 0; i < nCircles; ++i )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &x[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &y[i]) );
+   }
 
 	SCIP_CALL( SCIPfree(&scip) );
 
