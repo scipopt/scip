@@ -2417,18 +2417,20 @@ SCIP_RETCODE SCIPbendersExec(
    int nsubproblems;
    int subproblemcount;
    int nchecked;
-   int nsolveloops;     /* the number of times the subproblems are solved. An additional loop is required when integer
-                           variables are in the subproblem */
-   int i;
-   int l;
-   SCIP_Bool optimal;
-   SCIP_Bool allverified;      /* flag to indicate whether all subproblems have been checked */
-   int nverified;              /* the number of subproblems that have been checked */
-   SCIP_Bool* subprobsolved;
-   SCIP_BENDERSSUBSTATUS* substatus;
+   int nsolveloops;
+   int nverified;
    int* mergecands;
    int npriomergecands;
    int nmergecands;
+   SCIP_Bool* subprobsolved;
+   SCIP_BENDERSSUBSTATUS* substatus;
+   SCIP_Bool optimal;
+   SCIP_Bool allverified;
+   SCIP_Bool error;
+   int i;
+   int l;
+
+   error = FALSE;
 
    SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
 
@@ -2592,9 +2594,10 @@ SCIP_RETCODE SCIPbendersExec(
          (*result) = SCIP_INFEASIBLE;
 
       SCIPerrorMessage("An error was found when generating cuts for non-optimal subproblems of Benders' "
-         "decomposition <%s>.\n", SCIPbendersGetName(benders));
+         "decomposition <%s>. Consider merging the infeasible subproblems into the master problem.\n", SCIPbendersGetName(benders));
 
-      SCIPABORT();
+      error = TRUE;
+
       goto TERMINATE;
    }
 
@@ -2646,8 +2649,17 @@ TERMINATE:
 
       if( merged )
       {
-         SCIP_CALL( SCIPrestartSolve(set->scip) );
          (*result) = SCIP_CONSADDED;
+
+         /* since subproblems have been merged, then constraints have been added. This could resolve the unresolved
+          * infeasibility, so the error has been corrected.
+          */
+         error = FALSE;
+      }
+      else if( error )
+      {
+         SCIPerrorMessage("An error occurred during Benders' decomposition cut generations and no merging had been "
+            "performed. It is not possible to continue solving the problem by Benders' decomposition\n");
       }
    }
 
@@ -2679,7 +2691,10 @@ TERMINATE:
    SCIPfreeBlockMemoryArray(set->scip, &substatus, nsubproblems);
    SCIPfreeBlockMemoryArray(set->scip, &subprobsolved, nsubproblems);
 
-   return SCIP_OKAY;
+   if( error )
+      return SCIP_ERROR;
+   else
+      return SCIP_OKAY;
 }
 
 /** solves the user-defined subproblem solving function */
