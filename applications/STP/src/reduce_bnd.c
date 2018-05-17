@@ -42,7 +42,7 @@
 #include "heur_slackprune.h"
 
 #define DEFAULT_HEURRUNS 100                  /**< number of runs of constructive heuristic */
-#define DEFAULT_DARUNS     10                 /**< number of runs for dual ascent heuristic */
+#define DEFAULT_DARUNS     7                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
@@ -55,6 +55,8 @@
 #define STP_DAEX_MAXGRAD 9
 #define STP_DAEX_MINGRAD 6
 #define STP_DAEX_EDGELIMIT 50000
+#define RANDOM_DAMAXDEVIATION_LOWER 0.15  /**< random upper bound for max deviation for dual ascent */
+#define RANDOM_DAMAXDEVIATION_UPPER 0.30  /**< random upper bound for max deviation for dual ascent */
 
 #define EXEDGE_FREE 0
 #define EXEDGE_FIXED 1
@@ -2769,14 +2771,14 @@ SCIP_RETCODE reduce_check3Tree(
 int reduce_extendedEdge(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   const STP_Bool*       marked,             /**< edge array to mark which (directed) edge can be removed */
    const PATH*           vnoi,               /**< Voronoi data structure */
    const SCIP_Real*      cost,               /**< dual ascent costs */
    const SCIP_Real*      pathdist,           /**< distance array from shortest path calculations */
    const int*            result,             /**< sol int array */
    SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
    int                   root,               /**< the root */
-   int*                  nodearr             /**< for internal stuff */
+   int*                  nodearr,             /**< for internal stuff */
+   STP_Bool*             marked              /**< edge array to mark which (directed) edge can be removed */
 )
 {
    unsigned int* eqstack;
@@ -2808,16 +2810,25 @@ int reduce_extendedEdge(
 
          assert(graph->oeat[erev] != EAT_FREE);
 
+         if( SCIPisZero(scip, cost[e]) || SCIPisZero(scip, cost[erev]) )
+            continue;
+
          if( marked == NULL || !marked[e] )
          {
             SCIP_CALL_ABORT(reduceCheckEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, allowequality, nodearr,
                   &deletable, eqstack, &eqstack_size, eqmark));
+
+            if( marked != NULL && deletable )
+               marked[e] = TRUE;
          }
 
          if( (marked == NULL || !marked[erev]) && deletable )
          {
             SCIP_CALL_ABORT(reduceCheckEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, allowequality,
                   nodearr, &deletable, eqstack, &eqstack_size, eqmark));
+
+            if( marked != NULL && deletable )
+               marked[erev] = TRUE;
          }
 
          for( int i = 0; i < eqstack_size; i++ )
@@ -3013,7 +3024,7 @@ SCIP_RETCODE reduce_da(
       SCIP_CALL( orderDaRoots(scip, graph, terms, graph->terms, (prevrounds > 0), randnumgen) );
 
       if( prevrounds > 0 )
-         damaxdeviation = SCIPrandomGetReal(randnumgen, 0.1, 0.3);
+         damaxdeviation = SCIPrandomGetReal(randnumgen, RANDOM_DAMAXDEVIATION_LOWER, RANDOM_DAMAXDEVIATION_UPPER);
    }
    else
    {
@@ -3198,7 +3209,7 @@ SCIP_RETCODE reduce_da(
 
             if( extended )
             {
-               nfixed += reduce_extendedEdge(scip, graph, marked, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, root, nodearrint);
+               nfixed += reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, root, nodearrint, marked);
             }
 
             if( !SCIPisZero(scip, minpathcost) )
@@ -3232,7 +3243,7 @@ SCIP_RETCODE reduce_da(
       }
       else if( userec )
       {
-         damaxdeviation = SCIPrandomGetReal(randnumgen, 0.1, 0.3);
+         damaxdeviation = SCIPrandomGetReal(randnumgen, RANDOM_DAMAXDEVIATION_LOWER, RANDOM_DAMAXDEVIATION_UPPER);
       }
    }
 

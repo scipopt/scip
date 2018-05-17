@@ -56,7 +56,7 @@
  */
 
 #define DEFAULT_MAXNWAITINGROUNDS        2     /**< maximum number of rounds to wait until propagating again */
-#define REDUCTION_WAIT_RATIO             0.003 /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
+#define REDUCTION_WAIT_RATIO             0.02  /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
 
 /**@} */
 
@@ -138,11 +138,6 @@ SCIP_RETCODE globalfixing(
          {
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(edgevar), 1.0));
 
-//#ifdef SCIP_DEBUG
-#if 0
-            printf("lurking fix: ");
-            graph_edge_printInfo(scip, graph, e);
-#endif
             SCIPchgVarUbGlobal(scip, edgevar, 0.0);
             (*nfixededges)++;
          }
@@ -410,7 +405,7 @@ SCIP_RETCODE reduceRedcostExtended(
    setVnoiDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase);
 
    /* reduce graph */
-   extnfixed = reduce_extendedEdge(scip, propgraph, NULL, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr);
+   extnfixed = reduce_extendedEdge(scip, propgraph, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr, NULL);
    SCIPdebugMessage("extended fixes: %d \n", extnfixed);
 
    SCIPfreeBufferArray(scip, &nodearr);

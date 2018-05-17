@@ -96,8 +96,7 @@
 
 #define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
 #define DAMAXDEVIATION_LOWER 0.01  /**< lower bound for max deviation for dual ascent */
-#define DAMAXDEVIATION_UPPER 0.5  /**< upper bound for max deviation for dual ascent */
-
+#define DAMAXDEVIATION_UPPER 0.9  /**< upper bound for max deviation for dual ascent */
 
 /* *
 #define FLOW_FACTOR     100000
@@ -1643,7 +1642,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    assert(Is_term(g->term[root]));
    assert(maxdeviation >= DAMAXDEVIATION_LOWER && maxdeviation <= DAMAXDEVIATION_UPPER);
    assert(damaxdeviation == -1.0 || damaxdeviation > 0.0);
-
 
    if( nnodes == 1 )
       return SCIP_OKAY;

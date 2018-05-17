@@ -388,9 +388,6 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    if( !(heurdata->maxfreq) && heurdata->nfailures > 0 )
       return SCIP_OKAY;
 
-   if( graph->terms < 55 )
-      return SCIP_OKAY;
-
    /* get best current solution */
    bestsol = SCIPgetBestSol(scip);
 
