@@ -120,8 +120,7 @@ SECTION: General Questions about SCIP
       please read the SCIP <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file first.
     </p>
     <p>
-      If you encounter compilation problems dealing with the <code>explicit</code> keyword you can either try a newer
-      compiler or set the flags <code>LEGACY=true</code> for SoPlex and <code>SPX_LEGACY=true</code> for SCIP.
+      If you encounter compilation problems dealing with the <code>explicit</code> keyword you should try a newer compiler.
     </p>
 
     QUESTION: I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.

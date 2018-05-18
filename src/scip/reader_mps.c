@@ -2493,6 +2493,7 @@ SCIP_RETCODE readIndicators(
       SCIPdebugMsg(scip, "created indicator constraint <%s>", mpsinputField2(mpsi));
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
    }
 
    return SCIP_OKAY;
@@ -4864,6 +4865,10 @@ SCIP_RETCODE SCIPwriteMps(
          binvar = SCIPgetBinaryVarIndicator(cons);
          lincons = SCIPgetLinearConsIndicator(cons);
          slackvar = SCIPgetSlackVarIndicator(cons);
+
+         /* linvars always contains slack variable, thus nlinvars >= 1 */
+         if( SCIPgetNVarsLinear(scip, lincons) <= 1 || SCIPconsIsDeleted(lincons) )
+            continue;
 
          /* create variable and value strings */
          if( SCIPvarIsNegated(binvar) )

@@ -344,8 +344,6 @@
  * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
  * that may not be supported.
  *
- * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

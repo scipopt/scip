@@ -2334,8 +2334,8 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 
    SCIPdebugMessage("getting solution feasibility\n");
 
-   *primalfeasible = (SCIP_Bool) (lpi->solstat==XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS || (lpi->solmethod == 'p' && lpi->solstat==XPRS_LP_UNBOUNDED));
-   *dualfeasible = (SCIP_Bool) (lpi->solstat==XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS || (lpi->solmethod == 'd' && lpi->solstat==XPRS_LP_INFEAS));
+   *primalfeasible = SCIPlpiIsPrimalFeasible(lpi);
+   *dualfeasible = SCIPlpiIsDualFeasible(lpi);
 
    return SCIP_OKAY;
 }
@@ -2603,7 +2603,7 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == XPRS_LP_CUTOFF_IN_DUAL);
+   return (lpi->solstat == XPRS_LP_CUTOFF || lpi->solstat == XPRS_LP_CUTOFF_IN_DUAL);
 }
 
 /** returns TRUE iff the iteration limit was reached */

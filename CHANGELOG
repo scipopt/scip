@@ -80,6 +80,7 @@ deleted files:
 misc:
 - updated CppAD to version 20180000.0
 - add statistic that presents the number of resolves for instable LPs
+- remove LEGACY mode, compiler needs to be C++11-compliant
 
 
 SCIP version 5.0.2
@@ -105,6 +106,8 @@ fixed bugs:
 - fix parsing of version number in the CMake module for Ipopt
 - fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
 - added workaround for bug when solving certain bivariate quadratic interval equations with unbounded second variable
+- fixed bug with releasing slack variable and linear constraint in cons_indicator
+- fixed problem when writing MPS file with indicator constraints with corresponding empty linear constraints
 
 data structures:
 - expression interpreter objects are now stored in the block memory
