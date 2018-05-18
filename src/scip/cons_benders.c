@@ -52,6 +52,8 @@
 #define CONSHDLR_CHECKPRIORITY -5000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_MAXPREROUNDS         1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_EXHAUSTIVE /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 
@@ -511,6 +513,77 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 }
 
 
+/** The presolving method for the Benders' decomposition constraint handler. This method is used to update the lower
+ *  bounds of the auxiliary problem and to identify infeasibility before the subproblems are solved.
+ */
+static
+SCIP_DECL_CONSPRESOL(consPresolBenders)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   int nactivebenders;
+   int nsubproblems;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* it is only possible to compute the lower bound of the subproblems if the constraint handler is active */
+   if( conshdlrdata->active )
+   {
+      benders = SCIPgetBenders(scip);
+      nactivebenders = SCIPgetNActiveBenders(scip);
+
+      /* need to compute the lower bound for all active Benders' decompositions */
+      for( i = 0; i < nactivebenders; i++ )
+      {
+         nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
+
+         for( j = 0; j < nsubproblems; j++ )
+         {
+            SCIP_VAR* auxiliaryvar;
+            SCIP_Real lowerbound;
+            SCIP_Bool infeasible;
+
+            infeasible = FALSE;
+
+            /* computing the lower bound of the subproblem by solving it without any variable fixings */
+            SCIP_CALL( SCIPcomputeBendersSubproblemLowerbound(scip, benders[i], j, &lowerbound, &infeasible) );
+
+            if( infeasible )
+            {
+               (*result) = SCIP_CUTOFF;
+               break;
+            }
+
+            /* retrieving the auxiliary variable */
+            auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders[i], j);
+
+            /* only update the lower bound if it is greater than the current lower bound */
+            if( SCIPisGT(scip, lowerbound, SCIPvarGetLbLocal(auxiliaryvar)) )
+            {
+               /* updating the lower bound of the auxiliary variable */
+               SCIP_CALL( SCIPchgVarLb(SCIPbendersSubproblem(benders[i], j), auxiliaryvar, lowerbound) );
+
+               (*nchgbds)++;
+            }
+
+            /* stores the lower bound for the subproblem */
+            SCIPbendersUpdateSubprobLowerbound(benders[i], j, lowerbound);
+         }
+
+         if( (*result) == SCIP_CUTOFF )
+            break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockBenders)
@@ -552,6 +625,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBenders, NULL) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenders) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenders) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBenders, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
 
    /* add Benders' decomposition constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
