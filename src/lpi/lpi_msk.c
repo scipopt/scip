@@ -2409,6 +2409,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIP_CALL( SolveWSimplex(lpi) );
 
+   /* the following code is unclear: Why should the resolve change anything ?????? */
    if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
    {
       MSKsolstae solsta;
@@ -2481,6 +2482,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    SCIP_CALL( SolveWSimplex(lpi) );
 
+   /* the following code is unclear: Why should the resolve change anything ?????? */
    if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
    {
       MSKsolstae solsta;
