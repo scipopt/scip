@@ -42,14 +42,14 @@ def recurse_into_static_functions(cursor, static_functions_dict):
 if __name__ == "__main__":
 
     header_functions_idx = clang.cindex.Index.create()
-    tu  = header_functions_idx.parse(args.files[1])
+    tu  = header_functions_idx.parse(args.files[1], args=['-I../../src'])
     header_functions = set()
     for c in tu.cursor.walk_preorder():
         if c.kind == CursorKind.FUNCTION_DECL and str(c.location.file) == args.files[1]:
             header_functions.add(c.spelling)
 
     idx = clang.cindex.Index.create()
-    tu = idx.parse(args.files[0])
+    tu = idx.parse(args.files[0], args=['-I../../src'])
 
     function_dict = {}
     kindtypes = dict()
