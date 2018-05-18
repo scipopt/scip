@@ -591,7 +591,7 @@ SCIP_RETCODE probdataFree(
       SCIPfreeBlockMemoryArray(scip, &(*probdata)->subfacilityvars, (*probdata)->nfacilities);
 
 
-      for( i = 0; i < (*probdata)->nscenarios; i++ )
+      for( i = (*probdata)->nscenarios - 1; i >= 0 ; i-- )
          SCIP_CALL( SCIPfree(&(*probdata)->subproblems[i]) );
       SCIPfreeBlockMemoryArray(scip, &(*probdata)->subproblems, (*probdata)->nscenarios);
    }
