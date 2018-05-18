@@ -84,6 +84,7 @@ static int nextlpid                 =  1;
 #define DEBUG_DO_INTPNT_FEAS_CHECK   0
 #define DEBUG_CHECK_STATE_TOL        1e-5
 #define SHOW_ERRORS                  0
+#define SHOW_RELATIVE_OPTIMAL_GAP    0
 #define ASSERT_ON_NUMERICAL_TROUBLES 0
 #define ASSERT_ON_WARNING            0
 #define FORCE_MOSEK_LOG              0       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
@@ -2265,11 +2266,13 @@ SCIP_RETCODE SolveWSimplex(
    }  /*lint !e788*/
 
    /* todo: replace numbers by constants, e.g., tolerances */
-   if ( solsta == MSK_SOL_STA_OPTIMAL && fabs(dobj) + fabs(dobj) > 1.0e-6 && fabs(pobj-dobj) > 0.0001*(fabs(pobj) + fabs(dobj)))
+#if SHOW_RELATIVE_OPTIMAL_GAP
+   if ( solsta == MSK_SOL_STA_OPTIMAL && fabs(pobj) + fabs(dobj) > 1.0e-6 && fabs(pobj-dobj) > 0.0001*(fabs(pobj) + fabs(dobj)))
    {
       SCIPerrorMessage("Simplex[%d] returned optimal solution with different objvals %g != %g reldiff %.2g%%\n",
-         optimizecount, pobj, dobj, 100*fabs(pobj-dobj)/ MAX(fabs(pobj), fabs(dobj))); /*lint !e666*/
+         optimizecount, pobj, dobj, 100.0 * fabs(pobj-dobj)/ MAX(fabs(pobj), fabs(dobj))); /*lint !e666*/
    }
+#endif
 
    /* The optimizer terminated with an objective value outside the objective range. */
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
