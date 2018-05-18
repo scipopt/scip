@@ -42,12 +42,13 @@ if __name__ == "__main__":
         if c.kind == CursorKind.CALL_EXPR and c.referenced.get_definition() is None and c.referenced.storage_class is not StorageClass.STATIC:
             #print("\n".join(dir(c)))
             #sys.exit(0)
-            #if str(c.location.file).endswith("c"):
             headerfile = str(c.referenced.location.file)
-            for p in includedirs:
-                headerfile = remove_prefix(p, headerfile)
 
-            headers.add(headerfile)
+            if not headerfile.endswith("c"):
+                for p in includedirs:
+                    headerfile = remove_prefix(p, headerfile)
+
+                headers.add(headerfile)
 
     includelist = ['#include "scip/def.h"']
     for h in headers:

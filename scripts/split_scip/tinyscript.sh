@@ -99,4 +99,4 @@ done
 
 rm newfiles/scip/scip_bandit.c
 
-#./organizeincludes.sh
+./organizeincludes.sh
