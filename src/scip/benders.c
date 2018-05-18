@@ -1173,10 +1173,10 @@ SCIP_RETCODE createSubproblems(
             SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
 
             /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
-            if( mastervar != NULL )
+            if( mastervar != NULL && !SCIPisZero(subproblem, SCIPvarGetObj(vars[j])) )
             {
-               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Changing the objective coefficient of copy of master"
-                 " problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
+               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_FULL, NULL, "Changing the objective coefficient of copy "
+                  "of master problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
                /* changing the subproblem variable objective coefficient to zero */
                SCIP_CALL( SCIPchgVarObj(subproblem, vars[j], 0.0) );
             }
@@ -1555,7 +1555,13 @@ SCIP_RETCODE SCIPbendersExit(
    nsubproblems = SCIPbendersGetNSubproblems(benders);
    for( i = 0; i < nsubproblems; i++ )
    {
-      SCIP_CALL( SCIPreleaseVar(set->scip, &benders->auxiliaryvars[i]) );
+      /* it is possible that the master problem is not solved. As such, the auxiliary variables will not be created. So
+       * we don't need to release the variables
+       */
+      if( benders->auxiliaryvars[i] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(set->scip, &benders->auxiliaryvars[i]) );
+      }
    }
 
    /* calling the exit method for the Benders' cuts */
