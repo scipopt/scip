@@ -1174,10 +1174,10 @@ SCIP_RETCODE createSubproblems(
             SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
 
             /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
-            if( mastervar != NULL )
+            if( mastervar != NULL && !SCIPisZero(subproblem, SCIPvarGetObj(vars[j])) )
             {
-               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Changing the objective coefficient of copy of master"
-                 " problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
+               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_FULL, NULL, "Changing the objective coefficient of copy "
+                  "of master problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
                /* changing the subproblem variable objective coefficient to zero */
                SCIP_CALL( SCIPchgVarObj(subproblem, vars[j], 0.0) );
             }
@@ -1593,6 +1593,7 @@ SCIP_RETCODE computeSubproblemLowerbound(
    SCIP_Longint totalnodes;
    int disablecutoff;
    int verblevel;
+   SCIP_Bool optimal;
 
    SCIP_Bool lperror;
    SCIP_Bool cutoff;
@@ -1606,7 +1607,8 @@ SCIP_RETCODE computeSubproblemLowerbound(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Computing the lower bound for subproblem %d\n", probnumber);
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
-   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+   //SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_FULL) );
 
    /* if the subproblem is independent, then the default SCIP settings are used. Otherwise, only the root node is solved
     * to compute a lower bound on the subproblem
@@ -1626,6 +1628,8 @@ SCIP_RETCODE computeSubproblemLowerbound(
 
       SCIP_CALL( SCIPstartProbing(subproblem) );
       SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
+
+      optimal = (SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL);
    }
    else
    {
@@ -1637,10 +1641,15 @@ SCIP_RETCODE computeSubproblemLowerbound(
       eventhdlrdata->solvecip = TRUE;
 
       SCIP_CALL( SCIPsolve(subproblem) );
+
+      optimal = (SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL);
    }
 
    /* getting the lower bound value */
-   (*lowerbound) = SCIPgetDualbound(subproblem);
+   if( optimal )
+      (*lowerbound) = SCIPgetDualbound(subproblem);
+   else
+      (*lowerbound) = -SCIPinfinity(subproblem);
 
    if( !independent )
    {
