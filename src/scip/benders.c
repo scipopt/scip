@@ -3381,6 +3381,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
 
    (*lowerbound) = -SCIPinfinity(subproblem);
    (*infeasible) = FALSE;
+   optimal = FALSE;
 
    SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Computing the lower bound for subproblem %d\n", probnumber);
 
