@@ -73,46 +73,6 @@
 #include "scip/type_benders.h"
 #include "scip/type_benderscut.h"
 
-/* include public interfaces, s.t. the user only needs to include scip.h */
-#include "scip/pub_bandit.h"
-#include "scip/pub_benders.h"
-#include "scip/pub_benderscut.h"
-#include "scip/pub_branch.h"
-#include "scip/pub_conflict.h"
-#include "scip/pub_cons.h"
-#include "scip/pub_cutpool.h"
-#include "scip/pub_dialog.h"
-#include "scip/pub_disp.h"
-#include "scip/pub_event.h"
-#include "scip/pub_fileio.h"
-#include "scip/pub_heur.h"
-#include "scip/pub_compr.h"
-#include "scip/pub_history.h"
-#include "scip/pub_implics.h"
-#include "scip/pub_lp.h"
-#include "scip/pub_nlp.h"
-#include "scip/pub_message.h"
-#include "scip/pub_misc.h"
-#include "scip/pub_nodesel.h"
-#include "scip/pub_paramset.h"
-#include "scip/pub_presol.h"
-#include "scip/pub_pricer.h"
-#include "scip/pub_reader.h"
-#include "scip/pub_relax.h"
-#include "scip/pub_sepa.h"
-#include "scip/pub_prop.h"
-#include "scip/pub_sol.h"
-#include "scip/pub_table.h"
-#include "scip/pub_tree.h"
-#include "scip/pub_var.h"
-#include "lpi/lpi.h"
-#include "nlpi/pub_expr.h"
-
-/* include global presolving, cuts, and heuristics methods */
-#include "scip/presolve.h"
-#include "scip/cuts.h"
-#include "scip/heuristics.h"
-
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
  * In optimized mode, the structure is included in scip.h, because some of the methods
