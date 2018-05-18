@@ -91,7 +91,6 @@ static int nextlpid                 =  1;
 #define FORCE_NO_MAXITER             0
 #define FORCE_SILENCE                1       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
 #define SETBACK_LIMIT                250
-#define SCIP_CONTROLS_PRICING        1
 #define SCIP_CONTROLS_TOLERANCES     1
 #define STRONGBRANCH_PRICING         MSK_SIM_SELECTION_SE
 #define SUPRESS_NAME_ERROR           1
@@ -4824,29 +4823,24 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    int                   ival                /**< parameter value */
    )
 {
-   int scaling;
-
-#if SCIP_CONTROLS_PRICING
-   /*lint --e{641}*/
    static int pricing[7] =
    {
-      MSK_SIM_SELECTION_SE,
-      MSK_SIM_SELECTION_SE,
-      MSK_SIM_SELECTION_FULL,
-      MSK_SIM_SELECTION_PARTIAL,
-      MSK_SIM_SELECTION_SE,
-      MSK_SIM_SELECTION_ASE,
-      MSK_SIM_SELECTION_DEVEX,
+      (int)MSK_SIM_SELECTION_SE,             /**< mosek pricing for SCIP_PRICING_LPIDEFAULT */
+      (int)MSK_SIM_SELECTION_FREE,           /**< mosek pricing for SCIP_PRICING_AUTO */
+      (int)MSK_SIM_SELECTION_FULL,           /**< mosek pricing for SCIP_PRICING_FULL */
+      (int)MSK_SIM_SELECTION_PARTIAL,        /**< mosek pricing for SCIP_PRICING_PARTIAL */
+      (int)MSK_SIM_SELECTION_SE,             /**< mosek pricing for SCIP_PRICING_STEEP */
+      (int)MSK_SIM_SELECTION_ASE,            /**< mosek pricing for SCIP_PRICING_STEEPQSTART */
+      (int)MSK_SIM_SELECTION_DEVEX,          /**< mosek pricing for SCIP_PRICING_DEVEX */
    };
-#endif
 
-   assert(SCIP_PRICING_LPIDEFAULT == 0);
-   assert(SCIP_PRICING_AUTO == 1);
-   assert(SCIP_PRICING_FULL == 2);
-   assert(SCIP_PRICING_PARTIAL == 3);
-   assert(SCIP_PRICING_STEEP == 4);
-   assert(SCIP_PRICING_STEEPQSTART == 5);
-   assert(SCIP_PRICING_DEVEX == 6);
+   assert((int)SCIP_PRICING_LPIDEFAULT == 0);
+   assert((int)SCIP_PRICING_AUTO == 1);
+   assert((int)SCIP_PRICING_FULL == 2);
+   assert((int)SCIP_PRICING_PARTIAL == 3);
+   assert((int)SCIP_PRICING_STEEP == 4);
+   assert((int)SCIP_PRICING_STEEPQSTART == 5);
+   assert((int)SCIP_PRICING_DEVEX == 6);
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -4857,80 +4851,46 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    switch (type)
    {
    case SCIP_LPPAR_FROMSCRATCH:               /* solver should start from scratch at next call? */
+      SCIPdebugMessage("Setting fromscratch to %d.\n", ival);
       lpi->fromscratch = (SCIP_Bool) ival;
       break;
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
       assert( ival == 0 || ival == 1 );
+      SCIPdebugMessage("Setting scaling to %d.\n", ival);
       if( ival == 0 )
-         scaling = MSK_SCALING_NONE;
+      {
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_NONE) );
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_NONE) );
+      }
       else
-         scaling = MSK_SCALING_FREE;
+      {
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_FREE) );
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_FREE) );
+      }
       /* could also use: MSK_SCALING_AGGRESSIVE */
 
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, scaling) );
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
+      SCIPdebugMessage("Setting presolve to %d.\n", ival);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE,
             ival ? MSK_PRESOLVE_MODE_FREE : MSK_PRESOLVE_MODE_OFF) );
-
-#ifdef SCIP_DEBUG
-      if( ival )
-      {
-         SCIPdebugMessage("Setting presolve to on\n");
-      }
-#endif
       break;
    case SCIP_LPPAR_PRICING:                   /* pricing strategy */
-      assert(ival >= 0 && ival <= SCIP_PRICING_DEVEX);
+      SCIPdebugMessage("Setting pricing to %d.\n", ival);
+      assert(ival >= 0 && ival <= (int)SCIP_PRICING_DEVEX);
       lpi->pricing = (SCIP_PRICING)ival;
 
-#ifdef SCIP_DEBUG
-      switch( (SCIP_PRICING)ival )
-      {
-      case SCIP_PRICING_AUTO:
-         SCIPdebugMessage("Setting pricing to auto\n");
-         break;
-      case SCIP_PRICING_FULL:
-         SCIPdebugMessage("Setting pricing to full\n");
-         break;
-      case SCIP_PRICING_PARTIAL:
-         SCIPdebugMessage("Setting pricing to partial\n");
-         break;
-      case SCIP_PRICING_LPIDEFAULT:
-         SCIPdebugMessage("Setting pricing to lpi default\n");
-         break;
-      case SCIP_PRICING_STEEP:
-         SCIPdebugMessage("Setting pricing to steep\n");
-         break;
-      case SCIP_PRICING_STEEPQSTART:
-         SCIPdebugMessage("Setting pricing to steep quick start\n");
-         break;
-      case SCIP_PRICING_DEVEX:
-         SCIPdebugMessage("Setting pricing to devex\n");
-         break;
-      }
-#endif
-
-#if SCIP_CONTROLS_PRICING
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_SELECTION, pricing[ival]) );
-
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_SELECTION, pricing[ival]) );
 
       if( !(lpi->pricing == SCIP_PRICING_PARTIAL || lpi->pricing == SCIP_PRICING_AUTO ) )
       {
          /* No restrict */
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION, 0) );
-
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
       }
-#else
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_SELECTION, MSK_SIM_SELECTION_FREE) );
-
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_SELECTION, MSK_SIM_SELECTION_FREE) );
-#endif
       break;
    case SCIP_LPPAR_LPINFO:
       /* should LP solver output information to the screen? */
@@ -4938,25 +4898,21 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       SCIPdebugMessage("Ignoring log setting!\n");
 #else
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, ival ? MSK_ON : MSK_OFF) );
-      lpi->lpinfo = (SCIP_Bool) ival;
 #endif
+      lpi->lpinfo = (SCIP_Bool) ival;
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
-#if DEBUG_PARAM_SETTING
-      if( ival )
-      {
-         SCIPdebugMessage("Setting max iter to : %d\n", ival);
-      }
-#endif
-
+      SCIPdebugMessage("Setting max iter to %d.\n", ival);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads (0 => MOSEK chooses) */
       assert(ival >= 0);
+      SCIPdebugMessage("Setting number of threads to %d.\n", ival);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_NUM_THREADS, ival) );
       break;
    case SCIP_LPPAR_REFACTOR:                  /* refactorization interval */
       assert(ival >= 0);
+      SCIPdebugMessage("Setting refactorization interval to %d.\n", ival);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_REFACTOR_FREQ, ival) );
       break;
    default:
