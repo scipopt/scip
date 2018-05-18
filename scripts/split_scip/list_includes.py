@@ -25,10 +25,15 @@ def output(name, start, end):
     else:
         print "{},{}p".format(start,end)
 
+def remove_prefix(p,s):
+    if s.startswith(p):
+        return s[len(p):]
+    return s
 
 if __name__ == "__main__":
     idx = clang.cindex.Index.create()
-    tu = idx.parse(sys.argv[1], args=['-I../../src/','-Inewfiles/', '-DWITH_ZLIB'])
+    includedirs = ['../../src/','newfiles/']
+    tu = idx.parse(sys.argv[1], args= map(lambda x: '-I' + x, includedirs) + ['-DWITH_ZLIB'])
 
     headers = set()
     for idx, c in enumerate(tu.cursor.walk_preorder()):
@@ -38,6 +43,25 @@ if __name__ == "__main__":
             #print("\n".join(dir(c)))
             #sys.exit(0)
             #if str(c.location.file).endswith("c"):
-            headers.add(str(c.referenced.location.file))
+            headerfile = str(c.referenced.location.file)
+            for p in includedirs:
+                headerfile = remove_prefix(p, headerfile)
 
-    print "\n".join(map(str, headers))
+            headers.add(headerfile)
+
+    includelist = ['#include "scip/def.h"']
+    for h in headers:
+        # for system headers only add them if they are not included by scip/def.h and also handle
+        # that math functions are defined in mathcalls.h on our linux systems
+        if h.startswith("/usr/include/"):
+            if h.endswith("mathcalls.h"):
+                h = "math.h"
+            else:
+                h = remove_prefix("/usr/include/", h)
+
+            if h not in ["stdio.h", "stdint.h", "math.h", "limits.h", "float.h", "assert.h"]:
+                includelist.append("#include <{}>".format(remove_prefix("/usr/include/", h)))
+        else:
+            includelist.append('#include "{}"'.format(h))
+
+    print "\n".join(sorted(includelist))
