@@ -2273,6 +2273,14 @@ SCIP_RETCODE solveBendersSubproblems(
  *  ii) solveloop == SCIP_BENDERSSOLVELOOP_CIP - only the CIP Benders' cuts are called
  *  iii) solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX - only the LP Benders' cuts are called
  *  iv) solveloop == SCIP_BENDERSSOLVELOOP_USERCIP - only the CIP Benders' cuts are called
+ *
+ *  The priority of the results are: SCIP_CONSADDED (SCIP_SEPARATED), SCIP_DIDNOTFIND, SCIP_FEASIBLE, SCIP_DIDNOTRUN. In
+ *  this function, there are four levels of results that need to be assessed. These are:
+ *  i) The result from the individual cut for the subproblem
+ *  ii) The overall result for the subproblem from all cuts
+ *  iii) the overall result for the solve loop from all cuts
+ *  iv) the over all result from all solve loops.
+ *  In each level, the priority of results must be adhered to.
  */
 static
 SCIP_RETCODE generateBendersCuts(
@@ -2371,18 +2379,34 @@ SCIP_RETCODE generateBendersCuts(
                   /* at most a single cut is generated for each subproblem */
                   break;
                }
-               else if( cutresult == SCIP_FEASIBLE || cutresult == SCIP_DIDNOTFIND )
-                  subprobresult = cutresult;
+               else
+               {
+                  /* checking from lowest priority result */
+                  if( subprobresult == SCIP_DIDNOTRUN )
+                     subprobresult = cutresult;
+                  else if( subprobresult == SCIP_FEASIBLE && cutresult == SCIP_DIDNOTFIND )
+                     subprobresult = cutresult;
+                  /* if the subprobresult is SCIP_DIDNOTFIND, then it can't be updated. */
+               }
             }
 
-            /* the result is updated only if a Benders' cut is generated */
-            if( subprobresult == SCIP_CONSADDED || subprobresult == SCIP_SEPARATED || subprobresult == SCIP_FEASIBLE )
+            /* the highest priority for the results is CONSADDED and SEPARATED. The solveloopresult will always be
+             * updated if the subprobresult is either of these.
+             */
+            if( subprobresult == SCIP_CONSADDED || subprobresult == SCIP_SEPARATED )
             {
                solveloopresult = subprobresult;
             }
+            else if( subprobresult == SCIP_FEASIBLE )
+            {
+               /* updating the solve loop result based upon the priority */
+               if( solveloopresult == SCIP_DIDNOTRUN )
+                  solveloopresult = subprobresult;
+            }
             else if( subprobresult == SCIP_DIDNOTFIND )
             {
-               if( solveloopresult != SCIP_CONSADDED && solveloopresult != SCIP_SEPARATED )
+               /* updating the solve loop result based upon the priority */
+               if( solveloopresult == SCIP_DIDNOTRUN || solveloopresult == SCIP_FEASIBLE )
                   solveloopresult = subprobresult;
 
                /* since a cut was not found, then merging could be useful to avoid this in subsequent iterations. The
@@ -2396,9 +2420,6 @@ SCIP_RETCODE generateBendersCuts(
             }
             else if( subprobresult == SCIP_DIDNOTRUN )
             {
-               if( solveloopresult != SCIP_CONSADDED && solveloopresult != SCIP_SEPARATED && solveloopresult != SCIP_FEASIBLE )
-                  solveloopresult = subprobresult;
-
                /* if the subproblem is infeasible and no cut generation methods were run, then the infeasibility will
                 * never be resolved. As such, the subproblem will be merged into the master problem. If the subproblem
                 * was not infeasible, then it is added as a possible merge candidate
@@ -2425,8 +2446,23 @@ SCIP_RETCODE generateBendersCuts(
       }
    }
 
-   if( (*result) != SCIP_CONSADDED && (*result) != SCIP_SEPARATED && (*result) != SCIP_FEASIBLE )
+   /* updating the overall result based upon the priorities */
+   if( solveloopresult == SCIP_CONSADDED || solveloopresult == SCIP_SEPARATED )
+   {
       (*result) = solveloopresult;
+   }
+   else if( solveloopresult == SCIP_FEASIBLE )
+   {
+      /* updating the solve loop result based upon the priority */
+      if( (*result) == SCIP_DIDNOTRUN )
+         (*result) = solveloopresult;
+   }
+   else if( solveloopresult == SCIP_DIDNOTFIND )
+   {
+      /* updating the solve loop result based upon the priority */
+      if( (*result) == SCIP_DIDNOTRUN || (*result) == SCIP_FEASIBLE )
+         (*result) = solveloopresult;
+   }
 
    /* if no cuts were added, then the number of solve loops is increased */
    if( addedcuts == 0 && SCIPbendersGetNConvexSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
