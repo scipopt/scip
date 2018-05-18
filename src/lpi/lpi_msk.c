@@ -4863,12 +4863,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
+      assert( ival == 0 || ival == 1 );
       if( ival == 0 )
          scaling = MSK_SCALING_NONE;
-      else if( ival == 1 )
-         scaling = MSK_SCALING_FREE;
       else
-         scaling = MSK_SCALING_AGGRESSIVE;
+         scaling = MSK_SCALING_FREE;
+      /* could also use: MSK_SCALING_AGGRESSIVE */
 
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, scaling) );
