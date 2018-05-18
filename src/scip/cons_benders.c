@@ -52,8 +52,8 @@
 #define CONSHDLR_CHECKPRIORITY -5000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS         1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_EXHAUSTIVE /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
+#define CONSHDLR_MAXPREROUNDS         0 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FAST /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 
@@ -96,6 +96,7 @@ SCIP_RETCODE constructValidSolution(
    int j;
    SCIP_Bool success;
 
+   success = TRUE;
 
    /* don't propose new solutions if not in presolve or solving */
    if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
@@ -118,22 +119,6 @@ SCIP_RETCODE constructValidSolution(
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
 
-   /* checking the size of the checkedsols array and extending it is there is not enough memory */
-   assert(conshdlrdata->ncheckedsols <= conshdlrdata->checkedsolssize);
-   if( conshdlrdata->ncheckedsols + 1 > conshdlrdata->checkedsolssize )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->ncheckedsols + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize, newsize) );
-      conshdlrdata->checkedsolssize = newsize;
-   }
-   assert(conshdlrdata->ncheckedsols + 1 <= conshdlrdata->checkedsolssize);
-
-   /* recording the solution number to avoid checking the solution again */
-   conshdlrdata->checkedsols[conshdlrdata->ncheckedsols] = SCIPsolGetIndex(newsol);
-   conshdlrdata->ncheckedsols++;
-
    /* looping through all Benders' decompositions to construct the new solution */
    for( i = 0; i < nactivebenders; i++ )
    {
@@ -144,27 +129,61 @@ SCIP_RETCODE constructValidSolution(
       /* setting the auxiliary variable in the new solution */
       for( j = 0; j < nsubproblems; j++ )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, newsol, auxiliaryvars[j], SCIPbendersGetSubprobObjval(benders[i], j)) );
+         if( SCIPvarGetStatus(auxiliaryvars[j]) == SCIP_VARSTATUS_FIXED
+            && !SCIPisEQ(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]),
+               SCIPbendersGetSubprobObjval(benders[i], j)) )
+         {
+            success = FALSE;
+            break;
+         }
+         else if( SCIPisLT(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]),
+               SCIPbendersGetSubprobObjval(benders[i], j)) )
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, auxiliaryvars[j], SCIPbendersGetSubprobObjval(benders[i], j)) );
+         }
       }
+
+      if( !success )
+         break;
    }
 
-   /* getting the try solution heuristic */
-   heurtrysol = SCIPfindHeur(scip, "trysol");
-
-   /* passing the new solution to the trysol heuristic  */
-   SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
-   if ( success )
+   /* if setting the variable values was successful, then we try to add the solution */
+   if( success )
    {
-      SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, newsol) );
-      SCIPdebugMsg(scip, "Creating solution was successful.\n");
-   }
+      /* checking the size of the checkedsols array and extending it is there is not enough memory */
+      assert(conshdlrdata->ncheckedsols <= conshdlrdata->checkedsolssize);
+      if( conshdlrdata->ncheckedsols + 1 > conshdlrdata->checkedsolssize )
+      {
+         int newsize;
+
+         newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->ncheckedsols + 1);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize, newsize) );
+         conshdlrdata->checkedsolssize = newsize;
+      }
+      assert(conshdlrdata->ncheckedsols + 1 <= conshdlrdata->checkedsolssize);
+
+      /* recording the solution number to avoid checking the solution again */
+      conshdlrdata->checkedsols[conshdlrdata->ncheckedsols] = SCIPsolGetIndex(newsol);
+      conshdlrdata->ncheckedsols++;
+
+      /* getting the try solution heuristic */
+      heurtrysol = SCIPfindHeur(scip, "trysol");
+
+      /* passing the new solution to the trysol heuristic  */
+      SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+      if ( success )
+      {
+         SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, newsol) );
+         SCIPdebugMsg(scip, "Creating solution was successful.\n");
+      }
 #ifdef SCIP_DEBUG
-   else
-   {
-      /* the solution might not be feasible, because of additional constraints */
-      SCIPdebugMsg(scip, "Creating solution was not successful.\n");
-   }
+      else
+      {
+         /* the solution might not be feasible, because of additional constraints */
+         SCIPdebugMsg(scip, "Creating solution was not successful.\n");
+      }
 #endif
+   }
 
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
 
@@ -529,6 +548,17 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
+   (*result) = SCIP_DIDNOTFIND;
+
+   /* this presolving step is only valid for the main SCIP instance. If the SCIP instance is copied, then the presolving
+    * step is not performed.
+    */
+   if( SCIPgetSubscipDepth(scip) > 0 )
+   {
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -566,10 +596,12 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
             /* only update the lower bound if it is greater than the current lower bound */
             if( SCIPisGT(scip, lowerbound, SCIPvarGetLbLocal(auxiliaryvar)) )
             {
+               SCIPdebugMsg(scip, "Tightened lower bound of <%s> to %g\n", SCIPvarGetName(auxiliaryvar), lowerbound);
                /* updating the lower bound of the auxiliary variable */
-               SCIP_CALL( SCIPchgVarLb(SCIPbendersSubproblem(benders[i], j), auxiliaryvar, lowerbound) );
+               SCIP_CALL( SCIPchgVarLb(scip, auxiliaryvar, lowerbound) );
 
                (*nchgbds)++;
+               (*result) = SCIP_SUCCESS;
             }
 
             /* stores the lower bound for the subproblem */

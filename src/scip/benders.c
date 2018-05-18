@@ -1479,8 +1479,11 @@ SCIP_RETCODE transferBendersCuts(
             lhs = SCIPgetLhsLinear(subscip, addedcons[j]);
             rhs = SCIPgetRhsLinear(subscip, addedcons[j]);
 
-            /* create and add the cut to be transferred from the sub SCIP to the source SCIP */
-            SCIP_CALL( createAndAddTransferredCut(sourcescip, benders, vars, vals, lhs, rhs, nvars) );
+            if( nvars > 0 )
+            {
+               /* create and add the cut to be transferred from the sub SCIP to the source SCIP */
+               SCIP_CALL( createAndAddTransferredCut(sourcescip, benders, vars, vals, lhs, rhs, nvars) );
+            }
          }
       }
 
@@ -3366,7 +3369,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    SCIP_Longint totalnodes;
    int disablecutoff;
    int verblevel;
-
+   SCIP_Bool optimal;
    SCIP_Bool lperror;
    SCIP_Bool cutoff;
 
@@ -3403,7 +3406,10 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
       SCIP_CALL( SCIPstartProbing(subproblem) );
       SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
 
-      (*infeasible) = (SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE);
+      if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
+         optimal = TRUE;
+      else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
+         (*infeasible) = TRUE;
    }
    else
    {
@@ -3416,11 +3422,17 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
 
       SCIP_CALL( SCIPsolve(subproblem) );
 
-      (*infeasible) = (SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE);
+      if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
+         optimal = TRUE;
+      else if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
+         (*infeasible) = TRUE;
    }
 
    /* getting the lower bound value */
-   (*lowerbound) = SCIPgetDualbound(subproblem);
+   if( optimal )
+     (*lowerbound) = SCIPgetDualbound(subproblem);
+   else
+      (*lowerbound) = -SCIPinfinity(subproblem);
 
    if( !SCIPbendersSubprobIsIndependent(benders, probnumber) )
    {
