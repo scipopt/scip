@@ -6406,7 +6406,7 @@ SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( checkStage(scip, "SCIPmergeBendersSubprobIntoMaster", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmergeBendersSubprobIntoMaster", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersMergeSubprobIntoMaster(benders, scip->set, varmap, consmap, probnumber) );
 
