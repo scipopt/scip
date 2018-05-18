@@ -26,6 +26,18 @@
  * orbit to 0 or 1 if one of the other variables in the orbit is fixed to 0 or 1, respectively. Different from Margot,
  * the subgroup is obtained by filtering out generators that do not individually stabilize the variables branched to 1.
  *
+ * @pre All variable fixings applied by other components are required to be strict, i.e., if one variable is fixed to
+ *      a certain value v, all other variables in the same variable orbit can be fixed to v as well, c.f.
+ *
+ * F. Margot: Symmetry in integer linear programming. 50 Years of Integer Programming, 647-686, Springer 2010.
+ *
+ * In particular, this means that global variable fixings that are found, for example but not exclusively, during
+ * presolving, can be treated as local variable fixings. Thus, these fixings are compatible with orbital fixing.
+ * Note, however, that orbital fixing might lead to wrong results if it is called in repropagation of a node,
+ * because the path from the node to the root might have been changed. Thus, the stabilizers of 1-branchings of
+ * the initial propagation and repropagation might differ, which may cause conflicts. For this reason, orbital
+ * fixing cannot be called in repropagation.
+ *
  * @todo Possibly turn off propagator in subtrees.
  * @todo Check application of conflict resolution.
  */
