@@ -92,92 +92,29 @@ struct SCIP_HeurData
 };
 
 
-/** check whether the objective functions has nonzero coefficients corresponding to binary and integer variables */
-static
-void checkGlobalProperties(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_Bool nzobjs;
-   int nbinvars;
-   int nintvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(heurdata != NULL);
-
-   vars = SCIPgetVars(scip);
-   nbinvars = SCIPgetNBinVars(scip);
-   nintvars = SCIPgetNIntVars(scip);
-   nzobjs = FALSE;
-
-   /* we can skip looping over all binary and integer variables otherwise */
-   if( SCIPgetNObjVars(scip) > 0 )
-   {
-      for( i = 0; i < nbinvars + nintvars && !nzobjs; i++ )
-      {
-         if( SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
-            continue;
-
-         nzobjs = TRUE;
-      }
-   }
-
-   /* disable farkasdiving if no nonzero objectve coefficient is present, e.g., if there are no integer variables.
-    *
-    * note: SOS1 variables may be present
-    */
-   if( !nzobjs )
-   {
-      SCIPdebugMsg(scip, " ---> disable farkasdiving (only zero obj coefficients)\n");
-      heurdata->disabled = TRUE;
-   }
-
-   heurdata->glbchecked = TRUE;
-}
-
 /** check whether the diving candidates fulfill requirements */
 static
 SCIP_RETCODE checkDivingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_VAR**            divecandvars,       /**< diving candidates to check */
+   int                   ndivecands,         /**< number of diving candidates */
    SCIP_Bool*            success             /**< pointer to store whether the check was successfull */
    )
 {
-   SCIP_VAR** divecandvars;
    SCIP_Real* objcoefs;
    SCIP_Real lastobjcoef;
    SCIP_Real objdynamism;
    int maxfreq;
    int nnzobjcoefs;
    int ndiffnnzobjs;
-   int ndivecands;
    int i;
 
    *success = TRUE;
 
-   divecandvars = NULL;
-   ndivecands = 0;
-
-   /* we can only access the branching candidates if the LP is solved to optimality */
-   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
-   {
-      SCIP_CALL( SCIPgetLPBranchCands(scip, &divecandvars, NULL, NULL, &ndivecands, NULL, NULL) );
-   }
-   else
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
+   assert(heurdata != NULL);
    assert(divecandvars != NULL);
    assert(ndivecands >= 0);
-
-   /*
-    * check diving candidates w.r.t. objective function in detail
-    */
 
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoefs, ndivecands) );
 
@@ -185,17 +122,31 @@ SCIP_RETCODE checkDivingCandidates(
     * and implicit integer in the objective function
     */
    nnzobjcoefs = 0;
-   for( i = 0; i < ndivecands; i++ )
+
+   if( SCIPgetNObjVars(scip) > 0 )
    {
-      SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
+      for( i = 0; i < ndivecands; i++ )
+      {
+         SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
 
-      if( SCIPisZero(scip, obj) )
-         continue;
+         if( SCIPisZero(scip, obj) )
+            continue;
 
-      objcoefs[nnzobjcoefs] = REALABS(obj);
-      ++nnzobjcoefs;
+         objcoefs[nnzobjcoefs] = REALABS(obj);
+         ++nnzobjcoefs;
+      }
+   }
+
+   if( nnzobjcoefs == 0 )
+   {
+      *success = FALSE;
+      goto TERMINATE;
    }
    assert(nnzobjcoefs > 0);
+
+   /* skip here if we are cheching the global properties and want to check the local candidates, too */
+   if( !heurdata->glbchecked && heurdata->checkcands )
+      goto TERMINATE;
 
    /* sort in increasing order */
    SCIPsortReal(objcoefs, nnzobjcoefs);
@@ -251,12 +202,44 @@ SCIP_RETCODE checkDivingCandidates(
          SCIPdebugMsg(scip, " ---> disable farkasdiving at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
          *success = FALSE;
-         goto TERMINATE;
       }
    }
 
   TERMINATE:
    SCIPfreeBufferArray(scip, &objcoefs);
+
+   return SCIP_OKAY;
+}
+
+
+/** check whether the objective functions has nonzero coefficients corresponding to binary and integer variables */
+static
+SCIP_RETCODE checkGlobalProperties(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Bool success;
+   int nbinvars;
+   int nintvars;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+
+   vars = SCIPgetVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
+
+   SCIP_CALL( checkDivingCandidates(scip, heurdata, vars, nbinvars+nintvars, &success) );
+
+   if( !success )
+   {
+      SCIPdebugMsg(scip, " ---> disable farkasdiving (at least one global property is violated)\n");
+      heurdata->disabled = TRUE;
+   }
+
+   heurdata->glbchecked = TRUE;
 
    return SCIP_OKAY;
 }
@@ -355,6 +338,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolFarkasdiving)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   heurdata->glbchecked = FALSE;
    heurdata->disabled = FALSE;
    heurdata->foundrootsol = FALSE;
    heurdata->nbinobjvars = -1;
@@ -382,7 +366,9 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 
    /* check some simple global properties that are needed to run this heuristic */
    if( !heurdata->glbchecked )
-      checkGlobalProperties(scip, heurdata);
+   {
+      SCIP_CALL( checkGlobalProperties(scip, heurdata) );
+   }
 
    /* terminate if the heuristic has been disabled */
    if( heurdata->disabled )
@@ -397,7 +383,23 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
    /* check diving candidates in detail */
    if( heurdata->checkcands )
    {
-      SCIP_CALL( checkDivingCandidates(scip, heurdata, &success) );
+      SCIP_VAR** divecandvars;
+      int ndivecands;
+
+      /* we can only access the branching candidates if the LP is solved to optimality */
+      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         SCIP_CALL( SCIPgetLPBranchCands(scip, &divecandvars, NULL, NULL, &ndivecands, NULL, NULL) );
+      }
+      else
+      {
+         success = FALSE;
+      }
+
+      if( success )
+      {
+         SCIP_CALL( checkDivingCandidates(scip, heurdata, divecandvars, ndivecands, &success) );
+      }
    }
    else
    {
