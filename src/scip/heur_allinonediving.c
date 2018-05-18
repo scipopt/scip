@@ -47,6 +47,7 @@
 #define DIVETYPES_DIST       SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
 #define DIVETYPES_GUIDED     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
 #define DIVETYPES_COEF       SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
+#define DIVETYPES_FARK       SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
 #define DIVETYPES_FRAC       SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
 #define DIVETYPES_LINESEARCH SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
 #define DIVETYPES_PSCOST     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
@@ -1381,6 +1382,13 @@ SCIP_RETCODE SCIPincludeHeurAllinonediving(
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
          DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 17, DEFAULT_BACKTRACK, TRUE, DIVETYPES_VECLEN,
          SCIPdivesetGetScoreVeclendiving) );
+
+   /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, "allinone_fark", DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, 1,
+         DEFAULT_MAXLPITEROFS, DEFAULT_INITIALSEED + 23, DEFAULT_BACKTRACK, TRUE, DIVETYPES_FARK,
+         SCIPdivesetGetScoreFarkasdiving) );
 
    /* author gregor
     *

@@ -48,6 +48,12 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
+ *  score
+ */
+EXTERN
+SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreFarkasdiving);
+
 #ifdef __cplusplus
 }
 #endif
