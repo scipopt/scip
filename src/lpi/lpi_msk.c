@@ -2271,12 +2271,14 @@ SCIP_RETCODE SolveWSimplex(
          optimizecount, pobj, dobj, 100*fabs(pobj-dobj)/ MAX(fabs(pobj), fabs(dobj))); /*lint !e666*/
    }
 
+   /* The optimizer terminated with an objective value outside the objective range. */
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
    {
       if (solsta != MSK_SOL_STA_DUAL_FEAS && solsta != MSK_SOL_STA_OPTIMAL && solsta != MSK_SOL_STA_PRIM_AND_DUAL_FEAS)
       {
          SCIPerrorMessage("[%d] Terminated on objective range without dual feasible solsta.\n", optimizecount);
 
+         /* solve again with barrier */
          SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
       }
       else
@@ -2292,8 +2294,7 @@ SCIP_RETCODE SolveWSimplex(
 
             if (1.0e-6*(fabs(bound) + fabs(dobj)) < bound-dobj)
             {
-               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n",
-                  optimizecount, dobj, bound);
+               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n", optimizecount, dobj, bound);
 
                SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
             }
@@ -2304,8 +2305,7 @@ SCIP_RETCODE SolveWSimplex(
 
             if (1.0e-6*(fabs(bound) + fabs(dobj)) < dobj-bound)
             {
-               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n",
-                  optimizecount, dobj, bound);
+               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n", optimizecount, dobj, bound);
 
                SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
             }
@@ -2313,6 +2313,7 @@ SCIP_RETCODE SolveWSimplex(
       }
    }
 
+   /* if the simplex took too many iterations, solve again with barrier */
    if (maxiter >= 2000000000)
    {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, maxiter) );
