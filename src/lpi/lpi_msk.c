@@ -2114,6 +2114,11 @@ SCIP_RETCODE SolveWSimplex(
       /* Since max iter often is set, we switch off restricted pricing */
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
    }
+   else
+   {
+      /* otherwise use default value */
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 50) );
+   }
 
 #if FORCE_NO_MAXITER > 0
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, 2000000000) );
