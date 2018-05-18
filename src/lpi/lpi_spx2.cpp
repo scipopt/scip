@@ -100,7 +100,11 @@
 #error "This interface is not compatible with SoPlex versions prior to 2.0.0.2"
 #endif
 
+#if (SOPLEX_APIVERSION <= 5)
 #include "spxgithash.h"
+#else
+#include "soplex/spxgithash.h"
+#endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
 #undef SCIP_DEBUG
