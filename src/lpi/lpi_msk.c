@@ -91,7 +91,6 @@ static int nextlpid                 =  1;
 #define FORCE_NO_MAXITER             0
 #define FORCE_SILENCE                1       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
 #define SETBACK_LIMIT                250
-#define SCIP_CONTROLS_TOLERANCES     1
 #define STRONGBRANCH_PRICING         MSK_SIM_SELECTION_SE
 #define SUPRESS_NAME_ERROR           1
 #define WRITE_DUAL                   0
@@ -4938,7 +4937,6 @@ SCIP_RETCODE SCIPlpiGetRealpar(
 
    switch (type)
    {
-#if SCIP_CONTROLS_TOLERANCES
    case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
       break;
@@ -4948,7 +4946,6 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
-#endif
    case SCIP_LPPAR_OBJLIM:                    /* objective limit */
    {
       MSKobjsensee objsen;
@@ -4991,7 +4988,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 
    switch (type)
    {
-#if SCIP_CONTROLS_TOLERANCES
    case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
       if (dval < 1e-9)
          dval = 1e-9;
@@ -5008,7 +5004,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
-#endif
    case SCIP_LPPAR_OBJLIM:                    /* objective limit */
    {
       MSKobjsensee objsen;
