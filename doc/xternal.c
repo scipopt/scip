@@ -620,6 +620,7 @@
  * - No spaces between control structure keywords like "if", "for", "while", "switch" and the corresponding brackets.
  * - No spaces between a function name and the parenthesis in both the definition and function calls.
  * - Braces are on a new line and not indented.
+ * - Braces in if/for-statements should only be omitted if they enclose a single line.
  *
  *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleIfFor}
  *
@@ -659,6 +660,8 @@
  *
  * - Document functions, parameters, and variables in a doxygen conformed way.
  * - Multiline comments have the ending slash on a new line.
+ * - Do not include code in comments; put the code within defines, e.g., `SCIP_DISABLED_CODE` and/or add an explanation
+ * - Todos need double stars to be registered by doxygen.
  *
  *   @refsnippet{src/scip/scip.h,SnippetCodeStyleComment}
  *
