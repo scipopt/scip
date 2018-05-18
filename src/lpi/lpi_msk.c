@@ -2142,9 +2142,12 @@ SCIP_RETCODE SolveWSimplex(
    /* resolve with aggresive scaling if the maximal number of setbacks has been reached */
    if( lpi->termcode == MSK_RES_TRM_MAX_NUM_SETBACKS )
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
+      int scaling;
 
+      MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, &scaling) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
       MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
    }
 
 #if FORCE_MOSEK_SUMMARY
