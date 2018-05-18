@@ -78,7 +78,8 @@ do
  *
  *  if val is >= infty1, then give infty2, else give val
  */
-#define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)"
+#define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
+
 EOL
     fi
 
@@ -96,3 +97,4 @@ EOL
     fi
 done
 
+rm newfiles/scip/scip_bandit.c

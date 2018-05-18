@@ -6,7 +6,6 @@ import clang
 from clang.cindex import CursorKind, TokenKind, StorageClass
 
 clang.cindex.Config.set_library_file("/usr/lib/llvm-5.0/lib/libclang.so.1")
-human_readable=False
 
 gap_file_name = "gaps_file.txt"
 
@@ -16,6 +15,7 @@ parser = argparse.ArgumentParser(description='Parse input module and header file
 
 parser.add_argument('--write_gaps', action='store_true', default=False, dest="write_gaps")
 parser.add_argument('files', nargs=2, help='c file and header file')
+
 
 args = parser.parse_args()
 
@@ -30,13 +30,6 @@ def fully_qualified(c):
             return res + '::' + c.spelling
     return c.spelling
 
-def output(name, start, end):
-    if human_readable:
-        print "{} {} {}".format(name, start, end)
-    else:
-        print "{},{}p".format(start,end)
-
-
 def recurse_into_static_functions(cursor, static_functions_dict):
     for d in cursor.walk_preorder():
         if d.kind == CursorKind.CALL_EXPR and d.referenced.storage_class == StorageClass.STATIC:
@@ -47,6 +40,14 @@ def recurse_into_static_functions(cursor, static_functions_dict):
 
 
 if __name__ == "__main__":
+
+    header_functions_idx = clang.cindex.Index.create()
+    tu  = header_functions_idx.parse(args.files[1])
+    header_functions = set()
+    for c in tu.cursor.walk_preorder():
+        if c.kind == CursorKind.FUNCTION_DECL and str(c.location.file) == args.files[1]:
+            header_functions.add(c.spelling)
+
     idx = clang.cindex.Index.create()
     tu = idx.parse(args.files[0])
 
@@ -56,6 +57,7 @@ if __name__ == "__main__":
     for idx, c in enumerate(tu.cursor.walk_preorder()):
 
         kindtypes[c.kind] = kindtypes.get(c.kind, 0) + 1
+
 
         if c.kind == CursorKind.FUNCTION_DECL and c.get_definition() is not None:
             #print("\n".join(dir(c)))
@@ -68,13 +70,13 @@ if __name__ == "__main__":
                     #c.extent.end.line)
                     pass
 
-                with open(args.files[1], "r") as headerfile:
-                    if "{}(".format(c.referenced.spelling) in headerfile.read():
-                        #print "{} : {}--{}".format(fully_qualified(c.referenced), c.extent.start.line, c.extent.end.line)
 
-                        function_dict[c.extent.start.line] = c
+                if c.referenced.spelling in header_functions:
+                    #print "{} : {}--{}".format(fully_qualified(c.referenced), c.extent.start.line, c.extent.end.line)
 
-                        recurse_into_static_functions(c, static_functions_dict)
+                    function_dict[c.extent.start.line] = c
+
+                    recurse_into_static_functions(c, static_functions_dict)
 
 
 
