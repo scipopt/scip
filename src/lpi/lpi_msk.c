@@ -102,7 +102,7 @@ static int nextlpid                 =  1;
 #define WRITE_ABOVE                  0
 #endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
-#define ALWAYS_SOLVE_PRIMAL          1
+#define ALWAYS_SOLVE_PRIMAL          0
 #if DEBUG_PRINT_STAT > 0
 static int numstrongbranchmaxiterup =  0;
 static int numstrongbranchmaxiterdo =  0;
