@@ -660,7 +660,7 @@
  *
  * - Document functions, parameters, and variables in a doxygen conformed way.
  * - Multiline comments have the ending slash on a new line.
- * - Do not code in comments that has been commented out; put the code within defines,
+ * - Do not leave code in comments that has been commented out; put the code within defines,
  *   e.g., `SCIP_DISABLED_CODE` and/or add an explanation
  * - Todos need double stars to be registered by doxygen.
  *
