@@ -141,6 +141,7 @@ struct SCIP_LPi
    SCIP_Bool             fromscratch;        /**< Shall solves be performed with MSK_IPAR_SIM_HOTSTART turned off? */
    SCIP_Bool             clearstate;         /**< Shall next solve be performed with MSK_IPAR_SIM_HOTSTART turned off? */
    SCIP_Bool             lpinfo;             /**< Should LP solver output information to the screen? */
+   int                   restrictselectdef;  /**< default value for MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -780,6 +781,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->skc = NULL;
    (*lpi)->lastsolvetype = (MSKsoltypee) -1;
    (*lpi)->lpinfo = FALSE;
+   (*lpi)->restrictselectdef = 50;
    (*lpi)->fromscratch = FALSE;
    (*lpi)->clearstate = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
@@ -2109,12 +2111,14 @@ SCIP_RETCODE SolveWSimplex(
    if( gotbasicsol && maxiter < 20000 )
    {
       /* Since max iter often is set, we switch off restricted pricing */
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION, 0) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
    }
    else
    {
       /* otherwise use default value */
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 50) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION, lpi->restrictselectdef) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, lpi->restrictselectdef) );
    }
 
 #if FORCE_NO_MAXITER > 0
@@ -4883,12 +4887,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_SELECTION, pricing[ival]) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_SELECTION, pricing[ival]) );
 
-      if( !(lpi->pricing == SCIP_PRICING_PARTIAL || lpi->pricing == SCIP_PRICING_AUTO ) )
-      {
-         /* No restrict */
-         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION, 0) );
-         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
-      }
+      /* for certain pricing values, do not use restricted pricing */
+      if( lpi->pricing == SCIP_PRICING_PARTIAL || lpi->pricing == SCIP_PRICING_AUTO )
+         lpi->restrictselectdef = 50;
+      else
+         lpi->restrictselectdef = 0;
+
       break;
    case SCIP_LPPAR_LPINFO:
       /* should LP solver output information to the screen? */
