@@ -1556,7 +1556,13 @@ SCIP_RETCODE SCIPbendersExit(
    nsubproblems = SCIPbendersGetNSubproblems(benders);
    for( i = 0; i < nsubproblems; i++ )
    {
-      SCIP_CALL( SCIPreleaseVar(set->scip, &benders->auxiliaryvars[i]) );
+      /* it is possible that the master problem is not solved. As such, the auxiliary variables will not be created. So
+       * we don't need to release the variables
+       */
+      if( benders->auxiliaryvars[i] == NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(set->scip, &benders->auxiliaryvars[i]) );
+      }
    }
 
    /* calling the exit method for the Benders' cuts */
