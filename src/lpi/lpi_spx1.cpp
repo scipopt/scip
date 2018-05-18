@@ -73,7 +73,7 @@
 #endif
 
 /* include SoPlex solver */
-#include "spxsolver.h"
+#include "soplex.h"
 
 /* define subversion for versions <= 1.5.0.1 */
 #ifndef SOPLEX_SUBVERSION
@@ -91,10 +91,17 @@
 
 /* get githash of SoPlex */
 #if (SOPLEX_VERSION >= 160)
+#if (SOPLEX_APIVERSION <= 5)
 #include "spxgithash.h"
+#else
+#include "soplex/spxgithash.h"
+#endif
 #endif
 
+#define WITH_BOUNDFLIPPING
+#if (SOPLEX_APIVERSION <= 5)
 /* include SoPlex components */
+#include "spxsolver.h"
 #include "slufactor.h"
 #include "spxsteeppr.h"
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
@@ -106,9 +113,9 @@
 #include "spxmainsm.h"
 #include "spxequilisc.h"
 
-#define WITH_BOUNDFLIPPING
 #ifdef WITH_BOUNDFLIPPING
 #include "spxboundflippingrt.h"
+#endif
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
