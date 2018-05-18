@@ -4784,10 +4784,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
       if( *ival == MSK_SCALING_NONE )
          *ival = 0;
-      else if( *ival == MSK_SCALING_AGGRESSIVE )
-         *ival = 2;
       else
          *ival = 1;
+      /* further choice: MSK_SCALING_AGGRESSIVE - not currently used */
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
