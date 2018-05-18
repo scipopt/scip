@@ -58,8 +58,9 @@ if __name__ == "__main__":
                 h = "math.h"
             else:
                 h = remove_prefix("/usr/include/", h)
-
-            if h not in ["stdio.h", "stdint.h", "math.h", "limits.h", "float.h", "assert.h"]:
+            if h == "string.h":
+                includelist.append('#include <string.h>\n#if defined(_WIN32) || defined(_WIN64)\n#else\n#include <strings.h> /*lint --e{766}*/\n#endif')
+            elif h not in ["stdio.h", "stdint.h", "math.h", "limits.h", "float.h", "assert.h"]:
                 includelist.append("#include <{}>".format(remove_prefix("/usr/include/", h)))
         else:
             includelist.append('#include "{}"'.format(h))
