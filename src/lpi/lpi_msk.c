@@ -4853,14 +4853,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    switch (type)
    {
    case SCIP_LPPAR_FROMSCRATCH:               /* solver should start from scratch at next call? */
-      SCIPdebugMessage("Setting fromscratch to %d.\n", ival);
       lpi->fromscratch = (SCIP_Bool) ival;
       break;
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
       assert( ival == 0 || ival == 1 );
-      SCIPdebugMessage("Setting scaling to %d.\n", ival);
       if( ival == 0 )
       {
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_NONE) );
@@ -4875,12 +4873,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
-      SCIPdebugMessage("Setting presolve to %d.\n", ival);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE,
             ival ? MSK_PRESOLVE_MODE_FREE : MSK_PRESOLVE_MODE_OFF) );
       break;
    case SCIP_LPPAR_PRICING:                   /* pricing strategy */
-      SCIPdebugMessage("Setting pricing to %d.\n", ival);
       assert(ival >= 0 && ival <= (int)SCIP_PRICING_DEVEX);
       lpi->pricing = (SCIP_PRICING)ival;
 
@@ -4904,17 +4900,14 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->lpinfo = (SCIP_Bool) ival;
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
-      SCIPdebugMessage("Setting max iter to %d.\n", ival);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads (0 => MOSEK chooses) */
       assert(ival >= 0);
-      SCIPdebugMessage("Setting number of threads to %d.\n", ival);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_NUM_THREADS, ival) );
       break;
    case SCIP_LPPAR_REFACTOR:                  /* refactorization interval */
       assert(ival >= 0);
-      SCIPdebugMessage("Setting refactorization interval to %d.\n", ival);
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_REFACTOR_FREQ, ival) );
       break;
    default:
