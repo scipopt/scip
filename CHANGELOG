@@ -13,7 +13,7 @@ performance improvements:
 
 features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
-- new example brachistochrone in CallableLibrary examples collection
+- new examples brachistochrone and circpacking in CallableLibrary examples collection
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
 - new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
 - limits on the number of presolving rounds a presolver (maxrounds) or propagator/constraint handler (maxprerounds)
