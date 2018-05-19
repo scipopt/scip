@@ -2560,14 +2560,13 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 #if FORCE_MOSEK_LOG
    if( optimizecount > WRITE_ABOVE )
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_ON) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, 4) );
    }
    else
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_OFF) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, 0) );
    }
 #endif
-
 
    SCIPdebugMessage("Calling SCIPlpiSolveBarrier[%d] (%d) ", optimizecount, lpi->lpid);
 
@@ -4927,6 +4926,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       SCIPdebugMessage("Ignoring log setting!\n");
 #else
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, ival ? 4 : MSK_OFF) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, ival ? 4 : MSK_OFF) );
 #endif
       lpi->lpinfo = (SCIP_Bool) ival;
       break;
