@@ -2046,18 +2046,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* set user problem data */
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
 
-   /* disable sub-SCIP heuristics */
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/gins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/clique/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/vbounds/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/bound/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zeroobj/freq", -1) );
-
    if( graph->stp_type == STP_DHCSTP )
    {
       SCIP_CALL(SCIPsetIntParam(scip, "constraints/knapsack/propfreq", -1));
@@ -2170,13 +2158,13 @@ SCIP_RETCODE SCIPprobdataCreate(
    graph->orgsource = graph->source;
 
    probdata->norgedges = graph->edges;
-   probdata->stp_type = graph->stp_type;
 
    /* presolving */
    SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims, TRUE) );
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, TRUE) );
 
    graph = packedgraph;
+   probdata->stp_type = graph->stp_type;
 
 #ifdef WITH_UG
    {
@@ -2354,11 +2342,11 @@ SCIP_RETCODE SCIPprobdataCreate(
       {
          if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
          {
-            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, -1.0, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, FALSE, -1.0, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, -1.0, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, FALSE, -1.0, NULL) );
          }
       }
    }

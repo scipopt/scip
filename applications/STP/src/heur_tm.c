@@ -46,11 +46,11 @@
 #define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_EVALRUNS 15                  /**< number of runs */
+#define DEFAULT_EVALRUNS 25                  /**< number of runs */
 #define DEFAULT_INITRUNS 100                 /**< number of initial runs */
 #define DEFAULT_LEAFRUNS 15                  /**< number of runs at leafs */
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
-#define DEFAULT_DURINGLPFREQ 10              /**< frequency during LP solving */
+#define DEFAULT_DURINGLPFREQ 5               /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
 #define DEFAULT_RANDSEED 5                   /**< seed for pseudo-random functions */
 
@@ -58,7 +58,6 @@
 #define TM_SP       1
 #define TM_VORONOI  2
 #define TM_DIJKSTRA 3
-
 
 #ifdef WITH_UG
 extern

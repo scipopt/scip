@@ -688,7 +688,6 @@ SCIP_RETCODE sep_2cut(
    int     e;
    int     root;
    int     head;
-   int     erev;
    int     count;
    int     terms;
    int     nedges;
@@ -752,42 +751,15 @@ SCIP_RETCODE sep_2cut(
 
    assert(nedges >= nnodes);
 
-   for( e = 0; e < nnodes; e += 2 )
+   for( k = 0; k < nnodes; k++ )
    {
-      erev = e + 1;
-
-      if( intree && SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
-      {
-         capa[e] = 0;
-         capa[erev] = 0;
-         residual[e] = 0;
-         residual[erev] = 0;
-
-         headarr[e] = 1;
-         headarr[erev] = 1;
-      }
-      else
-      {
-         capa[e]     = ((int)(xval[e] * FLOW_FACTOR + 0.5)) + CREEP_VALUE;
-         capa[erev]  = ((int)(xval[erev] * FLOW_FACTOR + 0.5)) + CREEP_VALUE;
-         residual[e] = capa[e];
-         residual[erev] = capa[erev];
-
-         headarr[e] = SCIPisFeasLT(scip, xval[e], 1.0) ? 1 : 0;
-         headarr[erev] = SCIPisFeasLT(scip, xval[erev], 1.0) ? 1 : 0;
-      }
-
-      w[e] = 0;
-      w[erev] = 0;
-      excess[e] = 0;
-      excess[erev] = 0;
-      edgearr[e] = -1;
-      edgearr[erev] = -1;
+      w[k] = 0;
+      excess[k] = 0;
    }
 
-   for( ; e < nedges; e += 2 )
+   for( e = 0; e < nedges; e += 2 )
    {
-      erev = e + 1;
+      const int erev = e + 1;
 
       if( intree && SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
       {
@@ -1604,6 +1576,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
+   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
    SCIP_Real             damaxdeviation,     /**< maximum deviation for dual-ascent ( -1.0 for default) */
    STP_Bool* RESTRICT    nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
@@ -1632,6 +1605,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    int nnewedges;
    int norgcutverts;
    int stacklength;
+   int augmentingcomponent = -1;
    const SCIP_Bool addconss = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
 
    /* should currently not  be activated */
@@ -2084,9 +2058,35 @@ SCIP_RETCODE SCIPStpDualAscent(
          }
          else
          {
-            /* reinsert active vertex */
-            gnodeact->dist = currscore;
-            SCIP_CALL( SCIPpqueueInsert(pqueue, gnodeact) );
+            SCIP_Bool insert = TRUE;
+
+            if( is_pseudoroot )
+            {
+               int i = start[v];
+               const int end = start[v + 1];
+
+               assert(end - i == 2);
+
+               for( ; i != end; i++ )
+                  if( rescap[i] != 0.0 )
+                     break;
+
+               if( i == end )
+               {
+                  if( augmentingcomponent == -1 )
+                     augmentingcomponent = v;
+
+                  if( augmentingcomponent != v )
+                     insert = FALSE;
+               }
+            }
+
+            if( insert )
+            {
+               /* reinsert active vertex */
+               gnodeact->dist = currscore;
+               SCIP_CALL( SCIPpqueueInsert(pqueue, gnodeact) );
+            }
          }
 
          ENDOFLOOP:
