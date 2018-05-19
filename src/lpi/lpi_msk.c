@@ -89,7 +89,6 @@ static int nextlpid                 =  1;
 #define FORCE_MOSEK_LOG              0       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
 #define FORCE_MOSEK_SUMMARY          0
 #define FORCE_NO_MAXITER             0
-#define FORCE_SILENCE                1       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
 #define SETBACK_LIMIT                250
 #define STRONGBRANCH_PRICING         MSK_SIM_SELECTION_SE
 #define SUPRESS_NAME_ERROR           1
@@ -227,7 +226,7 @@ void MSKAPI printstr(
    const char*           str                 /**< string that contains string on output */
    )
 {  /*lint --e{715}*/
-#if SUPRESS_NAME_ERROR && !FORCE_SILENCE
+#if SUPRESS_NAME_ERROR
    char errstr[32];
    snprintf(errstr, 32, "MOSEK Error %d", MSK_RES_ERR_DUP_NAME);
    if (0 == strncmp(errstr, str, strlen(errstr)))
@@ -2106,12 +2105,12 @@ SCIP_RETCODE SolveWSimplex(
 #if FORCE_MOSEK_LOG
    if( optimizecount > WRITE_ABOVE )
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_ON) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 4) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM_FREQ, 1) );
    }
    else
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_OFF) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 4) );
    }
 #endif
 
@@ -2161,12 +2160,6 @@ SCIP_RETCODE SolveWSimplex(
    {
       MOSEK_CALL( MSK_solutionsummary(lpi->task, MSK_STREAM_LOG) );
    }
-#endif
-
-#if !FORCE_SILENCE
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, 100) );
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM_FREQ, 100) );
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 100) );
 #endif
 
    /* perform actual optimization */
@@ -2263,7 +2256,7 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_SOL_STA_INTEGER_OPTIMAL:
    case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
    default:
-#if SHOW_ERRORS && !FORCE_SILENCE
+#if SHOW_ERRORS
       SCIPerrorMessage("Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
 #endif
 
@@ -2302,7 +2295,7 @@ SCIP_RETCODE SolveWSimplex(
       break;
 
   default:
-#if SHOW_ERRORS && !FORCE_SILENCE
+#if SHOW_ERRORS
       SCIPerrorMessage("Simplex[%d] returned prosta = %d\n", optimizecount, prosta);
 #endif
 
@@ -2518,11 +2511,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
    }
 #endif
 
-#if !FORCE_SILENCE
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_ON) );
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM_FREQ, 1) );
-#endif
-
    SCIP_CALL( SolveWSimplex(lpi) );
 
    /* the following code is unclear: Why should the resolve change anything ?????? */
@@ -2652,7 +2640,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    case MSK_SOL_STA_INTEGER_OPTIMAL:
    case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
    default:
-#if SHOW_ERRORS && !FORCE_SILENCE
+#if SHOW_ERRORS
       SCIPerrorMessage("Barrier[%d] returned solsta = %d\n", optimizecount, solsta);
 #endif
 
@@ -2690,7 +2678,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 #endif
       break;
    default:
-#if SHOW_ERRORS && !FORCE_SILENCE
+#if SHOW_ERRORS
       SCIPerrorMessage("Barrier[%d] returned prosta = %d\n", optimizecount, prosta);
 #endif
 
@@ -4938,7 +4926,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 #if FORCE_MOSEK_LOG
       SCIPdebugMessage("Ignoring log setting!\n");
 #else
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, ival ? MSK_ON : MSK_OFF) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, ival ? 4 : MSK_OFF) );
 #endif
       lpi->lpinfo = (SCIP_Bool) ival;
       break;
