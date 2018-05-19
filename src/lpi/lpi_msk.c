@@ -99,7 +99,7 @@ static int nextlpid                 =  1;
 #define WRITE_ABOVE                  0
 #endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
-#define ALWAYS_SOLVE_PRIMAL          0
+#define ALWAYS_SOLVE_PRIMAL_FORM     1
 #if DEBUG_PRINT_STAT > 0
 static int numstrongbranchmaxiterup =  0;
 static int numstrongbranchmaxiterdo =  0;
@@ -2125,7 +2125,8 @@ SCIP_RETCODE SolveWSimplex(
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, MSK_PRESOLVE_MODE_ON) );
    }
 
-#if ALWAYS_SOLVE_PRIMAL > 0
+#if ALWAYS_SOLVE_PRIMAL_FORM > 0
+   /* always solve the primal formulation */
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SOLVE_FORM, MSK_SOLVE_PRIMAL) );
 #endif
 
