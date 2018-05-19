@@ -177,7 +177,7 @@ void visualizeSolutionMatplotlib(
    FILE* stream;
    int i;
 
-   stream = popen("python2", "w");
+   stream = popen("python", "w");
    if( stream == NULL )
    {
       SCIPerrorMessage("Could not open pipe to python.\n");
