@@ -20,12 +20,16 @@
  *
  * This example shows how to setup quadratic constraints in SCIP when using SCIP as callable library.
  * The example implements a model for the computation of a smallest rectangle that contains a number of
- * given circles in the plane.
+ * given circles in the plane or the computation of the maximal number of circles that can be placed
+ * into a given rectangle.
  *
  * Given n circles with radii \f$r_i\f$, the task is to find a coordinates \f$(x_i, y_i)\f$ for the
  * circle midpoints and a minimal rectangle of width \f$W \geq 0\f$ and height \f$H \geq 0\f$, such
  * that every circle is places within the rectangle (\f$r_i \leq x_i \leq W-r_i\f$, \f$r_i \leq y_i \leq H-r_i\f$)
  * and circles are not overlapping \f$\left((x_i-x_j)^2 + (y_i-y_j)^2 \geq (r_i + r_j)^2\right)\f$.
+ *
+ * Alternatively, one may fix the width and the rectangle and maximize the number of circles that
+ * can be fit into the rectangle without being overlapping.
  */
 
 #include <stdio.h>
@@ -46,9 +50,11 @@ static const SCIP_Real r[] = {0.25, 0.25, 0.4, 0.7, 0.1};
 /* Variables */
 SCIP_VAR* x[nCircles]; /**< x coordinates */
 SCIP_VAR* y[nCircles]; /**< y coordinates */
+SCIP_VAR* b[nCircles]; /**< whether circle is placed into rectangle */
 SCIP_VAR* a;           /**< area of rectangle */
 SCIP_VAR* w;           /**< width of rectangle */
 SCIP_VAR* h;           /**< height of rectangle */
+SCIP_Bool minarea;     /**< whether we minimize the area (TRUE) or maximize the number of circles in the rectangle (FALSE) */
 
 
 /** plots solution by use of Python/Matplotlib */
@@ -82,6 +88,10 @@ void visualizeSolutionMatplotlib(
 
    for( i = 0; i < nCircles; ++i )
    {
+      /* skip circles that are not included in current solution */
+      if( !minarea && SCIPgetSolVal(scip, sol, b[i]) < 0.5 )
+         continue;
+
       fprintf(stream, "patches.append(matplotlib.patches.Circle((%g, %g), %g))\n",
          SCIPgetSolVal(scip, sol, x[i]),
          SCIPgetSolVal(scip, sol, y[i]),
@@ -96,7 +106,10 @@ void visualizeSolutionMatplotlib(
 
    fprintf(stream, "plt.xlim(xmax=%g)\n", SCIPgetSolVal(scip, sol, w));
    fprintf(stream, "plt.ylim(ymax=%g)\n", SCIPgetSolVal(scip, sol, h));
-   fprintf(stream, "plt.title('Area = %.4f')\n", SCIPgetSolVal(scip, sol, a));
+   if( minarea )
+      fprintf(stream, "plt.title('Area = %.4f')\n", SCIPgetSolVal(scip, sol, a));
+   else
+      fprintf(stream, "plt.title('Number of circles = %d')\n", (int)SCIPround(scip, SCIPgetSolOrigObj(scip, sol)));
    fputs("plt.gca().set_aspect(1)\n", stream);
    fputs("plt.show()\n", stream);
 
@@ -139,11 +152,18 @@ void visualizeSolutionGnuplot(
    fprintf(stream, "set xrange [0:%.2f]\n", MAX(wval, hval));
    fprintf(stream, "set yrange [0:%.2f]\n", MAX(wval, hval));
    fprintf(stream, "set object rectangle from 0,0 to %.2f,%.2f\n", wval, hval);
-   fprintf(stream, "set xlabel \"Area = %.2f\"\n", wval * hval);
+   if( minarea )
+      fprintf(stream, "set xlabel \"Area = %.4f\"\n", SCIPgetSolVal(scip, sol, a));
+   else
+      fprintf(stream, "set xlabel \"Number of circles = %d\"\n", (int)SCIPround(scip, SCIPgetSolOrigObj(scip, sol)));
 
    fputs("plot '-' with circles notitle\n", stream);
    for( i = 0; i < nCircles; ++i )
    {
+      /* skip circles that are not included in current solution */
+      if( !minarea && SCIPgetSolVal(scip, sol, b[i]) < 0.5 )
+         continue;
+
       fprintf(stream, "%g %g %g\n",
          SCIPgetSolVal(scip, sol, x[i]),
          SCIPgetSolVal(scip, sol, y[i]),
@@ -207,11 +227,15 @@ SCIP_RETCODE visualizeSolutionAscii(
       int xcoord;
       int ycoord;
 
+      /* skip circles that are not included in current solution */
+      if( !minarea && SCIPgetSolVal(scip, sol, b[i]) < 0.5 )
+         continue;
+
       xval = SCIPgetSolVal(scip, sol, x[i]);
       yval = SCIPgetSolVal(scip, sol, y[i]);
       radius = r[i];
 
-      for( phi = 0.0; phi < 2.0 * M_PI; phi += 0.05 )
+      for( phi = 0.0; phi < 2.0 * M_PI; phi += 0.01 )
       {
          xcoord = SCIPround(scip, scale * (xval + radius * cos(phi))) + 1; /* +1 for border */
          ycoord = SCIPround(scip, scale * (yval + radius * sin(phi))) + 1; /* +1 for border */
@@ -228,8 +252,9 @@ SCIP_RETCODE visualizeSolutionAscii(
       }
    }
 
-   /* print area inside top border */
-   i = SCIPsnprintf(picture + width/2 - 8, width/2 + 8, " Area = %g ", SCIPgetSolOrigObj(scip, sol));
+   /* print objective value inside top border */
+   i = SCIPsnprintf(picture + width/2 - 8, width/2 + 8,
+      minarea ? " Area = %g " : " #Circles = %.0f ", SCIPgetSolOrigObj(scip, sol));
    picture[width/2-8+i] = '*';
 
    /* show plot */
@@ -310,8 +335,17 @@ static SCIP_RETCODE setupProblem(
 	char name[SCIP_MAXSTRLEN];
 	SCIP_Real one = 1.0;
 
+	/* if both width and height are fixed, then we don't optimize the area anymore, but the number of circles */
+   minarea = (fixwidth == SCIP_INVALID || fixheight == SCIP_INVALID);
+
 	/* create empty problem */
 	SCIP_CALL( SCIPcreateProbBasic(scip, "Packing circles") );
+
+	/* change to maximization if optimizing number of circles instead of rectangle area */
+	if( !minarea )
+	{
+	   SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
+	}
 
 	/* create variables */
 	for( i = 0; i < nCircles; ++i )
@@ -321,8 +355,14 @@ static SCIP_RETCODE setupProblem(
 
 		(void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "y_%d", i);
 		SCIP_CALL( SCIPcreateVarBasic(scip, &y[i], name, r[i], SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+
+		if( !minarea )
+		{
+	      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b_%d", i);
+	      SCIP_CALL( SCIPcreateVarBasic(scip, &b[i], name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+		}
 	}
-	SCIP_CALL( SCIPcreateVarBasic(scip, &a, "a", 0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+	SCIP_CALL( SCIPcreateVarBasic(scip, &a, "a", 0.0, SCIPinfinity(scip), minarea ? 1.0 : 0.0, SCIP_VARTYPE_CONTINUOUS) );
 	SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
 	SCIP_CALL( SCIPcreateVarBasic(scip, &h, "h", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
 
@@ -350,19 +390,58 @@ static SCIP_RETCODE setupProblem(
       assert(fixed);
    }
 
+   /* fix area if both width and height are given */
+   if( !minarea )
+   {
+      SCIP_Bool infeas;
+      SCIP_Bool fixed;
+
+      SCIP_CALL( SCIPfixVar(scip, a, fixwidth * fixheight, &infeas, &fixed) );
+
+      assert(!infeas);
+      assert(fixed);
+   }
+
 	/* add variables to problem */
 	for( i = 0; i < nCircles; ++i )
 	{
 		SCIP_CALL( SCIPaddVar(scip, x[i]) );
 		SCIP_CALL( SCIPaddVar(scip, y[i]) );
+		if( !minarea )
+		{
+	      SCIP_CALL( SCIPaddVar(scip, b[i]) );
+		}
 	}
 	SCIP_CALL( SCIPaddVar(scip, a) );
 	SCIP_CALL( SCIPaddVar(scip, w) );
 	SCIP_CALL( SCIPaddVar(scip, h) );
 
-	/* circles must be within rectangle (left and bottom are passed in by variable bounds) */
+	/* circles must be within rectangle, if decided to be put into rectangle
+	 * - lower and left bounds are already passed in by variable bounds
+	 * - upper and right bounds need to be satisfied only if circles are placed into rectangle
+	 * - however, for circles that are not placed into the rectangle, it is easy to satisfy the
+	 *   same constraints as long as the rectangle is not too small
+	 * - thus, if not minimizing area, we add these constraints on the circle coordinates,
+	 *   unless the circle is too big, in which case ensure that it is not placed into the rectangle
+	 */
 	for( i = 0; i < nCircles; ++i )
 	{
+	   if( !minarea && SCIPisLT(scip, MIN(fixwidth, fixheight), 2*r[i]) )
+	   {
+         SCIP_Bool infeas;
+	      SCIP_Bool fixed;
+
+	      SCIP_CALL( SCIPfixVar(scip, b[i], 0.0, &infeas, &fixed) );
+
+	      assert(!infeas);
+	      assert(fixed);
+
+	      xrw[i] = NULL;
+	      yrh[i] = NULL;
+
+	      continue;
+	   }
+
 	   /* linear constraint: x_i + r_i <= w --> r_i <= w - x_i */
 	   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundaryright_%d", i, i);
 	   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &xrw[i], name, 0, NULL, NULL, r[i], SCIPinfinity(scip)) );
@@ -380,15 +459,17 @@ static SCIP_RETCODE setupProblem(
 	SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &wha, "area", 0, NULL, NULL, 1, &w, &h, &one, -SCIPinfinity(scip), 0.0) );
 	SCIP_CALL( SCIPaddLinearVarQuadratic(scip, wha, a, -1.0) );
 
-	/* quadratic constraint: (x_i - x_j)^2 + (y_i - y_j)^2 >= (r_i + r_j)^2 */
-	/* x_i^2 - 2 x_i x_j + x_j^2 + y_i^2 - 2 y_i y_j + y_j^2 >= (r_i + r_j)^2 */
+	/* quadratic constraint: (x_i - x_j)^2 + (y_i - y_j)^2 >= (r_i + r_j)^2  (if minarea)
+    *   x_i^2 - 2 x_i x_j + x_j^2 + y_i^2 - 2 y_i y_j + y_j^2 >= (r_i + r_j)^2
+    * if not minarea, then rhs becomes (r_i + r_j)^2 * (b_i+b_j-1)
+	 */
 	for( i = 0; i < nCircles; ++i )
 	{
 	   for( j = i + 1; j < nCircles; ++j )
 	   {
-	      /* create empty quadratic constraint with right-hand-side (r_i - r_j)^2 */
+	      /* create empty quadratic constraint with right-hand-side +/- (r_i - r_j)^2 */
 	      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d,%d", i, j);
-	      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &quad[i][j], name, 0, NULL, NULL, 0, NULL, NULL, NULL, SQR(r[i] + r[j]), SCIPinfinity(scip)) );
+	      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &quad[i][j], name, 0, NULL, NULL, 0, NULL, NULL, NULL, (minarea ? 1.0 : -1.0) * SQR(r[i] + r[j]), SCIPinfinity(scip)) );
 
 	      SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, quad[i][j], x[i], 1.0) ); /* x_i^2 */
          SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, quad[i][j], x[j], 1.0) ); /* x_j^2 */
@@ -397,14 +478,27 @@ static SCIP_RETCODE setupProblem(
 	      SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, quad[i][j], y[i], 1.0) ); /* y_i^2 */
          SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, quad[i][j], y[j], 1.0) ); /* y_j^2 */
 	      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, quad[i][j], y[i], y[j], -2.0) ); /* - 2 y_i y_j */
+
+	      if( !minarea )
+	      {
+	         /* add -(r_i+r_j)^2 (b_i + b_j) */
+	         SCIP_CALL( SCIPaddLinearVarQuadratic(scip, quad[i][j], b[i], -SQR(r[i] + r[j])) );
+            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, quad[i][j], b[j], -SQR(r[i] + r[j])) );
+	      }
 	   }
 	}
 
 	/* add constraints to problem */
 	for( i = 0; i < nCircles; ++i )
 	{
-		SCIP_CALL( SCIPaddCons(scip, xrw[i]) );
-		SCIP_CALL( SCIPaddCons(scip, yrh[i]) );
+	   if( xrw[i] != NULL )
+	   {
+	      SCIP_CALL( SCIPaddCons(scip, xrw[i]) );
+	   }
+	   if( yrh[i] != NULL )
+	   {
+	      SCIP_CALL( SCIPaddCons(scip, yrh[i]) );
+	   }
 	}
 
 	SCIP_CALL( SCIPaddCons(scip, wha) );
@@ -422,8 +516,14 @@ static SCIP_RETCODE setupProblem(
 	 */
 	for( i = 0; i < nCircles; ++i )
 	{
-		SCIP_CALL( SCIPreleaseCons(scip, &xrw[i]) );
-		SCIP_CALL( SCIPreleaseCons(scip, &yrh[i]) );
+	   if( xrw[i] != NULL )
+	   {
+	      SCIP_CALL( SCIPreleaseCons(scip, &xrw[i]) );
+	   }
+	   if( yrh[i] != NULL )
+	   {
+	      SCIP_CALL( SCIPreleaseCons(scip, &yrh[i]) );
+	   }
 
       for( j = i + 1; j < nCircles; ++j )
       {
@@ -495,6 +595,10 @@ static SCIP_RETCODE runPacking(
    {
       SCIP_CALL( SCIPreleaseVar(scip, &x[i]) );
       SCIP_CALL( SCIPreleaseVar(scip, &y[i]) );
+      if( !minarea )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &b[i]) );
+      }
    }
 
 	SCIP_CALL( SCIPfree(&scip) );
