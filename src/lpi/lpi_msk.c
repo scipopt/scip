@@ -134,8 +134,14 @@ struct SCIP_LPi
    int                   lpid;               /**< id for LP within same task */
    MSKstakeye*           skx;                /**< basis status for columns */
    MSKstakeye*           skc;                /**< basis status for rows */
+   MSKboundkeye*         bkx;                /**< bound keys for columns */
+   MSKboundkeye*         bkc;                /**< bound keys for rows */
+   MSKint32t*            aptre;              /**< row or column end pointers */
    int                   skxsize;            /**< size of skx array */
    int                   skcsize;            /**< size of skc array */
+   int                   bkxsize;            /**< size of bkx */
+   int                   bkcsize;            /**< size of bkx */
+   int                   aptresize;          /**< size of aptre */
    MSKsoltypee           lastsolvetype;      /**< Which solver was called last and which solution should be returned? */
    SCIP_Bool             solved;             /**< was the current LP solved? */
    SCIP_Bool             fromscratch;        /**< Shall solves be performed with MSK_IPAR_SIM_HOTSTART turned off? */
@@ -351,6 +357,63 @@ SCIP_RETCODE scip_checkdata(
 }
 #endif
 
+/** resizes bound keys array bkx to have at least ncols entries */
+static
+SCIP_RETCODE ensureBkxMem(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols               /**< number of columns */
+   )
+{
+   if ( lpi->bkxsize < ncols )
+   {
+      int newsize;
+      newsize = MAX(2*lpi->bkxsize, ncols);
+
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->bkx), newsize) );
+      lpi->bkxsize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** resizes bound keys array bkc to have at least nrows entries */
+static
+SCIP_RETCODE ensureBkcMem(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   nrows               /**< number of rows */
+   )
+{
+   if ( lpi->bkcsize < nrows )
+   {
+      int newsize;
+      newsize = MAX(2*lpi->bkcsize, nrows);
+
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->bkc), newsize) );
+      lpi->bkcsize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** resizes aptre array to have at least n entries */
+static
+SCIP_RETCODE ensureAptreMem(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   n                   /**< number of entries */
+   )
+{
+   if ( lpi->aptresize < n )
+   {
+      int newsize;
+      newsize = MAX(2*lpi->aptresize, n);
+
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->aptre), newsize) );
+      lpi->aptresize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** marks the current LP to be unsolved */
 static
 void invalidateSolution(
@@ -419,31 +482,29 @@ SCIP_RETCODE getEndptrs(
    int                   n,                  /**< array size */
    const int*            beg,                /**< array of beginning indices */
    int                   nnonz,              /**< number of nonzeros */
-   int**                 aptre               /**< pointer to store the result */
+   MSKint32t*            aptre               /**< array to store the result */
    )
 {
    int i;
 
    assert(beg != NULL || nnonz == 0);
 
-   SCIP_ALLOC( BMSallocMemoryArray(aptre, n) );
-
    if (nnonz > 0)
    {
       assert(beg != NULL);
       for(i = 0; i < n-1; i++)
       {
-         (*aptre)[i] = beg[i+1];
-         assert((*aptre)[i] >= beg[i]);
+         aptre[i] = beg[i+1];
+         assert(aptre[i] >= beg[i]);
       }
 
-      (*aptre)[n-1] = nnonz;
-      assert((*aptre)[n-1] >= beg[n-1]);
+      aptre[n-1] = nnonz;
+      assert(aptre[n-1] >= beg[n-1]);
    }
    else
    {
       for( i = 0; i < n; i++ )
-         (*aptre)[i] = 0;
+         aptre[i] = 0;
    }
 
    return SCIP_OKAY;
@@ -775,10 +836,16 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->lpid = nextlpid++;
-   (*lpi)->skxsize = 0;
-   (*lpi)->skcsize = 0;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
+   (*lpi)->bkx = NULL;
+   (*lpi)->bkc = NULL;
+   (*lpi)->aptre = NULL;
+   (*lpi)->skxsize = 0;
+   (*lpi)->skcsize = 0;
+   (*lpi)->bkxsize = 0;
+   (*lpi)->bkcsize = 0;
+   (*lpi)->aptresize = 0;
    (*lpi)->lastsolvetype = (MSKsoltypee) -1;
    (*lpi)->lpinfo = FALSE;
    (*lpi)->restrictselectdef = 50;
@@ -804,6 +871,9 @@ SCIP_RETCODE SCIPlpiFree(
 
    MOSEK_CALL( MSK_deletetask(&(*lpi)->task) );
 
+   BMSfreeMemoryArrayNull(&(*lpi)->aptre);
+   BMSfreeMemoryArrayNull(&(*lpi)->bkx);
+   BMSfreeMemoryArrayNull(&(*lpi)->bkc);
    BMSfreeMemoryArrayNull(&(*lpi)->skx);
    BMSfreeMemoryArrayNull(&(*lpi)->skc);
    BMSfreeMemory(lpi);
@@ -842,10 +912,6 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
-   int* aptre;
-   MSKboundkeye* bkc;
-   MSKboundkeye* bkx;
-
 #ifndef NDEBUG
    {
       int j;
@@ -870,47 +936,29 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    invalidateSolution(lpi);
 
-   /* initialize all arrays with NULL */
-   aptre = NULL;
-   bkc = NULL;
-   bkx = NULL;
-
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiLoadColLP") );
 #endif
 
    if (nrows > 0)
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
-
-      generateMskBoundkeys(nrows, lhs, rhs, bkc);
+      SCIP_CALL( ensureBkcMem(lpi, nrows) );
+      generateMskBoundkeys(nrows, lhs, rhs, lpi->bkc);
    }
 
    if (ncols > 0)
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
+      SCIP_CALL( ensureBkxMem(lpi, ncols) );
+      generateMskBoundkeys(ncols, lb, ub, lpi->bkx);
 
-      generateMskBoundkeys(ncols, lb, ub, bkx);
-
-      SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
+      SCIP_CALL( ensureAptreMem(lpi, ncols) );
+      SCIP_CALL( getEndptrs(ncols, beg, nnonz, lpi->aptre) );
    }
 
-   MOSEK_CALL( MSK_inputdata(lpi->task, nrows, ncols, nrows, ncols, obj, 0.0, beg, aptre, ind, val,
-         bkc, lhs, rhs, bkx, lb, ub) );
+   MOSEK_CALL( MSK_inputdata(lpi->task, nrows, ncols, nrows, ncols, obj, 0.0, beg, lpi->aptre, ind, val,
+         lpi->bkc, lhs, rhs, lpi->bkx, lb, ub) );
 
    MOSEK_CALL( MSK_putobjsense(lpi->task, SENSE2MOSEK(objsen)) );
-
-
-   if( ncols > 0 )
-   {
-      BMSfreeMemoryArray(&aptre);
-      BMSfreeMemoryArray(&bkx);
-   }
-
-   if( nrows > 0 )
-   {
-      BMSfreeMemoryArray(&bkc);
-   }
 
    if( colnames != NULL )
    {
@@ -957,8 +1005,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    const int* aptrb;
 #endif
 
-   int* aptre;
-   MSKboundkeye* bkx;
    int oldcols;
 
    assert(MosekEnv != NULL);
@@ -984,14 +1030,14 @@ SCIP_RETCODE SCIPlpiAddCols(
    if (ncols == 0)
       return SCIP_OKAY;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
-   generateMskBoundkeys(ncols, lb, ub, bkx);
+   SCIP_CALL( ensureBkxMem(lpi, ncols) );
+   generateMskBoundkeys(ncols, lb, ub, lpi->bkx);
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &oldcols) );
 
    MOSEK_CALL( MSK_appendvars(lpi->task, ncols) );
    MOSEK_CALL( MSK_putcslice(lpi->task, oldcols, oldcols+ncols, obj) );
-   MOSEK_CALL( MSK_putvarboundslice(lpi->task, oldcols, oldcols+ncols, bkx, lb, ub) );
+   MOSEK_CALL( MSK_putvarboundslice(lpi->task, oldcols, oldcols+ncols, lpi->bkx, lb, ub) );
 
    if( nnonz > 0 )
    {
@@ -1008,12 +1054,10 @@ SCIP_RETCODE SCIPlpiAddCols(
       }
 #endif
 
-      SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
-      MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, aptre, ind, val) );
-      BMSfreeMemoryArray(&aptre);
+      SCIP_CALL( ensureAptreMem(lpi, ncols) );
+      SCIP_CALL( getEndptrs(ncols, beg, nnonz, lpi->aptre) );
+      MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, lpi->aptre, ind, val) );
    }
-
-   BMSfreeMemoryArray(&bkx);
 
    if( colnames != NULL )
    {
@@ -1138,8 +1182,6 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-   int* aptre;
-   MSKboundkeye* bkc;
    int oldrows;
 
    assert(MosekEnv != NULL);
@@ -1160,14 +1202,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    if (nrows == 0)
       return SCIP_OKAY;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
+   SCIP_CALL( ensureBkcMem(lpi, nrows) );
 
-   generateMskBoundkeys(nrows, lhs, rhs, bkc);
+   generateMskBoundkeys(nrows, lhs, rhs, lpi->bkc);
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &oldrows) );
 
    MOSEK_CALL( MSK_appendcons(lpi->task, nrows) );
-   MOSEK_CALL( MSK_putconboundslice(lpi->task, oldrows, oldrows+nrows, bkc, lhs, rhs) );
+   MOSEK_CALL( MSK_putconboundslice(lpi->task, oldrows, oldrows+nrows, lpi->bkc, lhs, rhs) );
 
    if( nnonz > 0 )
    {
@@ -1184,12 +1226,10 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 #endif
 
-      SCIP_CALL( getEndptrs(nrows, beg, nnonz, &aptre) );
-      MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, aptre, ind, val) );
-      BMSfreeMemoryArray(&aptre);
+      SCIP_CALL( ensureAptreMem(lpi, nrows) );
+      SCIP_CALL( getEndptrs(nrows, beg, nnonz, lpi->aptre) );
+      MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, lpi->aptre, ind, val) );
    }
-
-   BMSfreeMemoryArray(&bkc);
 
    if( rownames != NULL )
    {
@@ -1337,7 +1377,6 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {
-   MSKboundkeye* bkx;
    int i;
 
    assert(MosekEnv != NULL);
@@ -1371,12 +1410,10 @@ SCIP_RETCODE SCIPlpiChgBounds(
       }
    }
 
-   SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
+   SCIP_CALL( ensureBkxMem(lpi, ncols) );
 
-   generateMskBoundkeys(ncols, lb, ub, bkx);
-   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_VAR, ncols, ind, bkx, lb, ub) );
-
-   BMSfreeMemoryArray(&bkx);
+   generateMskBoundkeys(ncols, lb, ub, lpi->bkx);
+   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_VAR, ncols, ind, lpi->bkx, lb, ub) );
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgBounds") );
@@ -1394,8 +1431,6 @@ SCIP_RETCODE SCIPlpiChgSides(
    const SCIP_Real*      rhs                 /**< new values for right hand sides */
    )
 {
-   MSKboundkeye* bkc;
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
@@ -1412,12 +1447,10 @@ SCIP_RETCODE SCIPlpiChgSides(
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgSides") );
 #endif
 
-   SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
+   SCIP_CALL( ensureBkcMem(lpi, nrows) );
 
-   generateMskBoundkeys(nrows, lhs, rhs, bkc);
-   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_CON, nrows, ind, bkc, lhs, rhs) );
-
-   BMSfreeMemoryArray(&bkc);
+   generateMskBoundkeys(nrows, lhs, rhs, lpi->bkc);
+   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_CON, nrows, ind, lpi->bkc, lhs, rhs) );
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgSides") );
@@ -1689,8 +1722,6 @@ SCIP_RETCODE getASlice(
    double*               val                 /**< array of values */
    )
 {
-   int* aptre;
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
@@ -1710,15 +1741,13 @@ SCIP_RETCODE getASlice(
       assert(ind != NULL);
       assert(val != NULL);
 
-      SCIP_ALLOC( BMSallocMemoryArray(&aptre, last - first + 1) );
+      SCIP_CALL( ensureAptreMem(lpi, last - first + 1) );
 
       MOSEK_CALL( MSK_getaslicenumnz(lpi->task, iscon, first, last+1, nnonz) );
       surplus = *nnonz;
-      MOSEK_CALL( MSK_getaslice(lpi->task, iscon, first, last+1, *nnonz, &surplus, beg, aptre, ind, val) );
+      MOSEK_CALL( MSK_getaslice(lpi->task, iscon, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
 
       assert(surplus == 0);
-
-      BMSfreeMemoryArray(&aptre);
    }
 
 #if DEBUG_CHECK_DATA > 0
