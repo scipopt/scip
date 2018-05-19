@@ -296,7 +296,9 @@ SCIP_RETCODE includeEventHdlrDispsol(
 
 /** sets up problem */
 static SCIP_RETCODE setupProblem(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             fixwidth,           /**< a given fixed width for the rectangle, or SCIP_INVALID if not fixed */
+   SCIP_Real             fixheight           /**< a given fixed height for the rectangle, or SCIP_INVALID if not fixed */
 )
 {
 	SCIP_CONS* xrw[nCircles];
@@ -323,6 +325,30 @@ static SCIP_RETCODE setupProblem(
 	SCIP_CALL( SCIPcreateVarBasic(scip, &a, "a", 0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
 	SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
 	SCIP_CALL( SCIPcreateVarBasic(scip, &h, "h", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+
+	/* fix width if desired */
+	if( fixwidth != SCIP_INVALID )
+	{
+	   SCIP_Bool infeas;
+	   SCIP_Bool fixed;
+
+	   SCIP_CALL( SCIPfixVar(scip, w, fixwidth, &infeas, &fixed) );
+
+	   assert(!infeas);
+	   assert(fixed);
+	}
+
+   /* fix height if desired */
+   if( fixheight != SCIP_INVALID )
+   {
+      SCIP_Bool infeas;
+      SCIP_Bool fixed;
+
+      SCIP_CALL( SCIPfixVar(scip, h, fixheight, &infeas, &fixed) );
+
+      assert(!infeas);
+      assert(fixed);
+   }
 
 	/* add variables to problem */
 	for( i = 0; i < nCircles; ++i )
@@ -411,6 +437,8 @@ static SCIP_RETCODE setupProblem(
 
 /* runs packing circles */
 static SCIP_RETCODE runPacking(
+   SCIP_Real             fixwidth,           /**< a given fixed width for the rectangle, or SCIP_INVALID if not fixed */
+   SCIP_Real             fixheight,          /**< a given fixed height for the rectangle, or SCIP_INVALID if not fixed */
    SCIP_Bool             dognuplot,          /**< whether to draw best solution with gnuplot */
    SCIP_Bool             domatplotlib        /**< whether to draw best solution with python/matplotlib */
    )
@@ -428,7 +456,7 @@ static SCIP_RETCODE runPacking(
    SCIPinfoMessage(scip, NULL, "***************************\n");
    SCIPinfoMessage(scip, NULL, "\n");
 
-	SCIP_CALL( setupProblem(scip) );
+	SCIP_CALL( setupProblem(scip, fixwidth, fixheight) );
 
 	SCIPinfoMessage(scip, NULL, "Original problem:\n");
 	SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
@@ -483,18 +511,25 @@ int main(
    SCIP_RETCODE retcode;
    SCIP_Bool dognuplot = FALSE;
    SCIP_Bool domatplotlib = FALSE;
+   SCIP_Real fixwidth = SCIP_INVALID;
+   SCIP_Real fixheight = SCIP_INVALID;
    int i;
 
    for( i = 1; i < argc; ++i )
    {
-      if( strcmp(argv[i], "-h") == 0 )
+      if( strcmp(argv[i], "--help") == 0 )
       {
+         printf("usage: %s [--help] [-w <width>] [-h <height>]", argv[0]);
 #if _POSIX_C_SOURCE >= 2
-         printf("usage: %s [-g] [-m]\n", argv[0]);
+         printf(" [-g] [-m]");
+#endif
+         printf("\n");
+         printf("  --help shows this help and exits\n");
+         printf("  -w <width> fix rectangle width to given value\n");
+         printf("  -h <height> fix rectangle height to given value\n");
+#if _POSIX_C_SOURCE >= 2
          printf("  -g show final solution with gnuplot\n");
          printf("  -m show final solution with matplotlib\n");
-#else
-         printf("usage: %s\n", argv[0]);
 #endif
 
          return EXIT_SUCCESS;
@@ -502,14 +537,65 @@ int main(
 
 #if _POSIX_C_SOURCE >= 2
       if( strcmp(argv[i], "-g") == 0 )
+      {
          dognuplot = TRUE;
+         continue;
+      }
 
       if( strcmp(argv[i], "-m") == 0 )
+      {
          domatplotlib = TRUE;
+         continue;
+      }
 #endif
+
+      if( strcmp(argv[i], "-w") == 0 )
+      {
+         char* endptr;
+
+         if( i == argc-1 )
+         {
+            fprintf(stderr, "ERROR: Missing argument for -w.\n");
+            return EXIT_FAILURE;
+         }
+
+         fixwidth = strtod(argv[i+1], &endptr);
+         if( *endptr != '\0' )
+         {
+            fprintf(stderr, "ERROR: Could not parse argument %s into a number.\n", argv[i+1]);
+            return EXIT_FAILURE;
+         }
+
+         ++i;
+         continue;
+      }
+
+      if( strcmp(argv[i], "-h") == 0 )
+      {
+         char* endptr;
+
+         if( i == argc-1 )
+         {
+            fprintf(stderr, "ERROR: Missing argument for -h.\n");
+            return EXIT_FAILURE;
+         }
+
+         fixheight = strtod(argv[i+1], &endptr);
+         if( *endptr != '\0' )
+         {
+            fprintf(stderr, "ERROR: Could not parse argument %s into a number.\n", argv[i+1]);
+            return EXIT_FAILURE;
+         }
+
+         ++i;
+         continue;
+      }
+
+      fprintf(stderr, "ERROR: Unknown option %s.\n", argv[i]);
+      return EXIT_FAILURE;
    }
 
-   retcode = runPacking(dognuplot, domatplotlib);
+   retcode = runPacking(fixwidth, fixheight, dognuplot, domatplotlib);
 
    /* evaluate return code of the SCIP process */
    if( retcode != SCIP_OKAY )
