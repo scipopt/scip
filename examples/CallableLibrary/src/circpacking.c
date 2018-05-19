@@ -100,10 +100,10 @@ void visualizeSolutionMatplotlib(
    }
 
    fputs("colors = 100*np.random.rand(len(patches))\n"
-       "p = matplotlib.collections.PatchCollection(patches, alpha=0.4)\n"
-       "p.set_array(np.array(colors))\n"
-       "ax.add_collection(p)\n",
-       stream);
+      "p = matplotlib.collections.PatchCollection(patches, alpha=0.4)\n"
+      "p.set_array(np.array(colors))\n"
+      "ax.add_collection(p)\n",
+      stream);
 
    fprintf(stream, "plt.xlim(xmax=%g)\n", SCIPgetSolVal(scip, sol, w));
    fprintf(stream, "plt.ylim(ymax=%g)\n", SCIPgetSolVal(scip, sol, h));
@@ -304,13 +304,13 @@ SCIP_DECL_EVENTEXEC(eventExecDispsol)
 static
 SCIP_RETCODE includeEventHdlrDispsol(
    SCIP*                 scip                /**< SCIP data structure */
-   )
+)
 {
    SCIP_EVENTHDLR* eventhdlr = NULL;
 
    /* include event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, "dispsol", "displays new solutions",
-         eventExecDispsol, NULL) );
+      eventExecDispsol, NULL) );
    assert(eventhdlr != NULL);
 
    /* set non fundamental callbacks via setter functions */
@@ -332,59 +332,59 @@ static SCIP_RETCODE setupProblem(
    SCIP_Real one = 1.0;
    int i, j;
 
-	/* if both width and height are fixed, then we don't optimize the area anymore, but the number of circles */
+   /* if both width and height are fixed, then we don't optimize the area anymore, but the number of circles */
    minarea = (fixwidth == SCIP_INVALID || fixheight == SCIP_INVALID);
 
-	/* create empty problem */
-	SCIP_CALL( SCIPcreateProbBasic(scip, "Packing circles") );
+   /* create empty problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "Packing circles") );
 
-	/* change to maximization if optimizing number of circles instead of rectangle area */
-	if( !minarea )
-	{
-	   SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
-	}
+   /* change to maximization if optimizing number of circles instead of rectangle area */
+   if( !minarea )
+   {
+      SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
+   }
 
-	/* create variables */
-	SCIP_CALL( SCIPallocMemoryArray(scip, &x, ncircles) );
-	SCIP_CALL( SCIPallocMemoryArray(scip, &y, ncircles) );
-	SCIP_CALL( SCIPallocMemoryArray(scip, &b, ncircles) );
-	for( i = 0; i < ncircles; ++i )
-	{
-		(void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x_%d", i);
-		SCIP_CALL( SCIPcreateVarBasic(scip, &x[i], name, r[i], SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-		SCIP_CALL( SCIPaddVar(scip, x[i]) );
+   /* create variables */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &x, ncircles) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &y, ncircles) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &b, ncircles) );
+   for( i = 0; i < ncircles; ++i )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x_%d", i);
+      SCIP_CALL( SCIPcreateVarBasic(scip, &x[i], name, r[i], SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(scip, x[i]) );
 
-		(void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "y_%d", i);
-		SCIP_CALL( SCIPcreateVarBasic(scip, &y[i], name, r[i], SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-		SCIP_CALL( SCIPaddVar(scip, y[i]) );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "y_%d", i);
+      SCIP_CALL( SCIPcreateVarBasic(scip, &y[i], name, r[i], SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(scip, y[i]) );
 
-		if( !minarea )
-		{
-	      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b_%d", i);
-	      SCIP_CALL( SCIPcreateVarBasic(scip, &b[i], name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-	      SCIP_CALL( SCIPaddVar(scip, b[i]) );
-		}
-	}
-	SCIP_CALL( SCIPcreateVarBasic(scip, &a, "a", 0.0, SCIPinfinity(scip), minarea ? 1.0 : 0.0, SCIP_VARTYPE_CONTINUOUS) );
-	SCIP_CALL( SCIPaddVar(scip, a) );
+      if( !minarea )
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b_%d", i);
+         SCIP_CALL( SCIPcreateVarBasic(scip, &b[i], name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+         SCIP_CALL( SCIPaddVar(scip, b[i]) );
+      }
+   }
+   SCIP_CALL( SCIPcreateVarBasic(scip, &a, "a", 0.0, SCIPinfinity(scip), minarea ? 1.0 : 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, a) );
 
-	SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-	SCIP_CALL( SCIPaddVar(scip, w) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, w) );
 
-	SCIP_CALL( SCIPcreateVarBasic(scip, &h, "h", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-	SCIP_CALL( SCIPaddVar(scip, h) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &h, "h", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, h) );
 
-	/* fix width if desired */
-	if( fixwidth != SCIP_INVALID )
-	{
-	   SCIP_Bool infeas;
-	   SCIP_Bool fixed;
+   /* fix width if desired */
+   if( fixwidth != SCIP_INVALID )
+   {
+      SCIP_Bool infeas;
+      SCIP_Bool fixed;
 
-	   SCIP_CALL( SCIPfixVar(scip, w, fixwidth, &infeas, &fixed) );
+      SCIP_CALL( SCIPfixVar(scip, w, fixwidth, &infeas, &fixed) );
 
-	   assert(!infeas);
-	   assert(fixed);
-	}
+      assert(!infeas);
+      assert(fixed);
+   }
 
    /* fix height if desired */
    if( fixheight != SCIP_INVALID )
@@ -410,85 +410,85 @@ static SCIP_RETCODE setupProblem(
       assert(fixed);
    }
 
-	/* circles must be within rectangle, if decided to be put into rectangle
-	 * - lower and left bounds are already passed in by variable bounds
-	 * - upper and right bounds need to be satisfied only if circles are placed into rectangle
-	 * - however, for circles that are not placed into the rectangle, it is easy to satisfy the
-	 *   same constraints as long as the rectangle is not too small
-	 * - thus, if not minimizing area, we add these constraints on the circle coordinates,
-	 *   unless the circle is too big, in which case ensure that it is not placed into the rectangle
-	 */
-	for( i = 0; i < ncircles; ++i )
-	{
-	   if( !minarea && SCIPisLT(scip, MIN(fixwidth, fixheight), 2*r[i]) )
-	   {
+   /* circles must be within rectangle, if decided to be put into rectangle
+    * - lower and left bounds are already passed in by variable bounds
+    * - upper and right bounds need to be satisfied only if circles are placed into rectangle
+    * - however, for circles that are not placed into the rectangle, it is easy to satisfy the
+    *   same constraints as long as the rectangle is not too small
+    * - thus, if not minimizing area, we add these constraints on the circle coordinates,
+    *   unless the circle is too big, in which case ensure that it is not placed into the rectangle
+    */
+   for( i = 0; i < ncircles; ++i )
+   {
+      if( !minarea && SCIPisLT(scip, MIN(fixwidth, fixheight), 2*r[i]) )
+      {
          SCIP_Bool infeas;
-	      SCIP_Bool fixed;
+         SCIP_Bool fixed;
 
-	      SCIP_CALL( SCIPfixVar(scip, b[i], 0.0, &infeas, &fixed) );
+         SCIP_CALL( SCIPfixVar(scip, b[i], 0.0, &infeas, &fixed) );
 
-	      assert(!infeas);
-	      assert(fixed);
+         assert(!infeas);
+         assert(fixed);
 
-	      continue;
-	   }
+         continue;
+      }
 
-	   /* linear constraint: x_i + r_i <= w --> r_i <= w - x_i */
-	   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundaryright_%d", i, i);
-	   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, r[i], SCIPinfinity(scip)) );
-	   SCIP_CALL( SCIPaddCoefLinear(scip, cons, w, 1.0) );
-	   SCIP_CALL( SCIPaddCoefLinear(scip, cons, x[i], -1.0) );
-	   SCIP_CALL( SCIPaddCons(scip, cons) );
-	   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-	   /* linear constraint: y_i + r_i <= h --> r_i <= h - y_i */
-	   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundarytop_%d", i, i);
-	   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, r[i], SCIPinfinity(scip)) );
-	   SCIP_CALL( SCIPaddCoefLinear(scip, cons, h, 1.0) );
-	   SCIP_CALL( SCIPaddCoefLinear(scip, cons, y[i], -1.0) );
+      /* linear constraint: x_i + r_i <= w --> r_i <= w - x_i */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundaryright_%d", i, i);
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, r[i], SCIPinfinity(scip)) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, cons, w, 1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, cons, x[i], -1.0) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-	}
 
-	/* quadratic constraint: w * h <= a --> w * h - a <= 0 */
-	SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "area", 0, NULL, NULL, 1, &w, &h, &one, -SCIPinfinity(scip), 0.0) );
-	SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, a, -1.0) );
+      /* linear constraint: y_i + r_i <= h --> r_i <= h - y_i */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundarytop_%d", i, i);
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, r[i], SCIPinfinity(scip)) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, cons, h, 1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, cons, y[i], -1.0) );
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* quadratic constraint: w * h <= a --> w * h - a <= 0 */
+   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "area", 0, NULL, NULL, 1, &w, &h, &one, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, a, -1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-	/* quadratic constraint: (x_i - x_j)^2 + (y_i - y_j)^2 >= (r_i + r_j)^2  (if minarea)
+   /* quadratic constraint: (x_i - x_j)^2 + (y_i - y_j)^2 >= (r_i + r_j)^2  (if minarea)
     *   x_i^2 - 2 x_i x_j + x_j^2 + y_i^2 - 2 y_i y_j + y_j^2 >= (r_i + r_j)^2
     * if not minarea, then rhs becomes (r_i + r_j)^2 * (b_i+b_j-1)
-	 */
-	for( i = 0; i < ncircles; ++i )
-	{
-	   for( j = i + 1; j < ncircles; ++j )
-	   {
-	      /* create empty quadratic constraint with right-hand-side +/- (r_i - r_j)^2 */
-	      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d,%d", i, j);
-	      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, name, 0, NULL, NULL, 0, NULL, NULL, NULL, (minarea ? 1.0 : -1.0) * SQR(r[i] + r[j]), SCIPinfinity(scip)) );
+    */
+   for( i = 0; i < ncircles; ++i )
+   {
+      for( j = i + 1; j < ncircles; ++j )
+      {
+         /* create empty quadratic constraint with right-hand-side +/- (r_i - r_j)^2 */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d,%d", i, j);
+         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, name, 0, NULL, NULL, 0, NULL, NULL, NULL, (minarea ? 1.0 : -1.0) * SQR(r[i] + r[j]), SCIPinfinity(scip)) );
 
-	      SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, x[i], 1.0) ); /* x_i^2 */
+         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, x[i], 1.0) ); /* x_i^2 */
          SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, x[j], 1.0) ); /* x_j^2 */
-	      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, x[i], x[j], -2.0) ); /* - 2 x_i x_j */
+         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, x[i], x[j], -2.0) ); /* - 2 x_i x_j */
 
-	      SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, y[i], 1.0) ); /* y_i^2 */
+         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, y[i], 1.0) ); /* y_i^2 */
          SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, y[j], 1.0) ); /* y_j^2 */
-	      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, y[i], y[j], -2.0) ); /* - 2 y_i y_j */
+         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, y[i], y[j], -2.0) ); /* - 2 y_i y_j */
 
-	      if( !minarea )
-	      {
-	         /* add -(r_i+r_j)^2 (b_i + b_j) */
-	         SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, b[i], -SQR(r[i] + r[j])) );
+         if( !minarea )
+         {
+            /* add -(r_i+r_j)^2 (b_i + b_j) */
+            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, b[i], -SQR(r[i] + r[j])) );
             SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, b[j], -SQR(r[i] + r[j])) );
-	      }
+         }
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-	   }
-	}
+      }
+   }
 
-	return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /* runs packing circles */
@@ -497,10 +497,10 @@ static SCIP_RETCODE runPacking(
    SCIP_Real             fixheight,          /**< a given fixed height for the rectangle, or SCIP_INVALID if not fixed */
    SCIP_Bool             dognuplot,          /**< whether to draw best solution with gnuplot */
    SCIP_Bool             domatplotlib        /**< whether to draw best solution with python/matplotlib */
-   )
+)
 {
-	SCIP* scip;
-	int i;
+   SCIP* scip;
+   int i;
 
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
@@ -516,28 +516,28 @@ static SCIP_RETCODE runPacking(
       SCIPinfoMessage(scip, NULL, " %.2f", r[i]);
    SCIPinfoMessage(scip, NULL, "\n\n");
 
-	SCIP_CALL( setupProblem(scip, fixwidth, fixheight) );
+   SCIP_CALL( setupProblem(scip, fixwidth, fixheight) );
 
-	SCIPinfoMessage(scip, NULL, "Original problem:\n");
-	SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
+   SCIPinfoMessage(scip, NULL, "Original problem:\n");
+   SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
 
-	/* closing the last bit of the gap can take very long */
-	SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-4) );
+   /* closing the last bit of the gap can take very long */
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-4) );
 
-	SCIPinfoMessage(scip, NULL, "\nSolving...\n");
-	SCIP_CALL( SCIPsolve(scip) );
+   SCIPinfoMessage(scip, NULL, "\nSolving...\n");
+   SCIP_CALL( SCIPsolve(scip) );
 
-	if( SCIPgetNSols(scip) > 0 )
-	{
-		SCIPinfoMessage(scip, NULL, "\nSolution:\n");
-		SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), NULL, FALSE) );
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "\nSolution:\n");
+      SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), NULL, FALSE) );
 
-		if( dognuplot )
-	      visualizeSolutionGnuplot(scip, SCIPgetBestSol(scip));
+      if( dognuplot )
+         visualizeSolutionGnuplot(scip, SCIPgetBestSol(scip));
 
-		if( domatplotlib )
-		   visualizeSolutionMatplotlib(scip, SCIPgetBestSol(scip));
-	}
+      if( domatplotlib )
+         visualizeSolutionMatplotlib(scip, SCIPgetBestSol(scip));
+   }
 
    /* release variables */
    SCIP_CALL( SCIPreleaseVar(scip, &a) );
@@ -558,16 +558,16 @@ static SCIP_RETCODE runPacking(
    SCIPfreeMemoryArray(scip, &y);
    SCIPfreeMemoryArray(scip, &b);
 
-	SCIP_CALL( SCIPfree(&scip) );
+   SCIP_CALL( SCIPfree(&scip) );
 
-	return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** main method starting SCIP */
 int main(
    int                        argc,          /**< number of arguments from the shell */
    char**                     argv           /**< array of shell arguments */
-   )  /*lint --e{715}*/
+)  /*lint --e{715}*/
 {
    SCIP_RETCODE retcode;
    SCIP_Bool dognuplot = FALSE;
