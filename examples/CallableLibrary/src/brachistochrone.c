@@ -56,9 +56,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
-/** default number of points for the discretization of trajectory */
-#define DEFAULT_NPOINTS 3
-
 /* default start and end points */
 #define Y_START  1.0
 #define Y_END    0.0
@@ -325,7 +322,7 @@ void visualizeSolutionGnuplot(
 /** runs the brachistochrone example*/
 static
 SCIP_RETCODE runBrachistochrone(
-   unsigned int          n,                  /**< number of points for discretization */
+   unsigned int          n,                  /**< number of points for discretization, or 0 if automatic choice */
    SCIP_Real*            coord               /**< array containing [y(0), y(N), x(0), x(N)] */
 )
 {
@@ -336,6 +333,10 @@ SCIP_RETCODE runBrachistochrone(
 
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+   /* if no number of points given, then use 3 if no NLP solver, otherwise we can go higher */
+   if( n == 0 )
+      n = SCIPgetNNlpis(scip) > 0 ? 4 : 3;
 
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "**********************************************\n");
@@ -390,7 +391,7 @@ int main(
    SCIP_RETCODE retcode;
 
    /* setting up default problem parameters */
-   unsigned int n = DEFAULT_NPOINTS;
+   unsigned int n = 0;
    SCIP_Real coord[4] = { Y_START, Y_END, X_START, X_END };
 
    /* change some parameters if given as arguments */
