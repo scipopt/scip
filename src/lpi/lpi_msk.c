@@ -2043,31 +2043,28 @@ MSKrescodee filterTRMrescode(
    MSKrescodee           res                 /**< input result of call to Mosek function */
    )
 {
-   if (  res == MSK_RES_TRM_MAX_ITERATIONS || res == MSK_RES_TRM_MAX_TIME
-      || res == MSK_RES_TRM_OBJECTIVE_RANGE || res == MSK_RES_TRM_STALL
+   assert( termcode != NULL );
+
 #if ASSERT_ON_NUMERICAL_TROUBLES > 0
-      || res == MSK_RES_TRM_MAX_NUM_SETBACKS
-      || res == MSK_RES_TRM_NUMERICAL_PROBLEM
-#endif
-      )
+   if ( res == MSK_RES_TRM_MAX_NUM_SETBACKS || res == MSK_RES_TRM_NUMERICAL_PROBLEM )
    {
+      SCIPmessagePrintWarning(messagehdlr, "Return code %d in [%d]\n", res, optimizecount);
+      assert(0);
       *termcode = res;
-      if (res == MSK_RES_TRM_MAX_NUM_SETBACKS || res == MSK_RES_TRM_NUMERICAL_PROBLEM)
-      {
-         SCIPmessagePrintWarning(messagehdlr, "Return code %d in [%d]\n", res, optimizecount);
-
-#if ASSERT_ON_WARNING
-         assert(0);
-#endif
-      }
-
       return MSK_RES_OK;
    }
-   else
+#endif
+
+   if (  res == MSK_RES_TRM_MAX_ITERATIONS || res == MSK_RES_TRM_MAX_TIME
+      || res == MSK_RES_TRM_OBJECTIVE_RANGE || res == MSK_RES_TRM_STALL )
    {
-      *termcode = MSK_RES_OK;
-      return res;
+      *termcode = res;
+      res = MSK_RES_OK;
    }
+   else
+      *termcode = MSK_RES_OK;
+
+   return res;
 }
 
 /**< solve problem with the simplex algorithm */
@@ -2232,22 +2229,37 @@ SCIP_RETCODE SolveWSimplex(
       if (lpi->termcode == MSK_RES_OK)
          lpi->solved = TRUE;
       break;
+
    case MSK_SOL_STA_UNKNOWN:
+      /* Mosek seems to have status unknown on the following limits */
+      assert( lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS || lpi->termcode == MSK_RES_TRM_MAX_TIME
+         || lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE || lpi->termcode == MSK_RES_TRM_STALL );
+      if (lpi->termcode == MSK_RES_TRM_STALL)
+      {
+         SCIPmessagePrintWarning(lpi->messagehdlr, "Numerical problem: simplex[%d] returned solsta = %d.\n", optimizecount, solsta);
+         lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
+#if ASSERT_ON_WARNING
+         assert(0);
+#endif
+      }
+      break;
+
    case MSK_SOL_STA_NEAR_OPTIMAL:
    case MSK_SOL_STA_NEAR_PRIM_FEAS:
    case MSK_SOL_STA_NEAR_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
    case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
-      SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
 
-      if (lpi->termcode == MSK_RES_OK)
-         lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
+      assert(lpi->termcode == MSK_RES_OK);
 
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned solsta = %d (numerical problem).\n", optimizecount, solsta);
+      lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
 #if ASSERT_ON_WARNING
       assert(0);
 #endif
       break;
+
    case MSK_SOL_STA_INTEGER_OPTIMAL:
    case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
    default:
@@ -2264,31 +2276,32 @@ SCIP_RETCODE SolveWSimplex(
 
    switch (prosta)
    {
+   /* already handled above */
    case MSK_PRO_STA_PRIM_AND_DUAL_FEAS:
    case MSK_PRO_STA_PRIM_FEAS:
    case MSK_PRO_STA_DUAL_FEAS:
    case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
    case MSK_PRO_STA_PRIM_INFEAS:
    case MSK_PRO_STA_DUAL_INFEAS:
+   case MSK_SOL_STA_UNKNOWN:
       break;
-   case MSK_PRO_STA_UNKNOWN:
+
    case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_PRO_STA_NEAR_PRIM_FEAS:
    case MSK_PRO_STA_NEAR_DUAL_FEAS:
    case MSK_PRO_STA_ILL_POSED:
    case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
+      assert(lpi->termcode == MSK_RES_OK);
+
       SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned prosta = %d\n", optimizecount, prosta);
-
-      if (lpi->termcode == MSK_RES_OK)
-         lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
-
+      lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
       invalidateSolution(lpi);
-
 #if ASSERT_ON_WARNING
       assert(0);
 #endif
       break;
-   default:
+
+  default:
 #if SHOW_ERRORS && !FORCE_SILENCE
       SCIPerrorMessage("Simplex[%d] returned prosta = %d\n", optimizecount, prosta);
 #endif
