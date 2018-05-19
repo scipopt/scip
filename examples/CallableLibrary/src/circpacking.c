@@ -481,16 +481,43 @@ int main(
    )  /*lint --e{715}*/
 {
    SCIP_RETCODE retcode;
+   SCIP_Bool dognuplot = FALSE;
+   SCIP_Bool domatplotlib = FALSE;
+   int i;
 
-   retcode = runPacking(FALSE, FALSE);
+   for( i = 1; i < argc; ++i )
+   {
+      if( strcmp(argv[i], "-h") == 0 )
+      {
+#if _POSIX_C_SOURCE >= 2
+         printf("usage: %s [-g] [-m]\n", argv[0]);
+         printf("  -g show final solution with gnuplot\n");
+         printf("  -m show final solution with matplotlib\n");
+#else
+         printf("usage: %s\n", argv[0]);
+#endif
+
+         return EXIT_SUCCESS;
+      }
+
+#if _POSIX_C_SOURCE >= 2
+      if( strcmp(argv[i], "-g") == 0 )
+         dognuplot = TRUE;
+
+      if( strcmp(argv[i], "-m") == 0 )
+         domatplotlib = TRUE;
+#endif
+   }
+
+   retcode = runPacking(dognuplot, domatplotlib);
 
    /* evaluate return code of the SCIP process */
    if( retcode != SCIP_OKAY )
    {
       /* write error back trace */
       SCIPprintError(retcode);
-      return -1;
+      return EXIT_FAILURE;
    }
 
-   return 0;
+   return EXIT_SUCCESS;
 }
