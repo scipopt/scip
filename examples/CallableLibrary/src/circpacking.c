@@ -29,6 +29,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 
 #include "scip/scip.h"
@@ -42,12 +43,256 @@
 /** Radius **/
 static const SCIP_Real r[] = {0.25, 0.25, 0.4, 0.7, 0.1};
 
-/* variables */
+/* Variables */
 SCIP_VAR* x[nCircles]; /**< x coordinates */
 SCIP_VAR* y[nCircles]; /**< y coordinates */
 SCIP_VAR* a;           /**< area of rectangle */
 SCIP_VAR* w;           /**< width of rectangle */
 SCIP_VAR* h;           /**< height of rectangle */
+
+
+/** plots solution by use of Python/Matplotlib */
+static
+void visualizeSolutionMatplotlib(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< solution to plot */
+)
+{
+#if _POSIX_C_SOURCE < 2
+   SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
+#else
+   FILE* stream;
+   int i;
+
+   stream = popen("python", "w");
+   if( stream == NULL )
+   {
+      SCIPerrorMessage("Could not open pipe to python.\n");
+      return;
+   }
+
+   fputs("import numpy as np\n"
+      "import matplotlib\n"
+      "import matplotlib.pyplot as plt\n",
+      stream);
+
+   fputs("fig, ax = plt.subplots()\n"
+      "patches = []\n",
+      stream);
+
+   for( i = 0; i < nCircles; ++i )
+   {
+      fprintf(stream, "patches.append(matplotlib.patches.Circle((%g, %g), %g))\n",
+         SCIPgetSolVal(scip, sol, x[i]),
+         SCIPgetSolVal(scip, sol, y[i]),
+         r[i]);
+   }
+
+   fputs("colors = 100*np.random.rand(len(patches))\n"
+       "p = matplotlib.collections.PatchCollection(patches, alpha=0.4)\n"
+       "p.set_array(np.array(colors))\n"
+       "ax.add_collection(p)\n",
+       stream);
+
+   fprintf(stream, "plt.xlim(xmax=%g)\n", SCIPgetSolVal(scip, sol, w));
+   fprintf(stream, "plt.ylim(ymax=%g)\n", SCIPgetSolVal(scip, sol, h));
+   fprintf(stream, "plt.title('Area = %.4f')\n", SCIPgetSolVal(scip, sol, a));
+   fputs("plt.gca().set_aspect(1)\n", stream);
+   fputs("plt.show()\n", stream);
+
+   pclose(stream);
+#endif
+}
+
+/** plots solution by use of gnuplot */
+static
+void visualizeSolutionGnuplot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< solution to plot */
+)
+{
+#if _POSIX_C_SOURCE < 2
+   SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
+#else
+   SCIP_Real wval;
+   SCIP_Real hval;
+   FILE* stream;
+   int i;
+
+   /* -p (persist) to keep the plot open after gnuplot terminates */
+   stream = popen("gnuplot -p", "w");
+   if( stream == NULL )
+   {
+      SCIPerrorMessage("Could not open pipe to gnuplot.\n");
+      return;
+   }
+
+   fputs("unset xtics\n"
+      "unset ytics\n"
+      "unset border\n"
+      "set size ratio 1\n",
+      stream);
+
+   wval = SCIPgetSolVal(scip, sol, w);
+   hval = SCIPgetSolVal(scip, sol, h);
+
+   fprintf(stream, "set xrange [0:%.2f]\n", MAX(wval, hval));
+   fprintf(stream, "set yrange [0:%.2f]\n", MAX(wval, hval));
+   fprintf(stream, "set object rectangle from 0,0 to %.2f,%.2f\n", wval, hval);
+   fprintf(stream, "set xlabel \"Area = %.2f\"\n", wval * hval);
+
+   fputs("plot '-' with circles notitle\n", stream);
+   for( i = 0; i < nCircles; ++i )
+   {
+      fprintf(stream, "%g %g %g\n",
+         SCIPgetSolVal(scip, sol, x[i]),
+         SCIPgetSolVal(scip, sol, y[i]),
+         r[i]);
+   }
+   fputs("e\n", stream);
+
+   pclose(stream);
+#endif
+}
+
+/** plots solution by use of ascii graphics */
+static
+SCIP_RETCODE visualizeSolutionAscii(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< solution to plot */
+)
+{
+   SCIP_Real wval;
+   SCIP_Real hval;
+   SCIP_Real xval;
+   SCIP_Real yval;
+   SCIP_Real radius;
+   SCIP_Real scale;
+   int dispwidth;
+   int width;
+   int height;
+   char* picture;
+   int i;
+
+   wval = SCIPgetSolVal(scip, sol, w);
+   hval = SCIPgetSolVal(scip, sol, h);
+
+   /* scale so that picture is about as wide as SCIP B&B log */
+   SCIP_CALL( SCIPgetIntParam(scip, "display/width", &dispwidth) );
+   scale = (dispwidth-3) / wval;
+
+   width = SCIPceil(scip, scale*wval)+3;  /* +2 for left and right border and +1 for \n */
+   height = SCIPceil(scip, scale*hval)+2; /* +2 for top and bottom border */
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &picture, width * height + 1) );
+
+   /* initialize with white space and termination */
+   memset(picture, ' ', width * height);
+   picture[width*height] = '\0';
+
+   /* add border and linebreaks */
+   memset(picture, '*', width-1); /* top border */
+   memset(picture + (height-1) * width, '*', width-1);  /* bottom border */
+   for( i = 0; i < height; ++i )
+   {
+      picture[i*width] = '*';  /* left border */
+      picture[i*width + width-2] = '*';  /* right border */
+      picture[i*width + width-1] = '\n';
+   }
+
+   /* add circles */
+   for( i = 0; i < nCircles; ++i )
+   {
+      SCIP_Real phi;
+      int xcoord;
+      int ycoord;
+
+      xval = SCIPgetSolVal(scip, sol, x[i]);
+      yval = SCIPgetSolVal(scip, sol, y[i]);
+      radius = r[i];
+
+      for( phi = 0.0; phi < 2.0 * M_PI; phi += 0.05 )
+      {
+         xcoord = SCIPround(scip, scale * (xval + radius * cos(phi))) + 1; /* +1 for border */
+         ycoord = SCIPround(scip, scale * (yval + radius * sin(phi))) + 1; /* +1 for border */
+
+         /* feasible solutions should be within box
+          * due to rounding, they can be on the border
+          */
+         assert(xcoord >= 0);
+         assert(ycoord >= 0);
+         assert(xcoord < width);
+         assert(ycoord < height);
+
+         picture[ycoord * width + xcoord] = 'a' + i;
+      }
+   }
+
+   /* print area inside top border */
+   i = SCIPsnprintf(picture + width/2 - 8, width/2 + 8, " Area = %g ", SCIPgetSolOrigObj(scip, sol));
+   picture[width/2-8+i] = '*';
+
+   /* show plot */
+   SCIPinfoMessage(scip, NULL, picture);
+
+   SCIPfreeBufferArray(scip, &picture);
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of event handler (called after problem was transformed) */
+static
+SCIP_DECL_EVENTINIT(eventInitDispsol)
+{
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
+SCIP_DECL_EVENTEXIT(eventExitDispsol)
+{
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
+
+   return SCIP_OKAY;
+}
+
+/** execution method of event handler */
+static
+SCIP_DECL_EVENTEXEC(eventExecDispsol)
+{  /*lint --e{715}*/
+   SCIP_SOL* sol;
+
+   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
+
+   sol = SCIPeventGetSol(event);
+   assert(sol != NULL);
+
+   SCIP_CALL( visualizeSolutionAscii(scip, sol) );
+
+   return SCIP_OKAY;
+}
+
+/** creates event handler for dispsol event */
+static
+SCIP_RETCODE includeEventHdlrDispsol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr = NULL;
+
+   /* include event handler into SCIP */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, "dispsol", "displays new solutions",
+         eventExecDispsol, NULL) );
+   assert(eventhdlr != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitDispsol) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitDispsol) );
+
+   return SCIP_OKAY;
+}
 
 /** sets up problem */
 static SCIP_RETCODE setupProblem(
@@ -164,110 +409,6 @@ static SCIP_RETCODE setupProblem(
 	return SCIP_OKAY;
 }
 
-/** plots solution by use of Python/Matplotlib */
-static
-void visualizeSolutionMatplotlib(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< solution to plot */
-)
-{
-#if _POSIX_C_SOURCE < 2
-   SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
-#else
-   FILE* stream;
-   int i;
-
-   stream = popen("python", "w");
-   if( stream == NULL )
-   {
-      SCIPerrorMessage("Could not open pipe to python.\n");
-      return;
-   }
-
-   fputs("import numpy as np\n"
-      "import matplotlib\n"
-      "import matplotlib.pyplot as plt\n",
-      stream);
-
-   fputs("fig, ax = plt.subplots()\n"
-      "patches = []\n",
-      stream);
-
-   for( i = 0; i < nCircles; ++i )
-   {
-      fprintf(stream, "patches.append(matplotlib.patches.Circle((%g, %g), %g))\n",
-         SCIPgetSolVal(scip, sol, x[i]),
-         SCIPgetSolVal(scip, sol, y[i]),
-         r[i]);
-   }
-
-   fputs("colors = 100*np.random.rand(len(patches))\n"
-       "p = matplotlib.collections.PatchCollection(patches, alpha=0.4)\n"
-       "p.set_array(np.array(colors))\n"
-       "ax.add_collection(p)\n",
-       stream);
-
-   fprintf(stream, "plt.xlim(xmax=%g)\n", SCIPgetSolVal(scip, sol, w));
-   fprintf(stream, "plt.ylim(ymax=%g)\n", SCIPgetSolVal(scip, sol, h));
-   fprintf(stream, "plt.title('Area = %.4f')\n", SCIPgetSolVal(scip, sol, a));
-   fputs("plt.gca().set_aspect(1)\n", stream);
-   fputs("plt.show()\n", stream);
-
-   pclose(stream);
-#endif
-}
-
-/** plots solution by use of gnuplot */
-static
-void visualizeSolutionGnuplot(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< solution to plot */
-)
-{
-#if _POSIX_C_SOURCE < 2
-   SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
-#else
-   SCIP_Real wval;
-   SCIP_Real hval;
-   FILE* stream;
-   int i;
-
-   /* -p (persist) to keep the plot open after gnuplot terminates */
-   stream = popen("gnuplot -p", "w");
-   if( stream == NULL )
-   {
-      SCIPerrorMessage("Could not open pipe to gnuplot.\n");
-      return;
-   }
-
-   fputs("unset xtics\n"
-      "unset ytics\n"
-      "unset border\n"
-      "set size ratio 1\n",
-      stream);
-
-   wval = SCIPgetSolVal(scip, sol, w);
-   hval = SCIPgetSolVal(scip, sol, h);
-
-   fprintf(stream, "set xrange [0:%.2f]\n", MAX(wval, hval));
-   fprintf(stream, "set yrange [0:%.2f]\n", MAX(wval, hval));
-   fprintf(stream, "set object rectangle from 0,0 to %.2f,%.2f\n", wval, hval);
-   fprintf(stream, "set xlabel \"Area = %.2f\"\n", wval * hval);
-
-   fputs("plot '-' with circles notitle\n", stream);
-   for( i = 0; i < nCircles; ++i )
-   {
-      fprintf(stream, "%g %g %g\n",
-         SCIPgetSolVal(scip, sol, x[i]),
-         SCIPgetSolVal(scip, sol, y[i]),
-         r[i]);
-   }
-   fputs("e\n", stream);
-
-   pclose(stream);
-#endif
-}
-
 /* runs packing circles */
 static SCIP_RETCODE runPacking(
    SCIP_Bool             dognuplot,          /**< whether to draw best solution with gnuplot */
@@ -277,14 +418,15 @@ static SCIP_RETCODE runPacking(
 	SCIP* scip;
 	int i;
 
-	SCIP_CALL( SCIPcreate(&scip) );
-	SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL( includeEventHdlrDispsol(scip) );
 
-	SCIPinfoMessage(scip, NULL, "\n");
-	SCIPinfoMessage(scip, NULL, "***************************\n");
-	SCIPinfoMessage(scip, NULL, "* Running Packing Circles *\n");
-	SCIPinfoMessage(scip, NULL, "***************************\n");
-	SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "***************************\n");
+   SCIPinfoMessage(scip, NULL, "* Running Packing Circles *\n");
+   SCIPinfoMessage(scip, NULL, "***************************\n");
+   SCIPinfoMessage(scip, NULL, "\n");
 
 	SCIP_CALL( setupProblem(scip) );
 
