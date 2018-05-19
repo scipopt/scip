@@ -1041,8 +1041,6 @@ SCIP_RETCODE graph_pc_getSap(
       if( Is_pterm(graph->term[k]) )
          prizesum += prize[k];
 
-   prizesum += 1;
-
    *offset -= prizesum;
 
    e = (*newgraph)->outbeg[root];

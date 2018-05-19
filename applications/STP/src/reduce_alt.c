@@ -47,7 +47,7 @@
 #define STP_RED_CNSNN       25
 #define STP_RED_ANSMAXCANDS 500
 #define STP_RED_ANSEXMAXCANDS 50
-
+#define STP_RED_ANSMAXNEIGHBORS 25
 
 
 /* can edge be deleted in SD test in case of equality? If so, 'forbidden' array is adapted */
@@ -4780,6 +4780,7 @@ void reduce_ans(
    {
       SCIP_Real min;
       int e;
+      int neighborcount = 0;
 
       if( !g->mark[k] )
          continue;
@@ -4797,13 +4798,13 @@ void reduce_ans(
 
       /* check all neighbors of k */
       e = g->outbeg[k];
-      while( e != EAT_LAST )
+      while( e != EAT_LAST && neighborcount++ < STP_RED_ANSMAXNEIGHBORS )
       {
          const int j = g->head[e];
          e = g->oeat[e];
 
          /* valid candidate? */
-         if( g->mark[j] && g->grad[j] <= g->grad[k]  && !Is_term(g->term[j]) )
+         if( g->grad[j] <= g->grad[k] && !Is_term(g->term[j]) && g->mark[j] )
             ansProcessCandidate(scip, g, marked, count, min, j);
       }
 
