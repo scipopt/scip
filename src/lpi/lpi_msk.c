@@ -2694,7 +2694,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
 
 /** performs strong branching iterations on all candidates
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE SCIPlpiStrongbranch(
@@ -2933,7 +2933,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
 /** performs strong branching iterations on one @b fractional candidate
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiStrongbranchFrac(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2957,7 +2957,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
 
 /** performs strong branching iterations on given @b fractional candidates
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2997,7 +2997,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
 
 /** performs strong branching iterations on one candidate with @b integral value
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiStrongbranchInt(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3021,7 +3021,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 
 /** performs strong branching iterations on given candidates with @b integral values
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiStrongbranchesInt(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3246,7 +3246,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
 
    SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
 
-   return (   solsta == MSK_SOL_STA_PRIM_INFEAS_CER
+   return ( solsta == MSK_SOL_STA_PRIM_INFEAS_CER
       || prosta == MSK_PRO_STA_PRIM_INFEAS
       || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS);
 }
@@ -3599,7 +3599,7 @@ SCIP_RETCODE handle_singular(
 
 /** convert Mosek basis status to SCIP basis status
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE convertstat_mosek2scip(
@@ -3660,7 +3660,7 @@ SCIP_RETCODE convertstat_mosek2scip(
 
 /** convert Mosek to SCIP basis status - slack variables
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
@@ -3779,7 +3779,7 @@ void convertstat_scip2mosek_slack(
 
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiGetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -4254,15 +4254,15 @@ void lpistateFree(
 #ifndef NDEBUG
 /** check state
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE checkState1(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   n,                  /**< number of rows or columns */
-   MSKstakeye*           sk,                 /**< ??? */
-   MSKaccmodee           accmode,            /**< ??? */
-   char                  xc                  /**< ??? */
+   MSKstakeye*           sk,                 /**< basis status */
+   MSKaccmodee           accmode,            /**< whether rows/columns are considered */
+   char                  xc                  /**< specification of variables or constraints */
    )
 {
    int i;
@@ -4281,6 +4281,7 @@ SCIP_RETCODE checkState1(
          SCIPdebugMessage("STATE[%d]: %c[%d] = unk\n", optimizecount, xc, i);
          break;
       case MSK_SK_BAS:
+         /* the following function is deprecated */
          MOSEK_CALL( MSK_getsolutioni(lpi->task, accmode, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
          if (fabs(sl-su) > DEBUG_CHECK_STATE_TOL)
             SCIPdebugMessage("STATE[%d]: %c[%d] = bas, sl%c = %g, su%c = %g\n", optimizecount, xc, i, xc, sl, xc, su);
@@ -4306,7 +4307,7 @@ SCIP_RETCODE checkState1(
 
 /** check state
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE checkState(
@@ -4327,7 +4328,7 @@ SCIP_RETCODE checkState(
 
 /** store row and column basis status in a packed LPi state object
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE lpistatePack(
@@ -4356,8 +4357,8 @@ SCIP_RETCODE lpistatePack(
 static
 void lpistateUnpack(
    const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
-   MSKstakeye*           skx,                /**< ??? */
-   MSKstakeye*           skc                 /**< ??? */
+   MSKstakeye*           skx,                /**< basis status for columns */
+   MSKstakeye*           skc                 /**< basis status for rows */
    )
 {
    assert(sizeof(int) == sizeof(MSKstakeye));
@@ -4371,7 +4372,7 @@ void lpistateUnpack(
 
 /** stores LP state (like basis information) into lpistate object
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiGetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -4429,7 +4430,7 @@ SCIP_RETCODE SCIPlpiGetState(
 /** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
  *  columns and rows since the state was stored with SCIPlpiGetState()
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -4462,7 +4463,7 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpistate->ncols <= ncols);
 
    SCIP_CALL( ensureStateMem(lpi, ncols, nrows) );
-   SCIP_CALL( getbase(lpi, ncols, nrows) );
+   SCIP_CALL( getbase(lpi, ncols, nrows) ); /* Why do we need to get the basis ????? */
 
    lpistateUnpack(lpistate, lpi->skx, lpi->skc);
 
@@ -4550,7 +4551,7 @@ SCIP_Bool SCIPlpiHasStateBasis(
 
 /** reads LP state (like basis information) from a file
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiReadState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
