@@ -42,6 +42,8 @@
  *     & i = 0, \ldots, N-1
  * \f}
  *
+ * Further, we can require that the particle moves only in direction horizontally, that is
+ * \f$x_i \leq x_{i+1}\f$ if \f$x_0 \leq x_N\f$, and \f$x_{i+1} \leq x_{i}\f$, otherwise.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -256,6 +258,15 @@ SCIP_RETCODE setupProblem(
          SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, v[i], -1.0) );
 
          /* add the constraint to the problem and forget it */
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         /* add constraint x[i] <= x[i+1], if x[0] < x[N], otherwise add x[i+1] <= x[i] */
+         SCIPsnprintf(consname, SCIP_MAXSTRLEN, "xorder(%d)", i);
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, x[i],   coord[2] < coord[3] ?  1.0 : -1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, x[i+1], coord[2] < coord[3] ? -1.0 :  1.0) );
+
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
