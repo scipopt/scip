@@ -188,7 +188,8 @@ SCIP_RETCODE visualizeSolutionAscii(
    SCIP_Real xval;
    SCIP_Real yval;
    SCIP_Real radius;
-   SCIP_Real scale;
+   SCIP_Real scalex;
+   SCIP_Real scaley;
    int dispwidth;
    int width;
    int height;
@@ -200,10 +201,11 @@ SCIP_RETCODE visualizeSolutionAscii(
 
    /* scale so that picture is about as wide as SCIP B&B log */
    SCIP_CALL( SCIPgetIntParam(scip, "display/width", &dispwidth) );
-   scale = (dispwidth-3) / wval;
+   scalex = (dispwidth-3) / wval;
+   scaley = scalex / 2.0;  /* this gives almost round looking circles on my (SV) terminal */
 
-   width = SCIPceil(scip, scale*wval)+3;  /* +2 for left and right border and +1 for \n */
-   height = SCIPceil(scip, scale*hval)+2; /* +2 for top and bottom border */
+   width = SCIPceil(scip, scalex*wval)+3;  /* +2 for left and right border and +1 for \n */
+   height = SCIPceil(scip, scaley*hval)+2; /* +2 for top and bottom border */
 
    SCIP_CALL( SCIPallocBufferArray(scip, &picture, width * height + 1) );
 
@@ -238,8 +240,8 @@ SCIP_RETCODE visualizeSolutionAscii(
 
       for( phi = 0.0; phi < 2.0 * M_PI; phi += 0.01 )
       {
-         xcoord = SCIPround(scip, scale * (xval + radius * cos(phi))) + 1; /* +1 for border */
-         ycoord = SCIPround(scip, scale * (yval + radius * sin(phi))) + 1; /* +1 for border */
+         xcoord = SCIPround(scip, scalex * (xval + radius * cos(phi))) + 1; /* +1 for border */
+         ycoord = SCIPround(scip, scaley * (yval + radius * sin(phi))) + 1; /* +1 for border */
 
          /* feasible solutions should be within box
           * due to rounding, they can be on the border
