@@ -43,7 +43,8 @@
  * \f}
  *
  * Further, we can require that the particle moves only in direction horizontally, that is
- * \f$x_i \leq x_{i+1}\f$ if \f$x_0 \leq x_N\f$, and \f$x_{i+1} \leq x_{i}\f$, otherwise.
+ * \f$x_i \leq x_{i+1}\f$ if \f$x_0 \leq x_N\f$, and \f$x_{i+1} \leq x_{i}\f$, otherwise,
+ * and that it will not move higher than the start-coordinate.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -144,8 +145,8 @@ SCIP_RETCODE setupProblem(
          /* constraint the other variables to speed up solving */
          ylb = -SCIPinfinity(scip);
          yub = coord[0];
-         xlb = coord[2];
-         xub = coord[3];
+         xlb = MIN(coord[2], coord[3]);
+         xub = MAX(coord[2], coord[3]);
       }
 
       if( i < n )
