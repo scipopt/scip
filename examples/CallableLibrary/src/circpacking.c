@@ -217,9 +217,62 @@ void visualizeSolutionMatplotlib(
 #endif
 }
 
+/** plots solution by use of gnuplot */
+static
+void visualizeSolutionGnuplot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< solution to plot */
+)
+{
+#if _POSIX_C_SOURCE < 2
+   SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
+#else
+   SCIP_Real wval;
+   SCIP_Real hval;
+   FILE* stream;
+   int i;
+
+   /* -p (persist) to keep the plot open after gnuplot terminates */
+   stream = popen("gnuplot -p", "w");
+   if( stream == NULL )
+   {
+      SCIPerrorMessage("Could not open pipe to gnuplot.\n");
+      return;
+   }
+
+   fputs("unset xtics\n"
+      "unset ytics\n"
+      "unset border\n"
+      "set size ratio 1\n",
+      stream);
+
+   wval = SCIPgetSolVal(scip, sol, w);
+   hval = SCIPgetSolVal(scip, sol, h);
+
+   fprintf(stream, "set xrange [0:%.2f]\n", MAX(wval, hval));
+   fprintf(stream, "set yrange [0:%.2f]\n", MAX(wval, hval));
+   fprintf(stream, "set object rectangle from 0,0 to %.2f,%.2f\n", wval, hval);
+   fprintf(stream, "set xlabel \"Area = %.2f\"\n", wval * hval);
+
+   fputs("plot '-' with circles notitle\n", stream);
+   for( i = 0; i < nCircles; ++i )
+   {
+      fprintf(stream, "%g %g %g\n",
+         SCIPgetSolVal(scip, sol, x[i]),
+         SCIPgetSolVal(scip, sol, y[i]),
+         r[i]);
+   }
+   fputs("e\n", stream);
+
+   pclose(stream);
+#endif
+}
 
 /* runs packing circles */
-static SCIP_RETCODE runPacking(void)
+static SCIP_RETCODE runPacking(
+   SCIP_Bool             dognuplot,          /**< whether to draw best solution with gnuplot */
+   SCIP_Bool             domatplotlib        /**< whether to draw best solution with python/matplotlib */
+   )
 {
 	SCIP* scip;
 	int i;
@@ -257,7 +310,11 @@ static SCIP_RETCODE runPacking(void)
 		SCIPinfoMessage(scip, NULL, "\n");
 		SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), NULL, FALSE) );
 
-		visualizeSolutionMatplotlib(scip, SCIPgetBestSol(scip));
+		if( dognuplot )
+	      visualizeSolutionGnuplot(scip, SCIPgetBestSol(scip));
+
+		if( domatplotlib )
+		   visualizeSolutionMatplotlib(scip, SCIPgetBestSol(scip));
 	}
 
    /* release variables */
@@ -283,7 +340,7 @@ int main(
 {
    SCIP_RETCODE retcode;
 
-   retcode = runPacking();
+   retcode = runPacking(FALSE, FALSE);
 
    /* evaluate return code of the SCIP process */
    if( retcode != SCIP_OKAY )
