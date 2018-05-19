@@ -55,8 +55,9 @@
 #define STP_DAEX_MAXGRAD 9
 #define STP_DAEX_MINGRAD 6
 #define STP_DAEX_EDGELIMIT 50000
-#define RANDOM_DAMAXDEVIATION_LOWER 0.15  /**< random upper bound for max deviation for dual ascent */
-#define RANDOM_DAMAXDEVIATION_UPPER 0.30  /**< random upper bound for max deviation for dual ascent */
+#define DAMAXDEVIATION_RANDOM_LOWER 0.15  /**< random upper bound for max deviation for dual ascent */
+#define DAMAXDEVIATION_RANDOM_UPPER 0.30  /**< random upper bound for max deviation for dual ascent */
+#define DAMAXDEVIATION_FAST         0.75
 
 #define EXEDGE_FREE 0
 #define EXEDGE_FIXED 1
@@ -3024,7 +3025,7 @@ SCIP_RETCODE reduce_da(
       SCIP_CALL( orderDaRoots(scip, graph, terms, graph->terms, (prevrounds > 0), randnumgen) );
 
       if( prevrounds > 0 )
-         damaxdeviation = SCIPrandomGetReal(randnumgen, RANDOM_DAMAXDEVIATION_LOWER, RANDOM_DAMAXDEVIATION_UPPER);
+         damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
    }
    else
    {
@@ -3243,7 +3244,7 @@ SCIP_RETCODE reduce_da(
       }
       else if( userec )
       {
-         damaxdeviation = SCIPrandomGetReal(randnumgen, RANDOM_DAMAXDEVIATION_LOWER, RANDOM_DAMAXDEVIATION_UPPER);
+         damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
       }
    }
 
@@ -3808,9 +3809,9 @@ SCIP_RETCODE reduce_daPcMw(
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_Bool             solbasedda,         /**< rerun Da based on best primal solution */
    SCIP_Bool             varyroot,           /**< vary root for DA if possible */
-   SCIP_Bool             shiftcosts,         /**< should costs be shifted to try to reduce number of terminals? */
    SCIP_Bool             markroots,          /**< should terminals proven to be part of an opt. sol. be marked as such? */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             fastmode,           /**< run heuristic in fast mode? */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Real             prizesum            /**< sum of positive prizes */
 )
@@ -3826,6 +3827,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Real bestlpobjval;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
+   SCIP_Real damaxdeviation;
    int* roots;
    int* result;
    int* result2;
@@ -3892,15 +3894,15 @@ SCIP_RETCODE reduce_daPcMw(
    offset = 0.0;
 
    /* transform the problem to a real SAP */
-   if( shiftcosts )
-      SCIP_CALL( graph_pc_getSapShift(scip, graph, &transgraph, &offset) );
-   else
-      SCIP_CALL( graph_pc_getSap(scip, graph, &transgraph, &offset) );
+   SCIP_CALL( graph_pc_getSap(scip, graph, &transgraph, &offset) );
 
    /* initialize data structures for shortest paths */
    SCIP_CALL( graph_path_init(scip, transgraph) );
 
-   SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, transresult, state, root, TRUE, -1.0, nodearrchar) );
+   damaxdeviation = fastmode ? DAMAXDEVIATION_FAST : -1.0;
+
+   SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE,
+         gnodearr, NULL, transresult, state, root, TRUE, damaxdeviation, nodearrchar) );
 
    lpobjval += offset;
    bestlpobjval = lpobjval;
@@ -3929,15 +3931,6 @@ SCIP_RETCODE reduce_daPcMw(
 
    /* restore original graph */
    graph_pc_2org(graph);
-
-   if( shiftcosts )
-   {
-      for( int i = 0; i < nnodes; i++ )
-         if( Is_term(graph->term[i]) && transgraph->term[i] == -1 )
-            graph->mark[i] = FALSE;
-
-      varyroot = FALSE;
-   }
 
    for( int e = 0; e < extnedges; e++ )
       marked[e] = FALSE;
