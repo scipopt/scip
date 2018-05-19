@@ -97,6 +97,9 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
+.PHONY: doc
+doc:
+		cd doc && doxygen scip.dxy
 
 $(BINDIR)/%.$(BASE).$(LPS)$(EXEEXTENSION): $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/%.o | $(BINDIR)
 		@echo "-> linking $@"

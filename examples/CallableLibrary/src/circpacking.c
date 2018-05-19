@@ -22,10 +22,10 @@
  * The example implements a model for the computation of a smallest rectangle that contains a number of
  * given circles in the plane.
  *
- * Given n circles with radii \f$(r_i)\f$, the task is to find a coordinates \f$(x_i, y_i)\f$ for the
- * circle midpoints and a minimal rectangle \f$W, H \geq 0\f$, such that every circle is places within
- * the rectangle (\f$r_i \leq x_i \leq W-r_i\f$, \f$r_i \leq y_i \leq H-r_i\f$) and circles are not
- * overlapping (\f$\sqrt{(x_i-x_j)^2 + (y_i-y_j)^2} \geq (r_i + r_j)^2\f$).
+ * Given n circles with radii \f$r_i\f$, the task is to find a coordinates \f$(x_i, y_i)\f$ for the
+ * circle midpoints and a minimal rectangle of width \f$W \geq 0\f$ and height \f$H \geq 0\f$, such
+ * that every circle is places within the rectangle (\f$r_i \leq x_i \leq W-r_i\f$, \f$r_i \leq y_i \leq H-r_i\f$)
+ * and circles are not overlapping \f$\left((x_i-x_j)^2 + (y_i-y_j)^2 \geq (r_i + r_j)^2\right)\f$.
  */
 
 #include <stdio.h>
