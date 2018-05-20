@@ -3121,54 +3121,47 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
-   MSKsolstae solsta;
-   SCIP_Bool pfeas;
-   SCIP_Bool dfeas;
+   MSKprostae prosta;
 
-   assert(MosekEnv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->task != NULL);
+   assert( MosekEnv != NULL );
+   assert( lpi != NULL );
+   assert( lpi->task != NULL );
    assert( primalfeasible != NULL );
    assert( dualfeasible != NULL );
 
    SCIPdebugMessage("Calling SCIPlpiGetSolFeasibility (%d)\n", lpi->lpid);
 
-   pfeas = FALSE;
-   dfeas = FALSE;
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, lpi->lastsolvetype, &prosta, NULL) );
 
-   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, lpi->lastsolvetype, NULL, &solsta) );
-
-   switch (solsta)
+   switch (prosta)
    {
-   case MSK_SOL_STA_OPTIMAL:
-   case MSK_SOL_STA_PRIM_AND_DUAL_FEAS:
-      pfeas = TRUE;
-      dfeas = TRUE;
+   case MSK_PRO_STA_PRIM_AND_DUAL_FEAS:
+      *primalfeasible = TRUE;
+      *dualfeasible = TRUE;
       break;
-   case MSK_SOL_STA_PRIM_FEAS:
-      pfeas = TRUE;
+   case MSK_PRO_STA_PRIM_FEAS:
+      *primalfeasible = TRUE;
+      *dualfeasible = FALSE;
       break;
-   case MSK_SOL_STA_DUAL_FEAS:
-      dfeas = TRUE;
+   case MSK_PRO_STA_DUAL_FEAS:
+      *primalfeasible = FALSE;
+      *dualfeasible = TRUE;
       break;
-   case MSK_SOL_STA_UNKNOWN:
-   case MSK_SOL_STA_NEAR_OPTIMAL:
-   case MSK_SOL_STA_NEAR_PRIM_FEAS:
-   case MSK_SOL_STA_NEAR_DUAL_FEAS:
-   case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
-   case MSK_SOL_STA_PRIM_INFEAS_CER:
-   case MSK_SOL_STA_DUAL_INFEAS_CER:
-   case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
-   case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
-   case MSK_SOL_STA_INTEGER_OPTIMAL:
-   case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
+   case MSK_PRO_STA_UNKNOWN:
+   case MSK_PRO_STA_PRIM_INFEAS:
+   case MSK_PRO_STA_DUAL_INFEAS:
+   case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
+   case MSK_PRO_STA_ILL_POSED:
+   case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
+   case MSK_PRO_STA_NEAR_PRIM_FEAS:
+   case MSK_PRO_STA_NEAR_DUAL_FEAS:
+   case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
+      *primalfeasible = FALSE;
+      *dualfeasible = FALSE;
       break;
    default:
       return SCIP_LPERROR;
    }  /*lint !e788*/
-
-   *primalfeasible = pfeas;
-   *dualfeasible = dfeas;
 
    return SCIP_OKAY;
 }
