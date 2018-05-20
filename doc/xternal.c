@@ -104,6 +104,8 @@
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref PARAM   "additional user parameters"
  *   - \ref TABLE   "Statistics tables"
+ *   - \ref BENDERS "Benders' decomposition"
+ *     + \ref BENDERSCUTS "Benders' decomposition cuts"
  *
  * @subsection HOWTOUSESECTION How to use ...
  *
@@ -112,6 +114,7 @@
  *   - \ref COUNTER "How to use SCIP to count feasible solutions"
  *   - \ref REOPT   "How to use reoptimization in SCIP"
  *   - \ref CONCSCIP "How to use the concurrent solving mode in SCIP"
+ *   - \ref BENDDEF "How to use the Benders' decomposition framework"
  *
  *
  * @section FURTHERINFO Further information
@@ -5640,6 +5643,316 @@
  *
  * The TABLEEXITSOL callback is executed before the branch-and-bound process is freed. The statistics table should use this
  * call to clean up its branch-and-bound specific data.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page BENDERS How to add custom Benders' decomposition implementations
+ *
+ * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
+ * problems. Problems that display a block diagonal structure are particularly amenable to the application of Benders'
+ * decomposition. Such problems are given by
+ *
+ * \f[
+ *  \begin{array}[t]{rllclcl}
+ *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
+ *         & \\
+ *    subject \ to & \displaystyle & Ax & & & = & b \\
+ *         & \\
+ *         & \displaystyle & Tx & + & Hy & = h \\
+ *         & \\
+ *         & x \in mathbb{Z}^{p}\times\mathbb{R}^{n - p}  \\
+ *         & y \in \mathbb{R}^{m} \\
+ *  \end{array}
+ * \f]
+ *
+ * The variables \f$x\f$ and \f$y\f$ are described as the first and second stage variables respectively. In the
+ * classical use of Benders' decomposition, it is a requirement that the all second stage variables are continuous.
+ * Extensions to the classical Benders' decomposition approach have permitted the use of more general second stage
+ * problems.
+ *
+ * The application of Benders' decomposition to the above problem results in a subproblem, given by
+ *
+ * \f[
+ *  \begin{array}[t]{rll}
+ *    \min & \displaystyle & d^{T}y \\
+ *         & \\
+ *    subject \ to & \displaystyle & Hy  = h - T\bar{x} \\
+ *         & \\
+ *         & y \in \mathbb{R}^{m} \\
+ *  \end{array}
+ * \f]
+ *
+ * where \f$\bar{x}\f$ is a solution vector of the first stage variables. As such, the subproblem is a problem only in
+ * \f$y\f$. The dual solution to the subproblem, either an extreme point or extreme ray, is used to generate cuts that
+ * are added to the master problem. Let \f$\lambda\f$ be the vector of dual variables associated with the set of
+ * constraints from the subproblem. If, for a given \f$\bar{x}\f$, the subproblem is infeasible, then \f$\lambda\f$
+ * corresponds to a dual ray and is used to produce the cut
+ *
+ * \f[
+ *    0 \geq \lambda(h - Tx)
+ * \f]
+ *
+ * which eliminates \f$\bar{x}\f$ from the master problem. If, for a given \f$\bar{x}\f$, the subproblem is feasible,
+ * then \f$\lambda\f$ corresponds to a dual extreme point and is used to produce the cut
+ *
+ * \f[
+ *    \varphi \geq \lambda(h - Tx)
+ * \f]
+ *
+ * where \f$\varphi\f$ is an auxiliary variable added to the master problem as an underestimator of the optimal
+ * subproblem objective function value.
+ *
+ * Given \f$\Omega^{p}\f$ and \f$\Omega^{r}\f$ as the sets of dual extreme points and rays of the subproblem,
+ * respectively, the Benders' decomposition master problem is given by
+ *
+ * \f[
+ *  \begin{array}[t]{rll}
+ *    \min & \displaystyle & c^{T}x & + & \varphi \\
+ *         & \\
+ *    subject \ to & \displaystyle & Ax = b \\
+ *         & \\
+ *         & \displaystyle & \varphi \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r}\\
+ *         & \\
+ *         & \displaystyle & 0 \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r} \\
+ *         & \\
+ *         & x \in mathbb{Z}^{p}\times\mathbb{R}^{n - p}  \\
+ *         & \varphi \in \mathbb{R} \\
+ *  \end{array}
+ * \f]
+ *
+ * The Benders' decomposition framework of SCIP allows the user to provide a custom implementation of many aspects of
+ * the Benders' decomposition algorithm. It is possible to implement multiple Benders' decompositions that work in
+ * conjunction with each other. Such a situation is where you may have different formulations of the Benders'
+ * decomposition subproblem.
+ *
+ * The current list of all Benders' decomposition implementations available in this release can be found \ref BENDERSS
+ * "here".
+ *
+ * We now explain how users can add their own Benders' decomposition implementations.
+ * Take the default Benders' decomposition implementation (src/scip/benders_default.c) as an example.  Same as all other
+ * default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjBenders wrapper base
+ * class and implement the scip_...() virtual methods instead of the SCIP_DECL_BENDERS... callback methods.
+ *
+ * Additional documentation for the callback methods of a Benders' decomposition implementation, in particular for the
+ * input parameters, can be found in the file type_benders.h.
+ *
+ * Here is what you have to do to implement a custom Benders' decomposition:
+ * -# Copy the template files src/scip/benders_xyz.c and src/scip/benders_xyz.h into files "benders_mybenders.c" and
+ *  "benders_mybenders.h".
+      \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeBendersMybenders() in order to include the Benders' decomposition into your SCIP instance, e.g., in
+ *  the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenders".
+ * -# Adjust the properties of the Benders' decomposition (see \ref BENDERS_PROPERTIES).
+ * -# Define the Benders' decomposition data (see \ref BENDERS_DATA). This is optional.
+ * -# Implement the interface methods (see \ref BENDERS_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref BENDERS_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref BENDERS_ADDITIONALCALLBACKS).  This is optional.
+ *
+ *
+ * @section BENDERS_PROPERTIES Properties of a Benders' decomposition
+ *
+ * At the top of the new file "benders_mybenders.c", you can find the Benders' decomposition properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the Benders' decomposition properties by calling the constructor
+ * of the abstract base class scip::ObjBenders from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par BENDERS_NAME: the name of the Benders' decomposition.
+ * This name is used in the interactive shell to address the Benders' decomposition.
+ * Additionally, if you are searching for a Benders' decomposition with SCIPfindBenders(), this name is looked up.
+ * Names have to be unique: no two Benders' decompositions may have the same name.
+ *
+ * \par BENDERS_DESC: the description of the Benders' decomposition.
+ * This string is printed as a description of the Benders' decomposition in the interactive shell.
+ *
+ * \par BENDERS_PRIORITY: the priority of the Benders' decomposition.
+ * During the enforcement and checking of solutions in src/scip/cons_benders.c and src/scip/cons_benderslp.c, every
+ * active Benders' decompositions are called. The execution method of the Benders' decomposition calls each of the
+ * subproblems and generates cuts from their solutions.  So the active Benders' decompositions are called in order of
+ * priority until a cut is generated or feasibility is proven.
+ * \n
+ * The priority of the Benders' decomposition should be set according to the difficulty of solving the subproblems and
+ * the generation of cuts. However, it is possible to prioritise the Benders' decompositions with respect to the
+ * strength of the subproblem formulation and the resulting cuts.
+ *
+ * \par BENDERS_CUTLP: should Benders' decomposition cuts be generated during the enforcement of LP solutions.
+ * This is a flag that is used by src/scip/cons_benders.c and src/scip/cons_benderslp.c to idicate whether the
+ * enforcement of LP solutions should involve solving the Benders' decomposition subproblems. This should be set to TRUE
+ * to have an exact solution algorithm. In the presence of multiple Benders' decomposition, it may be desired to enforce
+ * the LP solutions for only a subset of those implemented.
+ *
+ * \par BENDERS_CUTRELAX: should Benders' decomposition cuts be generated during the enforcement of relaxation solutions.
+ * This is a flag that is used by src/scip/cons_benders.c and src/scip/cons_benderslp.c to idicate whether the
+ * enforcement of relaxation solutions should involve solving the Benders' decomposition subproblems. This should be
+ * set to TRUE to have an exact solution algorithm. In the presence of multiple Benders' decomposition, it may be desired
+ * to enforce the relaxation solutions for only a subset of those implemented. This parameter will only take effect if
+ * external relaxation have been implemented.
+ *
+ * \par BENDERS_CUTPSEUDO: should Benders' decomposition subproblems be solved during the enforcement of pseudo solutions.
+ * This is a flag that is used by src/scip/cons_benders.c and src/scip/cons_benderslp.c to idicate whether the
+ * enforcement of pseudo solutions should involve solving the Benders' decomposition subproblems. This should be set to
+ * TRUE, since not enforcing pseudo solutions could result in an error or suboptimal result. During the enforcement of
+ * pseudo solutions, no cuts are generated. Only a flag to indicate whether the solution is feasible or if the LP should
+ * be solved again is returned.
+ *
+ * \par BENDERS_SHAREAUXVARS: should this Benders' decomposition use the auxiliary variables from the highest priority
+ * Benders' decomposition.
+ * This parameter only takes effect if multiple Benders' decompositions are implemented. Consider the case that two Benders'
+ * decompositions are implemented with different formulations of the subproblem. Since the subproblems in each of the
+ * decomposition will have the same optimal solution, then it is useful to only have a single auxiliary variable for the
+ * two different subproblems. This means that when an optimality cut is generated in the lower priority Benders'
+ * decomposition, the auxiliary variable from the highest priority Benders' decomposition will be added to the right
+ * hand side.
+ *
+ * @section BENDERS_DATA Benders' decomposition Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_BendersData".
+ * In this data structure, you can store the data of your Benders' decomposition. For example, you should store the adjustable
+ * parameters of the Benders' decomposition in this data structure. In a Benders' decomposition, user parameters for the
+ * number of subproblems and an array to store the subproblem SCIP instances could be useful.
+ * \n
+ * Defining Benders' decomposition data is optional. You can leave the struct empty.
+ *
+ * @section BENDERS_INTERFACE Interface Methods
+ *
+ * At the bottom of "benders_mybenders.c", you can find the interface method SCIPincludeBendersMybenders(),
+ * which also appears in "benders_mybenders.h"
+ * SCIPincludeBendersMybenders() is called by the user, if (s)he wants to include the Benders' decomposition,
+ * i.e., if (s)he wants to use the Benders' decomposition in his/her application.
+ *
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the Benders' decomposition. For this, you can either call SCIPincludeBenders(),
+ * or SCIPincludeBendersBasic() since SCIP version 3.0. In the latter variant, \ref BENDERS_ADDITIONALCALLBACKS "additional callbacks"
+ * must be added via setter functions as, e.g., SCIPsetBendersCopy(). We recommend this latter variant because
+ * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
+ * variant must be manually adjusted with every SCIP release containing new callbacks for Benders' decompositions in order to compile.
+ *
+ * If you are using Benders' decomposition data, you have to allocate the memory
+ * for the data at this point. You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &bendersdata) );
+ * \endcode
+ * You also have to initialize the fields in "struct SCIP_BendersData" afterwards. For freeing the
+ * Benders' decomposition data, see \ref BENDERSFREE.
+ *
+ * You may also add user parameters for your Benders' decomposition, see \ref PARAM for how to add user parameters and
+ * the method SCIPincludeBendersDefault() in src/scip/benders_default.c for an example.
+ *
+ *
+ * @section BENDERS_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Benders' decomposition
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed together with the Benders' decomposition itself to SCIP using SCIPincludeBenders() or SCIPincludeBendersBasic(),
+ * see @ref BENDERS_INTERFACE.
+ *
+ * Benders' decomposition plugins have two callbacks, @ref BENDERSEXECLP and @ref BENDERSEXECSOL, of which at least one must be implemented.
+ *
+ * Additional documentation for the callback methods, in particular to their input parameters,
+ * can be found in type_benders.h.
+ *
+ * @subsection BENDERSEXECLP
+ *
+ * The BENDERSEXECLP callback is executed during the price-and-cut loop of the subproblem processing.
+ * It should try to generate general purpose cutting planes in order to bendersrate the current LP solution.
+ * The method is called in the LP solution loop, which means that a valid LP solution exists.
+ *
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * In addition to LP rows, the callback may also produce domain reductions or add additional constraints.
+ *
+ * Overall, the BENDERSEXECLP callback has the following options, which is indicated by the possible return values of
+ * the 'result' variable (see type_benders.h):
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the Benders' decomposition searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the Benders' decomposition was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the Benders' decomposition was skipped, but should be called again (result SCIP_DELAYED)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *
+ * @subsection BENDERSEXECSOL
+ *
+ * The BENDERSEXECSOL callback is executed during the separation loop on arbitrary primal solutions.
+ * It should try to generate general purpose cutting planes in order to separate the given primal solution.
+ * The method is not called in the LP solution loop, which means that there is no valid LP solution.
+ *
+ * In the standard SCIP environment, the BENDERSEXECSOL callback is not used because only LP solutions are
+ * separated. The BENDERSEXECSOL callback provides means to support external relaxation handlers like semidefinite
+ * relaxations that want to separate an intermediate primal solution vector. Thus, if you do not want to support
+ * such external plugins, you do not need to implement this callback method.
+ *
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
+ *
+ * Overall, the BENDERSEXECSOL callback has the following options, which is indicated by the possible return values of
+ * the 'result' variable (see type_benders.h):
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *
+ *
+ * @section BENDERS_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications, they can be used, for example, to initialize and free private data.
+ * Additional callbacks can either be passed directly with SCIPincludeBenders() to SCIP or via specific
+ * <b>setter functions</b> after a call of SCIPincludeBendersBasic(), see also @ref BENDERS_INTERFACE.
+ *
+ * @subsection BENDERSFREE
+ *
+ * If you are using separator data (see \ref BENDERS_DATA and \ref BENDERS_INTERFACE), you have to implement this method
+ * in order to free the separator data. This can be done by the following procedure:
+ *
+ * @refsnippet{src/scip/benders_gomory.c,SnippetBendersFreeGomory}
+ *
+ * If you have allocated memory for fields in your separator data, remember to free this memory
+ * before freeing the separator data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection BENDERSCOPY
+ *
+ * The BENDERSCOPY callback is executed when a SCIP instance is copied, e.g. to
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified
+ * separator for all copied SCIP instances. This may deteriorate the performance
+ * of primal heuristics using sub-SCIPs.
+ *
+ * @subsection BENDERSINIT
+ *
+ * The BENDERSINIT callback is executed after the problem is transformed.
+ * The separator may, e.g., use this call to initialize its separator data.
+ * The difference between the original and the transformed problem is explained in
+ * "What is this thing with the original and the transformed problem about?" on \ref FAQ.
+ *
+ * @subsection BENDERSEXIT
+ *
+ * The BENDERSEXIT callback is executed before the transformed problem is freed.
+ * In this method, the separator should free all resources that have been allocated for the solving process in BENDERSINIT.
+ *
+ * @subsection BENDERSINITSOL
+ *
+ * The BENDERSINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The separator may use this call to initialize its branch-and-bound specific data.
+ *
+ * @subsection BENDERSEXITSOL
+ *
+ * The BENDERSEXITSOL callback is executed before the branch-and-bound process is freed. The separator should use this call
+ * to clean up its branch-and-bound data, in particular to release all LP rows that it has created or captured.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
