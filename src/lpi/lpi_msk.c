@@ -18,6 +18,14 @@
  * @brief  LP interface for MOSEK
  * @author Bo Jensen
  * @author Tristan Gally
+ * @author Marc Pfetsch
+ *
+ * @todo Check whether MSK_IPAR_{SIM_DUAL|PRIMAL}_RESTRICT_SELECTION should be used if problem is solved from scratch or
+ *       if no basis is available.
+ * @todo Revise handling of the MSK_RES_TRM_MAX_NUM_SETBACKS return value: Remove it form the check of MOSEK_CALL and
+ *       include it in filterTRMrescode().
+ * @todo Check whether SCIPlpiGetSolFeasibility() should also return primal/dual feasible if the status is
+ *       MSK_SOL_STA_NEAR_PRIM_FEAS, MSK_SOL_STA_NEAR_DUAL_FEAS.
  */
 
 #include <assert.h>
