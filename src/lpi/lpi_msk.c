@@ -3490,7 +3490,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    SCIP_Real*            activity,           /**< row activity vector, may be NULL if not needed */
    SCIP_Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    )
-{  /*lint --e{715}*/
+{
    double* sux = NULL;
    int ncols = 0;
    int i;
@@ -3501,6 +3501,11 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    SCIPdebugMessage("Calling SCIPlpiGetSol (%d)\n", lpi->lpid);
 
+   if ( objval != NULL )
+   {
+      MOSEK_CALL( MSK_getprimalobj(lpi->task, lpi->lastsolvetype, objval) );
+   }
+
    if( redcost )
    {
       MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
@@ -3510,6 +3515,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
          primsol, dualsol, NULL, NULL, redcost, sux, NULL) );
 
+   /* the reduced costs are given by the difference of the slx and sux variables (third and second to last parameters) */
    if( redcost )
    {
       for( i = 0; i < ncols; i++ )
