@@ -26,6 +26,7 @@
  *       include it in filterTRMrescode().
  * @todo Check whether SCIPlpiGetSolFeasibility() should also return primal/dual feasible if the status is
  *       MSK_SOL_STA_NEAR_PRIM_FEAS, MSK_SOL_STA_NEAR_DUAL_FEAS.
+ * @todo Check why it can happen that the termination code is MSK_RES_OK, but the solution status is MSK_SOL_STA_UNKNOWN.
  */
 
 #include <assert.h>
@@ -2233,10 +2234,13 @@ SCIP_RETCODE SolveWSimplex(
       break;
 
    case MSK_SOL_STA_UNKNOWN:
-      /* Mosek seems to have status unknown on the following limits */
-      assert( lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS || lpi->termcode == MSK_RES_TRM_MAX_TIME
-         || lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE || lpi->termcode == MSK_RES_TRM_STALL );
-      if (lpi->termcode == MSK_RES_TRM_STALL)
+      /* Mosek seems to have status unknown on the following termination codes */
+      assert( lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS || lpi->termcode == MSK_RES_TRM_MAX_TIME ||
+         lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE || lpi->termcode == MSK_RES_TRM_STALL ||
+         lpi->termcode == MSK_RES_OK );
+
+      if ( lpi->termcode != MSK_RES_TRM_MAX_ITERATIONS && lpi->termcode != MSK_RES_TRM_MAX_TIME &&
+           lpi->termcode != MSK_RES_TRM_OBJECTIVE_RANGE )
       {
          SCIPmessagePrintWarning(lpi->messagehdlr, "Numerical problem: simplex[%d] returned solsta = %d.\n", optimizecount, solsta);
          lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
