@@ -2454,6 +2454,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIP_CALL( SolveWSimplex(lpi) );
 
+#ifdef SCIP_DISABLED_CODE
    /* the following code is unclear: Why should the resolve change anything ?????? */
    if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
    {
@@ -2466,6 +2467,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
          SCIP_CALL( SolveWSimplex(lpi) );
       }
    }
+#endif
 
 #if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
@@ -2522,6 +2524,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    SCIP_CALL( SolveWSimplex(lpi) );
 
+#ifdef SCIP_DISABLED_CODE
    /* the following code is unclear: Why should the resolve change anything ?????? */
    if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
    {
@@ -2534,6 +2537,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
          SCIP_CALL( SolveWSimplex(lpi) );
       }
    }
+#endif
 
 #if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
@@ -4504,7 +4508,10 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpistate->ncols <= ncols);
 
    SCIP_CALL( ensureStateMem(lpi, ncols, nrows) );
+
+#ifdef SCIP_DISABLED_CODE
    SCIP_CALL( getbase(lpi, ncols, nrows) ); /* Why do we need to get the basis ????? */
+#endif
 
    lpistateUnpack(lpistate, lpi->skx, lpi->skc);
 
