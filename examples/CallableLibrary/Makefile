@@ -35,7 +35,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAMES	=	string gastrans circle brachistochrone circpacking
+MAINNAMES	=	string gastrans circle brachistochrone circlepacking
 MAINOBJ		=	$(addsuffix .o,$(MAINNAMES))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.$(OPT)

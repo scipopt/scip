@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   circpacking.c
+/**@file   circlepacking.c
  * @brief  Packing circles in a rectangle of minimal size.
  * @author Jose Salmeron
  * @author Stefan Vigerske
