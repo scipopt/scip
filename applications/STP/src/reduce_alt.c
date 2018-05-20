@@ -2590,8 +2590,8 @@ SCIP_RETCODE reduce_getSdPcMw(
       assert(statehead[k]     == UNKNOWN);
       assert(pathhead[k].dist == FARAWAY);
       assert(pathhead[k].edge == UNKNOWN);
-      pathmaxnodehead[k] = -1;
-      pathmaxnodetail[k] = -1;
+      assert(pathmaxnodehead[k] == -1);
+      assert(pathmaxnodetail[k] == -1);
    }
 
    /* compare restricted sd with edge cost (if existing) */

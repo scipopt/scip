@@ -898,7 +898,7 @@ SCIP_RETCODE sep_2cut(
 
    while( terms > 0 )
    {
-      if( terms % 20 == 0 && SCIPisStopped(scip) )
+      if( ((unsigned) terms) % 32 == 0 && SCIPisStopped(scip) )
          break;
 
       /* look for reachable terminal */
@@ -1075,6 +1075,77 @@ SCIP_RETCODE sep_2cut(
 }
 
 
+static
+SCIP_RETCODE dualascent_init(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int* RESTRICT   edgearr,            /**< CSR ancestor edge array */
+   int                   root,               /**< the root */
+   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
+   int                   ncsredges,          /**< number of CSR edges */
+   int*                  gmark,              /**< array for marking nodes */
+   int* RESTRICT         active,             /**< active vertices mark */
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   GNODE**               gnodearr,           /**< array containing terminal nodes*/
+   SCIP_Real* RESTRICT   rescap              /**< residual capacity */
+)
+{
+   const int nnodes = g->knots;
+
+   for( int i = 0; i < ncsredges; i++ )
+      rescap[i] = g->cost[edgearr[i]];
+
+   /* mark terminals as active, add all except root to pqueue */
+   for( int i = 0, k = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+      {
+         active[i] = 0;
+         assert(g->grad[i] > 0);
+         if( i != root )
+         {
+            gnodearr[k]->number = i;
+            gnodearr[k]->dist = g->grad[i];
+
+            /* for variants with dummy terminals */
+            if( g->grad[i] == 2 )
+            {
+               int a;
+
+               for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
+                  if( g->cost[a] == 0.0 )
+                     break;
+
+               if( a != EAT_LAST )
+               {
+                  const int tail = g->tail[a];
+                  gnodearr[k]->dist += g->grad[tail] - 1;
+
+                  if( is_pseudoroot )
+                  {
+                     for( a = g->inpbeg[tail]; a != EAT_LAST; a = g->ieat[a] )
+                        if( g->cost[a] == 0.0 )
+                           gnodearr[k]->dist += g->grad[g->tail[a]] - 1;
+                  }
+               }
+
+               assert(gnodearr[k]->dist > 0);
+            }
+
+            SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[k++]));
+         }
+      }
+      else
+      {
+         active[i] = -1;
+      }
+   }
+
+   for( int i = 0; i < nnodes + 1; i++ )
+      gmark[i] = FALSE;
+
+   return SCIP_OKAY;
+}
 
 /**@} */
 
@@ -1595,14 +1666,13 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT unsattails;
    int* RESTRICT gmark;
    int* RESTRICT active;
-   STP_Bool* RESTRICT mynodearrchar = NULL;
    SCIP_Real dualobj;
    SCIP_Real currscore;
    const SCIP_Real maxdeviation = (damaxdeviation > 0.0) ? damaxdeviation : DEFAULT_DAMAXDEVIATION;
    const int nnodes = g->knots;
    const int nterms = g->terms;
    const int nedges = g->edges;
-   int nnewedges;
+   int ncsredges;
    int norgcutverts;
    int stacklength;
    int augmentingcomponent = -1;
@@ -1656,11 +1726,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    else
       rescap = redcost;
 
-   if( nodearrchar == NULL )
-      SCIP_CALL( SCIPallocBufferArray(scip, &mynodearrchar, nnodes) );
-   else
-      mynodearrchar = nodearrchar;
-
    if( nodearrint == NULL )
       SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
    else
@@ -1692,50 +1757,14 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_CALL( SCIPallocMemoryArray(scip, &stackarr, nnodes) );
 
    /* fill auxiliary adjacent vertex/edges arrays */
-   graph_get_csr(g, edgearr, tailarr, start, &nnewedges);
+   graph_get_csr(g, edgearr, tailarr, start, &ncsredges);
 
-   /* mark terminals as active, add all except root to pqueue */
-   for( int i = 0, k = 0; i < nnodes; i++ )
+   /* initialize priority queue and res. capacity */
+   SCIP_CALL( dualascent_init(scip, g, edgearr, root, is_pseudoroot, ncsredges, gmark, active, pqueue, gnodearr, rescap) );
+
+   /* mark whether an arc is satisfied (has capacity 0) */
+   for( int i = 0; i < ncsredges; i++ )
    {
-      if( Is_term(g->term[i]) )
-      {
-         active[i] = 0;
-         assert(g->grad[i] > 0);
-         if( i != root )
-         {
-            gnodearr[k]->number = i;
-            gnodearr[k]->dist = g->grad[i];
-            /* for variants with dummy terminals */
-            if( g->grad[i] == 2 )
-            {
-               int a;
-
-               for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
-                  if( g->cost[a] == 0.0 )
-                     break;
-
-               if( a != EAT_LAST )
-                  gnodearr[k]->dist += g->grad[g->tail[a]] - 1;
-
-               assert(gnodearr[k]->dist > 0);
-            }
-
-            SCIP_CALL( SCIPpqueueInsert(pqueue, gnodearr[k++]) );
-         }
-      }
-      else
-      {
-         active[i] = -1;
-      }
-   }
-
-   for( int i = 0; i < nnodes + 1; i++ )
-      gmark[i] = FALSE;
-
-   /* set residual capacities and mark whether an arc is satisfied (has capacity 0) */
-   for( int i = 0; i < nnewedges; i++ )
-   {
-      rescap[i] = g->cost[edgearr[i]];
 #ifdef BITFIELDSARRAY
       if( SCIPisZero(scip, rescap[i]) )
          SetBit(bitarr, i);
@@ -2106,14 +2135,14 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIPdebugMessage("DA: dualglobal: %f \n", dualobj);
    *objval = dualobj;
 
-   for( int i = nnewedges; i < nedges; i++ )
+   for( int i = ncsredges; i < nedges; i++ )
    {
       edgearr[i] = i;
       rescap[i] = g->cost[i];
    }
 
    /* re-extend rescap array */
-   for( int i = 0; i < nnewedges; i++ )
+   for( int i = 0; i < ncsredges; i++ )
    {
       if( edgearr[i] != i  )
       {
@@ -2158,7 +2187,17 @@ SCIP_RETCODE SCIPStpDualAscent(
    if( ascendandprune )
    {
        SCIP_Bool success;
+       STP_Bool* RESTRICT mynodearrchar = NULL;
+
+       if( nodearrchar == NULL )
+          SCIP_CALL( SCIPallocBufferArray(scip, &mynodearrchar, nnodes) );
+       else
+          mynodearrchar = nodearrchar;
+
        SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, root, mynodearrchar, &success, TRUE) );
+
+       if( nodearrchar == NULL )
+          SCIPfreeBufferArray(scip, &mynodearrchar);
    }
 
    if( edgearrint == NULL )
@@ -2166,9 +2205,6 @@ SCIP_RETCODE SCIPStpDualAscent(
 
    if( nodearrint == NULL )
       SCIPfreeBufferArray(scip, &cutverts);
-
-   if( nodearrchar == NULL )
-      SCIPfreeBufferArray(scip, &mynodearrchar);
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
