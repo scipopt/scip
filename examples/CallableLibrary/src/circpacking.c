@@ -591,15 +591,16 @@ int main(
 #if _POSIX_C_SOURCE >= 2
          printf(" [-g] [-m]");
 #endif
-         printf(" { <radius> } \n");
-         printf("  --help shows this help and exits\n");
-         printf("  -w <width> fix rectangle width to given value\n");
-         printf("  -h <height> fix rectangle height to given value\n");
+         puts(" { <radius> }");
+         puts("  --help shows this help and exits");
+         puts("  -w <width> fix rectangle width to given value");
+         puts("  -h <height> fix rectangle height to given value");
 #if _POSIX_C_SOURCE >= 2
-         printf("  -g show final solution with gnuplot\n");
-         printf("  -m show final solution with matplotlib\n");
+         puts("  -g show final solution with gnuplot");
+         puts("  -m show final solution with matplotlib");
 #endif
-         printf("If no radii are given, then a default choice is used.\n");
+         puts("If no radii are given, then a default choice is used.");
+         puts("If both width and height are fixed, then the number of circles that fit into the rectangle is maximized.");
 
          return EXIT_SUCCESS;
       }
