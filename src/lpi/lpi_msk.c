@@ -2041,7 +2041,7 @@ MSKrescodee filterTRMrescode(
    MSKrescodee*          termcode,           /**< pointer to store output termination code */
    MSKrescodee           res                 /**< input result of call to Mosek function */
    )
-{
+{  /*lint --e{715}*/
    assert( termcode != NULL );
 
 #if ASSERT_ON_NUMERICAL_TROUBLES > 0
@@ -2066,7 +2066,7 @@ MSKrescodee filterTRMrescode(
    return res;
 }
 
-/**< solve problem with the simplex algorithm */
+/** solve problem with the simplex algorithm */
 static
 SCIP_RETCODE SolveWSimplex(
    SCIP_LPI*             lpi                 /**< LP interface structure */
@@ -2277,7 +2277,7 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
    case MSK_PRO_STA_PRIM_INFEAS:
    case MSK_PRO_STA_DUAL_INFEAS:
-   case MSK_SOL_STA_UNKNOWN:
+   case MSK_PRO_STA_UNKNOWN:
       break;
 
    case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
@@ -2295,7 +2295,7 @@ SCIP_RETCODE SolveWSimplex(
 #endif
       break;
 
-  default:
+   default:
 #if SHOW_ERRORS
       SCIPerrorMessage("Simplex[%d] returned prosta = %d\n", optimizecount, prosta);
 #endif
@@ -3193,7 +3193,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    return ( solsta == MSK_SOL_STA_DUAL_INFEAS_CER
       || prosta == MSK_PRO_STA_DUAL_INFEAS
-      || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS);
+      || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS );
 }
 
 /** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
@@ -3278,7 +3278,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
 
    return ( solsta == MSK_SOL_STA_PRIM_INFEAS_CER
       || prosta == MSK_PRO_STA_PRIM_INFEAS
-      || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS);
+      || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS );
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
@@ -3376,10 +3376,10 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return (   lpi->termcode == MSK_RES_OK
+   return ( lpi->termcode == MSK_RES_OK
       || lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS
       || lpi->termcode == MSK_RES_TRM_MAX_TIME
-      || lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE);
+      || lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE );
 }
 
 /** returns TRUE iff the objective limit was reached */
@@ -3391,7 +3391,7 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE;
+   return ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE );
 }
 
 /** returns TRUE iff the iteration limit was reached */
@@ -3403,7 +3403,7 @@ SCIP_Bool SCIPlpiIsIterlimExc(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS;
+   return ( lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS );
 }
 
 /** returns TRUE iff the time limit was reached */
@@ -3415,7 +3415,7 @@ SCIP_Bool SCIPlpiIsTimelimExc(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return lpi->termcode == MSK_RES_TRM_MAX_TIME;
+   return ( lpi->termcode == MSK_RES_TRM_MAX_TIME );
 }
 
 /** returns the internal solution status of the solver */
@@ -3436,7 +3436,7 @@ int SCIPlpiGetInternalStatus(
    if ( retcode != SCIP_OKAY )
       return 0;
 
-   return solsta; /*lint !e641*/
+   return (int) solsta;
 }
 
 /** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
@@ -3634,10 +3634,10 @@ SCIP_RETCODE handle_singular(
 static
 SCIP_RETCODE convertstat_mosek2scip(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc,                /**< ??? */
-   MSKstakeye*           sk,                 /**< ??? */
+   MSKaccmodee           acc,                /**< whether constraints/variables are considered */
+   MSKstakeye*           sk,                 /**< status array of Mosek */
    int                   n,                  /**< size */
-   int*                  stat                /**< status array */
+   int*                  stat                /**< status array of SCIP */
    )
 {
    int i;
@@ -4311,10 +4311,14 @@ SCIP_RETCODE checkState1(
          SCIPdebugMessage("STATE[%d]: %c[%d] = unk\n", optimizecount, xc, i);
          break;
       case MSK_SK_BAS:
+#ifndef NDEBUG
          /* the following function is deprecated */
          MOSEK_CALL( MSK_getsolutioni(lpi->task, accmode, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
          if (fabs(sl-su) > DEBUG_CHECK_STATE_TOL)
+         {
             SCIPdebugMessage("STATE[%d]: %c[%d] = bas, sl%c = %g, su%c = %g\n", optimizecount, xc, i, xc, sl, xc, su);
+         }
+#endif
          break;
       case MSK_SK_SUPBAS:
          SCIPdebugMessage("STATE[%d]: %c[%d] = supbas\n", optimizecount, xc, i);
