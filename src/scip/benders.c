@@ -1613,8 +1613,7 @@ SCIP_RETCODE computeSubproblemLowerbound(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Computing the lower bound for subproblem %d\n", probnumber);
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
-   //SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
-   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_FULL) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
    /* if the subproblem is independent, then the default SCIP settings are used. Otherwise, only the root node is solved
     * to compute a lower bound on the subproblem
