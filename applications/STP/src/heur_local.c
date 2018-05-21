@@ -56,7 +56,7 @@
 #define DEFAULT_MINNBESTSOLS  6
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
-#define GREEDY_EXTENSIONS_MW 10   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
+#define GREEDY_EXTENSIONS_MW 6   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
 #define GREEDY_EXTENSIONS    5  /**< Number of extensions for greedy PC heuristic. */
 
 

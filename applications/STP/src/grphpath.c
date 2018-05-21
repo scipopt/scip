@@ -497,12 +497,10 @@ void graph_path_exec(
    PATH*                 path                /**< shortest paths data structure */
    )
 {
-   int   k;
-   int   m;
-   int   i;
-   const int nnodes = p->knots;
    int* heap;
    int* state;
+   int k;
+   const int nnodes = p->knots;
    int count;
 
    assert(scip      != NULL);
@@ -523,7 +521,7 @@ void graph_path_exec(
    state = p->path_state;
 
    /* initialize */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       state[i]     = UNKNOWN;
       path[i].dist = FARAWAY + 1;
@@ -547,15 +545,17 @@ void graph_path_exec(
          /* mark as scanned */
          state[k] = CONNECT;
 
-         for( i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i] )
+         for( int i = p->outbeg[k]; i >= 0; i = p->oeat[i] )
          {
-            m = p->head[i];
+            const int m = p->head[i];
+
+            assert(i != EAT_LAST);
 
             /* node not scanned and valid? */
-            if( (state[m]) && (p->mark[m]) )
+            if( state[m] )
             {
-               /* closer than previously? */
-               if( SCIPisGT(scip, path[m].dist, (mode == MST_MODE) ? cost[i] : (path[k].dist + cost[i])) )
+               /* closer than previously and valid? */
+               if( path[m].dist > ((mode == MST_MODE) ? cost[i] : (path[k].dist + cost[i])) && p->mark[m] )
                   correct(scip, heap, state, &count, path, m, k, i, cost[i], mode);
             }
          }
@@ -1242,11 +1242,11 @@ void graph_path_st_pcmw(
          }
 
          /* update adjacent vertices */
-         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
          {
             const int m = g->head[e];
 
-            assert(state[m]);
+            assert(state[m] && e != EAT_LAST);
             /* is m not connected, allowed and closer (as close)? */
 
             if( !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) && g->mark[m] )
@@ -1418,7 +1418,6 @@ void graph_path_st_pcmw_extend(
 {
    SCIP_Real maxprize;
    int   k;
-   int   e;
    int   count;
    int   nnodes;
    int   nstnodes;
@@ -1513,11 +1512,13 @@ void graph_path_st_pcmw_extend(
          }
 
          /* update adjacent vertices */
-         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
          {
-            int m = g->head[e];
+            const int m = g->head[e];
 
             assert(state[m]);
+            assert(e != EAT_LAST);
+
             /* is m not connected, allowed and closer (as close)? */
 
             if( !connected[m] && path[m].dist > (path[k].dist + cost[e]) && g->mark[m] )

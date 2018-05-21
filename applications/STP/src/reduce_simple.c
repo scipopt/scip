@@ -77,36 +77,46 @@ unsigned nchains(
 
 /** is there no vertex of higher prize? */
 static
-SCIP_Bool maxprize(
+SCIP_Bool is_maxprize(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   int                   i                   /**< the terminal to be checked */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   i,                  /**< the terminal to be checked */
+   SCIP_Real*            maxprize            /**< stores incumbent prize (can be updated) */
    )
 {
    int t = -1;
-   SCIP_Real max = -1.0;
+   SCIP_Real max;
+
+   assert(i >= 0 && Is_term(g->term[i]) && g->prize[i] > 0.0);
 
    if( g->stp_type == STP_RPCSPG && i != g->source )
       return FALSE;
    else if( g->stp_type == STP_RPCSPG && i == g->source )
       return TRUE;
 
+   max = *maxprize;
+
+   if( max > g->prize[i] )
+      return FALSE;
+
    for( int k = 0; k < g->knots; k++ )
    {
       if( Is_term(g->term[k]) && g->mark[k] && g->grad[k] > 0 )
       {
          assert(k != g->source);
-         if( SCIPisGT(scip, g->prize[k], max) )
+         if( g->prize[k] > max )
          {
             max = g->prize[k];
             t = k;
          }
-         else if( t == i && SCIPisGE(scip, g->prize[k], max) )
+         else if( t == i && g->prize[k] >= max )
          {
             t = k;
          }
       }
    }
+
+   *maxprize = max;
 
    SCIPdebugMessage("maxprize: %f (from %d) \n", g->prize[t], t );
    return (t == i);
@@ -122,7 +132,8 @@ SCIP_RETCODE trydg1edgepc(
    int*                  count,              /**< pointer storing number of eliminated edges */
    int                   i,                  /**< the terminal to be checked */
    int                   iout,               /**< outgoing arc */
-   SCIP_Bool*            rerun               /**< further eliminations possible? */
+   SCIP_Bool*            rerun,              /**< further eliminations possible? */
+   SCIP_Real*            maxprize            /**< stores incumbent prize (can be updated) */
    )
 {
    int i1;
@@ -133,7 +144,7 @@ SCIP_RETCODE trydg1edgepc(
    assert(count  != NULL);
    assert(Is_term(g->term[i]));
 
-   if( maxprize(scip, g, i) )
+   if( is_maxprize(scip, g, i, maxprize) )
       return SCIP_OKAY;
 
    i1 = g->head[iout];
@@ -939,6 +950,7 @@ SCIP_RETCODE reduce_simple_mw(
    int*                  count               /**< pointer to number of reductions */
    )
 {
+   SCIP_Real maxprize = -1.0;
    const int root = g->source;
    const int nnodes = g->knots;
    int localcount = 0;
@@ -1161,7 +1173,7 @@ SCIP_RETCODE reduce_simple_mw(
          if( g->grad[i] == 2 )
          {
             /* if terminal node i is not the one with the highest prize, delete */
-            if( !maxprize(scip, g, i) )
+            if( !is_maxprize(scip, g, i, &maxprize) )
             {
                SCIPdebugMessage("delete degree 0 term %d prize: %f count:%d\n ", i, g->prize[i], localcount);
                (*fixed) += g->prize[i];
@@ -1181,7 +1193,7 @@ SCIP_RETCODE reduce_simple_mw(
 
             if( !Is_term(g->term[g->head[e]]) )
             {
-               SCIP_CALL( trydg1edgepc(scip, g, fixed, NULL, count, i, e, &rerun) );
+               SCIP_CALL( trydg1edgepc(scip, g, fixed, NULL, count, i, e, &rerun, &maxprize) );
                continue;
             }
          }
@@ -1327,6 +1339,7 @@ SCIP_RETCODE reduce_simple_pc(
 {
    int edges2[2];
    int nodes2[2];
+   SCIP_Real maxprize = -1.0;
    const int root = g->source;
    const int nnodes = g->knots;
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG);
@@ -1437,7 +1450,7 @@ SCIP_RETCODE reduce_simple_pc(
          if( ( (g->grad[i] == 2 && pc) || (g->grad[i] == 1 && !pc) ) )
          {
             /* if terminal node i is node the one with the highest prize, delete */
-            if( !maxprize(scip, g, i) )
+            if( !is_maxprize(scip, g, i, &maxprize) )
             {
                SCIPdebugMessage("delete 0 term %d prize: %f count:%d\n ", i, g->prize[i], *count);
                (*fixed) += g->prize[i];
@@ -1455,12 +1468,12 @@ SCIP_RETCODE reduce_simple_pc(
             assert(e != EAT_LAST);
             assert(g->head[e] != root || !pc);
 
-            SCIP_CALL( trydg1edgepc(scip, g, fixed, solnode, count, i, e, &rerun) );
+            SCIP_CALL( trydg1edgepc(scip, g, fixed, solnode, count, i, e, &rerun, &maxprize) );
          }
          /* terminal of (real) degree 2? */
          else if( ( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc)  )  )
          {
-            if( !maxprize(scip, g, i) )
+            if( !is_maxprize(scip, g, i, &maxprize) )
             {
                int i2 = 0;
                for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
