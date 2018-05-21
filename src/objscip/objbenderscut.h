@@ -41,7 +41,7 @@ namespace scip
  *  a pure virtual function (this must be implemented). This function is: benderscut_exec().
  *
  *  - \ref BENDERSCUT "Instructions for implementing a Benders' decomposition plugin"
- *  - \ref BENDERSDECOMPCUT "List of available Benders' decomposition plugins"
+ *  - \ref BENDERSCUTS "List of available Benders' decomposition plugins"
  *  - \ref type_benderscut.h "Corresponding C interface"
  */
 class ObjBenderscut : public ObjCloneable

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_xyz.h
- * @ingroup BENDERS
+ * @ingroup BENDERSCUTS
  * @brief  xyz Benders' decomposition cuts
  * @author Stephen J. Maher
  *
@@ -33,7 +33,10 @@
 extern "C" {
 #endif
 
-/** creates the xyz Benders' decomposition cut and includes it in SCIP */
+/** creates the xyz Benders' decomposition cut and includes it in SCIP
+ *
+ *  @ingroup BenderscutIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBenderscutXyz(
    SCIP*                 scip,               /**< SCIP data structure */

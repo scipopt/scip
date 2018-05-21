@@ -183,9 +183,8 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_DIDNOTRUN  : the subproblem was not solved in this iteration. Other decompositions will be checked.
  *  - SCIP_CONSADDED  : a constraint has been added to the master problem. No other decompositions will be checked.
- *  - SCIP_SEPARATED  : a cut has been added to the master proble. No other decompositions will be checked.
- *  - SCIP_FEASIBLE   : feasibility of the solution is reported to SCIP. FEASIBLE can be returned if you can guarantee
- *                      that this solution will never be optimal. Other decompositions will be checked.
+ *  - SCIP_SEPARATED  : a cut has been added to the master problem. No other decompositions will be checked.
+ *  - SCIP_FEASIBLE   : feasibility of the solution is reported to SCIP. Other decompositions will be checked.
  *  - SCIP_INFEASIBLE : infeasibility of the solution is reported to SCIP. No other decompositions will be checked.
  */
 #define SCIP_DECL_BENDERSPRESUBSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol,\
