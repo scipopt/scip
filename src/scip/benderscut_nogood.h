@@ -14,9 +14,21 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_nogood.h
- * @ingroup BENDERS
+ * @ingroup BENDERSCUTS
  * @brief  Generates a no-good cut for solutions that are integer infeasible
  * @author Stephen J. Maher
+ *
+ * The no-good cut is generated for the Benders' decomposition master problem if an integer solution is identified as
+ * infeasible in at least one CIP subproblems. The no-good cut is required, because the classical Benders' decomposition
+ * feasibility cuts (see benderscut_feas.c) will only cut off the solution \f$\bar{x}\f$ if the LP relaxation of the CIP
+ * is infeasible.
+ *
+ * Consider a Benders' decomposition subproblem that is a CIP and it infeasible. Let \f$S_{r}\f$ be the set of indices
+ * for master problem variables that are 1 in \f$\bar{x}\f$. The no-good cut is given by
+ *
+ * \f[
+ * 1 \leq \sum_{i \in S_{r}}(1 - x_{i}) + \sum_{i \notin S_{r}}x_{i}
+ * \f]
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -31,7 +43,10 @@
 extern "C" {
 #endif
 
-/** creates the no good Benders' decomposition cut and includes it in SCIP */
+/** creates the no good Benders' decomposition cut and includes it in SCIP
+ *
+ *  @ingroup BenderscutIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBenderscutNogood(
    SCIP*                 scip,               /**< SCIP data structure */
