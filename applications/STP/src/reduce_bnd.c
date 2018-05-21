@@ -50,9 +50,9 @@
 #define STP_RED_MINBNDTERMS   500
 #define STP_DABD_MAXDEGREE 5
 #define STP_DABD_MAXDNEDGES 10
-#define STP_DAEX_MAXDFSDEPTH 7
-#define STP_DAEX_MINDFSDEPTH 5
-#define STP_DAEX_MAXGRAD 9
+#define STP_DAEX_MAXDFSDEPTH 6
+#define STP_DAEX_MINDFSDEPTH 4
+#define STP_DAEX_MAXGRAD 8
 #define STP_DAEX_MINGRAD 6
 #define STP_DAEX_EDGELIMIT 50000
 #define DAMAXDEVIATION_RANDOM_LOWER 0.15  /**< random upper bound for max deviation for dual ascent */

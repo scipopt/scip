@@ -215,6 +215,7 @@ extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, int*, int, int);
 extern SCIP_RETCODE   graph_pc_contractEdge(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
+extern SCIP_RETCODE   graph_knot_contractLowdeg2High(SCIP*, GRAPH*, int*, int, int);
 extern SCIP_RETCODE   graph_sol_reroot(SCIP*, GRAPH*, int*, int);
 extern SCIP_RETCODE   graph_sol_getOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
 extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, IDX*, IDX*, IDX*, IDX*, SCIP_Bool);

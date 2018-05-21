@@ -2395,12 +2395,23 @@ SCIP_RETCODE graph_knot_contract(
    /* traverse edges */
    for( i = 0; i < slc; i++ )
    {
+      const int ihead = knot[i];
       assert(knot != NULL && outcost != NULL && incost != NULL && mark != NULL);
 
       /* search for an edge out of t with same head as current edge */
-      for( et = p->outbeg[t]; et != EAT_LAST; et = p->oeat[et] )
-         if( p->head[et] == knot[i] )
-            break;
+
+      if( p->grad[ihead] >= p->grad[t] )
+      {
+         for( et = p->outbeg[t]; et >= 0; et = p->oeat[et] )
+            if( p->head[et] == ihead )
+               break;
+      }
+      else
+      {
+         for( et = p->inpbeg[ihead]; et >= 0; et = p->ieat[et] )
+            if( p->tail[et] == t )
+               break;
+      }
 
       /* does such an edge not exist? */
       if( et == EAT_LAST )
@@ -2528,6 +2539,26 @@ SCIP_RETCODE graph_knot_contract(
    assert(p->grad[s]   == 0);
    assert(p->outbeg[s] == EAT_LAST);
    assert(p->inpbeg[s] == EAT_LAST);
+   return SCIP_OKAY;
+}
+
+/** contract endpoint of lower degree into endpoint of higher degree */
+SCIP_RETCODE graph_knot_contractLowdeg2High(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
+                                                or NULL */
+   int                   t,                  /**< tail node to be contracted */
+   int                   s                   /**< head node to be contracted */
+   )
+{
+   assert(g != NULL);
+
+   if( g->grad[t] >= g->grad[s] )
+      SCIP_CALL(graph_knot_contract(scip, g, solnode, t, s));
+   else
+      SCIP_CALL(graph_knot_contract(scip, g, solnode, s, t));
+
    return SCIP_OKAY;
 }
 

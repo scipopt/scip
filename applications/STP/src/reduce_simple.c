@@ -651,7 +651,8 @@ SCIP_RETCODE reduce_simple(
             {
                *fixed += g->cost[ett];
                SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[ett], NULL) );
-               SCIP_CALL( graph_knot_contract(scip, g, solnode, i, g->head[ett]) );
+               SCIP_CALL( graph_knot_contractLowdeg2High(scip, g, solnode, i, g->head[ett]) );
+
                rerun = TRUE;
             }
          }
@@ -1587,21 +1588,31 @@ SCIP_RETCODE reduce_simple_pc(
                   assert(g->inpbeg[j] == EAT_LAST);
 
                   /* contract s into t */
-                  SCIP_CALL(graph_knot_contract(scip, g, solnode, i1, i));
-                  graph_pc_knot2nonTerm(g, i);
+                  if( g->grad[i1] >= g->grad[i] )
+                  {
+                     SCIP_CALL(graph_knot_contract(scip, g, solnode, i1, i));
+                     graph_pc_knot2nonTerm(g, i);
+                  }
+                  else
+                  {
+                     SCIP_CALL(graph_knot_contract(scip, g, solnode, i, i1));
+                     graph_pc_knot2nonTerm(g, i1);
+                  }
 
-                  assert(g->grad[i] == 0);
-               }
+               } /* i1 == root */
                else
                {
-                  SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
+                  if( g->grad[i] >= g->grad[i1] )
+                     SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
+                  else
+                     SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i, i1) );
                }
 
                rerun = TRUE;
             }
-         }
-      }
-   }
+         } /* contract adjacent terminals */
+      } /* for i = 1, ..., nnodes */
+   } /* main loops */
 
    if( !pc )
       g->mark[root] = TRUE;
