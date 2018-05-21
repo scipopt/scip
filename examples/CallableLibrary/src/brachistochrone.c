@@ -14,8 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   brachistochrone.c
- * @brief  Minimum time for a particle to go from point A to B under gravity only.
+ * @brief  Computing a minimum-time trajectory for a particle to move from point A to B under gravity only
  * @author Anass Meskini
+ * @author Stefan Vigerske
  *
  * This is an example that uses expressions and expression trees to set up non-linear constraints in SCIP when used as
  * a callable library. This example implements a discretized model to obtain the trajectory associated with the shortest
@@ -68,8 +69,8 @@ SCIP_RETCODE setupProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int          n,                  /**< number of points for discretization */
    SCIP_Real*            coord,              /**< array containing [y(0), y(N), x(0), x(N)] */
-   SCIP_VAR***           x_,                 /**< buffer to store pointer to x variables array */
-   SCIP_VAR***           y_                  /**< buffer to store pointer to y variables array */
+   SCIP_VAR***           xvars,              /**< buffer to store pointer to x variables array */
+   SCIP_VAR***           yvars               /**< buffer to store pointer to y variables array */
    )
 {
    /* variables:
@@ -105,8 +106,8 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &v, (size_t) n ) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &y, (size_t) n + 1) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &x, (size_t) n + 1) );
-   *x_ = x;
-   *y_ = y;
+   *xvars = x;
+   *yvars = y;
 
    /* create and add variables to the problem and set the initial and final point constraints through upper and lower
     * bounds
