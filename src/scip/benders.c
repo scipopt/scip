@@ -2095,9 +2095,9 @@ SCIP_RETCODE solveBendersSubproblems(
    /* it is possible to only solve a subset of subproblems. This is given by a parameter. */
    numtocheck = numSubproblemsToCheck(benders, set, type);
 
-   SCIPdebugMessage("Performing the subproblem solving process. Number of subproblems to check %d\n", numtocheck);
+   SCIPsetDebugMsg(set, "Performing the subproblem solving process. Number of subproblems to check %d\n", numtocheck);
 
-   SCIPdebugMessage("Benders' decomposition - solve loop %d\n", solveloop);
+   SCIPsetDebugMsg(set, "Benders' decomposition - solve loop %d\n", solveloop);
    numnotopt = 0;
    subproblemcount = 0;
 
@@ -2164,7 +2164,7 @@ SCIP_RETCODE solveBendersSubproblems(
 #ifdef SCIP_DEBUG
             if( type == SCIP_BENDERSENFOTYPE_LP )
             {
-               SCIPdebugMessage("LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
+               SCIPsetDebugMsg(set, "LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
                   SCIPbendersGetSubprobObjval(benders, i));
             }
 #endif
@@ -2212,12 +2212,12 @@ SCIP_RETCODE solveBendersSubproblems(
                   {
                      if( subproboptimal )
                      {
-                        SCIPdebugMessage("Subproblem %d is Optimal (%f >= %f)\n", i,
+                        SCIPsetDebugMsg(set, "Subproblem %d is Optimal (%f >= %f)\n", i,
                            SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
                      }
                      else
                      {
-                        SCIPdebugMessage("Subproblem %d is NOT Optimal (%f < %f)\n", i,
+                        SCIPsetDebugMsg(set, "Subproblem %d is NOT Optimal (%f < %f)\n", i,
                            SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
                      }
                   }
@@ -2621,7 +2621,7 @@ SCIP_RETCODE SCIPbendersExec(
 #ifdef SCIP_DEBUG
    if( (*result) == SCIP_CONSADDED )
    {
-      SCIPdebugMessage("Benders decomposition: Cut added\n");
+      SCIPsetDebugMsg(set, "Benders decomposition: Cut added\n");
    }
 #endif
 
@@ -2835,7 +2835,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
-   SCIPdebugMessage("Benders decomposition: solving subproblem %d\n", probnumber);
+   SCIPsetDebugMsg(set, "Benders decomposition: solving subproblem %d\n", probnumber);
 
    result = SCIP_DIDNOTRUN;
    objective = SCIPsetInfinity(set);
