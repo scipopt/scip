@@ -85,7 +85,7 @@ struct SCIP_BenderscutData
    int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
 };
 
-/** method to call, when the priority of a benders was changed */
+/** method to call, when the priority of a Benders' decomposition was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdBenderscutintConstant)
 {  /*lint --e{715}*/
