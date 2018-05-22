@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_benders.c
- * @brief  constraint handler for benders decomposition
+ * @brief  constraint handler for Benders' decomposition
  * @author Stephen J. Maher
  *
  * Two constraint handlers are implemented for the generation of Benders' decomposition cuts. When included in a
@@ -633,7 +633,7 @@ SCIP_DECL_CONSLOCK(consLockBenders)
  * constraint specific interface methods
  */
 
-/** creates the handler for benders constraints and includes it in SCIP */
+/** creates the handler for Benders' decomposition and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP*                 scip                /**< SCIP data structure */
    )

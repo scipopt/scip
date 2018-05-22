@@ -42,10 +42,10 @@ extern "C" {
 #endif
 
 
-/** copies the given benders to a new scip */
+/** copies the given Benders' decomposition to a new scip */
 extern
 SCIP_RETCODE SCIPbendersCopyInclude(
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
    SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
    SCIP_Bool             shareauxvars,       /**< should this Benders' use the highest priority Benders aux vars */
-   SCIP_DECL_BENDERSCOPY ((*benderscopy)),   /**< copy method of benders or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_BENDERSCOPY ((*benderscopy)),   /**< copy method of Benders' decomposition or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSFREE ((*bendersfree)),   /**< destructor of Benders' decomposition */
    SCIP_DECL_BENDERSINIT ((*bendersinit)),   /**< initialize Benders' decomposition */
    SCIP_DECL_BENDERSEXIT ((*bendersexit)),   /**< deinitialize Benders' decomposition */
@@ -136,14 +136,14 @@ SCIP_RETCODE SCIPbendersExitsol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** activates benders such that it is called in LP solving loop */
+/** activates Benders' decomposition such that it is called in LP solving loop */
 SCIP_RETCODE SCIPbendersActivate(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   nsubproblems        /**< the number subproblems used in this decomposition */
    );
 
-/** deactivates benders such that it is no longer called in LP solving loop */
+/** deactivates Benders' decomposition such that it is no longer called in LP solving loop */
 void SCIPbendersDeactivate(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -152,8 +152,8 @@ void SCIPbendersDeactivate(
 /** enables or disables all clocks of Benders' decomposition depending on the value of the flag */
 extern
 void SCIPbendersEnableOrDisableClocks(
-   SCIP_BENDERS*         benders,            /**< the benders for which all clocks should be enabled or disabled */
-   SCIP_Bool             enable              /**< should the clocks of the benders be enabled? */
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the Benders' decomposition be enabled? */
    );
 
 /** solves the subproblem using the current master problem solution.
@@ -252,8 +252,8 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    );
 
 /** merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
- *  constraints to the master problem, but keeps the subproblem stored in the Benders data structure. The reason for
- *  keeping the subproblem available is for when it is queried for solutions after the problem is solved.
+ *  constraints to the master problem, but keeps the subproblem stored in the Benders' decomposition data structure.
+ *  The reason for keeping the subproblem available is for when it is queried for solutions after the problem is solved.
  *
  *  Once the subproblem is merged into the master problem, then the subproblem is flagged as disabled. This means that
  *  it will not be solved in the subsequent subproblem solving loops.
@@ -280,11 +280,11 @@ void SCIPbendersSetPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** sets copy callback of benders */
+/** sets copy callback of Benders' decomposition */
 extern
 void SCIPbendersSetCopy(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_DECL_BENDERSCOPY ((*benderscopy))    /**< copy callback of benders */
+   SCIP_DECL_BENDERSCOPY ((*benderscopy))    /**< copy callback of Benders' decomposition */
    );
 
 /** sets destructor callback of Benders' decomposition */
@@ -470,16 +470,16 @@ void SCIPbendersSetBenderscutsSorted(
    SCIP_Bool             sorted              /**< the value to set the sorted flag to */
    );
 
-/** sorts benders cuts by priorities */
+/** sorts Benders' decomposition cuts by priorities */
 extern
 void SCIPbendersSortBenderscuts(
-   SCIP_BENDERS*         benders             /**< benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** sorts benders cuts by name */
+/** sorts Benders' decomposition cuts by name */
 extern
 void SCIPbendersSortBenderscutsName(
-   SCIP_BENDERS*         benders             /**< benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 #ifdef __cplusplus

@@ -15,7 +15,7 @@
 
 /**@file   type_benders.h
  * @ingroup TYPEDEFINITIONS
- * @brief  type definitions for benders decomposition methods
+ * @brief  type definitions for Benders' decomposition methods
  * @author Stephen J. Maher
  */
 
@@ -81,7 +81,8 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  */
 #define SCIP_DECL_BENDERSFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** initialization method of Benders' decomposition (called after problem was transformed and benders is active)
+/** initialization method of Benders' decomposition (called after problem was transformed and the Benders' decomposition
+ * is active)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -89,7 +90,8 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  */
 #define SCIP_DECL_BENDERSINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** deinitialization method of Benders' decomposition (called before transformed problem is freed and benders is active)
+/** deinitialization method of Benders' decomposition (called before transformed problem is freed and the Benders'
+ * decomposition is active)
  *
  *  input:
  *  - scip            : SCIP main data structure

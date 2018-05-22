@@ -1655,7 +1655,7 @@ SCIP_RETCODE SCIPcopyBenders(
    SCIP_Bool*            valid               /**< pointer to store whether all plugins were validly copied */
    )
 {
-   /* TODO: If the benders is not copied, then cons_benders needs to be deactivated. */
+   /* TODO: If the Benders' decomposition is not copied, then cons_benders needs to be deactivated. */
    SCIP_Bool copybendersvalid;
    int p;
 
@@ -3790,7 +3790,7 @@ SCIP_RETCODE doCopy(
    /* copy the Benders' decomposition plugins explicitly, because it requires the variable mapping hash map */
    SCIP_CALL( SCIPcopyBenders(sourcescip, targetscip, localvarmap, &benderscopyvalid) );
 
-   SCIPdebugMsg(sourcescip, "Copying benders plugins was%s valid.\n", benderscopyvalid ? "" : " not");
+   SCIPdebugMsg(sourcescip, "Copying Benders' decomposition plugins was%s valid.\n", benderscopyvalid ? "" : " not");
 
    localvalid = localvalid && benderscopyvalid;
 
@@ -5877,8 +5877,8 @@ SCIP_RETCODE SCIPdeactivatePricer(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  *
- *  @note method has all benders callbacks as arguments and is thus changed every time a new callback is added
- *        in future releases; consider using SCIPincludeBendersBasic() and setter functions
+ *  @note method has all Benders' decomposition callbacks as arguments and is thus changed every time a new callback is
+ *        added in future releases; consider using SCIPincludeBendersBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
 SCIP_RETCODE SCIPincludeBenders(
@@ -5975,7 +5975,7 @@ SCIP_RETCODE SCIPincludeBendersBasic(
 
    SCIP_CALL( checkStage(scip, "SCIPincludeBendersBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* check whether benders is already present */
+   /* check whether Benders' decomposition is already present */
    if( SCIPfindBenders(scip, name) != NULL )
    {
       SCIPerrorMessage("benders <%s> already included.\n", name);
@@ -6004,8 +6004,8 @@ SCIP_RETCODE SCIPincludeBendersBasic(
  */
 SCIP_RETCODE SCIPsetBendersCopy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSCOPY((*benderscopy))     /**< copy method of benders or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSCOPY((*benderscopy))     /**< copy method of Benders' decomposition or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6028,8 +6028,8 @@ SCIP_RETCODE SCIPsetBendersCopy(
  */
 SCIP_RETCODE SCIPsetBendersFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSFREE((*bendersfree))     /**< destructor of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSFREE((*bendersfree))     /**< destructor of Benders' decomposition */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6052,8 +6052,8 @@ SCIP_RETCODE SCIPsetBendersFree(
  */
 SCIP_RETCODE SCIPsetBendersInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINIT ((*bendersinit))    /**< initialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINIT ((*bendersinit))    /**< initialize Benders' decomposition */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6076,8 +6076,8 @@ SCIP_RETCODE SCIPsetBendersInit(
  */
 SCIP_RETCODE SCIPsetBendersExit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXIT ((*bendersexit))    /**< deinitialize benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXIT ((*bendersexit))    /**< deinitialize Benders' decomposition */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6100,8 +6100,8 @@ SCIP_RETCODE SCIPsetBendersExit(
  */
 SCIP_RETCODE SCIPsetBendersInitpre(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINITPRE((*bendersinitpre))/**< presolving initialization method of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINITPRE((*bendersinitpre))/**< presolving initialization method of Benders' decomposition */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersInitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6124,8 +6124,8 @@ SCIP_RETCODE SCIPsetBendersInitpre(
  */
 SCIP_RETCODE SCIPsetBendersExitpre(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre))/**< presolving deinitialization method of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre))/**< presolving deinitialization method of Benders' decomposition */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersExitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6148,8 +6148,8 @@ SCIP_RETCODE SCIPsetBendersExitpre(
  */
 SCIP_RETCODE SCIPsetBendersInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSINITSOL((*bendersinitsol))/**< solving process initialization method of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSINITSOL((*bendersinitsol))/**< solving process initialization method of Benders' decomposition */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6172,8 +6172,8 @@ SCIP_RETCODE SCIPsetBendersInitsol(
  */
 SCIP_RETCODE SCIPsetBendersExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization method of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization method of Benders' decomposition */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6196,7 +6196,7 @@ SCIP_RETCODE SCIPsetBendersExitsol(
  */
 SCIP_RETCODE SCIPsetBendersPresubsolve(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve))/**< method called prior to solving the subproblems */
    )
 {
@@ -6220,7 +6220,7 @@ SCIP_RETCODE SCIPsetBendersPresubsolve(
  */
 SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex)),/**< the solving method for convex Benders' decomposition subproblems */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< solving method for a Benders' decomposition subproblem */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the subproblem freeing method for Benders' decomposition */
@@ -6260,8 +6260,8 @@ SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
  */
 SCIP_RETCODE SCIPsetBendersPostsolve(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization method of benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization method of Benders' decomposition */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBendersPostsolve", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6286,7 +6286,9 @@ SCIP_BENDERS* SCIPfindBenders(
    return SCIPsetFindBenders(scip->set, name);
 }
 
-/** returns the array of currently available Benders' decomposition; active benders are in the first slots of the array */
+/** returns the array of currently available Benders' decomposition; active Benders' decomposition are in the first
+ * slots of the array
+ */
 SCIP_BENDERS** SCIPgetBenders(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -6592,7 +6594,7 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
  */
 SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
@@ -6635,7 +6637,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
  */
 SCIP_RETCODE SCIPfreeBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    )
 {
@@ -6797,8 +6799,8 @@ SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  *
- *  @note method has all benders callbacks as arguments and is thus changed every time a new callback is added
- *        in future releases; consider using SCIPincludeBendersBasic() and setter functions
+ *  @note method has all Benders' decomposition callbacks as arguments and is thus changed every time a new callback is
+ *        added in future releases; consider using SCIPincludeBendersBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
 SCIP_RETCODE SCIPincludeBenderscut(
@@ -6857,7 +6859,7 @@ SCIP_RETCODE SCIPincludeBenderscut(
 SCIP_RETCODE SCIPincludeBenderscutBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_BENDERSCUT**     benderscutptr,      /**< reference to a benders cut, or NULL */
+   SCIP_BENDERSCUT**     benderscutptr,      /**< reference to a Benders' decomposition cut, or NULL */
    const char*           name,               /**< name of Benders' decomposition */
    const char*           desc,               /**< description of Benders' decomposition */
    int                   priority,           /**< priority of the Benders' decomposition */
@@ -6870,7 +6872,7 @@ SCIP_RETCODE SCIPincludeBenderscutBasic(
 
    SCIP_CALL( checkStage(scip, "SCIPincludeBenderscutBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* check whether benders is already present */
+   /* check whether Benders' decomposition cut is already present */
    if( SCIPfindBenderscut(benders, name) != NULL )
    {
       SCIPerrorMessage("Benders' cut <%s> already included.\n", name);
@@ -6887,7 +6889,7 @@ SCIP_RETCODE SCIPincludeBenderscutBasic(
    return SCIP_OKAY;
 }
 
-/** sets copy method of benders cut
+/** sets copy method of Benders' decomposition cut
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6898,7 +6900,7 @@ SCIP_RETCODE SCIPincludeBenderscutBasic(
  */
 SCIP_RETCODE SCIPsetBenderscutCopy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< benders cut */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy))/**< copy method of benderscut or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
@@ -7069,7 +7071,7 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    return SCIP_OKAY;
 }
 
-/** adds the generated constraint to the Benders cut storage
+/** adds the generated constraint to the Benders' decomposition cut storage
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
