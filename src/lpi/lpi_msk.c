@@ -4306,14 +4306,22 @@ SCIP_RETCODE checkState1(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   n,                  /**< number of rows or columns */
    MSKstakeye*           sk,                 /**< basis status */
-   MSKaccmodee           accmode,            /**< whether rows/columns are considered */
-   char                  xc                  /**< specification of variables or constraints */
+   MSKaccmodee           accmode             /**< whether rows/columns are considered */
    )
 {
+   char xc;
    int i;
 
    assert(lpi != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
+
+   if( accmode == MSK_ACC_VAR )
+      xc = 'x';
+   else
+   {
+      assert( accmode == MSK_ACC_CON );
+      xc = 'c';
+   }
 
    /* printout for all except LOW, UPR, FIX and BAS with sl[xc]==su[xc] */
    for( i = 0; i < n; i++ )
@@ -4326,14 +4334,12 @@ SCIP_RETCODE checkState1(
          SCIPdebugMessage("STATE[%d]: %c[%d] = unk\n", optimizecount, xc, i);
          break;
       case MSK_SK_BAS:
-#ifndef NDEBUG
          /* the following function is deprecated */
          MOSEK_CALL( MSK_getsolutioni(lpi->task, accmode, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
          if (fabs(sl-su) > DEBUG_CHECK_STATE_TOL)
          {
             SCIPdebugMessage("STATE[%d]: %c[%d] = bas, sl%c = %g, su%c = %g\n", optimizecount, xc, i, xc, sl, xc, su);
          }
-#endif
          break;
       case MSK_SK_SUPBAS:
          SCIPdebugMessage("STATE[%d]: %c[%d] = supbas\n", optimizecount, xc, i);
@@ -4368,8 +4374,8 @@ SCIP_RETCODE checkState(
    assert(lpi != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
 
-   SCIP_CALL( checkState1(lpi, ncols, lpi->skx, MSK_ACC_VAR, 'x') );
-   SCIP_CALL( checkState1(lpi, nrows, lpi->skc, MSK_ACC_CON, 'c') );
+   SCIP_CALL( checkState1(lpi, ncols, lpi->skx, MSK_ACC_VAR) );
+   SCIP_CALL( checkState1(lpi, nrows, lpi->skc, MSK_ACC_CON) );
 
    return SCIP_OKAY;
  }
