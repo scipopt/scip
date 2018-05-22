@@ -812,6 +812,8 @@ INPUT                  = . \
                          ../examples/GMI/doc/xternal_gmi.c \
                          ../examples/Relaxator/src/ \
                          ../examples/Relaxator/doc/xternal_relaxator.c \
+                         ../examples/SCFLP/src/ \
+                         ../examples/SCFLP/doc/xternal_scflp.c \
                          ../examples/TSP/src/ \
                          ../examples/TSP/doc/xternal_tsp.c
 

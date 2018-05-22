@@ -168,6 +168,19 @@
  *  </tr>
  *  </table>
  *
+ *  @section BENDERSDECOMP Benders' decomposition
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  \ref SCFLP_MAIN "Stochastic capacitated facility location problem"
+ *  </td>
+ *  <td>
+ *  A stochastic programming problem that demonstrates the use of the Benders' decomposition frameowork within SCIP.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
  *  @section BRANCHANDCUT Branch-and-cut
  *
  *  <table>
