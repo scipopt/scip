@@ -4501,7 +4501,9 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(blkmem != NULL);
+#ifdef SCIP_DISABLED_CODE
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
+#endif
 
    if (lpistate == NULL)
    {
