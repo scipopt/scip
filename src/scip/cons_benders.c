@@ -129,17 +129,19 @@ SCIP_RETCODE constructValidSolution(
       /* setting the auxiliary variable in the new solution */
       for( j = 0; j < nsubproblems; j++ )
       {
+         SCIP_Real objval;
+
+         objval = SCIPbendersGetSubprobObjval(benders[i], j);
+
          if( SCIPvarGetStatus(auxiliaryvars[j]) == SCIP_VARSTATUS_FIXED
-            && !SCIPisEQ(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]),
-               SCIPbendersGetSubprobObjval(benders[i], j)) )
+            && !SCIPisEQ(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]), objval) )
          {
             success = FALSE;
             break;
          }
-         else if( SCIPisLT(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]),
-               SCIPbendersGetSubprobObjval(benders[i], j)) )
+         else if( SCIPisLT(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]), objval) )
          {
-            SCIP_CALL( SCIPsetSolVal(scip, newsol, auxiliaryvars[j], SCIPbendersGetSubprobObjval(benders[i], j)) );
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, auxiliaryvars[j], objval) );
          }
       }
 
@@ -176,13 +178,11 @@ SCIP_RETCODE constructValidSolution(
          SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, newsol) );
          SCIPdebugMsg(scip, "Creating solution was successful.\n");
       }
-#ifdef SCIP_DEBUG
       else
       {
          /* the solution might not be feasible, because of additional constraints */
          SCIPdebugMsg(scip, "Creating solution was not successful.\n");
       }
-#endif
    }
 
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
@@ -532,8 +532,12 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 }
 
 
-/** The presolving method for the Benders' decomposition constraint handler. This method is used to update the lower
- *  bounds of the auxiliary problem and to identify infeasibility before the subproblems are solved.
+/** the presolving method for the Benders' decomposition constraint handler
+ *
+ *  This method is used to update the lower bounds of the auxiliary problem and to identify infeasibility before the
+ *  subproblems are solved. When SCIP is copied, the Benders' decomposition subproblems from the source SCIP are
+ *  transferred to the target SCIP. So there is no need to perform this presolving step in the copied SCIP, since the
+ *  computed bounds would be identical.
  */
 static
 SCIP_DECL_CONSPRESOL(consPresolBenders)
