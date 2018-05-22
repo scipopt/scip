@@ -1175,8 +1175,9 @@ SCIP_RETCODE createSubproblems(
             /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
             if( mastervar != NULL && !SCIPisZero(subproblem, SCIPvarGetObj(vars[j])) )
             {
-               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_FULL, NULL, "Changing the objective coefficient of copy "
-                  "of master problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
+               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Changing the objective "
+                  "coefficient of copy of master problem variable <%s> in subproblem %d to zero.\n",
+                  SCIPvarGetName(mastervar), i);
                /* changing the subproblem variable objective coefficient to zero */
                SCIP_CALL( SCIPchgVarObj(subproblem, vars[j], 0.0) );
             }
@@ -3383,7 +3384,8 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    (*infeasible) = FALSE;
    optimal = FALSE;
 
-   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Computing the lower bound for subproblem %d\n", probnumber);
+   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Computing a lower bound for"
+      " subproblem %d\n", probnumber);
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
@@ -3399,7 +3401,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
       SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", 1) );
    }
 
-   /* if the subproblem not independent and is convex, then the probing LP is solve. Otherwise, the MIP is solved */
+   /* if the subproblem not independent and is convex, then the probing LP is solved. Otherwise, the MIP is solved */
    if( !SCIPbendersSubprobIsIndependent(benders, probnumber) && SCIPbendersSubprobIsConvex(benders, probnumber) )
    {
       assert(SCIPisLPConstructed(subproblem));
@@ -3415,6 +3417,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    else
    {
       SCIP_EVENTHDLRDATA* eventhdlrdata;
+
       /* if the subproblem is not convex, then event handlers have been added to interrupt the solve. These must be
        * disabled
        */
@@ -3492,8 +3495,8 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
    assert(set != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
-   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "Infeasibility of subproblem %d can't be resolved. "
-     "Subproblem %d is being merged into the master problem.\n", probnumber, probnumber);
+   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "Benders' decomposition: Infeasibility of subproblem %d can't "
+      "be resolved. Subproblem %d is being merged into the master problem.\n", probnumber, probnumber);
 
    /* freeing the subproblem because it will be flagged as independent. Since the subproblem is flagged as independent,
     * it will no longer be solved or freed within the solving loop.
