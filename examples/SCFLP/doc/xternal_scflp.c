@@ -43,7 +43,9 @@
  *
  * -# \ref SCFLP_PROBLEM "Problem description"
  * -# \ref SCFLP_READER "Parsing the input format"
- * -# \ref SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP - with and without Benders' decomposition"
+ * -# \ref SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP
+ *    - \ref SCFLP_DETEQUIV "Directly as a monolithic MIP"
+ *    - \ref SCFLP_BENDERS "Applying Benders' decomposition"
  */
 
 /**@page SCFLP_PROBLEM Problem description
