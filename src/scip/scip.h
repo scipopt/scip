@@ -397,34 +397,6 @@ SCIP_Bool SCIPisStopped(
  * debug solution methods
  */
 
-/**@addtogroup DebugSolutionMethods
- *
- * @{
- */
-
-/** enable debug solution mechanism
- *
- *  the debug solution mechanism allows to trace back the invalidation of
- *  a debug solution during the solution process of SCIP. It must be explicitly
- *  enabled for the SCIP data structure.
- *
- *  @see debug.h for more information on debug solution mechanism
- */
-EXTERN
-void SCIPenableDebugSol(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** disable solution debugging mechanism
- *
- *  @see debug.h for more information on debug solution mechanism
- */
-EXTERN
-void SCIPdisableDebugSol(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/**@} */
 
 
 /*
