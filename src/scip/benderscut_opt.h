@@ -20,8 +20,7 @@
  *
  * The classical Benders' decomposition optimality cuts arise from a feasible instance of the Benders' decomposition
  * subproblem. The optimality cuts are an underestimator of the subproblem objective function value. Auxiliary
- * variables, \f$\varphi\f$ are added to the master problem to compute the lower bound on the subproblem objective
- * fucntion value.
+ * variables, \f$\varphi\f$ are added to the master problem as alower bound on the subproblem objective function value.
  *
  * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
  * \f[
