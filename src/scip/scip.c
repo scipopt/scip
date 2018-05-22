@@ -6707,8 +6707,8 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    return SCIPbendersGetAuxiliaryVarVal(benders, scip->set, sol, probnumber);
 }
 
-/** Solves an independent subproblem to identify its lower bound. The lower bound is then used to update the bound on
- *  the auxiliary variable.
+/** solves an independent subproblem to identify its lower bound and updates the lower bound of the corresponding
+ *  auxiliary variable
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -6740,9 +6740,11 @@ SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
    return SCIP_OKAY;
 }
 
-/** Merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
- *  constraints to the master problem, but keeps the subproblem stored in the Benders data structure. The reason for
- *  keeping the subproblem available is for when it is queried for solutions after the problem is solved.
+/** merges a subproblem into the master problem.
+ *
+ *  This process adds a copy of the subproblem variables and constraints to the master problem, but keeps the subproblem
+ *  stored in the Benders data structure. The reason for keeping the subproblem available is for when it is queried for
+ *  solutions after the problem is solved.
  *
  *  Once the subproblem is merged into the master problem, then the subproblem is flagged as disabled. This means that
  *  it will not be solved in the subsequent subproblem solving loops.
