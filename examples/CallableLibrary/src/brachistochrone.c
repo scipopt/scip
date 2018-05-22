@@ -323,7 +323,7 @@ void visualizeSolutionGnuplot(
 /** runs the brachistochrone example*/
 static
 SCIP_RETCODE runBrachistochrone(
-   unsigned int          n,                  /**< number of points for discretization, or 0 if automatic choice */
+   unsigned int          n,                  /**< number of points for discretization */
    SCIP_Real*            coord               /**< array containing [y(0), y(N), x(0), x(N)] */
 )
 {
@@ -332,12 +332,10 @@ SCIP_RETCODE runBrachistochrone(
    SCIP_VAR** x;
    unsigned int i;
 
+   assert(n >= 2);
+
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   /* if no number of points given, then use 3 if no NLP solver, otherwise we can go higher */
-   if( n == 0 )
-      n = SCIPgetNNlpis(scip) > 0 ? 4 : 3;
 
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "**********************************************\n");
@@ -392,7 +390,7 @@ int main(
    SCIP_RETCODE retcode;
 
    /* setting up default problem parameters */
-   unsigned int n = 0;
+   unsigned int n = 3;
    SCIP_Real coord[4] = { Y_START, Y_END, X_START, X_END };
 
    /* change some parameters if given as arguments */
