@@ -9442,42 +9442,6 @@ SCIP_RETCODE SCIPvalidateSolve(
 
 /**@} */
 
-/**@addtogroup RandomNumbers
- *
- * @{
- */
-
-/** creates and initializes a random number generator
- *
- *  @note The initial seed is changed using SCIPinitializeRandomSeed()
- */
-EXTERN
-SCIP_RETCODE SCIPcreateRandom(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   unsigned int          initialseed,        /**< initial random seed */
-   SCIP_Bool             useglobalseed       /**< should SCIP's global seed be used to initialise the supplied seed? */
-   );
-
-/** frees a random number generator */
-EXTERN
-void SCIPfreeRandom(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
-   );
-
-/** initializes a random number generator with a given seed
- *
- *  @note The seed is changed using SCIPinitializeRandomSeed()
- */
-EXTERN
-void SCIPsetRandomSeed(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   unsigned int          seed                /**< new random seed */
-   );
-
-/**@} */
 
 #ifdef __cplusplus
 }
