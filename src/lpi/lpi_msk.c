@@ -4484,8 +4484,6 @@ SCIP_RETCODE SCIPlpiGetState(
 
 /** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
  *  columns and rows since the state was stored with SCIPlpiGetState()
- *
- * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
