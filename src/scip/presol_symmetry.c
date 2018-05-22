@@ -1674,11 +1674,22 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
-      for (i = 0; i < presoldata->nperms; ++i)
+      if ( transposedperms )
       {
-         SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
+         for (i = 0; i < presoldata->npermvars; ++i)
+         {
+            SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->nmaxperms);
+         }
+         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->npermvars);
       }
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
+      else
+      {
+         for (i = 0; i < presoldata->nperms; ++i)
+         {
+            SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
+         }
+         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
+      }
 
       /* reset settings */
       presoldata->npermvars = 0;
