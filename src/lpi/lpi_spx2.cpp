@@ -102,8 +102,6 @@
 
 #if (SOPLEX_APIVERSION <= 5)
 #include "spxgithash.h"
-#else
-#include "soplex/spxgithash.h"
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
