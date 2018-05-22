@@ -2585,66 +2585,6 @@ SCIP_NODESEL* SCIPgetNodesel(
 
 
 
-/**@addtogroup PublicDisplayMethods
- *
- * @{
- */
-
-/** creates a display column and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeDisp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of display column */
-   const char*           desc,               /**< description of display column */
-   const char*           header,             /**< head line of display column */
-   SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
-   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
-   SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
-   SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
-   SCIP_DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
-   SCIP_DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
-   SCIP_DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
-   SCIP_DISPDATA*        dispdata,           /**< display column data */
-   int                   width,              /**< width of display column (no. of chars used) */
-   int                   priority,           /**< priority of display column */
-   int                   position,           /**< relative position of display column */
-   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbor? */
-   );
-
-/** returns the display column of the given name, or NULL if not existing */
-EXTERN
-SCIP_DISP* SCIPfindDisp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of display column */
-   );
-
-/** returns the array of currently available display columns */
-EXTERN
-SCIP_DISP** SCIPgetDisps(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns the number of currently available display columns */
-EXTERN
-int SCIPgetNDisps(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** automatically selects display columns for being shown w.r.t. the display width parameter */
-EXTERN
-SCIP_RETCODE SCIPautoselectDisps(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** changes the display column mode */
-EXTERN
-void SCIPchgDispMode(
-   SCIP_DISP*            disp,               /**< display column */
-   SCIP_DISPMODE         mode                /**< the display column mode */
-   );
-
-/* @} */
 
 /**@addtogroup PublicTableMethods
  *
