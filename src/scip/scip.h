@@ -130,276 +130,49 @@
 #include "scip/debug.h"
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "scip/scip_bandit.h"
+#include "scip/scip_benders.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_compr.h"
+#include "scip/scip_concurrent.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_datastructures.h"
+#include "scip/scip_debug.h"
+#include "scip/scip_dialog.h"
+#include "scip/scip_disp.h"
+#include "scip/scip_event.h"
+#include "scip/scip_expr.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_nonlinear.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_relax.h"
+#include "scip/scip_reopt.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_table.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_validation.h"
+#include "scip/scip_var.h"
 
-/*
- * miscellaneous methods
- */
-
-
-
-
-
-/*
- * general SCIP methods
- */
-
-
-/*
- * debug solution methods
- */
-
-
-
-/*
- * message output methods
- */
-
-
-
-
-
-/*
- * SCIP copy methods
- */
-
-
-/*
- * parameter settings
- */
-
-
-
-/*
- * SCIP user functionality methods: managing plugins
- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
- * user interactive dialog methods
- */
-
-
-/*
- * global problem methods
- */
-
-
-
-
-
-/*
- * local subproblem methods
- */
-
-
-
-
-
-/*
- * solve methods
- */
-
-
-
-
-
-/*
- * variable methods
- */
-
-
-
-
-
-/*
- * conflict analysis methods
- */
-
-
-
-
-
-/*
- * constraint methods
- */
-
-
-
-
-
-/*
- * LP methods
- */
-
-
-
-
-/*
- * LP column methods
- */
-
-
-
-
-
-/*
- * LP row methods
- */
-
-
-
-/*
- * NLP methods
- */
-
-
-
-/*
- * NLP diving methods
- */
-
-
-
-/*
- * NLP nonlinear row methods
- */
-
-
-
-
-
-
-/*
- * nonlinear methods
- */
-
-
-
-
-
-/*
- * cutting plane methods
- */
-
-
-
-
-
-/*
- * LP diving methods
- */
-
-
-
-
-
-/*
- * probing methods
- */
-
-
-/*
- * branching methods
- */
-
-
-
-
-
-/*
- * primal solutions
- */
-
-
-
-
-
-/*
- * event methods
- */
-
-
-
-
-
-/*
- * tree methods
- */
-
-
-
-/*
- * parallel interface methods
- */
-
-
-
-
-/*
- * reoptimization methods
- */
-
-
-/*
- * statistic methods
- */
-
-
-/*
- * timing methods
- */
-
-
-
-/*
- * numeric values and comparisons
- */
-
-
-
-
-
-/*
- * memory management
- */
-
-
-
-
-/*
- * dynamic arrays
- */
-
-
-
-
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
