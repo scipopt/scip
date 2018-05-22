@@ -147,13 +147,13 @@ typedef struct shortest_path
 
 /* ((((edge) % 2) == 0) ? ((edge) + 1) : ((edge) - 1)) without branch */
 #define flipedge(edge) ( ((edge) + 1) - 2 * ((edge) % 2) )
+#define flipedge_Uint(edge) ( (((unsigned int) edge) + 1) - 2 * (((unsigned int) edge) % 2) )
 
 #define PATH_NIL    ((PATH*)0)
-
 #define CONNECT      0
 #define UNKNOWN    (-1)
 #define FARAWAY      1e15
-#define BLOCKED     1e10
+#define BLOCKED      1e10
 
 #define EDGE_BLOCKED      0
 #define EDGE_MODIFIABLE    1

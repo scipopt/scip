@@ -1105,15 +1105,11 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
          curr = prunegraph->pcancestors[k];
          while( curr != NULL )
          {
-
-            if( nodearrchar[prunegraph->orgtail[curr->index]] == FALSE )
-            {
+            if( !nodearrchar[prunegraph->orgtail[curr->index]])
                nodearrchar[prunegraph->orgtail[curr->index]] = TRUE;
-            }
-            if( nodearrchar[g->orghead[curr->index]] == FALSE )
-            {
+            if( !nodearrchar[g->orghead[curr->index]] )
                nodearrchar[g->orghead[curr->index]] = TRUE;
-            }
+
             curr = curr->parent;
          }
       }

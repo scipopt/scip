@@ -2310,7 +2310,7 @@ SCIP_RETCODE graph_knot_contract(
    int    head;
    int    tail;
    int    sgrad;
-   const SCIP_Bool pcmw = graph_pc_isPcMw(p);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(p) && 1;
 
    assert(p          != NULL);
    assert(t          >= 0);
@@ -2425,7 +2425,7 @@ SCIP_RETCODE graph_knot_contract(
          /* This is for nodes with edges to s and t.
           * Need to adjust the out and in costs of the edge
           */
-         if( SCIPisGT(scip, p->cost[et], outcost[i]) )
+         if( p->cost[et] > outcost[i] )
          {
             SCIPintListNodeFree(scip, &((p->ancestors)[et]));
             assert(ancestors != NULL);
@@ -2437,7 +2437,7 @@ SCIP_RETCODE graph_knot_contract(
 
             p->cost[et] = outcost[i];
          }
-         if( SCIPisGT(scip, p->cost[Edge_anti(et)], incost[i]) )
+         if( p->cost[Edge_anti(et)] > incost[i] )
          {
             anti = Edge_anti(et);
             SCIPintListNodeFree(scip, &(p->ancestors[anti]));
@@ -2555,9 +2555,9 @@ SCIP_RETCODE graph_knot_contractLowdeg2High(
    assert(g != NULL);
 
    if( g->grad[t] >= g->grad[s] )
-      SCIP_CALL(graph_knot_contract(scip, g, solnode, t, s));
+      SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    else
-      SCIP_CALL(graph_knot_contract(scip, g, solnode, s, t));
+      SCIP_CALL( graph_knot_contract(scip, g, solnode, s, t) );
 
    return SCIP_OKAY;
 }

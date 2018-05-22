@@ -99,6 +99,8 @@ SCIP_Bool is_maxprize(
    if( max > g->prize[i] )
       return FALSE;
 
+   max = -1.0;
+
    for( int k = 0; k < g->knots; k++ )
    {
       if( Is_term(g->term[k]) && g->mark[k] && g->grad[k] > 0 )
@@ -1423,6 +1425,9 @@ SCIP_RETCODE reduce_simple_pc(
                g->cost[flipedge(e1)]  += g->cost[e2];
 
                SCIPdebugMessage("contract non-terminals %d %d \n ", i2, i);
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], NULL) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL) );
+
                SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
                (*count)++;
 
@@ -1600,22 +1605,12 @@ SCIP_RETCODE reduce_simple_pc(
 
                   assert(g->inpbeg[j] == EAT_LAST);
 
-                  /* contract s into t */
-                  if( g->grad[i1] >= g->grad[i] )
-                  {
-                     SCIP_CALL(graph_knot_contract(scip, g, solnode, i1, i));
-                     graph_pc_knot2nonTerm(g, i);
-                  }
-                  else
-                  {
-                     SCIP_CALL(graph_knot_contract(scip, g, solnode, i, i1));
-                     graph_pc_knot2nonTerm(g, i1);
-                  }
-
+                  SCIP_CALL(graph_knot_contract(scip, g, solnode, i1, i));
+                  graph_pc_knot2nonTerm(g, i);
                } /* i1 == root */
                else
                {
-                  if( g->grad[i] >= g->grad[i1] )
+                  if( g->grad[i] >= g->grad[i1] || 1 )
                      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
                   else
                      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i, i1) );
