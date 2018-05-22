@@ -134,78 +134,6 @@
 #endif
 
 /*
- * Local methods
- */
-
-
-/** gets global lower (dual) bound in transformed problem */
-static
-SCIP_Real getLowerbound(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      return -SCIPinfinity(scip);
-   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-   {
-      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with lower
-       * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
-       * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
-       */
-      return -SCIPinfinity(scip);
-   }
-   else
-   {
-      SCIP_Real treelowerbound;
-
-      /* it may happen that the remaining tree is empty or all open nodes have a lower bound above the cutoff bound, but
-       * have not yet been cut off, e.g., when the user calls SCIPgetDualbound() in some event handler; in this case,
-       * the global lower bound is given by the upper bound value
-       */
-      treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
-
-      if( treelowerbound < scip->primal->upperbound)
-         return treelowerbound;
-      else
-         return scip->primal->upperbound;
-   }
-}
-
-/** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
-static
-SCIP_Real getUpperbound(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-      return -SCIPinfinity(scip);
-   else
-      return scip->primal->upperbound;
-}
-
-/** gets global primal bound (objective value of best solution or user objective limit) */
-static
-SCIP_Real getPrimalbound(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, getUpperbound(scip));
-}
-
-/** gets global dual bound */
-static
-SCIP_Real getDualbound(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   /* in case we are in presolving we use the stored dual bound if it exits */
-   if( scip->set->stage <= SCIP_STAGE_INITSOLVE && scip->transprob->dualbound < SCIP_INVALID )
-      return scip->transprob->dualbound;
-
-   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, getLowerbound(scip));
-}
-
-/*
  * miscellaneous methods
  */
 
@@ -558,7 +486,7 @@ SCIP_RETCODE SCIPprintStage(
       SCIP_CALL( SCIPprintStatus(scip, file) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
 
-      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, (int)SCIPgetObjsense(scip) * getPrimalbound(scip))  )
+      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, (int)SCIPgetObjsense(scip) * SCIPgetPrimalbound(scip))  )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " (objective limit reached)");
 
       break;
@@ -16311,7 +16239,7 @@ SCIP_RETCODE freeSolve(
       /* copy the current dual bound into the problem data structure such that it can be used initialize the new search
        * tree
        */
-      SCIPprobUpdateDualbound(scip->transprob, getDualbound(scip));
+      SCIPprobUpdateDualbound(scip->transprob, SCIPgetDualbound(scip));
    }
 
    /* remove focus from the current focus node */
@@ -16699,7 +16627,7 @@ SCIP_RETCODE displayRelevantStats(
       SCIP_Bool objlimitreached = FALSE;
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
-         && !SCIPisInfinity(scip, getPrimalbound(scip)) )
+         && !SCIPisInfinity(scip, SCIPgetPrimalbound(scip)) )
          objlimitreached = TRUE;
 
       SCIPmessagePrintInfo(scip->messagehdlr, "\n");
@@ -16740,7 +16668,7 @@ SCIP_RETCODE displayRelevantStats(
                (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN,"");
 
             SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%" SCIP_LONGINT_FORMAT " solutions%s)\n",
-               getPrimalbound(scip), scip->primal->nsolsfound, limsolstring);
+               SCIPgetPrimalbound(scip), scip->primal->nsolsfound, limsolstring);
          }
       }
       if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
@@ -16751,7 +16679,7 @@ SCIP_RETCODE displayRelevantStats(
          }
          else
          {
-            SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", getDualbound(scip));
+            SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
          }
          SCIPmessagePrintInfo(scip->messagehdlr, "Gap                : ");
          if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
@@ -44428,7 +44356,11 @@ SCIP_Real SCIPgetDualbound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return getDualbound(scip);
+   /* in case we are in presolving we use the stored dual bound if it exits */
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE && scip->transprob->dualbound < SCIP_INVALID )
+      return scip->transprob->dualbound;
+
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetLowerbound(scip));
 }
 
 /** gets global lower (dual) bound in transformed problem
@@ -44449,7 +44381,31 @@ SCIP_Real SCIPgetLowerbound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return getLowerbound(scip);
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      return -SCIPinfinity(scip);
+   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+   {
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with lower
+       * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
+       * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
+       */
+      return -SCIPinfinity(scip);
+   }
+   else
+   {
+      SCIP_Real treelowerbound;
+
+      /* it may happen that the remaining tree is empty or all open nodes have a lower bound above the cutoff bound, but
+       * have not yet been cut off, e.g., when the user calls SCIPgetDualbound() in some event handler; in this case,
+       * the global lower bound is given by the upper bound value
+       */
+      treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+
+      if( treelowerbound < scip->primal->upperbound)
+         return treelowerbound;
+      else
+         return scip->primal->upperbound;
+   }
 }
 
 /** gets dual bound of the root node for the original problem
@@ -44471,7 +44427,7 @@ SCIP_Real SCIPgetDualboundRoot(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return getPrimalbound(scip);
+      return SCIPgetPrimalbound(scip);
    else
       return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->rootlowerbound);
 }
@@ -44495,7 +44451,7 @@ SCIP_Real SCIPgetLowerboundRoot(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return getUpperbound(scip);
+      return SCIPgetUpperbound(scip);
    else
       return scip->stat->rootlowerbound;
 }
@@ -44574,7 +44530,7 @@ SCIP_Real SCIPgetPrimalbound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPrimalbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return getPrimalbound(scip);
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetUpperbound(scip));
 }
 
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
@@ -44598,7 +44554,10 @@ SCIP_Real SCIPgetUpperbound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return getUpperbound(scip);
+   if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+      return -SCIPinfinity(scip);
+   else
+      return scip->primal->upperbound;
 }
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
@@ -44719,10 +44678,10 @@ SCIP_Real SCIPgetGap(
    /* the lowerbound is infinity, but SCIP may not have updated the status; in this case, the problem was already solved
     * so we return gap = 0
     */
-   if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
+   if( SCIPsetIsInfinity(scip->set, SCIPgetLowerbound(scip)) )
       return 0.0;
 
-   return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getPrimalbound(scip), getDualbound(scip));
+   return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), SCIPgetPrimalbound(scip), SCIPgetDualbound(scip));
 }
 
 /** gets current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds
@@ -44753,10 +44712,10 @@ SCIP_Real SCIPgetTransGap(
    /* the lowerbound is infinity, but SCIP may not have updated the status; in this case, the problem was already solved
     * so we return gap = 0
     */
-   if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
+   if( SCIPsetIsInfinity(scip->set, SCIPgetLowerbound(scip)) )
       return 0.0;
 
-   return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getUpperbound(scip), getLowerbound(scip));
+   return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), SCIPgetUpperbound(scip), SCIPgetLowerbound(scip));
 }
 
 /** gets number of feasible primal solutions found so far
@@ -46476,8 +46435,8 @@ void SCIPprintSolutionStatistics(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintSolutionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   primalbound = getPrimalbound(scip);
-   dualbound = getDualbound(scip);
+   primalbound = SCIPgetPrimalbound(scip);
+   dualbound = SCIPgetDualbound(scip);
    gap = SCIPgetGap(scip);
 
    objlimitreached = FALSE;
@@ -47174,7 +47133,7 @@ void SCIPstoreSolutionGap(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   scip->stat->lastsolgap = SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getPrimalbound(scip), getDualbound(scip));
+   scip->stat->lastsolgap = SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), SCIPgetPrimalbound(scip), SCIPgetDualbound(scip));
 
    if( scip->primal->nsols == 1 )
       scip->stat->firstsolgap = scip->stat->lastsolgap;
