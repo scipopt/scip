@@ -194,50 +194,6 @@ extern "C" {
 
 
 
-/**@addtogroup PublicTableMethods
- *
- * @{
- */
-
-/** creates a statistics table and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeTable(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of statistics table */
-   const char*           desc,               /**< description of statistics table */
-   SCIP_Bool             active,             /**< should the table be activated by default? */
-   SCIP_DECL_TABLECOPY   ((*tablecopy)),     /**< copy method of statistics table or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_TABLEFREE   ((*tablefree)),     /**< destructor of statistics table */
-   SCIP_DECL_TABLEINIT   ((*tableinit)),     /**< initialize statistics table */
-   SCIP_DECL_TABLEEXIT   ((*tableexit)),     /**< deinitialize statistics table */
-   SCIP_DECL_TABLEINITSOL ((*tableinitsol)), /**< solving process initialization method of statistics table */
-   SCIP_DECL_TABLEEXITSOL ((*tableexitsol)), /**< solving process deinitialization method of statistics table */
-   SCIP_DECL_TABLEOUTPUT ((*tableoutput)),   /**< output method */
-   SCIP_TABLEDATA*       tabledata,          /**< statistics table data */
-   int                   position,           /**< position of statistics table */
-   SCIP_STAGE            earlieststage       /**< output of the statistics table is only printed from this stage onwards */
-   );
-
-/** returns the statistics table of the given name, or NULL if not existing */
-EXTERN
-SCIP_TABLE* SCIPfindTable(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of statistics table */
-   );
-
-/** returns the array of currently available statistics tables */
-EXTERN
-SCIP_TABLE** SCIPgetTables(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns the number of currently available statistics tables */
-EXTERN
-int SCIPgetNTables(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/* @} */
 
 
 
