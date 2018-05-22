@@ -25,8 +25,8 @@ fi
 cd ..
 
 # build a fresh version of SCIP
-#make -j clean
-#make -j ZIMPL=false
+make -j clean
+make -j ZIMPL=false
 
 # run scip with some commands for the shell tutorial
 bin/scip < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp
