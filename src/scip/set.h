@@ -589,27 +589,27 @@ void SCIPsetSortPricersName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** inserts variable benders in variable benders list */
+/** inserts Benders' decomposition into the Benders' decomposition list */
 extern
 SCIP_RETCODE SCIPsetIncludeBenders(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** returns the variable benders of the given name, or NULL if not existing */
+/** returns the Benders' decomposition of the given name, or NULL if not existing */
 extern
 SCIP_BENDERS* SCIPsetFindBenders(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           name                /**< name of variable benders */
+   const char*           name                /**< name of Benders' decomposition */
    );
 
-/** sorts benders by priorities */
+/** sorts Benders' decomposition by priorities */
 extern
 void SCIPsetSortBenders(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** sorts benders by name */
+/** sorts Benders' decomposition by name */
 extern
 void SCIPsetSortBendersName(
    SCIP_SET*             set                 /**< global SCIP settings */

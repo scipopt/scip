@@ -121,7 +121,7 @@ SCIP_Bool SCIPbendersIsInitialized(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** returns whether the given Benders decomposition is in use in the current problem */
+/** returns whether the given Benders' decomposition is in use in the current problem */
 SCIP_Bool SCIPbendersIsActive(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
    );
@@ -199,7 +199,9 @@ SCIP_BENDERSCUT* SCIPfindBenderscut(
    );
 
 
-/** returns the array of currently available Benders' cuts; active benders are in the first slots of the array */
+/** returns the array of currently available Benders' cuts; active Benders' decomposition are in the first slots of
+ * the array
+ */
 EXTERN
 SCIP_BENDERSCUT** SCIPbendersGetBenderscuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
