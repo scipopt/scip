@@ -100,3 +100,8 @@ done
 rm newfiles/scip/scip_bandit.c
 
 ./organizeincludes.sh
+
+#
+# replace doxygen brief descriptions
+#
+./descriptions.sh
