@@ -49,6 +49,9 @@
 #define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** the maximum depth at which the LNS check is performed */
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** the fraction of subproblems that are solved in each iteration */
 
+#define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
+                                                     merge candidates */
+
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
 
 /* event handler properties */
@@ -2661,6 +2664,43 @@ SCIP_RETCODE SCIPbendersExec(
    }
 #endif
 
+   /* if the number of checked pseudo solutions exceeds a set limit, then all subproblems are passed as merge
+    * candidates. Currently, merging subproblems into the master problem is the only method for resolving numerical
+    * troubles
+    */
+   if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
+   {
+      benders->npseudosols++;
+
+      if( benders->npseudosols > BENDERS_MAXPSEUDOSOLS )
+      {
+         /* if a priority merge candidate already exists, then no other merge candidates need to be added.*/
+         if( npriomergecands == 0 )
+         {
+            /* all subproblems are added to the merge candidate list. The first active subproblem is added as a
+             * priority merge candidate
+             */
+            nmergecands = 0;
+            npriomergecands = 1;
+            for( i = 0; i < nsubproblems; i++ )
+            {
+               /* only active subproblems are added to the merge candidate list */
+               if( subproblemIsActive(benders, i) )
+               {
+                  mergecands[nmergecands] = i;
+                  nmergecands++;
+               }
+            }
+         }
+
+         SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "The number of checked pseudo solutions exceeds the "
+           "limit of %d. All active subproblems are merge candidates, with Subproblem %d a priority candidate.\n",
+           BENDERS_MAXPSEUDOSOLS, mergecands[0]);
+      }
+   }
+   else
+      benders->npseudosols = 0;
+
    /* if the result is SCIP_DIDNOTFIND, then there was a error in generating cuts in all subproblems that are not
     * optimal. This result does not cutoff any solution, so the Benders' decomposition algorithm will fail.
     * TODO: Work out a way to ensure Benders' decomposition does not terminate due to a SCIP_DIDNOTFIND result.
@@ -2685,6 +2725,8 @@ SCIP_RETCODE SCIPbendersExec(
 
    if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
    {
+      /* if the pseudo solution is passed to the Benders' decomposition subproblems, then all subproblems are set as
+       * merge candidates. If there is a pseudo solution, then it may not be possible to  */
       if( (*infeasible) || !allverified )
          (*result) = SCIP_SOLVELP;
       else
