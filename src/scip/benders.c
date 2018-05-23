@@ -2876,6 +2876,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    result = SCIP_DIDNOTRUN;
    objective = SCIPsetInfinity(set);
 
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
    /* initially setting the solved flag to FALSE */
    (*solved) = FALSE;
 
@@ -2909,7 +2911,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
 
          /* if the LP was solved without error, then the subproblem is labelled as solved */
-         if( SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_ERROR )
+         if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL
+            || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
             (*solved) = TRUE;
       }
       else
@@ -2920,8 +2923,6 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          (*solved) = TRUE;
       }
    }
-
-   subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    bestsol = SCIPgetBestSol(subproblem);
 
@@ -2943,9 +2944,10 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
                probnumber);
             SCIPABORT();
          }
-         else if( SCIPgetLPSolstat(subproblem) = SCIP_LPSOLSTAT_ERROR )
+         else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_ERROR
+            || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_NOTSOLVED )
          {
-            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, "Benders' decomposition: Error solving LP relaxation of "
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Error solving LP relaxation of "
                "subproblem %d. No cut will be generated for this subproblem.\n", probnumber);
             SCIPbendersSetSubprobObjval(benders, probnumber, SCIPsetInfinity(set));
          }
@@ -3304,6 +3306,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       (*infeasible) = TRUE;
    else if( SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_OPTIMAL
       && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
+      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_NOTSOLVED
       && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_ERROR )
    {
       SCIPerrorMessage("Invalid status: %d. Solving the LP relaxation of Benders' decomposition subproblem %d.\n",
@@ -3403,7 +3406,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
       (*infeasible) = TRUE;
    else if( SCIPgetStatus(subproblem) != SCIP_STATUS_OPTIMAL && SCIPgetStatus(subproblem) != SCIP_STATUS_UNBOUNDED
-      && SCIPgetStatus(subproblem) != SCIP_STATUS_USERINTERRUPT && SCIPgetStatus(subproblem) != SCIP_STATUS_BESTSOLLIMIT)
+      && SCIPgetStatus(subproblem) != SCIP_STATUS_USERINTERRUPT && SCIPgetStatus(subproblem) != SCIP_STATUS_BESTSOLLIMIT
+      && SCIPgetStatus(subproblem) != SCIP_STATUS_TIMELIMIT )
    {
       SCIPerrorMessage("Invalid status: %d. Solving the CIP of Benders' decomposition subproblem %d.\n",
          SCIPgetLPSolstat(subproblem), probnumber);

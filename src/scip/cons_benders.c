@@ -253,10 +253,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
       {
          if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
          {
-            if( !SCIPsolIsOriginal(sol) )
-            {
-               SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
-            }
+            SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
          }
 
          (*result) = SCIP_INFEASIBLE;
