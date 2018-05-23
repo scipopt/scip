@@ -41,9 +41,6 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-#ifdef WITH_ZLIB
-#include <zlib.h>
-#endif
 
 #include "lpi/lpi.h"
 #include "nlpi/exprinterpret.h"
