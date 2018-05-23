@@ -108,8 +108,8 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                501 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
+#define SCIP_VERSION                600 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
 #define SCIP_APIVERSION              33 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2018 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
