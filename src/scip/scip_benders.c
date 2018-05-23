@@ -994,7 +994,7 @@ SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( checkStage(scip, "SCIPcomputeBendersSubproblemLowerbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcomputeBendersSubproblemLowerbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersComputeSubproblemLowerbound(benders, scip->set, probnumber, lowerbound, infeasible) );
 
