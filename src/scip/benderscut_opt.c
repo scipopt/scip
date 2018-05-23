@@ -133,10 +133,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
    SCIP_Real rhs;
    int i;
 
-#ifndef NDEBUG
    SCIP_Real verifyobj = 0;
    SCIP_Real checkobj = 0;
-#endif
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -308,7 +306,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
       return SCIP_OKAY;
    }
 
-#ifndef NDEBUG
    if( addcut )
       lhs = SCIProwGetLhs(row);
    else
@@ -319,7 +316,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
       verifyobj -= SCIPgetRowSolActivity(masterprob, row, sol);
    else
       verifyobj -= SCIPgetActivityLinear(masterprob, cons, sol);
-#endif
 
    /* it is possible that numerics will cause the generated cut to be invalid. This cut should not be added to the
     * master problem, since its addition could cut off feasible solutions. The success flag is set of false, indicating
