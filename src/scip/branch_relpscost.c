@@ -1385,7 +1385,7 @@ SCIP_RETCODE execRelpscost(
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
       assert(!SCIPisFeasIntegral(scip, branchcandssol[bestcand]));
-      assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
+      assert(!allcolsinlp || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
       assert(!bestsbdowncutoff && !bestsbupcutoff);
 
       var = branchcands[bestcand];
@@ -1479,7 +1479,7 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
-         (unsigned int)branchruledata->startrandseed) );
+         (unsigned int)branchruledata->startrandseed, TRUE) );
 
    return SCIP_OKAY;
 }

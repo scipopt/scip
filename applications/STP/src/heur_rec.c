@@ -2126,7 +2126,7 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
 #endif
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed, TRUE) );
 
    return SCIP_OKAY;
 }

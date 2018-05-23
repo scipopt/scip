@@ -88,8 +88,9 @@ SCIP_RETCODE SCIPpresolCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a presolver */
-SCIP_RETCODE SCIPpresolCreate(
+/** internal method for creating a presolver */
+static
+SCIP_RETCODE doPresolCreate(
    SCIP_PRESOL**         presol,             /**< pointer to store presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -128,6 +129,8 @@ SCIP_RETCODE SCIPpresolCreate(
    }
 
    SCIP_ALLOC( BMSallocMemory(presol) );
+   BMSclearMemory(*presol);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*presol)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*presol)->desc, desc, strlen(desc)+1) );
    (*presol)->presolcopy = presolcopy;
@@ -163,6 +166,38 @@ SCIP_RETCODE SCIPpresolCreate(
    return SCIP_OKAY;
 }
 
+/** creates a presolver */
+SCIP_RETCODE SCIPpresolCreate(
+   SCIP_PRESOL**         presol,             /**< pointer to store presolver */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of presolver */
+   const char*           desc,               /**< description of presolver */
+   int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+   int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   SCIP_PRESOLTIMING     timing,             /**< timing mask of the presolver */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
+   SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
+   SCIP_DECL_PRESOLINITPRE((*presolinitpre)),/**< presolving initialization method of presolver (called when presolving is about to begin) */
+   SCIP_DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
+   SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   )
+{
+   assert(presol != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+
+   SCIP_CALL_FINALLY( doPresolCreate(presol, set, messagehdlr, blkmem, name, desc, priority, maxrounds, timing,
+      presolcopy, presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata), 
+      (void) SCIPpresolFree(presol, set) );
+
+   return SCIP_OKAY;
+}
+
 /** frees memory of presolver */
 SCIP_RETCODE SCIPpresolFree(
    SCIP_PRESOL**         presol,             /**< pointer to presolver data structure */
@@ -170,7 +205,8 @@ SCIP_RETCODE SCIPpresolFree(
    )
 {
    assert(presol != NULL);
-   assert(*presol != NULL);
+   if( *presol == NULL )
+      return SCIP_OKAY;
    assert(!(*presol)->initialized);
    assert(set != NULL);
 
@@ -182,8 +218,8 @@ SCIP_RETCODE SCIPpresolFree(
 
    SCIPclockFree(&(*presol)->presolclock);
    SCIPclockFree(&(*presol)->setuptime);
-   BMSfreeMemoryArray(&(*presol)->name);
-   BMSfreeMemoryArray(&(*presol)->desc);
+   BMSfreeMemoryArrayNull(&(*presol)->name);
+   BMSfreeMemoryArrayNull(&(*presol)->desc);
    BMSfreeMemory(presol);
 
    return SCIP_OKAY;
@@ -386,7 +422,7 @@ SCIP_RETCODE SCIPpresolExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check number of presolving rounds */
-   if( presol->maxrounds >= 0 && nrounds >= presol->maxrounds )
+   if( presol->maxrounds >= 0 && presol->ncalls >= presol->maxrounds )
       return SCIP_OKAY;
 
    /* calculate the number of changes since last call */

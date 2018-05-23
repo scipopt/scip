@@ -46,10 +46,12 @@ MAINOBJ		=	probdata_cyc.o \
 			heur_cycgreedy.o \
 			heur_fuzzyround.o \
 			heur_cyckerlin.o \
+			heur_redsize.o \
 			branch_multinode.o \
 			sepa_edge.o \
 			sepa_subtour.o \
 			sepa_partition.o \
+			event_newsol.o \
 			cycplugins.o \
 			main.o
 

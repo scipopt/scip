@@ -33,7 +33,7 @@ static
 void setup(void)
 {
    SCIPcreate(&scip);
-   SCIPcreateRandom(scip, &randgen, randomseed);
+   SCIPcreateRandom(scip, &randgen, randomseed, TRUE);
 }
 
 static

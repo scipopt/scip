@@ -264,7 +264,7 @@ SCIP_Real SCIPaggrRowGetRhs(
 /** gets the number of row aggregations */
 EXTERN
 int SCIPaggrRowGetNRows(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    );
 
 /** perform a cut selection algorithm for the given array of cuts; the array is partitioned

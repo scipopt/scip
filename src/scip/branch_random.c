@@ -163,7 +163,7 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
-         (unsigned int)branchruledata->initseed) );
+         (unsigned int)branchruledata->initseed, TRUE) );
 
    return SCIP_OKAY;
 }

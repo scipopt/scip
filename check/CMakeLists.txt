@@ -80,6 +80,8 @@ set(settings_fastMIP
     "cgmipviol"
     "presolving_off"
     "separating_off"
+    "lookahead-abbrev-bincons"
+    "lookahead-addclique-scaledcutoffscore"
   )
 set(settings_MINLP
     "minlp"
@@ -118,6 +120,10 @@ set(settings_Symmetry
 set(settings_sparsify
     "sparsifyaggr"
   )
+
+set(settings_Benders
+    "usebenders"
+   )
 
 #
 # Indicator instances
@@ -175,6 +181,7 @@ set(instances_MIP
 # Reduced set of MIP instances for more expensive settings
 #
 set(instances_fastMIP
+    "instances/MIP/bell5.mps\;8966406.49"
     "instances/MIP/egout.mps\;568.1007"
     "instances/MIP/gt2.mps\;21166"
     "instances/MIP/MANN_a9.clq.lp\;16"
@@ -300,14 +307,16 @@ set(instances_Symmetry
 # Stochastic programming instances
 #
 set(instances_Stochastic
-#    "instances/Stochastic/4node1.smps\;480.9"
-#    "instances/Stochastic/4node2.smps\;480.9"
    "instances/Stochastic/pltexpA2_6.smps\;-9.479354404641"
    "instances/Stochastic/pltexpA2_16.smps\;-9.663308373027"
    "instances/Stochastic/pltexpA4_6.smps\;-19.5994173819041"
-#    "instances/Stochastic/pltexpA4_16.smps\;-18.8493368600210"
-#    "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
-#    "instances/Stochastic/sslp_5_25_100.smps\;-127.37"
+   )
+
+set(instances_Benders
+    "instances/Stochastic/4node1.smps\;480.9"
+    "instances/Stochastic/4node2.smps\;480.9"
+    "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
+    "instances/Stochastic/sslp_5_25_100.smps\;-127.37"
    )
 
 #
@@ -396,6 +405,7 @@ add_instancetests(instances_Orbitope settings_default "Orbitope")
 add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
+add_instancetests(instances_Benders settings_Benders "Benders")
 
 #
 # test writing and reading solutions
@@ -683,7 +693,6 @@ if (UNIX)
     else ()
         set(timeoutcommand "timeout")
     endif (APPLE)
-
     add_test(NAME signal-handling-sigterm-blend2
             COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -f ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/blend2.mps
             )

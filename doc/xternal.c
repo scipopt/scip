@@ -73,7 +73,6 @@
  *  - @subpage FURTHERINFO
  */
 
-
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /** @page LPI Available implementations of the LP solver interface
@@ -85,10 +84,10 @@
  * `spx`    | SoPlex
  * `cpx`    | IBM ILOG CPLEX
  * `xprs`   | FICO XPress
- * `grb`    | Gurobi (interface is in beta stage, version at least 7.0.2 required)
+ * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
- * `msk`    | Mosek (experimental)
+ * `msk`    | Mosek
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  *
@@ -1103,10 +1102,35 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>Cycle Clustering</b></a>
+ *  </td>
+ *  <td>
+ *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  <a href="http://scip.zib.de/doc/applications/MinIISC"><b>MinIISC</b></a>
  *  </td>
  *  <td>
  *  A solver that computes irreducible infeasible subsystems using Benders decomposition
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for multi-objective optimization problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  \ref RINGPACKING_MAIN "Ringpacking"
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the Ringpacking Problem. It includes a customized reader,
+ *  (global) problem data, variable data, and constraint handler.
  *  </td>
  *  </tr>
  *  <tr>
@@ -1123,22 +1147,6 @@
  *  </td>
  *  <td>
  *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
- *  </td>
- *  <td>
- *  A solver for multi-objective optimization problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>Cycle Clustering</b></a>
- *  </td>
- *  <td>
- *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
  *  </td>
  *  </tr>
  *  </table>
@@ -7886,7 +7894,7 @@
 
 /**@defgroup PublicRowMethods LP Row
  * @ingroup PublicLPMethods
- * @brief methods for LP rows
+ * @brief public methods for LP rows
  */
 
 /**@defgroup PublicCutMethods Cuts and Cutpools
@@ -7897,6 +7905,11 @@
 /**@defgroup PublicLPDivingMethods LP Diving
  * @ingroup PublicLPMethods
  * @brief methods to initiate and conduct LP diving
+ */
+
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PublicSolveMethods
+ * @brief public methods for conflict analysis
  */
 
 /**@defgroup PublicNLPMethods NLP Relaxation
@@ -7968,6 +7981,11 @@
  *  between nodes of a graph. Disjoint Set is also known as Union Find.
  */
 
+/**@defgroup PublicDynamicArrayMethods Dynamic Arrays
+ * @ingroup DataStructures
+ * @brief methods for the creation and access of dynamic arrays
+ */
+
 /**@defgroup DirectedGraph Directed Graph
  * @ingroup DataStructures
  * @brief graph structure with common algorithms for directed and undirected graphs
@@ -7978,6 +7996,11 @@
  * @brief commonly used methods from different categories
  *
  * Below you find a list of miscellaneous methods grouped by different categories
+ */
+
+/**@defgroup PublicValidationMethods Validation
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods for validating the correctness of a solving process
  */
 
 /**@defgroup PublicMemoryMethods Memory Management
@@ -8030,9 +8053,9 @@
  * @brief  public methods for tree compressions
  */
 
-/**@defgroup PublicConflictMethods Conflict Analysis
+/**@defgroup PublicConflicthdlrMethods Conflict Analysis
  * @ingroup PluginManagementMethods
- * @brief public methods related to conflict analysis
+ * @brief public methods for conflict handlers
  */
 
 /**@defgroup PublicConshdlrMethods Constraint handlers

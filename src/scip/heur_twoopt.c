@@ -847,7 +847,7 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
 #ifdef SCIP_STATISTIC
    /* initialize statistics */

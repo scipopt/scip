@@ -48,6 +48,7 @@
 #include "scip/type_var.h"
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
+#include "scip/pub_misc_linear.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -2077,6 +2078,20 @@ int SCIPsnprintf(
    int                   len,                /**< length of the string to copy */
    const char*           s,                  /**< source string */
    ...                                       /**< further parameters */
+   );
+
+/** safe version of strncpy
+ *
+ *  Copies string in s to t using at most @a size-1 nonzero characters (strncpy copies size characters). It always adds
+ *  a terminating zero char. Does not pad the remaining string with zero characters (unlike strncpy). Returns the number
+ *  of copied nonzero characters, if the length of s is at most size - 1, and returns size otherwise. Thus, the original
+ *  string was truncated if the return value is size.
+ */
+EXTERN
+int SCIPstrncpy(
+   char*                 t,                  /**< target string */
+   const char*           s,                  /**< source string */
+   int                   size                /**< maximal size of t */
    );
 
 /** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
