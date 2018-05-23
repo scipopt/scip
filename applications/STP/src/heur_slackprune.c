@@ -441,14 +441,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    }
 
    /* execute slackprune heuristic */
-   if( graph->stp_type == STP_MWCSP )
-   {
-      SCIP_CALL( SCIPStpHeurSlackPruneRunPcMw(scip, vars, graph, soledge, &success) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE, (graph->edges < SLACK_MAXTOTNEDGES)) );
-   }
+   SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE, (graph->edges < SLACK_MAXTOTNEDGES)) );
 
    /* solution found by slackprune heuristic? */
    if( success )
@@ -819,7 +812,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    PATH*    vnoi;
    PATH*    path;
    GNODE** gnodearr;
-   IDX* curr;
    SCIP_Real    ubbest;
    SCIP_Real    offsetnew;
    SCIP_Real*    cost;
@@ -1097,23 +1089,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    /* retransform edges fixed during graph reduction */
    graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
 
-   /* prune the solution tree (in the original graph) */
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( nodearrchar[k] == TRUE )
-      {
-         curr = prunegraph->pcancestors[k];
-         while( curr != NULL )
-         {
-            if( !nodearrchar[prunegraph->orgtail[curr->index]])
-               nodearrchar[prunegraph->orgtail[curr->index]] = TRUE;
-            if( !nodearrchar[g->orghead[curr->index]] )
-               nodearrchar[g->orghead[curr->index]] = TRUE;
-
-            curr = curr->parent;
-         }
-      }
-   }
+   SCIP_CALL( graph_sol_markPcancestors(scip, prunegraph->pcancestors, prunegraph->orgtail, prunegraph->orghead, nnodes,
+         nodearrchar, NULL, NULL, NULL, NULL) );
 
    for( e = 0; e < nedges; e++ )
       soledge[e] = UNKNOWN;

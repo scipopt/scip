@@ -186,10 +186,10 @@ SCIP_RETCODE trydg1edgepc(
 
          if( g->pcancestors[i] != NULL )
          {
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i1]), g->pcancestors[i], NULL) );
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->pcancestors[i], NULL) );
             SCIPintListNodeFree(scip, &(g->pcancestors[i]));
          }
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i1]), g->ancestors[iout], NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[iout], NULL) );
          (*count) += graph_pc_deleteTerm(scip, g, i);
          return SCIP_OKAY;
       }
@@ -1063,14 +1063,8 @@ SCIP_RETCODE reduce_simple_mw(
             }
             else
             {
-               if( g->pcancestors[i] != NULL )
-               {
-                  SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i2]), g->pcancestors[i], NULL));
-                  SCIPintListNodeFree(scip, &(g->pcancestors[i]));
-               }
-               SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i2]), g->ancestors[e], NULL));
-
-               SCIP_CALL(graph_knot_contract(scip, g, solnode, i2, i));
+               SCIP_CALL( graph_pc_contractEdgeAncestors(scip, g, i2, i, flipedge_Uint(e)) );
+               SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
             }
 
             localcount++;
@@ -1577,15 +1571,13 @@ SCIP_RETCODE reduce_simple_pc(
                   assert(e != EAT_LAST);
                   SCIPdebugMessage("contract rt %d->%d \n", i, i1);
 
-                  assert(g->pcancestors != NULL);
-#if 1
                   if( g->pcancestors[i] != NULL )
                   {
                      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->pcancestors[i], NULL));
                      SCIPintListNodeFree(scip, &(g->pcancestors[i]));
                   }
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[ett], NULL));
-#endif
+
                   /* artificial terminal to i */
                   j = g->head[e];
                   assert(!g->mark[j]);
@@ -1610,7 +1602,7 @@ SCIP_RETCODE reduce_simple_pc(
                } /* i1 == root */
                else
                {
-                  if( g->grad[i] >= g->grad[i1] || 1 )
+                  if( g->grad[i] >= g->grad[i1] )
                      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
                   else
                      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i, i1) );

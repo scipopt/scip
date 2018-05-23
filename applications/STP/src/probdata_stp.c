@@ -3039,9 +3039,12 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    else if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP
       || graph->stp_type == STP_RPCSPG )
    {
+      int* solnodequeue;
       int root;
       root = graph->source;
-      assert(root >= 0);
+      assert(root >= 0 && nsolnodes == 0);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &solnodequeue, norgnodes) );
 
       for( e = 0; e <= graph->edges; e++ )
       {
@@ -3054,6 +3057,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                curr = graph->fixedges;
             while (curr != NULL)
             {
+               const int ancestoredge = curr->index;
                if( e < graph->edges && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP) )
                {
                   if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[flipedge(e)])) )
@@ -3063,84 +3067,62 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                   }
                }
 
-               if( curr->index < graph->norgmodeledges )
+               if( ancestoredge < graph->norgmodeledges )
                {
-                  if( orgedges[curr->index] == FALSE )
+                  if( !orgedges[ancestoredge] )
                   {
-                     orgedges[curr->index] = TRUE;
+                     orgedges[ancestoredge] = TRUE;
                      nsoledges++;
                   }
-                  if( orgnodes[graph->orgtail[curr->index]] == FALSE )
+                  if( !orgnodes[graph->orgtail[ancestoredge]] )
                   {
-                     orgnodes[graph->orgtail[curr->index]] = TRUE;
-                     nsolnodes++;
+                     orgnodes[graph->orgtail[ancestoredge]] = TRUE;
+                     solnodequeue[nsolnodes++] = graph->orgtail[ancestoredge];
                   }
-                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                  if( !orgnodes[graph->orghead[ancestoredge]] )
                   {
-                     orgnodes[graph->orghead[curr->index]] = TRUE;
-                     nsolnodes++;
+                     orgnodes[graph->orghead[ancestoredge]] = TRUE;
+                     solnodequeue[nsolnodes++] = graph->orghead[ancestoredge];
                   }
                }
-               else if( graph->orghead[curr->index] < graph->norgmodelknots )
+               else if( graph->orghead[ancestoredge] < graph->norgmodelknots )
                {
-                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                  if( !orgnodes[graph->orghead[ancestoredge]])
                   {
-                     orgnodes[graph->orghead[curr->index]] = TRUE;
-                     nsolnodes++;
+                     orgnodes[graph->orghead[ancestoredge]] = TRUE;
+                     solnodequeue[nsolnodes++] = graph->orghead[ancestoredge];
                   }
                }
                curr = curr->parent;
             }
          }
       }
-      /* cover RPCSPG with single node solution */
-      if( graph->stp_type == STP_RPCSPG && orgnodes[root] == FALSE )
+      /* cover RPCSPG/RMWCSP with single node solution */
+      if( (graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP) && !orgnodes[root] )
       {
-         orgnodes[root] = TRUE;
          assert(nsolnodes == 0);
+
+         orgnodes[root] = TRUE;
          nsolnodes = 1;
       }
 
-      if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
-      {
-         for( k = 0; k < graph->norgmodelknots; k++ )
-         {
-            if( orgnodes[k] == TRUE )
-            {
-               curr = graph->pcancestors[k];
-               while( curr != NULL )
-               {
-                  if( orgedges[curr->index] == FALSE )
-                  {
-                     orgedges[curr->index] = TRUE;
-                     nsoledges++;
-                  }
-                  if( orgnodes[graph->orgtail[curr->index]] == FALSE )
-                  {
-                     orgnodes[graph->orgtail[curr->index]] = TRUE;
-                     nsolnodes++;
-                  }
-                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
-                  {
-                     orgnodes[graph->orghead[curr->index]] = TRUE;
-                     nsolnodes++;
-                  }
-                  curr = curr->parent;
-               }
-            }
-         }
-      }
+      SCIP_CALL( graph_sol_markPcancestors(scip, graph->pcancestors, graph->orgtail, graph->orghead, norgnodes,
+            orgnodes, orgedges, solnodequeue, &nsolnodes, &nsoledges ) );
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
       for( k = 0; k < norgnodes; k++ )
          if( orgnodes[k] == TRUE )
-	    SCIPinfoMessage(scip, file, "V %d\n", k + 1);
+
+	   SCIPinfoMessage(scip, file, "V %d\n", k + 1);
 
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
+
       for( e = 0; e < norgedges; e += 2 )
-	 if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
-	    SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
+         if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
+            SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
+
+      SCIPfreeBufferArray(scip, &solnodequeue);
    }
 
    SCIPfreeBufferArray(scip, &orgnodes);
