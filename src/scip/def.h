@@ -26,6 +26,7 @@
 
 #ifdef __cplusplus
 #define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 #endif
 
 #include <stdio.h>
