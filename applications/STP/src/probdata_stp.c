@@ -2196,6 +2196,10 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
 
+   if( pc )
+   {
+      SCIP_CALL(SCIPsetIntParam(scip, "constraints/logicor/presoltiming", 4));
+   }
 
    /* update type for MWCSP (might be RMWCSP now) */
    mw = (graph->stp_type == STP_MWCSP);

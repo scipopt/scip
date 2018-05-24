@@ -92,6 +92,7 @@ SCIP_RETCODE selectBranchingVertexByDegree(
    int* nodestate;
    int maxdegree = 0;
    const int nnodes = g->knots;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
 
@@ -103,12 +104,16 @@ SCIP_RETCODE selectBranchingVertexByDegree(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( nodestate[k] == BRANCH_STP_VERTEX_NONTERM && g->grad[k] > maxdegree )
+      if( nodestate[k] == BRANCH_STP_VERTEX_NONTERM && (g->grad[k] > maxdegree
+            || (pcmw && Is_pterm(g->term[k]))) )
       {
          assert(!Is_term(g->term[k]));
 
          maxdegree = g->grad[k];
          *vertex = k;
+
+         if( pcmw && Is_pterm(g->term[k]) )
+            maxdegree = nnodes;
       }
    }
 

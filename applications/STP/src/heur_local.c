@@ -54,6 +54,7 @@
 #define DEFAULT_MAXNBESTSOLS  25
 #define DEFAULT_NBESTSOLS     10
 #define DEFAULT_MINNBESTSOLS  6
+#define LOCAL_MAXRESTARTS  5
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
 #define GREEDY_EXTENSIONS_MW 6   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
@@ -634,7 +635,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       /* initialize data structures */
       SCIP_CALL( SCIPStpunionfindInit(scip, &uf, nnodes) );
 
-      for( nruns = 0; nruns < 3 && localmoves > 0; nruns++ )
+      for( nruns = 0; nruns < LOCAL_MAXRESTARTS && localmoves > 0; nruns++ )
       {
          localmoves = 0;
 

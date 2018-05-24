@@ -1305,12 +1305,11 @@ SCIP_RETCODE SCIPStpHeurRecRun(
              *  2. compute solution
              */
 
-            // todo: run prune heuristic with changed weights! costrev not needed!
+            // todo: run prune heuristic with changed weights!
 
             /* run TM heuristic */
             SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, solgraph, NULL, &best_start, soledges, heurdata->ntmruns,
                   solgraph->source, cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
-
 
             assert(SCIPisStopped(scip) || success);
             assert(SCIPisStopped(scip) || graph_sol_valid(scip, solgraph, soledges));
@@ -1408,7 +1407,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                   }
                }
             }
-         }
+         } /* if( solgraph->terms > 1 ) */
 
          /* retransform edges fixed during graph reduction */
          if( probtype != STP_DCSTP )
@@ -1445,22 +1444,24 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          if( pcmw )
          {
-            for( int k = 0; k < solgraph->orgknots; k++ )
-            {
-               if( solnodes[k] )
+            STP_Bool* pcancestoredges;
+            SCIP_CALL( SCIPallocBufferArray(scip, &pcancestoredges, solgraph->orgedges) );
+
+            for( int k = 0; k < solgraph->orgedges; k++ )
+               pcancestoredges[k] = FALSE;
+
+            SCIP_CALL( graph_sol_markPcancestors(scip, solgraph->pcancestors, solgraph->orgtail, solgraph->orghead, solgraph->orgknots,
+                  solnodes, pcancestoredges, NULL, NULL, NULL ) );
+
+            for( int k = 0; k < solgraph->orgedges; k++ )
+               if( pcancestoredges[k] )
                {
-                  curr = solgraph->pcancestors[k];
-                  while( curr != NULL )
-                  {
-                     const int i = edgeancestor[curr->index];
-
-                     stnodes[graph->tail[i]] = TRUE;
-                     stnodes[graph->head[i]] = TRUE;
-
-                     curr = curr->parent;
-                  }
+                  const int i = edgeancestor[k];
+                  stnodes[graph->tail[i]] = TRUE;
+                  stnodes[graph->head[i]] = TRUE;
                }
-            }
+
+            SCIPfreeBufferArray(scip, &pcancestoredges);
             SCIPfreeBufferArray(scip, &solnodes);
          }
 
@@ -1603,8 +1604,9 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 {
    SCIP_HEURDATA* tmheurdata;
    GRAPH* newgraph;
-   SCIP_Real dummy;
    int* unodemap;
+   STP_Bool* solnodes;
+   SCIP_Real dummy;
    int j;
    int nsolterms;
    int nsoledges;
@@ -1750,7 +1752,8 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    /* compute Steiner tree to obtain upper bound */
    best_start = newgraph->source;
-   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost, newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost,
+         newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
 
    graph_path_exit(scip, newgraph);
 
@@ -1773,6 +1776,26 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    for( int k = 0; k < nsolnodes; k++ )
       if( stvertex[unodemap[k]] )
          marksolverts(newgraph, newgraph->pcancestors[k], unodemap, stvertex);
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &solnodes, nsolnodes));
+
+   for( int k = 0; k < nsolnodes; k++ )
+      solnodes[k] = FALSE;
+
+   for( int k = 0; k < nnodes; k++ )
+      if( stvertex[k] )
+      {
+         assert(dnodemap[k] < nsolnodes);
+         solnodes[dnodemap[k]] = TRUE;
+      }
+
+   SCIP_CALL( graph_sol_markPcancestors(scip, newgraph->pcancestors, newgraph->orgtail, newgraph->orghead, nsolnodes, solnodes, NULL, NULL, NULL, NULL ) );
+
+   for( int k = 0; k < nsolnodes; k++ )
+      if( solnodes[k] )
+         stvertex[unodemap[k]] = TRUE;
+
+   SCIPfreeBufferArray(scip, &solnodes);
 
    for( int e = 0; e < nedges; e++ )
       newresult[e] = UNKNOWN;

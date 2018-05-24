@@ -1696,6 +1696,7 @@ SCIP_RETCODE computeDaSolPcMw(
    if( graph->stp_type != STP_MWCSP || !(*apsol) )
      return SCIP_OKAY;
 
+#if 1
    SCIP_CALL( SCIPStpHeurRecExclude(scip, graph, result1, result2, pathedge, nodearrchar, &success) );
 
    if( success )
@@ -1704,6 +1705,7 @@ SCIP_RETCODE computeDaSolPcMw(
       *upperbound = graph_sol_getObj(graph->cost, result1, 0.0, nedges);
       SCIPdebugMessage("DA: afterLastExclusion %f \n", *upperbound);
    }
+#endif
 
    return SCIP_OKAY;
 }

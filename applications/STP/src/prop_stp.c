@@ -735,15 +735,14 @@ SCIP_DECL_PROPEXEC(propExecStp)
       {
          callreduce = TRUE;
       }
-   }
 #ifdef WITH_UG
    if( propdata->ncalls == 1 && SCIPgetDepth(scip) == 0 )
    {
       SCIPdebugMessage("trigger UG root reductions \n");
       callreduce = TRUE;
    }
-
 #endif
+   }
 
    if( callreduce )
    {

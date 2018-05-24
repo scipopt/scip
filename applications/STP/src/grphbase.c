@@ -3218,6 +3218,7 @@ SCIP_RETCODE graph_sol_markPcancestors(
          for( IDX* curr = pcancestors[ancestornode]; curr != NULL; curr = curr->parent )
          {
             const int ancestoredge = curr->index;
+            assert(tails[ancestoredge] < orgnnodes && heads[ancestoredge] < orgnnodes);
 
             if( soledgemark != NULL && !soledgemark[ancestoredge] )
             {
