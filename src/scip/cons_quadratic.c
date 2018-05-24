@@ -11164,14 +11164,14 @@ SCIP_RETCODE propagateBoundsCons(
                      /* in theory, rhs2 should not be empty here
                       * what we tried to do here is to remove the contribution of the k'th bilinear term (=bilinbounds) to [minquadactivity,maxquadactivity] from rhs2
                       * however, quadactivity is computed differently (as x*(a1*y1+...+an*yn)) than bilinbounds (a*ak*yk) and since interval arithmetics do overestimation,
-                      * it can happen than bilinbounds is actually slightly larger than quadactivity, which results in rhs2 being (slightly) empty
+                      * it can happen that bilinbounds is actually slightly larger than quadactivity, which results in rhs2 being (slightly) empty
                       * a proper fix could be to compute the quadactivity also as x*a1*y1+...+x*an*yn in propagateBoundsGetQuadAcitivity if sqrcoef=0, but due to taking
                       * also infinite bounds into account, this complicates the code even further
                       * instead, I'll just work around this by turning an empty rhs2 into a small non-empty one
                       */
                      if( SCIPintervalIsEmpty(intervalinfty, rhs2) )
                      {
-                        assert(SCIPisRelEQ(scip, rhs2.inf, rhs2.sup));
+                        assert(SCIPisSumRelEQ(scip, rhs2.inf, rhs2.sup));
                         SCIPswapReals(&rhs2.inf, &rhs2.sup);
                      }
 
