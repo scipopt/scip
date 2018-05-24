@@ -396,6 +396,8 @@ set(nlpiheaders
 )
 
 set(objscipheaders
+    objscip/objbenders.h
+    objscip/objbenderscut.h
     objscip/objbranchrule.h
     objscip/objcloneable.h
     objscip/objconshdlr.h
