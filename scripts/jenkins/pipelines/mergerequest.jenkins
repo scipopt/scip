@@ -8,25 +8,24 @@ gitlabCommitStatus(name: 'cmake compilation') {
             }
         }
         stage('Merge') {
-            checkout
-                changelog: false,
-                poll: false,
-                scm: [
-                    $class: 'GitSCM',
-                    branches: [[name: 'origin/${gitlabSourceBranch}']],
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [[
-                        $class: 'PreBuildMerge',
-                        options: [
-                                 mergeRemote: 'origin',
-                                 mergeTarget: '${gitlabTargetBranch}'
-                        ]
-                    ]],
-                    submoduleCfg: [],
-                    userRemoteConfigs: [[
-                        credentialsId: '6b0cae3e-9aa0-4206-88ac-4362f76f0111',
-                    url: 'git@git.zib.de:integer/scip.git']]
-                ]
+            checkout changelog: false,
+                     poll: false,
+                     scm: [
+                         $class: 'GitSCM',
+                         branches: [[name: 'origin/${gitlabSourceBranch}']],
+                         doGenerateSubmoduleConfigurations: false,
+                         extensions: [[
+                             $class: 'PreBuildMerge',
+                             options: [
+                                      mergeRemote: 'origin',
+                                      mergeTarget: '${gitlabTargetBranch}'
+                             ]
+                         ]],
+                         submoduleCfg: [],
+                         userRemoteConfigs: [[
+                             credentialsId: '6b0cae3e-9aa0-4206-88ac-4362f76f0111',
+                         url: 'git@git.zib.de:integer/scip.git']]
+                     ]
         }
 
         stage('Test') {
