@@ -82,7 +82,6 @@ struct SCIP_LPi
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    int                   notfromscratch;     /**< do we not want to solve the lp from scratch */
    int                   solstat;            /**< solution status of last optimization call */
-   int                   unbvec;             /**< primal or dual vector on which the problem is unbounded */
    char                  solmethod;          /**< method used to solve the LP */
 
    char*                 larray;             /**< array with 'L' entries for changing lower bounds */
@@ -1840,6 +1839,7 @@ static SCIP_RETCODE lpiSolve(
       lpi->clearstate = FALSE;
    }
 
+   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, (lpi->par_presolve) ?  1 : 0) );
    CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, (lpi->par_presolve) ?  1 : 0) );
 
    if( lpi->par_fastlp )
@@ -1858,12 +1858,6 @@ static SCIP_RETCODE lpiSolve(
 
    /* evaluate the result */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_LPSTATUS, &lpi->solstat) );
-   if( lpi->solstat == XPRS_LP_UNBOUNDED || lpi->solstat == XPRS_LP_INFEAS )
-   {
-      CHECK_ZERO( lpi->messagehdlr, XPRSgetunbvec(lpi->xprslp, &lpi->unbvec) );
-   }
-   else
-      lpi->unbvec = -1;
 
    /* Make sure the LP is postsolved in case it was interrupted. */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRESOLVESTATE, &state) );
@@ -1899,7 +1893,7 @@ static SCIP_RETCODE lpiSolve(
 
       if( presolving != 0 )
       {
-         int tmpiterations;
+         int iterations;
 
          /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
          SCIPdebugMessage("presolver may have solved the problem -> calling Xpress %s again without presolve\n",
@@ -1907,21 +1901,16 @@ static SCIP_RETCODE lpiSolve(
 
          /* switch off preprocessing */
          CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, 0) );
 
          /* resolve w/o presolving */
          CHECK_ZERO( lpi->messagehdlr, XPRSlpoptimize(lpi->xprslp, method) );
 
          /* evaluate the result */
          CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_LPSTATUS, &lpi->solstat) );
-         if( lpi->solstat == XPRS_LP_UNBOUNDED || lpi->solstat == XPRS_LP_INFEAS )
-         {
-            CHECK_ZERO( lpi->messagehdlr, XPRSgetunbvec(lpi->xprslp, &lpi->unbvec) );
-         }
-         else
-            lpi->unbvec = -1;
 
-         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &tmpiterations) );
-         lpi->iterations += tmpiterations;
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &iterations) );
+         lpi->iterations += iterations;
          lpi->solisbasic = TRUE;
 
          CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &primalinfeasible) );
@@ -1931,6 +1920,7 @@ static SCIP_RETCODE lpiSolve(
 
          /* reinstall the previous setting */
          CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, presolving) );
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, presolving) );
       }
    }
 
