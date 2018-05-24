@@ -32,6 +32,8 @@
  * can be fit into the rectangle without being overlapping.
  */
 
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
+
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
