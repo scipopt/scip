@@ -40,7 +40,6 @@
 
 #include "scip/scip.h"
 #include "scip/cons_benders.h"
-#include "scip/cons_benderslp.h"
 #include "scip/heur_trysol.h"
 #include "scip/heuristics.h"
 
