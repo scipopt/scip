@@ -41,6 +41,9 @@
 #include "grph.h"
 #include "heur_tm.h"
 
+#define STP_DELPSEUDO_MAXGRAD 5
+#define STP_DELPSEUDO_MAXNEDGES 10
+
 /*
  * local functions
  */
@@ -58,9 +61,14 @@ SCIP_Bool cutoffEdge(
    int                   cutoffidx           /**< index for cutoff array */
    )
 {
-   const SCIP_Real newcost = ecostrev[edgeidx1] + ecost[edgeidx2];
+   SCIP_Real newcost;
 
    assert(edgeidx1 != edgeidx2);
+
+   if( cutoffs == NULL )
+      return FALSE;
+
+   newcost = ecostrev[edgeidx1] + ecost[edgeidx2];
 
    if( !SCIPisGT(scip, newcost, cutoffs[cutoffidx]) )
       return FALSE;
@@ -2124,9 +2132,6 @@ void graph_knot_del(
       graph_edge_del(scip, g, g->outbeg[k], freeancestors);
 }
 
-#define STP_DELPSEUDO_MAXGRAD 5
-#define STP_DELPSEUDO_MAXNEDGES 10
-
 /** pseudo delete node, i.e. reconnect neighbors; maximum degree of 4! */
 SCIP_RETCODE graph_knot_delPseudo(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2152,7 +2157,6 @@ SCIP_RETCODE graph_knot_delPseudo(
    const int degree = g->grad[vertex];
 
    assert(scip != NULL);
-   assert(cutoffs != NULL);
    assert(success != NULL);
    assert(g != NULL);
    assert(vertex >= 0);

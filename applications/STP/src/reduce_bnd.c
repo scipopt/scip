@@ -5135,11 +5135,6 @@ SCIP_RETCODE reduce_bound(
    /* traverse all node, try to eliminate 3 degree nodes */
    if( !mw )
    {
-      SCIP_Real cutoffs[6];
-
-      for( int i = 0; i < 6; i++ )
-         cutoffs[i] = FARAWAY;
-
       for( k = 0; k < nnodes; k++ )
       {
          if( (!graph->mark[k] && pc) || graph->grad[k] == 0 )
@@ -5150,7 +5145,7 @@ SCIP_RETCODE reduce_bound(
             tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
             if( SCIPisGT(scip, tmpcost, obj) )
             {
-               SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, cutoffs, NULL, k, &success) );
+               SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, NULL, NULL, k, &success) );
 
                assert(graph->grad[k] == 0 || (graph->grad[k] == 4 && !success));
             }
@@ -5433,7 +5428,6 @@ SCIP_RETCODE reduce_boundPrune(
    int                   minelims            /**< minimum number of edges to be eliminated */
    )
 {
-   SCIP_Real* cost3;
    SCIP_Real* const prize = graph->prize;
    SCIP_Real obj;
    SCIP_Real max;
@@ -5443,10 +5437,6 @@ SCIP_RETCODE reduce_boundPrune(
    SCIP_Real maxcost;
    SCIP_Real radiim2;
    SCIP_Real radiim3;
-   int* edges3;
-   int* nodes3;
-   IDX** ancestors = NULL;
-   IDX** revancestors = NULL;
    const int root = graph->source;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
@@ -5473,10 +5463,6 @@ SCIP_RETCODE reduce_boundPrune(
 
    mstobj = 0.0;
    *nelims = 0;
-
-   cost3 = NULL;
-   edges3 = NULL;
-   nodes3 = NULL;
 
    if( nterms <= 2 )
       return SCIP_OKAY;
@@ -5857,7 +5843,7 @@ SCIP_RETCODE reduce_boundPrune(
             }
          }
 #if 1
-         /* traverse all nodes, try to eliminate 3 degree nodes todo: extend for 3 ... 5 */
+         /* traverse all nodes, try to eliminate 3,4  degree nodes */
          for( int k = 0; k < nnodes; k++ )
          {
             if( (*nelims) >= minelims )
@@ -5871,7 +5857,7 @@ SCIP_RETCODE reduce_boundPrune(
 
             if( !eliminate )
             {
-               if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
+               if( graph->grad[k] >= 3 && graph->grad[k] <= 4 && !Is_term(graph->term[k]) )
                {
                   tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
                   for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
@@ -5886,83 +5872,21 @@ SCIP_RETCODE reduce_boundPrune(
                continue;
             }
 
-            if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
+            if( graph->grad[k] >= 3 && graph->grad[k] <= 4 && !Is_term(graph->term[k]) )
             {
                tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
                if( SCIPisGT(scip, tmpcost, obj) )
                {
-                  (*nelims)++;
+                  SCIP_Bool success;
 
-                  /* first 3-node elimination? */
-                  if( ancestors == NULL )
-                  {
-                     SCIP_CALL( SCIPallocBufferArray(scip, &cost3, 3) );
-                     SCIP_CALL( SCIPallocBufferArray(scip, &edges3, 3) );
-                     SCIP_CALL( SCIPallocBufferArray(scip, &nodes3, 3) );
-                     SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 3) );
-                     SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 3) );
-                     for( int l = 0; l < 3; l++ )
-                     {
-                        ancestors[l] = NULL;
-                        revancestors[l] = NULL;
-                     }
-                  }
+                  SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, NULL, NULL, k, &success) );
 
-                  assert(cost3 != NULL);
-                  assert(edges3 != NULL);
-                  assert(nodes3 != NULL);
-                  assert(ancestors != NULL);
-                  assert(revancestors != NULL);
+                  assert(graph->grad[k] == 0 || (graph->grad[k] == 4 && !success));
 
-                  SCIPdebugMessage("eliminated 3 knot %d\n", k);
-                  /* get incident edges, cost and adjacent nodes */
-                  for( int e = graph->outbeg[k], l = 0; e != EAT_LAST; e = graph->oeat[e] )
-                  {
-                     assert(l < 3);
-                     edges3[l] = e;
-                     nodes3[l] = graph->head[e];
-                     cost3[l++] = graph->cost[e];
-                  }
-
-                  /* clear */
-                  for( int l = 0; l < 3; l++ )
-                  {
-                     SCIPintListNodeFree(scip, &(ancestors[l]));
-                     SCIPintListNodeFree(scip, &(revancestors[l]));
-                  }
-
-                  /* store ancestors of incident edges */
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[0]), graph->ancestors[edges3[0]], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[0]), graph->ancestors[Edge_anti(edges3[0])], NULL) );
-
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[1]), graph->ancestors[edges3[1]], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[1]), graph->ancestors[Edge_anti(edges3[1])], NULL) );
-
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[2]), graph->ancestors[edges3[2]], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[2]), graph->ancestors[Edge_anti(edges3[2])], NULL) );
-
-                  SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[0], nodes3[0], nodes3[1], cost3[0] + cost3[1], ancestors[0], ancestors[1], revancestors[0], revancestors[1], TRUE) );
-                  SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[1], nodes3[1], nodes3[2], cost3[1] + cost3[2], ancestors[1], ancestors[2], revancestors[1], revancestors[2], TRUE) );
-                  SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[2], nodes3[2], nodes3[0], cost3[2] + cost3[0], ancestors[2], ancestors[0], revancestors[2], revancestors[0], TRUE) );
-
-                  assert(graph->grad[k] == 0);
+                  if( success )
+                     (*nelims)++;
                }
             }
-         }
-
-         if( ancestors != NULL )
-         {
-            assert(revancestors != NULL);
-            for( int k = 0; k < 3; k++ )
-            {
-               SCIPintListNodeFree(scip, &(ancestors[k]));
-               SCIPintListNodeFree(scip, &(revancestors[k]));
-            }
-            SCIPfreeBufferArray(scip, &revancestors);
-            SCIPfreeBufferArray(scip, &ancestors);
-            SCIPfreeBufferArray(scip, &nodes3);
-            SCIPfreeBufferArray(scip, &edges3);
-            SCIPfreeBufferArray(scip, &cost3);
          }
       } /* no MWCS */
 #endif
