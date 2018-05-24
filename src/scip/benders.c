@@ -49,6 +49,9 @@
 #define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** the maximum depth at which the LNS check is performed */
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** the fraction of subproblems that are solved in each iteration */
 
+#define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
+                                                     merge candidates */
+
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
 
 /* event handler properties */
@@ -1166,6 +1169,8 @@ SCIP_RETCODE createSubproblems(
        */
       if( !benders->iscopy )
       {
+         SCIP_Bool objchanged = FALSE;
+
          assert(SCIPgetStage(subproblem) == SCIP_STAGE_PROBLEM);
          for( j = 0; j < nvars; j++ )
          {
@@ -1180,7 +1185,15 @@ SCIP_RETCODE createSubproblems(
                   SCIPvarGetName(mastervar), i);
                /* changing the subproblem variable objective coefficient to zero */
                SCIP_CALL( SCIPchgVarObj(subproblem, vars[j], 0.0) );
+
+               objchanged = TRUE;
             }
+         }
+
+         if( objchanged )
+         {
+            SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Benders' decomposition: Objective coefficients of "
+               "copied of master problem variables has been changed to zero.\n");
          }
       }
 
@@ -2544,6 +2557,48 @@ SCIP_RETCODE SCIPbendersExec(
    }
 #endif
 
+   /* if the number of checked pseudo solutions exceeds a set limit, then all subproblems are passed as merge
+    * candidates. Currently, merging subproblems into the master problem is the only method for resolving numerical
+    * troubles.
+    *
+    * We are only interested in the pseudo solutions that have been checked completely for integrality. This is
+    * identified by checkint == TRUE. This means that the Benders' decomposition constraint is one of the last
+    * constraint handlers that must resolve the infeasibility. If the Benders' decomposition framework can't resolve the
+    * infeasibility, then this will result in an error.
+    */
+   if( type == SCIP_BENDERSENFOTYPE_PSEUDO && checkint )
+   {
+      benders->npseudosols++;
+
+      if( benders->npseudosols > BENDERS_MAXPSEUDOSOLS )
+      {
+         /* if a priority merge candidate already exists, then no other merge candidates need to be added.*/
+         if( npriomergecands == 0 )
+         {
+            /* all subproblems are added to the merge candidate list. The first active subproblem is added as a
+             * priority merge candidate
+             */
+            nmergecands = 0;
+            npriomergecands = 1;
+            for( i = 0; i < nsubproblems; i++ )
+            {
+               /* only active subproblems are added to the merge candidate list */
+               if( subproblemIsActive(benders, i) )
+               {
+                  mergecands[nmergecands] = i;
+                  nmergecands++;
+               }
+            }
+
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "   The number of checked pseudo solutions exceeds the "
+              "limit of %d. All active subproblems are merge candidates, with subproblem %d a priority candidate.\n",
+              BENDERS_MAXPSEUDOSOLS, mergecands[0]);
+         }
+      }
+   }
+   else
+      benders->npseudosols = 0;
+
    /* if the result is SCIP_DIDNOTFIND, then there was a error in generating cuts in all subproblems that are not
     * optimal. This result does not cutoff any solution, so the Benders' decomposition algorithm will fail.
     * TODO: Work out a way to ensure Benders' decomposition does not terminate due to a SCIP_DIDNOTFIND result.
@@ -2759,6 +2814,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    result = SCIP_DIDNOTRUN;
    objective = SCIPsetInfinity(set);
 
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
    /* initially setting the solved flag to FALSE */
    (*solved) = FALSE;
 
@@ -2790,17 +2847,20 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || SCIPbendersSubprobIsConvex(benders, probnumber) )
       {
          SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
+
+         /* if the LP was solved without error, then the subproblem is labelled as solved */
+         if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL
+            || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
+            (*solved) = TRUE;
       }
       else
       {
          SCIP_CALL( SCIPbendersSolveSubproblemCIP(benders, probnumber, infeasible, type, FALSE) );
+
+         /* if the generic subproblem solving methods are used, then the CIP subproblems are always solved. */
+         (*solved) = TRUE;
       }
-
-      /* if the generic subproblem solving methods are used, then the subproblems are always solved. */
-      (*solved) = TRUE;
    }
-
-   subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    bestsol = SCIPgetBestSol(subproblem);
 
@@ -2821,6 +2881,13 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
             SCIPerrorMessage("The LP of Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
                probnumber);
             SCIPABORT();
+         }
+         else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_ERROR
+            || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_NOTSOLVED )
+         {
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "   Benders' decomposition: Error solving LP "
+               "relaxation of subproblem %d. No cut will be generated for this subproblem.\n", probnumber);
+            SCIPbendersSetSubprobObjval(benders, probnumber, SCIPsetInfinity(set));
          }
          else
          {
@@ -3173,12 +3240,12 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
    SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
 
-   assert(!lperror);
-
    if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
       (*infeasible) = TRUE;
    else if( SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_OPTIMAL
-      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
+      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_NOTSOLVED
+      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_ERROR )
    {
       SCIPerrorMessage("Invalid status: %d. Solving the LP relaxation of Benders' decomposition subproblem %d.\n",
          SCIPgetLPSolstat(subproblem), probnumber);
@@ -3277,7 +3344,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
       (*infeasible) = TRUE;
    else if( SCIPgetStatus(subproblem) != SCIP_STATUS_OPTIMAL && SCIPgetStatus(subproblem) != SCIP_STATUS_UNBOUNDED
-      && SCIPgetStatus(subproblem) != SCIP_STATUS_USERINTERRUPT && SCIPgetStatus(subproblem) != SCIP_STATUS_BESTSOLLIMIT)
+      && SCIPgetStatus(subproblem) != SCIP_STATUS_USERINTERRUPT && SCIPgetStatus(subproblem) != SCIP_STATUS_BESTSOLLIMIT
+      && SCIPgetStatus(subproblem) != SCIP_STATUS_TIMELIMIT )
    {
       SCIPerrorMessage("Invalid status: %d. Solving the CIP of Benders' decomposition subproblem %d.\n",
          SCIPgetLPSolstat(subproblem), probnumber);
@@ -3531,7 +3599,7 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
    assert(set != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
-   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "Benders' decomposition: Infeasibility of subproblem %d can't "
+   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "   Benders' decomposition: Infeasibility of subproblem %d can't "
       "be resolved. Subproblem %d is being merged into the master problem.\n", probnumber, probnumber);
 
    /* freeing the subproblem because it will be flagged as independent. Since the subproblem is flagged as independent,

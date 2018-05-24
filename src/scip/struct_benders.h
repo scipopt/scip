@@ -101,6 +101,9 @@ struct SCIP_Benders
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 
+   /* solving process information */
+   int                   npseudosols;        /**< the number of pseudo solutions checked since the last generated cut */
+
    /* Bender's cut information */
    SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */
    int                   nbenderscuts;       /**< the number of Benders' cut algorithms */
