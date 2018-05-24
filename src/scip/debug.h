@@ -287,6 +287,34 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
 
 #endif
 
+/** checks, if SCIP is in one of the feasible stages */
+#ifndef NDEBUG
+
+SCIP_RETCODE SCIPcheckStage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           method,             /**< method that was called */
+   SCIP_Bool             init,               /**< may method be called in the INIT stage? */
+   SCIP_Bool             problem,            /**< may method be called in the PROBLEM stage? */
+   SCIP_Bool             transforming,       /**< may method be called in the TRANSFORMING stage? */
+   SCIP_Bool             transformed,        /**< may method be called in the TRANSFORMED stage? */
+   SCIP_Bool             initpresolve,       /**< may method be called in the INITPRESOLVE stage? */
+   SCIP_Bool             presolving,         /**< may method be called in the PRESOLVING stage? */
+   SCIP_Bool             exitpresolve,       /**< may method be called in the EXITPRESOLE stage? */
+   SCIP_Bool             presolved,          /**< may method be called in the PRESOLVED stage? */
+   SCIP_Bool             initsolve,          /**< may method be called in the INITSOLVE stage? */
+   SCIP_Bool             solving,            /**< may method be called in the SOLVING stage? */
+   SCIP_Bool             solved,             /**< may method be called in the SOLVED stage? */
+   SCIP_Bool             exitsolve,          /**< may method be called in the EXITSOLVE stage? */
+   SCIP_Bool             freetrans,          /**< may method be called in the FREETRANS stage? */
+   SCIP_Bool             freescip            /**< may method be called in the FREE stage? */
+   );
+#else
+
+#define SCIPcheckStage(scip,method,init,problem,transforming,transformed,initpresolve,presolving,exitpresolve,presolved, \
+   initsolve,solving,solved,exitsolve,freetrans,freescip) SCIP_OKAY
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif

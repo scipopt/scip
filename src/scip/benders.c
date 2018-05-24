@@ -2676,9 +2676,14 @@ SCIP_RETCODE SCIPbendersExec(
 
    /* if the number of checked pseudo solutions exceeds a set limit, then all subproblems are passed as merge
     * candidates. Currently, merging subproblems into the master problem is the only method for resolving numerical
-    * troubles
+    * troubles.
+    *
+    * We are only interested in the pseudo solutions that have been checked completely for integrality. This is
+    * identified by checkint == TRUE. This means that the Benders' decomposition constraint is one of the last
+    * constraint handlers that must resolve the infeasibility. If the Benders' decomposition framework can't resolve the
+    * infeasibility, then this will result in an error.
     */
-   if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
+   if( type == SCIP_BENDERSENFOTYPE_PSEUDO && checkint )
    {
       benders->npseudosols++;
 
