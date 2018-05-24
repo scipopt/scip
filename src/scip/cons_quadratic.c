@@ -7031,6 +7031,10 @@ SCIP_RETCODE generateCutLTI(
        SCIPisInfinity(scip, rightminactivity) || SCIPisInfinity(scip, -rightmaxactivity) )
       return SCIP_OKAY;
 
+   /* if activity in reference point exceeds value for infinity, then the below method will also not work properly */
+   if( SCIPisInfinity(scip, REALABS(leftrefactivity)) || SCIPisInfinity(scip, REALABS(rightrefactivity)) )
+      return SCIP_OKAY;
+
    /* if any of the factors is essentially fixed, give up and do usual method (numerically less sensitive, I hope) */
    if( SCIPisRelEQ(scip, leftminactivity, leftmaxactivity) || SCIPisRelEQ(scip, rightminactivity, rightmaxactivity) )
       return SCIP_OKAY;
