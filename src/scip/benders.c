@@ -2623,8 +2623,6 @@ SCIP_RETCODE SCIPbendersExec(
 
    if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
    {
-      /* if the pseudo solution is passed to the Benders' decomposition subproblems, then all subproblems are set as
-       * merge candidates. If there is a pseudo solution, then it may not be possible to  */
       if( (*infeasible) || !allverified )
          (*result) = SCIP_SOLVELP;
       else
