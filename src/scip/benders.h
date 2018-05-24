@@ -239,6 +239,18 @@ SCIP_Real SCIPbendersGetAuxiliaryVarVal(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** Solves an independent subproblem to identify its lower bound. The lower bound is then used to update the bound on
+ *  the auxiliary variable.
+ */
+extern
+SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   probnumber,         /**< the subproblem to be evaluated */
+   SCIP_Real*            lowerbound,         /**< the lowerbound for the subproblem */
+   SCIP_Bool*            infeasible          /**< was the subproblem found to be infeasible? */
+   );
+
 /** merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
  *  constraints to the master problem, but keeps the subproblem stored in the Benders' decomposition data structure.
  *  The reason for keeping the subproblem available is for when it is queried for solutions after the problem is solved.
