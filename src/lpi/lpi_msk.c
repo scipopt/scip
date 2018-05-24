@@ -4847,9 +4847,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
       if( *ival == MSK_SCALING_NONE )
          *ival = 0;
-      else
+      else if( *ival == MSK_SCALING_FREE )
          *ival = 1;
-      /* further choice: MSK_SCALING_AGGRESSIVE - not currently used */
+      else if( *ival == MSK_SCALING_AGGRESSIVE )
+         *ival = 2;
+      else /* MSK_SCALING_MODERATE should not be used by the interface */
+         return SCIP_PARAMETERWRONGVAL;
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
@@ -4917,18 +4920,22 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
-      assert( ival == 0 || ival == 1 );
+      assert( ival >= 0 && ival <= 2 );
       if( ival == 0 )
       {
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_NONE) );
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_NONE) );
       }
-      else
+      else if( ival == 1 )
       {
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_FREE) );
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_FREE) );
       }
-      /* could also use: MSK_SCALING_AGGRESSIVE */
+      else
+      {
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_AGGRESSIVE) );
+      }
 
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
