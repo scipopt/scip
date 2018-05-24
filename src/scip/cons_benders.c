@@ -130,7 +130,7 @@ SCIP_RETCODE constructValidSolution(
          default:
             SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
             break;
-      }
+      }  /*lint !e788*/
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
 
