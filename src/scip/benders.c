@@ -1170,6 +1170,8 @@ SCIP_RETCODE createSubproblems(
        */
       if( !benders->iscopy )
       {
+         SCIP_Bool objchanged = FALSE;
+
          assert(SCIPgetStage(subproblem) == SCIP_STAGE_PROBLEM);
          for( j = 0; j < nvars; j++ )
          {
@@ -1183,7 +1185,15 @@ SCIP_RETCODE createSubproblems(
                   "of master problem variable <%s> in subproblem %d to zero.\n", SCIPvarGetName(mastervar), i);
                /* changing the subproblem variable objective coefficient to zero */
                SCIP_CALL( SCIPchgVarObj(subproblem, vars[j], 0.0) );
+
+               objchanged = TRUE;
             }
+         }
+
+         if( objchanged )
+         {
+            SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Benders' decomposition: Objective coefficients of "
+               "copied of master problem variables has been changed to zero.\n");
          }
       }
 
@@ -2696,11 +2706,11 @@ SCIP_RETCODE SCIPbendersExec(
                   nmergecands++;
                }
             }
-         }
 
-         SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "The number of checked pseudo solutions exceeds the "
-           "limit of %d. All active subproblems are merge candidates, with Subproblem %d a priority candidate.\n",
-           BENDERS_MAXPSEUDOSOLS, mergecands[0]);
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "   The number of checked pseudo solutions exceeds the "
+              "limit of %d. All active subproblems are merge candidates, with subproblem %d a priority candidate.\n",
+              BENDERS_MAXPSEUDOSOLS, mergecands[0]);
+         }
       }
    }
    else
@@ -2994,8 +3004,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_ERROR
             || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_NOTSOLVED )
          {
-            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Error solving LP relaxation of "
-               "subproblem %d. No cut will be generated for this subproblem.\n", probnumber);
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "   Benders' decomposition: Error solving LP "
+               "relaxation of subproblem %d. No cut will be generated for this subproblem.\n", probnumber);
             SCIPbendersSetSubprobObjval(benders, probnumber, SCIPsetInfinity(set));
          }
          else
@@ -3608,7 +3618,7 @@ SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
    assert(set != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
 
-   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "Infeasibility of subproblem %d can't be resolved. "
+   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "   Infeasibility of subproblem %d can't be resolved. "
      "Subproblem %d is being merged into the master problem.\n", probnumber, probnumber);
 
    /* freeing the subproblem because it will be flagged as independent. Since the subproblem is flagged as independent,
