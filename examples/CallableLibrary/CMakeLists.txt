@@ -30,7 +30,7 @@ endif()
 target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(string ${SCIP_LIBRARIES})
-target_link_libraries(brachistochrone ${SCIP_LIBRARIES})
+target_link_libraries(brachistochrone ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(circlepacking ${SCIP_LIBRARIES} ${LIBM})
 
 if( TARGET examples )

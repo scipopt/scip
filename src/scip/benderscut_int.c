@@ -85,7 +85,7 @@ struct SCIP_BenderscutData
    int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
 };
 
-/** method to call, when the priority of a benders was changed */
+/** method to call, when the priority of a Benders' decomposition was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdBenderscutintConstant)
 {  /*lint --e{715}*/
@@ -351,6 +351,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 
    if( optimal )
    {
+      (*result) = SCIP_FEASIBLE;
       SCIPdebugMsg(masterprob, "No <%s> cut added. Current Master Problem Obj: %g\n", BENDERSCUT_NAME,
          SCIPgetSolOrigObj(masterprob, NULL));
       return SCIP_OKAY;

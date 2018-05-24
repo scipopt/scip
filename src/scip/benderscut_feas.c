@@ -165,7 +165,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
        */
       if( mastervar != NULL )
       {
-         SCIPdebugMessage("Adding coeffs to feasibility cut: <%s> dualsol %g\n", SCIPvarGetName(mastervar), dualsol);
+         SCIPdebugMsg(masterprob ,"Adding coeffs to feasibility cut: <%s> dualsol %g\n", SCIPvarGetName(mastervar), dualsol);
 
          SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, mastervar, dualsol) );
       }
@@ -208,7 +208,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    if( SCIPisGE(masterprob, activity, lhs) )
    {
       (*success) = FALSE;
-      SCIPdebugMessage("Invalid feasibility cut - activity is greater than lhs %g >= %g.\n", activity, lhs);
+      SCIPdebugMsg(masterprob ,"Invalid feasibility cut - activity is greater than lhs %g >= %g.\n", activity, lhs);
       return SCIP_OKAY;
    }
 
