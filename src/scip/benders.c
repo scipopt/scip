@@ -2706,11 +2706,11 @@ SCIP_RETCODE SCIPbendersExec(
                   nmergecands++;
                }
             }
-         }
 
-         SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "   The number of checked pseudo solutions exceeds the "
-           "limit of %d. All active subproblems are merge candidates, with subproblem %d a priority candidate.\n",
-           BENDERS_MAXPSEUDOSOLS, mergecands[0]);
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "   The number of checked pseudo solutions exceeds the "
+              "limit of %d. All active subproblems are merge candidates, with subproblem %d a priority candidate.\n",
+              BENDERS_MAXPSEUDOSOLS, mergecands[0]);
+         }
       }
    }
    else
