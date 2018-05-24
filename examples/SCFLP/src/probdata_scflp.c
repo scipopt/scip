@@ -99,8 +99,7 @@
  *
  * Once the master and subproblem SCIP instances are created, the Benders' decomposition is invoked by calling the
  * interface function SCIPcreateBendersDefault(). The parameters for this function are a SCIP instance for the master
- * problem, an array of SCIP instances for the subproblems and an array of weights (or probabilities) for the scenarios.
- * Benders' cuts.
+ * problem, an array of SCIP instances for the subproblems and the number of subproblems.
  *
  * The Benders' decomposition framework involves the use of constraint handlers within SCIP, src/scip/cons_benders.h and
  * src/scip/cons_benderslp.h. In order to solve the master problem by adding Benders' cuts, src/scip/cons_benders.h and
