@@ -259,8 +259,49 @@ set(scipsources
     scip/relax.c
     scip/reopt.c
     scip/retcode.c
-    scip/scip.c
     scip/scip_bandit.c
+    scip/scip_benders.c
+    scip/scip_branch.c
+    scip/scip_compr.c
+    scip/scip_concurrent.c
+    scip/scip_conflict.c
+    scip/scip_cons.c
+    scip/scip_copy.c
+    scip/scip_cut.c
+    scip/scip_datastructures.c
+    scip/scip_debug.c
+    scip/scip_dialog.c
+    scip/scip_disp.c
+    scip/scip_event.c
+    scip/scip_expr.c
+    scip/scip_general.c
+    scip/scip_heur.c
+    scip/scip_lp.c
+    scip/scip_mem.c
+    scip/scip_message.c
+    scip/scip_nlp.c
+    scip/scip_nodesel.c
+    scip/scip_nonlinear.c
+    scip/scip_numerics.c
+    scip/scip_param.c
+    scip/scip_presol.c
+    scip/scip_pricer.c
+    scip/scip_prob.c
+    scip/scip_probing.c
+    scip/scip_prop.c
+    scip/scip_randnumgen.c
+    scip/scip_reader.c
+    scip/scip_relax.c
+    scip/scip_reopt.c
+    scip/scip_sepa.c
+    scip/scip_sol.c
+    scip/scip_solve.c
+    scip/scip_solvingstats.c
+    scip/scip_table.c
+    scip/scip_timing.c
+    scip/scip_tree.c
+    scip/scip_validation.c
+    scip/scip_var.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c
@@ -647,6 +688,49 @@ set(scipheaders
     scip/scipdefplugins.h
     scip/scipgithash.h
     scip/scip.h
+    scip/scip_bandit.h
+    scip/scip_benders.h
+    scip/scip_branch.h
+    scip/scip_compr.h
+    scip/scip_concurrent.h
+    scip/scip_conflict.h
+    scip/scip_cons.h
+    scip/scip_copy.h
+    scip/scip_cut.h
+    scip/scip_datastructures.h
+    scip/scip_debug.h
+    scip/scip_dialog.h
+    scip/scip_disp.h
+    scip/scip_event.h
+    scip/scip_expr.h
+    scip/scip_general.h
+    scip/scip_heur.h
+    scip/scip_lp.h
+    scip/scip_mem.h
+    scip/scip_message.h
+    scip/scip_nlp.h
+    scip/scip_nodesel.h
+    scip/scip_nonlinear.h
+    scip/scip_numerics.h
+    scip/scip_param.h
+    scip/scip_presol.h
+    scip/scip_pricer.h
+    scip/scip_prob.h
+    scip/scip_probing.h
+    scip/scip_prop.h
+    scip/scip_randnumgen.h
+    scip/scip_reader.h
+    scip/scip_relax.h
+    scip/scip_reopt.h
+    scip/scip_sepa.h
+    scip/scip_sol.h
+    scip/scip_solve.h
+    scip/scip_solvingstats.h
+    scip/scip_table.h
+    scip/scip_timing.h
+    scip/scip_tree.h
+    scip/scip_validation.h
+    scip/scip_var.h
     scip/scipshell.h
     scip/sepa_cgmip.h
     scip/sepa_clique.h
