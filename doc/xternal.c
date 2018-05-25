@@ -957,9 +957,9 @@
  *
  * It is recommended for all new users to use the CMake build system configuration, if available on their platform.
  *
- * - Open the <code>CMakeLists</code> via
+ * - Open the <code>CMakeLists</code> (some examples projects have a subdirectory "check" for testing) via
  *    \verbatim
- kate CMakeLists.txt & kate check/CMakeLists.txt
+ kate CMakeLists.txt & kate check/CMakeLists.txt # if check/CMakeLists.txt is available
      \endverbatim
  *    and replace all instances of the copied project's name (e.g. <code>binpacking</code>) with your project name.
  * - Create a new subdirectory, jump to the new directory and use cmake specifying your \SCIP directory. For instance, type
