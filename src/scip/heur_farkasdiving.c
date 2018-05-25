@@ -541,7 +541,7 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          &heurdata->maxobjocc, TRUE, DEFAULT_MAXOBJOCC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/objdynamism",
-         "minimal objective dynamism (log)",
+         "minimal objective dynamism (log) to run",
          &heurdata->objdynamism, TRUE, DEFAULT_OBJDYN, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scaletype",
