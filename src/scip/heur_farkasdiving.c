@@ -86,8 +86,6 @@ struct SCIP_HeurData
    SCIP_Bool             scalescore;         /**< should score be scaled by fractionality */
    SCIP_Bool             rootsuccess;        /**< run if successfull at root */
    SCIP_Bool             foundrootsol;       /**< was a solution found at the root node? */
-   int                   nbinobjvars;        /**< number of binary variables in the objective function */
-   int                   nintobjvars;        /**< number of integer variables in the objective function */
    char                  scaletype;          /**< scale score by [f]ractionality or [i]mpact on farkasproof */
 };
 
@@ -107,7 +105,9 @@ SCIP_RETCODE checkDivingCandidates(
    SCIP_Real objdynamism;
    int maxfreq;
    int nnzobjcoefs;
+#ifdef SCIP_DEBUG
    int ndiffnnzobjs;
+#endif
    int i;
 
    *success = TRUE;
@@ -153,7 +153,9 @@ SCIP_RETCODE checkDivingCandidates(
    assert(!SCIPisZero(scip, objcoefs[0]));
 
    lastobjcoef = objcoefs[0];
+#ifdef SCIP_DEBUG
    ndiffnnzobjs = 1;
+#endif
 
    objdynamism = log10(objcoefs[nnzobjcoefs-1] / objcoefs[0]);
 
@@ -186,7 +188,9 @@ SCIP_RETCODE checkDivingCandidates(
             tmpmaxfreq = 0;
 
             lastobjcoef = objcoefs[i];
+#ifdef SCIP_DEBUG
             ++ndiffnnzobjs;
+#endif
          }
          else
          {
@@ -341,8 +345,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolFarkasdiving)
    heurdata->glbchecked = FALSE;
    heurdata->disabled = FALSE;
    heurdata->foundrootsol = FALSE;
-   heurdata->nbinobjvars = -1;
-   heurdata->nintobjvars = -1;
 
    return SCIP_OKAY;
 }
