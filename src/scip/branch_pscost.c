@@ -21,11 +21,27 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/branch_pscost.h"
+#include "scip/pub_branch.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include "scip/type_branch.h"
+#include "scip/type_misc.h"
+#include "scip/type_result.h"
+#include <string.h>
 
 #define BRANCHRULE_NAME          "pscost"
 #define BRANCHRULE_DESC          "branching on pseudo cost values"

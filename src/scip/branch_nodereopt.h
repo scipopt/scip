@@ -25,10 +25,9 @@
 #define __SCIP_BRANCH_NODEREOPT_H__
 
 
-#include "scip/scip.h"
-#include "scip/type_branch.h"
-#include "scip/type_reopt.h"
-#include "scip/type_tree.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 #ifdef __cplusplus
 extern "C" {
