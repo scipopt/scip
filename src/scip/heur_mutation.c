@@ -23,8 +23,6 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/cons_linear.h"
 #include "scip/heur_mutation.h"
 #include "scip/pub_misc.h"
 
