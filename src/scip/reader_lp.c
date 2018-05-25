@@ -2631,7 +2631,7 @@ void printRow(
    )
 {
    int v;
-   char linebuffer[LP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -2860,7 +2860,7 @@ void printSosCons(
 {
    int v;
 
-   char linebuffer[LP_MAX_PRINTLEN];
+   char linebuffer[LP_MAX_PRINTLEN+1];
    int linecnt;
    char buffer[LP_MAX_PRINTLEN];
    char varname[LP_MAX_NAMELEN];
@@ -2915,7 +2915,7 @@ SCIP_RETCODE printSOCCons(
    )
 {
    int v;
-   char linebuffer[LP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
    SCIP_VAR* var;
    SCIP_Real coef;
@@ -3552,7 +3552,7 @@ SCIP_RETCODE SCIPwriteLp(
    int v;
 
    int linecnt;
-   char linebuffer[LP_MAX_PRINTLEN];
+   char linebuffer[LP_MAX_PRINTLEN+1];
 
    char varname[LP_MAX_NAMELEN];
    char buffer[LP_MAX_PRINTLEN];

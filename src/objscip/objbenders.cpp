@@ -248,7 +248,7 @@ SCIP_DECL_BENDERSSOLVESUBCONVEX(bendersSolvesubconvexObj)
 
    /* call virtual method of benders object */
    SCIP_CALL( bendersdata->objbenders->scip_solvesubconvex(scip, benders, sol, probnumber, onlyconvexcheck, objective,
-         result) );
+      result) );
 
    return SCIP_OKAY;
 }
@@ -282,7 +282,8 @@ SCIP_DECL_BENDERSPOSTSOLVE(bendersPostsolveObj)
    assert(bendersdata->objbenders != NULL);
 
    /* call virtual method of benders object */
-   SCIP_CALL( bendersdata->objbenders->scip_postsolve(scip, benders, sol, type, checkint, infeasible) );
+   SCIP_CALL( bendersdata->objbenders->scip_postsolve(scip, benders, sol, type, mergecands, npriomergecands,
+      nmergecands, checkint, infeasible, merged) );
 
    return SCIP_OKAY;
 }
@@ -349,11 +350,11 @@ SCIP_RETCODE SCIPincludeObjBenders(
 
    /* include Benders' decomposition */
    SCIP_CALL( SCIPincludeBenders(scip, objbenders->scip_name_, objbenders->scip_desc_,
-         objbenders->scip_priority_, objbenders->scip_cutlp_, objbenders->scip_cutpseudo_,
-         objbenders->scip_cutrelax_, objbenders->scip_shareauxvars_, bendersCopyObj, bendersFreeObj, bendersInitObj,
-         bendersExitObj, bendersInitpreObj, bendersExitpreObj, bendersInitsolObj, bendersExitsolObj, bendersGetvarObj,
-         bendersCreatesubObj, bendersPresubsolveObj, bendersSolvesubconvexObj, bendersSolvesubObj, bendersPostsolveObj,
-         bendersFreesubObj, bendersdata) ); /*lint !e429*/
+      objbenders->scip_priority_, objbenders->scip_cutlp_, objbenders->scip_cutpseudo_,
+      objbenders->scip_cutrelax_, objbenders->scip_shareauxvars_, bendersCopyObj, bendersFreeObj, bendersInitObj,
+      bendersExitObj, bendersInitpreObj, bendersExitpreObj, bendersInitsolObj, bendersExitsolObj, bendersGetvarObj,
+      bendersCreatesubObj, bendersPresubsolveObj, bendersSolvesubconvexObj, bendersSolvesubObj, bendersPostsolveObj,
+      bendersFreesubObj, bendersdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

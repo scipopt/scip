@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_benders.c
- * @brief  constraint handler for benders decomposition
+ * @brief  constraint handler for Benders' decomposition
  * @author Stephen J. Maher
  *
  * Two constraint handlers are implemented for the generation of Benders' decomposition cuts. When included in a
@@ -40,7 +40,6 @@
 
 #include "scip/scip.h"
 #include "scip/cons_benders.h"
-#include "scip/cons_benderslp.h"
 #include "scip/heur_trysol.h"
 #include "scip/heuristics.h"
 
@@ -52,6 +51,8 @@
 #define CONSHDLR_CHECKPRIORITY -5000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_MAXPREROUNDS         0 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FAST /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 
@@ -80,7 +81,8 @@ static
 SCIP_RETCODE constructValidSolution(
    SCIP*                 scip,               /**< the SCIP instance */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -94,6 +96,7 @@ SCIP_RETCODE constructValidSolution(
    int j;
    SCIP_Bool success;
 
+   success = TRUE;
 
    /* don't propose new solutions if not in presolve or solving */
    if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
@@ -108,29 +111,28 @@ SCIP_RETCODE constructValidSolution(
    /* if the solution is NULL, then we create the solution from the LP sol */
    if( sol != NULL )
    {
+      assert(type == SCIP_BENDERSENFOTYPE_CHECK);
       SCIP_CALL( SCIPcreateSolCopy(scip, &newsol, sol) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+      switch( type )
+      {
+         case SCIP_BENDERSENFOTYPE_LP:
+            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+            break;
+         case SCIP_BENDERSENFOTYPE_PSEUDO:
+            SCIP_CALL( SCIPcreatePseudoSol(scip, &newsol, NULL) );
+            break;
+         case SCIP_BENDERSENFOTYPE_RELAX:
+            SCIP_CALL( SCIPcreateRelaxSol(scip, &newsol, NULL) );
+            break;
+         default:
+            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+            break;
+      }  /*lint !e788*/
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
-
-   /* checking the size of the checkedsols array and extending it is there is not enough memory */
-   assert(conshdlrdata->ncheckedsols <= conshdlrdata->checkedsolssize);
-   if( conshdlrdata->ncheckedsols + 1 > conshdlrdata->checkedsolssize )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->ncheckedsols + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize, newsize) );
-      conshdlrdata->checkedsolssize = newsize;
-   }
-   assert(conshdlrdata->ncheckedsols + 1 <= conshdlrdata->checkedsolssize);
-
-   /* recording the solution number to avoid checking the solution again */
-   conshdlrdata->checkedsols[conshdlrdata->ncheckedsols] = SCIPsolGetIndex(newsol);
-   conshdlrdata->ncheckedsols++;
 
    /* looping through all Benders' decompositions to construct the new solution */
    for( i = 0; i < nactivebenders; i++ )
@@ -142,27 +144,61 @@ SCIP_RETCODE constructValidSolution(
       /* setting the auxiliary variable in the new solution */
       for( j = 0; j < nsubproblems; j++ )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, newsol, auxiliaryvars[j], SCIPbendersGetSubprobObjval(benders[i], j)) );
+         SCIP_Real objval;
+
+         objval = SCIPbendersGetSubprobObjval(benders[i], j);
+
+         if( SCIPvarGetStatus(auxiliaryvars[j]) == SCIP_VARSTATUS_FIXED
+            && !SCIPisEQ(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]), objval) )
+         {
+            success = FALSE;
+            break;
+         }
+         else if( SCIPisLT(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]), objval) )
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, auxiliaryvars[j], objval) );
+         }
+      }
+
+      if( !success )
+         break;
+   }
+
+   /* if setting the variable values was successful, then we try to add the solution */
+   if( success )
+   {
+      /* checking the size of the checkedsols array and extending it is there is not enough memory */
+      assert(conshdlrdata->ncheckedsols <= conshdlrdata->checkedsolssize);
+      if( conshdlrdata->ncheckedsols + 1 > conshdlrdata->checkedsolssize )
+      {
+         int newsize;
+
+         newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->ncheckedsols + 1);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize, newsize) );
+         conshdlrdata->checkedsolssize = newsize;
+      }
+      assert(conshdlrdata->ncheckedsols + 1 <= conshdlrdata->checkedsolssize);
+
+      /* recording the solution number to avoid checking the solution again */
+      conshdlrdata->checkedsols[conshdlrdata->ncheckedsols] = SCIPsolGetIndex(newsol);
+      conshdlrdata->ncheckedsols++;
+
+      /* getting the try solution heuristic */
+      heurtrysol = SCIPfindHeur(scip, "trysol");
+
+      /* passing the new solution to the trysol heuristic  */
+      SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+      if ( success )
+      {
+         SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, newsol) );
+         SCIPdebugMsg(scip, "Creating solution was successful.\n");
+      }
+      else
+      {
+         /* the solution might not be feasible, because of additional constraints */
+         SCIPdebugMsg(scip, "Creating solution was not successful.\n");
       }
    }
-
-   /* getting the try solution heuristic */
-   heurtrysol = SCIPfindHeur(scip, "trysol");
-
-   /* passing the new solution to the trysol heuristic  */
-   SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
-   if ( success )
-   {
-      SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, newsol) );
-      SCIPdebugMsg(scip, "Creating solution was successful.\n");
-   }
-#ifdef SCIP_DEBUG
-   else
-   {
-      /* the solution might not be feasible, because of additional constraints */
-      SCIPdebugMsg(scip, "Creating solution was not successful.\n");
-   }
-#endif
 
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
 
@@ -235,7 +271,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
             break;
          default:
             break;
-      }
+      }  /*lint !e788*/
 
       /* The decompositions are checked until one is found that is not feasible. Not being feasible could mean that
        * infeasibility of the original problem has been proven or a constraint has been added. If the result
@@ -251,13 +287,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
        * still need to be updated. This is done by constructing a valid solution. */
       if( (*result) == SCIP_FEASIBLE && auxviol )
       {
-         if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
-         {
-            if( !SCIPsolIsOriginal(sol) )
-            {
-               SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
-            }
-         }
+         SCIP_CALL( constructValidSolution(scip, conshdlr, sol, type) );
 
          (*result) = SCIP_INFEASIBLE;
       }
@@ -284,6 +314,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBenders)
    assert(scip != NULL);
 
    SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
+
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }
@@ -488,7 +520,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
             {
                if( !SCIPsolIsOriginal(sol) )
                {
-                  SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
+                  SCIP_CALL( constructValidSolution(scip, conshdlr, sol, SCIP_BENDERSENFOTYPE_CHECK) );
                }
 
                if( printreason )
@@ -511,6 +543,94 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 }
 
 
+/** the presolving method for the Benders' decomposition constraint handler
+ *
+ *  This method is used to update the lower bounds of the auxiliary problem and to identify infeasibility before the
+ *  subproblems are solved. When SCIP is copied, the Benders' decomposition subproblems from the source SCIP are
+ *  transferred to the target SCIP. So there is no need to perform this presolving step in the copied SCIP, since the
+ *  computed bounds would be identical.
+ */
+static
+SCIP_DECL_CONSPRESOL(consPresolBenders)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   int nactivebenders;
+   int nsubproblems;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   (*result) = SCIP_DIDNOTFIND;
+
+   /* this presolving step is only valid for the main SCIP instance. If the SCIP instance is copied, then the presolving
+    * step is not performed.
+    */
+   if( SCIPgetSubscipDepth(scip) > 0 )
+   {
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* it is only possible to compute the lower bound of the subproblems if the constraint handler is active */
+   if( conshdlrdata->active )
+   {
+      benders = SCIPgetBenders(scip);
+      nactivebenders = SCIPgetNActiveBenders(scip);
+
+      /* need to compute the lower bound for all active Benders' decompositions */
+      for( i = 0; i < nactivebenders; i++ )
+      {
+         nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
+
+         for( j = 0; j < nsubproblems; j++ )
+         {
+            SCIP_VAR* auxiliaryvar;
+            SCIP_Real lowerbound;
+            SCIP_Bool infeasible;
+
+            infeasible = FALSE;
+
+            /* computing the lower bound of the subproblem by solving it without any variable fixings */
+            SCIP_CALL( SCIPcomputeBendersSubproblemLowerbound(scip, benders[i], j, &lowerbound, &infeasible) );
+
+            if( infeasible )
+            {
+               (*result) = SCIP_CUTOFF;
+               break;
+            }
+
+            /* retrieving the auxiliary variable */
+            auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders[i], j);
+
+            /* only update the lower bound if it is greater than the current lower bound */
+            if( SCIPisGT(scip, lowerbound, SCIPvarGetLbLocal(auxiliaryvar)) )
+            {
+               SCIPdebugMsg(scip, "Tightened lower bound of <%s> to %g\n", SCIPvarGetName(auxiliaryvar), lowerbound);
+               /* updating the lower bound of the auxiliary variable */
+               SCIP_CALL( SCIPchgVarLb(scip, auxiliaryvar, lowerbound) );
+
+               (*nchgbds)++;
+               (*result) = SCIP_SUCCESS;
+            }
+
+            /* stores the lower bound for the subproblem */
+            SCIPbendersUpdateSubprobLowerbound(benders[i], j, lowerbound);
+         }
+
+         if( (*result) == SCIP_CUTOFF )
+            break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockBenders)
@@ -524,7 +644,7 @@ SCIP_DECL_CONSLOCK(consLockBenders)
  * constraint specific interface methods
  */
 
-/** creates the handler for benders constraints and includes it in SCIP */
+/** creates the handler for Benders' decomposition and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -552,6 +672,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBenders, NULL) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenders) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenders) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBenders, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
 
    /* add Benders' decomposition constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

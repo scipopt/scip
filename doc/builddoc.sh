@@ -56,6 +56,8 @@ cd ..
 
 bin/scip -c "set default set save doc/inc/parameters.set quit"
 
+bin/scip -c "read doc/inc/simpleinstance/simple.lp optimize quit" > doc/inc/simpleinstance/output.log
+
 cd doc
 
 ### FINISHED FAQ GENERATION

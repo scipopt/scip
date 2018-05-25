@@ -34,19 +34,19 @@
 extern "C" {
 #endif
 
-/** variable benderss data */
+/** Benders' decomposition data */
 struct SCIP_Benders
 {
    char*                 name;               /**< name of Benders' decomposition */
    char*                 desc;               /**< description of Benders' decomposition */
-   SCIP_DECL_BENDERSCOPY ((*benderscopy));   /**< copy method of benders or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_BENDERSFREE ((*bendersfree));   /**< destructor of variable benders */
-   SCIP_DECL_BENDERSINIT ((*bendersinit));   /**< initialize variable benders */
-   SCIP_DECL_BENDERSEXIT ((*bendersexit));   /**< deinitialize variable benders */
+   SCIP_DECL_BENDERSCOPY ((*benderscopy));   /**< copy method of Benders' decomposition or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_BENDERSFREE ((*bendersfree));   /**< destructor of Benders' decomposition */
+   SCIP_DECL_BENDERSINIT ((*bendersinit));   /**< initialize Benders' decomposition */
+   SCIP_DECL_BENDERSEXIT ((*bendersexit));   /**< deinitialize Benders' decomposition */
    SCIP_DECL_BENDERSINITPRE((*bendersinitpre));/**< presolving initialization method for Benders' decomposition */
    SCIP_DECL_BENDERSEXITPRE((*bendersexitpre));/**< presolving deinitialization method for Benders' decomposition */
-   SCIP_DECL_BENDERSINITSOL((*bendersinitsol));/**< solving process initialization method of variable benders */
-   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol));/**< solving process deinitialization method of variable benders */
+   SCIP_DECL_BENDERSINITSOL((*bendersinitsol));/**< solving process initialization method of Benders' decomposition */
+   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol));/**< solving process deinitialization method of Benders' decomposition */
    SCIP_DECL_BENDERSGETVAR((*bendersgetvar)); /**< returns the corresponding variable from the master or subproblem */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve));/**< called prior to the subproblem solving loop */
    SCIP_DECL_BENDERSCREATESUB((*benderscreatesub));/**< creates the Benders' decomposition subproblems */
@@ -54,11 +54,11 @@ struct SCIP_Benders
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub));/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve));/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub));/**< the freeing method for the Benders' decomposition subproblems */
-   SCIP_BENDERSDATA*     bendersdata;        /**< variable benderss local data */
-   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this benders for the next stages */
-   SCIP_CLOCK*           bendersclock;       /**< benders execution time */
+   SCIP_BENDERSDATA*     bendersdata;        /**< Benders' decomposition local data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this Benders' decomposition for the next stages */
+   SCIP_CLOCK*           bendersclock;       /**< Benders' decomposition execution time */
    int                   priority;           /**< priority of the Benders' decomposition */
-   int                   ncalls;             /**< number of times, this benders was called */
+   int                   ncalls;             /**< number of times, this Benders' decomposition was called */
    int                   ncutsfound;         /**< number of cuts found by the Benders' decomposition */
    int                   ntransferred;       /**< number of cuts transferred from sub SCIP to the master SCIP */
    SCIP_Bool             active;             /**< is the Benders' decomposition active? */
@@ -100,6 +100,9 @@ struct SCIP_Benders
    SCIP_Bool*            subprobenabled;     /**< flag to indicate whether the subproblem is enabled */
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
+
+   /* solving process information */
+   int                   npseudosols;        /**< the number of pseudo solutions checked since the last generated cut */
 
    /* Bender's cut information */
    SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */
