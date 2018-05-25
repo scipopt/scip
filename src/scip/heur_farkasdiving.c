@@ -198,8 +198,10 @@ SCIP_RETCODE checkDivingCandidates(
          }
       }
 
+#ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "%d divecands; %d nnzobjs; %d diffnnzobjs; %d maxfreq\n", ndivecands, nnzobjcoefs, ndiffnnzobjs,
          maxfreq, heurdata->maxobjocc * nnzobjcoefs);
+#endif
 
       if( maxfreq > heurdata->maxobjocc * nnzobjcoefs )
       {
