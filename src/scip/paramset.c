@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2792,7 +2792,7 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       if( strcmp(heurname, "dualval") == 0 )
          continue;
 
-      /* the benders heuristics should remain disabled */
+      /* the aggressive Benders' decomposition heuristics should remain disabled */
       if( strstr(heurname, "benders") != NULL )
          continue;
 

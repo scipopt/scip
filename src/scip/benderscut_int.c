@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -59,7 +59,7 @@ struct SCIP_BenderscutData
    int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
 };
 
-/** method to call, when the priority of a benders was changed */
+/** method to call, when the priority of a Benders' decomposition was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdBenderscutintConstant)
 {  /*lint --e{715}*/

@@ -9,13 +9,13 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_benders.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for benders decomposition
+ * @brief  constraint handler for Benders' decomposition
  * @author Stephen J. Maher
  */
 
@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-/** creates the handler for benders constraints and includes it in SCIP
+/** creates the handler for Benders' decomposition and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
  * */

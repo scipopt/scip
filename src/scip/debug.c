@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1928,3 +1928,338 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
 }
 
 #endif
+
+/** checks, if SCIP is in one of the feasible stages */
+#ifndef NDEBUG
+SCIP_RETCODE SCIPcheckStage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           method,             /**< method that was called */
+   SCIP_Bool             init,               /**< may method be called in the INIT stage? */
+   SCIP_Bool             problem,            /**< may method be called in the PROBLEM stage? */
+   SCIP_Bool             transforming,       /**< may method be called in the TRANSFORMING stage? */
+   SCIP_Bool             transformed,        /**< may method be called in the TRANSFORMED stage? */
+   SCIP_Bool             initpresolve,       /**< may method be called in the INITPRESOLVE stage? */
+   SCIP_Bool             presolving,         /**< may method be called in the PRESOLVING stage? */
+   SCIP_Bool             exitpresolve,       /**< may method be called in the EXITPRESOLE stage? */
+   SCIP_Bool             presolved,          /**< may method be called in the PRESOLVED stage? */
+   SCIP_Bool             initsolve,          /**< may method be called in the INITSOLVE stage? */
+   SCIP_Bool             solving,            /**< may method be called in the SOLVING stage? */
+   SCIP_Bool             solved,             /**< may method be called in the SOLVED stage? */
+   SCIP_Bool             exitsolve,          /**< may method be called in the EXITSOLVE stage? */
+   SCIP_Bool             freetrans,          /**< may method be called in the FREETRANS stage? */
+   SCIP_Bool             freescip            /**< may method be called in the FREE stage? */
+   )
+{
+   assert(scip != NULL);
+   assert(method != NULL);
+
+   /*SCIPdebugMsg(scip, "called method <%s> at stage %d ------------------------------------------------\n",
+     method, scip->set->stage);*/
+
+   assert(scip->mem != NULL);
+   assert(scip->set != NULL);
+   assert(scip->interrupt != NULL);
+   assert(scip->dialoghdlr != NULL);
+   assert(scip->totaltime != NULL);
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_INIT:
+      assert(scip->stat == NULL);
+      assert(scip->origprob == NULL);
+      assert(scip->eventfilter == NULL);
+      assert(scip->eventqueue == NULL);
+      assert(scip->branchcand == NULL);
+      assert(scip->lp == NULL);
+      assert(scip->nlp == NULL);
+      assert(scip->primal == NULL);
+      assert(scip->tree == NULL);
+      assert(scip->conflict == NULL);
+      assert(scip->transprob == NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !init )
+      {
+         SCIPerrorMessage("cannot call method <%s> in initialization stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PROBLEM:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter == NULL);
+      assert(scip->eventqueue == NULL);
+      assert(scip->branchcand == NULL);
+      assert(scip->lp == NULL);
+      assert(scip->nlp == NULL);
+      assert(scip->primal == NULL);
+      assert(scip->tree == NULL);
+      assert(scip->conflict == NULL);
+      assert(scip->transprob == NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !problem )
+      {
+         SCIPerrorMessage("cannot call method <%s> in problem creation stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
+      assert(scip->transprob != NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !transforming )
+      {
+         SCIPerrorMessage("cannot call method <%s> in problem transformation stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMED:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
+      assert(scip->transprob != NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !transformed )
+      {
+         SCIPerrorMessage("cannot call method <%s> in problem transformed stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITPRESOLVE:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
+      assert(scip->transprob != NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !initpresolve )
+      {
+         SCIPerrorMessage("cannot call method <%s> in init presolving stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
+      assert(scip->transprob != NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !presolving )
+      {
+         SCIPerrorMessage("cannot call method <%s> in presolving stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_EXITPRESOLVE:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
+      assert(scip->transprob != NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !exitpresolve )
+      {
+         SCIPerrorMessage("cannot call method <%s> in exit presolving stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVED:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
+      assert(scip->transprob != NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !presolved )
+      {
+         SCIPerrorMessage("cannot call method <%s> in problem presolved stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->transprob != NULL);
+
+      if( !initsolve )
+      {
+         SCIPerrorMessage("cannot call method <%s> in init solve stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
+      assert(scip->transprob != NULL);
+      assert(scip->pricestore != NULL);
+      assert(scip->sepastore != NULL);
+      assert(scip->cutpool != NULL);
+      assert(scip->delayedcutpool != NULL);
+
+      if( !solving )
+      {
+         SCIPerrorMessage("cannot call method <%s> in solving stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVED:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->conflict != NULL);
+      assert(scip->transprob != NULL);
+      assert(scip->pricestore != NULL);
+      assert(scip->sepastore != NULL);
+      assert(scip->cutpool != NULL);
+      assert(scip->delayedcutpool != NULL);
+
+      if( !solved )
+      {
+         SCIPerrorMessage("cannot call method <%s> in problem solved stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_EXITSOLVE:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->transprob != NULL);
+
+      if( !exitsolve )
+      {
+         SCIPerrorMessage("cannot call method <%s> in solve deinitialization stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_FREETRANS:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->pricestore == NULL);
+      assert(scip->sepastore == NULL);
+      assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
+
+      if( !freetrans )
+      {
+         SCIPerrorMessage("cannot call method <%s> in free transformed problem stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_FREE:
+      if( !freescip )
+      {
+         SCIPerrorMessage("cannot call method <%s> in free stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   default:
+      /* note that this is in an internal SCIP error since all SCIP stages are covert in the switch above */
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }
+}
+#endif
+

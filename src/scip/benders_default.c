@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -69,7 +69,7 @@ struct SCIP_BendersData
    SCIP_VAR***           subproblemvars;     /**< the subproblem variables corresponding to master problem variables */
    int                   nmastervars;        /**< the number of variables in the master problem */
    int                   nsubproblems;       /**< the number of subproblems */
-   SCIP_Bool             created;            /**< flag to indicate that the Benders Data was created */
+   SCIP_Bool             created;            /**< flag to indicate that the Benders' decomposition Data was created */
 };
 
 
@@ -97,7 +97,7 @@ SCIP_RETCODE createBendersData(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*bendersdata)->subproblems, nsubproblems) );
 
-   /* Copying the subproblem to the benders data. */
+   /* Copying the subproblem to the Benders' decomposition data. */
    for( i = 0; i < nsubproblems; i++ )
       (*bendersdata)->subproblems[i] = subproblems[i];
 
@@ -207,11 +207,11 @@ SCIP_RETCODE createVariableMappings(
  * Callback methods for Benders' decomposition
  */
 
-/** copy method for benders plugins (called when SCIP copies plugins) */
+/** copy method for Benders' decomposition plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
 {  /*lint --e{715}*/
-   SCIP_BENDERSDATA* bendersdata;   /* the source benders data */
+   SCIP_BENDERSDATA* bendersdata;   /* the source Benders' decomposition data */
 
    assert(scip != NULL);
    assert(benders != NULL);

@@ -26,7 +26,6 @@
 #include <math.h>
 
 #include "scip/cons_bivariate.h"
-#include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/heur_subnlp.h"

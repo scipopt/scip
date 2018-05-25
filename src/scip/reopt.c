@@ -44,7 +44,6 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/clock.h"
-#include "scip/heur_reoptsols.h"
 #include "scip/history.h"
 #include "blockmemshell/memory.h"
 
