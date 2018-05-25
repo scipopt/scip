@@ -84,6 +84,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBenderslp)
 
    SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
 
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 
