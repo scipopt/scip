@@ -36,8 +36,6 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
-#include <scip/cons_linking.h>
-
 
 /*
  * private functions

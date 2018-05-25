@@ -25,8 +25,6 @@
 #include <stdio.h>
 #include "scip/scip.h"
 #include "scip/heur_rens.h"
-#include "scip/scipdefplugins.h"       /* needed for the secondary SCIP instance */
-#include "scip/cons_linear.h"          /* needed if the LP relaxation gets copied into linear constraints */
 #include "scip/pub_misc.h"
 
 /* default values for standard parameters that every primal heuristic has in SCIP */

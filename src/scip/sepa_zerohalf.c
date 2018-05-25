@@ -46,7 +46,6 @@
 
 #include "string.h"
 #include "scip/sepa_zerohalf.h"
-#include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 #include "scip/struct_lp.h"
 

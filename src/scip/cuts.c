@@ -27,7 +27,6 @@
 #include "scip/struct_lp.h"
 #include "scip/lp.h"
 #include "scip/struct_cuts.h"
-#include "scip/cons_knapsack.h"
 #include "scip/struct_scip.h"
 #include "scip/dbldblarith.h"
 

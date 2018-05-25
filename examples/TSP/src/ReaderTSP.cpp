@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -404,6 +404,8 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
       stringstream varname;
       edge = &graph->edges[i]; /*lint !e613*/
 
+/**! [SnippetTSPVariableCreation] */
+
       // the variable is named after the two nodes connected by the edge it represents
       varname << "x_e_" << edge->back->adjac->id+1 << "-" << edge->adjac->id+1;
       SCIP_CALL( SCIPcreateVar(scip, &var, varname.str().c_str(), 0.0, 1.0, edge->length,
@@ -414,19 +416,23 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
       SCIP_CALL( addVarToEdges(scip, edge, var) );
 
       /* release variable for the reader. */
-      SCIP_CALL( SCIPreleaseVar(scip, &var) );      
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );
+
+/**! [SnippetTSPVariableCreation] */
 
    }
 
    /* add all n node degree constraints */
    if( nnodes >= 2 )
    {
+
       for( i = 0, node = &(graph->nodes[0]); i < nnodes; i++, node++ ) /*lint !e613*/
       {
+/**! [SnippetTSPDegreeConstraintCreation] */
          SCIP_CONS* cons;
          stringstream consname;
          consname << "deg_con_v" << node->id+1;
-         
+
          // a new degree constraint is created, named after a node
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname.str().c_str(), 0, NULL, NULL, 2.0, 2.0, 
                TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );  
@@ -438,12 +444,15 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, edge->var, 1.0) );
             edge = edge->next;
          }
-             
+
          // add the constraint to SCIP
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+/**! [SnippetTSPDegreeConstraintCreation] */
       }
    }
+
+/**! [SnippetTSPNosubtourConstraintCreation] */
 
    /* last, we need a constraint forbidding subtours */
    SCIP_CONS* cons;
@@ -451,7 +460,9 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
          FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE ) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
- 
+
+/**! [SnippetTSPNosubtourConstraintCreation] */
+
    release_graph(&graph);
    *result = SCIP_SUCCESS;
 

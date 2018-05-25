@@ -24,8 +24,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/cons_linear.h"
 #include "scip/heur_crossover.h"
 #include "scip/pub_misc.h"
 

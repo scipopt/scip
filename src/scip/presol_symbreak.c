@@ -38,10 +38,8 @@
 
 #include <scip/cons_linear.h>
 #include <scip/cons_orbitope.h>
-#include <scip/cons_setppc.h>
 #include <scip/cons_symresack.h>
 #include <scip/misc.h>
-#include <scip/prop_probing.h>
 #include <scip/presol_symbreak.h>
 #include <scip/presol_symmetry.h>
 #include <symmetry/type_symmetry.h>
