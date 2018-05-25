@@ -27,10 +27,7 @@
 #define __SCIP_BENDERSCUT_XYZ_H__
 
 
-#include "scip/def.h"
-#include "scip/type_benders.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {

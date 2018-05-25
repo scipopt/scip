@@ -25,9 +25,7 @@
 #define __SCIP_TABLE_XYZ_H__
 
 
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
