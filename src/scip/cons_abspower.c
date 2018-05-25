@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -114,8 +114,8 @@ struct SCIP_ConsData
    SCIP_Real             root;               /**< root of polynomial */
    DECL_MYPOW            ((*power));         /**< function for computing power*/
 
-   SCIP_Real             lhsviol;            /**< current (scaled) violation of left  hand side */
-   SCIP_Real             rhsviol;            /**< current (scaled) violation of right hand side */
+   SCIP_Real             lhsviol;            /**< current violation of left  hand side */
+   SCIP_Real             rhsviol;            /**< current violation of right hand side */
 
    int                   xeventfilterpos;    /**< position of x var event in SCIP event filter */
    int                   zeventfilterpos;    /**< position of z var event in SCIP event filter */
@@ -1145,10 +1145,12 @@ SCIP_RETCODE presolveDual(
    lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
    rhsexists = !SCIPisInfinity(scip,  consdata->rhs);
 
-   if( SCIPvarGetNLocksDown(consdata->x) == (lhsexists ? 1 : 0) &&
-       SCIPvarGetNLocksUp(consdata->x)   == (rhsexists ? 1 : 0) &&
-       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksDown(consdata->z) : SCIPvarGetNLocksUp(consdata->z)) == (lhsexists ? 1 : 0) &&
-       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksUp(consdata->z) : SCIPvarGetNLocksDown(consdata->z)) == (rhsexists ? 1 : 0) )
+   if( SCIPvarGetNLocksDownType(consdata->x, SCIP_LOCKTYPE_MODEL) == (lhsexists ? 1 : 0) &&
+       SCIPvarGetNLocksUpType(consdata->x, SCIP_LOCKTYPE_MODEL)   == (rhsexists ? 1 : 0) &&
+       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) :
+         SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL)) == (lhsexists ? 1 : 0) &&
+       (consdata->zcoef > 0.0 ? SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL) :
+         SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL)) == (rhsexists ? 1 : 0) )
    {
       /* x and z are only locked by cons, so we can fix them to an optimal solution of
        * min  xobj * x + zobj * z
@@ -1178,6 +1180,13 @@ SCIP_RETCODE presolveDual(
          computeBoundsX(scip, cons, zbnds, &xbnds);
          xlb = MAX(SCIPvarGetLbGlobal(consdata->x), xbnds.inf); /*lint !e666*/
          xub = MIN(SCIPvarGetUbGlobal(consdata->x), xbnds.sup); /*lint !e666*/
+
+         /* with our own "local" boundtightening, xlb might end slightly above xub,
+          * which can result in xfix being outside bounds below, see also #2202
+          */
+         assert(SCIPisFeasLE(scip, xlb, xub));
+         if( xub < xlb )
+            xlb = xub = (xlb + xub)/2.0;
 
          if( SCIPisZero(scip, SCIPvarGetObj(consdata->z)) )
          {
@@ -2317,7 +2326,7 @@ SCIP_RETCODE fixAlmostFixedX(
    int                   nconss,             /**< number of constraints */
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility was detected */
    SCIP_Bool*            reduceddom          /**< buffer to store whether some variable bound was tightened */
-)
+   )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real lb;
@@ -5487,7 +5496,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
       }
       else if( SCIPisEQ(scip, consdata->exponent, 1.852) )
       {
-         consdata->root = 0.398217;
+         consdata->root = 0.39821689389382575186;
       }
       else
       {
@@ -6561,6 +6570,7 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6572,11 +6582,11 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
    {
       if( haslb )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->x, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->x, locktype, nlockspos, nlocksneg) );
       }
       if( hasub )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->x, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->x, locktype, nlocksneg, nlockspos) );
       }
    }
 
@@ -6586,22 +6596,22 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( haslb )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlocksneg, nlockspos) );
          }
          if( hasub )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->z, nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->z, locktype, nlockspos, nlocksneg) );
          }
       }
    }
@@ -6752,8 +6762,8 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
 
          if( printreason )
          {
-            SCIPinfoMessage(scip, NULL, "absolute power constraint <%s> violated by %g (scaled = %g)\n\t",
-               SCIPconsGetName(conss[c]), viol, MAX(consdata->lhsviol, consdata->rhsviol));
+            SCIPinfoMessage(scip, NULL, "absolute power constraint <%s> violated by %g\n\t",
+               SCIPconsGetName(conss[c]), viol);
             SCIP_CALL( consPrintAbspower(scip, conshdlr, conss[c], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
          }

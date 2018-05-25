@@ -1,0 +1,6 @@
+misc/usesymmetry = 1
+presolving/symbreak/detectorbitopes = TRUE
+presolving/symbreak/addconsstiming = 2
+constraints/symresack/ppsymresack = TRUE
+constraints/orbisack/checkpporbisack = TRUE
+constraints/orbitope/checkpporbitope = TRUE

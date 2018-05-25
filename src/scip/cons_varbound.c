@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1082,37 +1082,34 @@ SCIP_RETCODE chgLhs(
    if( SCIPisEQ(scip, lhs, consdata->rhs) )
       consdata->rhs = lhs;
 
-   /* if necessary, update the rounding locks of variables */
-   if( SCIPconsIsLocked(cons) )
+   /* update the rounding locks of variables */
+
+   /* the left hand side switched from -infinity to a non-infinite value -> install rounding locks */
+   if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -lhs) )
    {
-      assert(SCIPconsIsTransformed(cons));
+      SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
 
-      /* the left hand side switched from -infinity to a non-infinite value -> install rounding locks */
-      if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -lhs) )
+      if( SCIPisPositive(scip, consdata->vbdcoef) )
       {
-	 SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
-
-	 if( SCIPisPositive(scip, consdata->vbdcoef) )
-	 {
-	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
-	 }
-	 else
-	 {
-	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
-	 }
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
       }
-      /* the left hand side switched from a non-infinite value to -infinity -> remove rounding locks */
-      else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -lhs) )
+      else
       {
-	 SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
-	 if( SCIPisPositive(scip, consdata->vbdcoef) )
-	 {
-	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
-	 }
-	 else
-	 {
-	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
-	 }
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+      }
+   }
+   /* the left hand side switched from a non-infinite value to -infinity -> remove rounding locks */
+   else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -lhs) )
+   {
+      SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
+
+      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
       }
    }
 
@@ -1165,37 +1162,35 @@ SCIP_RETCODE chgRhs(
    if( SCIPisEQ(scip, rhs, consdata->lhs) )
       consdata->lhs = rhs;
 
-   /* if necessary, update the rounding locks of variables */
-   if( SCIPconsIsLocked(cons) )
+   /* update the locks of variables */
+   assert(SCIPconsIsTransformed(cons));
+
+   /* the right hand side switched from infinity to a non-infinite value -> install locks */
+   if( SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, rhs) )
    {
-      assert(SCIPconsIsTransformed(cons));
+      SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
 
-      /* the right hand side switched from infinity to a non-infinite value -> install rounding locks */
-      if( SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, rhs) )
+      if( SCIPisPositive(scip, consdata->vbdcoef) )
       {
-	 SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
-
-	 if( SCIPisPositive(scip, consdata->vbdcoef) )
-	 {
-	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
-	 }
-	 else
-	 {
-	    SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
-	 }
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
       }
-      /* the right hand side switched from a non-infinite value to infinity -> remove rounding locks */
-      else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, rhs) )
+      else
       {
-	 SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
-	 if( SCIPisPositive(scip, consdata->vbdcoef) )
-	 {
-	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
-	 }
-	 else
-	 {
-	    SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
-	 }
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
+      }
+   }
+   /* the right hand side switched from a non-infinite value to infinity -> remove locks */
+   else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, rhs) )
+   {
+      SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
+
+      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
       }
    }
 
@@ -1559,7 +1554,8 @@ SCIP_RETCODE propagateCons(
       /* this did not seem to help but should be tested again, there might also still be a bug in there */
 #ifdef SCIP_DISABLED_CODE
       /* local duality fixing of variables in the constraint */
-      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksDown(consdata->vbdvar) == 1
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar))
+         && SCIPvarGetNLocksDownType(consdata->vbdvar, SCIP_LOCKTYPE_MODEL) == 1
          && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->vbdvar))
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
          && ((consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
@@ -1569,7 +1565,8 @@ SCIP_RETCODE propagateCons(
             SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar));
          SCIP_CALL( SCIPchgVarUb(scip, consdata->vbdvar, SCIPvarGetLbLocal(consdata->vbdvar)) );
       }
-      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksUp(consdata->vbdvar) == 1
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar))
+         && SCIPvarGetNLocksUpType(consdata->vbdvar, SCIP_LOCKTYPE_MODEL) == 1
          && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->vbdvar))
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
          && ((consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
@@ -1579,7 +1576,8 @@ SCIP_RETCODE propagateCons(
             SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
          SCIP_CALL( SCIPchgVarLb(scip, consdata->vbdvar, SCIPvarGetUbLocal(consdata->vbdvar)) );
       }
-      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksDown(consdata->var) == 1
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var))
+         && SCIPvarGetNLocksDownType(consdata->var, SCIP_LOCKTYPE_MODEL) == 1
          && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->var))
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
          && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -1588,7 +1586,8 @@ SCIP_RETCODE propagateCons(
             SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetLbLocal(consdata->var));
          SCIP_CALL( SCIPchgVarUb(scip, consdata->var, SCIPvarGetLbLocal(consdata->var)) );
       }
-      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksUp(consdata->var) == 1
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var))
+         && SCIPvarGetNLocksUpType(consdata->var, SCIP_LOCKTYPE_MODEL) == 1
          && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->var))
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
          && !SCIPisInfinity(scip, consdata->rhs) )
@@ -2460,27 +2459,27 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIPdebugMsg(scip, "and constraint: ");
          SCIPdebugPrintCons(scip, cons0, NULL);
 
-         /* if sign of coefficient switches, update the rounding locks of the variable */
-         if( SCIPconsIsLocked(cons0) && consdata0->vbdcoef * coef < 0.0 )
+         /* if sign of coefficient switches, update the locks of the variable */
+         if( consdata0->vbdcoef * coef < 0.0 )
          {
             assert(SCIPconsIsTransformed(cons0));
 
-            /* remove rounding locks for variable with old coefficient and install rounding locks for variable with new
+            /* remove locks for variable with old coefficient and install locks for variable with new
              * coefficient
              */
             if( SCIPisPositive(scip, consdata0->vbdcoef) )
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0,
-                     !SCIPisInfinity(scip, -consdata0->lhs), !SCIPisInfinity(scip, consdata0->rhs)) );
-               SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0,
-                     !SCIPisInfinity(scip, consdata0->rhs), !SCIPisInfinity(scip, -consdata0->lhs)) );
+               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
+                  !SCIPisInfinity(scip, consdata0->rhs)) );
+               SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
+                  !SCIPisInfinity(scip, -consdata0->lhs)) );
             }
             else
             {
-               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0,
-                     !SCIPisInfinity(scip, consdata0->rhs), !SCIPisInfinity(scip, -consdata0->lhs)) );
-               SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0,
-                     !SCIPisInfinity(scip, -consdata0->lhs), !SCIPisInfinity(scip, consdata0->rhs)) );
+               SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
+                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+               SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
+                  !SCIPisInfinity(scip, consdata0->rhs)) );
             }
          }
 
@@ -4408,27 +4407,27 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->var, locktype, nlockspos, nlocksneg) );
       if( consdata->vbdcoef > 0.0 )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vbdvar, locktype, nlockspos, nlocksneg) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vbdvar, locktype, nlocksneg, nlockspos) );
       }
    }
 
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->var, nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->var, locktype, nlocksneg, nlockspos) );
       if( consdata->vbdcoef > 0.0 )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vbdvar, locktype, nlocksneg, nlockspos) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vbdvar, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vbdvar, locktype, nlockspos, nlocksneg) );
       }
    }
 

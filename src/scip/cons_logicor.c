@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -145,7 +145,6 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   /* rounding down may violate the constraint */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
 
    return SCIP_OKAY;
@@ -159,7 +158,6 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   /* rounding down may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
 
    return SCIP_OKAY;
@@ -681,7 +679,8 @@ SCIP_RETCODE dualPresolving(
       }
 
       /* remember best variable with no uplocks, this variable dominates all other with exactly one downlock */
-      if( SCIPvarGetNLocksDown(var) > 1 && SCIPvarGetNLocksUp(var) == 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 )
       {
          SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
 
@@ -696,7 +695,8 @@ SCIP_RETCODE dualPresolving(
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > 0 )
          continue;
 
       ++nfixables;
@@ -732,7 +732,8 @@ SCIP_RETCODE dualPresolving(
          assert(var != NULL);
 
          /* check if a variable only appearing in this constraint is dominated by another */
-         if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 0 )
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 )
          {
             assert(idxnouplocks != v);
 
@@ -774,7 +775,8 @@ SCIP_RETCODE dualPresolving(
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > 0 )
          continue;
 
       if( v == idx )
@@ -2359,8 +2361,8 @@ SCIP_RETCODE addConsToOccurList(
          assert(occurlistsizes[pos] == 0);
 
          /* allocate memory */
-         assert(SCIPvarGetNLocksDown(var) > 0 || !SCIPconsIsChecked(cons));
-         occurlistsizes[pos] = SCIPvarGetNLocksDown(var) + 1;
+         assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 0 || !SCIPconsIsChecked(cons));
+         occurlistsizes[pos] = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) + 1;
          SCIP_CALL( SCIPallocBufferArray(scip, &(occurlist[pos]), occurlistsizes[pos]) ); /*lint !e866*/
 
          /* put constraint in list of current variable */
@@ -4650,7 +4652,7 @@ SCIP_DECL_CONSLOCK(consLockLogicor)
    /* lock every single coefficient */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;

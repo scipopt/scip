@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3962,8 +3962,8 @@ SCIP_RETCODE appendBuffer(
       SCIP_CALL( SCIPreallocBufferArray(scip, buffer, (*bufferlen)));
    }
 
-   /* append extension to linebuffer */
-   (void)strncpy((*buffer)+(*bufferpos), extension, (size_t)strlen(extension));
+   /* append extension to linebuffer - safe to use strcpy */
+   (void)strcpy((*buffer) + (*bufferpos), extension);
    *bufferpos = newpos;
 
    return SCIP_OKAY;

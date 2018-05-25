@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,7 @@
  * @ingroup BRANCHINGRULES
  * @brief  all variables full strong LP branching rule
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  *
  * The all variables full strong branching rule applies strong branching to every non-fixed variable
  * at the current node of the branch-and-bound search. The rule selects the candidate

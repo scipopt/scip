@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -708,7 +708,7 @@ SCIP_RETCODE reduceSap(
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
    nnodes = g->knots;
    nedges = g->edges;
@@ -836,7 +836,7 @@ SCIP_RETCODE reduceNw(
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
    nnodes = g->knots;
    nedges = g->edges;
@@ -956,7 +956,7 @@ SCIP_RETCODE redLoopMw(
    tryrmw = tryrmw && userec;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1201,7 +1201,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
    if( rpc )
    {
@@ -1442,7 +1442,7 @@ SCIP_RETCODE redLoopStp(
    assert(graph_valid(g));
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
    ub = upperbound;
    fix = 0.0;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -290,15 +290,12 @@ SCIP_RETCODE lockRounding(
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      /* rounding in both directions may violate the constraint */
       SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      /* rounding up may violate the constraint */
       SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      /* rounding down may violate the constraint */
       SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
       break;
    default:
@@ -325,15 +322,12 @@ SCIP_RETCODE unlockRounding(
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      /* rounding in both directions may violate the constraint */
       SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      /* rounding up may violate the constraint */
       SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      /* rounding down may violate the constraint */
       SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
       break;
    default:
@@ -368,7 +362,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &(*conshdlrdata)->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -809,6 +803,8 @@ SCIP_RETCODE setSetppcType(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Bool locked;
+   int i;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -819,13 +815,15 @@ SCIP_RETCODE setSetppcType(
    SCIPdebugMsg(scip, " -> converting <%s> into setppc type %d\n", SCIPconsGetName(cons), setppctype);
 
    /* remove rounding locks */
-   if( SCIPconsIsLocked(cons) )
-   {
-      int v;
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
 
-      for( v = 0; v < consdata->nvars; ++v )
+   if( locked )
+   {
+      for( i = 0; i < consdata->nvars; ++i )
       {
-         SCIP_CALL( unlockRounding(scip, cons, consdata->vars[v]) );
+         SCIP_CALL( unlockRounding(scip, cons, consdata->vars[i]) );
       }
    }
 
@@ -852,13 +850,11 @@ SCIP_RETCODE setSetppcType(
    consdata->setppctype = setppctype; /*lint !e641*/
 
    /* reinstall rounding locks again */
-   if( SCIPconsIsLocked(cons) )
+   if( locked )
    {
-      int v;
-
-      for( v = 0; v < consdata->nvars; ++v )
+      for( i = 0; i < consdata->nvars; ++i )
       {
-         SCIP_CALL( lockRounding(scip, cons, consdata->vars[v]) );
+         SCIP_CALL( lockRounding(scip, cons, consdata->vars[i]) );
       }
    }
 
@@ -1345,7 +1341,8 @@ SCIP_RETCODE dualPresolving(
       /* the variable should not be (globally) fixed */
       assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
 
-      if( SCIPvarGetNLocksDown(var) >= nlockdowns && SCIPvarGetNLocksUp(var) == nlockups )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) >= nlockdowns
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlockups )
       {
          activevar = var;
          negated = FALSE;
@@ -1370,7 +1367,8 @@ SCIP_RETCODE dualPresolving(
       /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlockups )
          ++nposfixings;
    }
 
@@ -1401,7 +1399,8 @@ SCIP_RETCODE dualPresolving(
          /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
           * variables
           */
-         if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlockups )
          {
             activevar = var;
             negated = FALSE;
@@ -1445,7 +1444,8 @@ SCIP_RETCODE dualPresolving(
          /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
           * variables
           */
-         if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlockups )
          {
             activevar = var;
             negated = FALSE;
@@ -1453,8 +1453,12 @@ SCIP_RETCODE dualPresolving(
             /* get the active variable */
             SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
             assert(SCIPvarIsActive(activevar));
-            assert(negated || (SCIPvarGetNLocksDown(var) == SCIPvarGetNLocksDown(activevar) && SCIPvarGetNLocksUp(var) == SCIPvarGetNLocksUp(activevar)));
-            assert(!negated || (SCIPvarGetNLocksDown(var) == SCIPvarGetNLocksUp(activevar) && SCIPvarGetNLocksUp(var) == SCIPvarGetNLocksDown(activevar)));
+            assert(negated
+               || (SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPvarGetNLocksDownType(activevar, SCIP_LOCKTYPE_MODEL)
+                  && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPvarGetNLocksUpType(activevar, SCIP_LOCKTYPE_MODEL)));
+            assert(!negated
+               || (SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPvarGetNLocksUpType(activevar, SCIP_LOCKTYPE_MODEL)
+                  && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPvarGetNLocksDownType(activevar, SCIP_LOCKTYPE_MODEL)));
 
             if( negated )
                objval = -SCIPvarGetObj(activevar);
@@ -1469,7 +1473,7 @@ SCIP_RETCODE dualPresolving(
             /* if variables has a negative objective contribution, and is uplocked by another constraint we cannot fix
              * the variables to 1
              */
-            if( (fixval == 1.0 && SCIPvarGetNLocksUp(var) > nlockups) || objval < bestobjval )
+            if( (fixval == 1.0 && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > nlockups) || objval < bestobjval )
                continue;
 
             SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
@@ -1491,7 +1495,9 @@ SCIP_RETCODE dualPresolving(
       /* in case of a set packing constraint with positive objective values, all variables can be fixed to zero; in all
        * other cases the variable with the smallest objective values is fixed to one
        */
-      if( (setppctype == SCIP_SETPPCTYPE_PACKING && bestobjval > 0.0 && SCIPvarGetNLocksDown(vars[idx]) == 0) || setppctype != SCIP_SETPPCTYPE_PACKING || bestobjval <= 0.0 )
+      if( (setppctype == SCIP_SETPPCTYPE_PACKING && bestobjval > 0.0
+         && SCIPvarGetNLocksDownType(vars[idx], SCIP_LOCKTYPE_MODEL) == 0)
+         || setppctype != SCIP_SETPPCTYPE_PACKING || bestobjval <= 0.0 )
       {
          if( setppctype == SCIP_SETPPCTYPE_PACKING && bestobjval > 0.0 )
             fixval = 0.0;
@@ -2961,7 +2967,8 @@ SCIP_RETCODE collectCliqueData(
 
             /* get the maximal number of occurances of this variable, if this variables  */
             tmpvar = SCIPvarIsNegated(var) ? SCIPvarGetNegatedVar(var) : var;
-            maxnvarconsidx[varindex] = SCIPvarGetNLocksDown(tmpvar) + SCIPvarGetNLocksUp(tmpvar);
+            maxnvarconsidx[varindex] = SCIPvarGetNLocksDownType(tmpvar, SCIP_LOCKTYPE_MODEL)
+               + SCIPvarGetNLocksUpType(tmpvar, SCIP_LOCKTYPE_MODEL);
             SCIP_CALL( SCIPallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) );  /*lint !e866*/
          }
          else
@@ -5446,7 +5453,9 @@ SCIP_RETCODE multiAggregateBinvar(
    for( v = nvars - 2; v >= 0; --v )
       scalars[v] = -1.0;
 
-   SCIPdebugMsg(scip, "multi-aggregating binary variable <%s> (locks: [%d,%d]; to %d variables)\n", SCIPvarGetName(vars[pos]), SCIPvarGetNLocksDown(vars[pos]), SCIPvarGetNLocksUp(vars[pos]), nvars - 1);
+   SCIPdebugMsg(scip, "multi-aggregating binary variable <%s> (locks: [%d,%d]; to %d variables)\n",
+      SCIPvarGetName(vars[pos]), SCIPvarGetNLocksDownType(vars[pos], SCIP_LOCKTYPE_MODEL),
+      SCIPvarGetNLocksUpType(vars[pos], SCIP_LOCKTYPE_MODEL), nvars - 1);
 
    /* perform multi-aggregation */
    SCIP_CALL( SCIPmultiaggregateVar(scip, vars[pos], nvars - 1, tmpvars, scalars, 1.0, infeasible, aggregated) );
@@ -5556,8 +5565,8 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
       if( v < nbinvars || SCIPvarIsBinary(binvars[v]) )
       {
-         nuplocks = SCIPvarGetNLocksUp(binvars[v]);
-         ndownlocks = SCIPvarGetNLocksDown(binvars[v]);
+         nuplocks = SCIPvarGetNLocksUpType(binvars[v], SCIP_LOCKTYPE_MODEL);
+         ndownlocks = SCIPvarGetNLocksDownType(binvars[v], SCIP_LOCKTYPE_MODEL);
 
          if( (nuplocks == 1 && ndownlocks <= 1) || (nuplocks <= 1 && ndownlocks == 1) || (nuplocks <= 2 && ndownlocks <= 2 && SCIPvarGetNegatedVar(binvars[v]) != NULL) )
             ++nposvars;
@@ -5723,7 +5732,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
          SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
 
-         nuplocks = SCIPvarGetNLocksUp(var);
+         nuplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 
          if( nuplocks == 1 && objval <= 0 )
          {
@@ -5754,7 +5763,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
             SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
 
-            nuplocks = SCIPvarGetNLocksUp(var);
+            nuplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 
             if( nuplocks == 1 && objval <= 0 )
             {
@@ -5824,8 +5833,8 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
          aggregated = FALSE;
-         nuplocks = SCIPvarGetNLocksUp(var);
-         ndownlocks = SCIPvarGetNLocksDown(var);
+         nuplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+         ndownlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
          assert(nuplocks >= 1 && ndownlocks >= 0); /* we are only treating set partitioning and set packing constraints, so every variable in there should have an uplock */
 
          if( dualpresolvingenabled && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING && nuplocks <= 1 && nuplocks + ndownlocks <= 2 )
@@ -8401,7 +8410,7 @@ SCIP_DECL_CONSLOCK(consLockSetppc)
 
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksdown, nlocksup) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlocksdown, nlocksup) );
    }
 
    return SCIP_OKAY;

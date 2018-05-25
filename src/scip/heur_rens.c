@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -385,7 +385,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
    SCIP_Bool success;
    int i;
-   int nvars;              /**< number of original problem's variables */
+   int nvars;              /* number of original problem's variables */
    SCIP_RETCODE retcode;
 
    assert(scip != NULL);

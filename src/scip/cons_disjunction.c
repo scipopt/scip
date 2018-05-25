@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -79,7 +79,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSDATA**       consdata,           /**< pointer to constraint data */
    SCIP_CONS**           conss,              /**< initial constraint in disjunction */
    int                   nconss,             /**< number of initial constraints in disjunction */
-   SCIP_CONS*            relaxcons           /**< a conjuction constraint containing the liner relaxation of the disjunction constraint, or NULL */
+   SCIP_CONS*            relaxcons           /**< a conjunction constraint containing the liner relaxation of the disjunction constraint, or NULL */
    )
 {
    assert(scip != NULL);
@@ -120,7 +120,7 @@ SCIP_RETCODE consdataCreate(
 
          if( (*consdata)->relaxcons != NULL )
          {
-            SCIP_CALL( SCIPcaptureCons(scip, relaxcons) );
+            SCIP_CALL( SCIPcaptureCons(scip, (*consdata)->relaxcons) );
          }
       }
    }
@@ -659,13 +659,15 @@ SCIP_DECL_CONSLOCK(consLockDisjunction)
    SCIP_CONSDATA* consdata;
    int c;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* lock sub constraints */
    for( c = 0; c < consdata->nconss; ++c )
    {
-      SCIP_CALL( SCIPaddConsLocks(scip, consdata->conss[c], nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddConsLocksType(scip, consdata->conss[c], locktype, nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;

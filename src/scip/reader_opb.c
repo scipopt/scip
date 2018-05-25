@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2114,7 +2114,7 @@ void appendBuffer(
       writeBuffer(scip, file, linebuffer, linecnt);
 
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
+   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
    (*linecnt) += (int) strlen(extension);
 }
 
@@ -2139,7 +2139,7 @@ SCIP_RETCODE writeOpbObjective(
    )
 {
    SCIP_VAR* var;
-   char linebuffer[OPB_MAX_LINELEN];
+   char linebuffer[OPB_MAX_LINELEN+1];
    char buffer[OPB_MAX_LINELEN];
    SCIP_Longint mult;
    SCIP_Bool objective;
@@ -3760,7 +3760,7 @@ SCIP_RETCODE writeOpbFixedVars(
    SCIP_Bool const       transformed         /**< TRUE iff problem is the transformed problem */
    )
 {
-   char linebuffer[OPB_MAX_LINELEN];
+   char linebuffer[OPB_MAX_LINELEN+1];
    char buffer[OPB_MAX_LINELEN];
    int linecnt;
    int v;
@@ -3838,7 +3838,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
 {
    SCIP_VAR* resvar;
    SCIP_Longint rhslhs;
-   char linebuffer[OPB_MAX_LINELEN];
+   char linebuffer[OPB_MAX_LINELEN+1];
    char buffer[OPB_MAX_LINELEN];
    int linecnt;
    int r, v;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -368,6 +368,7 @@ SCIP_RETCODE componentSetupWorkingSol(
 
    /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugSolIsEnabled(component->problem->scip) )
    {
       PROBLEM* problem;
       SCIP* scip;
@@ -1136,6 +1137,7 @@ SCIP_RETCODE solveComponent(
    case SCIP_STATUS_USERINTERRUPT:
       SCIP_CALL( SCIPinterruptSolve(scip) );
       break;
+   case SCIP_STATUS_TERMINATE:
    case SCIP_STATUS_UNKNOWN:
    case SCIP_STATUS_NODELIMIT:
    case SCIP_STATUS_TOTALNODELIMIT:
@@ -1905,7 +1907,8 @@ SCIP_RETCODE findComponents(
          {
             assert(nunfixedvars <= v);
             sortedvars[nunfixedvars] = vars[v];
-            varlocks[nunfixedvars] = 4 * (SCIPvarGetNLocksDown(vars[v]) + SCIPvarGetNLocksUp(vars[v]));
+            varlocks[nunfixedvars] = 4 * (SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL)
+               + SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL));
             unfixedvarpos[v] = nunfixedvars;
             ++nunfixedvars;
          }
@@ -2375,6 +2378,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
             /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
+         if( SCIPdebugSolIsEnabled(scip) )
          {
             SCIP_SOL* debugsol;
             SCIP_Real val;

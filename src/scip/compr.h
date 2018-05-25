@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,7 +55,8 @@ SCIP_RETCODE SCIPcomprCreate(
    const char*           desc,               /**< description of tree compression */
    int                   priority,           /**< priority of the tree compression */
    int                   minnnodes,          /**< minimal number of nodes for calling compression */
-   SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy
+                                              *   your plugin into sub-SCIPs */
    SCIP_DECL_COMPRFREE   ((*comprfree)),     /**< destructor of tree compression */
    SCIP_DECL_COMPRINIT   ((*comprinit)),     /**< initialize tree compression */
    SCIP_DECL_COMPREXIT   ((*comprexit)),     /**< deinitialize tree compression */

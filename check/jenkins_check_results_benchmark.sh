@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -x
 
 #
 # Usage:
@@ -10,6 +10,8 @@
 # To know which results to process with evalcheck_cluster_benchmark
 # The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 #
+
+echo "This is jenkins_check_results_benchmark.sh running."
 
 # read from stdin
 i=0
@@ -23,9 +25,11 @@ do
   fi
 done < /dev/stdin
 
+export OUTPUTDIR="results/clusterbench$(date +%Y%m%d)"
+
 # build job ids string for sbatch dependency
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute checker after all jobs completed
-sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=100 --time=100 --partition=mip-dbg --account=mip jenkins_failcheck_benchmark.sh
+sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=mip-dbg --account=mip jenkins_failcheck_benchmark.sh

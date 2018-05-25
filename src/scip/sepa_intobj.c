@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -115,7 +115,7 @@ SCIP_RETCODE createObjRow(
          SCIP_CALL( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
                SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, sepadata->objvar) );
-         SCIP_CALL( SCIPaddVarLocks(scip, sepadata->objvar, +1, +1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, sepadata->objvar, SCIP_LOCKTYPE_MODEL, +1, +1) );
       }
       else
          attendobjvarbound = TRUE;

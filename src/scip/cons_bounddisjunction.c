@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -159,12 +159,10 @@ SCIP_RETCODE lockRounding(
 
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
    {
-      /* rounding down may violate the constraint */
       SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, TRUE, FALSE) );
    }
    else
    {
-      /* rounding up may violate the constraint */
       SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[pos], cons, FALSE, TRUE) );
    }
 
@@ -185,12 +183,10 @@ SCIP_RETCODE unlockRounding(
 
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
    {
-      /* rounding down may violate the constraint */
       SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, TRUE, FALSE) );
    }
    else
    {
-      /* rounding up may violate the constraint */
       SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, FALSE, TRUE) );
    }
 
@@ -2718,11 +2714,11 @@ SCIP_DECL_CONSLOCK(consLockBounddisjunction)
    {
       if( consdata->boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
       }
    }
 

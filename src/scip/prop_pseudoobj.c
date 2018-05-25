@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -260,14 +260,14 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
 
    /* second criteria the locks which indicate most effect */
    if( SCIPvarGetObj(var1) > 0.0 )
-      locks1 = SCIPvarGetNLocksDown(var1);
+      locks1 = SCIPvarGetNLocksDownType(var1, SCIP_LOCKTYPE_MODEL);
    else
-      locks1 = SCIPvarGetNLocksUp(var1);
+      locks1 = SCIPvarGetNLocksUpType(var1, SCIP_LOCKTYPE_MODEL);
 
    if( SCIPvarGetObj(var2) > 0.0 )
-      locks2 = SCIPvarGetNLocksDown(var2);
+      locks2 = SCIPvarGetNLocksDownType(var2, SCIP_LOCKTYPE_MODEL);
    else
-      locks2 = SCIPvarGetNLocksUp(var2);
+      locks2 = SCIPvarGetNLocksUpType(var2, SCIP_LOCKTYPE_MODEL);
 
    if( locks1 < locks2 )
       return -1;
@@ -276,14 +276,14 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
 
    /* third criteria the other locks */
    if( SCIPvarGetObj(var1) > 0.0 )
-      locks1 = SCIPvarGetNLocksUp(var1);
+      locks1 = SCIPvarGetNLocksUpType(var1, SCIP_LOCKTYPE_MODEL);
    else
-      locks1 = SCIPvarGetNLocksDown(var1);
+      locks1 = SCIPvarGetNLocksDownType(var1, SCIP_LOCKTYPE_MODEL);
 
    if( SCIPvarGetObj(var2) >  0.0 )
-      locks2 = SCIPvarGetNLocksUp(var2);
+      locks2 = SCIPvarGetNLocksUpType(var2, SCIP_LOCKTYPE_MODEL);
    else
-      locks2 = SCIPvarGetNLocksDown(var2);
+      locks2 = SCIPvarGetNLocksDownType(var2, SCIP_LOCKTYPE_MODEL);
 
    if( locks1 < locks2 )
       return -1;

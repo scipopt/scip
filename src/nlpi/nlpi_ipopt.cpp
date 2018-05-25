@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,6 +36,7 @@
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 #include "scip/misc.h"
 
 #include <new>      /* for std::bad_alloc */
@@ -609,7 +610,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       if( IsNull((*problem)->nlp) )
          throw std::bad_alloc();
    }
-   catch( std::bad_alloc )
+   catch( const std::bad_alloc& )
    {
       SCIPerrorMessage("Not enough memory to initialize Ipopt.\n");
       return SCIP_NOMEMORY;
@@ -1785,9 +1786,10 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
 
    case SCIP_NLPPAR_TILIM:
    {
-      if( dval >= 0 )
+      if( dval >= 0.0 )
       {
-         problem->ipopt->Options()->SetNumericValue("max_cpu_time", dval);
+         /* Ipopt doesn't like a setting of exactly 0 for the max_cpu_time, so increase as little as possible in that case */
+         problem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(dval, DBL_MIN));
       }
       else
       {

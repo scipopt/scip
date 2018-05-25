@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -329,7 +329,7 @@ void incrementalStatsUpdate(
    *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
 
    /* it may happen that *sumvarptr is slightly negative, especially after a series of add/removal operations */
-   assert(*sumvarptr >= -1e-6);
+   assert(*sumvarptr >= -1e-4);
    *sumvarptr = MAX(0.0, *sumvarptr);
 }
 
@@ -5815,6 +5815,13 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownRealIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealIntLong
@@ -10044,6 +10051,36 @@ int SCIPsnprintf(
    return n;
 }
 
+/** safe version of strncpy
+ *
+ *  Copies string in s to t using at most @a size-1 nonzero characters (strncpy copies size characters). It always adds
+ *  a terminating zero char. Does not pad the remaining string with zero characters (unlike strncpy). Returns the number
+ *  of copied nonzero characters, if the length of s is at most size - 1, and returns size otherwise. Thus, the original
+ *  string was truncated if the return value is size.
+ */
+int SCIPstrncpy(
+   char*                 t,                  /**< target string */
+   const char*           s,                  /**< source string */
+   int                   size                /**< maximal size of t */
+   )
+{
+   int n;
+
+   if( size <= 0 )
+      return 0;
+
+   /* decrease size by 1 to create space for terminating zero char */
+   --size;
+   for( n = 0; n < size && *s != '\0'; n++ )
+      *(t++) = *(s++);
+   *t = '\0';
+
+   if( *s != '\0' )
+      ++n;
+
+   return n;
+}
+
 /** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
@@ -10313,18 +10350,16 @@ SCIP_Real SCIPcomputeGap(
 {
    if( EPSEQ(primalbound, dualbound, eps) )
       return 0.0;
-   else if( EPSZ(dualbound, eps) ||
-            EPSZ(primalbound, eps) ||
-            REALABS(primalbound) >= inf ||
-            REALABS(dualbound) >= inf ||
-            primalbound * dualbound < 0.0 )
-      return inf;
    else
    {
       SCIP_Real absdual = REALABS(dualbound);
       SCIP_Real absprimal = REALABS(primalbound);
 
-      return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
+      if( EPSZ(dualbound, eps) || EPSZ(primalbound, eps) || absprimal >= inf || absdual >= inf ||
+         primalbound * dualbound < 0.0 )
+         return inf;
+      else
+         return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
    }
 }
 

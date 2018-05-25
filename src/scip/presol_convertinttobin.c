@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -151,7 +151,8 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 	 continue;
 
       /* check for correct locks */
-      if( presoldata->samelocksinbothdirections && SCIPvarGetNLocksUp(vars[v]) != SCIPvarGetNLocksDown(vars[v]) )
+      if( presoldata->samelocksinbothdirections
+         && SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL) != SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL) )
          continue;
 
       /* get variable's bounds */
@@ -191,7 +192,8 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
       nnewbinvars = (int)SCIPfloor(scip, (log((SCIP_Real) domainsize)/log(2.0))) + 1;
 
       SCIPdebugMsg(scip, "integer variable <%s> [%g,%g], domainsize %" SCIP_LONGINT_FORMAT "\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ",
-         SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUp(vars[v]), SCIPvarGetNLocksDown(vars[v]), nnewbinvars);
+         SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL),
+         SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL), nnewbinvars);
 
       assert(nnewbinvars > 0);
 

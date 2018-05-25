@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -234,7 +234,7 @@ Test(parsing_linear, equation_onevariable, .description = "test if an equation c
    lindata.lhs = 5.0;
    lindata.rhs = 5.0;
    lindata.coefs[0] = 5.0;
-   BMScopyMemoryArray(lindata.names, "v1", 3);
+   BMScopyMemoryArray(lindata.names[0], "v1", 3);
    lindata.nnonz = 1;
 
    sprintf(filename, FNAME, "equation_onevariable");

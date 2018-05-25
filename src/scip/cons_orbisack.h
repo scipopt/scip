@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -79,13 +79,13 @@ SCIP_RETCODE SCIPseparateCoversOrbisack(
 /** checks whether a given binary solution is feasible for the orbisack */
 EXTERN
 SCIP_RETCODE SCIPcheckSolutionOrbisack(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_SOL*          sol,                /**< solution to check for feasibility */
-   SCIP_VAR**         vars1,              /**< variables of first column */
-   SCIP_VAR**         vars2,              /**< variables of second column */
-   int                nrows,              /**< number of rows */
-   SCIP_Bool          printreason,        /**< whether reason for infeasibility should be printed */
-   SCIP_Bool*         feasible            /**< memory address to store whether sol is feasible */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to check for feasibility */
+   SCIP_VAR**            vars1,              /**< variables of first column */
+   SCIP_VAR**            vars2,              /**< variables of second column */
+   int                   nrows,              /**< number of rows */
+   SCIP_Bool             printreason,        /**< whether reason for infeasibility should be printed */
+   SCIP_Bool*            feasible            /**< memory address to store whether sol is feasible */
    );
 
 /** creates and captures a orbisack constraint

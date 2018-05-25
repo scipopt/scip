@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -46,10 +46,12 @@ MAINOBJ		=	probdata_cyc.o \
 			heur_cycgreedy.o \
 			heur_fuzzyround.o \
 			heur_cyckerlin.o \
+			heur_redsize.o \
 			branch_multinode.o \
 			sepa_edge.o \
 			sepa_subtour.o \
 			sepa_partition.o \
+			event_newsol.o \
 			cycplugins.o \
 			main.o
 

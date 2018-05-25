@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -29,6 +29,7 @@ fi
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
+DATFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.dat
 TMPFILE=$SOLVERPATH/$OUTPUTDIR/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
@@ -124,6 +125,12 @@ echo =ready=                        >> $OUTFILE
 
 mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
+
+# move a possible data file
+if [ -f "${DATFILE}" ] ;
+then
+    mv $DATFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.dat
+fi
 
 rm -f $TMPFILE
 rm -f $SOLFILE

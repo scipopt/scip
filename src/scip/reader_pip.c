@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -898,8 +898,7 @@ SCIP_RETCODE readPolynomial(
          if( strcmp(pipinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            (void)strncpy(name, pipinput->tokenbuf, PIP_MAX_LINELEN);
-            name[PIP_MAX_LINELEN - 1] = '\0';
+            (void)SCIPstrncpy(name, pipinput->tokenbuf, PIP_MAX_LINELEN);
             SCIPdebugMsg(scip, "(line %d) read constraint name: '%s'\n", pipinput->linenumber, name);
          }
          else
@@ -2105,7 +2104,7 @@ void printRow(
    )
 {
    int v;
-   char linebuffer[PIP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[PIP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -2237,7 +2236,7 @@ void printRowNl(
    int v;
    int c;
    int e;
-   char linebuffer[PIP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[PIP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -2964,7 +2963,7 @@ SCIP_RETCODE SCIPwritePip(
    int e;
 
    int linecnt;
-   char linebuffer[PIP_MAX_PRINTLEN];
+   char linebuffer[PIP_MAX_PRINTLEN+1];
 
    char varname[PIP_MAX_NAMELEN];
    char buffer[PIP_MAX_PRINTLEN];

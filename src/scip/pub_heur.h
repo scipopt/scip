@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -290,6 +290,12 @@ SCIP_Longint SCIPdivesetGetNProbingNodes(
 /** get the total number of backtracks performed by this dive set */
 EXTERN
 SCIP_Longint SCIPdivesetGetNBacktracks(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of conflicts found by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNConflicts(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 

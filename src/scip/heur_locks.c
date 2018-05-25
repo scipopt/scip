@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -168,7 +168,7 @@ SCIP_DECL_HEURINIT(heurInitLocks) /*lint --e{715}*/
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -295,8 +295,8 @@ SCIP_RETCODE SCIPapplyLockFixings(
    for( v = 0; v < nbinvars; ++v )
    {
       var = sortvars[v];
-      nuplocks[v] = SCIPvarGetNLocksUp(var);
-      ndownlocks[v] = SCIPvarGetNLocksDown(var);
+      nuplocks[v] = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+      ndownlocks[v] = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
    }
 
    /* get activities of rows */

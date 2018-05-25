@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -197,6 +197,40 @@ void SCIPbanditSetData(
    bandit->data = banditdata;
 }
 
+/** internal method to create a bandit VTable */
+static
+SCIP_RETCODE doBanditvtableCreate(
+   SCIP_BANDITVTABLE**   banditvtable,       /**< pointer to virtual table for bandit algorithm */
+   const char*           name,               /**< a name for the algorithm represented by this vtable */
+   SCIP_DECL_BANDITFREE  ((*banditfree)),    /**< callback to free bandit specific data structures */
+   SCIP_DECL_BANDITSELECT((*banditselect)),  /**< selection callback for bandit selector */
+   SCIP_DECL_BANDITUPDATE((*banditupdate)),  /**< update callback for bandit algorithms */
+   SCIP_DECL_BANDITRESET ((*banditreset))    /**< update callback for bandit algorithms */
+   )
+{
+   SCIP_BANDITVTABLE* banditvtableptr;
+
+   assert(banditvtable != NULL);
+   assert(name != NULL);
+   assert(banditfree != NULL);
+   assert(banditselect != NULL);
+   assert(banditupdate != NULL);
+   assert(banditreset != NULL);
+
+   /* allocate memory for this virtual function table */
+   SCIP_ALLOC( BMSallocMemory(banditvtable) );
+   BMSclearMemory(*banditvtable);
+
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*banditvtable)->name, name, strlen(name)+1) );
+   banditvtableptr = *banditvtable;
+   banditvtableptr->banditfree = banditfree;
+   banditvtableptr->banditselect = banditselect;
+   banditvtableptr->banditupdate = banditupdate;
+   banditvtableptr->banditreset = banditreset;
+
+   return SCIP_OKAY;
+}
+
 /** create a bandit VTable for bandit algorithm callback functions */
 SCIP_RETCODE SCIPbanditvtableCreate(
    SCIP_BANDITVTABLE**   banditvtable,       /**< pointer to virtual table for bandit algorithm */
@@ -207,7 +241,6 @@ SCIP_RETCODE SCIPbanditvtableCreate(
    SCIP_DECL_BANDITRESET ((*banditreset))    /**< update callback for bandit algorithms */
    )
 {
-   SCIP_BANDITVTABLE* banditvtableptr;
    assert(banditvtable != NULL);
    assert(name != NULL);
    assert(banditfree != NULL);
@@ -215,14 +248,8 @@ SCIP_RETCODE SCIPbanditvtableCreate(
    assert(banditupdate != NULL);
    assert(banditreset != NULL);
 
-   /* allocate memory for this virtual function table */
-   SCIP_ALLOC( BMSallocMemory(banditvtable) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*banditvtable)->name, name, strlen(name)+1) );
-   banditvtableptr = *banditvtable;
-   banditvtableptr->banditfree = banditfree;
-   banditvtableptr->banditselect = banditselect;
-   banditvtableptr->banditupdate = banditupdate;
-   banditvtableptr->banditreset = banditreset;
+   SCIP_CALL_FINALLY( doBanditvtableCreate(banditvtable, name, banditfree, banditselect, banditupdate, banditreset),
+      SCIPbanditvtableFree(banditvtable) );
 
    return SCIP_OKAY;
 }
@@ -234,9 +261,10 @@ void SCIPbanditvtableFree(
    )
 {
    assert(banditvtable != NULL);
-   assert(*banditvtable != NULL);
+   if( *banditvtable == NULL )
+      return;
 
-   BMSfreeMemoryArray(&(*banditvtable)->name);
+   BMSfreeMemoryArrayNull(&(*banditvtable)->name);
    BMSfreeMemory(banditvtable);
 }
 

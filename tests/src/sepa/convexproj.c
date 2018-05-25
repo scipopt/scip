@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -268,7 +268,6 @@ void setup_sepadata(void)
    cr_assert_eq(sepadata->nnlrows, 3, "error: received %d nlrows", sepadata->nnlrows);
 
    /* initialize some of the sepadata */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(sepadata->constraintviolation), 3) );
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &sepadata->exprinterpreter) );
    sepadata->nlpinvars = SCIPgetNVars(scip);
    cr_assert_eq(sepadata->nlpinvars, 2, "error: received %d vars", sepadata->nlpinvars);

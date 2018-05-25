@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,7 +52,8 @@ enum SCIP_Status
    SCIP_STATUS_OPTIMAL        = 11,     /**< the problem was solved to optimality, an optimal solution is available */
    SCIP_STATUS_INFEASIBLE     = 12,     /**< the problem was proven to be infeasible */
    SCIP_STATUS_UNBOUNDED      = 13,     /**< the problem was proven to be unbounded */
-   SCIP_STATUS_INFORUNBD      = 14      /**< the problem was proven to be either infeasible or unbounded */
+   SCIP_STATUS_INFORUNBD      = 14,     /**< the problem was proven to be either infeasible or unbounded */
+   SCIP_STATUS_TERMINATE      = 15      /**< status if the process received a SIGTERM signal */
 };
 typedef enum SCIP_Status SCIP_STATUS;
 

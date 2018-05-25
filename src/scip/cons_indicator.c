@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3164,10 +3164,6 @@ SCIP_RETCODE consdataCreate(
 #endif
    }
 
-   /* capture slack variable and linear constraint */
-   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->slackvar) );
-   SCIP_CALL( SCIPcaptureCons(scip, (*consdata)->lincons) );
-
    return SCIP_OKAY;
 }
 
@@ -3392,7 +3388,7 @@ SCIP_RETCODE presolRoundIndicator(
                except by this indicator constraint. If more than one indicator constraint is
                effected, we have to hope that they are all fulfilled - in this case the last
                constraint will fix the binary variable to 1. */
-            if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+            if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
             {
                if ( SCIPvarGetUbGlobal(binvar) > 0.5 )
                {
@@ -3410,7 +3406,7 @@ SCIP_RETCODE presolRoundIndicator(
          {
             /* In this case we would like to fix the binary variable to 0, if it is not locked down
                (should also have been performed by other dual reductions). */
-            if ( SCIPvarGetNLocksDown(binvar) == 0 )
+            if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
             {
                if ( SCIPvarGetLbGlobal(binvar) < 0.5 )
                {
@@ -3462,8 +3458,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
          /* change binvary variable */
          consdata->binvar = var;
@@ -3513,8 +3509,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
@@ -3802,7 +3798,7 @@ SCIP_RETCODE propIndicator(
                   except by this indicator constraint. If more than one indicator constraint is
                   affected, we have to hope that they are all fulfilled - in this case the last
                   constraint will fix the binary variable to 1. */
-               if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+               if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                {
                   if ( SCIPvarGetUbLocal(binvar) > 0.5 )
                   {
@@ -3820,7 +3816,7 @@ SCIP_RETCODE propIndicator(
             {
                /* In this case we would like to fix the binary variable to 0, if it is not locked down
                   (should also have been performed by other dual reductions). */
-               if ( SCIPvarGetNLocksDown(binvar) == 0 )
+               if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
                {
                   if ( SCIPvarGetLbLocal(binvar) < 0.5 )
                   {
@@ -5626,6 +5622,10 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          conshdlrdata->eventhdlrrestart, sourcedata->binvar, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive) );
    assert( consdata != NULL );
 
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, consdata->slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
+
    /* create transformed constraint with the same flags */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
@@ -6457,12 +6457,13 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
    SCIPdebugMsg(scip, "%socking constraint <%s>.\n", (nlocksneg < 0) || (nlockspos < 0) ? "Unl" : "L", SCIPconsGetName(cons));
 #endif
 
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, nlocksneg, nlockspos) );
+   SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, locktype, nlocksneg, nlockspos) );
 
    if ( consdata->linconsactive )
    {
       assert( consdata->slackvar != NULL );
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, nlocksneg, nlockspos) );
+
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, locktype, nlocksneg, nlockspos) );
    }
    else
    {
@@ -6489,22 +6490,22 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
          {
             if ( haslhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlockspos, nlocksneg) );
             }
             if ( hasrhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlocksneg, nlockspos) );
             }
          }
          else
          {
             if ( haslhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlocksneg, nlockspos) );
             }
             if ( hasrhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlockspos, nlocksneg) );
             }
          }
       }
@@ -7440,6 +7441,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
             binvar, slackvar, lincons, linconsactive) );
       assert( consdata != NULL );
+      /* do not need to capture slack variable and linear constraint here */
 
       /* create constraint */
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -7464,10 +7466,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
          }
       }
    }
-
-   /* release slack variable and linear constraint */
-   SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
-   SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
    return SCIP_OKAY;
 }
@@ -7627,6 +7625,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
    }
+
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    return SCIP_OKAY;
 }
@@ -7902,9 +7904,9 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
  *       - \ref SCIP_STAGE_PROBLEM
  */
 SCIP_RETCODE SCIPsetSlackVarUb(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_CONS*            cons,                /**< indicator constraint */
-   SCIP_Real             ub                   /**< upper bound for slack variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_Real             ub                  /**< upper bound for slack variable */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8123,7 +8125,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
                if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
                {
                   /* check whether variable only occurs in the current constraint */
-                  if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+                  if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                   {
                      SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                      *changed = TRUE;
@@ -8141,7 +8143,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             {
                /* setting variable to 0 does not increase objective -> check whether variable only occurs in the current constraint
                 * note: binary variables are only locked up */
-               if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+               if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) <= 0
+                  && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
                {
                   SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
                   *changed = TRUE;

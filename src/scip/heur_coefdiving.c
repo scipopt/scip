@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -199,8 +199,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
    else
    {
       /* the candidate may not be rounded */
-      int nlocksdown = SCIPvarGetNLocksDown(cand);
-      int nlocksup = SCIPvarGetNLocksUp(cand);
+      int nlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
+      int nlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
       *roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && candsfrac > 0.5));
    }
 
@@ -220,13 +220,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
-      *score = SCIPvarGetNLocksUp(cand);
+      *score = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
    }
    else
    {
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
-      *score = SCIPvarGetNLocksDown(cand);
+      *score = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
    }
 
 
@@ -240,7 +240,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
          (*score) *= 0.01;
    }
    else if( candsfrac < 0.01 )
-      (*score) *= 0.1;
+      (*score) *= 0.01;
 
    /* prefer decisions on binary variables */
    if( !SCIPvarIsBinary(cand) )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -85,6 +85,7 @@ void SCIPdivesetUpdateStats(
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
    SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
    SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
    SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    );
 

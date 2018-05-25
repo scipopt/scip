@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -622,7 +622,7 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
    propdata->genvboundprop = SCIPfindProp(scip, "genvbounds");
 
    SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
    SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &propdata->nlpstatistics) );
    propdata->lastnode = -1;
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# This scripts generates the dependences for SCIP
+# This scripts generates the dependencies for SCIP
 #
 
-LPSS=(cpx spx spx2 xprs msk clp grb qso none)
+LPSS=(cpx spx spx1 xprs msk clp grb qso none)
 OPTS=(opt dbg prf opt-gccold)
 TPIS=(omp tny none)
 EXPRINTS=(none cppad)
@@ -12,7 +12,7 @@ for OPT in ${OPTS[@]}
 do
    # dependencies of main SCIP source and objscip library
    # with ZIMPL disabled
-   make OPT=$OPT ZIMPL=false LPS=none scipdepend
+   make OPT=$OPT ZIMPL=false LPS=none SYM=none scipdepend
 
    # dependencies of cmain and cppmain
    make OPT=$OPT ZIMPL=false LPS=none LINKER=C   maindepend
@@ -23,9 +23,9 @@ do
       # check if the header for the LP solver are available,
       # or we are in the special case "none"
       # in the case "qso", the include directory is called qsinc
-      if [ -e lib/include/$LPS"inc" ] || [ "$LPS" == "none" ] || [ "$LPS" == "spx2" -a -e lib/include/spxinc ] || [ "$LPS" == "qso" -a -e lib/include/qsinc ] || [ "$LPS" == "clp" -a -e lib/clp.*.opt ]
+      if [ -e lib/include/$LPS"inc" ] || [ "$LPS" == "none" ] || [ "${LPS:0:3}" == "spx" -a -e lib/include/spxinc ] || [ "$LPS" == "qso" -a -e lib/include/qsinc ] || [ "$LPS" == "clp" -a -e lib/static/clp.*.opt ]
       then
-      make LPS=$LPS OPT=$OPT lpidepend
+         make LPS=$LPS OPT=$OPT lpidepend
       fi
    done
 

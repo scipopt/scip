@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1327,6 +1327,42 @@ SCIP_RETCODE checkMemGlbCons(
 
          reopt->allocmemglbconss = newsize;
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** reactivate globally valid constraints that were deactivated and necessary to ensure correctness */
+static
+SCIP_RETCODE cleanActiveConss(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int nentries;
+   int i;
+
+   assert(reopt != NULL);
+
+   /* the hashmap need not to be exist, e.g., if the problem was solved during presolving */
+   if( reopt->activeconss == NULL )
+      return SCIP_OKAY;
+
+   nentries = SCIPhashmapGetNEntries(reopt->activeconss);
+
+   /* loop over all entries of the hashmap and reactivate deactivated constraints */
+   for( i = 0; i < nentries; i++ )
+   {
+      SCIP_CONS* cons;
+      SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry(reopt->activeconss, i);
+
+      if( entry == NULL )
+         continue;
+
+      cons = (SCIP_CONS*)SCIPhashmapEntryGetImage(entry);
+      assert(cons != NULL);
+
+      SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
    }
 
    return SCIP_OKAY;
@@ -5067,10 +5103,36 @@ SCIP_RETCODE SCIPreoptCreate(
    eventhdlr = NULL;
 
    /* include event handler into SCIP */
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL, eventInitsolReopt,
-         eventExitsolReopt, NULL, eventExecReopt, NULL) );
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, set, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL,
+      eventInitsolReopt, eventExitsolReopt, NULL, eventExecReopt, NULL) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, eventhdlr) );
    assert(eventhdlr != NULL);
+
+   return SCIP_OKAY;
+}
+
+/* release all variables and constraints captured during reoptimization */
+SCIP_RETCODE SCIPreoptReleaseData(
+   SCIP_REOPT*           reopt,              /**< pointer to reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   /* release all added constraints and free the data */
+   if( reopt->addedconss != NULL )
+   {
+      int c;
+      for( c = 0; c < reopt->naddedconss; c++)
+      {
+         assert(reopt->addedconss[c] != NULL);
+
+         SCIP_CALL( SCIPconsRelease(&reopt->addedconss[c], blkmem, set) );
+      }
+
+      BMSfreeBlockMemoryArray(blkmem, &reopt->addedconss, reopt->addedconsssize);
+   }
+
+   SCIP_CALL( cleanActiveConss(reopt, set) );
 
    return SCIP_OKAY;
 }
@@ -5169,34 +5231,22 @@ SCIP_RETCODE SCIPreoptFree(
    /* clocks */
    SCIPclockFree(&(*reopt)->savingtime);
 
-   /* clean addedconss array */
-   if( (*reopt)->addedconss != NULL )
+   /* the hashmap need not to be exist, e.g., if the problem was solved during presolving */
+   if( (*reopt)->activeconss != NULL )
    {
-      int c;
-      for( c = 0; c < (*reopt)->naddedconss; c++)
-      {
-         assert((*reopt)->addedconss[c] != NULL);
-
-         SCIP_CALL( SCIPconsRelease(&(*reopt)->addedconss[c], blkmem, set) );
-      }
-
-      BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
+      SCIPhashmapFree(&(*reopt)->activeconss);
+      (*reopt)->activeconss = NULL;
    }
 
    if( (*reopt)->glblb != NULL )
    {
       SCIPhashmapFree(&(*reopt)->glblb);
       SCIPhashmapFree(&(*reopt)->glbub);
-      SCIPhashmapFree(&(*reopt)->activeconss);
       (*reopt)->glblb = NULL;
       (*reopt)->glbub = NULL;
-      (*reopt)->activeconss = NULL;
    }
    else
-   {
       assert((*reopt)->glbub == NULL);
-      assert((*reopt)->activeconss == NULL);
-   }
 
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory, (*reopt)->runsize);
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
@@ -7668,7 +7718,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       assert(!SCIPhashmapExists(reopt->activeconss, (void*)cons));
       SCIP_CALL( SCIPhashmapInsert(reopt->activeconss, (void*)cons, (void*)cons) );
 
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      /* don't release the constraint because we would need to capture the constraint anyway */
 
       /* mark the constraint as empty */
       reopt->glbconss[c]->nvars = 0;
@@ -8157,6 +8207,7 @@ SCIP_RETCODE SCIPreoptSaveActiveConss(
       assert(SCIPconsIsActive(conss[i]));
       assert(!SCIPhashmapExists(reopt->activeconss, (void*)conss[i]));
 
+      SCIPconsCapture(conss[i]);
       SCIP_CALL( SCIPhashmapInsert(reopt->activeconss, (void*)conss[i], (void*)conss[i]) );
    }
 
@@ -8239,7 +8290,10 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
 
       cons = (SCIP_CONS*)SCIPhashmapEntryGetImage(entry);
       assert(cons != NULL);
-      assert(!SCIPconsIsDeleted(cons));
+
+      /* it can happen that the constraint got globally deleted */
+      if( SCIPconsIsDeleted(cons) )
+         cons->deleted = FALSE;
 
       /* to ensure that the constraint will be added to all the data structures we need to deactivate the
        * constraint first.

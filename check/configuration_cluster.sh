@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -19,7 +19,7 @@
 # This script cancels the process if required variables are not correctly set
 
 # input variables - should be passed to this script
-QUEUE=$1    # the name of the cluster (M610, M620, dbg, telecom-dbg, mip-dbg, opt-low, opt)
+QUEUE=$1    # the name of the cluster (M620, dbg, telecom-dbg, mip-dbg, opt-low, opt)
 PPN=$2      # number of cluster nodes to use
 EXCLUSIVE=$3 # should cluster nodes be blocked for other users while the jobs are running?
 QUEUETYPE=$4 # either 'srun' or 'qsub'
@@ -75,13 +75,6 @@ then
 
     # wakeup the cluster
     make --makefile=wakeup-slurm wake_opt
-elif test $CLUSTERQUEUE = "M610-low"
-then
-    NICE="--nice=10000"
-    CLUSTERQUEUE="M610"
-
-    # wakeup the cluster
-    make --makefile=wakeup-slurm wake_M610
 elif test $CLUSTERQUEUE = "M620-low"
 then
     NICE="--nice=10000"
@@ -111,6 +104,13 @@ then
     make --makefile=wakeup-slurm wake_M620
     make --makefile=wakeup-slurm wake_M620v2
     make --makefile=wakeup-slurm wake_M620v3
+elif test $CLUSTERQUEUE = "M640-low"
+then
+    NICE="--nice=10000"
+    CLUSTERQUEUE="M640"
+
+    # wakeup the cluster
+    make --makefile=wakeup-slurm wake_M640
 elif test $CLUSTERQUEUE = "moskito"
 then
     ACCOUNT="dopt"
@@ -122,7 +122,7 @@ then
     EXCLUSIVE=" --exclusive"
     if test $CLUSTERQUEUE = "opt"
     then
-        CLUSTERQUEUE="M610"
+        CLUSTERQUEUE="M640"
     fi
 else
     EXCLUSIVE=""

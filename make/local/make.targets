@@ -1,15 +1,15 @@
 # this local Makefile includes the cluster targets
 
-OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
+OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | sed 's/\(portal\)//g' | tr -cd '[:alpha:]')
 
 -include $(SCIPDIR)/make/local/make.$(OPTHOST)
 
 .PHONY: testfscip
-testfscip: check/configuration_set_fscip.sh check/configuration_logfiles_fscip.sh check/evalcheck_cluster.sh check/check.awk
+testfscip: check_fscip.sh check/configuration_set_fscip.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk
 		cd check; \
-		$(SHELL) ./check_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) $(notdir $(FSCIP)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(SHELL) ./check_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) $(notdir $(FSCIP)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-		$(SEEDS);
+		$(SEEDS) $(GLBSEEDSHIFT);
 
 .PHONY: testcplex
 testcplex:
@@ -69,13 +69,14 @@ testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configu
 		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES);
 
 .PHONY: testclusterfscip
-testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh check/configuration_set_fscip.sh check/configuration_logfiles_fscip.sh check/evalcheck_cluster.sh check/check.awk
+testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh check/configuration_set_fscip.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk
 		cd check; \
 		$(SHELL) ./check_cluster_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) \
-		$(notdir $(FSCIP)) $(TIME) $(NODES) $(MEM) \
+		$(notdir $(FSCIP)) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) \
+		$(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercpx
 testclustercpx:

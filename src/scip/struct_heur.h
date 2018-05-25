@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,6 +58,7 @@ struct SCIP_Diveset
    SCIP_Longint          totalnbacktracks;   /**< the total number of backtracks during the execution of this dive set */
    SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
    SCIP_Longint          nbestsolsfound;     /**< the total number of best solutions found */
+   SCIP_Longint          nconflictsfound;    /**< the total number of added conflicts during the execution of this dive set */
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   mindepth;           /**< the minimum depth reached by all executions of the dive set */
    int                   maxdepth;           /**< the maximum depth reached by an execution of the dive set */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -298,8 +298,8 @@ SCIP_RETCODE selectShifting(
 
       /* calculate the score of the shifting (prefer smaller values) */
       if( isfrac )
-         shiftscore = increase ? -1.0 / (SCIPvarGetNLocksUp(var) + 1.0) : 
-            -1.0 / (SCIPvarGetNLocksDown(var) + 1.0);
+         shiftscore = increase ? -1.0 / (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + 1.0) :
+            -1.0 / (SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) + 1.0);
       else
       {
          int probindex;
@@ -422,7 +422,7 @@ SCIP_RETCODE selectEssentialRounding(
          obj = SCIPvarGetObj(var);
 
          /* shifting down */
-         nlocks = SCIPvarGetNLocksUp(var);
+         nlocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
          if( nlocks >= maxnlocks )
          {
             shiftval = SCIPfeasFloor(scip, solval);
@@ -438,7 +438,7 @@ SCIP_RETCODE selectEssentialRounding(
          }
 
          /* shifting up */
-         nlocks = SCIPvarGetNLocksDown(var);
+         nlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
          if( nlocks >= maxnlocks )
          {
             shiftval = SCIPfeasCeil(scip, solval);
@@ -581,7 +581,7 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    SCIPheurSetData(heur, heurdata);
 

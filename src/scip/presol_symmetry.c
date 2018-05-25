@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,6 +41,7 @@
 #include <scip/cons_logicor.h>
 #include <scip/cons_or.h>
 #include <scip/cons_xor.h>
+#include <scip/cons_linking.h>
 
 #include <scip/presol_symmetry.h>
 #include <symmetry/compute_symmetry.h>
@@ -56,8 +57,8 @@
 
 /* default parameter values */
 #define DEFAULT_MAXGENERATORS      1500      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
-#define DEFAULT_COMPUTEPRESOLVED   TRUE      /**< Should the symmetry be computed after presolving (otherwise before presol)? */
 #define DEFAULT_CHECKSYMMETRIES   FALSE      /**< Should all symmetries be checked after computation? */
+#define DEFAULT_DISPLAYNORBITVARS FALSE      /**< Should the number of variables affected by some symmetry be displayed? */
 
 /* other defines */
 #define MAXGENNUMERATOR        64000000      /**< determine maximal number of generators by dividing this number by the number of variables */
@@ -66,12 +67,9 @@
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Bool             computepresolved;   /**< Should the symmetry be computed afer presolving (otherwise before presol)? */
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
-   SYM_HANDLETYPE        symtype;            /**< type of symmetry of registered calling function */
-   SYM_SPEC              symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
-   SYM_SPEC              symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
+   SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
@@ -79,12 +77,11 @@ struct SCIP_PresolData
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
+   int                   norbitvars;         /**< number of vars that are contained in a non-trivial orbit */
+   SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
-   int                   oldmaxpreroundscomponents; /**< original value of parameter constraints/components/maxprerounds */
    int                   oldmaxroundsdomcol; /**< original value of parameter presolving/maxrounds/domcol */
-   int                   oldmaxpreroundsdualfix; /**< original value of parameter propagating/dualfix/maxprerounds */
-   int                   oldfreqdualfix;     /**< original value of parameter propagating/dualfix/freq */
    SCIP_Bool             changeddefaultparams; /**< whether default parameters were changed  */
 };
 
@@ -619,6 +616,8 @@ int getNSymhandableConss(
 
    conshdlr = SCIPfindConshdlr(scip, "linear");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "linking");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "setppc");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "xor");
@@ -638,7 +637,6 @@ int getNSymhandableConss(
 
    return nhandleconss;
 }
-
 
 /** compute symmetry group of MIP */
 static
@@ -786,6 +784,10 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( ! SCIPconsIsActive(cons) )
          continue;
 
+      /* Skip conflict constraints if we are late in the solving process */
+      if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsConflict(cons) )
+         continue;
+
       /* get constraint handler */
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
@@ -799,6 +801,34 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_CALL( collectCoefficients(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
                SCIPgetNVarsLinear(scip, cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons),
                SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+      }
+      else if ( strcmp(conshdlrname, "linking") == 0 )
+      {
+         SCIP_VAR** curconsvars;
+         int* curconsvals;
+         int i;
+
+         /* get constraint variables and their amount */
+         curconsvals = SCIPgetValsLinking(scip, cons);
+         SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
+         /* SCIPgetBinVarsLinking returns the number of binary variables, but we also need the integer variable */
+         nconsvars++;
+
+         /* copy vars and vals for binary variables */
+         for( i = 0; i < nconsvars - 1; i++ )
+         {
+            consvars[i] = curconsvars[i];
+            consvals[i] = (SCIP_Real) curconsvals[i];
+         }
+
+         /* set final entry of vars and vals to the linking variable and its coefficient, respectively */
+         consvars[nconsvars - 1] = SCIPgetIntvarLinking(scip, cons);
+         consvals[nconsvars - 1] = -1;
+
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
+                        SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+         SCIP_CALL( collectCoefficients(scip, consvars, NULL, nconsvars - 1, 1.0, 1.0,
+                        SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "setppc") == 0 )
       {
@@ -1106,7 +1136,8 @@ SCIP_RETCODE computeSymmetryGroup(
       /* determine generators */
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
 
-      if ( ! SCIPisStopped(scip) && checksymmetries )
+      /* SCIPisStopped() might call SCIPgetGap() which is only available after initpresolve */
+      if ( checksymmetries && SCIPgetStage(scip) > SCIP_STAGE_INITPRESOLVE && ! SCIPisStopped(scip) )
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
@@ -1149,11 +1180,74 @@ SCIP_RETCODE computeSymmetryGroup(
 }
 
 
+/* compute number of variables that are contained in a non-trivial orbit */
+static
+SCIP_RETCODE computeNOrbitVars(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
+   SCIP_Bool             completestatistic   /**< whether a complete statistic on affected vars should be computed */
+   )
+{
+   int** perms;
+   int nperms;
+   int nvars;
+   SCIP_Shortbool* affected;
+   int i;
+   int p;
+   int naffected = 0;
+
+   assert( scip != NULL );
+   assert( presoldata != NULL );
+   assert( presoldata->perms != NULL );
+   assert( presoldata->nperms > 0 );
+   assert( presoldata->npermvars > 0 );
+
+   perms = presoldata->perms;
+   nperms = presoldata->nperms;
+   nvars = presoldata->npermvars;
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &affected, nvars) );
+
+   /* iterate over permutations and check which variables are affected by some symmetry */
+   for (p = 0; p < nperms && (completestatistic || ! presoldata->binvaraffected); ++p)
+   {
+      for (i = 0; i < nvars; ++i)
+      {
+         if ( affected[i] )
+            continue;
+
+         if ( perms[p][i] != i )
+         {
+            if ( SCIPvarIsBinary(presoldata->permvars[i]) )
+            {
+               presoldata->binvaraffected = TRUE;
+
+               if ( ! completestatistic )
+                  break;
+            }
+
+            affected[i] = TRUE;
+            ++naffected;
+         }
+      }
+   }
+
+   if ( completestatistic )
+      presoldata->norbitvars = naffected;
+
+   SCIPfreeBufferArray(scip, &affected);
+
+   return SCIP_OKAY;
+}
+
+
 /** determine symmetry */
 static
 SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
+   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
+   SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
 {
    int maxgenerators;
@@ -1215,7 +1309,7 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
    /* skip symmetry computation if required variables are not present */
-   else if ( ! (type & presoldata->symspecrequire) )
+   else if ( ! (type & symspecrequire) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "   (%.1fs) symmetry computation skipped: type (bin %c, int %c, cont %c) does not match requirements (bin %c, int %c, cont %c)\n",
@@ -1223,9 +1317,9 @@ SCIP_RETCODE determineSymmetry(
          SCIPgetNBinVars(scip) > 0 ? '+' : '-',
          SCIPgetNIntVars(scip) > 0  ? '+' : '-',
          SCIPgetNContVars(scip) + SCIPgetNImplVars(scip) > 0 ? '+' : '-',
-         (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
-         (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
-         (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
+         (symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+         (symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+         (symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
       return SCIP_OKAY;
    }
    /* skip symmetry computation if there are constraints that cannot be handled by symmetry */
@@ -1240,14 +1334,14 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
       "   (%.1fs) symmetry computation started: requiring (bin %c, int %c, cont %c), (fixed: bin %c, int %c, cont %c)\n",
       SCIPgetSolvingTime(scip),
-      (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
-      (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
-      (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-',
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
+      (symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+      (symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+      (symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-',
+      (symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+      (symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+      (symspecrequirefixed & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
 
-   if ( presoldata->symspecrequire & presoldata->symspecrequirefixed )
+   if ( symspecrequire & symspecrequirefixed )
       SCIPwarningMessage(scip, "Warning: some required symmetries must be fixed.\n");
 
    /* actually compute (global) symmetry */
@@ -1255,7 +1349,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = presoldata->maxgenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
-   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE, presoldata->checksymmetries,
+   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, presoldata->checksymmetries,
          &presoldata->npermvars, &presoldata->permvars, &presoldata->permvarsobj, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms,
          &presoldata->log10groupsize, &presoldata->successful) );
 
@@ -1266,42 +1360,62 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
    else
    {
+      int usesymmetry;
+
       assert( presoldata->nperms > 0 );
 
-      if ( maxgenerators == 0 )
+      SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+
+      if ( presoldata->displaynorbitvars )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-            "   (%.1fs) symmetry computation finished: %d generators found (max: -, log10 of symmetry group size: %.1f)\n",
-            SCIPgetSolvingTime(scip), presoldata->nperms, presoldata->log10groupsize);
+         SCIP_CALL( computeNOrbitVars(scip, presoldata, TRUE) );
       }
-      else
+      else if ( usesymmetry == 1 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-            "   (%.1fs) symmetry computation finished: %d generators found (max: %u, log10 of symmetry group size: %.1f)\n",
-            SCIPgetSolvingTime(scip), presoldata->nperms, maxgenerators, presoldata->log10groupsize);
+         SCIP_CALL( computeNOrbitVars(scip, presoldata, FALSE) );
+      }
+
+      /* display statistics: number of generators */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "   (%.1fs) symmetry computation finished: %d generators found (max: ",
+         SCIPgetSolvingTime(scip), presoldata->nperms);
+
+      /* display statistics: maximum number of generators*/
+      if ( maxgenerators == 0 )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "-");
+      else
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%u", maxgenerators);
+
+      /* display statistics: log10 group size, number of affected vars*/
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", presoldata->log10groupsize);
+
+      /* display statistics: number of affected vars*/
+      if ( presoldata->displaynorbitvars )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", presoldata->norbitvars);
+      else
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
+
+      /* do not deactivate components if no binary variables are affected in the polyhedral setting */
+      if ( ! presoldata->binvaraffected && usesymmetry == 1 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present\n", SCIPgetSolvingTime(scip));
+
+         return SCIP_OKAY;
       }
 
       /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "   (%.1fs) turning off presolver <domcol>, constraint handler <components>, and propagator <dualfix> for remaining computations in order to avoid conflicts\n",
+         "   (%.1fs) turning off presolver <domcol> for remaining computations in order to avoid conflicts\n",
          SCIPgetSolvingTime(scip));
 
       /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods */
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-
-      /* components creates sub-SCIPs on which no symmetry handling is installed, thus turn this off */
-      SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", 0) );
-
-      /* dual fixing might interfere with symmetry handling methods, thus turn this off */
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", 0) );
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/freq", 0) );
 
       presoldata->changeddefaultparams = TRUE;
    }
 
    return SCIP_OKAY;
 }
-
 
 
 /*
@@ -1322,35 +1436,6 @@ SCIP_DECL_PRESOLINIT(presolInitSymmetry)
 
    /* initialize original values of changed parameters in case we do not enter determineSymmetry() */
    SCIP_CALL( SCIPgetIntParam(scip, "presolving/domcol/maxrounds", &(presoldata->oldmaxroundsdomcol)) );
-   SCIP_CALL( SCIPgetIntParam(scip, "constraints/components/maxprerounds", &(presoldata->oldmaxpreroundscomponents)) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/dualfix/maxprerounds", &(presoldata->oldmaxpreroundsdualfix)) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/dualfix/freq", &(presoldata->oldfreqdualfix)) );
-
-   return SCIP_OKAY;
-}
-
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-static
-SCIP_DECL_PRESOLINITPRE(presolInitpreSymmetry)
-{
-   SCIP_PRESOLDATA* presoldata;
-
-   assert( scip != NULL );
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   SCIPdebugMsg(scip, "Initialization of symmetry presolver.\n");
-
-   /* compute symmetries if not requested during presolving */
-   if ( ! presoldata->computepresolved && ! presoldata->computedsym && presoldata->symtype != 0 )
-   {
-      /* determine symmetry here in initpre, since other plugins specify their problem type in init() */
-      SCIP_CALL( determineSymmetry(scip, presoldata) );
-   }
 
    return SCIP_OKAY;
 }
@@ -1381,12 +1466,11 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
 
    /* reset settings */
-   presoldata->symtype = 0;
-   presoldata->symspecrequire = 0;
-   presoldata->symspecrequirefixed = 0;
    presoldata->npermvars = 0;
    presoldata->nperms = 0;
    presoldata->nmaxperms = 0;
+   presoldata->norbitvars = 0;
+   presoldata->binvaraffected = FALSE;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
 
@@ -1394,9 +1478,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    if ( presoldata->changeddefaultparams )
    {
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", presoldata->oldmaxroundsdomcol) );
-      SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", presoldata->oldmaxpreroundscomponents) );
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldmaxpreroundsdualfix) );
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldfreqdualfix) );
 
       presoldata->changeddefaultparams = FALSE;
    }
@@ -1442,44 +1523,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSymmetry)
 }
 
 
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-static
-SCIP_DECL_PRESOLEXITPRE(presolExitpreSymmetry)
-{
-   SCIP_PRESOLDATA* presoldata;
-
-   assert( scip != NULL );
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   /* skip if we are in a restart */
-   if ( SCIPgetNRuns(scip) > 1 )
-      return SCIP_OKAY;
-
-   /* skip if we already terminated */
-   if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
-      return SCIP_OKAY;
-
-   /* skip if we are exiting */
-   if ( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   SCIPdebugMsg(scip, "Exitpre method of symmetry presolver ...\n");
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   /* compute symmetries if requested during presolving */
-   if ( presoldata->computepresolved && ! presoldata->computedsym && presoldata->symtype != 0 )
-   {
-      SCIP_CALL( determineSymmetry(scip, presoldata) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-
 /*
  * External methods
  */
@@ -1495,15 +1538,14 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
    assert( presoldata != NULL );
 
-   presoldata->symtype = 0;
-   presoldata->symspecrequire = 0;
-   presoldata->symspecrequirefixed = 0;
    presoldata->npermvars = 0;
    presoldata->permvars = NULL;
    presoldata->permvarsobj = NULL;
    presoldata->perms = NULL;
    presoldata->nperms = 0;
    presoldata->nmaxperms = 0;
+   presoldata->norbitvars = 0;
+   presoldata->binvaraffected = FALSE;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
    presoldata->changeddefaultparams = FALSE;
@@ -1516,24 +1558,22 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSymmetry) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSymmetry) );
    SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitSymmetry) );
-   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreSymmetry) );
-   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreSymmetry) );
 
    /* add parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PRESOL_NAME "/computepresolved",
-         "Should the symmetry be computed after presolving (otherwise before presol)?",
-         &presoldata->computepresolved, TRUE, DEFAULT_COMPUTEPRESOLVED, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/" PRESOL_NAME "/maxgenerators",
          "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
          &presoldata->maxgenerators, TRUE, DEFAULT_MAXGENERATORS, 0, INT_MAX, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/checksymmetries",
          "Should all symmetries be checked after computation?",
          &presoldata->checksymmetries, TRUE, DEFAULT_CHECKSYMMETRIES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/displaynorbitvars",
+         "Should the number of variables affected by some symmetry be displayed?",
+         &presoldata->displaynorbitvars, TRUE, DEFAULT_DISPLAYNORBITVARS, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
@@ -1548,11 +1588,15 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
 /** return symmetry group generators */
 SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
+   SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
+   SCIP_Bool             recompute,          /**< Have symmetries already been computed? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store log10 of group size (or NULL) */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of group size (or NULL) */
+   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -1577,17 +1621,42 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
+   /* free symmetry information if we recompute symmetries */
+   if ( recompute )
+   {
+      int i;
+
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
+      for (i = 0; i < presoldata->nperms; ++i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
+
+      /* reset settings */
+      presoldata->npermvars = 0;
+      presoldata->nperms = 0;
+      presoldata->nmaxperms = 0;
+      presoldata->norbitvars = 0;
+      presoldata->binvaraffected = FALSE;
+      presoldata->computedsym = FALSE;
+      presoldata->successful = FALSE;
+   }
+
+   /* if not already done before, compute symmetries */
    if ( ! presoldata->computedsym )
    {
-      if ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED &&
-           SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE )
+      if ( SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING &&
+           SCIPgetStage(scip) != SCIP_STAGE_EXITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED &&
+           SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE && SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       {
          SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
          return SCIP_INVALIDCALL;
       }
 
       /* determine symmetry here */
-      SCIP_CALL( determineSymmetry(scip, presoldata) );
+      SCIP_CALL( determineSymmetry(scip, presoldata, symspecrequire, symspecrequirefixed) );
    }
 
    *npermvars = presoldata->npermvars;
@@ -1596,6 +1665,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    *perms = presoldata->perms;
    if ( log10groupsize != NULL )
       *log10groupsize = presoldata->log10groupsize;
+   if ( binvaraffected != NULL )
+      *binvaraffected = presoldata->binvaraffected;
 
    return SCIP_OKAY;
 }
@@ -1627,78 +1698,6 @@ SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
    assert( presoldata != NULL );
 
    *permvarsobj = presoldata->permvarsobj;
-
-   return SCIP_OKAY;
-}
-
-
-/** register that a specific symmetry is needed */
-SCIP_RETCODE SCIPregisterSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_HANDLETYPE        symtype,            /**< type of symmetry handling of callee */
-   SYM_SPEC              type,               /**< variable types the callee is interested in */
-   SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
-   )
-{
-   SCIP_PRESOLDATA* presoldata;
-   SCIP_PRESOL* presol;
-
-   assert( scip != NULL );
-
-   /* find symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   if ( presol == NULL )
-   {
-      SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   /* check if there are conflicting symmetry handling methods */
-   if ( ( presoldata->symtype & ~ symtype ) != 0 )
-   {
-      SCIPerrorMessage("Conflicting symmetry handling methods are activated.\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   presoldata->symtype |= symtype;
-   presoldata->symspecrequire |= type;
-   presoldata->symspecrequirefixed |= fixedtype;
-
-   return SCIP_OKAY;
-}
-
-
-/** return at what time symmetry is computed (before or after presolving) */
-SCIP_RETCODE SCIPgetTimingSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            afterpresolve       /**< pointer to store whether symmetry is computed in stage initpre or exitpre */
-   )
-{
-   SCIP_PRESOLDATA* presoldata;
-   SCIP_PRESOL* presol;
-
-   assert( scip != NULL );
-   assert( afterpresolve != NULL );
-
-   /* find symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   if ( presol == NULL )
-   {
-      SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   *afterpresolve = presoldata->computepresolved;
 
    return SCIP_OKAY;
 }

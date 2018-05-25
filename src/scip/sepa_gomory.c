@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -200,7 +200,7 @@ SCIP_DECL_SEPAINIT(sepaInitGomory)
    assert(sepadata != NULL);
 
    /* create and initialize random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -498,6 +498,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                /* add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
                 * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically
                 */
+
+                /* flush all changes before adding the cut */
+               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
                SCIP_CALL( SCIPaddRow(scip, cut, TRUE, &cutoff) );
                naddedcuts++;
             }

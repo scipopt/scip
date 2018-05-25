@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPresetBandit(
    assert(scip != NULL);
    assert(bandit != NULL);
 
-   SCIP_CALL( SCIPbanditReset(SCIPbuffer(scip), bandit, priorities, SCIPinitializeRandomSeed(scip, (int)(seed % INT_MAX))) );
+   SCIP_CALL( SCIPbanditReset(SCIPbuffer(scip), bandit, priorities, SCIPinitializeRandomSeed(scip, seed)) );
 
    return SCIP_OKAY;
 }

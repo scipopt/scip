@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -483,8 +483,8 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
       if( SCIPsetIsFeasIntegral(set, solval) || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
          continue;
 
-      nuplocks = SCIPvarGetNLocksUp(var);
-      ndownlocks = SCIPvarGetNLocksDown(var);
+      nuplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+      ndownlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
       obj = SCIPvarGetUnchangedObj(var);
 
       roundup = FALSE;
@@ -1342,7 +1342,12 @@ SCIP_Real SCIPsolGetVal(
          return 0.0;
       }
       assert(!SCIPvarIsTransformed(origvar));
-      return scalar * SCIPsolGetVal(sol, set, stat, origvar) + constant;
+
+      solval = SCIPsolGetVal(sol, set, stat, origvar);
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+         return SCIP_UNKNOWN;
+      else
+         return scalar * solval + constant;
    }
 
    /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */

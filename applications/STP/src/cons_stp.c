@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1388,7 +1388,7 @@ SCIP_DECL_CONSLOCK(consLockStp)
    nvars = SCIPprobdataGetNVars(scip);
 
    for( v = 0; v < nvars; ++v )
-      SCIP_CALL( SCIPaddVarLocks(scip, vars[v], 1, 1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, 1, 1) );
 
    return SCIP_OKAY;
 }

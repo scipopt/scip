@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,5 +29,6 @@
  * - string.c shows how to setup general nonlinear and quadratic constraints
  * - gastrans.c shows how to setup absolute power constraints
  * - circle.c shows how to setup second-order-cone constraints
+ * - brachistochrone.c shows how to setup nonlinear constraints
  */
 

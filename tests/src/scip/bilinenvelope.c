@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0, TRUE) );
 }
 
 static

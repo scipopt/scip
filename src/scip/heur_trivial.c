@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -140,11 +140,11 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       }
 
       /* set variables to the bound with fewer locks, if tie choose an average value */
-      if( SCIPvarGetNLocksDown(vars[i]) >  SCIPvarGetNLocksUp(vars[i]) )
+      if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], ub) );
       }
-      else if( SCIPvarGetNLocksDown(vars[i]) <  SCIPvarGetNLocksUp(vars[i]) )
+      else if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) < SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], lb) );
       }

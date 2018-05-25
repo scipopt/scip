@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -850,24 +850,24 @@ SCIP_RETCODE extractGates(
       {
          assert(SCIPvarIsActive(SCIPvarGetNegatedVar(activevars[d])));
 
-         if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) >= nlogicorvars - 1 )
+         if( SCIPvarGetNLocksDownType(SCIPvarGetNegatedVar(activevars[d]), SCIP_LOCKTYPE_MODEL) >= nlogicorvars - 1 )
          {
             posresultants[nposresultants] = activevars[d];
             ++nposresultants;
          }
-         else if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) == 0 )
+         else if( SCIPvarGetNLocksDownType(SCIPvarGetNegatedVar(activevars[d]), SCIP_LOCKTYPE_MODEL) == 0 )
             return SCIP_OKAY;
       }
       else
       {
          assert(SCIPvarIsActive(activevars[d]));
 
-         if( SCIPvarGetNLocksUp(activevars[d]) >= nlogicorvars - 1 )
+         if( SCIPvarGetNLocksUpType(activevars[d], SCIP_LOCKTYPE_MODEL) >= nlogicorvars - 1 )
          {
             posresultants[nposresultants] = activevars[d];
             ++nposresultants;
          }
-         else if( SCIPvarGetNLocksUp(activevars[d]) == 0 )
+         else if( SCIPvarGetNLocksUpType(activevars[d], SCIP_LOCKTYPE_MODEL) == 0 )
             return SCIP_OKAY;
       }
    }

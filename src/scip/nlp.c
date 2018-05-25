@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4773,8 +4773,10 @@ SCIP_RETCODE nlpSolve(
             SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
 
             /* do a quick assert that variable bounds are satisfied, if feasibility is claimed */
-            assert(SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
-            assert(SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
+            assert(SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(nlp->vars[i])) ||
+               SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
+            assert(SCIPsetIsInfinity(set, SCIPvarGetUbLocal(nlp->vars[i])) ||
+               SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
 
             SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
             nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solval;  /*lint !e613 */
@@ -5049,7 +5051,7 @@ SCIP_RETCODE SCIPnlpInclude(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, set, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecNlp, NULL) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, eventhdlr) );
 
