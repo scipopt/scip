@@ -20,9 +20,13 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
+#include "scip/bandit.h"
 #include "scip/bandit_exp3.h"
+#include "scip/pub_bandit.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/scip_bandit.h"
+#include "scip/type_misc.h"
 
 #define BANDIT_NAME "exp3"
 #define NUMTOL 1e-6

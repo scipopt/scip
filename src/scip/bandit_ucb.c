@@ -20,10 +20,16 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
+#include "scip/bandit.h"
 #include "scip/bandit_ucb.h"
-#include "blockmemshell/memory.h"
+#include "scip/pub_bandit.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/scip_bandit.h"
+#include "scip/type_misc.h"
+
+
 
 #define BANDIT_NAME "ucb"
 #define NUMEPS 1e-6

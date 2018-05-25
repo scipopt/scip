@@ -112,34 +112,52 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
+#include "lpi/lpi.h"
 #include "scip/clock.h"
-#include "scip/visual.h"
-#include "scip/history.h"
-#include "scip/paramset.h"
-#include "scip/lp.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/tree.h"
-#include "scip/sol.h"
-#include "scip/scip.h"
 #include "scip/conflict.h"
+#include "scip/conflictstore.h"
 #include "scip/cons.h"
-#include "scip/prop.h"
+#include "scip/cons_linear.h"
+#include "scip/cuts.h"
+#include "scip/history.h"
+#include "scip/lp.h"
 #include "scip/presolve.h"
-#include "scip/debug.h"
+#include "scip/prob.h"
+#include "scip/prop.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/cuts.h"
-#include "lpi/lpi.h"
-
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_paramset.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_var.h"
+#include "scip/set.h"
+#include "scip/sol.h"
 #include "scip/struct_conflict.h"
-#include "scip/cons_linear.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_tree.h"
+#include "scip/struct_var.h"
+#include "scip/tree.h"
+#include "scip/type_paramset.h"
+#include "scip/var.h"
+#include "scip/visual.h"
+#include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h> /*lint --e{766}*/
+#endif
+
+
 
 #define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
 #define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */

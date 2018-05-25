@@ -56,6 +56,7 @@ def get_headerset(file):
 
 if __name__ == "__main__":
     inclset = get_headerset(sys.argv[1])
+    includelist = []
     if sys.argv[1].endswith(".c"):
         headerfile = sys.argv[1][:-1] + 'h'
         if os.path.isfile(headerfile):
@@ -68,8 +69,9 @@ if __name__ == "__main__":
             inclset.remove(f)
 
         inclset.add(headerfile)
+    else:
+        includelist.append('#include "scip/def.h"')
 
-    includelist = ['#include "scip/def.h"']
     for h in inclset:
         # for system headers only add them if they are not included by scip/def.h and also handle
         # that math functions are defined in mathcalls.h on our linux systems

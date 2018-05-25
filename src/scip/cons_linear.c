@@ -46,17 +46,51 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-#include <ctype.h>
-
-#include "scip/cons_linear.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
-#include "scip/cons_quadratic.h"
+#include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/debug.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include "scip/type_conflict.h"
+#include "scip/type_event.h"
+#include "scip/type_message.h"
+#include "scip/type_result.h"
+#include "scip/type_set.h"
+#include "scip/type_timing.h"
+#include "scip/type_tree.h"
+#include <ctype.h>
+#include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h> /*lint --e{766}*/
+#endif
+
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
