@@ -1005,6 +1005,7 @@ SCIP_RETCODE graph_pc_getSap(
    )
 {
    SCIP_Real* prize;
+   SCIP_Real max;
    SCIP_Real prizesum;
    int k;
    int e;
@@ -1044,10 +1045,18 @@ SCIP_RETCODE graph_pc_getSap(
    pseudoroot = (*newgraph)->knots;
    graph_knot_add((*newgraph), -1);
 
+   max = 0.0;
    for( k = 0; k < nnodes; k++ )
       if( Is_pterm(graph->term[k]) )
+      {
          prizesum += prize[k];
 
+         if( prize[k] > max )
+            max = prize[k];
+      }
+
+   printf("prizesum %f  max %f\n", prizesum, max);
+   prizesum -= max;
    *offset -= prizesum;
 
    e = (*newgraph)->outbeg[root];

@@ -95,8 +95,9 @@
 #define DEFAULT_FLOWSEP        TRUE  /**< Try Flow-Cuts */
 
 #define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
-#define DAMAXDEVIATION_LOWER 0.01  /**< lower bound for max deviation for dual ascent */
-#define DAMAXDEVIATION_UPPER 0.9  /**< upper bound for max deviation for dual ascent */
+#define DA_MAXDEVIATION_LOWER 0.01  /**< lower bound for max deviation for dual ascent */
+#define DA_MAXDEVIATION_UPPER 0.9  /**< upper bound for max deviation for dual ascent */
+#define DA_EPS (5.0 * 1e-7)
 
 /* *
 #define FLOW_FACTOR     100000
@@ -1684,7 +1685,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    assert(scip != NULL);
    assert(objval != NULL);
    assert(Is_term(g->term[root]));
-   assert(maxdeviation >= DAMAXDEVIATION_LOWER && maxdeviation <= DAMAXDEVIATION_UPPER);
+   assert(maxdeviation >= DA_MAXDEVIATION_LOWER && maxdeviation <= DA_MAXDEVIATION_UPPER);
    assert(damaxdeviation == -1.0 || damaxdeviation > 0.0);
 
    if( nnodes == 1 )
@@ -2016,11 +2017,12 @@ SCIP_RETCODE SCIPStpDualAscent(
 
                assert(SCIPisGE(scip, rescap[a], 0.0));
 
-               if( rescap[a] == 0.0 )
+               if( rescap[a] <= DA_EPS )
                {
                   int tail = unsattails[i];
 
-                  assert(rescap[a] == 0.0);
+                  rescap[a] = 0.0;
+
                   assert(tail > 0);
                   assert(tailarr[a] > 0);
 
