@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1840,7 +1840,7 @@ static SCIP_RETCODE lpiSolve(
       lpi->clearstate = FALSE;
    }
 
-   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, (lpi->par_presolve) ?  1 : 0) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
    CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, (lpi->par_presolve) ?  1 : 0) );
 
    if( lpi->par_fastlp )
@@ -1890,7 +1890,7 @@ static SCIP_RETCODE lpiSolve(
          goto TERMINATE;
 
       /* get the current presolving setting */
-      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_PRESOLVE, &presolving) );
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, &presolving) );
 
       if( presolving != 0 )
       {
@@ -1901,7 +1901,6 @@ static SCIP_RETCODE lpiSolve(
                strcmp(method, "p") == 0 ? "primal simplex" : strcmp(method, "d") == 0 ? "dual simplex" : "barrier");
 
          /* switch off preprocessing */
-         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
          CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, 0) );
 
          /* resolve w/o presolving */
@@ -1920,7 +1919,6 @@ static SCIP_RETCODE lpiSolve(
             lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
 
          /* reinstall the previous setting */
-         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, presolving) );
          CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, presolving) );
       }
    }

@@ -35,7 +35,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAMES	=	string gastrans circle brachistochrone
+MAINNAMES	=	string gastrans circle brachistochrone circlepacking
 MAINOBJ		=	$(addsuffix .o,$(MAINNAMES))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.$(OPT)
@@ -71,7 +71,7 @@ $(MAINSHORTLINKS):	$(MAINFILES)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $@.$(BASE).$(LPS)$(EXEEXTENSION)) $(notdir $@)
 
-$(OBJDIR):	
+$(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
 $(BINDIR):
@@ -97,29 +97,16 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
+.PHONY: doc
+doc:
+		cd doc && doxygen scip.dxy
 
-$(BINDIR)/string.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/string.o
+$(BINDIR)/%.$(BASE).$(LPS)$(EXEEXTENSION): $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/%.o | $(BINDIR)
 		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/string.o $(LINKCXXSCIPALL)	$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/$*.o $(LINKCXXSCIPALL)	$(LDFLAGS) $(LINKCXX_o)$@
 
-$(BINDIR)/gastrans.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/gastrans.o
-		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/gastrans.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
-
-$(BINDIR)/circle.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/circle.o
-		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/circle.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
-
-$(BINDIR)/brachistochrone.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/brachistochrone.o
-		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/brachistochrone.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
-
-$(OBJDIR)/%.o:	$(SRCDIR)/%.c
+$(OBJDIR)/%.o:	$(SRCDIR)/%.c | $(OBJDIR)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
-
-$(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
-		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
 #---- EOF --------------------------------------------------------------------

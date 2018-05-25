@@ -18,6 +18,9 @@ add_executable(string
 add_executable(brachistochrone
    src/brachistochrone.c)
 
+add_executable(circlepacking
+   src/circlepacking.c)
+
 # link to math library if it is available
 find_library(LIBM m)
 if(NOT LIBM)
@@ -28,9 +31,10 @@ target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(string ${SCIP_LIBRARIES})
 target_link_libraries(brachistochrone ${SCIP_LIBRARIES} ${LIBM})
+target_link_libraries(circlepacking ${SCIP_LIBRARIES} ${LIBM})
 
 if( TARGET examples )
-    add_dependencies( examples circle gastrans string brachistochrone )
+    add_dependencies( examples circle gastrans string brachistochrone circlepacking )
 endif()
 
 #
@@ -62,3 +66,4 @@ addbuildandtest(circle)
 addbuildandtest(gastrans)
 addbuildandtest(string)
 addbuildandtest(brachistochrone)
+addbuildandtest(circlepacking)
