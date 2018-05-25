@@ -45,9 +45,6 @@
  *
  * @version 6.0.0
  *
- *   - \ref BENDER "Benders' decomposition"
- *     + \ref BENDERSCUT "Benders' decomposition cuts"
- *   - \ref BENDDECF "How to use the Benders' decomposition framework"
  * \image html scippy.png
  *
  * @section QUICKSTART Quickstart
@@ -198,6 +195,8 @@
  * - @subpage EXPRINT "Interfaces to expression interpreters"
  * - @subpage PARAM   "additional user parameters"
  * - @subpage TABLE   "Statistics tables"
+ * - @subpage BENDER "Benders' decomposition"
+ *   + @subpage BENDERSCUT "Benders' decomposition cuts"
  */
 /**@page HOWTOUSESECTION How to use ...
  *
@@ -206,6 +205,7 @@
  * - @subpage COUNTER "How to use SCIP to count feasible solutions"
  * - @subpage REOPT   "How to use reoptimization in SCIP"
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
+ * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  */
 
 /**@page FURTHERINFO Further information
