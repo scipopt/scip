@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -265,6 +265,8 @@ SCIP_DECL_SEPAEXIT(sepaExitIntobj)
    /* release objective variable */
    if( sepadata->objvar != NULL )
    {
+      /* remove locks in createObjRow() */
+      SCIP_CALL( SCIPaddVarLocksType(scip, sepadata->objvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
       SCIP_CALL( SCIPreleaseVar(scip, &sepadata->objvar) );
    }
 

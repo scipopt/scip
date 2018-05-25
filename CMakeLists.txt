@@ -469,6 +469,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 enable_testing()
 
+if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    include(FeatureSummary)
+    feature_summary(WHAT ALL)
+endif()
 
-include(FeatureSummary)
-feature_summary(WHAT ALL)

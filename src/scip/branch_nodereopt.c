@@ -24,7 +24,6 @@
 
 #include "scip/branch_nodereopt.h"
 #include "scip/branch_relpscost.h"
-#include "scip/cons_logicor.h"
 #include "scip/scip.h"
 #include "scip/tree.h"
 #include "scip/pub_reopt.h"
