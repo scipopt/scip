@@ -3167,7 +3167,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* the subproblem must be set up before this function is called. */
-   if( SCIPbendersSubprobIsSetup(benders, probnumber) )
+   if( !SCIPbendersSubprobIsSetup(benders, probnumber) )
    {
       SCIPerrorMessage("Benders' decomposition subproblem %d must be set up before calling SCIPbendersSolveSubproblem(). Call SCIPsetupSubproblem() first.\n", probnumber);
       return SCIP_ERROR;
@@ -3197,7 +3197,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
       subproblem = SCIPbendersSubproblem(benders, probnumber);
 
       /* solving the subproblem */
-      if( solvecip )
+      if( solvecip && !SCIPbendersSubprobIsConvex(benders, probnumber) )
       {
          SCIP_CALL( SCIPbendersSolveSubproblemCIP(benders, probnumber, infeasible, type, solvecip) );
 
