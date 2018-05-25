@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_callablelibrary.c
  * @brief  main document page
  * @author Stefan Vigerske
  */
@@ -30,5 +30,5 @@
  * - gastrans.c shows how to setup absolute power constraints
  * - circle.c shows how to setup second-order-cone constraints
  * - brachistochrone.c shows how to setup nonlinear constraints
+ * - circlepacking.c shows how to setup quadratic constraints
  */
-
