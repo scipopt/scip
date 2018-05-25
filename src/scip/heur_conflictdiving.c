@@ -29,7 +29,7 @@
 #define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. conflict locks"
 #define HEUR_DISPCHAR                '~'
 #define HEUR_PRIORITY                -1000100
-#define HEUR_FREQ                    10
+#define HEUR_FREQ                    -1
 #define HEUR_FREQOFS                 0
 #define HEUR_MAXDEPTH                -1
 #define HEUR_TIMING                  SCIP_HEURTIMING_AFTERLPPLUNGE
@@ -43,7 +43,7 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.10 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.15 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed (0.0: no limit) */
@@ -56,8 +56,8 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_LOCKWEIGHT          0.8
-#define DEFAULT_LIKECOEF           TRUE
+#define DEFAULT_LOCKWEIGHT          1.0 /**< weight used in a convex combination of conflict an variable locks */
+#define DEFAULT_LIKECOEF          FALSE /**< proceede rounding like coefficient diving */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
 #define DEFAULT_MAXVARSFAC         -1.0 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
 #define DEFAULT_MINMAXVARS           -1 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
@@ -431,7 +431,7 @@ SCIP_RETCODE getScore(
          (*score) *= 0.01;
    }
    else if( candsfrac < 0.01 )
-      (*score) *= 0.1;
+      (*score) *= 0.01;
 
    /* prefer decisions on binary variables */
    if( !SCIPvarIsBinary(cand) )
@@ -509,7 +509,7 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
          &heurdata->maxviol, TRUE, DEFAULT_MAXVIOL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/likecoef",
-         "proceede like coefficient diving",
+         "proceede rounding like coefficient diving",
          &heurdata->likecoefdiving, TRUE, DEFAULT_LIKECOEF, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minconflictlocks",
