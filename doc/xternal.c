@@ -48,19 +48,6 @@
  * \image html scippy.png
  *
  * @section QUICKSTART Quickstart
- *  @section BENDERSDECOMP Benders' decomposition
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref SCFLP_MAIN "Stochastic capacitated facility location problem"
- *  </td>
- *  <td>
- *  A stochastic programming problem that demonstrates the use of the Benders' decomposition frameowork within SCIP.
- *  </td>
- *  </tr>
- *  </table>
- *
  *
  *  Let's consider the following minimal example in LP format. A 4-variable problem with a single, general integer
  *  variable and three linear constraints
@@ -1012,6 +999,7 @@
  *
  *  - @subpage OTHERPLUGINS Extending SCIP by custom plugins
  *  - @subpage BRANCHANDPRICE Branch-and-price
+ *  - @subpage BENDERSDECOMP Benders' decomposition
  *  - @subpage BRANCHANDCUT Branch-and-cut
  *  - @subpage CALLABLELIBRARY Callable library
  */
@@ -1039,6 +1027,21 @@
  *  </tr>
  *  </table>
  * 
+ */
+
+/**@page BENDERSDECOMP Benders' decomposition
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage SCFLP_MAIN "Stochastic capacitated facility location problem"
+ *  </td>
+ *  <td>
+ *  A stochastic programming problem that demonstrates the use of the Benders' decomposition frameowork within SCIP.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
  */
 
 /**@page BRANCHANDCUT Branch-and-cut
@@ -8130,6 +8133,16 @@
  *
  */
 
+/**@defgroup PublicBendersMethods Benders' decomposition
+ * @ingroup PluginManagementMethods
+ * @brief  methods for Benders' decomposition plugins
+ */
+
+/**@defgroup PublicBenderscutsMethods Benders' decomposition cuts
+ * @ingroup PluginManagementMethods
+ * @brief  methods for Benders' decomposition cuts plugins
+ */
+
 /**@defgroup PublicBranchRuleMethods Branching Rules
  * @ingroup PluginManagementMethods
  * @brief  methods for branching rule plugins
@@ -8256,6 +8269,22 @@
   * \ref PUBLICCOREAPI "the Core API" and \ref PUBLICPLUGINAPI "Plugin API" for the complete API available to user plugins.
   *
   */
+
+/**@defgroup BENDERSDECOMPOSITION Benders' decomposition
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default Benders' decomposition plugins of \SCIP
+ *
+ */
+
+/**@defgroup BendersIncludes Inclusion methods
+ * @ingroup BENDERSDECOMPOSITION
+ * @brief methods to include specific branching rules into \SCIP
+ *
+ * This module contains methods to include specific Benders' decomposition plugins into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all Benders' decomposition plugins) using SCIPincludeDefaultPlugins()
+ *
+ */
 
 /**@defgroup BRANCHINGRULES Branching Rules
  * @ingroup PUBLICPLUGINAPI

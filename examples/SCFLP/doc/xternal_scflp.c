@@ -41,11 +41,11 @@
  * Benders' decomposition. Initially, we will describe how to build the deterministic equivalent problem. Second, we
  * will describe how to build the problem so that the Benders' decomposition framework can be used.
  *
- * -# \ref SCFLP_PROBLEM "Problem description"
- * -# \ref SCFLP_READER "Parsing the input format"
- * -# \ref SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP
- *    - \ref SCFLP_DETEQUIV "Directly as a monolithic MIP"
- *    - \ref SCFLP_BENDERS "Applying Benders' decomposition"
+ * -# @subpage SCFLP_PROBLEM "Problem description"
+ * -# @subpage SCFLP_READER "Parsing the input format"
+ * -# @subpage SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP
+ *    - @subpage SCFLP_DETEQUIV "Directly as a monolithic MIP"
+ *    - @subpage SCFLP_BENDERS "Applying Benders' decomposition"
  */
 
 /**@page SCFLP_PROBLEM Problem description
