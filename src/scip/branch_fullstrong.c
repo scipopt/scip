@@ -21,9 +21,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "blockmemshell/memory.h"
 #include "scip/branch_fullstrong.h"
 #include "scip/pub_branch.h"
