@@ -33,6 +33,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_cutpool.h"
 #include "scip/type_lp.h"
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"

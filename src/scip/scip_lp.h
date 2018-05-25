@@ -32,6 +32,7 @@
 #define __SCIP_SCIP_LP_H__
 
 
+#include "lpi/type_lpi.h"
 #include "scip/def.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"

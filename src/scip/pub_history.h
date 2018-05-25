@@ -24,6 +24,9 @@
 #ifndef __SCIP_PUB_HISTORY_H__
 #define __SCIP_PUB_HISTORY_H__
 
+#include "scip/def.h"
+#include "scip/type_history.h"
+
 #ifdef NDEBUG
 #include "scip/struct_history.h"
 #endif

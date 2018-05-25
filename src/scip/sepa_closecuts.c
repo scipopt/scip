@@ -49,10 +49,32 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
+#include "scip/pub_message.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/sepa_closecuts.h"
+#include "scip/type_lp.h"
+#include "scip/type_message.h"
+#include "scip/type_result.h"
+#include "scip/type_sepa.h"
+#include "scip/type_var.h"
 #include <string.h>
 
-#include "scip/sepa_closecuts.h"
 
 
 #define SEPA_NAME              "closecuts"

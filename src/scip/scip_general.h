@@ -35,6 +35,7 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include "scip/type_set.h"
 #include "scip/type_stat.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access

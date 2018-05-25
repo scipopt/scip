@@ -31,6 +31,7 @@
 #include "scip/type_lp.h"
 #include "scip/type_sepa.h"
 #include "scip/type_var.h"
+#include "scip/type_misc.h"
 
 #ifdef NDEBUG
 #include "scip/struct_lp.h"

@@ -20,9 +20,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
+#include "scip/pub_message.h"
+#include "scip/pub_table.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_table.h"
 #include "scip/table_default.h"
+#include "scip/type_set.h"
+#include "scip/type_table.h"
+
 
 #define TABLE_NAME_STATUS                "status"
 #define TABLE_DESC_STATUS                "status statistics table"

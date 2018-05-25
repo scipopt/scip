@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/type_lp.h"
+#include "scip/type_prop.h"
 #include "scip/type_var.h"
 #include "scip/type_tree.h"
 #include "scip/type_cons.h"

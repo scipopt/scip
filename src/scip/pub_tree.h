@@ -26,9 +26,12 @@
 
 
 #include "scip/def.h"
-#include "scip/type_misc.h"
-#include "scip/type_tree.h"
+#include "scip/type_cons.h"
+#include "scip/type_lp.h"
 #include "scip/type_reopt.h"
+#include "scip/type_retcode.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
 
 #ifdef NDEBUG
 #include "scip/struct_tree.h"
