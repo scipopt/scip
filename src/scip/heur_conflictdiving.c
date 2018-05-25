@@ -57,7 +57,7 @@
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_LOCKWEIGHT          1.0 /**< weight used in a convex combination of conflict an variable locks */
-#define DEFAULT_LIKECOEF          FALSE /**< proceede rounding like coefficient diving */
+#define DEFAULT_LIKECOEF          FALSE /**< perform rounding like coefficient diving */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
 #define DEFAULT_MAXVARSFAC         -1.0 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
 #define DEFAULT_MINMAXVARS           -1 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
@@ -509,7 +509,7 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
          &heurdata->maxviol, TRUE, DEFAULT_MAXVIOL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/likecoef",
-         "proceede rounding like coefficient diving",
+         "perform rounding like coefficient diving",
          &heurdata->likecoefdiving, TRUE, DEFAULT_LIKECOEF, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minconflictlocks",
