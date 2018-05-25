@@ -1072,14 +1072,16 @@
  * for these kinds of projects.
  * Below, you find some hints of how to start such a project.
  *
+ * @section START_CHOICE Choose an example project
+ *
  * - The example should be chosen
  *   depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *   <br>
  *   We suggest the use of one of the following examples:
- *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *     - The \ref VRP_MAIN "Vehicle Routing Problem Example" is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example
+ *     - The \ref BINPACKING_MAIN "Binpacking Example"
  *       and the <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a> application are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The \ref TSP_MAIN "TSP example"
@@ -1090,16 +1092,35 @@
  * - Copy one of the examples in the <code>examples</code> directory (in the \SCIP root
  *   directory). For instance, type
  *   \verbatim
- > cp -r examples/Binpacking/ ../SCIPProject/ ; cd ../SCIPProject
+ cp -r examples/Binpacking/ ../SCIPProject/ ; cd ../SCIPProject
      \endverbatim
  *   from the \SCIP root directory for copying the content of the <code>Binpacking</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the \SCIP root directory and jumping to
  *   the new SCIPProject directory rightafter.
  *
- * For building with Make:
+ * @section START_CMAKE Building with CMake
+ *
+ * It is recommended for all new users to use the CMake build system configuration, if available on their platform.
+ *
+ * - Open the <code>CMakeLists</code> via
+ *    \verbatim
+ kate CMakeLists.txt & kate check/CMakeLists.txt
+     \endverbatim
+ *    and replace all instances of the copied project's name (e.g. <code>binpacking</code>) with your project name.
+ * - Create a new subdirectory, jump to the new directory and use cmake specifying your \SCIP directory. For instance, type
+ *    \verbatim
+ mkdir Release ; cd Release ; cmake .. -DSCIP_DIR=../scip/Release
+     \endverbatim
+ * and compile using the <code>make</code> command. For the CMake equivalents of all the flags that can be used in \SCIP, see \ref CMAKE.
+ *
+ *
+ * @section START_MAKE Building with the Makefile system
+ *
+ * If CMake should be unavailable on your targeted platform, try the classic Makefile system of SCIP.
+ *
  * - Open the <code>Makefile</code>  via
  *    \verbatim
- > kate Makefile
+ kate Makefile
      \endverbatim
  *    and edit the following variables at the top to have a compilable code:
  *
@@ -1111,17 +1132,6 @@
  *   compile your code, see \ref MAKE.
  *   Note that you need to update the dependency files before compiling your project via <code>make depend</code>.
  *
- * For building with CMake:
- * - Open the <code>CMakeLists</code> via
- *    \verbatim
- > kate CMakeLists.txt & kate check/CMakeLists.txt
-     \endverbatim
- *    and replace all instances of the copied project's name (e.g. <code>binpacking</code>) with your project name.
- * - Create a new subdirectory, jump to the new directory and use cmake specifying your \SCIP directory. For instance, type
- *    \verbatim
- > mkdir Release ; cd Release ; cmake .. -DSCIP_DIR=../scip/Release
-     \endverbatim
- * and compile using the <code>make</code> command. For the CMake equivalents of all the flags that can be used in \SCIP, see \ref CMAKE.
  *
  *
  *
