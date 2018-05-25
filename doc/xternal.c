@@ -42,7 +42,7 @@
  * - is a framework for branch-and-cut-and-price.
  *
  * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
- * 
+ *
  * @version 6.0.0
  *
  * \image html scippy.png
@@ -64,6 +64,7 @@
  * \verbinclude output.log
  *
  *  - @subpage GETTINGSTARTED
+ *  - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
  *  - @subpage FURTHERINFORMATION
  *  - @subpage PROGRAMMING
  *  - @subpage HOWTOADD
@@ -153,7 +154,6 @@
  * - @subpage INTERFACES "Interfaces"
  * - @subpage START       "How to start a new project"
  * - @subpage EXAMPLES    "Examples"
- * - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
  * - @subpage LPI         "Available LP solver interfaces"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
  */
@@ -1088,6 +1088,54 @@
  *  </table>
  */
 
+/** @page APPLICATIONS_COLORING Coloring
+ *
+ * An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
+ *
+ * The documentation of this application can be accessed
+ * <a href="http://scip.zib.de/doc/applications/Coloring"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_CYCLECLUSTERING Cycle Clustering
+ *
+ * Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
+ *
+ * The documentation of this application can be accessed
+ * <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_MINIISC MinIISC
+ *
+ *  A solver that computes irreducible infeasible subsystems using Benders decomposition
+ *
+ * The documentation of this application can be accessed
+ * <a href="http://scip.zib.de/doc/applications/MinIISC"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_POLYSCIP PolySCIP
+ *
+ *  A solver for multi-objective optimization problems.
+ *
+ * The documentation of this application can be accessed
+ *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_SCHEDULER Scheduler
+ *
+ *  A solver for scheduling problems.
+ *
+ * The documentation of this application can be accessed
+ *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_STP Steiner Tree Problem
+ *
+*  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
+ *
+ * The documentation of this application can be accessed
+ *  <a href="http://scip.zib.de/doc/applications/STP"><b>here</b></a>.
+ */
+
 /** @page APPLICATIONS Application projects
  *
  *  There are several extensions of \SCIP for particular applications included in the release. They are contained in the &quot;applications&quot; directory
@@ -1096,7 +1144,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a>
+ *  @subpage APPLICATIONS_COLORING
  *  </td>
  *  <td>
  *  An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
@@ -1104,7 +1152,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>Cycle Clustering</b></a>
+ *  @subpage APPLICATIONS_CYCLECLUSTERING
  *  </td>
  *  <td>
  *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
@@ -1112,7 +1160,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/MinIISC"><b>MinIISC</b></a>
+ *  @subpage APPLICATIONS_MINIISC
  *  </td>
  *  <td>
  *  A solver that computes irreducible infeasible subsystems using Benders decomposition
@@ -1120,7 +1168,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
+ *  @subpage APPLICATIONS_POLYSCIP
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
@@ -1128,7 +1176,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  \ref RINGPACKING_MAIN "Ringpacking"
+ *  @subpage RINGPACKING_MAIN "Ringpacking"
  *  </td>
  *  <td>
  *  An implementation of the column generation approach for the Ringpacking Problem. It includes a customized reader,
@@ -1137,7 +1185,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>Scheduler</b></a>
+ *  @subpage APPLICATIONS_SCHEDULER
  *  </td>
  *  <td>
  *  A solver for scheduling problems.
@@ -1145,7 +1193,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/STP"><b>Steiner Tree Problem</b></a>
+ *  @subpage APPLICATIONS_STP
  *  </td>
  *  <td>
  *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.

@@ -842,9 +842,7 @@ INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.h \
                          *.cpp \
-                         *.hpp \
-                         interfaces.dxy \
-                         howtoadd.dxy
+                         *.hpp
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -995,6 +993,7 @@ EXCLUDE_SYMBOLS        = Ipopt \
 
 EXAMPLE_PATH           = inc/ \
                          ../ \
+                         ../INSTALL \
                          ../release-notes/ \
                          ../src \
                          ../check/instances/Stochastic/pltexpA2_6.smps \
