@@ -25,21 +25,22 @@
 #define __SCIP_BRANCH_H__
 
 
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_set.h"
-#include "scip/type_stat.h"
-#include "scip/type_misc.h"
+#include "scip/def.h"
+#include "scip/type_branch.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
-#include "scip/type_var.h"
+#include "scip/type_message.h"
 #include "scip/type_prob.h"
-#include "scip/type_tree.h"
+#include "scip/type_reopt.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 #include "scip/type_sepastore.h"
-#include "scip/type_branch.h"
-#include "scip/pub_branch.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -26,12 +26,15 @@
 
 
 #include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_misc.h"
-#include "scip/type_history.h"
-#include "scip/type_var.h"
-#include "scip/type_implics.h"
 #include "scip/type_cons.h"
+#include "scip/type_history.h"
+#include "scip/type_implics.h"
+#include "scip/type_misc.h"
+#include "scip/type_prop.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 #ifdef NDEBUG
 #include "scip/struct_var.h"
