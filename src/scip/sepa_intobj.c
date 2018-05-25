@@ -265,6 +265,8 @@ SCIP_DECL_SEPAEXIT(sepaExitIntobj)
    /* release objective variable */
    if( sepadata->objvar != NULL )
    {
+      /* remove locks in createObjRow() */
+      SCIP_CALL( SCIPaddVarLocksType(scip, sepadata->objvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
       SCIP_CALL( SCIPreleaseVar(scip, &sepadata->objvar) );
    }
 
