@@ -38,8 +38,7 @@ if __name__ == "__main__":
     headers = set()
     for idx, c in enumerate(tu.cursor.walk_preorder()):
 
-
-        if c.kind == CursorKind.CALL_EXPR and c.referenced.get_definition() is None and c.referenced.storage_class is not StorageClass.STATIC:
+        if (c.kind == CursorKind.CALL_EXPR and c.referenced.get_definition() is None and c.referenced.storage_class is not StorageClass.STATIC) or (c.kind == CursorKind.TYPE_REF and str(c.location.file) == sys.argv[1]):
             #print("\n".join(dir(c)))
             #sys.exit(0)
             headerfile = str(c.referenced.location.file)
