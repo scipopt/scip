@@ -29,6 +29,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_history.h"
 #include "scip/type_implics.h"
+#include "scip/type_lp.h"
 #include "scip/type_misc.h"
 #include "scip/type_prop.h"
 #include "scip/type_result.h"
@@ -40,6 +41,7 @@
 #include "scip/struct_var.h"
 #include "scip/implics.h"
 #include "scip/history.h"
+#include "scip/pub_lp.h"
 #endif
 
 #ifdef __cplusplus

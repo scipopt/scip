@@ -48,6 +48,7 @@
 #include "scip/struct_var.h"
 #else
 #include "scip/event.h"
+#include "scip/pub_history.h"
 #endif
 
 #ifdef __cplusplus
