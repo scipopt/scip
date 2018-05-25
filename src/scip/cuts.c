@@ -42,6 +42,7 @@
 #include "scip/scip_var.h"
 #include "scip/struct_lp.h"
 #include "scip/struct_scip.h"
+#include "scip/struct_set.h"
 
 /* =========================================== general static functions =========================================== */
 #ifdef SCIP_DEBUG
