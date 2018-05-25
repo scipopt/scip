@@ -23,12 +23,14 @@
  * given circles in the plane or the computation of the maximal number of circles that can be placed
  * into a given rectangle.
  *
- * Given n circles with radii \f$r_i\f$, the task is to find a coordinates \f$(x_i, y_i)\f$ for the
- * circle midpoints and a minimal rectangle of width \f$W \geq 0\f$ and height \f$H \geq 0\f$, such
- * that every circle is places within the rectangle (\f$r_i \leq x_i \leq W-r_i\f$, \f$r_i \leq y_i \leq H-r_i\f$)
- * and circles are not overlapping \f$\left((x_i-x_j)^2 + (y_i-y_j)^2 \geq (r_i + r_j)^2\right)\f$.
+ * Suppose that n circles with radii \f$r_i\f$ are given.
+ * The task is to find coordinates \f$(x_i, y_i)\f$ for the circle midpoints and a rectangle of
+ * width \f$W \geq 0\f$ and height \f$H \geq 0\f$, such that
+ * - every circle is placed within the rectangle (\f$r_i \leq x_i \leq W-r_i\f$, \f$r_i \leq y_i \leq H-r_i\f$),
+ * - circles are not overlapping \f$\left((x_i-x_j)^2 + (y_i-y_j)^2 \geq (r_i + r_j)^2\right)\f$, and
+ * - the area of the rectangle is minimal.
  *
- * Alternatively, one may fix the width and the rectangle and maximize the number of circles that
+ * Alternatively, one may fix the size of the rectangle and maximize the number of circles that
  * can be fit into the rectangle without being overlapping.
  */
 
@@ -91,7 +93,9 @@ void visualizeSolutionMatplotlib(
 
    for( i = 0; i < ncircles; ++i )
    {
-      /* skip circles that are not included in current solution */
+      /* The binary variable b[i] indicates which circles should be included in the current solution.
+       * Here we want to skip circles that are not included, that is b[i] is zero (or close to zero due to tolerances).
+       */
       if( !minarea && SCIPgetSolVal(scip, sol, b[i]) < 0.5 )
          continue;
 
@@ -324,7 +328,7 @@ SCIP_RETCODE includeEventHdlrDispsol(
    return SCIP_OKAY;
 }
 
-/** sets up problem */
+/** create problem in given SCIP and add all variables and constraints to model the circle packing problem */
 static SCIP_RETCODE setupProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             fixwidth,           /**< a given fixed width for the rectangle, or SCIP_INVALID if not fixed */
@@ -348,7 +352,20 @@ static SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
    }
 
-   /* create variables */
+   /* Create variables, setup variable bounds, and setup objective function:
+    * We add variables x[i], y[i] for the circle midpoints and, if optimizing the number of circles in the rectangle,
+    * a binary variable b[i] to indicate whether circle i should be in the rectangle or not.
+    * Additionally, we add variables for the rectangle area, width, and height.
+    *
+    * Since the rectangle lower-left corner is assumed to be at (0,0), we can set a lower bound
+    * r[i] for both variables x[i] and y[i].
+    *
+    * In the objective function, we have 1.0*a, if minimizing the area of the rectangle,
+    * otherwise the area does not contribute to the objective, but every b[i] will be present instead.
+    *
+    * Further below we fix the width and height of the rectangle, if fixwidth and fixheight are valid.
+    * If both are valid, then we can also fix the area of the rectangle.
+    */
    SCIP_CALL( SCIPallocMemoryArray(scip, &x, ncircles) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &y, ncircles) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &b, ncircles) );
@@ -378,7 +395,7 @@ static SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPcreateVarBasic(scip, &h, "h", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, h) );
 
-   /* fix width if desired */
+   /* fix width if a valid value for fixwidth is given */
    if( fixwidth != SCIP_INVALID )
    {
       SCIP_Bool infeas;
@@ -390,7 +407,7 @@ static SCIP_RETCODE setupProblem(
       assert(fixed);
    }
 
-   /* fix height if desired */
+   /* fix height if a valid value for fixheight is given */
    if( fixheight != SCIP_INVALID )
    {
       SCIP_Bool infeas;
@@ -402,7 +419,7 @@ static SCIP_RETCODE setupProblem(
       assert(fixed);
    }
 
-   /* fix area if both width and height are given */
+   /* fix area if both width and height are fixed */
    if( !minarea )
    {
       SCIP_Bool infeas;
@@ -414,13 +431,22 @@ static SCIP_RETCODE setupProblem(
       assert(fixed);
    }
 
-   /* circles must be within rectangle, if decided to be put into rectangle
-    * - lower and left bounds are already passed in by variable bounds
-    * - upper and right bounds need to be satisfied only if circles are placed into rectangle
-    * - however, for circles that are not placed into the rectangle, it is easy to satisfy the
-    *   same constraints as long as the rectangle is not too small
-    * - thus, if not minimizing area, we add these constraints on the circle coordinates,
-    *   unless the circle is too big, in which case ensure that it is not placed into the rectangle
+   /* boundary constraints on circle coordinates
+    *
+    * If minimizing the area of the rectangle, then the coordinates of every circle must
+    * satisfy the boundary conditions r_i <= x_i <= w - r_i and r_i <= y_i <= h - r_i.
+    * The lower bounds r_i are already required by the variable bounds (see above).
+    * For the upper bounds, we add the corresponding linear constraints.
+    *
+    * If the area of the rectangle is fixed, then it would be sufficient to place only
+    * circles into the rectangle that have been decided to be put into the rectangle.
+    * We could model this as a big-M constraint on x_i and y_i, but on the other hand,
+    * we can also require that the circle coordinates always satisfy the boundary conditions,
+    * even if the circle is not placed into the rectangle (b_i=0).
+    * As the non-overlapping constraints do not apply for circles that are not placed into
+    * the rectangle, satisfying these boundary conditions is always possible, unless the
+    * circle itself is too big to be placed into the rectangle. In this case, though,
+    * we can decide a-priori that the circle is not placed into the rectangle, i.e., fix b_i to 0.
     */
    for( i = 0; i < ncircles; ++i )
    {
@@ -454,15 +480,29 @@ static SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
-   /* quadratic constraint: w * h <= a --> w * h - a <= 0 */
+   /* constraint that defines the area of the rectangle
+    *
+    * We could add the quadratic constraint w * h - a = 0.
+    * But if we are minimizing a, then we can relax this constraint to w * h - a <= 0.
+    * If the size the rectangle is fixed, then w, h, and a have been fixed above.
+    * We could actually omit this constraint, but here SCIP presolve will take care of removing it.
+    */
    SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "area", 0, NULL, NULL, 1, &w, &h, &one, -SCIPinfinity(scip), 0.0) );
    SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, a, -1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* quadratic constraint: (x_i - x_j)^2 + (y_i - y_j)^2 >= (r_i + r_j)^2  (if minarea)
+   /* quadratic constraints that require that circles are not overlapping.
+    * For circles i and j, i<j, we require that the euclidean distance of the circle middle points
+    * is at least the sum of the circle radii, i.e., || (x_i,y_i) - (x_j,y_j) || >= r_i + r_j.
+    * Equivalently, (x_i - x_j)^2 + (y_i - y_j)^2 >= (r_i + r_j)^2, which can be expanded to
     *   x_i^2 - 2 x_i x_j + x_j^2 + y_i^2 - 2 y_i y_j + y_j^2 >= (r_i + r_j)^2
-    * if not minarea, then rhs becomes (r_i + r_j)^2 * (b_i+b_j-1)
+    *
+    * When not minimizing the area of the circles, however, then this constraint only needs
+    * to hold if both circles are placed into the rectangle, that is if b_i=1 and b_j=1.
+    * We can achieve this by relaxing the right-hand-side to 0 or a negative value if b_i + b_j <= 1:
+    *   (x_i - x_j)^2 + (y_i - y_j)^2 >= (r_i + r_j)^2 * (b_i+b_j-1), which can be expanded to
+    *   x_i^2 - 2 x_i x_j + x_j^2 + y_i^2 - 2 y_i y_j + y_j^2 - (r_i+r_j)^2 b_i - (r_i+r_j)^2 b_j >= -(r_i + r_j)^2
     */
    for( i = 0; i < ncircles; ++i )
    {
@@ -495,7 +535,10 @@ static SCIP_RETCODE setupProblem(
    return SCIP_OKAY;
 }
 
-/* runs packing circles */
+/* run circle packing example
+ *
+ * Sets up SCIP and the SCIP problem, solves the problem, and shows the solution.
+ */
 static SCIP_RETCODE runPacking(
    SCIP_Real             fixwidth,           /**< a given fixed width for the rectangle, or SCIP_INVALID if not fixed */
    SCIP_Real             fixheight,          /**< a given fixed height for the rectangle, or SCIP_INVALID if not fixed */
@@ -525,7 +568,10 @@ static SCIP_RETCODE runPacking(
    SCIPinfoMessage(scip, NULL, "Original problem:\n");
    SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
 
-   /* closing the last bit of the gap can take very long */
+   /* By default, SCIP tries to close the gap between primal and dual bound completely.
+    * This can take very long for this example, so we increase the gap tolerance to have
+    * SCIP stop when the distance between primal and dual bound is already below 1e-4.
+    */
    SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-4) );
 
    SCIPinfoMessage(scip, NULL, "\nSolving...\n");
@@ -558,9 +604,9 @@ static SCIP_RETCODE runPacking(
    }
 
    /* free memory arrays */
-   SCIPfreeMemoryArray(scip, &x);
-   SCIPfreeMemoryArray(scip, &y);
    SCIPfreeMemoryArray(scip, &b);
+   SCIPfreeMemoryArray(scip, &y);
+   SCIPfreeMemoryArray(scip, &x);
 
    SCIP_CALL( SCIPfree(&scip) );
 
@@ -601,7 +647,7 @@ int main(
          puts("  -g show final solution with gnuplot");
          puts("  -m show final solution with matplotlib");
 #endif
-         puts("If no radii are given, then a default choice is used.");
+         puts("If no radii are given, then 5 circles with radii 0.25, 0.25, 0.4, 0.7, and 0.1 used.");
          puts("If both width and height are fixed, then the number of circles that fit into the rectangle is maximized.");
 
          return EXIT_SUCCESS;
@@ -687,6 +733,7 @@ int main(
       ncircles = 5;
    }
 
+   /* run the actual circle packing example (setting up SCIP, solving the problem, showing the solution) */
    retcode = runPacking(fixwidth, fixheight, dognuplot, domatplotlib);
 
    /* evaluate return code of the SCIP process */
