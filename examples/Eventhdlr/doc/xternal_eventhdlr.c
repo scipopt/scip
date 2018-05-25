@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page     EVENTHDLR_MAIN
+/**@page     EVENTHDLR_MAIN Event Handler
  * @author   Stefan Heinz
  *
  * This example illustrates the use of an event handler within \SCIP. It extends the
