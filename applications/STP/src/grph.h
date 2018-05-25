@@ -203,6 +203,7 @@ extern void   graph_pc_2org(GRAPH*);
 extern void   graph_pc_2trans(GRAPH*);
 extern void   graph_pc_2orgcheck(GRAPH*);
 extern void   graph_pc_2transcheck(GRAPH*);
+extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);
 extern SCIP_RETCODE   graph_pc_init(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);

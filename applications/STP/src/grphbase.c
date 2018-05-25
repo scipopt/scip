@@ -1092,6 +1092,36 @@ SCIP_RETCODE graph_pc_getSap(
    return SCIP_OKAY;
 }
 
+/** adapts SAP deriving from PCST or MWCS problem with new big M */
+void graph_pc_adaptSap(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bigM,               /**< new big M value */
+   GRAPH*                graph,              /**< the SAP graph */
+   SCIP_Real*            offset              /**< the offset */
+   )
+{
+   SCIP_Real oldbigM;
+   const int root = graph->source;
+
+   assert(bigM > 0.0);
+   assert(scip != NULL && graph != NULL && offset != NULL);
+   assert(graph->outbeg[root] >= 0);
+
+   oldbigM = graph->cost[graph->outbeg[root]];
+   assert(oldbigM > 0.0);
+
+   *offset += (oldbigM - bigM);
+
+   printf("new vs old %f, %f \n", bigM, oldbigM);
+
+   for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+   {
+      assert(graph->cost[e] == oldbigM);
+      graph->cost[e] = bigM;
+   }
+}
+
+
 /** alters the graph for prize collecting problems and shifts weights to reduce number of terminal */
 SCIP_RETCODE graph_pc_getSapShift(
    SCIP*                 scip,               /**< SCIP data structure */
