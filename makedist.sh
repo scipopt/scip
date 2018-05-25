@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -e
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
@@ -12,17 +12,19 @@ then
 fi
 rm -f release/$NAME.tgz
 
-# run git status to clean the dirty git hash
-git status
+echo "store git hash"
+GITHASH=`git describe --always --dirty  | sed 's/^.*-g//'`
+echo "#define SCIP_GITHASH \"$GITHASH\"" > src/scip/githash.c
 
 # Before we create a tarball change the director and file rights in a command way
 echo adjust file modes
-find ./ -type d -exec chmod 750 {} \;
-find ./ -type f -exec chmod 640 {} \;
-find ./ -name "*.sh" -exec chmod 750 {} \;
-chmod 750 bin/* scripts/* interfaces/ampl/get.ASL check/cmpres.awk cmake/Modules/asan-wrapper applications/PolySCIP/mult_zimpl/mult_zimpl_to_mop.py
+git ls-files | xargs dirname | sort -u | xargs chmod 750
+git ls-files | xargs chmod 640
+git ls-files "*.sh" | xargs chmod 750
 
-tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
+chmod 750 scripts/* interfaces/ampl/get.ASL check/cmpres.awk cmake/Modules/asan-wrapper applications/PolySCIP/mult_zimpl/mult_zimpl_to_mop.py
+
+tar --no-recursion --ignore-failed-read -czhf release/$NAME.tgz \
 --exclude="*~" \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/INSTALL_CMAKE $NAME/CHANGELOG $NAME/Makefile \
@@ -266,9 +268,10 @@ $NAME/tests/src/cons/superindicator/*                  \
 
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, and makedist.sh ($VERSION):"
+echo "check version numbers ($VERSION):"
 grep -H "SCIP_VERSION" src/scip/def.h
 grep -H "@version" doc/xternal.c
 grep -H "^SCIP_VERSION" make/make.project
+grep -H "SCIP_VERSION" CMakeLists.txt
 echo ""
 tail src/scip/githash.c
