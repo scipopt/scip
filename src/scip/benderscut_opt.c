@@ -230,9 +230,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
       redcost = SCIPgetVarRedcost(subproblem, var);
 
-#ifndef NDEBUG
       checkobj += SCIPvarGetUnchangedObj(var)*SCIPvarGetSol(var, TRUE);
-#endif
 
       /* checking whether the subproblem variable has a corresponding master variable. */
       if( mastervar != NULL )
