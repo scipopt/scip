@@ -121,7 +121,7 @@ SCIP_Bool SCIPbendersIsInitialized(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** returns whether the given Benders decomposition is in use in the current problem */
+/** returns whether the given Benders' decomposition is in use in the current problem */
 SCIP_Bool SCIPbendersIsActive(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
    );
@@ -199,7 +199,9 @@ SCIP_BENDERSCUT* SCIPfindBenderscut(
    );
 
 
-/** returns the array of currently available Benders' cuts; active benders are in the first slots of the array */
+/** returns the array of currently available Benders' cuts; active Benders' decomposition are in the first slots of
+ * the array
+ */
 EXTERN
 SCIP_BENDERSCUT** SCIPbendersGetBenderscuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -288,6 +290,13 @@ void SCIPbendersUpdateSubprobLowerbound(
 
 /** returns the stored lower bound for the given subproblem */
 SCIP_Real SCIPbendersGetSubprobLowerbound(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
+/** returns whether the subproblem is enabled, i.e. the subproblem is still solved in the solving loop. */
+extern
+SCIP_Bool SCIPbendersSubprobIsEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );

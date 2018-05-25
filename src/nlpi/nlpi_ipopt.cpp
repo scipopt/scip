@@ -610,7 +610,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       if( IsNull((*problem)->nlp) )
          throw std::bad_alloc();
    }
-   catch( std::bad_alloc )
+   catch( const std::bad_alloc& )
    {
       SCIPerrorMessage("Not enough memory to initialize Ipopt.\n");
       return SCIP_NOMEMORY;

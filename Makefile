@@ -164,10 +164,6 @@ LPSOPTIONS	+=	spx1
 ifeq ($(LPS),spx1)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
-ifeq ($(SPX_LEGACY),true)
-CFLAGS		+= 	-DSOPLEX_LEGACY
-CXXFLAGS	+= 	-DSOPLEX_LEGACY
-endif
 LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx1.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
@@ -737,7 +733,48 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/relax.o \
 			scip/reopt.o \
 			scip/retcode.o \
-			scip/scip.o \
+			scip/scip_benders.o \
+			scip/scip_branch.o \
+			scip/scip_compr.o \
+			scip/scip_concurrent.o \
+			scip/scip_conflict.o \
+			scip/scip_cons.o \
+			scip/scip_copy.o \
+			scip/scip_cut.o \
+			scip/scip_datastructures.o\
+			scip/scip_debug.o \
+			scip/scip_dialog.o \
+			scip/scip_disp.o \
+			scip/scip_event.o \
+			scip/scip_expr.o \
+			scip/scip_general.o \
+			scip/scip_heur.o \
+			scip/scip_lp.o \
+			scip/scip_mem.o \
+			scip/scip_message.o \
+			scip/scip_nlp.o \
+			scip/scip_nodesel.o \
+			scip/scip_nonlinear.o \
+			scip/scip_numerics.o \
+			scip/scip_param.o \
+			scip/scip_presol.o \
+			scip/scip_pricer.o \
+			scip/scip_prob.o \
+			scip/scip_probing.o \
+			scip/scip_prop.o \
+			scip/scip_randnumgen.o \
+			scip/scip_reader.o \
+			scip/scip_relax.o \
+			scip/scip_reopt.o \
+			scip/scip_sepa.o \
+			scip/scip_sol.o \
+			scip/scip_solve.o \
+			scip/scip_solvingstats.o \
+			scip/scip_table.o \
+			scip/scip_timing.o \
+			scip/scip_tree.o \
+			scip/scip_validation.o \
+			scip/scip_var.o \
 			scip/scip_bandit.o \
 			scip/scipbuildflags.o \
 			scip/scipcoreplugins.o \

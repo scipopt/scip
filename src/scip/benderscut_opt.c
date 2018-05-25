@@ -76,6 +76,38 @@ struct SCIP_BenderscutData
  * Local methods
  */
 
+/** in the case of numerical troubles, the LP is resolved with solution polishing activated */
+static
+SCIP_RETCODE polishSolution(
+   SCIP*                 subproblem,         /**< the SCIP data structure */
+   SCIP_Bool*            success             /**< TRUE is the resolving of the LP was successful */
+   )
+{
+   int oldpolishing;
+   SCIP_Bool lperror;
+   SCIP_Bool cutoff;
+
+   assert(subproblem != NULL);
+   assert(SCIPinProbing(subproblem));
+
+   (*success) = FALSE;
+
+   /* setting the solution polishing parameter */
+   SCIP_CALL( SCIPgetIntParam(subproblem, "lp/solutionpolishing", &oldpolishing) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/solutionpolishing", 2) );
+
+   /* resolving the probing LP */
+   SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
+
+   if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
+      (*success) = TRUE;
+
+   /* resetting the solution polishing parameter */
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/solutionpolishing", oldpolishing) );
+
+   return SCIP_OKAY;
+}
+
 /** computes a standard Benders' optimality cut from the dual solutions of the LP */
 static
 SCIP_RETCODE computeStandardOptimalityCut(
@@ -101,10 +133,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
    SCIP_Real rhs;
    int i;
 
-#ifndef NDEBUG
    SCIP_Real verifyobj = 0;
    SCIP_Real checkobj = 0;
-#endif
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -276,7 +306,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
       return SCIP_OKAY;
    }
 
-#ifndef NDEBUG
    if( addcut )
       lhs = SCIProwGetLhs(row);
    else
@@ -287,9 +316,21 @@ SCIP_RETCODE computeStandardOptimalityCut(
       verifyobj -= SCIPgetRowSolActivity(masterprob, row, sol);
    else
       verifyobj -= SCIPgetActivityLinear(masterprob, cons, sol);
-#endif
 
-   assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj));
+   /* it is possible that numerics will cause the generated cut to be invalid. This cut should not be added to the
+    * master problem, since its addition could cut off feasible solutions. The success flag is set of false, indicating
+    * that the Benders' cut could not find a valid cut.
+    */
+   if( !SCIPisFeasEQ(masterprob, checkobj, verifyobj) )
+   {
+      (*success) = FALSE;
+      SCIPdebugMsg(masterprob, "The objective function and cut activity are not equal (%g != %g).\n", checkobj,
+         verifyobj);
+#ifdef SCIP_DEBUG
+      SCIPABORT();
+#endif
+      return SCIP_OKAY;
+   }
 
    (*success) = TRUE;
 
@@ -385,6 +426,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    if( optimal )
    {
+      (*result) = SCIP_FEASIBLE;
       SCIPdebugMsg(masterprob, "No cut added for subproblem %d\n", probnumber);
       return SCIP_OKAY;
    }
@@ -516,6 +558,26 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
             sol, probnumber, type, result) );
+
+      /* if it was not possible to generate a cut, this could be due to numerical issues. So the solution to the LP is
+       * resolved and the generation of the cut is reattempted
+       */
+      if( (*result) == SCIP_DIDNOTFIND )
+      {
+         SCIP_Bool success;
+
+         SCIPinfoMessage(scip, NULL, "Numerical trouble generating optimality cut for subproblem %d. Attempting to "
+            "polish the LP solution to find an alternative dual extreme point.\n", probnumber);
+
+         SCIP_CALL( polishSolution(subproblem, &success) );
+
+         /* only attempt to generate a cut if the solution polishing was successful */
+         if( success )
+         {
+            SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
+                  sol, probnumber, type, result) );
+         }
+      }
    }
 
    return SCIP_OKAY;

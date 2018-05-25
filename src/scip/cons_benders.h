@@ -15,7 +15,7 @@
 
 /**@file   cons_benders.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for benders decomposition
+ * @brief  constraint handler for Benders' decomposition
  * @author Stephen J. Maher
  */
 
@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-/** creates the handler for benders constraints and includes it in SCIP
+/** creates the handler for Benders' decomposition and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
  * */

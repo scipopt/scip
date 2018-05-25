@@ -12441,15 +12441,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                fastmip = 0;
                goto SOLVEAGAIN;
             }
-            else if( !tightprimfeastol )
+            else if( !tightdualfeastol )
             {
                /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems):
                 * solve again with tighter feasibility tolerance
                 */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again with tighter primal feasibility tolerance\n",
+                  "(node %" SCIP_LONGINT_FORMAT ") proof of infeasible LP %" SCIP_LONGINT_FORMAT " not valid -- solving again with tighter dual feasibility tolerance\n",
                   stat->nnodes, stat->nlps);
-               tightprimfeastol = TRUE;
+               tightdualfeastol = TRUE;
                goto SOLVEAGAIN;
             }
             else if( !fromscratch && simplex )
@@ -14814,7 +14814,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
     * due to numerics, it might happen that the left-hand side of the aggregation is larger/smaller or equal than +/- infinity.
     * in that case, we declare the Farkas proof to be invalid.
     */
-   if( checkfarkas && (SCIPsetIsInfinity(set, REALABS(farkaslhs)) || SCIPsetIsSumGE(set, maxactivity, farkaslhs)) )
+   if( checkfarkas && (SCIPsetIsInfinity(set, REALABS(farkaslhs)) || SCIPsetIsGE(set, maxactivity, farkaslhs)) )
    {
       SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f, lhs=%.12f\n", maxactivity, farkaslhs);
 

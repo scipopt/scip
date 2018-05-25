@@ -240,7 +240,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
          (*score) *= 0.01;
    }
    else if( candsfrac < 0.01 )
-      (*score) *= 0.1;
+      (*score) *= 0.01;
 
    /* prefer decisions on binary variables */
    if( !SCIPvarIsBinary(cand) )

@@ -463,7 +463,7 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
    SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    )
 {
-   char path[SCIP_MAXSTRLEN];
+   char path[SCIP_MAXSTRLEN+1];
    char p[SCIP_MAXSTRLEN];
 
    assert(dialoghdlr != NULL);
@@ -540,7 +540,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
    SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    )
 {
-   char path[SCIP_MAXSTRLEN];
+   char path[SCIP_MAXSTRLEN+1];
    char p[SCIP_MAXSTRLEN];
    char* firstword;
    int pos;
@@ -720,7 +720,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
    )
 {
    char s[SCIP_MAXSTRLEN];
-   char h[SCIP_MAXSTRLEN];
+   char h[SCIP_MAXSTRLEN+1];
    SCIP_Bool cleanuphistory;
 
    assert(dialoghdlr != NULL);

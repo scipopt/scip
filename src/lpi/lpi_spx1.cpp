@@ -72,8 +72,17 @@
 #undef SCIP_DEBUG
 #endif
 
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+ * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
+ */
+#ifdef __GNUC__
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
 /* include SoPlex solver */
-#include "spxsolver.h"
+#include "soplex.h"
 
 /* define subversion for versions <= 1.5.0.1 */
 #ifndef SOPLEX_SUBVERSION
@@ -91,10 +100,15 @@
 
 /* get githash of SoPlex */
 #if (SOPLEX_VERSION >= 160)
+#if (SOPLEX_APIVERSION <= 5)
 #include "spxgithash.h"
 #endif
+#endif
 
+#define WITH_BOUNDFLIPPING
+#if (SOPLEX_APIVERSION <= 5)
 /* include SoPlex components */
+#include "spxsolver.h"
 #include "slufactor.h"
 #include "spxsteeppr.h"
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
@@ -106,9 +120,9 @@
 #include "spxmainsm.h"
 #include "spxequilisc.h"
 
-#define WITH_BOUNDFLIPPING
 #ifdef WITH_BOUNDFLIPPING
 #include "spxboundflippingrt.h"
+#endif
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
@@ -507,15 +521,15 @@ public:
 
    void setProbname(const char* probname)
    {
-      int len;
+      size_t len;
 
       assert(probname != NULL);
       if( m_probname != NULL )
          spx_free(m_probname);
-      len = (int) strlen(probname);
+
+      len = strlen(probname);
       spx_alloc(m_probname, len + 1);
-      /* safe to use strcpy */
-      (void)strcpy(m_probname, probname);
+      memcpy(m_probname, probname, len + 1);
    }
 
    Real getObjLoLimit() const

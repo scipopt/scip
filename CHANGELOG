@@ -15,6 +15,7 @@ features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
 - new example brachistochrone in CallableLibrary examples collection
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
+- "lp/checkstability" is properly implemented for SoPlex LPI (spx2)
 - new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
 - limits on the number of presolving rounds a presolver (maxrounds) or propagator/constraint handler (maxprerounds)
   participates in are now compared to the number of calls of the particular presolving method, not the number of
@@ -80,6 +81,7 @@ deleted files:
 misc:
 - updated CppAD to version 20180000.0
 - add statistic that presents the number of resolves for instable LPs
+- remove LEGACY mode, compiler needs to be C++11-compliant
 
 
 SCIP version 5.0.2
@@ -105,6 +107,8 @@ fixed bugs:
 - fix parsing of version number in the CMake module for Ipopt
 - fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
 - added workaround for bug when solving certain bivariate quadratic interval equations with unbounded second variable
+- fixed bug with releasing slack variable and linear constraint in cons_indicator
+- fixed problem when writing MPS file with indicator constraints with corresponding empty linear constraints
 
 data structures:
 - expression interpreter objects are now stored in the block memory

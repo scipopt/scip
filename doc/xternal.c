@@ -42,6 +42,10 @@
  * - is a framework for branch-and-cut-and-price.
  *
  * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
+ * 
+ * @version 6.0.0
+ *
+ * \image html scippy.png
  *
  * @section QUICKSTART Quickstart
  *
@@ -58,12 +62,6 @@
  * reads and optimizes this model in no time:
  *
  * \verbinclude output.log
- *
- *
- *
- *
- *
- *
  *
  *  - @subpage GETTINGSTARTED
  *  - @subpage FURTHERINFORMATION
@@ -98,8 +96,6 @@
  * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
  * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
  * that may not be supported.
- *
- * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
  */
 
@@ -219,10 +215,6 @@
 /**@page AUTHORS SCIP Authors
  * <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  5.0.1.4
- *
- * \image html scippy.png
- * 
  */
 
 /**@page CHG Changes between different versions of SCIP
@@ -448,6 +440,16 @@
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
  *    </td>
  *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
+ * </tr>
+ * <tr>
+ *    <td>Mixed-integer semidefinite program (MISDP)</td>
+ *    <td>\f{align*}{
+ *         \text{inf} \quad \thinspace & b^T y \\
+ *         \text{s.t.} \quad & \sum_{j=1}^m A_j\, y_j - A_0 \succeq 0 \\
+ *         & y_j \in \mathbb{Z} && \forall\, j \in \mathcal{I}
+ *        \f}
+ *    </td>
+ *    <td colspan="3"> see the <a href="http://www.opt.tu-darmstadt.de/scipsdp/">SCIP-SDP web page</a></td>
  * </tr>
  * </table>
  *
@@ -703,7 +705,7 @@
  * gives some hints on what to do if the \ref COMPILERPROBLEMS "compilation throws an error". We give some comments on
  * how to install \SCIP under \ref WINDOWS "WINDOWS" and show \ref RUN "how to start \SCIP".
  *
- * If you experience any problems during the installation, you will find help in the \ref INSTALL "INSTALL" file.
+ * If you experience any problems during the installation, you will find help in the INSTALL file.
  *
  * \SCIP contains a makefile system, which allows the individual setting of several parameters. A detailed list of parameter settings
  * obtained by <code>make help</code>. For instance, the following settings are supported:
@@ -820,7 +822,7 @@
  *
  * @section COMPILERPROBLEMS Compilation problems:
  *
- * - If the soft-link query script does not work on your machine, read step 2 in the \ref INSTALL "INSTALL" file for
+ * - If the soft-link query script does not work on your machine, read step 2 in the INSTALL file for
  * instructions on manually creating the soft-links.
  *
  * - If you get an error message of the type\n
