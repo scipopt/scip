@@ -1002,6 +1002,7 @@
  *
  *  - @subpage OTHERPLUGINS Extending SCIP by custom plugins
  *  - @subpage BRANCHANDPRICE Branch-and-price
+ *  - @subpage BENDERSDECOMP Benders' decomposition
  *  - @subpage BRANCHANDCUT Branch-and-cut
  *  - @subpage CALLABLELIBRARY Callable library
  */
@@ -1029,6 +1030,21 @@
  *  </tr>
  *  </table>
  * 
+ */
+
+/**@page BENDERSDECOMP Benders' decomposition
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage SCFLP_MAIN "Stochastic capacitated facility location problem"
+ *  </td>
+ *  <td>
+ *  A stochastic programming problem that demonstrates the use of the Benders' decomposition frameowork within SCIP.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
  */
 
 /**@page BRANCHANDCUT Branch-and-cut
@@ -8827,6 +8843,16 @@
  * @ingroup PUBLICCOREAPI
  * @brief Methods for the inclusion and management of SCIP plugins and callback functions
  *
+ */
+
+/**@defgroup PublicBendersMethods Benders' decomposition
+ * @ingroup PluginManagementMethods
+ * @brief  methods for Benders' decomposition plugins
+ */
+
+/**@defgroup PublicBenderscutsMethods Benders' decomposition cuts
+ * @ingroup PluginManagementMethods
+ * @brief  methods for Benders' decomposition cuts plugins
  */
 
 /**@defgroup PublicBranchRuleMethods Branching Rules

@@ -700,6 +700,13 @@ SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    );
 
+/* @} */
+
+/**@addtogroup PublicBenderscutsMethods
+ *
+ * @{
+ */
+
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible

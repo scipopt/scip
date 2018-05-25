@@ -13,13 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_cap.c
- * @brief  Cap problem reader file reader
+/**@file   reader_scflp.c
+ * @brief  SCFLP reader file reader
  * @author Stephen J. Maher
  *
- * This file implements the reader/parser used to read the cap input data. For more details see \ref CAP_READER.
+ * This file implements the reader/parser used to read the CAP input data and builds a SCFLP instance. For more details
+ * see \ref SCFLP_READER.
  *
- * @page CAP_READER Parsing the input format and creating the problem
+ * @page SCFLP_READER Parsing the input format
  *
  * In the <code>data</code> directory you find a few data files which contain each one CAP problem. These data
  * files have the following structure:
@@ -34,9 +35,9 @@
  * one interface methods (the one including the reader into \SCIP). For our purpose we only implemented the \ref
  * READERREAD callback and the interface method which adds the reader plugin to \SCIP.
  *
- * @section CAP_READERINCLUDE The SCIPincludeReaderCap() interface method
+ * @section SCFLP_READERINCLUDE The SCIPincludeReaderScflp() interface method
  *
- * The interface method <code>SCIPincludeReaderCap()</code> is called to add the reader plugin to \SCIP (see
+ * The interface method <code>SCIPincludeReaderScflp()</code> is called to add the reader plugin to \SCIP (see
  * cmain.c). This means \SCIP gets informed that this reader is available for reading input files. Therefore, the
  * function <code>SCIPincludeReader()</code> is called within this method which passes all necessary information of the
  * reader to SCIP. This information includes the name of the reader, a description, and the file extension for which the
@@ -46,10 +47,10 @@
  * (some of them might be NULL pointers). These function
  * pointers are used by \SCIP to run the reader. For more information about all available reader callbacks we refer to
  * the \ref READER "How to add file readers" tutorial. In the remaining section
- * we restrict ourself to the callback <code>READERREAD</code> which is the only one we implemented for the cap
+ * we restrict ourself to the callback <code>READERREAD</code> which is the only one we implemented for the SCFLP
  * example. All other callbacks are not required for this example.
  *
- * @section CAP_READERREAD The READERREAD callback method
+ * @section SCFLP_READERREAD The READERREAD callback method
  *
  * The READERREAD callback is in charge of parsing a file and creating the problem. To see the list of arguments this
  * functions gets see the file type_reader.h in the source of \SCIP. The following arguments are of interest in our
@@ -64,7 +65,7 @@
  * with a mean given by the deterministic demand and the standard deviation sampled from a uniform distribution with the
  * range [0.1*mean, 0.3*mean]. The number of scenarios can be set using a runtime parameter.
  *
- * @subsection CAP_PARSING Parsing the problem
+ * @subsection SCFLP_PARSING Parsing the problem
  *
  * The file can be opened and parsed with your favorite methods. In this case we are using the functionality provided by
  * \SCIP since this has some nice side effects. We are using the function SCIPfopen() which can besides standard
@@ -72,15 +73,13 @@
  * in the source of SCIP. Parsing the data out of the file is not that hard. Please look at the code and comments
  * therein for more details.
  *
- * @subsection CAP_CREATING Creating the problem
+ * @subsection SCFLP_CREATING Creating the problem
  *
  * After parsing the file the final task for the reader is to create the problem. In our case, we pass the collected data
- * to the \ref probdata_cap.h "main problem data plugin". For this, we use the interface methods
+ * to the \ref probdata_scflp.h "main problem data plugin". For this, we use the interface methods
  * SCIPprobdataCreate() which is provided by the
- * problem data plugin (see probdata_cap.c). After that, the reader sets the result value for the SCIP_RESULT
+ * problem data plugin (see probdata_scflp.c). After that, the reader sets the result value for the SCIP_RESULT
  * pointer to <code>SCIP_SUCCESS</code> and returns with a proper <code>SCIP_RETCODE</code>.
- *
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -90,16 +89,16 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "probdata_cap.h"
-#include "reader_cap.h"
+#include "probdata_scflp.h"
+#include "reader_scflp.h"
 
 /**@name Reader properties
  *
  * @{
  */
 
-#define READER_NAME             "capreader"
-#define READER_DESC             "file reader for cap data format"
+#define READER_NAME             "scflpreader"
+#define READER_DESC             "file reader for CAP data format and creates a SCFLP instance"
 #define READER_EXTENSION        "cap"
 
 
@@ -194,7 +193,7 @@ SCIP_RETCODE readerdataFree(
 
 /** destructor of reader to free user data (called when SCIP is exiting)*/
 static
-SCIP_DECL_READERFREE(readerFreeCap)
+SCIP_DECL_READERFREE(readerFreeScflp)
 {
    SCIP_READERDATA* readerdata;
 
@@ -211,7 +210,7 @@ SCIP_DECL_READERFREE(readerFreeCap)
 
 /** problem reading method of reader */
 static
-SCIP_DECL_READERREAD(readerReadCap)
+SCIP_DECL_READERREAD(readerReadScflp)
 {  /*lint --e{715}*/
    SCIP_READERDATA* readerdata;
 
@@ -263,7 +262,7 @@ SCIP_DECL_READERREAD(readerReadCap)
    }
 
    lineno = 0;
-   sprintf(name, "CAP");
+   sprintf(name, "SCFLP");
 
    nfacilities = 0;
    ncustomers = 0;
@@ -463,25 +462,25 @@ SCIP_DECL_READERREAD(readerReadCap)
  * @{
  */
 
-/** includes the cap file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderCap(
+/** includes the scflp file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderScflp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create cap reader data */
+   /* create scflp reader data */
    readerdata = NULL;
 
    SCIP_CALL( readerdataCreate(scip, &readerdata) );
 
-   /* include cap reader */
+   /* include scflp reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
    assert(reader != NULL);
 
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeCap) );
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCap) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeScflp) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadScflp) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/" READER_NAME "/usebenders", "Should Benders' decomposition be used to solve the problem?",
