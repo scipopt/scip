@@ -59,8 +59,6 @@
 #define DEFAULT_LOCKWEIGHT          1.0 /**< weight used in a convex combination of conflict an variable locks */
 #define DEFAULT_LIKECOEF          FALSE /**< perform rounding like coefficient diving */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
-#define DEFAULT_MAXVARSFAC         -1.0 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
-#define DEFAULT_MINMAXVARS           -1 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
 #define DEFAULT_MINCONFLICTLOCKS      5 /**< threshold for penalizing the score */
 
 /* locally defined heuristic data */

@@ -51,7 +51,7 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.10 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed (0.0: no limit) */
@@ -380,6 +380,8 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
       return SCIP_OKAY;
    }
 
+   success = TRUE;
+
    /* check diving candidates in detail */
    if( heurdata->checkcands )
    {
@@ -390,20 +392,13 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
       if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
          SCIP_CALL( SCIPgetLPBranchCands(scip, &divecandvars, NULL, NULL, &ndivecands, NULL, NULL) );
+
+         SCIP_CALL( checkDivingCandidates(scip, heurdata, divecandvars, ndivecands, &success) );
       }
       else
       {
          success = FALSE;
       }
-
-      if( success )
-      {
-         SCIP_CALL( checkDivingCandidates(scip, heurdata, divecandvars, ndivecands, &success) );
-      }
-   }
-   else
-   {
-      success = TRUE;
    }
 
    if( success )
