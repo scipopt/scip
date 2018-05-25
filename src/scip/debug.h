@@ -27,14 +27,20 @@
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */
 
-
 #include "scip/def.h"
-#include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef WITH_DEBUG_SOLUTION
+#include "blockmemshell/memory.h"
+#include "scip/type_cons.h"
 #include "scip/type_lp.h"
-#include "scip/type_prob.h"
-#include "scip/type_tree.h"
 #include "scip/type_misc.h"
+#include "scip/type_set.h"
+#include "scip/type_sol.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
