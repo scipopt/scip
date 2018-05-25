@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page RINGPACKING_MAIN Overview
+/**@page RINGPACKING_MAIN Ringpacking
  * @author Benjamin Mueller
  *
  * This application contains a branch-and-price approach for the Ringpacking problem, also known as recursive circle
@@ -34,12 +34,12 @@
  *
  * In the following we introduce the problem, explain the use of the reader plugin and pricer plugin.
  *
- * -# \ref RINGPACKING_PROBLEM "Problem description"
- * -# \ref RINGPACKING_READER "Parsing the input format and creating the problem"
- * -# \ref RINGPACKING_PROBLEMDATA "Main problem data"
- * -# \ref RINGPACKING_PRICER "Pricing new variables"
- * -# \ref RINGPACKING_ENUMERATION "Enumerating circular patterns"
- * -# \ref RINGPACKING_MAKEFILE "The Makefile"
+ * -# \subpage RINGPACKING_PROBLEM "Problem description"
+ * -# \subpage RINGPACKING_READER "Parsing the input format and creating the problem"
+ * -# \subpage RINGPACKING_PROBLEMDATA "Main problem data"
+ * -# \subpage RINGPACKING_PRICER "Pricing new variables"
+ * -# \subpage RINGPACKING_ENUMERATION "Enumerating circular patterns"
+ * -# \subpage RINGPACKING_MAKEFILE "The Makefile"
  *
  */
 
