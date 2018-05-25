@@ -167,7 +167,7 @@ void visualizeSolutionGnuplot(
    fputs("plot '-' with circles notitle\n", stream);
    for( i = 0; i < ncircles; ++i )
    {
-      /* skip circles that are not included in current solution */
+      /* skip circles that are not included in current solution, that is b[i] is close to zero */
       if( !minarea && SCIPgetSolVal(scip, sol, b[i]) < 0.5 )
          continue;
 
@@ -236,7 +236,7 @@ SCIP_RETCODE visualizeSolutionAscii(
       int xcoord;
       int ycoord;
 
-      /* skip circles that are not included in current solution */
+      /* skip circles that are not included in current solution, that is b[i] close to zero */
       if( !minarea && SCIPgetSolVal(scip, sol, b[i]) < 0.5 )
          continue;
 
