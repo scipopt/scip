@@ -234,6 +234,7 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
 }
 
 /** destructor of Benders' decomposition to free user data (called when SCIP is exiting) */
+/**! [SnippetBendersFreeDefault] */
 static
 SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 {  /*lint --e{715}*/
@@ -264,6 +265,7 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 
    return SCIP_OKAY;
 }
+/**! [SnippetBendersFreeDefault] */
 
 
 /** initialization method of Benders' decomposition (called after problem was transformed) */
@@ -281,6 +283,7 @@ SCIP_DECL_BENDERSINIT(bendersInitDefault)
 
 
 /** mapping method between the master problem variables and the subproblem variables of Benders' decomposition */
+/**! [SnippetBendersGetvarDefault] */
 static
 SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
 {  /*lint --e{715}*/
@@ -328,6 +331,7 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
 
    return SCIP_OKAY;
 }
+/**! [SnippetBendersGetvarDefault] */
 
 /** the method for creating the Benders' decomposition subproblem. This method is called during the initialisation stage
  *  (after the master problem was transformed)

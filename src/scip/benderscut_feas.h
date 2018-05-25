@@ -14,11 +14,23 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_feas.h
- * @ingroup BENDERS
+ * @ingroup BENDERSCUTS
  * @brief  Standard feasibility cuts for Benders' decomposition
  * @author Stephen J. Maher
  *
- * template file for Benders' decomposition cuts plugins
+ * The classical Benders' decomposition feasibility cuts arise from an infeasible instance of the Benders' decomposition
+ * subproblem.
+ * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
+ * \f[
+ * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \geq 0\}
+ * \f]
+ * If the subproblem is infeasible as a result of the solution \f$\bar{x}\f$, then the Benders' decomposition
+ * feasibility cut can be generated from the dual ray. Let \f$w\f$ be the vector corresponding to the dual ray of the
+ * Benders' decomposition subproblem. The resulting cut is:
+ * \f[
+ * 0 \geq w^{T}(h - Hx)
+ * \f]
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,7 +45,10 @@
 extern "C" {
 #endif
 
-/** creates the Standard Feasibility Benders' decomposition cuts and includes it in SCIP */
+/** creates the Standard Feasibility Benders' decomposition cuts and includes it in SCIP
+ *
+ *  @ingroup BenderscutIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBenderscutFeas(
    SCIP*                 scip,               /**< SCIP data structure */
