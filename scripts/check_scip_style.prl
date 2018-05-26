@@ -34,6 +34,9 @@
 #   bad style
 #   [checkcomments, default: false]
 #
+# - Check for empty lines after "{" in the next line or before "}"
+#   [checkemptylines, default: true]
+#
 # Note the this will not give a complete check. The checks are also
 # heuristic in order to avoid to be flooded with warnings. To
 # guarantee correct indentation of the code, one should use the
@@ -64,6 +67,7 @@ my $checkindent = 1;     # check for correct indentation
 my $checktabsparam = 1;  # check whether tabs in parameter lists are present
 my $checkstage = 1;      # check whether names of functions for checkstage are correct in scip.c
 my $checkdocinbody = 1;  # check whether doxygen documentation appears within code
+my $checkemptylines = 1; # check for empty lines after "{" in the next line or before "}"
 
 my $nfiles = 0;
 
@@ -118,6 +122,9 @@ for (my $i = 0; $i < $narg; ++$i)
    my $documentationpos = -1;
    my $foundexternc = 0;
    my $inenumstruct = 0;
+   my $emptyline = 0;
+   my $lastemptyline = -1;
+   my $openbraceprev = 0;
 
    while(<FILE>)
    {
@@ -125,6 +132,32 @@ for (my $i = 0; $i < $narg; ++$i)
       ++$line;
       my $str = $_;
       $documentationpos = -1;
+
+      # check for empty lines in functions
+      if ( $depth > 0 && $checkemptylines == 1 )
+      {
+	 # check for empty lines
+	 if ( length($str) == 0 )
+	 {
+	    ++$emptyline;
+	    $lastemptyline = $line;
+
+	    # check for empty lines following an opening block
+	    if ( $openbraceprev > 0 )
+	    {
+	       printf("%d: empty line following an opening block.\n", $line);
+	    }
+	 }
+	 else
+	 {
+	    if ( $emptyline >= 2 )
+	    {
+	       printf("%d: %d consecutive empty lines in code.\n", $line - 1, $emptyline);
+	    }
+	    $emptyline = 0;
+	 }
+      }
+      $openbraceprev = 0;
 
       # ---------------------------------------------------------
       # handle comments
@@ -239,7 +272,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # calculate depth
 
       # determine whether we are in an enum or struct (assume it is at the beginning of the line)
-      if ( $str =~ /^enum/ || $str =~ /^struct/ || $str =~ /^typedef struct/ || $str =~ /\s*union/ )
+      if ( $str =~ /^enum/ || $str =~ /^struct/ || $str =~ /^typedef struct/ || $str =~ /^typedef enum/ || $str =~ /\s*union/ )
       {
 	 ++($inenumstruct);
       }
@@ -247,6 +280,12 @@ for (my $i = 0; $i < $narg; ++$i)
       # check for opening blocks
       if ( $str =~ /\{/ && $str !~ /'\{'/ && $incomment == 0 )
       {
+	 # mark beginning of block if block is not closing on same line
+	 if ( $str !~ /\{(.*)\}/ )
+	 {
+	    $openbraceprev = 1;
+	 }
+
 	 if ( $str =~ /\@\{/ )
 	 {
 	    printf("%d: '\@{' within non-comment line:\n%s\n\n", $line, $_);
@@ -275,6 +314,12 @@ for (my $i = 0; $i < $narg; ++$i)
       # check for closing blocks
       if ( $str =~ /\}/ && $str !~ /'\}'/ && $incomment == 0 )
       {
+	 # check for empty lines preceeding a closeing block
+	 if ( $lastemptyline == $line - 1 && $depth > 0 && $checkemptylines == 1 && $str !~ /\{(.*)\}/ )
+	 {
+	    printf("%d: empty line preceeding closing block.\n", $line);
+	 }
+
 	 --($inenumstruct);
 	 if ( $inenumstruct < 0 )
 	 {
