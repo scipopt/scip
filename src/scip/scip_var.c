@@ -4089,7 +4089,7 @@ SCIP_RETCODE SCIPtryStrongbranchLPSol(
    assert(foundsol != NULL);
    assert(cutoff != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetVarStrongbranchData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPtryStrongbranchLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->set->branch_checksbsol )
    {
