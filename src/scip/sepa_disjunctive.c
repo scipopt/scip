@@ -765,7 +765,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       else
          bound1 = SCIPcolGetLb(col);
 
-
       /* determine second simplex row */
       var = SCIPnodeGetVarSOS1(conflictgraph, fixings2[edgenumber]);
       col = SCIPvarGetCol(var);

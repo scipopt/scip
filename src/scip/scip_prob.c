@@ -2647,7 +2647,6 @@ int SCIPgetNTotalVars(
       SCIPABORT();
       return 0; /*lint !e527*/
    }  /*lint !e788*/
-
 }
 
 

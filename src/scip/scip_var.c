@@ -2768,7 +2768,6 @@ SCIP_RETCODE SCIPstartStrongbranch(
 
       /* inform the LP that the current probing mode is used for strong branching */
       SCIPlpStartStrongbranchProbing(scip->lp);
-
    }
    else
    {
@@ -3314,7 +3313,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 #endif
    }
 
-
    /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
     * conflict analysis
     * @todo do this after propagation? should be able to get valid bounds more often, but they might be weaker
@@ -3650,7 +3648,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    }
    while( !firstchild );
 
-
    /* set strong branching information in column */
    if( *lperror )
    {
@@ -3978,7 +3975,6 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
             SCIP_CALL( analyzeStrongbranch(scip, vars[j], (downinf != NULL) ? (&(downinf[j])) : NULL,
                   (upinf != NULL) ? (&(upinf[j])) : NULL, (downconflict != NULL) ? (&(downconflict[j])) : NULL,
                   (upconflict != NULL) ? (&(upconflict[j])) : NULL) );
-
          }
       }
    }
@@ -7112,8 +7108,6 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    int maxncliquevarscomp;
    int ncliquevars;
 
-
-
    /* allocate temporary memory for storing the variables of the current clique */
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
@@ -7259,7 +7253,6 @@ SCIP_RETCODE SCIPcalcCliquePartition(
 
       return SCIP_OKAY;
    }
-
 
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &tmpvalues, nvars) );
    SCIP_CALL( SCIPsetDuplicateBufferArray(scip->set, &tmpvars, vars, nvars) );

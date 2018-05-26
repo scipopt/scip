@@ -1326,7 +1326,6 @@ SCIP_RETCODE presolve(
    nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
 #endif
 
-
    /* switch status to unknown */
    scip->stat->status = SCIP_STATUS_UNKNOWN;
 
@@ -2088,7 +2087,6 @@ SCIP_RETCODE freeTransform(
        * freed in SCIPfreeProb().
        */
       SCIP_CALL( SCIPconflictstoreClear(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
-
    }
 
    /* free transformed problem data structures */

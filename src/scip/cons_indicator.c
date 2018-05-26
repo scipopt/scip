@@ -1903,7 +1903,6 @@ SCIP_RETCODE scaleFirstRow(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler */
    )
 {
-
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
 

@@ -1811,7 +1811,6 @@ SCIP_DECL_CONSLOCK(consLockOr)
 static
 SCIP_DECL_CONSPRINT(consPrintOr)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

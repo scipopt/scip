@@ -4317,7 +4317,6 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
             retcode = SCIPlpiStrongbranchFrac(lp->lpi, col->lpipos, col->primsol, itlim, down == NULL ? NULL : &sbdown, up == NULL ? NULL :  &sbup, &sbdownvalid, &sbupvalid, &iter);
          }
 
-
          /* check return code for errors */
          if( retcode == SCIP_LPERROR )
          {
@@ -4969,7 +4968,6 @@ SCIP_RETCODE rowScale(
             c--;
             oldlen = row->len;
          }
-
       }
       else
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
@@ -12817,7 +12815,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
                   }
-
                }
 
                assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
@@ -13271,7 +13268,6 @@ void getObjvalDeltaObj(
          else
             (*deltaval) = -lb * oldobj;
       }
-
    }
    else if( SCIPsetIsNegative(set, oldobj) )
    {
@@ -13692,7 +13688,6 @@ SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
 
       /* update the root pseudo objective values */
       lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
-
    }
 
    return SCIP_OKAY;

@@ -152,7 +152,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
    nconss = SCIPgetNConss(subproblem);
    conss = SCIPgetConss(subproblem);
 
-
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
    {
@@ -176,7 +175,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
          lhs = SCIProwGetLhs(row);
       else
          lhs = SCIPgetLhsLinear(masterprob, cons);
-
 
       if( SCIPisPositive(subproblem, dualsol) )
          addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
@@ -218,7 +216,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
       SCIP_VAR* var;
       SCIP_VAR* mastervar;
       SCIP_Real redcost;
-
 
       if( i < nvars )
          var = vars[i];

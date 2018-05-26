@@ -180,7 +180,6 @@ SCIP_RETCODE branchruledataEnsureArraySize(
          branchruledata->currentlbs[v] = SCIP_INVALID;
          branchruledata->currentubs[v] = SCIP_INVALID;
       }
-
    }
    else
    {

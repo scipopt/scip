@@ -1210,7 +1210,6 @@ SCIP_RETCODE createSubproblems(
          {
             SCIP_CALL( initialiseLPSubproblem(benders, i) );
          }
-
       }
       else
       {
@@ -1253,7 +1252,6 @@ SCIP_RETCODE createSubproblems(
    benders->subprobscreated = TRUE;
 
    return SCIP_OKAY;
-
 }
 
 
@@ -2542,7 +2540,6 @@ SCIP_RETCODE SCIPbendersExec(
             && SCIPbendersGetNConvexSubprobs(benders) < SCIPbendersGetNSubproblems(benders))
             nsolveloops = 2;
       }
-
    }
 
    allverified = (nverified == nsubproblems);

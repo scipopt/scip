@@ -207,7 +207,6 @@ SCIP_RETCODE freeScenarioTree(
    if( (*scenariotree)->nsubproblems > 0 )
       SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, (*scenariotree)->nchildren);
 
-
    SCIPfreeBlockMemory(scip, scenariotree);
 
    return SCIP_OKAY;
@@ -575,7 +574,6 @@ SCIP_RETCODE copyScenario(
    probability = getScenarioProbability(scip, sourcescenario);
    SCIP_CALL( setScenarioProbability(scip, (*targetscenario), probability) );
 
-
    return SCIP_OKAY;
 }
 
@@ -604,7 +602,6 @@ SCIP_RETCODE mergeScenarios(
    /* setting the scenario probability */
    probability = getScenarioProbability(scip, scenario1)*getScenarioProbability(scip, (*mergedscenario));
    SCIP_CALL( setScenarioProbability(scip, (*mergedscenario), probability) );
-
 
    return SCIP_OKAY;
 }
@@ -670,7 +667,6 @@ SCIP_RETCODE buildScenarioTree(
    {
       /* adding child to the scenario tree */
       SCIP_CALL( scenarioAddChild(scip, scenariotree, scenarios[stageindex][i]) );
-
 
       /* building the tree below the recently added child */
       if( stage < numstages - 1 )
@@ -848,7 +844,6 @@ SCIP_RETCODE buildScenariosFromBlocks(
       SCIP_CALL( setScenarioNum(scip, (*scenarios)[(*numscenarios)], (*numscenarios)) );
       SCIP_CALL( setScenarioStageNum(scip, (*scenarios)[(*numscenarios)], stagenum) );
 
-
       /* if there is only a single block for the scenario, then we simply copy the block.
        * Otherwise, the blocks are merged into a single scenario */
       if( (*numblocksforscen) == 1 )
@@ -862,8 +857,6 @@ SCIP_RETCODE buildScenariosFromBlocks(
 
       (*numscenarios)++;
    }
-
-
 
    return SCIP_OKAY;
 }
@@ -908,7 +901,6 @@ SCIP_RETCODE createScenariosFromBlocks(
    SCIP_CALL( SCIPallocBufferArray(scip, &blocksforscen, numblocks) );
 
    (void) SCIPsnprintf(periods, SCIP_MAXSTRLEN, "");
-
 
    stagenum = 0;
    for( i = 0; i < numblocks; i++ )
@@ -1364,7 +1356,6 @@ SCIP_RETCODE readStoch(
       return SCIP_OKAY;
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -1459,7 +1450,6 @@ SCIP_RETCODE readBlocks(
                foundblock = TRUE;
                break;
             }
-
          }
          blocknum = i;
 
@@ -1709,7 +1699,6 @@ SCIP_RETCODE readIndep(
 
    while( stoinputReadLine(stoi) )
    {
-
       if( stoinputField0(stoi) != NULL )
       {
          if( !strcmp(stoinputField0(stoi), "INDEP") )
@@ -1761,7 +1750,6 @@ SCIP_RETCODE readIndep(
             foundblock = TRUE;
             break;
          }
-
       }
       blocknum = i;
 
@@ -2254,12 +2242,10 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
             var = SCIPfindVar(scenarioscip, name);
          }
 
-
          /* changing the coefficient for the variable */
          SCIP_CALL( SCIPchgCoefLinear(scenarioscip, cons, var, getScenarioEntryValue(scenario, i)) );
       }
    }
-
 
    return SCIP_OKAY;
 }
@@ -2326,7 +2312,6 @@ SCIP_RETCODE buildFullProblem(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-
    /* adding all variables and constraints for stages below the first stage.
     * The first stage is covered by the original problem. */
    for( i = 0; i < getScenarioNChildren(readerdata->scenariotree); i++ )
@@ -2334,8 +2319,6 @@ SCIP_RETCODE buildFullProblem(
 
    /* removing the variable and constraints that were included as part of the core file */
    SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
-
-
 
    return SCIP_OKAY;
 }
@@ -2460,7 +2443,6 @@ SCIP_RETCODE readSto(
    if( !unsupported && stoinputSection(stoi) != STO_ENDATA )
       stoinputSyntaxerror(stoi);
 
-
    error = stoinputHasError(stoi);
 
    if( !error && !unsupported )
@@ -2584,7 +2566,6 @@ SCIP_RETCODE SCIPincludeReaderSto(
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
    readerdata->scenariotree = NULL;
    readerdata->numscenarios = 0;
-
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );

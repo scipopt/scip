@@ -275,7 +275,6 @@ SCIP_RETCODE detectDominatingVubs(
             (SCIPvarsHaveCommonClique(var1, FALSE, var2, TRUE, TRUE) &&
                SCIPvarsHaveCommonClique(var1, TRUE, var2, FALSE, TRUE)) )
          {
-
             if( SCIPisLE(scip, highthresholds[i], highthresholds[j]) )
             {
 #ifdef SCIP_DEBUG
@@ -383,7 +382,6 @@ SCIP_RETCODE detectDominatingVlbs(
             (SCIPvarsHaveCommonClique(var1, FALSE, var2, TRUE, TRUE) &&
                SCIPvarsHaveCommonClique(var1, TRUE, var2, FALSE, TRUE)) )
          {
-
             if( SCIPisGE(scip, highthresholds[i], highthresholds[j]) )
             {
 #ifdef SCIP_DEBUG

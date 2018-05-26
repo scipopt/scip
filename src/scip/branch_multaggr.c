@@ -719,7 +719,6 @@ SCIP_DECL_BRANCHEXIT(branchExitMultAggr)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 {  /*lint --e{715}*/
-
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** lpcands;
    SCIP_VAR** tmplpcands;

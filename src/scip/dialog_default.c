@@ -2380,7 +2380,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
          SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
-
       }
 
       break;

@@ -498,7 +498,6 @@ void addFracCounter(
       assert(nfracsinrow[rowlppos] >= 0);
       theviolrowpos = violrowpos[rowlppos];
 
-
       /* swap positions in violrows array if fractionality has changed to 0 */
       if( theviolrowpos >= 0 )
       {
@@ -515,7 +514,6 @@ void addFracCounter(
             {
                violrows[theviolrowpos] = violrows[*nviolfracrows - 1];
                violrows[*nviolfracrows - 1] = rows[r];
-
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
                violrowpos[rowlppos] = *nviolfracrows - 1;
@@ -534,7 +532,6 @@ void addFracCounter(
             {
                violrows[theviolrowpos] = violrows[*nviolfracrows];
                violrows[*nviolfracrows] = rows[r];
-
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
                violrowpos[rowlppos] = *nviolfracrows;

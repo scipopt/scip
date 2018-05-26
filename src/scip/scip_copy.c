@@ -652,7 +652,6 @@ SCIP_RETCODE SCIPenableConsCompression(
    assert(scip != NULL);
    assert(scip->origprob != NULL);
 
-
    /* check stage */
    SCIP_CALL( SCIPcheckStage(scip, "SCIPenableConsCompression", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -1559,7 +1558,6 @@ SCIP_RETCODE SCIPcopyConss(
       nsourceconss = SCIPconshdlrGetNActiveConss(sourceconshdlrs[i]);
       sourceconss = SCIPconshdlrGetConss(sourceconshdlrs[i]);
 
-
 #ifdef SCIP_DISABLED_CODE
       /* @todo using the following might reduce the number of copied constraints - check whether this is better */
       /* Get all checked constraints for copying; this included local constraints */
@@ -1607,7 +1605,6 @@ SCIP_RETCODE SCIPcopyConss(
          /* add the copied constraint to target SCIP if the copying process created a constraint */
          if( targetcons != NULL )
          {
-
             if( !enablepricing )
                SCIPconsSetModifiable(targetcons, FALSE);
 

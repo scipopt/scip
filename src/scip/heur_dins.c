@@ -123,7 +123,6 @@ void computeIntegerVariableBounds(
    bestsol = SCIPgetBestSol(scip);
    mipsol = SCIPgetSolVal(scip, bestsol, var);
 
-
    /* if the solution values differ by 0.5 or more, the variable is rebounded, otherwise it is just copied */
    if( REALABS(lpsol - mipsol) >= 0.5 )
    {
@@ -919,7 +918,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
-
 
    retcode = wrapperDins(scip, subscip, heur, heurdata, vars, fixedvars, fixedvals, result, nvars, nbinvars, nintvars, binfixings, intfixings, nsubnodes);
    SCIP_CALL( SCIPfree(&subscip) );

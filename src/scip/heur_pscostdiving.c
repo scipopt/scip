@@ -140,7 +140,6 @@ SCIP_DECL_HEUREXIT(heurExitPscostdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
@@ -186,7 +185,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);
-
 
    /* bound fractions to not prefer variables that are nearly integral */
    candsfrac = MAX(candsfrac, 0.1);

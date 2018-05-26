@@ -84,8 +84,8 @@ SCIP_RETCODE updateBestCandidate(
    SCIP_Real             candscoremax,       /**< maximal score of branching candidate */
    SCIP_Real             candscoresum,       /**< sum of scores of branching candidate */
    SCIP_Real             candrndscore,       /**< random score of branching candidate */
-   SCIP_Real             candsol             /**< proposed branching point of branching candidate */          
-)
+   SCIP_Real             candsol             /**< proposed branching point of branching candidate */
+   )
 {
    SCIP_Real candbrpoint;
    SCIP_Real branchscore;
@@ -322,7 +322,6 @@ SCIP_RETCODE updateBestCandidate(
       (*bestvar)      = cand;
       (*bestbrpoint)  = candbrpoint;
       return SCIP_OKAY;
-
    }
 
    /* if score of candidate is worse than bestscore, stay with best candidate */

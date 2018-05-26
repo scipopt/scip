@@ -1522,7 +1522,6 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    assert(distances != NULL);
    assert(maxdistance >= 0);
 
-
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    nbinintvars = nbinvars + nintvars;
@@ -1638,7 +1637,6 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
 
          /* mark the constraint as visited */
          SCIP_CALL( SCIPhashtableInsert(vargraph->visitedconss, (void *)cons) );
-
       } /* end constraint loop */
 
       queue[currlvlidx] = -1;

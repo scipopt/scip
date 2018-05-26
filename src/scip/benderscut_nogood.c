@@ -144,7 +144,6 @@ SCIP_RETCODE computeNogoodCut(
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
    }
 
-
 #ifndef NDEBUG
    if( addcut )
       verifycons = SCIPgetRowSolActivity(masterprob, row, sol);

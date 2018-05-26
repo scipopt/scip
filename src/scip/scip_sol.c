@@ -2131,7 +2131,6 @@ SCIP_RETCODE printDualSol(
                SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
          }
       }
-
    }
 
    return SCIP_OKAY;

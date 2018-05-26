@@ -392,7 +392,6 @@ SCIP_DECL_DISPCOPY(dispCopyDefault)
 static
 SCIP_DECL_DISPINITSOL(SCIPdispInitsolSolFound)
 {  /*lint --e{715}*/
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0);
    assert(scip != NULL);

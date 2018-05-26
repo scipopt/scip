@@ -199,4 +199,3 @@ SCIP_RETCODE SCIPincludeReaderMst(
 
    return SCIP_OKAY;
 }
-

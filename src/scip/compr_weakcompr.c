@@ -294,7 +294,6 @@ SCIP_RETCODE constructCompression(
       assert(comprdata->representatives[pos_repr_fix-1] != NULL);
       SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[pos_repr_fix-1], vars[0], vals[0], boundtypes[k],
             1.0, SCIPinfinity(scip), nvars[0], REOPT_CONSTYPE_DUALREDS, linear) );
-
    }
 
    assert(0 <= pos_repr_fix && pos_repr_fix < comprdata->nrepresentatives);

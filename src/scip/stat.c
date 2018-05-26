@@ -560,7 +560,6 @@ void SCIPstatResetCurrentRun(
    else
       stat->referencebound = SCIPsetInfinity(set);
 
-
    if( !solved )
       stat->status = SCIP_STATUS_UNKNOWN;
 

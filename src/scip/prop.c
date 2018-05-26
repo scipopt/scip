@@ -746,7 +746,6 @@ SCIP_RETCODE SCIPpropResolvePropagation(
 
    if( prop->propresprop != NULL )
    {
-
       /* start timing */
       SCIPclockStart(prop->resproptime, set);
 

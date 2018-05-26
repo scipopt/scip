@@ -332,7 +332,6 @@ void collectNonBinaryVBoundData(
                   else
                      lastbounds[*nimplidx] = SCIP_INVALID;
 
-
                   *foundnonbin = MIN(*foundnonbin, idx);
 
                   implidx[*nimplidx] = idx;
@@ -1391,7 +1390,6 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       while( --ncountnonzeros >= 0 )
          counts[countnonzeros[ncountnonzeros]] = 0;
    }
-
 
    SCIPfreeBufferArray(scip, &countnonzeros);
    SCIPfreeBufferArray(scip, &implidx);
