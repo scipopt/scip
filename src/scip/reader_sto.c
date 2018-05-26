@@ -2111,7 +2111,7 @@ SCIP_RETCODE addScenarioConsToProb(
    return SCIP_OKAY;
 }
 
-
+/** add variables and constraint to problem */
 static
 SCIP_RETCODE addScenarioVarsAndConsToProb(
    SCIP*                 scip,               /**< the SCIP data structure of master problem */
