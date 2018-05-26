@@ -2203,7 +2203,6 @@ void consdataUpdateChgCoef(
       }
    }
 
-
    /* update maximum activity delta */
    if( !SCIPisInfinity(scip, consdata->maxactdelta ) )
    {
@@ -3507,7 +3506,6 @@ SCIP_RETCODE chgLhs(
    consdata->upgradetried = FALSE;
    consdata->rangedrowpropagated = 0;
 
-
    /* update the lhs of the LP row */
    if( consdata->row != NULL )
    {
@@ -4767,7 +4765,6 @@ SCIP_RETCODE applyFixings(
       }
       if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->rhs))
       {
-
          /* for large numbers that are relatively equal, substraction can lead to cancellation,
           * causing wrong fixings of other variables --> better use a real zero here;
           * for small numbers, polishing the difference might lead to wrong results -->
@@ -9824,7 +9821,6 @@ SCIP_RETCODE convertLongEquality(
             }
             else if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v])) )
                ++infinf;
-
          }
          else if( SCIPisNegative(scip, consdata->vals[v]) )
          {
@@ -11923,7 +11919,6 @@ SCIP_RETCODE simplifyInequalities(
                   else
                      newcoef = vals[candpos] - restcoef + gcd;
                }
-
 
                /* done */
 
@@ -14094,7 +14089,6 @@ SCIP_RETCODE presolStuffing(
                {
                   SCIPdebugMsg(scip, "fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                   SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
-
                }
                else
                {
@@ -14852,7 +14846,6 @@ SCIP_RETCODE fullDualPresolve(
          && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )
       {
-
          /* since we locally copied the variable array we can change the variable type immediately */
          SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
 
@@ -15053,7 +15046,6 @@ SCIP_DECL_CONSEXIT(consExitLinear)
    }
 
    return SCIP_OKAY;
-
 }
 
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
@@ -15066,8 +15058,7 @@ SCIP_Bool isRangedRow(
 {
    assert(scip != NULL);
 
-   return !(SCIPisEQ(scip, lhs, rhs)
-      || SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs) );
+   return !(SCIPisEQ(scip, lhs, rhs) || SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs) );
 }
 
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
@@ -15115,7 +15106,6 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
       conss = SCIPconshdlrGetConss(conshdlr);
       nconss = SCIPconshdlrGetNConss(conshdlr);
    }
-
 
    /* reset linear constraint type classification */
    SCIPlinConsStatsReset(linconsstats);
@@ -16502,7 +16492,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 static
 SCIP_DECL_CONSRESPROP(consRespropLinear)
 {  /*lint --e{715}*/
-
    assert(scip != NULL);
    assert(cons != NULL);
    assert(result != NULL);
@@ -16655,31 +16644,30 @@ SCIP_RETCODE findOperators(
       /* try if we found a possible operator */
       switch( *curr )
       {
-         case '<':
-         case '=':
-         case '>':
+      case '<':
+      case '=':
+      case '>':
 
-            /* check if the two characters curr[0,1] form an operator together */
-            if( curr[1] == '=' )
-            {
-               found = TRUE;
+         /* check if the two characters curr[0,1] form an operator together */
+         if( curr[1] == '=' )
+         {
+            found = TRUE;
 
-               /* update increment to continue after this operator */
-               increment = 2;
-            }
-            break;
-         case '[':
-            if( strncmp(curr, "[free]", 6) == 0 )
-            {
-               found = TRUE;
+            /* update increment to continue after this operator */
+            increment = 2;
+         }
+         break;
+      case '[':
+         if( strncmp(curr, "[free]", 6) == 0 )
+         {
+            found = TRUE;
 
-               /* update increment to continue after this operator */
-               increment = 6;
-            }
-            break;
-         default:
-            break;
-
+            /* update increment to continue after this operator */
+            increment = 6;
+         }
+         break;
+      default:
+         break;
       }
 
       /* assign the found operator to the first or second pointer and check for violations of the linear constraint grammar */
@@ -17825,7 +17813,6 @@ SCIP_RETCODE SCIPcopyConsLinear(
       }
    }
 
-
    success = TRUE;
    /* map variables of the source constraint to variables of the target SCIP */
    for( v = 0; v < nvars && success; ++v )
@@ -18590,7 +18577,6 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       else
          negcoeffsum += val;
    }
-
 
    /*
     * call the upgrading methods
