@@ -7649,7 +7649,6 @@ SCIP_Bool SCIPhaveVarsCommonClique(
       || SCIPvarsHaveCommonClique(var1, value1, var2, value2, regardimplics));
 }
 
-
 /** writes the clique graph to a gml file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

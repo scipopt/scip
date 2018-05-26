@@ -894,7 +894,6 @@ SCIP_RETCODE presolveRound(
    nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
 #endif
 
-
    if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
       /* In exhaustive presolving, we continue the loop where we stopped last time to avoid calling the same

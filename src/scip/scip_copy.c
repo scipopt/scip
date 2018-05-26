@@ -157,16 +157,16 @@ SCIP_Bool takeCut(
 
    switch( cutsel )
    {
-      case 'a':
-         takecut = (SCIPcutGetAge(cut) == 0);
-         break;
-      case 'q':
-         takecut = (SCIPcutGetLPActivityQuot(cut) >= scip->set->sepa_minactivityquot);
-         break;
-      default:
-         SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n");
-         SCIPABORT();
-         takecut = FALSE;  /*lint !e527*/
+   case 'a':
+      takecut = (SCIPcutGetAge(cut) == 0);
+      break;
+   case 'q':
+      takecut = (SCIPcutGetLPActivityQuot(cut) >= scip->set->sepa_minactivityquot);
+      break;
+   default:
+      SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n");
+      SCIPABORT();
+      takecut = FALSE;  /*lint !e527*/
       break;
    }
 
@@ -1266,7 +1266,7 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
 
    /* if the transformation of the source was subject to scaling, the history information cannot be just copied */
    if( !SCIPsetIsEQ(targetscip->set, 1.0, SCIPgetOrigObjscale(sourcescip))
-         || !SCIPsetIsEQ(targetscip->set, 0.0, SCIPgetOrigObjoffset(sourcescip)) )
+      || !SCIPsetIsEQ(targetscip->set, 0.0, SCIPgetOrigObjoffset(sourcescip)) )
       return SCIP_OKAY;
 
    /* merge histories of the targetSCIP-variables to the SCIP variables. */
@@ -1282,15 +1282,15 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
       /* depending on the variable status, we use either the transformed variable history or the history of the col itself */
       switch( sourcevarstatus )
       {
-         case SCIP_VARSTATUS_ORIGINAL:
-            assert(NULL != SCIPvarGetTransVar(sourcevars[i]));
-            SCIPvarMergeHistories(targetvars[i], SCIPvarGetTransVar(sourcevars[i]), targetscip->stat);
-            break;
-         case SCIP_VARSTATUS_COLUMN:
-            SCIPvarMergeHistories(targetvars[i], sourcevars[i], targetscip->stat);
-            break;
-         default:
-            /* other variable status are currently not supported for the merging */
+      case SCIP_VARSTATUS_ORIGINAL:
+         assert(NULL != SCIPvarGetTransVar(sourcevars[i]));
+         SCIPvarMergeHistories(targetvars[i], SCIPvarGetTransVar(sourcevars[i]), targetscip->stat);
+         break;
+      case SCIP_VARSTATUS_COLUMN:
+         SCIPvarMergeHistories(targetvars[i], sourcevars[i], targetscip->stat);
+         break;
+      default:
+         /* other variable status are currently not supported for the merging */
          break;
       }  /*lint !e788*/
    }

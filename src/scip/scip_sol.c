@@ -3434,7 +3434,6 @@ SCIP_SOL** SCIPgetPartialSols(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPartialSols", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->origprimal->partialsols;
-
 }
 
 /** returns number of partial solutions

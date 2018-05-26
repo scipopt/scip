@@ -1167,7 +1167,7 @@ void stoinputSetProbname(
 static
 void stoinputSetStochtype(
    STOINPUT*             stoi,               /**< sto input structure */
-   const char*           stochtype            /**< name of the scenario type */
+   const char*           stochtype           /**< name of the scenario type */
    )
 {
    assert(stoi != NULL);

@@ -536,7 +536,7 @@ SCIP_RETCODE SCIPreadProb(
    return retcode;
 }
 
-/* write original or transformed problem */
+/** write original or transformed problem */
 static
 SCIP_RETCODE writeProblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -822,7 +822,6 @@ SCIP_RETCODE SCIPfreeProb(
 
    return SCIP_OKAY;
 }
-
 
 /** permutes parts of the problem data structure
  *
@@ -3260,7 +3259,6 @@ int SCIPgetNCheckConss(
    }
 
    return ncheckconss;
-
 }
 
 /*
