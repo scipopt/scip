@@ -48,6 +48,7 @@
 #define SCIP_DEFAULT_LNSCHECK              TRUE  /** should the Benders' decomposition be used in LNS heuristics */
 #define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** the maximum depth at which the LNS check is performed */
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** the fraction of subproblems that are solved in each iteration */
+#define SCIP_DEFAULT_UPDATEAUXVARBOUND     TRUE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -957,6 +958,11 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
          "The fraction of subproblems that are solved in each iteration.", &(*benders)->subprobfrac, FALSE,
          SCIP_DEFAULT_SUBPROBFRAC, 0.0, 1.0, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/updateauxvarbound", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+         "Should the auxiliary variable bound be updated by solving the subproblem?", &(*benders)->updateauxvarbound,
+         FALSE, SCIP_DEFAULT_UPDATEAUXVARBOUND, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -2486,22 +2492,6 @@ SCIP_RETCODE SCIPbendersExec(
    assert(infeasible != NULL);
    assert(auxviol != NULL);
 
-   /* if the enforcement type is SCIP_BENDERSENFOTYPE_LP and the LP is currently unbounded. This could mean that there
-    * is no lower bound on the auxiliary variables. In this case, we try to update the lower bound for the auxiliary
-    * variables.
-    */
-   if( type == SCIP_BENDERSENFOTYPE_LP && SCIPgetLPSolstat(set->scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
-   {
-      SCIP_CALL( updateAuxiliaryVarLowerbound(benders, set, result) );
-
-      /* if no bound was changed, then we continue by solving the Benders' decomposition subproblems */
-      if( (*result) != SCIP_DIDNOTRUN )
-      {
-         assert((*result) == SCIP_REDUCEDDOM || (*result) == SCIP_INFEASIBLE);
-         return SCIP_OKAY;
-      }
-   }
-
    /* if the Benders' decomposition is called from a sub-scip, it is assumed that this is an LNS heuristic. As such, the
     * check is not performed and the solution is assumed to be feasible
     */
@@ -2525,6 +2515,19 @@ SCIP_RETCODE SCIPbendersExec(
    {
       (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
+   }
+
+   /* if the enforcement type is SCIP_BENDERSENFOTYPE_LP and the LP is currently unbounded. This could mean that there
+    * is no lower bound on the auxiliary variables. In this case, we try to update the lower bound for the auxiliary
+    * variables.
+    */
+   if( type == SCIP_BENDERSENFOTYPE_LP && SCIPgetLPSolstat(set->scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY
+      && benders->updateauxvarbound )
+   {
+      SCIP_CALL( updateAuxiliaryVarLowerbound(benders, set, result) );
+
+      /* the auxiliary variable bound will only be updated once. */
+      benders->updateauxvarbound = FALSE;
    }
 
    /* setting the first subproblem to check in this round of subproblem checks */

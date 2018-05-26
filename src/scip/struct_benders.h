@@ -75,6 +75,7 @@ struct SCIP_Benders
    SCIP_Bool             cutsasconss;        /**< Should the transferred cuts be added as constraints? */
    int                   mipcheckfreq;       /**< the frequency that the MIP subproblem is checked for feasibility, -1 for always.*/
    SCIP_Real             subprobfrac;        /**< the fraction of subproblems that are solved in each iteration */
+   SCIP_Bool             updateauxvarbound;  /**< should the auxiliary variable lower bound be updated by solving the subproblem */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
