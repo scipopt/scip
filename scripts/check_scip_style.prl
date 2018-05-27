@@ -48,11 +48,12 @@ my $narg = @ARGV;
 
 if ( $narg < 1 || $ARGV[0] eq "-h" )
 {
-   printf("usage: <.> [-h] [-t] [-b] [-n] [-o] <files>\n");
+   printf("usage: <.> [-h] [-t] [-b] [-n] [-o] [-a] <files>\n");
    printf("-t: output if tabs are present.\n");
    printf("-b: output possible positions of badly placed braces.\n");
    printf("-n: warn about missing newlines in debug messages.\n");
-   printf("-o: warn about SCIP_CALL_ABORT and printfs.\n");
+   printf("-o: other warnings: SCIP_CALL_ABORT and printfs.\n");
+   printf("-a: all checks on.\n");
    exit(1);
 }
 
@@ -99,6 +100,16 @@ for (my $i = 0; $i < $narg; ++$i)
    if ( $ARGV[$i] eq "-o" )
    {
       $checkothers = 1;
+      next;
+   }
+
+   # check for all
+   if ( $ARGV[$i] eq "-a" )
+   {
+      $checkothers = 1;
+      $checktabs = 1;
+      $checkbraces = 1;
+      $checkdebug = 1;
       next;
    }
 
@@ -455,7 +466,7 @@ for (my $i = 0; $i < $narg; ++$i)
 	    }
 	 }
 
-	 # check checkStage function (only for scip.c)
+	 # check checkStage function (only for scip_*.c)
 	 if ( $str =~ /checkStage\(scip/ )
 	 {
 	    my @str1 = split(/checkStage/, $str);
