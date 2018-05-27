@@ -43,7 +43,7 @@
  *
  * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
  *
- * @version  6.0.0
+ * @version 6.0.0
  *
  * \image html scippy.png
  *
