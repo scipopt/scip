@@ -2464,7 +2464,6 @@ SCIP_RETCODE checkSystemGF2(
             b[nconssmat] = ! b[nconssmat];
          }
 
-
          /* replace aggregated variables */
          while( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
          {
@@ -4247,7 +4246,6 @@ SCIP_RETCODE preprocessConstraintPairs(
       if( *cutoff )
          return SCIP_OKAY;
 #endif
-
       }
    }
 

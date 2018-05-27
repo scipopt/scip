@@ -89,7 +89,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkpporbisack;    /**< whether we allow upgrading to packing/partitioning orbisacks */
    SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
    int                   maxnrows;           /**< maximal number of rows in an orbisack constraint */
-
 };
 
 /** constraint data for orbisack constraints */
@@ -1909,7 +1908,6 @@ SCIP_RETCODE SCIPseparateCoversOrbisack(
    SCIPfreeBufferArray(scip, &coeff1);
 
    return SCIP_OKAY;
-
 }
 
 

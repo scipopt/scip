@@ -88,7 +88,6 @@ SCIP_RETCODE applyBoundHeur(
    if( maxproprounds == -2 )
       maxproprounds = 0;
 
-
    /* only look at binary and integer variables */
    nvars = nbinvars + nintvars;
 

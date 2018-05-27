@@ -51,7 +51,6 @@ struct SCIP_BanditData
 /** callback to free bandit specific data structures */
 SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    int nactions;
    assert(bandit != NULL);
@@ -72,7 +71,6 @@ SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3)
 /** selection callback for bandit selector */
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    SCIP_RANDNUMGEN* rng;
    SCIP_Real randnr;
@@ -92,7 +90,6 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3)
    rng = SCIPbanditGetRandnumgen(bandit);
    assert(rng != NULL);
    nactions = SCIPbanditGetNActions(bandit);
-
 
    /* draw a random number between 0 and 1 */
    randnr = SCIPrandomGetReal(rng, 0.0, 1.0);

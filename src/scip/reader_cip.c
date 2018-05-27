@@ -750,7 +750,6 @@ SCIP_DECL_READERFREE(readerFreeCip)
 static
 SCIP_DECL_READERREAD(readerReadCip)
 {  /*lint --e{715}*/
-
    CIPINPUT cipinput;
    SCIP_Real objscale;
    SCIP_Real objoffset;

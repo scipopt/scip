@@ -1309,7 +1309,6 @@ SCIP_RETCODE setObjective(
          }
 #endif
 
-
          /* create artificial objection function constraint containing the artificial integer variable */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "artificial_obj_cons");
          SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &pseudocons, name, linvars, ncoefs, coefs, terms, ntermcoefs,
@@ -2701,7 +2700,6 @@ SCIP_RETCODE printNonLinearCons(
             nresvars, andvars, nandvars, weight, &mult, multisymbol);
       }
 
-
       if( !SCIPisInfinity(scip, rhs) )
       {
          mult *= -1;
@@ -3164,7 +3162,6 @@ SCIP_RETCODE printPseudobooleanCons(
             ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
       }
    }
-
 
    /* free buffers for non-linear arrays */
    if( ntermvals > 0 )
@@ -3920,7 +3917,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
             /* add variable to the hashmap */
             SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
-
          }
       }
    }
@@ -3988,7 +3984,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
          if( cont )
             continue;
       }
-
 
       /* print and with fixed or aggregated and-resultant */
       /* rhslhs equals to 0 means the and constraint is relevant due to it's not clear on which values the and variables are
@@ -4082,7 +4077,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
          writeBuffer(scip, file, linebuffer, &linecnt);
-
       }
    }
 

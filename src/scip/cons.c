@@ -2610,7 +2610,6 @@ SCIP_RETCODE SCIPconshdlrInitpre(
 
       for( c = 0; c < conshdlr->nconss; ++c )
       {
-
          /**@todo should only active constraints be added to the initconss array? at least cons->active is asserted in
           *       conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c])
           */
@@ -7047,7 +7046,6 @@ SCIP_RETCODE SCIPconsUnmarkPropagate(
    }
 
    return SCIP_OKAY;
-
 }
 
 /** adds given value to age of constraint, but age can never become negative;

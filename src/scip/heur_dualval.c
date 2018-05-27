@@ -1749,7 +1749,6 @@ SCIP_RETCODE computeRanks(
 
             assert(dualvalue != NULL);
             ranks[j] = (*dualvalue);
-
          }
          else /* if we have an indicator variable */
          {

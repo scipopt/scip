@@ -71,7 +71,6 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "============\n");
    SCIPinfoMessage(scip, NULL, "\n");
 
-
    retcode = SCIPreadProb(scip, filename, NULL);
 
    switch( retcode )
@@ -131,7 +130,6 @@ SCIP_RETCODE fromCommandLine(
 
       SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
    }
-
 
    /**************
     * Statistics *
@@ -432,6 +430,7 @@ SCIP_RETCODE SCIPrunShell(
    )
 {
    SCIP* scip = NULL;
+
    /*********
     * Setup *
     *********/
@@ -449,7 +448,6 @@ SCIP_RETCODE SCIPrunShell(
     * Process command line arguments *
     **********************************/
    SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
-
 
    /********************
     * Deinitialization *

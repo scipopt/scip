@@ -122,6 +122,7 @@
                                                 SCIPverbMessage(scip, lvl, NULL, __VA_ARGS__);                             \
                                              }                                                                             \
                                              while( FALSE )
+
 /* Writes a debug message without the leading information. Can be used to append something to an output of LABdebugMessage*/
 #define LABdebugMessagePrint(scip,lvl,...)   do                                                                            \
                                              {                                                                             \
@@ -822,7 +823,6 @@ void mergeFSBStatistics(
    mainstatistics->ndomredcons += childstatistics->ndomredcons;
    mainstatistics->ncutoffproofnodes += childstatistics->ncutoffproofnodes;
    mainstatistics->ndomredproofnodes += childstatistics->ndomredproofnodes;
-
 
    for( i = 0; i < mainstatistics->recursiondepth; i++ )
    {
@@ -4690,7 +4690,6 @@ SCIP_RETCODE selectVarStart(
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching would branch on variable <%s>\n",
                SCIPvarGetName(decision->cand->branchvar));
          }
-
       }
       else if( status->domred )
       {

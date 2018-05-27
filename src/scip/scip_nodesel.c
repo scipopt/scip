@@ -156,8 +156,7 @@ SCIP_RETCODE SCIPincludeNodesel(
    }
 
    SCIP_CALL( SCIPnodeselCreate(&nodesel, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
-         nodeselcopy,
-         nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
+         nodeselcopy, nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
          nodeselselect, nodeselcomp, nodeseldata) );
    SCIP_CALL( SCIPsetIncludeNodesel(scip->set, nodesel) );
 
@@ -195,8 +194,7 @@ SCIP_RETCODE SCIPincludeNodeselBasic(
    }
 
    SCIP_CALL( SCIPnodeselCreate(&nodeselptr, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
-         NULL,
-         NULL, NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL,
          nodeselselect, nodeselcomp, nodeseldata) );
    SCIP_CALL( SCIPsetIncludeNodesel(scip->set, nodeselptr) );
 

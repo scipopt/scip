@@ -395,14 +395,14 @@ void SCIPaddBilinMcCormick(
             /* x*y = ubx * y + (x-ubx) * y >= ubx * y + (x-ubx) * uby >= ubx * y + min{(lbx-ubx) * uby, 0 * uby} */
             coefx    =  0.0;
             coefy    =  bilincoef * ubx;
-            constant =  bilincoef * (uby > 0.0 ? (lbx-ubx) * uby : 0.0);
+            constant =  bilincoef * (uby > 0.0 ? (lbx - ubx) * uby : 0.0);
          }
          else if( SCIPisRelEQ(scip, lby, uby) )
          {
             /* x*y = uby * x + (y-uby) * x >= uby * x + (y-uby) * ubx >= uby * x + min{(lby-uby) * ubx, 0 * ubx} */
             coefx    =  bilincoef * uby;
             coefy    =  0.0;
-            constant =  bilincoef * (ubx > 0.0 ? (lby-uby) * ubx : 0.0);
+            constant =  bilincoef * (ubx > 0.0 ? (lby - uby) * ubx : 0.0);
          }
          else
          {
@@ -452,14 +452,14 @@ void SCIPaddBilinMcCormick(
             /* x*y = lbx * y + (x-lbx) * y <= lbx * y + (x-lbx) * uby <= lbx * y + max{(ubx-lbx) * uby, 0 * uby} */
             coefx    =  0.0;
             coefy    =  bilincoef * lbx;
-            constant =  bilincoef * (uby > 0.0 ? (ubx-lbx) * uby : 0.0);
+            constant =  bilincoef * (uby > 0.0 ? (ubx - lbx) * uby : 0.0);
          }
          else if( SCIPisRelEQ(scip, lby, uby) )
          {
             /* x*y = uby * x + (y-uby) * x <= uby * x + (y-uby) * lbx <= uby * x + max{(lby-uby) * lbx, 0 * lbx} */
             coefx    =  bilincoef * uby;
             coefy    =  0.0;
-            constant =  bilincoef * (lbx < 0.0 ? (lby-uby) * lbx : 0.0);
+            constant =  bilincoef * (lbx < 0.0 ? (lby - uby) * lbx : 0.0);
          }
          else
          {

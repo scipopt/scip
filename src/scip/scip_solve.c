@@ -894,7 +894,6 @@ SCIP_RETCODE presolveRound(
    nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
 #endif
 
-
    if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
       /* In exhaustive presolving, we continue the loop where we stopped last time to avoid calling the same
@@ -1326,7 +1325,6 @@ SCIP_RETCODE presolve(
    nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
    nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
 #endif
-
 
    /* switch status to unknown */
    scip->stat->status = SCIP_STATUS_UNKNOWN;
@@ -2089,7 +2087,6 @@ SCIP_RETCODE freeTransform(
        * freed in SCIPfreeProb().
        */
       SCIP_CALL( SCIPconflictstoreClear(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
-
    }
 
    /* free transformed problem data structures */

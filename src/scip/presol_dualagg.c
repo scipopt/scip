@@ -107,7 +107,6 @@ void getUplockRowIdx(
       assert(*valpnt > 0.0);
    }
 #endif
-
 }
 
 /** find row which leads to the downlock of the given variable */

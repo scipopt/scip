@@ -416,7 +416,6 @@ SCIP_RETCODE calcActivityBounds(
 
       if( matrix->minactivityneginf[row] + matrix->minactivityposinf[row] > 0 )
          matrix->minactivity[row] = -SCIPinfinity(scip);
-
    }
 
    return SCIP_OKAY;
@@ -788,7 +787,6 @@ SCIP_RETCODE SCIPmatrixCreate(
 
             for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
             {
-
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
 

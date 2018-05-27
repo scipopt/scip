@@ -1748,7 +1748,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsCountsols)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-
    if( conshdlrdata->active )
    {
       if( !solinfeasible )

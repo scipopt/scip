@@ -1745,7 +1745,6 @@ SCIP_Bool checkRikun(
       else
          val -= facet[pos] * (SCIPvarGetUbLocal(ecaggr->vars[pos]) - SCIPvarGetLbLocal(ecaggr->vars[pos]));
 
-
       /* update  maximum violation */
       maxviolation = MAX(val - fvals[gray], maxviolation);
       assert(SCIPisFeasEQ(scip, maxviolation, 0.0));

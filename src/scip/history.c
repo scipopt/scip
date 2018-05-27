@@ -149,9 +149,7 @@ void SCIPhistoryUnite(
       history->nactiveconflicts[i] += addhistory->nactiveconflicts[d];
       history->nbranchings[i] += addhistory->nbranchings[d];
       history->branchdepthsum[i] += addhistory->branchdepthsum[d];
-
    }
-
 }
 
 /** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
