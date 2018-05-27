@@ -1996,7 +1996,6 @@ SCIP_RETCODE getScenarioDecompVar(
          getScenarioEntityName(varname, SCIPvarGetName(consvar), getScenarioStageNum(scip, checkscen),
             getScenarioNum(scip, checkscen));
 
-
       /* first checking whether the variable is included in the scenario */
       searchvar = SCIPfindVar(scip, varname);
       if( searchvar != NULL )
@@ -2168,7 +2167,6 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
    /* adding the constraints to the scenario */
    SCIP_CALL( addScenarioConsToProb(scenarioscip, scenario, conss, nconss, decomp) );
-
 
    /* add the variables and constraints of the child scenarios */
    for( i = 0; i < getScenarioNChildren(scenario); i++ )

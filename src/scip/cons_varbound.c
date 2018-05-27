@@ -4634,6 +4634,7 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
 static
 SCIP_DECL_CONSGETVARS(consGetVarsVarbound)
 {  /*lint --e{715}*/
+   assert( success != NULL );
 
    if( varssize < 2 )
       (*success) = FALSE;

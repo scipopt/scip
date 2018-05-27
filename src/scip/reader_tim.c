@@ -269,7 +269,6 @@ SCIP_RETCODE createReaderdata(
       SCIP_CALL( SCIPhashmapCreate(&readerdata->stages[i]->consnametocons, SCIPblkmem(scip), hashmapsize) );
    }
 
-
    return SCIP_OKAY;
 }
 

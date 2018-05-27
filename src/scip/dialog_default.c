@@ -307,6 +307,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 /** dialog execution method for the change add constraint */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
 {  /*lint --e{715}*/
+   assert( scip != NULL );
 
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       SCIPdialogMessage(scip, NULL, "cannot call method after problem was transformed\n");
@@ -359,6 +360,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
 /** dialog execution method for the change bounds command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds)
 {  /*lint --e{715}*/
+   assert( scip != NULL );
 
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       SCIPdialogMessage(scip, NULL, "cannot call method after problem was transformed\n");

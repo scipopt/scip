@@ -15548,6 +15548,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveLinear)
 {  /*lint --e{715}*/
+   assert( cons != NULL );
 
    if( SCIPconsIsDeleted(cons) )
    {
