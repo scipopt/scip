@@ -2502,11 +2502,6 @@ SCIP_RETCODE SCIPlpiGetSol(
    int nrows;
    register int i;
 
-#ifdef SCIP_DEBUG
-   int stat, ncols, sense;
-   char *icstat, *irstat;
-#endif
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
@@ -2521,64 +2516,6 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    QS_CONDRET( QSget_solution(lpi->prob, objval, primsol, dualsol, lpi->irng, redcost) );
 
-#if 0
-#ifdef SCIP_DEBUG
-   QSget_status(lpi->prob, &stat);
-   rval = QSget_objsense(lpi->prob, &sense);
-   if( stat == QS_LP_OPTIMAL )
-   {
-      ncols = QSget_colcount(lpi->prob);
-      QS_CONDRET(rval);
-
-      SCIP_CALL(ensureTabMem(lpi,nrows+ncols));
-      icstat = lpi->ibas;
-      irstat = lpi->ibas+ncols;
-
-      rval = QSget_basis_array(lpi->prob,icstat, irstat);
-      QS_CONDRET(rval);
-
-      for( i = ncols ; i-- ; )
-      {
-         switch( icstat[i] )
-         {
-         case QS_COL_BSTAT_BASIC:
-         case QS_COL_BSTAT_FREE:
-            if( fabs(redcost[i])> FEASTOL )
-            {
-               SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            break;
-         case QS_COL_BSTAT_UPPER:
-            if( redcost[i]*sense > FEASTOL )
-            {
-               SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            break;
-         case QS_COL_BSTAT_LOWER:
-            if( redcost[i]*sense < -FEASTOL )
-            {
-               SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            break;
-         default:
-            SCIPerrorMessage("unknown stat col[%d] = %c, rd[%d] = %lg\n", i, icstat[i], i, redcost[i]*sense);
-            SCIPABORT();
-            return SCIP_INVALIDDATA; /*lint !e527*/
-         }
-      }
-   }
-   else
-   {
-      SCIPerrorMessage("Getting solution with stat %d (not optimal)\n", stat);
-   }
-#endif
-#endif
 
    QS_CONDRET( QSget_rhs(lpi->prob, lpi->irhs) );
    QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
@@ -2605,6 +2542,65 @@ SCIP_RETCODE SCIPlpiGetSol(
          }
       }
    }
+
+#ifdef SCIP_DISABLED_CODE
+   {
+      int stat;
+      int ncols;
+      int sense;
+      char* icstat;
+      char* irstat;
+
+      QSget_status(lpi->prob, &stat);
+      if( stat == QS_LP_OPTIMAL )
+      {
+         QS_CONDRET( QSget_objsense(lpi->prob, &sense) );
+         ncols = QSget_colcount(lpi->prob);
+
+         SCIP_CALL(ensureTabMem(lpi, nrows + ncols));
+         icstat = lpi->ibas;
+         irstat = lpi->ibas + ncols;
+
+         QS_CONDRET( QSget_basis_array(lpi->prob,icstat, irstat) );
+
+         for( i = ncols ; i-- ; )
+         {
+            switch( icstat[i] )
+            {
+            case QS_COL_BSTAT_BASIC:
+            case QS_COL_BSTAT_FREE:
+               if( fabs(redcost[i])> FEASTOL )
+               {
+                  SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i] * sense, sense);
+                  SCIPABORT();
+                  return SCIP_INVALIDDATA; /*lint !e527*/
+               }
+               break;
+            case QS_COL_BSTAT_UPPER:
+               if( redcost[i] * sense > FEASTOL )
+               {
+                  SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i] * sense, sense);
+                  SCIPABORT();
+                  return SCIP_INVALIDDATA; /*lint !e527*/
+               }
+               break;
+            case QS_COL_BSTAT_LOWER:
+               if( redcost[i] * sense < -FEASTOL )
+               {
+                  SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i] * sense, sense);
+                  SCIPABORT();
+                  return SCIP_INVALIDDATA; /*lint !e527*/
+               }
+               break;
+            default:
+               SCIPerrorMessage("unknown stat col[%d] = %c, rd[%d] = %lg\n", i, icstat[i], i, redcost[i] * sense);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
+         }
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
