@@ -667,7 +667,7 @@ static
 SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 {  /*lint --e{715}*/
    assert( scip != NULL );
-   assert( param ! = NULL );
+   assert( param != NULL );
 
    /* create or deconstruct the reoptimization data structures */
    SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
@@ -680,7 +680,7 @@ static
 SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
 {  /*lint --e{715}*/
    assert( scip != NULL );
-   assert( param ! = NULL );
+   assert( param != NULL );
 
    if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
