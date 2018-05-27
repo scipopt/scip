@@ -2516,13 +2516,12 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    QS_CONDRET( QSget_solution(lpi->prob, objval, primsol, dualsol, lpi->irng, redcost) );
 
-
-   QS_CONDRET( QSget_rhs(lpi->prob, lpi->irhs) );
-   QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
-
    /* build back the activity */
    if( activity )
    {
+      QS_CONDRET( QSget_rhs(lpi->prob, lpi->irhs) );
+      QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
+
       for( i = 0; i < nrows; ++i )
       {
          switch( lpi->isen[i] )
