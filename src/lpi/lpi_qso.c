@@ -2147,8 +2147,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    SCIPdebugMessage("calling QSopt strong branching on %d variables with integral value (%d it lim)\n", ncols, itlim);
 
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
-    * value for all cases. Could also implement a manual search as in lpi_cpx.c
-    */
+    * value for all cases. Could also implement a manual search as in lpi_cpx.c. */
    QS_CONDRET( QSget_objval(lpi->prob, &objval) );
 
    for( j = 0; j < ncols; ++j )
