@@ -222,8 +222,27 @@ for (my $i = 0; $i < $narg; ++$i)
 	 }
       }
 
+      # ----------------------------------------
+      # check checkStage function (only for scip_*.c)
+      if ( $checkstage == 1 && $str =~ /checkStage\(scip/ )
+      {
+	 my @str1 = split(/checkStage/, $str);
+	 my @str2 = split(/,/, $str1[1]);
+	 my $s = $str2[1];
+
+	 # strip quotes
+	 $s =~ s/\"//g;
+	 # strip spaces
+	 $s =~ s/\s//g;
+
+	 if ( $s ne $functionname )
+	 {
+	    printf("%d: possible wrong checkstage name: <%s> <%s>\n", $line, $s, $functionname);
+	 }
+      }
+
       # ---------------------------------------------------------
-      # handle strings
+      # handle strings (must be executed after the functions above that need strings)
 
       # remove everything within a string
       if ( $str =~ /\".*\"/ )
@@ -416,7 +435,27 @@ for (my $i = 0; $i < $narg; ++$i)
 
       # printf("%d: %d (%d %d): %s\n", $line, $depth, $foundexternc, $inenumstruct, $str);
 
-      # --------------------------------------------
+      # -----------------------------------------------------------
+      # try to determine function names (needed for checking stage)
+      if ( $checkstage == 1 )
+      {
+	 # try to determine function name
+	 if ( $afterdocumentation == 1 )
+	 {
+	    # check for parenthesis
+	    if ( $depth == 0 && $str =~ /\S\(/ && $str !~ /\)\)/ )
+	    {
+	       my @mystr = split(/\(/, $str);
+	       my @s = split(/\s+/, $mystr[0]);
+
+	       # guess function name
+	       $functionname = $s[$#s];
+	       $afterdocumentation = 0;
+	    }
+	 }
+      }
+
+      # -----------------------------------------------------------
       # check for tabs
       if ( $checktabs )
       {
@@ -465,44 +504,6 @@ for (my $i = 0; $i < $narg; ++$i)
 	       printf("%d: brace: %s\n\n", $line, $_);
 	    }
          }
-      }
-
-      # ----------------------------------------
-      # try to determine function names
-      if ( $checkstage == 1 )
-      {
-	 # try to determine function name
-	 if ( $afterdocumentation == 1 )
-	 {
-	    # check for parenthesis
-	    if ( $depth == 0 && $str =~ /\S\(/ && $str !~ /\)\)/ )
-	    {
-	       my @mystr = split(/\(/, $str);
-	       my @s = split(/\s+/, $mystr[0]);
-
-	       # guess function name
-	       $functionname = $s[$#s];
-	       $afterdocumentation = 0;
-	    }
-	 }
-
-	 # check checkStage function (only for scip_*.c)
-	 if ( $str =~ /checkStage\(scip/ )
-	 {
-	    my @str1 = split(/checkStage/, $str);
-	    my @str2 = split(/,/, $str1[1]);
-	    my $s = $str2[1];
-
-	    # strip quotes
-	    $s =~ s/\"//g;
-	    # strip spaces
-	    $s =~ s/\s//g;
-
-	    if ( $s ne $functionname )
-	    {
-	       printf("%d: possible wrong checkstage name: <%s> <%s>\n", $line, $s, $functionname);
-	    }
-	 }
       }
 
       # ------------------------------------------------------------
