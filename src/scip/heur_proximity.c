@@ -265,7 +265,6 @@ SCIP_RETCODE createNewSol(
          {
             SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], subsolvals[v]) );
          }
-
       }
    }
 

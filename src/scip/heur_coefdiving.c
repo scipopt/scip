@@ -142,7 +142,6 @@ SCIP_DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
@@ -228,7 +227,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
          candsfrac = 1.0 - candsfrac;
       *score = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
    }
-
 
    /* penalize too small fractions */
    if( SCIPisEQ(scip, candsfrac, 0.01) )

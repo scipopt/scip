@@ -132,7 +132,6 @@ SCIP_Real calcShiftVal(
    int ncolrows;
    int i;
 
-
    /* get variable's solution value, global bounds and objective coefficient */
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -149,7 +148,6 @@ SCIP_Real calcShiftVal(
    }
    else
       return 0.0;
-
 
    SCIPdebugMsg(scip, "Try to shift %s variable <%s> with\n", shiftdown ? "down" : "up", SCIPvarGetName(var) );
    SCIPdebugMsg(scip, "    lb:<%g> <= val:<%g> <= ub:<%g> and obj:<%g> by at most: <%g>\n", lb, solval, ub, obj, shiftval);
@@ -486,7 +484,6 @@ SCIP_DECL_HEURINIT(heurInitOneopt)
 static
 SCIP_DECL_HEUREXEC(heurExecOneopt)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;
    SCIP_SOL* bestsol;                        /* incumbent solution                   */
    SCIP_SOL* worksol;                        /* heuristic's working solution         */
@@ -801,8 +798,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
          shifted = TRUE;
       }
-
-   } while( heurdata->useloop && shifted );
+   }
+   while( heurdata->useloop && shifted );
 
    if( nsuccessfulshifts > 0 )
    {

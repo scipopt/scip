@@ -461,7 +461,6 @@ SCIP_DECL_READERFREE(readerFreePpm)
 static
 SCIP_DECL_READERWRITE(readerWritePpm)
 {  /*lint --e{715}*/
-
    SCIP_READERDATA* readerdata;
 
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);

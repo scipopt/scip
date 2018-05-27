@@ -199,7 +199,6 @@ void writeLPs(
          }
       }
 
-
       fprintf(filemax, "end\n");
       fprintf(filemin, "end\n");
 
@@ -454,7 +453,6 @@ void getActivities(
             minlhs -= coefotheroverlap[minsortedidx[i]] * tmpupperbds[minsortedidx[i]];
          }
       }
-
 
       /*
        * solve maximization LP

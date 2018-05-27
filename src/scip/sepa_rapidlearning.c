@@ -210,7 +210,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                                              */
    SCIP_Bool valid;
 
-
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
     /* initializing the subproblem */

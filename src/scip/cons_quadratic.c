@@ -6255,7 +6255,6 @@ SCIP_RETCODE generateCutFactorable(
             }
          }
       }
-
    }
 
    /* write violated constraints as multleft * factorleft * factorright <= rhs */
@@ -10724,7 +10723,6 @@ void propagateBoundsGetQuadActivity(
             quadactcontr[i].inf = bnd;
          }
       }
-
    }
 
    SCIPintervalSetBounds(&consdata->quadactivitybounds,
@@ -11350,7 +11348,6 @@ SCIP_RETCODE propagateBounds(
             }
          }
       }
-
    }
    while( success && *result != SCIP_CUTOFF && roundnr < maxproprounds );
 
@@ -14005,7 +14002,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          consEnfolpQuadratic, consEnfopsQuadratic, consCheckQuadratic, consLockQuadratic,
          conshdlrdata) );
    assert(conshdlr != NULL);
-
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyQuadratic, consCopyQuadratic) );

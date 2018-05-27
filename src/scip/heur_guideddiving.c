@@ -149,7 +149,6 @@ SCIP_DECL_HEUREXIT(heurExitGuideddiving) /*lint --e{715}*/
 static
 SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
 

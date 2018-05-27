@@ -5068,7 +5068,6 @@ SCIP_RETCODE getClosestVlb(
             *closestvlbidx = i;
          }
          assert(*closestvlbidx >= 0);
-
       }
    }
 
@@ -5152,7 +5151,6 @@ SCIP_RETCODE getClosestVub(
             continue;
 
          assert(SCIPvarIsBinary(vubvars[i]));
-
 
          /* checks if current variable upper bound u~_i * x_i + d_i meets the following criteria
           * (let a_j  = coefficient of y_j in current row,
@@ -6047,7 +6045,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
          (*solval) += profits[j];
       solitemsweight += weights[j];
    }
-
 
    /* continue to put items into the knapsack if they entirely fit */
    for( ; j < nitems; j++ )

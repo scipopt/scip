@@ -47,8 +47,8 @@ void handleSigterm(
 
 /** main method starting SCIP */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
    )
 {
    SCIP_RETCODE retcode;

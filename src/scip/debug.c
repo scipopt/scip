@@ -1870,7 +1870,6 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
-
    /* loop over the columns of B */
    for( k = 0; k < nrows; ++k )
    {

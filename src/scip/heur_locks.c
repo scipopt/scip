@@ -268,7 +268,6 @@ SCIP_RETCODE SCIPapplyLockFixings(
 
    roundupprobability = heurdata->roundupprobability;
 
-
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
    SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%d\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
@@ -1041,7 +1040,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );
    }
-
 
  TERMINATE:
    /* exit probing mode */

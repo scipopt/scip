@@ -167,8 +167,7 @@ SCIP_RETCODE SCIPincludeProp(
 
    SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, freq, delay, timingmask, presolpriority, presolmaxrounds, presoltiming,
-         propcopy,
-         propfree, propinit, propexit, propinitpre, propexitpre, propinitsol, propexitsol,
+         propcopy, propfree, propinit, propexit, propinitpre, propexitpre, propinitsol, propexitsol,
          proppresol, propexec, propresprop, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
 

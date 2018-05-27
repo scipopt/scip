@@ -1146,6 +1146,5 @@ SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP_CALL( consdataAddCons(scip, consdata, addcons) );
 
    return SCIP_OKAY;
-
 }
 

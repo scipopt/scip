@@ -1645,7 +1645,6 @@ SCIP_RETCODE readBounds(
    }
    mpsinputSyntaxerror(mpsi);
 
-
  READBOUNDS_FINISH:
    if( nsemicont > 0 )
    {
