@@ -928,7 +928,7 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
+SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
@@ -941,11 +941,11 @@ SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* check stages for both, SCIP and the requested subproblem data structure */
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckBendersSubprobOptimality", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPcheckStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubprobOptimality",
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckBendersSubproblemOptimality", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubproblemOptimality",
          FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbendersCheckSubprobOptimality(benders, scip->set, sol, probnumber, optimal) );
+   SCIP_CALL( SCIPbendersCheckSubproblemOptimality(benders, scip->set, sol, probnumber, optimal) );
 
    return SCIP_OKAY;
 }
@@ -1022,7 +1022,7 @@ SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
+SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of subproblem variables corresponding
@@ -1036,9 +1036,9 @@ SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPmergeBendersSubprobIntoMaster", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmergeBendersSubproblemIntoMaster", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbendersMergeSubprobIntoMaster(benders, scip->set, varmap, consmap, probnumber) );
+   SCIP_CALL( SCIPbendersMergeSubproblemIntoMaster(benders, scip->set, varmap, consmap, probnumber) );
 
    return SCIP_OKAY;
 }

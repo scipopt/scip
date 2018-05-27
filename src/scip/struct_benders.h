@@ -114,7 +114,7 @@ struct SCIP_Benders
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored
  *  and reset after the solving loop. */
-struct SCIP_SubprobParams
+struct SCIP_SubproblemParams
 {
    int cons_linear_propfreq;
    int lp_disablecutoff;
@@ -128,7 +128,7 @@ struct SCIP_SubprobParams
    SCIP_Bool misc_catchctrlc;
    SCIP_Bool misc_scaleobj;
 };
-typedef struct SCIP_SubprobParams SCIP_SUBPROBPARAMS;
+typedef struct SCIP_SubproblemParams SCIP_SUBPROBPARAMS;
 
 #ifdef __cplusplus
 }

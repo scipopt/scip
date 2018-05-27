@@ -627,7 +627,7 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPcheckBendersSubprobOptimality(
+SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
@@ -690,7 +690,7 @@ SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
-SCIP_RETCODE SCIPmergeBendersSubprobIntoMaster(
+SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of subproblem variables corresponding

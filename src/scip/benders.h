@@ -222,7 +222,7 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
 
 /** compares the subproblem objective value with the auxiliary variable value for optimality */
 extern
-SCIP_RETCODE SCIPbendersCheckSubprobOptimality(
+SCIP_RETCODE SCIPbendersCheckSubproblemOptimality(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -262,7 +262,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
  *  is added as an underestimator constraint.
  */
 extern
-SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
+SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of subproblem variables corresponding
@@ -394,7 +394,7 @@ void SCIPbendersRemoveSubproblems(
 
 /** sets the subproblem setup flag */
 extern
-void SCIPbendersSetSubprobIsSetup(
+void SCIPbendersSetSubproblemIsSetup(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             issetup             /**< flag to indicate whether the subproblem has been setup */
@@ -402,14 +402,14 @@ void SCIPbendersSetSubprobIsSetup(
 
 /** returns the subproblem setup flag */
 extern
-SCIP_Bool SCIPbendersSubprobIsSetup(
+SCIP_Bool SCIPbendersSubproblemIsSetup(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** sets the independent subproblem flag */
 extern
-void SCIPbendersSetSubprobIsIndependent(
+void SCIPbendersSetSubproblemIsIndependent(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             isindep             /**< flag to indicate whether the subproblem is independent */
@@ -417,7 +417,7 @@ void SCIPbendersSetSubprobIsIndependent(
 
 /** returns whether the subproblem is independent */
 extern
-SCIP_Bool SCIPbendersSubprobIsIndependent(
+SCIP_Bool SCIPbendersSubproblemIsIndependent(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
@@ -426,7 +426,7 @@ SCIP_Bool SCIPbendersSubprobIsIndependent(
  *  problem.
  */
 extern
-void SCIPbendersSetSubprobEnabled(
+void SCIPbendersSetSubproblemEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             enabled             /**< flag to indicate whether the subproblem is enabled */

@@ -171,10 +171,10 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    subprobsol = SCIPgetBestSol(subproblem);
 #endif
 
-   subprobobj = SCIPbendersGetSubprobObjval(benders, probnumber);
+   subprobobj = SCIPbendersGetSubproblemObjval(benders, probnumber);
 
    SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g\n", probnumber,
-      SCIPbendersGetSubprobObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol));
+      SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol));
 
    nvars = SCIPgetNVars(masterprob);
    vars = SCIPgetVars(masterprob);
@@ -344,7 +344,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
     * objective value of the subproblem
     */
    optimal = FALSE;
-   SCIP_CALL( SCIPcheckBendersSubprobOptimality(masterprob, benders, sol, probnumber, &optimal) );
+   SCIP_CALL( SCIPcheckBendersSubproblemOptimality(masterprob, benders, sol, probnumber, &optimal) );
 
    if( optimal )
    {
@@ -358,9 +358,9 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
     * Otherwise, the constant remains the same.
     */
    if( SCIPisLT(masterprob, benderscutdata->subprobconstant[probnumber],
-         SCIPbendersGetSubprobLowerbound(benders, probnumber)) )
+         SCIPbendersGetSubproblemLowerbound(benders, probnumber)) )
    {
-      benderscutdata->subprobconstant[probnumber] = SCIPbendersGetSubprobLowerbound(benders, probnumber);
+      benderscutdata->subprobconstant[probnumber] = SCIPbendersGetSubproblemLowerbound(benders, probnumber);
       benderscutdata->firstcut[probnumber] = TRUE;
    }
 
