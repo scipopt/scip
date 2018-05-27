@@ -668,7 +668,6 @@ SCIP_RETCODE SCIPlpiAddCols(
       {
          lpi->iccnt[i] = 0;
          lbeg[i] = 0;
-         assert( val[i] != 0.0 );
       }
    }
    else
@@ -679,7 +678,10 @@ SCIP_RETCODE SCIPlpiAddCols(
 
       nrows = QSget_rowcount(lpi->prob);
       for (i = 0; i < nnonz; ++i)
+      {
          assert( 0 <= ind[i] && ind[i] < nrows );
+         assert( val[i] != 0.0 );
+      }
 #endif
 
       /* compute column lengths */
