@@ -6730,7 +6730,6 @@ int SCIPprofileGetEarliestFeasibleStart(
       remainingduration = duration - (profile->timepoints[pos+1] - est);
       SCIPdebugMessage("remaining duration %d\n", remainingduration);
 
-
       if( remainingduration <= 0 )
          (*infeasible) = FALSE;
       else
@@ -10452,7 +10451,6 @@ void SCIPdisjointsetUnion(
    assert(0 <= q);
    assert(djset->size > p);
    assert(djset->size > q);
-
 
    idp = SCIPdisjointsetFind(djset, p);
    idq = SCIPdisjointsetFind(djset, q);

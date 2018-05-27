@@ -53,7 +53,6 @@ struct SCIP_BanditData
 /** callback to free bandit specific data structures */
 SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    int nactions;
 
@@ -77,7 +76,6 @@ SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy)
 /** selection callback for bandit algorithm */
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    SCIP_Real randnr;
    SCIP_Real curreps;

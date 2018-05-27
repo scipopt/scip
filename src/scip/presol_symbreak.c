@@ -449,7 +449,6 @@ SCIP_RETCODE extendSubOrbitope(
                *infeasible = TRUE;
                break;
             }
-
          }
       }
    }

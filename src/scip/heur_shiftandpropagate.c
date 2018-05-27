@@ -602,7 +602,6 @@ SCIP_RETCODE initMatrix(
             matrix->rhs[i] /= maxval;
       }
 
-
       /* in case of empty rows with a 0 < lhs <= 0.0 or 0.0 <= rhs < 0 we deduce the infeasibility of the problem */
       if( nrowlpnonz == 0 && (SCIPisFeasPositive(scip, matrix->lhs[i]) || SCIPisFeasNegative(scip, matrix->rhs[i])) )
       {
@@ -645,7 +644,6 @@ SCIP_RETCODE initMatrix(
       SCIP_ROW** rows;
       SCIP_Real* colvals;
       int ncolnonz;
-
 
       assert(SCIPcolGetLPPos(lpcols[j]) >= 0);
 
@@ -1336,7 +1334,6 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 static
 SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
@@ -1490,7 +1487,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    if( nlprows == 0 || nlpcols == 0 )
       return SCIP_OKAY;
 
-
    *result = SCIP_DIDNOTFIND;
    initialized = FALSE;
 
@@ -1606,8 +1602,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    eventhdlrdata->violatedrowpos = violatedrowpos;
    eventhdlrdata->nviolatedrows = &nviolatedrows;
 
-
-
    /* initialize arrays. Before sorting, permutation is the identity permutation */
    for( i = 0; i < ndiscvars; ++i )
       permutation[i] = i;
@@ -1619,7 +1613,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          heurdata->rowweights[r] = DEFAULT_WEIGHT_EQUALITY;
       else
          heurdata->rowweights[r] = DEFAULT_WEIGHT_INEQUALITY;
-
    }
    colnorms = matrix->colnorms;
 
@@ -2030,9 +2023,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          assert(SCIPgetProbingDepth(scip) >= 1);
          SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
 
-
-
-
          /* this assert should be always fulfilled because we run this heuristic at the root node only and do not
           * perform probing if nprobings is less than DEFAULT_PROPBREAKER (currently: 65000)
           */
@@ -2073,8 +2063,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
 
             SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
-
          }
+
          /* if the tightened bound again leads to a cutoff, both subproblems are proven infeasible and the heuristic
           * can be stopped */
          if( cutoff )
@@ -2180,7 +2170,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             {
                if( SCIPvarIsInLP(vars[v]) )
                   assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])));
-
             }
          }
 #endif
@@ -2393,7 +2382,6 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeShiftandpropagate) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitShiftandpropagate) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitShiftandpropagate) );
-
 
    /* add shiftandpropagate primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nproprounds",

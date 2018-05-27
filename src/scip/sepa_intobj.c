@@ -297,7 +297,6 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 {  /*lint --e{715}*/
-
    *result = SCIP_DIDNOTRUN;
 
    /* only call separator, if we are not close to terminating */
@@ -322,7 +321,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
 {  /*lint --e{715}*/
-
    *result = SCIP_DIDNOTRUN;
 
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );

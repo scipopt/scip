@@ -309,8 +309,6 @@ SCIP_RETCODE SCIPsetBranchruleExitsol(
    return SCIP_OKAY;
 }
 
-
-
 /** sets branching execution method for fractional LP solutions */
 SCIP_RETCODE SCIPsetBranchruleExecLp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -656,7 +654,6 @@ int SCIPgetNPrioExternBranchBins(
 
    return SCIPbranchcandGetNPrioExternBins(scip->branchcand);
 }
-
 
 /** gets number of integer external branching candidates with maximal branch priority
  *

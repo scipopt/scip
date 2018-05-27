@@ -163,7 +163,6 @@ SCIP_RETCODE heurdataEnsureArraySize(
          heurdata->currentlbs[v] = SCIP_INVALID;
          heurdata->currentubs[v] = SCIP_INVALID;
       }
-
    }
    else
    {
@@ -919,7 +918,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 
       return SCIP_OKAY;
    }
-
 
    /* in debug mode, ensure that all bound process events which occurred in the mean time have been captured
     * by the heuristic event system

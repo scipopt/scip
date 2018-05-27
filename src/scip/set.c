@@ -628,7 +628,6 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
 static
 SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
 {  /*lint --e{715}*/
-
    SCIPmarkLimitChanged(scip);
    return SCIP_OKAY;
 }
@@ -667,9 +666,10 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
 static
 SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 {  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( param != NULL );
 
    /* create or deconstruct the reoptimization data structures */
-
    SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
 
    return SCIP_OKAY;
@@ -679,6 +679,8 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 static
 SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
 {  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( param != NULL );
 
    if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
@@ -910,7 +912,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-
    /* copy all relaxator plugins */
    if( copyrelaxators && sourceset->relaxs != NULL )
    {
@@ -919,7 +920,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
       }
    }
-
 
    /* copy all separator plugins */
    if( copyseparators && sourceset->sepas != NULL )
@@ -958,7 +958,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-
    /* copy all node selector plugins */
    if( copynodeselectors && sourceset->nodesels != NULL )
    {
@@ -977,7 +976,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-
    /* copy all display plugins */
    if( copydisplays && sourceset->disps != NULL )
    {
@@ -986,7 +984,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
       }
    }
-
 
    /* copy all dialog plugins */
    if( copydialogs && sourceset->dialogs != NULL )
@@ -1967,7 +1964,6 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->random_permutevars, TRUE, SCIP_DEFAULT_RANDOM_PERMUTEVARS,
          NULL, NULL) );
 
-
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/lpseed",
          "random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)",
@@ -2094,7 +2090,6 @@ SCIP_RETCODE SCIPsetCreate(
          "should aggregation of variables be forbidden?",
          &(*set)->presol_donotaggr, TRUE, SCIP_DEFAULT_PRESOL_DONOTAGGR,
          NULL, NULL) );
-
 
    /* pricing parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2756,7 +2751,6 @@ SCIP_RETCODE SCIPsetFree(
       SCIPconcsolverTypeFree(&(*set)->concsolvertypes[i]);
    }
    BMSfreeMemoryArrayNull(&(*set)->concsolvertypes);
-
 
    /* free information on external codes */
    for( i = 0; i < (*set)->nextcodes; ++i )
@@ -3775,13 +3769,11 @@ void SCIPsetReinsertConshdlrSepaPrio(
          }
          set->conshdlrs_sepa[newpos] = conshdlr;
       }
-
    }
    else if( newpriority < oldpriority )
    {
       i = set->nconshdlrs - 1;
-      while( i >= 0 &&
-                  strcmp(SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetName(conshdlr)) != 0 )
+      while( i >= 0 && strcmp(SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetName(conshdlr)) != 0 )
       {
          int priorityatpos;
 

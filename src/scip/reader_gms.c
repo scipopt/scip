@@ -285,7 +285,6 @@ SCIP_RETCODE printActiveVariables(
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
 
-
    if( *linecnt == 0 )
       /* we start a new line; therefore we tab this line */
       appendLine(scip, file, linebuffer, linecnt, "     ");

@@ -794,7 +794,8 @@ SCIP_RETCODE SCIPseparateSol(
    actdepth = (pretendroot ? 0 : SCIPtreeGetCurrentDepth(scip->tree));
 
    /* apply separation round */
-   SCIP_CALL( SCIPseparationRound(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->primal, scip->tree, scip->lp, scip->sepastore,
+   SCIP_CALL( SCIPseparationRound(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->transprob, scip->primal, scip->tree, scip->lp, scip->sepastore,
          sol, actdepth, allowlocal, onlydelayed, delayed, cutoff) );
 
    return SCIP_OKAY;
@@ -867,13 +868,13 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Bool isroot;
+   SCIP_Bool isroot = FALSE;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPremoveInefficaciousCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   isroot = FALSE;
    if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       isroot = TRUE;
+
    SCIP_CALL( SCIPsepastoreRemoveInefficaciousCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat,
          scip->eventqueue, scip->eventfilter, scip->lp, isroot, SCIP_EFFICIACYCHOICE_LP) );
 

@@ -468,7 +468,6 @@ SCIP_RETCODE determineVariableFixings(
       {
          SCIP_CALL( selectSolsRandomized(scip, selection, heurdata, success) );
       }
-
    }
    /* otherwise randomize the set of solutions */
    else

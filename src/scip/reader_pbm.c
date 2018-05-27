@@ -359,7 +359,6 @@ void drawScaledImage(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-
    for( y = 0; y < readerdata->maxrows; y++ )
    {
       for( x = 0; x < readerdata->maxcols; x++ )
@@ -417,7 +416,6 @@ SCIP_DECL_READERFREE(readerFreePbm)
 static
 SCIP_DECL_READERWRITE(readerWritePbm)
 {  /*lint --e{715}*/
-
    SCIP_READERDATA* readerdata;
 
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);

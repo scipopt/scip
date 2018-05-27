@@ -475,7 +475,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    infeasible = FALSE;
    auxviol = FALSE;
 
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    /* if the constraint handler is active, then the check must be performed.  */
@@ -635,7 +634,6 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
 static
 SCIP_DECL_CONSLOCK(consLockBenders)
 {  /*lint --e{715}*/
-
    return SCIP_OKAY;
 }
 
