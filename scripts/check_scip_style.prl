@@ -134,7 +134,7 @@ for (my $i = 0; $i < $narg; ++$i)
       $documentationpos = -1;
 
       # check for empty lines in functions
-      if ( $depth > 0 && $checkemptylines == 1 )
+      if ( $depth > $foundexternc && $checkemptylines == 1 )
       {
 	 # check for empty lines
 	 if ( length($str) == 0 )
@@ -315,7 +315,7 @@ for (my $i = 0; $i < $narg; ++$i)
       if ( $str =~ /\}/ && $str !~ /'\}'/ && $incomment == 0 )
       {
 	 # check for empty lines preceeding a closeing block
-	 if ( $lastemptyline == $line - 1 && $depth > 0 && $checkemptylines == 1 && $str !~ /\{(.*)\}/ )
+	 if ( $lastemptyline == $line - 1 && $depth > $foundexternc && $checkemptylines == 1 && $str !~ /\{(.*)\}/ )
 	 {
 	    printf("%d: empty line preceeding closing block.\n", $line);
 	 }
