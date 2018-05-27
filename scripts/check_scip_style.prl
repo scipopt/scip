@@ -37,6 +37,9 @@
 # - Check for empty lines after "{" in the next line or before "}"
 #   [checkemptylines, default: true]
 #
+# - Check for spaces around operators; non-strict setting allows operators with numbers like "a+1"
+#   [checkoperspaces, default: false]
+#
 # Note the this will not give a complete check. The checks are also
 # heuristic in order to avoid to be flooded with warnings. To
 # guarantee correct indentation of the code, one should use the
@@ -48,11 +51,12 @@ my $narg = @ARGV;
 
 if ( $narg < 1 || $ARGV[0] eq "-h" )
 {
-   printf("usage: <.> [-h] [-t] [-b] [-n] [-o] [-a] <files>\n");
-   printf("-t: output if tabs are present.\n");
-   printf("-b: output possible positions of badly placed braces.\n");
-   printf("-n: warn about missing newlines in debug messages.\n");
-   printf("-o: other warnings: SCIP_CALL_ABORT and printfs.\n");
+   printf("usage: <.> [-h] [-t] [-b] [-n] [-o] [-s] [-a] <files>\n");
+   printf("-t: output if tabs are present;\n");
+   printf("-b: output possible positions of badly placed braces;\n");
+   printf("-n: warn about missing newlines in debug messages;\n");
+   printf("-o: other warnings: SCIP_CALL_ABORT and printfs;\n");
+   printf("-s: spaces around operators;\n");
    printf("-a: all checks on.\n");
    exit(1);
 }
@@ -63,6 +67,8 @@ my $checkbraces = 0;     # check whether braces are badly placed
 my $checkdebug = 0;      # check whether debug messages contain a newline at end
 my $checkothers = 0;     # check for SCIP_CALL_ABORT and printfs
 my $checkcomments = 0;   # check for two comments in a line
+my $checkoperspaces = 0; # check for spaces around operators
+my $checkoperstrict = 0; # check strict rules for operators
 
 my $checkindent = 1;     # check for correct indentation
 my $checktabsparam = 1;  # check whether tabs in parameter lists are present
@@ -103,6 +109,13 @@ for (my $i = 0; $i < $narg; ++$i)
       next;
    }
 
+   # check for checkoperspaces
+   if ( $ARGV[$i] eq "-s" )
+   {
+      $checkoperspaces = 1;
+      next;
+   }
+
    # check for all
    if ( $ARGV[$i] eq "-a" )
    {
@@ -110,6 +123,7 @@ for (my $i = 0; $i < $narg; ++$i)
       $checktabs = 1;
       $checkbraces = 1;
       $checkdebug = 1;
+      $checkoperspaces = 1;
       next;
    }
 
@@ -601,6 +615,26 @@ for (my $i = 0; $i < $narg; ++$i)
 		  }
 		  printf("^\n\n");
 	       }
+	    }
+	 }
+      }
+
+      # ----------------------------------------
+      # check spaces around operators
+      if ( $checkoperspaces == 1 )
+      {
+	 if ( $checkoperstrict == 1 )
+	 {
+	    if ( $str =~ /\w[\+\*\%\-]\w/ )
+	    {
+	       printf("%d: operator without surrounding spaces: %s\n\n", $line, $_);
+	    }
+	 }
+	 else
+	 {
+	    if ( $str =~ /[a-zA-Z][\+\*\%\-][a-zA-Z]/ )
+	    {
+	       printf("%d: operator without surrounding spaces: %s\n\n", $line, $_);
 	    }
 	 }
       }
