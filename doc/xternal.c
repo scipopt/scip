@@ -5963,6 +5963,16 @@
  * You may also add user parameters for your Benders' decomposition, see \ref PARAM for how to add user parameters and
  * the method SCIPincludeBendersDefault() in src/scip/benders_default.c for an example.
  *
+ * It is advised to disable presolving for the Benders' decomposition master problem by calling SCIPsetPresolving() with
+ * the parameter SCIP_PARAMSETTING_OFF. Presolving should be disabled because reductions on the master problem could be
+ * invalid since constraints have been transferred to the subproblems. It is not necessary to disable all presolving,
+ * but care must be taken when it is used for the Benders' decomposition master problem.
+ *
+ * The Benders' decomposition constraint handler, see src/scip/cons_benders.c, includes a presolver for tightening the
+ * bound on the auxiliary variables. This presolver can be enabled with by setting "presolving/maxround" to 1 and
+ * "constraints/benders/maxprerounds" to 1. This presolver solves the Benders' decomposition subproblems without fixing
+ * the master problem variables to find a lower bound for the auxiliary variable.
+ *
  *
  * @section BENDERS_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Benders' decomposition
  *
