@@ -2507,9 +2507,10 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    SCIPdebugMessage("getting solution\n");
 
-   /* cannot return solution if we reached the objective limit */
-   if ( lpi->solstat == QS_LP_OBJ_LIMIT )
-      return SCIP_LPERROR;
+   /* Do nothing if the status is not optimal, e.g., if we reached the objective limit or the problem is
+    * infeasible. QSopt cannot return a solution in this case.*/
+   if ( lpi->solstat != QS_LP_OPTIMAL )
+      return SCIP_OKAY;
 
    nrows = QSget_rowcount(lpi->prob);
    SCIP_CALL( ensureRowMem(lpi, nrows) );
