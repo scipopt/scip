@@ -10,8 +10,8 @@
 # - List lines where tabs occur.
 #   [checktabs, default: false, -t option, "-o" to only output tabs]
 #
-# - List lines in which the brackets seem to be at the wrong place
-#   [checkbrackets, default: false, -b option].
+# - List lines in which the braces seem to be at the wrong place
+#   [checkbraces, default: false, -b option].
 #
 # - List occurences of printf's.
 #   [checkothers, default: true]
@@ -50,7 +50,7 @@ if ( $narg < 1 || $ARGV[0] eq "-h" )
 {
    printf("usage: <.> [-h] [-t] [-b] [-n] [-o] <files>\n");
    printf("-t: output if tabs are present.\n");
-   printf("-b: output possible positions of badly placed brackets.\n");
+   printf("-b: output possible positions of badly placed braces.\n");
    printf("-n: warn about missing newlines in debug messages.\n");
    printf("-o: warn about SCIP_CALL_ABORT and printfs.\n");
    exit(1);
@@ -58,7 +58,7 @@ if ( $narg < 1 || $ARGV[0] eq "-h" )
 
 # determine which part to check
 my $checktabs = 0;       # check whether tabs are present
-my $checkbrackets = 0;   # check whether brackets are badly placed
+my $checkbraces = 0;     # check whether braces are badly placed
 my $checkdebug = 0;      # check whether debug messages contain a newline at end
 my $checkothers = 0;     # check for SCIP_CALL_ABORT and printfs
 my $checkcomments = 0;   # check for two comments in a line
@@ -84,7 +84,7 @@ for (my $i = 0; $i < $narg; ++$i)
    # check for tab option
    if ( $ARGV[$i] eq "-b" )
    {
-      $checkbrackets = 1;
+      $checkbraces = 1;
       next;
    }
 
@@ -342,7 +342,7 @@ for (my $i = 0; $i < $narg; ++$i)
 		  --$depth;
 		  if ( $depth + $foundexternc < 0 )
 		  {
-		     printf("Warning: bracket count wrong!\n");
+		     printf("Warning: brace count wrong!\n");
 		     $depth = 0;
 		  }
 	       }
@@ -381,14 +381,14 @@ for (my $i = 0; $i < $narg; ++$i)
       }
 
       # ----------------------------------------
-      # check brackets
-      if ( $checkbrackets && $incomment == 0 )
+      # check braces
+      if ( $checkbraces && $incomment == 0 )
       {
 	 # ignore 'extern "C"{'
 	 my $s = $str;
 	 $s =~ s/(extern \"C\" \{)//g;
 
-	 # check for brackets
+	 # check for braces
 	 if ( $s =~ /\{/ || $s =~ /\}/ )
 	 {
 	    # strip spaces:
@@ -399,7 +399,7 @@ for (my $i = 0; $i < $narg; ++$i)
 
 	    if ( length($s) > 1 )
 	    {
-	       printf("%d: bracket: %s\n\n", $line, $_);
+	       printf("%d: brace: %s\n\n", $line, $_);
 	    }
          }
       }
