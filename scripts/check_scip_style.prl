@@ -145,7 +145,39 @@ for (my $i = 0; $i < $narg; ++$i)
 	    # check for empty lines following an opening block
 	    if ( $openbraceprev > 0 )
 	    {
-	       printf("%d: empty line following an opening block.\n", $line);
+	       # directly warn within a function
+	       if ( $depth > $foundexternc + 1 )
+	       {
+		  printf("%d: empty line following an opening block.\n", $line);
+	       }
+	       else
+	       {
+		  # we do not want to warn if the first line after the
+		  # empty line is a SCIP_CALL at the beginning of a
+		  # function. Thus, we read the next line and check.
+		  $str = <FILE>;
+		  chomp($str);
+		  ++$line;
+
+		  # do not warn if we directly call another function
+		  if ( $str !~ /SCIP\_CALL\(/ )
+		  {
+		     printf("%d: empty line following an opening block.\n", $line);
+		  }
+		  else
+		  {
+		     # we now have to update the empty line status
+		     if ( length($str) == 0 )
+		     {
+			++$emptyline;
+			$lastemptyline = $line;
+		     }
+		     else
+		     {
+			$emptyline = 0;
+		     }
+		  }
+	       }
 	    }
 	 }
 	 else
