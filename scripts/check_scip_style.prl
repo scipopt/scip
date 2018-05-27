@@ -202,17 +202,37 @@ for (my $i = 0; $i < $narg; ++$i)
       }
       $openbraceprev = 0;
 
+      # ----------------------------------------
+      # check for SCIPdebugMessage without "\n"
+      if ( $checkdebug == 1 && $str =~ /SCIPdebugMessage/ )
+      {
+	 my $s = $str;
+
+	 # remove "SCIP_LONGINT_FORMAT"
+	 $s =~ s/\"SCIP_LONGINT_FORMAT\"//g;
+
+	 my $debpos = index($s, "SCIPdebugMessage");
+	 my $enddebpos = index($s, "\",", $debpos + 18);
+	 if ( $enddebpos >= 0 )
+	 {
+	    if ( substr($s, $enddebpos-2, 2) ne "\\n" )
+	    {
+	       printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
+	    }
+	 }
+      }
+
+      # ---------------------------------------------------------
+      # handle strings
+
+      # remove everything within a string
+      if ( $str =~ /\".*\"/ )
+      {
+	 $str =~ s/\".*\"//g;
+      }
+
       # ---------------------------------------------------------
       # handle comments
-
-      # remove comments within string constants: to only consider "\*"
-      # within string, the first '"' should appear without a '"'
-      # appearing before (by excluding [^\"]).
-      if ( $str =~ /^[^\"]*\"[^\"]*\/\*/ )
-      {
-         printf("%d: removing comment within string:<%s>\n", $line, $str);
-         $str =~ s/\/\*//g;
-      }
 
       # make sure that no comment ends and afterwards starts on the same line
       if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
@@ -601,26 +621,6 @@ for (my $i = 0; $i < $narg; ++$i)
 	    if ( ! ($_ =~ /SCIP\_CALL\_ABORT\( checkStage/) )
 	    {
 	       printf("%d: SCIP_CALL_ABORT found: %s\n\n", $line, $_);
-	    }
-	 }
-      }
-
-      # ----------------------------------------
-      # check for SCIPdebugMessage without "\n"
-      if ( $checkdebug == 1 && $str =~ /SCIPdebugMessage/ )
-      {
-	 my $s = $str;
-
-	 # remove "SCIP_LONGINT_FORMAT"
-	 $s =~ s/\"SCIP_LONGINT_FORMAT\"//g;
-
-	 my $debpos = index($s, "SCIPdebugMessage");
-	 my $enddebpos = index($s, "\",", $debpos + 18);
-	 if ( $enddebpos >= 0 )
-	 {
-	    if ( substr($s, $enddebpos-2, 2) ne "\\n" )
-	    {
-	       printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
 	    }
 	 }
       }
