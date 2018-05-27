@@ -261,7 +261,8 @@ for (my $i = 0; $i < $narg; ++$i)
       # remove everything within a string
       if ( $str =~ /\".*\"/ )
       {
-	 $str =~ s/\".*\"//g;
+	 # remove minimal occurence of string
+	 $str =~ s/\".*?\"//g;
       }
 
       # ---------------------------------------------------------
@@ -270,10 +271,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # make sure that no comment ends and afterwards starts on the same line
       if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
       {
-	 if ( $str =~ /\*lint/ )
-	 {
-	 }
-	 else
+	 if ( $str !~ /\*lint/ )
 	 {
 	    # simply warn, but continue (parsing might not be correct, however)
 	    printf("%d: line contains two comments - merge into one?\n%s\n\n", $line, $_);
