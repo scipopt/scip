@@ -34,8 +34,6 @@
  * can be fit into the rectangle without being overlapping.
  */
 
-#define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
-
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -244,7 +242,7 @@ SCIP_RETCODE visualizeSolutionAscii(
       yval = SCIPgetSolVal(scip, sol, y[i]);
       radius = r[i];
 
-      for( phi = 0.0; phi < 2.0 * M_PI; phi += 0.01 )
+      for( phi = 0.0; phi < 6.283 /* 2*pi */; phi += 0.01 )
       {
          xcoord = SCIPround(scip, scalex * (xval + radius * cos(phi))) + 1; /* +1 for border */
          ycoord = SCIPround(scip, scaley * (yval + radius * sin(phi))) + 1; /* +1 for border */
