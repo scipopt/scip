@@ -1160,7 +1160,7 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( level0(scip, g) );
 
-   if( tryrmw )
+   if( tryrmw && g->terms > 2 )
       SCIP_CALL( graph_pc_mw2rmw(scip, g, prizesum) );
 
    SCIPfreeRandom(scip, &randnumgen);

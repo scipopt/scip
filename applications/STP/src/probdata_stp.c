@@ -3106,7 +3106,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       {
          assert(nsolnodes == 0);
 
-         orgnodes[root] = TRUE;
+         solnodequeue[0] = root;
          nsolnodes = 1;
       }
 
