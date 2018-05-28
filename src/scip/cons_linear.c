@@ -51,6 +51,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
+#include "scip/debug.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
