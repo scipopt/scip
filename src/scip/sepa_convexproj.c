@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -577,7 +577,6 @@ SCIP_RETCODE separateCuts(
          nlpunstable = TRUE;
    }
 
-
    /* if nlp is detected to be unstable, don't try to separate again */
    if( nlpunstable )
    {
@@ -759,7 +758,6 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolConvexproj)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
 {  /*lint --e{715}*/
-
    SCIP_Real maxviolation;
    SCIP_SOL* lpsol;
    SCIP_SEPADATA* sepadata;

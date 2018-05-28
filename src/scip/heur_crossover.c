@@ -24,8 +24,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/cons_linear.h"
 #include "scip/heur_crossover.h"
 #include "scip/pub_misc.h"
 
@@ -470,7 +468,6 @@ SCIP_RETCODE determineVariableFixings(
       {
          SCIP_CALL( selectSolsRandomized(scip, selection, heurdata, success) );
       }
-
    }
    /* otherwise randomize the set of solutions */
    else
@@ -886,7 +883,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->nextnodenumber = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    /* initialize hash table */
    SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,

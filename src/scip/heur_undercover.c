@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -198,7 +198,6 @@ SCIP_Bool termIsConstant(
       return SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    else
       return SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-
 }
 
 
@@ -1636,7 +1635,6 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_CALL( SCIPsetIntParam(coveringscip, "display/verblevel", 0) );
 #endif
 
-
    /* solve covering problem */
    retcode = SCIPsolve(coveringscip);
 
@@ -1758,7 +1756,6 @@ SCIP_RETCODE computeFixingOrder(
          bestscore = MAX(bestscore, scores[i]);
       else
          bestscore = MIN(bestscore, scores[i]);
-
    }
 
    /* put integers to the front */
@@ -3158,7 +3155,7 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

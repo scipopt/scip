@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -140,7 +140,6 @@ SCIP_DECL_HEUREXIT(heurExitPscostdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
@@ -186,7 +185,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);
-
 
    /* bound fractions to not prefer variables that are nearly integral */
    candsfrac = MAX(candsfrac, 0.1);

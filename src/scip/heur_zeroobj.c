@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -210,7 +210,6 @@ SCIP_DECL_HEURINIT(heurInitZeroobj)
 static
 SCIP_DECL_HEUREXEC(heurExecZeroobj)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP_Longint nnodes;                 /* number of stalling nodes for the subproblem */
 
@@ -281,7 +280,6 @@ SCIP_RETCODE setupAndSolveSubscip(
    int i;
    SCIP_Bool success;
    SCIP_Bool valid;
-
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -482,7 +480,6 @@ SCIP_RETCODE setupAndSolveSubscip(
 
    SCIPdebugMsg(scip, "solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
 
-
    /* errors in solving the subproblem should not kill the overall solving process;
     * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
@@ -562,7 +559,6 @@ SCIP_RETCODE SCIPapplyZeroobj(
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
-
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );

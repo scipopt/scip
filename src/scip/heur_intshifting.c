@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -531,7 +531,6 @@ void addFracCounter(
                violrows[theviolrowpos] = violrows[*nviolfracrows - 1];
                violrows[*nviolfracrows - 1] = row;
 
-
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
                violrowpos[rowlppos] = *nviolfracrows - 1;
             }
@@ -549,7 +548,6 @@ void addFracCounter(
             {
                violrows[theviolrowpos] = violrows[*nviolfracrows];
                violrows[*nviolfracrows] = row;
-
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
                violrowpos[rowlppos] = *nviolfracrows;
@@ -597,7 +595,7 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1131,7 +1129,5 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitIntshifting) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolIntshifting) );
 
-
    return SCIP_OKAY;
 }
-

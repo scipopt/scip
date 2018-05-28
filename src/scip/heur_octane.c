@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -864,7 +864,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             subspacevars[currentindex] = vars[i];
             fracspace[i] = currentindex;
             ++currentindex;
-
          }
          else
          {
@@ -901,7 +900,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max + 1) );
-
 
    for( i = f_max; i >= 0; --i )
    {
@@ -1113,7 +1111,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                break;
          }
       }
-
 
       if( !cons_viol )
       {

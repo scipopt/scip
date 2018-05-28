@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2464,7 +2464,6 @@ SCIP_RETCODE checkSystemGF2(
             b[nconssmat] = ! b[nconssmat];
          }
 
-
          /* replace aggregated variables */
          while( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
          {
@@ -4247,7 +4246,6 @@ SCIP_RETCODE preprocessConstraintPairs(
       if( *cutoff )
          return SCIP_OKAY;
 #endif
-
       }
    }
 

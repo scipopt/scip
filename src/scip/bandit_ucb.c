@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -108,7 +108,6 @@ SCIP_RETCODE dataReset(
 /** callback to free bandit specific data structures */
 SCIP_DECL_BANDITFREE(SCIPbanditFreeUcb)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    int nactions;
    assert(bandit != NULL);
@@ -130,7 +129,6 @@ SCIP_DECL_BANDITFREE(SCIPbanditFreeUcb)
 /** selection callback for bandit selector */
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectUcb)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    int nactions;
    int* counter;

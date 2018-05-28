@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -678,7 +678,6 @@ SCIP_RETCODE applyProbing(
             propdata->lastsortstartidx = 0;
          }
       }
-
    }
    while( i == 0 && !(*cutoff) && !(*delay) && !aborted );
 
@@ -731,7 +730,6 @@ SCIP_DECL_PROPFREE(propFreeProbing)
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
 
-
    SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
@@ -752,8 +750,7 @@ SCIP_DECL_PROPINIT(propInitProbing)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
-      DEFAULT_RANDSEED) );
-
+      DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

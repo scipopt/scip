@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -610,7 +610,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       if( IsNull((*problem)->nlp) )
          throw std::bad_alloc();
    }
-   catch( std::bad_alloc )
+   catch( const std::bad_alloc& )
    {
       SCIPerrorMessage("Not enough memory to initialize Ipopt.\n");
       return SCIP_NOMEMORY;

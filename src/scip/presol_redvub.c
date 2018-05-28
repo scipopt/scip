@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -275,7 +275,6 @@ SCIP_RETCODE detectDominatingVubs(
             (SCIPvarsHaveCommonClique(var1, FALSE, var2, TRUE, TRUE) &&
                SCIPvarsHaveCommonClique(var1, TRUE, var2, FALSE, TRUE)) )
          {
-
             if( SCIPisLE(scip, highthresholds[i], highthresholds[j]) )
             {
 #ifdef SCIP_DEBUG
@@ -383,7 +382,6 @@ SCIP_RETCODE detectDominatingVlbs(
             (SCIPvarsHaveCommonClique(var1, FALSE, var2, TRUE, TRUE) &&
                SCIPvarsHaveCommonClique(var1, TRUE, var2, FALSE, TRUE)) )
          {
-
             if( SCIPisGE(scip, highthresholds[i], highthresholds[j]) )
             {
 #ifdef SCIP_DEBUG

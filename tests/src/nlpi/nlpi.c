@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -294,7 +294,7 @@ SCIP_RETCODE solveQP(
    *nlpsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
    *nlptermstat = SCIP_NLPTERMSTAT_OTHER;
 
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, rndseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, rndseed, TRUE) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, n+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, n+1) );

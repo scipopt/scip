@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -84,8 +84,8 @@ SCIP_RETCODE updateBestCandidate(
    SCIP_Real             candscoremax,       /**< maximal score of branching candidate */
    SCIP_Real             candscoresum,       /**< sum of scores of branching candidate */
    SCIP_Real             candrndscore,       /**< random score of branching candidate */
-   SCIP_Real             candsol             /**< proposed branching point of branching candidate */          
-)
+   SCIP_Real             candsol             /**< proposed branching point of branching candidate */
+   )
 {
    SCIP_Real candbrpoint;
    SCIP_Real branchscore;
@@ -322,7 +322,6 @@ SCIP_RETCODE updateBestCandidate(
       (*bestvar)      = cand;
       (*bestbrpoint)  = candbrpoint;
       return SCIP_OKAY;
-
    }
 
    /* if score of candidate is worse than bestscore, stay with best candidate */
@@ -743,7 +742,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    assert(branchrule != NULL);
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
-         BRANCHRULE_RANDSEED_DEFAULT) );
+         BRANCHRULE_RANDSEED_DEFAULT, TRUE) );
 
    /* set non-fundamental callbacks via specific setter functions*/
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );

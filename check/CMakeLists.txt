@@ -1,9 +1,22 @@
 include(CTest)
 
-add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure --schedule-random
+#
+# add a custom SCIP check target 'scip_check'
+#
+add_custom_target(scip_check
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure
                 DEPENDS scip
                 )
+
+#
+# add a phony target check, if it has not been defined in a different SCIP Optimization Suite project, yet
+# and add 'scip_check' as a dependency.
+#
+if (NOT TARGET check)
+    add_custom_target(check)
+endif()
+
+add_dependencies(check scip_check)
 
 #
 # define the instance sets
@@ -120,6 +133,10 @@ set(settings_Symmetry
 set(settings_sparsify
     "sparsifyaggr"
   )
+
+set(settings_Benders
+    "usebenders"
+   )
 
 #
 # Indicator instances
@@ -303,14 +320,14 @@ set(instances_Symmetry
 # Stochastic programming instances
 #
 set(instances_Stochastic
-#    "instances/Stochastic/4node1.smps\;480.9"
-#    "instances/Stochastic/4node2.smps\;480.9"
    "instances/Stochastic/pltexpA2_6.smps\;-9.479354404641"
    "instances/Stochastic/pltexpA2_16.smps\;-9.663308373027"
    "instances/Stochastic/pltexpA4_6.smps\;-19.5994173819041"
-#    "instances/Stochastic/pltexpA4_16.smps\;-18.8493368600210"
-#    "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
-#    "instances/Stochastic/sslp_5_25_100.smps\;-127.37"
+   )
+
+set(instances_Benders
+    "instances/Stochastic/4node1.smps\;480.9"
+    "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
    )
 
 #
@@ -399,6 +416,7 @@ add_instancetests(instances_Orbitope settings_default "Orbitope")
 add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
+add_instancetests(instances_Benders settings_Benders "Benders")
 
 #
 # test writing and reading solutions

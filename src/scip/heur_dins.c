@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -122,7 +122,6 @@ void computeIntegerVariableBounds(
    /* get the current MIP solution for each variable */
    bestsol = SCIPgetBestSol(scip);
    mipsol = SCIPgetSolVal(scip, bestsol, var);
-
 
    /* if the solution values differ by 0.5 or more, the variable is rebounded, otherwise it is just copied */
    if( REALABS(lpsol - mipsol) >= 0.5 )
@@ -919,7 +918,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
-
 
    retcode = wrapperDins(scip, subscip, heur, heurdata, vars, fixedvars, fixedvals, result, nvars, nbinvars, nintvars, binfixings, intfixings, nsubnodes);
    SCIP_CALL( SCIPfree(&subscip) );

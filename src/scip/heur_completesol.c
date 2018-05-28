@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1005,8 +1005,6 @@ SCIP_RETCODE applyCompletesol(
    SCIPfreeBufferArray(scip, &tightened);
    SCIP_CALL( SCIPendProbing(scip) );
 
-
-
    return SCIP_OKAY;
 }
 
@@ -1298,7 +1296,6 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcontvars",
          "maximal number of continuous variables after presolving",
          &heurdata->maxcontvars, FALSE, DEFAULT_MAXCONTVARS, -1, INT_MAX, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

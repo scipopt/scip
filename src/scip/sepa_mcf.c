@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2226,7 +2226,6 @@ SCIP_RETCODE extractCapacities(
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
-
    unsigned char*    capacityrowsigns   = mcfdata->capacityrowsigns;
    int*              colcommodity       = mcfdata->colcommodity;
 #ifndef NDEBUG
@@ -2274,7 +2273,6 @@ SCIP_RETCODE extractCapacities(
    /* ->  loop through the list of capacity cands in non-increasing score order  */
    for( i = 0; i < ncapacitycands; i++ )
    {
-
       SCIP_ROW*  capacityrow;
       SCIP_COL** rowcols;
       int rowlen;
@@ -2422,7 +2420,6 @@ void collectIncidentFlowCols(
       int arcid;
       int c;
       int j;
-
 
       c = SCIPcolGetLPPos(rowcols[i]);
       assert(0 <= c && c < SCIPgetNLPCols(scip));
@@ -2661,7 +2658,6 @@ SCIP_RETCODE getNodeSimilarityScore(
          *score += 1.0 - (ABS(nposuncap - basenposuncap) + ABS(nneguncap - basenneguncap))/(2.0 * ncols + 1.0);
 
       *score = MAX(*score, 1e-6); /* score may get negative due to many columns having the same arcid */
-
    }
 
    SCIPdebugMsg(scip, " -> node similarity: row <%s>: incompatible=%u overlap=%g rowlen=%d baserowlen=%d score=%g\n",
@@ -4465,7 +4461,6 @@ SCIP_RETCODE mcfnetworkExtract(
          {
             SCIPdebugMsg(scip, " -> discarded component with %d nodes and %d arcs\n", ncompnodes, ncomparcs);
          }
-
       }
 
       /* free temporary memory */
@@ -4540,10 +4535,10 @@ SCIP_RETCODE printFlowSystemInfo(
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colvisited, ncols) );
+
    /* get flow variable types */
    for(c=0; c < ncols; c++)
       colvisited[c]=FALSE;
-
 
    MCFdebugMessage("\n\n****** VAR COUNTING ********* \n");
 
@@ -4659,7 +4654,6 @@ SCIP_RETCODE printFlowSystemInfo(
       MCFdebugMessage("   nof capvars:  %5d of which [ %d , %d , %d ] are continuous, integer, binary\n",
          ncapvars, ncontcapvars, nintcapvars, nbincapvars);
    }
-
 
    MCFdebugMessage("****** END VAR COUNTING ********* \n\n");
 
@@ -4864,7 +4858,6 @@ SCIP_RETCODE nodepairqueueCreate(
    int*         colcommodity;
 #endif
 
-
    SCIP_HASHTABLE* hashtable;
    NODEPAIRENTRY*  nodepairs;
 
@@ -5000,7 +4993,6 @@ SCIP_RETCODE nodepairqueueCreate(
             nodepair.weight = MIN( nodepair.weight, -0.0001);
          }
 #endif
-
       }
       else
       {
@@ -5100,8 +5092,8 @@ SCIP_RETCODE nodepairqueueCreate(
             hasdemand1 = TRUE;
             break;
          }
-
       }
+
       /* node2 */
       for( k = 0; k < ncommodities; k++ )
       {
@@ -5185,7 +5177,6 @@ NODEPAIRENTRY* nodepairqueueRemove(
    NODEPAIRQUEUE*        nodepairqueue       /**< nodepair priority queue */
    )
 {
-
    assert(nodepairqueue != NULL);
 
    return (NODEPAIRENTRY*)SCIPpqueueRemove(nodepairqueue->pqueue);
@@ -5983,7 +5974,6 @@ SCIP_RETCODE generateClusterCuts(
       SCIP_Real bestefficacy;
       SCIP_Real f0;
 
-
       if( sepadata->checkcutshoreconnectivity )
       {
          if( nodepartition != NULL && !nodepartitionIsConnected(scip, mcfnetwork, nodepartition, partition ) )
@@ -5999,7 +5989,6 @@ SCIP_RETCODE generateClusterCuts(
 
       for( inverted = FALSE; inverted <= useinverted && !*cutoff; inverted++ )
       {
-
          if( nodepartition == NULL )
          {
             SCIPdebugMsg(scip, "generating single-node cuts for node %u (inverted: %u)\n", partition, inverted);
@@ -6910,7 +6899,6 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeMcf) );
    SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolMcf) );
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolMcf) );
-
 
    /** @todo introduce parameters such as maxrounds (see other separators) */
    /* add mcf separator parameters */

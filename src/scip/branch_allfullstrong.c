@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -293,7 +293,6 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    cutoffbound = SCIPgetCutoffbound(scip);
 #endif
 
-
    assert(scip != NULL);
    assert(pseudocands != NULL);
    assert(bestpseudocand != NULL);
@@ -356,7 +355,6 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
       /* get branching rule data */
       branchruledata = SCIPbranchruleGetData(branchrule);
       assert(branchruledata != NULL);
-
 
       /* initialize strong branching */
       SCIP_CALL( SCIPstartStrongbranch(scip, FALSE) );
@@ -496,7 +494,6 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
          {
             if( integral )
             {
-
                if( skipdown[c] )
                {
                   downgain = 0.0;

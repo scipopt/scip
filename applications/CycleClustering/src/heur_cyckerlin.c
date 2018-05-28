@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -645,7 +645,7 @@ SCIP_RETCODE runCyckerlin(
    nbins = SCIPcycGetNBins(scip);
    ncluster = SCIPcycGetNCluster(scip);
    cmatrix = SCIPcycGetCmatrix(scip);
-   SCIP_CALL( SCIPcreateRandom(scip, &rnd, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &rnd, DEFAULT_RANDSEED, TRUE) );
 
    assert(nbins >= 0);
    assert(ncluster >= 0);

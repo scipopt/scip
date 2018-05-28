@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -308,7 +308,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 
          if( !heurdata->maxviol )
             *roundup = !(*roundup);
-
       }
       else if( !SCIPisEQ(scip, candsfrac, 0.5) )
       {
@@ -436,7 +435,6 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxnnzobjfac",
          "maximal portion of nonzero objective coeffcients.",
          &heurdata->maxnnzobjfac, TRUE, DEFAULT_MAXNNZOBJFAC, 0.0, 1.0, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

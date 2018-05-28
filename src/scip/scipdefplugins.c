@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,6 +35,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAbspower(scip) ); /* absolute power needs to be after quadratic and nonlinear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
+   SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
+   SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
    SCIP_CALL( SCIPincludeConshdlrBivariate(scip) ); /* bivariate needs to be after quadratic and nonlinear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrCardinality(scip) );
@@ -208,6 +210,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeTableDefault(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
+   SCIP_CALL( SCIPincludeBendersDefault(scip) );
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );

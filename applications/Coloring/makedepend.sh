@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This scripts generates the dependences for the Coloring example
+# This scripts generates the dependencies for the Coloring example
 #
 
 OPTS=(opt dbg opt-gccold)

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -951,7 +951,6 @@ SCIP_RETCODE boundchgReleaseData(
    /* release variable */
    assert(boundchg->var != NULL);
    SCIP_CALL( SCIPvarRelease(&boundchg->var, blkmem, set, eventqueue, lp) );
-
 
    return SCIP_OKAY;
 }
@@ -3392,7 +3391,6 @@ SCIP_RETCODE SCIPvarTransform(
          assert((*transvar)->nlocksup[i] >= 0);
       }
 
-
       /* copy doNotMultiaggr status */
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
 
@@ -3931,7 +3929,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    for( v = 1; v < ntmpvars; ++v )
       assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
 #endif
-
 
    /* collect for each variable the representation in active variables */
    while( ntmpvars >= 1 )
@@ -10269,7 +10266,6 @@ SCIP_RETCODE SCIPvarAddVub(
                if( !SCIPsetIsInfinity(set, -zlb) )
                   maxvub = vubcoef * zlb + vubconstant;
             }
-
          }
          if( minvub > maxvub )
             minvub = maxvub;
@@ -10284,6 +10280,7 @@ SCIP_RETCODE SCIPvarAddVub(
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
+
          /* improve global upper bound of variable */
          if( SCIPsetIsFeasLT(set, maxvub, xub) )
          {
@@ -14153,7 +14150,6 @@ SCIP_Real SCIPvarGetMinPseudocostScore(
    solvaldeltaup = SCIPsetCeil(set, solval) - solval;
    solvaldeltadown = SCIPsetFloor(set, solval) - solval;
 
-
    upscore = SCIPvarGetPseudocost(var, stat, solvaldeltaup);
    downscore = SCIPvarGetPseudocost(var, stat, solvaldeltadown);
 
@@ -14350,7 +14346,6 @@ SCIP_Bool SCIPvarSignificantPscostDifference(
    SCIP_Real county;
    SCIP_Real tresult;
    SCIP_Real realdirection;
-
 
    if( varx == vary )
       return FALSE;

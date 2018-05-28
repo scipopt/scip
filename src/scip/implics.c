@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2075,7 +2075,6 @@ SCIP_RETCODE sortAndMergeClique(
       startidx = curr;
    }
 
-
    /* we might have found an infeasibility or reduced the clique to size 0 */
    if( *infeasible || *nclqvars == 0 )
       return SCIP_OKAY;
@@ -2262,7 +2261,6 @@ int cliquetableGetNodeIndexBinvar(
    else
       activevar = binvar;
 
-
    assert(SCIPvarIsBinary(activevar));
 
    /* if the map does not contain an index for this variable, return -1 and mark that the components must be
@@ -2310,7 +2308,6 @@ void cliquetableUpdateConnectednessClique(
    /* loop over variables in the clique and connect the corresponding components */
    for( i = 0; i < nclqvars && !cliquetable->compsfromscratch; ++i )
    {
-
       /* this method may also detect that the clique table must entirely recompute connectedness */
       int currnode = cliquetableGetNodeIndexBinvar(cliquetable, clqvars[i]);
 
@@ -2442,7 +2439,6 @@ SCIP_RETCODE SCIPcliquetableAdd(
                /* check if variable is fixed already and terminate with infeasible if this fixing contradicts the clique info */
                if( SCIPvarGetLbGlobal(clqvar) > SCIPvarGetUbGlobal(clqvar) - 0.5 )
                {
-
                   /* check if fixing contradicts clique constraint */
                   if( (clqval && SCIPvarGetLbGlobal(clqvar) > 0.5)
                      || (! clqval && SCIPvarGetUbGlobal(clqvar) < 0.5) )
@@ -2732,7 +2728,6 @@ SCIP_RETCODE cliqueCleanup(
             /* increase indexer of last active, i.e. unfixed, variable in clique */
             ++w;
          }
-
       }
       clique->nvars = w;
 

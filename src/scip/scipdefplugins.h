@@ -46,6 +46,8 @@
 #include "scip/compr_weakcompr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
+#include "scip/cons_benders.h"
+#include "scip/cons_benderslp.h"
 #include "scip/cons_bivariate.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_cardinality.h"
@@ -208,6 +210,7 @@
 #include "scip/scipshell.h"
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
+#include "scip/benders_default.h"
 
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpi_filtersqp.h"

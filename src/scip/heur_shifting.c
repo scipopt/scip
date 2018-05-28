@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -498,7 +498,6 @@ void addFracCounter(
       assert(nfracsinrow[rowlppos] >= 0);
       theviolrowpos = violrowpos[rowlppos];
 
-
       /* swap positions in violrows array if fractionality has changed to 0 */
       if( theviolrowpos >= 0 )
       {
@@ -515,7 +514,6 @@ void addFracCounter(
             {
                violrows[theviolrowpos] = violrows[*nviolfracrows - 1];
                violrows[*nviolfracrows - 1] = rows[r];
-
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
                violrowpos[rowlppos] = *nviolfracrows - 1;
@@ -534,7 +532,6 @@ void addFracCounter(
             {
                violrows[theviolrowpos] = violrows[*nviolfracrows];
                violrows[*nviolfracrows] = rows[r];
-
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
                violrowpos[rowlppos] = *nviolfracrows;
@@ -581,7 +578,7 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    SCIPheurSetData(heur, heurdata);
 

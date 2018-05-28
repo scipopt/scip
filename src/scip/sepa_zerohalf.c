@@ -46,7 +46,6 @@
 
 #include "string.h"
 #include "scip/sepa_zerohalf.h"
-#include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 #include "scip/struct_lp.h"
 
@@ -2113,7 +2112,7 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolZerohalf)
    assert(sepadata != NULL);
 
    assert(sepadata->randnumgen == NULL);
-   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, (unsigned int)sepadata->initseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, (unsigned int)sepadata->initseed, TRUE) );
 
    return SCIP_OKAY;
 }

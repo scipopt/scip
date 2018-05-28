@@ -8,11 +8,17 @@ performance improvements:
     - new default parameter settings for bandit selection parameters
     - no adjustment of minimum improvement by default
 - improved bound tightening for some quadratic equations
+- constraint handler checking order for original solutions has been modified to check those with negative check priority
+  that don't need constraints after all other constraint handlers and constraints have been checked
 
 features:
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
-- new example brachistochrone in CallableLibrary examples collection
+- new example "brachistochrone" in CallableLibrary examples collection; this example implements a discretized model to
+  obtain the trajectory associated with the shortest time to go from point A to B for a particle under gravity only
+- new example "circlepacking" in CallableLibrary examples collection; this example models two problems about packing
+  circles of given radii into a rectangle
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
+- "lp/checkstability" is properly implemented for SoPlex LPI (spx2)
 - new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
 - limits on the number of presolving rounds a presolver (maxrounds) or propagator/constraint handler (maxprerounds)
   participates in are now compared to the number of calls of the particular presolving method, not the number of
@@ -32,6 +38,8 @@ deleted and modified API functions:
 - the seed of SCIPinitializeRandomSeed() is now an unsigned int
 - the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
 - added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
+- new parameter for SCIPcreateRandom() to specify whether the global random seed shift should be used in the creation of
+  the random number generator
 
 new API functions:
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
@@ -43,13 +51,26 @@ new API functions:
   SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
 - added SCIPstrncpy(), a safe version of strncpy()
 
+features:
+- new miscellaneous methods for constraints that have a one-row linear representation in pub_misc_linear.h
+- a Benders' decomposition framework has been added. This framework provides the functionality for a user to solve a
+  decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
+  integer optimality cuts and no-good cuts.
+
 new parameters:
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
 - "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
+- "lp/alwaysgetduals" ensure that the dual solutions are always computed from the recent LP solve
+- "display/relevantstats" indicates whether the small relevant statistics are displayed at the end of solving
 - "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
 - "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
 - "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts
+- "benders/*" new submenu for Benders' decomposition related settings. This includes the settings related to the
+  included Benders' decompositions and the general Benders' decomposition settings.
+- "benders/<decompname>/benderscuts/*" submenu within each included Benders' decomposition to control the Benders'
+  decomposition cuts. The cuts are added to each decomposition separately, so the setting are unique to each
+  decomposition.
 
 deleted and modified parameters:
 - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
@@ -63,6 +84,7 @@ deleted files:
 misc:
 - updated CppAD to version 20180000.0
 - add statistic that presents the number of resolves for instable LPs
+- remove LEGACY mode, compiler needs to be C++11-compliant
 
 
 SCIP version 5.0.2
@@ -88,6 +110,8 @@ fixed bugs:
 - fix parsing of version number in the CMake module for Ipopt
 - fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
 - added workaround for bug when solving certain bivariate quadratic interval equations with unbounded second variable
+- fixed bug with releasing slack variable and linear constraint in cons_indicator
+- fixed problem when writing MPS file with indicator constraints with corresponding empty linear constraints
 
 data structures:
 - expression interpreter objects are now stored in the block memory

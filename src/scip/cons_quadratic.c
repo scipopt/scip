@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -6255,7 +6255,6 @@ SCIP_RETCODE generateCutFactorable(
             }
          }
       }
-
    }
 
    /* write violated constraints as multleft * factorleft * factorright <= rhs */
@@ -7125,6 +7124,10 @@ SCIP_RETCODE generateCutLTI(
    /* if activities exceed "opposite" infinity, huge bounds seem to be involved, for which the below method is not prepared */
    if( SCIPisInfinity(scip, leftminactivity)  || SCIPisInfinity(scip, -leftmaxactivity) ||
        SCIPisInfinity(scip, rightminactivity) || SCIPisInfinity(scip, -rightmaxactivity) )
+      return SCIP_OKAY;
+
+   /* if activity in reference point exceeds value for infinity, then the below method will also not work properly */
+   if( SCIPisInfinity(scip, REALABS(leftrefactivity)) || SCIPisInfinity(scip, REALABS(rightrefactivity)) )
       return SCIP_OKAY;
 
    /* if any of the factors is essentially fixed, give up and do usual method (numerically less sensitive, I hope) */
@@ -10720,7 +10723,6 @@ void propagateBoundsGetQuadActivity(
             quadactcontr[i].inf = bnd;
          }
       }
-
    }
 
    SCIPintervalSetBounds(&consdata->quadactivitybounds,
@@ -11237,14 +11239,14 @@ SCIP_RETCODE propagateBoundsCons(
                      /* in theory, rhs2 should not be empty here
                       * what we tried to do here is to remove the contribution of the k'th bilinear term (=bilinbounds) to [minquadactivity,maxquadactivity] from rhs2
                       * however, quadactivity is computed differently (as x*(a1*y1+...+an*yn)) than bilinbounds (a*ak*yk) and since interval arithmetics do overestimation,
-                      * it can happen than bilinbounds is actually slightly larger than quadactivity, which results in rhs2 being (slightly) empty
+                      * it can happen that bilinbounds is actually slightly larger than quadactivity, which results in rhs2 being (slightly) empty
                       * a proper fix could be to compute the quadactivity also as x*a1*y1+...+x*an*yn in propagateBoundsGetQuadAcitivity if sqrcoef=0, but due to taking
                       * also infinite bounds into account, this complicates the code even further
                       * instead, I'll just work around this by turning an empty rhs2 into a small non-empty one
                       */
                      if( SCIPintervalIsEmpty(intervalinfty, rhs2) )
                      {
-                        assert(SCIPisRelEQ(scip, rhs2.inf, rhs2.sup));
+                        assert(SCIPisSumRelEQ(scip, rhs2.inf, rhs2.sup));
                         SCIPswapReals(&rhs2.inf, &rhs2.sup);
                      }
 
@@ -11346,7 +11348,6 @@ SCIP_RETCODE propagateBounds(
             }
          }
       }
-
    }
    while( success && *result != SCIP_CUTOFF && roundnr < maxproprounds );
 
@@ -14001,7 +14002,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          consEnfolpQuadratic, consEnfopsQuadratic, consCheckQuadratic, consLockQuadratic,
          conshdlrdata) );
    assert(conshdlr != NULL);
-
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyQuadratic, consCopyQuadratic) );
