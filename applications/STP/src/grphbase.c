@@ -1055,7 +1055,6 @@ SCIP_RETCODE graph_pc_getSap(
             max = prize[k];
       }
 
-   printf("prizesum %f  max %f\n", prizesum, max);
    prizesum -= max;
    *offset -= prizesum;
 
