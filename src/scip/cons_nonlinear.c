@@ -4473,9 +4473,9 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
          SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1], p3val,
                &alpha, &beta, &gamma_, &delta) );
 
-         assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-         assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-         assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
+         assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+         assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+         assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
 
          /* if hyperplane through p1,p2,p3 does not overestimate f(p4), then it must be the other variant */
          if( alpha * p4[0] + beta * p4[1] + gamma_ * p4val > delta )
@@ -4487,9 +4487,9 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
             SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1],
                   p4val, &alpha, &beta, &gamma_, &delta) );
 
-            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
 
             /* if hyperplane through p1,p3,p4 does not overestimate f(p2), then it must be the other variant */
             if( alpha * p2[0] + beta * p2[1] + gamma_ * p2val > delta )
@@ -4501,9 +4501,9 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
          SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
 
-         assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-         assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-         assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+         assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+         assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+         assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
 
          /* if hyperplane through p1,p3,p4 does not overestimate f(p2), then it must be the other variant */
          if( alpha * p2[0] + beta * p2[1] + gamma_ * p2val > delta )
@@ -4515,9 +4515,9 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
             SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1],
                   p3val, &alpha, &beta, &gamma_, &delta) );
 
-            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
+            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
 
             /* if hyperplane through p1,p2,p3 does not overestimate f(p4), then it must be the other variant */
             if( alpha * p4[0] + beta * p4[1] + gamma_ * p4val > delta )
@@ -4533,10 +4533,10 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
                   p4val, &alpha, &beta, &gamma_, &delta) );
 
             /* hyperplane should be above (p3,f(p3)) and other points should lie on hyperplane */
-            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-            assert(SCIPisRelLE(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+            assert(SCIPisRelLE(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
 
             if( (!SCIPisZero(scip, alpha) && SCIPisZero(scip, alpha/gamma_)) ||
                ( !SCIPisZero(scip, beta)  && SCIPisZero(scip, beta /gamma_)) )
@@ -4546,10 +4546,10 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
                      p4val, &alpha, &beta, &gamma_, &delta) );
 
                /* hyperplane should be above (p1,f(p1)) and other points should lie on hyperplane */
-               assert(SCIPisRelLE(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+               assert(SCIPisRelLE(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+               assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+               assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+               assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
             }
          }
          else
@@ -4558,10 +4558,10 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
                   p4val, &alpha, &beta, &gamma_, &delta) );
 
             /* hyperplane should be above (p1,f(p1)) and other points should lie on hyperplane */
-            assert(SCIPisRelLE(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+            assert(SCIPisRelLE(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
 
             if( (!SCIPisZero(scip, alpha) && SCIPisZero(scip, alpha/gamma_)) ||
                ( !SCIPisZero(scip, beta)  && SCIPisZero(scip, beta /gamma_)) )
@@ -4571,10 +4571,10 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
                      p4val, &alpha, &beta, &gamma_, &delta) );
 
                /* hyperplane should be above (p3,f(p3)) and other points should lie on hyperplane */
-               assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-               assert(SCIPisRelLE(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+               assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+               assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+               assert(SCIPisRelLE(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+               assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
             }
          }
       }
@@ -9966,15 +9966,23 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    *gamma_ = -a2*b1 + a1*b2 + a2*c1 - b2*c1 - a1*c2 + b1*c2;
    *delta  = -a3*b2*c1 + a2*b3*c1 + a3*b1*c2 - a1*b3*c2 - a2*b1*c3 + a1*b2*c3;
 
+   /* SCIPdebugMsg(scip, "alpha: %g beta: %g gamma: %g delta: %g\n", *alpha, *beta, *gamma_, *delta); */
+
    /* check if hyperplane contains all three points (necessary because of numerical troubles) */
-   if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 + *gamma_ * a3, *delta) ||
-      !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 + *gamma_ * b3, *delta) ||
-      !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 + *gamma_ * c3, *delta) )
+   if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3) ||
+      !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3) ||
+      !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3) )
    {
       SCIP_Real m[9];
       SCIP_Real rhs[3];
       SCIP_Real x[3];
       SCIP_Bool success;
+
+      /*
+      SCIPdebugMsg(scip, "a = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", a1, a2, a3, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3, SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3));
+      SCIPdebugMsg(scip, "b = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", b1, b2, b3, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3, SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3));
+      SCIPdebugMsg(scip, "c = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", c1, c2, c3, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3, SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3));
+      */
 
       /* initialize matrix column-wise */
       m[0] = a1;
@@ -9995,6 +10003,7 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
 
       /* solve the linear problem */
       SCIP_CALL( SCIPsolveLinearProb(3, m, rhs, x, &success) );
+      assert(success);
 
       *delta  = rhs[0];
       *alpha  = x[0];
@@ -10004,9 +10013,9 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
       /* set all coefficients to zero if one of the points is not contained in the hyperplane; this ensures that we do
        * not add a cut to SCIP and that all assertions are trivially fulfilled
        */
-      if( !success || !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 + *gamma_ * a3, *delta) ||
-         !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 + *gamma_ * b3, *delta) ||
-         !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 + *gamma_ * c3, *delta) )
+      if( !success || !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3) ||
+         !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3) ||
+         !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3) ) /*lint !e774*/
       {
          SCIPdebugMsg(scip, "could not resolve numerical difficulties\n");
          *delta  = 0.0;
