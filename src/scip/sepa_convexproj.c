@@ -577,7 +577,6 @@ SCIP_RETCODE separateCuts(
          nlpunstable = TRUE;
    }
 
-
    /* if nlp is detected to be unstable, don't try to separate again */
    if( nlpunstable )
    {
@@ -759,7 +758,6 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolConvexproj)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
 {  /*lint --e{715}*/
-
    SCIP_Real maxviolation;
    SCIP_SOL* lpsol;
    SCIP_SEPADATA* sepadata;

@@ -2169,6 +2169,9 @@ SCIP_RETCODE postprocessCut(
       return SCIP_OKAY;
    }
 
+   if( *nnz == 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( cutTightenCoefs(scip, cutislocal, cutcoefs, QUAD(&rhs), cutinds, nnz, &redundant) );
 
    if( redundant )
@@ -2231,6 +2234,9 @@ SCIP_RETCODE postprocessCutQuad(
       /* right hand side was changed to infinity -> cut is redundant */
       return SCIP_OKAY;
    }
+
+   if( *nnz == 0 )
+      return SCIP_OKAY;
 
    SCIP_CALL( cutTightenCoefsQuad(scip, cutislocal, cutcoefs, QUAD(cutrhs), cutinds, nnz, &redundant) );
    if( redundant )
@@ -4380,20 +4386,23 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
                intf0 = intscalerhs - floor(intscalerhs);
             }
 
-            if( ! SCIPisEQ(scip, delta, 1.0) )
+            if( intf0 >= minfrac && intf0 <= maxfrac )
             {
-               deltacands[ndeltacands++] = delta;
-            }
-
-            if( intf0 < maxfrac )
-            {
-               SCIP_Real delta2;
-
-               delta2 = 1.0 / (intscale * floor(maxfrac / intf0));
-
-               if( ! SCIPisEQ(scip, delta, delta2) && ! SCIPisEQ(scip, delta2, 1.0) )
+               if( ! SCIPisEQ(scip, delta, 1.0) )
                {
-                  deltacands[ndeltacands++] = delta2;
+                  deltacands[ndeltacands++] = delta;
+               }
+
+               if( intf0 < maxfrac )
+               {
+                  SCIP_Real delta2;
+
+                  delta2 = 1.0 / (intscale * floor(maxfrac / intf0));
+
+                  if( ! SCIPisEQ(scip, delta, delta2) && ! SCIPisEQ(scip, delta2, 1.0) )
+                  {
+                     deltacands[ndeltacands++] = delta2;
+                  }
                }
             }
          }
@@ -5068,7 +5077,6 @@ SCIP_RETCODE getClosestVlb(
             *closestvlbidx = i;
          }
          assert(*closestvlbidx >= 0);
-
       }
    }
 
@@ -5152,7 +5160,6 @@ SCIP_RETCODE getClosestVub(
             continue;
 
          assert(SCIPvarIsBinary(vubvars[i]));
-
 
          /* checks if current variable upper bound u~_i * x_i + d_i meets the following criteria
           * (let a_j  = coefficient of y_j in current row,
@@ -6047,7 +6054,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
          (*solval) += profits[j];
       solitemsweight += weights[j];
    }
-
 
    /* continue to put items into the knapsack if they entirely fit */
    for( ; j < nitems; j++ )

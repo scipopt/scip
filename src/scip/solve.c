@@ -195,7 +195,6 @@ SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_Bool*            unbounded           /**< pointer to store whether an unbounded ray was found in the LP */
    )
 {  /*lint --e{715}*/
-
    SCIP_RESULT result;
    SCIP_Longint oldnbestsolsfound;
    SCIP_Real lowerbound;
@@ -918,7 +917,6 @@ SCIP_RETCODE updatePseudocost(
                      }
                      else
                         delta = SCIP_INVALID;
-
                   }
                   else
                   {
@@ -1135,7 +1133,6 @@ SCIP_RETCODE SCIPinitConssLP(
       /* the current node will be cut off; we clear the sepastore */
       SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );
    }
-
 
    /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);
@@ -3053,7 +3050,6 @@ SCIP_RETCODE solveNodeLP(
          *solverelaxagain = TRUE;
          markRelaxsUnsolved(set, relaxation);
       }
-
    }
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
@@ -3263,7 +3259,6 @@ SCIP_RETCODE enforceConstraints(
    *branched = FALSE;
    /**@todo avoid checking the same pseudosolution twice */
 
-
    /* enforce (best) relaxation solution if the LP has a worse objective value */
    enforcerelaxsol = SCIPrelaxationIsSolValid(relaxation) && SCIPrelaxationIsLpIncludedForSol(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetSolObj(relaxation), SCIPlpGetObjval(lp, set, prob)));
@@ -3350,7 +3345,6 @@ SCIP_RETCODE enforceConstraints(
       }
       else if( SCIPtreeHasFocusNodeLP(tree) )
       {
-
          SCIPsetDebugMsg(set, "enforce LP solution with value %g\n", SCIPlpGetObjval(lp, set, prob));
 
          assert(lp->flushed);
@@ -3821,7 +3815,6 @@ SCIP_RETCODE propAndSolve(
    *relaxcalled = FALSE;
    if( solverelax && !(*cutoff) )
    {
-
       /* clear the storage of external branching candidates */
       SCIPbranchcandClearExternCands(branchcand);
 
@@ -4160,7 +4153,6 @@ SCIP_RETCODE solveNode(
          /* time or solution limit was hit and we already created a dummy child node to terminate fast */
          if( *stopped )
             return SCIP_OKAY;
-
       }
       fullseparation = FALSE;
 
@@ -4210,7 +4202,6 @@ SCIP_RETCODE solveNode(
 
       if( pricingaborted && !(*cutoff) && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
       {
-
          SCIPtreeSetFocusNodeLP(tree, FALSE);
 
          /* if we just ran into the time limit this is not really a numerical trouble;
@@ -4688,7 +4679,6 @@ SCIP_RETCODE addCurrentSolution(
 
       /* stop clock for relaxation solutions */
       SCIPclockStop(stat->relaxsoltime, set);
-
    }
    else if( SCIPtreeHasFocusNodeLP(tree) )
    {
@@ -4996,7 +4986,6 @@ SCIP_RETCODE SCIPsolveCIP(
 
                /* update the cutoff pointer if the new solution made the cutoff bound equal to the lower bound */
                SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, &cutoff) );
-
 
                /* increment number of feasible leaf nodes */
                stat->nfeasleaves++;

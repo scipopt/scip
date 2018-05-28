@@ -94,7 +94,6 @@ SCIP_RETCODE smpsinputCreate(
    (*smpsi)->f0          = NULL;
    (*smpsi)->f1          = NULL;
 
-
    return SCIP_OKAY;
 }
 
@@ -388,7 +387,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
             {
                SCIPinfoMessage(scip, NULL, "deterministic equivalent problem ");
             }
-
 
             SCIPinfoMessage(scip, NULL,
                "has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",

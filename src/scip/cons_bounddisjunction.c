@@ -2806,7 +2806,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
 static
 SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

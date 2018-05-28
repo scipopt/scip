@@ -145,7 +145,6 @@ SCIP_RETCODE compensateVarLock(
    if( !singleton )
       return SCIP_OKAY;
 
-
    /* we perform the following transformations afterwards:
     *
     * lhs <= a1 x1 + a2 x2 + ... an xn <= rhs

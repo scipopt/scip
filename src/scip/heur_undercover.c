@@ -198,7 +198,6 @@ SCIP_Bool termIsConstant(
       return SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    else
       return SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-
 }
 
 
@@ -1636,7 +1635,6 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_CALL( SCIPsetIntParam(coveringscip, "display/verblevel", 0) );
 #endif
 
-
    /* solve covering problem */
    retcode = SCIPsolve(coveringscip);
 
@@ -1758,7 +1756,6 @@ SCIP_RETCODE computeFixingOrder(
          bestscore = MAX(bestscore, scores[i]);
       else
          bestscore = MIN(bestscore, scores[i]);
-
    }
 
    /* put integers to the front */

@@ -775,7 +775,6 @@ SCIP_DECL_HEURINIT(heurInitRens)
 static
 SCIP_DECL_HEUREXEC(heurExecRens)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
 

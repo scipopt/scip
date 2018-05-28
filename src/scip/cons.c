@@ -2610,7 +2610,6 @@ SCIP_RETCODE SCIPconshdlrInitpre(
 
       for( c = 0; c < conshdlr->nconss; ++c )
       {
-
          /**@todo should only active constraints be added to the initconss array? at least cons->active is asserted in
           *       conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c])
           */
@@ -7047,7 +7046,6 @@ SCIP_RETCODE SCIPconsUnmarkPropagate(
    }
 
    return SCIP_OKAY;
-
 }
 
 /** adds given value to age of constraint, but age can never become negative;
@@ -7255,7 +7253,7 @@ SCIP_RETCODE SCIPconsAddLocks(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
    assert(cons->nlockspos[locktype] >= 0);
    assert(cons->nlocksneg[locktype] >= 0);
    assert(-2 <= nlockspos && nlockspos <= 2);
@@ -8448,7 +8446,7 @@ SCIP_Bool SCIPconsIsLockedTypePos(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return (cons->nlockspos[locktype] > 0);
 }
@@ -8460,7 +8458,7 @@ SCIP_Bool SCIPconsIsLockedTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return (cons->nlocksneg[locktype] > 0);
 }
@@ -8472,7 +8470,7 @@ SCIP_Bool SCIPconsIsLockedType(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return (cons->nlockspos[locktype] > 0 || cons->nlocksneg[locktype] > 0);
 }
@@ -8484,7 +8482,7 @@ int SCIPconsGetNLocksTypePos(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return cons->nlockspos[locktype];
 }
@@ -8496,7 +8494,7 @@ int SCIPconsGetNLocksTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return cons->nlocksneg[locktype];
 }

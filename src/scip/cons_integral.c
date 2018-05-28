@@ -312,7 +312,6 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    }
 
    return SCIP_OKAY;
-
 }
 
 /*

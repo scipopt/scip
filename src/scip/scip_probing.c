@@ -1199,8 +1199,8 @@ SCIP_RETCODE SCIPgetDiveBoundChanges(
    {
       SCIP_CALL( SCIPconshdlrGetDiveBoundChanges(scip->set->conshdlrs_enfo[i], scip->set, diveset, sol,
             success, infeasible) );
-
    }
+
 #ifndef NDEBUG
    /* check if the constraint handler correctly assigned values to the dive set */
    if( *success )

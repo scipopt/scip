@@ -1802,7 +1802,6 @@ SCIP_RETCODE propdataInit(
    else
       propdata->addedvars = NULL;
 
-
    return SCIP_OKAY;
 }
 
@@ -3464,7 +3463,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
 static
 SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 {  /*lint --e{715}*/
-
    SCIP_PROPDATA* propdata;
    SCIP_VAR** vars;
    SCIP_Real cutoffbound;
@@ -3683,7 +3681,6 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 {
    SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
-
 
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );

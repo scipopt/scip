@@ -548,7 +548,6 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
    int                    concsolverid;
    SCIP_STATUS            solverstatus;
 
-
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
    concsolverid = SCIPconcsolverGetIdx(concsolver);

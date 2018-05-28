@@ -4317,7 +4317,6 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
             retcode = SCIPlpiStrongbranchFrac(lp->lpi, col->lpipos, col->primsol, itlim, down == NULL ? NULL : &sbdown, up == NULL ? NULL :  &sbup, &sbdownvalid, &sbupvalid, &iter);
          }
 
-
          /* check return code for errors */
          if( retcode == SCIP_LPERROR )
          {
@@ -4969,7 +4968,6 @@ SCIP_RETCODE rowScale(
             c--;
             oldlen = row->len;
          }
-
       }
       else
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
@@ -12817,7 +12815,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
                   }
-
                }
 
                assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
@@ -13271,7 +13268,6 @@ void getObjvalDeltaObj(
          else
             (*deltaval) = -lb * oldobj;
       }
-
    }
    else if( SCIPsetIsNegative(set, oldobj) )
    {
@@ -13692,7 +13688,6 @@ SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
 
       /* update the root pseudo objective values */
       lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
-
    }
 
    return SCIP_OKAY;
@@ -14666,7 +14661,6 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_COL** lpicols;
    SCIP_ROW** lpirows;
    SCIP_Real* dualfarkas;
-   SCIP_Real* dualsol;
    SCIP_Real* farkascoefs;
    SCIP_Real farkaslhs;
    SCIP_Real maxactivity;
@@ -14700,7 +14694,6 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
 
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, lp->nlpirows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsol, lp->nlpirows) );
 
    if( checkfarkas )
    {
@@ -14710,7 +14703,6 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
 
    /* get dual Farkas infeasibility proof */
    SCIP_CALL( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
-   SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, NULL, dualsol, NULL, NULL) );
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -14723,7 +14715,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    {
       SCIPsetDebugMsg(set, " row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);
       lpirows[r]->dualfarkas = dualfarkas[r];
-      lpirows[r]->dualsol = dualsol[r];
+      lpirows[r]->dualsol = SCIP_INVALID;
       lpirows[r]->activity = 0.0;
       lpirows[r]->validactivitylp = -1L;
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
@@ -14826,7 +14818,6 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    if( checkfarkas )
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
-   SCIPsetFreeBufferArray(set, &dualsol);
    SCIPsetFreeBufferArray(set, &dualfarkas);
 
    return SCIP_OKAY;
