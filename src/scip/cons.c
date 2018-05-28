@@ -7253,7 +7253,7 @@ SCIP_RETCODE SCIPconsAddLocks(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
    assert(cons->nlockspos[locktype] >= 0);
    assert(cons->nlocksneg[locktype] >= 0);
    assert(-2 <= nlockspos && nlockspos <= 2);
@@ -8446,7 +8446,7 @@ SCIP_Bool SCIPconsIsLockedTypePos(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return (cons->nlockspos[locktype] > 0);
 }
@@ -8458,7 +8458,7 @@ SCIP_Bool SCIPconsIsLockedTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return (cons->nlocksneg[locktype] > 0);
 }
@@ -8470,7 +8470,7 @@ SCIP_Bool SCIPconsIsLockedType(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return (cons->nlockspos[locktype] > 0 || cons->nlocksneg[locktype] > 0);
 }
@@ -8482,7 +8482,7 @@ int SCIPconsGetNLocksTypePos(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return cons->nlockspos[locktype];
 }
@@ -8494,7 +8494,7 @@ int SCIPconsGetNLocksTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
 
    return cons->nlocksneg[locktype];
 }
