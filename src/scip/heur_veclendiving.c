@@ -195,7 +195,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreVeclendiving)
       *score *= 0.001;
 
    return SCIP_OKAY;
-
 }
 
 /*

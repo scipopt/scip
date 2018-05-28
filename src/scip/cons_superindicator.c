@@ -1056,7 +1056,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
    SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
 #endif
 
-
    /* check all the useful constraint */
    for( c = 0; c < nusefulconss && *result != SCIP_CUTOFF; ++c )
    {
@@ -1220,7 +1219,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
       else if( *result == SCIP_FEASIBLE || *result == SCIP_DIDNOTRUN )
       {
          SCIP_CALL( consdataCheckSuperindicator(scip, consdata, NULL, TRUE, FALSE, FALSE, &locresult) );
-
       }
 
       /* evaluate result value */

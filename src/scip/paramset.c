@@ -3875,7 +3875,6 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
                }
             }
          }
-
       }
       break;
    case SCIP_PARAMEMPHASIS_PHASEPROOF:

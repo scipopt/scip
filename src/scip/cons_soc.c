@@ -2887,7 +2887,6 @@ SCIP_RETCODE disaggregate(
     */
    if( !SCIPisZero(scip, consdata->constant) )
    {
-
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%s", SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateVar(scip, &disvars[ndisvars], name, 0.0, SCIPinfinity(scip), 0.0,
             SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
@@ -3223,7 +3222,6 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
       }
    }
-
 
    quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
    assert( quadterms != NULL );
@@ -3642,7 +3640,6 @@ GENERALUPG:
       goto cleanup;
 
    assert(rhsissoc != lhsissoc);
-
 
    if( lhsissoc )
    {

@@ -1001,7 +1001,6 @@ SCIP_RETCODE SCIPnodeselSelect(
    SCIP_NODE**           selnode             /**< pointer to store node to be processed next */
    )
 {
-
    assert(nodesel != NULL);
    assert(nodesel->nodeselselect != NULL);
    assert(set != NULL);

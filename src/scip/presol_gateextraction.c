@@ -1184,7 +1184,6 @@ SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
          assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons));
          SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons) );
 
-
          /* remove hashdata entry from hashtable */
          SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[c]) );
 

@@ -7535,7 +7535,6 @@ SCIP_RETCODE findAggregation(
    SCIPfreeBufferArray(scip, &(varcount[0]));
    SCIPfreeBufferArray(scip, &allvars);
 
-
    return SCIP_OKAY;
 }
 

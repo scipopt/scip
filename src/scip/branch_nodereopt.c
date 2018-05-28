@@ -86,7 +86,6 @@ SCIP_RETCODE Exec(
    assert(reoptnode != NULL);
    reopttype = (SCIP_REOPTTYPE)SCIPreoptnodeGetType(reoptnode);
 
-
    /* The current node is equal to the root and dual reductions were performed. Since the root has a special role
     * within the reoptimiziation we have to split the root node into several nodes and move all stored child nodes to
     * the one representing the root node including all dual reductions as before.

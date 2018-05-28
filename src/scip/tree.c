@@ -4141,7 +4141,6 @@ SCIP_RETCODE focusnodeToSubroot(
    assert(lp->flushed);
    assert(lp->solved);
 
-
    /* create subroot data */
    SCIP_CALL( subrootCreate(&subroot, blkmem, set, transprob, tree, lp) );
 
@@ -5670,7 +5669,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
       if( upchild != NULL )
          *upchild = node;
    }
-
 
    return SCIP_OKAY;
 }

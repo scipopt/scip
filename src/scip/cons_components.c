@@ -2555,6 +2555,5 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          "factor to increase the feasibility tolerance of the main SCIP in all sub-SCIPs, default value 1.0",
          &conshdlrdata->feastolfactor, TRUE, DEFAULT_FEASTOLFACTOR, 0.0, 1000000.0, NULL, NULL) );
 
-
    return SCIP_OKAY;
 }

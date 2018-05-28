@@ -98,7 +98,6 @@ SCIP_DECL_PARAMCHGD(paramChgdBenderscutintConstant)
    for( i = 0; i < benderscutdata->nsubproblems; i++ )
       benderscutdata->subprobconstant[i] = benderscutdata->cutconstant;
 
-
    return SCIP_OKAY;
 }
 
@@ -153,7 +152,6 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    int i;
    SCIP* subproblem;
    SCIP_SOL* subprobsol;
-
 
 #ifndef NDEBUG
    SCIP_Real verifyobj = 0;
@@ -238,7 +236,6 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    {
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
    }
-
 
 #ifndef NDEBUG
    if( addcut )

@@ -343,7 +343,6 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       maxdivedepth = (int)(heurdata->depthfac * nvars);
    maxdivedepth = MIN(maxdivedepth, 10*maxdepth);
 
-
    *result = SCIP_DIDNOTFIND;
 
    /* get temporary memory for remembering the current soft roundings */

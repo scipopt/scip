@@ -1347,7 +1347,6 @@ SCIP_RETCODE readExpression(
       return SCIP_OKAY;
    }
 
-
    /* single argument operands */
    if( strcmp(exprname, "negate") == 0 ||
       strcmp(exprname, "abs") == 0 ||
@@ -1849,7 +1848,6 @@ SCIP_RETCODE readExpression(
       SCIPfreeBufferArray(scip, &quadelems);
       SCIPfreeBufferArray(scip, &quadvarsidxs);
    }
-
 
    SCIPerrorMessage("Expression operand <%s> in nonlinear expression not supported by SCIP so far.\n", exprname);
    *doingfine = FALSE;
@@ -2525,7 +2523,6 @@ SCIP_DECL_READERREAD(readerReadOsil)
    SCIP_CALL_TERMINATE( retcode, readSOScons(scip, data, vars, nvars, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
-
 
    *result = SCIP_SUCCESS;
    retcode = SCIP_OKAY;

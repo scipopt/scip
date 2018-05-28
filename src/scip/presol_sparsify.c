@@ -835,7 +835,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          assert(varpairs != NULL);
 
-
          insert = TRUE;
 
          /* check if this pair is already contained in the hash table;

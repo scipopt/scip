@@ -397,7 +397,6 @@ SCIP_RETCODE applyCliqueFixings(
             {
                if( probingdepthofonefix > 0 )
                {
-
                   SCIP_CALL( SCIPbacktrackProbing(scip, probingdepthofonefix - 1) );
                   probingdepthofonefix = 0;
                   ++nbacktracks;
@@ -444,7 +443,6 @@ SCIP_RETCODE applyCliqueFixings(
                            SCIP_CALL( SCIPgetNegatedVar(scip, onefixvars[i], &onefixvars[i]) );
                         }
                      }
-
 
                      /* create conflict constraint */
                      SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, *nonefixvars, onefixvars,
@@ -821,7 +819,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       }
    }
    /*************************** END Probing LP Solving ***************************/
-
 
    /*************************** Create Conflict ***************************/
    if( enabledconflicts && SCIPallColsInLP(scip) &&

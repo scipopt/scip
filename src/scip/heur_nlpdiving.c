@@ -1110,12 +1110,12 @@ SCIP_RETCODE chooseDoubleVar(
       nlpsolceil =  SCIPfeasCeil(scip, nlpsol);
       floorval = MIN(lpsolfloor,nlpsolfloor);
       ceilval =  MAX(lpsolceil,nlpsolceil);
+
       /* if both values are in the same interval, find out which integer is (in sum) the closer one, this will be the
        * new bound. The minima and maxima are necessary since one or both values with be integer
        */
       if( SCIPvarIsBinary(var) || ceilval-floorval < 1.5 )
       {
-
          frac = 0.33*(lpsol-floorval) + 0.67*(nlpsol-floorval);
          if( frac < 0.5 )
          {
@@ -1383,9 +1383,7 @@ SCIP_RETCODE solveSubMIP(
    )
 {
    SCIP* subscip;
-
    SCIP_RETCODE retcode;
-
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
