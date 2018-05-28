@@ -47,7 +47,7 @@
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
 #define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
-#define STP_RED_MINBNDTERMS   500
+#define STP_RED_MINBNDTERMS   750
 #define STP_DABD_MAXDEGREE 5
 #define STP_DABD_MAXDNEDGES 10
 #define STP_DAEX_MAXDFSDEPTH 6
@@ -4034,10 +4034,8 @@ SCIP_RETCODE reduce_daPcMw(
       }
    }
 
-#if 0
    if( graph->stp_type == STP_MWCSP && graph->terms < STP_RED_MINBNDTERMS  )
       varyroot = FALSE;
-#endif
 
    /* change or mark roots? */
    if( varyroot || markroots )
