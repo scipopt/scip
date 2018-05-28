@@ -4380,20 +4380,23 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
                intf0 = intscalerhs - floor(intscalerhs);
             }
 
-            if( ! SCIPisEQ(scip, delta, 1.0) )
+            if( intf0 >= minfrac && intf0 <= maxfrac )
             {
-               deltacands[ndeltacands++] = delta;
-            }
-
-            if( intf0 < maxfrac )
-            {
-               SCIP_Real delta2;
-
-               delta2 = 1.0 / (intscale * floor(maxfrac / intf0));
-
-               if( ! SCIPisEQ(scip, delta, delta2) && ! SCIPisEQ(scip, delta2, 1.0) )
+               if( ! SCIPisEQ(scip, delta, 1.0) )
                {
-                  deltacands[ndeltacands++] = delta2;
+                  deltacands[ndeltacands++] = delta;
+               }
+
+               if( intf0 < maxfrac )
+               {
+                  SCIP_Real delta2;
+
+                  delta2 = 1.0 / (intscale * floor(maxfrac / intf0));
+
+                  if( ! SCIPisEQ(scip, delta, delta2) && ! SCIPisEQ(scip, delta2, 1.0) )
+                  {
+                     deltacands[ndeltacands++] = delta2;
+                  }
                }
             }
          }
