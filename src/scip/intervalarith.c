@@ -3898,7 +3898,6 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                   }
                }
             }
-
          }
          else if( REALABS(2.0 * ay * bx - axy * by) > 1e-9 )
          {

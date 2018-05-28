@@ -2826,7 +2826,6 @@ SCIP_RETCODE reformulate(
          }
 #endif
 
-
          switch( SCIPexprgraphGetNodeOperator(node) )
          {
          case SCIP_EXPR_VARIDX:
@@ -3001,7 +3000,6 @@ SCIP_RETCODE reformulate(
             assert(SCIPexprgraphGetNodeCurvature(node) & SCIP_EXPRCURV_CONVEX);
             ++i;
             break;
-
          }
 
          case SCIP_EXPR_INTPOWER:

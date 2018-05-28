@@ -60,3 +60,4 @@ interfaces/gams/gams
 interfaces/gams/test
 examples/*/doc/html
 applications/*/doc/html
+doc/inc/simpleinstance/output.log

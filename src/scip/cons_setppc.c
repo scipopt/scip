@@ -605,7 +605,6 @@ SCIP_RETCODE consdataCreate(
          (*consdata)->nvars = nvars;
       }
 
-
       if( SCIPisTransformed(scip) )
       {
          /* get transformed variables */
@@ -629,7 +628,6 @@ SCIP_RETCODE consdataCreate(
             SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
          }
       }
-
    }
    else
    {
@@ -1527,7 +1525,6 @@ SCIP_RETCODE dualPresolving(
    /* set result pointer to SCIP_SUCCESS, if variables could be fixed */
    if( *nfixedvars != noldfixed )
       *result = SCIP_SUCCESS;
-
 
    return SCIP_OKAY;
 }
@@ -5295,7 +5292,6 @@ SCIP_RETCODE preprocessCliques(
    SCIPfreeBufferArray(scip, &usefulvars);
    SCIPfreeBufferArray(scip, &usefulconss);
 
-
    /* perform all collected aggregations */
    if( !*cutoff && naggregations > 0 && !SCIPdoNotAggr(scip) )
    {
@@ -6759,7 +6755,6 @@ SCIP_RETCODE performVarDeletions(
    SCIP_CONSDATA* consdata;
    int i;
    int v;
-
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -8510,7 +8505,6 @@ SCIP_DECL_CONSDELVARS(consDelvarsSetppc)
 static
 SCIP_DECL_CONSPRINT(consPrintSetppc)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
@@ -8994,7 +8988,6 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
       SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadraticUpgdSetppc, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
 
-
    /* set partitioning constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/npseudobranches",
@@ -9142,7 +9135,6 @@ SCIP_RETCODE SCIPcreateConsBasicSetpack(
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
-
 }
 
 /** creates and captures a set covering constraint
@@ -9201,7 +9193,6 @@ SCIP_RETCODE SCIPcreateConsBasicSetcover(
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
-
 }
 
 /** adds coefficient in set partitioning / packing / covering constraint */

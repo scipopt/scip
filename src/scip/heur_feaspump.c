@@ -707,7 +707,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP* probingscip;         /* copied SCIP structure, used for round-and-propagate loop of feasibility pump 2.0 */
    SCIP_HASHMAP* varmapfw;    /* mapping of SCIP variables to sub-SCIP variables */
 
-
    SCIP_VAR** vars;
    SCIP_VAR** pseudocands;
    SCIP_VAR** tmppseudocands;
@@ -1062,7 +1061,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* check whether the variable is one of the most fractionals and label if so */
          if( SCIPisFeasPositive(scip, frac) )
             insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
-
       }
 
       if( heurdata->usefp20 )

@@ -327,7 +327,6 @@ SCIP_RETCODE SCIPreaderWrite(
 
          SCIPsetDebugMsg(set, "Writing %d constraints.\n", nconss);
 
-
          SCIP_CALL( SCIPsetAllocBufferArray(set, &conss, nconss) );
 
          /* copy the constraints */

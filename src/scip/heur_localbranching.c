@@ -487,7 +487,6 @@ SCIP_RETCODE setupAndSolveSubscipLocalbranching(
    SCIPdebugMsg(scip, "solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
       heurdata->curneighborhoodsize, nsubnodes);
 
-
    /* Errors in solving the subproblem should not kill the overall solving process
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */

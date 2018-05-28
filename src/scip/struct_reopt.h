@@ -106,7 +106,6 @@ struct SCIP_ReoptNode
 /* tree to store the current search tree */
 struct SCIP_ReoptTree
 {
-
    SCIP_REOPTNODE**      reoptnodes;              /**< array of SCIP_REOPTNODE */
    SCIP_QUEUE*           openids;                 /**< queue of open positions in the reoptnodes array */
    int                   nreoptnodes;             /**< number of saved nodes */

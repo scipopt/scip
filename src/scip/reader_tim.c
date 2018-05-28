@@ -269,7 +269,6 @@ SCIP_RETCODE createReaderdata(
       SCIP_CALL( SCIPhashmapCreate(&readerdata->stages[i]->consnametocons, SCIPblkmem(scip), hashmapsize) );
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -489,7 +488,7 @@ static
 SCIP_RETCODE timinputSetStageStartCons(
    TIMINPUT*             timi,               /**< tim input structure */
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           consname,            /**< name of the constraint that starts the stage */
+   const char*           consname,           /**< name of the constraint that starts the stage */
    int                   stagenum            /**< the stage number the constraint starts */
    )
 {

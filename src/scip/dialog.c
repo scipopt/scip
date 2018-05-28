@@ -511,7 +511,6 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
    /* the last character in the buffer must be a '\0' */
    dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
 
-
    /* skip leading spaces: find start of first word */
    while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
       dialoghdlr->bufferpos++;

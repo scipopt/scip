@@ -531,7 +531,6 @@ void addFracCounter(
                violrows[theviolrowpos] = violrows[*nviolfracrows - 1];
                violrows[*nviolfracrows - 1] = row;
 
-
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
                violrowpos[rowlppos] = *nviolfracrows - 1;
             }
@@ -549,7 +548,6 @@ void addFracCounter(
             {
                violrows[theviolrowpos] = violrows[*nviolfracrows];
                violrows[*nviolfracrows] = row;
-
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
                violrowpos[rowlppos] = *nviolfracrows;
@@ -1131,7 +1129,5 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitIntshifting) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolIntshifting) );
 
-
    return SCIP_OKAY;
 }
-

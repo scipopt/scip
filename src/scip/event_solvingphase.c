@@ -475,7 +475,6 @@ SCIP_RETCODE ensureDepthInfoArraySize(
       for( c = oldsize; c < newsize; ++c )
       {
          SCIP_CALL( createDepthinfo(scip, &(eventhdlrdata->depthinfos[c])) );
-
       }
 
       eventhdlrdata->maxdepth = newsize;
@@ -493,14 +492,12 @@ SCIP_RETCODE releaseNodeInformation(
    SCIP_NODE*            node                /**< node to be removed from the data structures of the event handler */
    )
 {
-
    assert(scip != NULL);
    assert(node != NULL);
    assert(eventhdlrdata != NULL);
 
    /* ensure the depth info data structure can hold this node */
    SCIP_CALL( ensureDepthInfoArraySize(scip, eventhdlrdata, node) );
-
 
    /* in case that selected nodes were cut off in between two calls to this method, build data structures from scratch again */
    if( SCIPgetNDelayedCutoffs(scip) > eventhdlrdata->lastndelayedcutoffs || eventhdlrdata->newbestsol
@@ -1025,11 +1022,9 @@ SCIP_RETCODE applySolvingPhase(
    /* determine current solving phase */
    determineSolvingPhase(scip, eventhdlrdata);
 
-
    /* nothing has changed */
    if( oldsolvingphase == eventhdlrdata->solvingphase )
       return SCIP_OKAY;
-
 
    /* check if the solving process should be interrupted when the current solution is optimal */
    if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && eventhdlrdata->transitionmethod == 'o' &&
@@ -1061,7 +1056,6 @@ SCIP_RETCODE applySolvingPhase(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving phase to phase %d.\n", eventhdlrdata->solvingphase);
 
    return SCIP_OKAY;
-
 }
 
 /** update the logarithmic regression */
@@ -1244,8 +1238,8 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingphase)
 static
 SCIP_DECL_EVENTINITSOL(eventInitsolSolvingphase)
 {  /*lint --e{715}*/
-
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+
    assert(scip != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    eventhdlrdata->depthinfos = NULL;
@@ -1323,13 +1317,11 @@ SCIP_RETCODE collectNondefaultParams(
             eventhdlrdata->nondefaultparamssize *= 2;
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &eventhdlrdata->nondefaultparams, \
                   eventhdlrdata->nnondefaultparams, eventhdlrdata->nondefaultparamssize) );
-
          }
 
          eventhdlrdata->nondefaultparams[eventhdlrdata->nnondefaultparams++] = param;
       }
    }
-
 
    return SCIP_OKAY;
 }
@@ -1416,7 +1408,6 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
    assert(eventtype & (EVENTHDLR_EVENT));
    assert(eventtype != SCIP_EVENTTYPE_NODEFOCUSED || SCIPeventGetNode(event) == SCIPgetCurrentNode(scip));
 
-
    /* update data structures depending on the event */
    SCIP_CALL( updateDataStructures(scip, eventhdlrdata, eventtype) );
 
@@ -1425,7 +1416,6 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
    {
       SCIP_CALL( applySolvingPhase(scip, eventhdlrdata) );
    }
-
 
    /* in test mode, we check every transition criterion */
    if( eventhdlrdata->testmode )

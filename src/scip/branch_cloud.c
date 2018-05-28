@@ -412,7 +412,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    SCIPdebugMsg(scip, "considered %d additional points in the cloud\n",counter);
 
-
    /* terminate the diving */
    SCIP_CALL( SCIPendDive(scip) );
 

@@ -444,7 +444,6 @@ SCIP_Bool checkCons(
    if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vbdvar)) && (!SCIPisFeasLE(scip, solval, consdata->rhs) || !SCIPisFeasGE(scip, solval, consdata->lhs)) )
       return FALSE;
 
-
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
@@ -2138,7 +2137,6 @@ SCIP_RETCODE preprocessConstraintPairs(
                   }
                }
             }
-
 
             /* lower bounds for consdata1->var */
             if ( ! SCIPisInfinity(scip, -consdata1->lhs) )
@@ -4636,6 +4634,7 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
 static
 SCIP_DECL_CONSGETVARS(consGetVarsVarbound)
 {  /*lint --e{715}*/
+   assert( success != NULL );
 
    if( varssize < 2 )
       (*success) = FALSE;

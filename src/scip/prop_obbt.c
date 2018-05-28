@@ -2537,8 +2537,6 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    conshdlr = SCIPfindConshdlr(scip, "quadratic");
    if( conshdlr != NULL )
    {
-
-      /*SCIPdebugMsg(scip, "cons_quadratic is there!\n");*/
       nconss = SCIPconshdlrGetNActiveConss(conshdlr);
       conss = SCIPconshdlrGetConss(conshdlr);
 
@@ -2788,7 +2786,6 @@ SCIP_RETCODE initBounds(
       nbilins = SCIPgetNAllBilinearTermsQuadratic(scip);
       bilinidx = 0;
       nbilinterms = 0;
-
 
       /* allocate memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &x, nbilins) );

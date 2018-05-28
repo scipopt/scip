@@ -805,7 +805,6 @@ void consdataChgWeight(
    weightdiff = newweight - oldweight;
    consdata->weights[item] = newweight;
 
-
    /* update weight sums for all and fixed variables */
    updateWeightSums(consdata, consdata->vars[item], weightdiff);
 
@@ -981,7 +980,6 @@ SCIP_RETCODE checkCons(
             SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", absviol);
          }
       }
-
    }
 
    return SCIP_OKAY;
@@ -1575,7 +1573,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    {
       tempsort[j] = profits[j]/((SCIP_Real) weights[j]);
       realweights[j] = (SCIP_Real)weights[j];
-
    }
 
    /* partially sort indices such that all elements that are larger than the break item appear first */
@@ -1961,7 +1958,6 @@ SCIP_RETCODE GUBsetCreate(
       /* already updated status of variable in GUB constraint if it exceeds the capacity of the knapsack */
       if( weights[i] > capacity )
          (*gubset)->gubconss[(*gubset)->gubconssidx[i]]->gubvarsstatus[(*gubset)->gubvarsidx[i]] = GUBVARSTATUS_CAPACITYEXCEEDED;
-
    }
 
    return SCIP_OKAY;
@@ -2985,7 +2981,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
 #endif
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
-
 
    /* to get the GUB lifting sequence, we first sort all variables in F, C2, and R
     * - F:      non-increasing x*_j and non-increasing a_j in case of equality
@@ -8208,7 +8203,6 @@ SCIP_RETCODE detectRedundantVars(
       int* clqpart;
       int cliquenum;
 
-
       sumfront = 0;
       maxactduetoclqfront = 0;
 
@@ -9198,7 +9192,6 @@ SCIP_RETCODE dualWeightsTightening(
          }
       }
    }
-
 
  TERMINATE:
    /* correct capacity */
@@ -11213,7 +11206,6 @@ SCIP_RETCODE greedyCliqueAlgorithm(
             compareweightidx--;
             ncliquevars --;
          }
-
       }
 
       SCIPfreeBufferArray(scip, &cliquevars);
@@ -12468,7 +12460,6 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
 
       /* unmark the constraint to be propagated */
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
-
    }
 
    /* adjust result code */
@@ -13274,7 +13265,6 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
          else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED ||
             (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && SCIPvarGetStatus(SCIPvarGetNegatedVar(var)) == SCIP_VARSTATUS_AGGREGATED) )
             consdata->merged = FALSE;
-
       }
       /*lint -fallthrough*/
    case SCIP_EVENTTYPE_IMPLADDED: /* further preprocessing might be possible due to additional implications */

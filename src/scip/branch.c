@@ -645,7 +645,6 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
          }
          branchcand->nprioexternimpls++;
 
-
          if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
          {
             if( insertpos != branchcand->nprioexternbins + branchcand->nprioexternints )
@@ -661,7 +660,6 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
             }
             branchcand->nprioexternints++;
             branchcand->nprioexternimpls--;
-
 
             if( vartype == SCIP_VARTYPE_BINARY )
             {

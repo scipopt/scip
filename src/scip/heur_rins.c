@@ -688,6 +688,5 @@ SCIP_RETCODE SCIPincludeHeurRins(
          "should uct node selection be used at the beginning of the search?",
          &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
 
-
    return SCIP_OKAY;
 }

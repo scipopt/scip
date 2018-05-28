@@ -265,6 +265,8 @@ SCIP_DECL_SEPAEXIT(sepaExitIntobj)
    /* release objective variable */
    if( sepadata->objvar != NULL )
    {
+      /* remove locks in createObjRow() */
+      SCIP_CALL( SCIPaddVarLocksType(scip, sepadata->objvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
       SCIP_CALL( SCIPreleaseVar(scip, &sepadata->objvar) );
    }
 
@@ -295,7 +297,6 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 {  /*lint --e{715}*/
-
    *result = SCIP_DIDNOTRUN;
 
    /* only call separator, if we are not close to terminating */
@@ -320,7 +321,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
 {  /*lint --e{715}*/
-
    *result = SCIP_DIDNOTRUN;
 
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );

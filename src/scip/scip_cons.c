@@ -1121,7 +1121,6 @@ SCIP_RETCODE SCIPparseCons(
    SCIP_CALL( SCIPconsParse(cons, scip->set, scip->messagehdlr, str,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
-
    return SCIP_OKAY;
 }
 

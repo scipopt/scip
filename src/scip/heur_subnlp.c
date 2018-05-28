@@ -1277,7 +1277,6 @@ SCIP_RETCODE solveSubNLP(
    /* set verbosity of NLP solver */
    SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
 
-
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT " and timelimit %g\n", itercontingent, timelimit);
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );

@@ -1094,7 +1094,6 @@ SCIP_RETCODE SCIPsolSetVal(
             }
 
             solStamp(sol, stat, tree, FALSE);
-
          }
          return SCIP_OKAY;
       }
@@ -1711,7 +1710,6 @@ SCIP_RETCODE SCIPsolCheck(
       }
 #endif
    }
-
 
    return SCIP_OKAY;
 }

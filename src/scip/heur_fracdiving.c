@@ -142,7 +142,6 @@ SCIP_DECL_HEUREXIT(heurExitFracdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 

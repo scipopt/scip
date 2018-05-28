@@ -1256,7 +1256,6 @@ SCIP_RETCODE checkArraySizesHeur(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
    {
@@ -2744,7 +2743,6 @@ SCIP_RETCODE checkArraySizesGLS(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
    {
@@ -2767,7 +2765,6 @@ SCIP_RETCODE checkArraySizesGLS(
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
-
 
    if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {

@@ -644,7 +644,6 @@ void SCIPsyncdataSetStatus(
     */
    if( syncdata->status < SCIP_STATUS_OPTIMAL )
    {
-
       if( status > syncdata->status || (status == syncdata->status && solverid < syncdata->winner) )
       {
          syncdata->status = status;

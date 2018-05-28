@@ -259,7 +259,6 @@ void confgraphAddBdchg(
    char depth[SCIP_MAXSTRLEN];
    int col;
 
-
    switch( SCIPbdchginfoGetChgtype(bdchginfo) )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
@@ -622,7 +621,6 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-
    assert(conflicthdlr != NULL);
    assert(set != NULL);
    assert(bdchginfos != NULL || nbdchginfos == 0);
@@ -1994,7 +1992,6 @@ SCIP_RETCODE conflictInsertConflictset(
       }
 
       /**@todo like in sepastore.c: calculate overlap between conflictsets -> large overlap reduces score */
-
    }
 
    /* insert conflictset into the sorted conflictsets array */
@@ -5123,7 +5120,6 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
    conflict->conflictset->conflicttype = conftype;
    conflict->conflictset->usescutoffbound = usescutoffbound;
 
-
    return SCIP_OKAY;
 }
 
@@ -5881,7 +5877,6 @@ SCIP_RETCODE addCand(
    /* calculate the increase in the proof's activity */
    proofactdelta = (newbound - oldbound)*proofcoef;
    assert(proofactdelta > 0.0);
-
 
    /* calculate score for undoing the bound change */
    score = calcBdchgScore(prooflhs, proofact, proofactdelta, proofcoef, depth, currentdepth, var, set);
@@ -7727,7 +7722,6 @@ SCIP_RETCODE conflictAnalyzeLP(
     */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &curvarlbs, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &curvarubs, nvars) );
-
 
    /* get current bounds and current positions in lb/ubchginfos arrays of variables */
    valid = TRUE;

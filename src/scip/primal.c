@@ -772,7 +772,6 @@ SCIP_RETCODE primalAddSol(
 
       SCIPsetDebugMsg(set, "original solution %p was successfully transferred to the transformed problem space\n",
          (void*)sol);
-
    }
 
    return SCIP_OKAY;
