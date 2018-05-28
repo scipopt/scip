@@ -2169,6 +2169,9 @@ SCIP_RETCODE postprocessCut(
       return SCIP_OKAY;
    }
 
+   if( *nnz == 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( cutTightenCoefs(scip, cutislocal, cutcoefs, QUAD(&rhs), cutinds, nnz, &redundant) );
 
    if( redundant )
@@ -2231,6 +2234,9 @@ SCIP_RETCODE postprocessCutQuad(
       /* right hand side was changed to infinity -> cut is redundant */
       return SCIP_OKAY;
    }
+
+   if( *nnz == 0 )
+      return SCIP_OKAY;
 
    SCIP_CALL( cutTightenCoefsQuad(scip, cutislocal, cutcoefs, QUAD(cutrhs), cutinds, nnz, &redundant) );
    if( redundant )
