@@ -16,24 +16,6 @@
 /**@file   benderscut_opt.c
  * @brief  Generates a standard Benders' decomposition optimality cut
  * @author Stephen J. Maher
- *
- * The classical Benders' decomposition optimality cuts arise from a feasible instance of the Benders' decomposition
- * subproblem. The optimality cuts are an underestimator of the subproblem objective function value. Auxiliary
- * variables, \f$\varphi\f$ are added to the master problem to compute the lower bound on the subproblem objective
- * fucntion value.
- *
- * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
- * \f[
- * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \geq 0\}
- * \f]
- * If the subproblem is feasible, and \f$z(\bar{x}) > \varphi\f$ (indicating that the current underestimators are not
- * optimal) then the Benders' decomposition optimality cut can be generated from the optimal dual solution of the
- * subproblem. Let \f$w\f$ be the vector corresponding to the optimal dual solution of the Benders' decomposition
- * subproblem. The resulting cut is:
- * \f[
- * \varphi \geq w^{T}(h - Hx)
- * \f]
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -417,7 +399,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
     * objective value of the subproblem */
-   SCIP_CALL( SCIPcheckBendersSubprobOptimality(masterprob, benders, sol, probnumber, &optimal) );
+   SCIP_CALL( SCIPcheckBendersSubproblemOptimality(masterprob, benders, sol, probnumber, &optimal) );
 
    if( optimal )
    {

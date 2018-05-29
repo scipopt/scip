@@ -146,7 +146,7 @@ SCIP_RETCODE constructValidSolution(
       {
          SCIP_Real objval;
 
-         objval = SCIPbendersGetSubprobObjval(benders[i], j);
+         objval = SCIPbendersGetSubproblemObjval(benders[i], j);
 
          if( SCIPvarGetStatus(auxiliaryvars[j]) == SCIP_VARSTATUS_FIXED
             && !SCIPisEQ(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]), objval) )
@@ -619,7 +619,7 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
             }
 
             /* stores the lower bound for the subproblem */
-            SCIPbendersUpdateSubprobLowerbound(benders[i], j, lowerbound);
+            SCIPbendersUpdateSubproblemLowerbound(benders[i], j, lowerbound);
          }
 
          if( (*result) == SCIP_CUTOFF )

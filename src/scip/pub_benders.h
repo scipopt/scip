@@ -174,7 +174,7 @@ SCIP_VAR** SCIPbendersGetAuxiliaryVars(
 
 /** stores the objective function value of the subproblem for use in cut generation */
 EXTERN
-void SCIPbendersSetSubprobObjval(
+void SCIPbendersSetSubproblemObjval(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Real             objval              /**< the objective function value for the subproblem */
@@ -182,7 +182,7 @@ void SCIPbendersSetSubprobObjval(
 
 /** returns the objective function value of the subproblem for use in cut generation */
 EXTERN
-SCIP_Real SCIPbendersGetSubprobObjval(
+SCIP_Real SCIPbendersGetSubproblemObjval(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
  *  constraints to the subproblems.
  */
 EXTERN
-void SCIPbendersSetSubprobIsConvex(
+void SCIPbendersSetSubproblemIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             isconvex            /**< flag to indicate whether the subproblem is convex */
@@ -241,14 +241,14 @@ void SCIPbendersSetSubprobIsConvex(
  *  This means that the dual solution can be used to generate cuts.
  */
 EXTERN
-SCIP_Bool SCIPbendersSubprobIsConvex(
+SCIP_Bool SCIPbendersSubproblemIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** returns the number of subproblems that are convex */
 extern
-int SCIPbendersGetNConvexSubprobs(
+int SCIPbendersGetNConvexSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
@@ -282,21 +282,21 @@ int SCIPbendersGetNTransferredCuts(
 /** updates the lower bound for the subproblem. If the lower bound is not greater than the previously stored lowerbound,
  * then no update occurs.
  */
-void SCIPbendersUpdateSubprobLowerbound(
+void SCIPbendersUpdateSubproblemLowerbound(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Real             lowerbound          /**< the lower bound */
    );
 
 /** returns the stored lower bound for the given subproblem */
-SCIP_Real SCIPbendersGetSubprobLowerbound(
+SCIP_Real SCIPbendersGetSubproblemLowerbound(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** returns whether the subproblem is enabled, i.e. the subproblem is still solved in the solving loop. */
 extern
-SCIP_Bool SCIPbendersSubprobIsEnabled(
+SCIP_Bool SCIPbendersSubproblemIsEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );

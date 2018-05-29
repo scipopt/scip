@@ -141,6 +141,8 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   ### Compilation ###
   ###################
 
+  make solchecker
+
   # build with soplex only if today we have some soplex runs scheduled
   BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}

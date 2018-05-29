@@ -704,10 +704,11 @@ if (UNIX)
     else ()
         set(timeoutcommand "timeout")
     endif (APPLE)
-    add_test(NAME signal-handling-sigterm-blend2
-            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -f ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/blend2.mps
+    configure_file(interactiveshell/signal-handling-sigterm.bat.in interactiveshell/signal-handling-sigterm.bat)
+    add_test(NAME signal-handling-sigterm
+            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -b interactiveshell/signal-handling-sigterm.bat
             )
-    set_tests_properties(signal-handling-sigterm-blend2
+    set_tests_properties(signal-handling-sigterm
                         PROPERTIES
                             DEPENDS scip-build
                             PASS_REGULAR_EXPRESSION "termination signal received"

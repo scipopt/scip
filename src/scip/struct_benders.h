@@ -69,12 +69,13 @@ struct SCIP_Benders
    SCIP_Bool             shareauxvars;       /**< should this Benders' share the highest priority Benders' auxiliary vars */
 
    /* additional Benders' decomposition parameters */
-   SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
-   SCIP_Bool             lnscheck;           /**< Should Benders' decomposition be used in LNS heuristics? */
-   int                   lnsmaxdepth;        /**< The maximum depth at which the LNS check is performed */
-   SCIP_Bool             cutsasconss;        /**< Should the transferred cuts be added as constraints? */
-   int                   mipcheckfreq;       /**< the frequency that the MIP subproblem is checked for feasibility, -1 for always.*/
-   SCIP_Real             subprobfrac;        /**< the fraction of subproblems that are solved in each iteration */
+   SCIP_Bool             transfercuts;       /**< should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
+   SCIP_Bool             lnscheck;           /**< should Benders' decomposition be used in LNS heuristics? */
+   int                   lnsmaxdepth;        /**< maximum depth at which the LNS check is performed */
+   SCIP_Bool             cutsasconss;        /**< should the transferred cuts be added as constraints? */
+   int                   mipcheckfreq;       /**< frequency at which the MIP subproblems are checked (-1: always) */
+   SCIP_Real             subprobfrac;        /**< fraction of subproblems that are solved in each iteration */
+   SCIP_Bool             updateauxvarbound;  /**< should the auxiliary variable lower bound be updated by solving the subproblem? */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -114,7 +115,7 @@ struct SCIP_Benders
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored
  *  and reset after the solving loop. */
-struct SCIP_SubprobParams
+struct SCIP_SubproblemParams
 {
    int cons_linear_propfreq;
    int lp_disablecutoff;
@@ -128,7 +129,7 @@ struct SCIP_SubprobParams
    SCIP_Bool misc_catchctrlc;
    SCIP_Bool misc_scaleobj;
 };
-typedef struct SCIP_SubprobParams SCIP_SUBPROBPARAMS;
+typedef struct SCIP_SubproblemParams SCIP_SUBPROBPARAMS;
 
 #ifdef __cplusplus
 }

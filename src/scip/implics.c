@@ -20,24 +20,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
 #include "scip/event.h"
-#include "scip/var.h"
 #include "scip/implics.h"
 #include "scip/misc.h"
+#include "scip/pub_implics.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/debug.h"
-#include "scip/misc.h"
-
-#ifndef NDEBUG
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
 #include "scip/struct_implics.h"
-#endif
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/var.h"
 
 
 

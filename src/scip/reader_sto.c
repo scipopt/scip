@@ -238,7 +238,7 @@ SCIP* getScenarioScip(
 
 /** creates the subproblem array. This array will be the same size as the number of children */
 static
-SCIP_RETCODE createScenarioSubprobArray(
+SCIP_RETCODE createScenarioSubproblemArray(
    SCIP*                 scip,               /**< the SCIP data structure */
    STOSCENARIO*          scenario            /**< the scenario */
    )
@@ -269,7 +269,7 @@ void addScenarioSubproblem(
 
 /** returns the subproblem array for the scenario */
 static
-SCIP** getScenarioSubprobArray(
+SCIP** getScenarioSubproblemArray(
    STOSCENARIO*          scenario            /**< the scenario */
    )
 {
@@ -2154,7 +2154,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
       /* allocating memory for the subproblems */
       if( getScenarioNChildren(scenario) > 0 )
-         SCIP_CALL( createScenarioSubprobArray(scenarioscip, scenario) );
+         SCIP_CALL( createScenarioSubproblemArray(scenarioscip, scenario) );
    }
    else
       scenarioscip = scip;
@@ -2180,7 +2180,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
    /* adding the Benders' decomposition */
    if( decomp && getScenarioNChildren(scenario) > 0 )
-      SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubprobArray(scenario), getScenarioNChildren(scenario)) );
+      SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubproblemArray(scenario), getScenarioNChildren(scenario)) );
 
    /* computing the probability for the scenario */
    probability = computeScenarioProbability(scenarioscip, scenario);
@@ -2334,7 +2334,7 @@ SCIP_RETCODE buildDecompProblem(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-   SCIP_CALL( createScenarioSubprobArray(scip, readerdata->scenariotree) );
+   SCIP_CALL( createScenarioSubproblemArray(scip, readerdata->scenariotree) );
 
    /* activating the Benders' constraint handler. The two-phase method is activated by default. If the user desires not
     * to use the two-phase method, then the setting in cons_benderslp must be explicitly changed.
@@ -2353,7 +2353,7 @@ SCIP_RETCODE buildDecompProblem(
    }
 
    /* creating the Benders' decomposition */
-   SCIP_CALL( SCIPcreateBendersDefault(scip, getScenarioSubprobArray(readerdata->scenariotree),
+   SCIP_CALL( SCIPcreateBendersDefault(scip, getScenarioSubproblemArray(readerdata->scenariotree),
          getScenarioNChildren(readerdata->scenariotree)) );
 
    /* removing the variable and constraints that were included as part of the core file */
