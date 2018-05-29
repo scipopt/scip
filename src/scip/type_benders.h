@@ -157,7 +157,7 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  If the user defines a subproblem solving method, then in BENDERSCREATESUB, the user must specify whether the
  *  subproblem is convex. This is necessary because the dual solutions from convex problems can be used to generate cuts.
  *  The classical Benders' optimality and feasibility cuts require that the subproblems are convex. If the subproblem is
- *  convex, then the user must call SCIPbendersSetSubprobIsConvex()
+ *  convex, then the user must call SCIPbendersSetSubproblemIsConvex()
  *
  *  If the user does NOT implement a subproblem solving method, then the convexity of the problem is determined
  *  internally.
@@ -282,7 +282,7 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  * the master problem in the method.
  * Additionally, if there are any subproblems that are infeasibility and this can not be resolved, then the it is
  * possible to merge these subproblems into the master problem. The subproblem indices are given in the mergecands
- * array. The merging can be perform by a user defined function or by calling SCIPmergeBendersSubprobIntoMaster. If a
+ * array. The merging can be perform by a user defined function or by calling SCIPmergeBendersSubproblemIntoMaster. If a
  * subproblem was merged into the master problem, then the merged flag must be set to TRUE.
  *
  *  input:

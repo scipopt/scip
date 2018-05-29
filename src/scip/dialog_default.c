@@ -1678,7 +1678,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                {
                   SCIPdialogMessage(scip, NULL, "\n");
                   SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
-                  if( SCIPbendersSubprobIsConvex(benders[idx], subidx) )
+                  if( SCIPbendersSubproblemIsConvex(benders[idx], subidx) )
                      SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
                   else
                      SCIP_CALL( SCIPprintBestSol(subproblem, NULL, printzeros) );
