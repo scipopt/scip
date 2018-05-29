@@ -1961,7 +1961,7 @@ SCIP_RETCODE updateAuxiliaryVarLowerbound(
       }
 
       /* stores the lower bound for the subproblem */
-      SCIPbendersUpdateSubprobLowerbound(benders, i, lowerbound);
+      SCIPbendersUpdateSubproblemLowerbound(benders, i, lowerbound);
    }
 
    return SCIP_OKAY;
@@ -3149,7 +3149,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
       subproblem = SCIPbendersSubproblem(benders, probnumber);
 
       /* solving the subproblem */
-      if( solvecip && !SCIPbendersSubprobIsConvex(benders, probnumber) )
+      if( solvecip && !SCIPbendersSubproblemIsConvex(benders, probnumber) )
       {
          SCIP_CALL( SCIPbendersSolveSubproblemCIP(benders, probnumber, infeasible, type, solvecip) );
 
