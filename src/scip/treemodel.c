@@ -49,11 +49,11 @@ struct SCIP_Treemodel
    SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel rule? */
    char                 highrule;            /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
    char                 lowrule;             /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-   int                  height;              /**< estimated tree height at which we switch from using the low rule to the high rule */
+   unsigned int         height;              /**< estimated tree height at which we switch from using the low rule to the high rule */
    char                 filterhigh;          /**< should dominated candidates be filtered before using the high scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
    char                 filterlow;           /**< should dominated candidates be filtered before using the low scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
-   int                  maxfpiter;           /**< maximum number of fixed-point iterations when computing the ratio [ADVANCED] */
-   int                  maxsvtsheight;       /**< maximum height to compute the SVTS score exactly before approximating [ADVANCED] */
+   unsigned int         maxfpiter;           /**< maximum number of fixed-point iterations when computing the ratio [ADVANCED] */
+   unsigned int         maxsvtsheight;       /**< maximum height to compute the SVTS score exactly before approximating [ADVANCED] */
    char                 fallbackinf;         /**< which method should be used as a fallback if the tree size estimates are infinite? ('d'efault, 'r'atio) [ADVANCED] */
    char                 fallbacknoprim;      /**< which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio) [ADVANCED] */
    SCIP_Real            smallpscost;         /**< threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching [ADVANCED] */
@@ -273,7 +273,7 @@ void computeVarRatio(
    SCIP_Real ratio = 1.0;
    SCIP_Real newratio;
    SCIP_Real r;
-   int iters;
+   unsigned int iters;
 
    assert(SCIPisGE(scip, leftgain, 0.0));
    assert(SCIPisGE(scip, rightgain, leftgain));
@@ -819,7 +819,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
 )
 {
    SCIP_Real localabsgap;           /* The gap at the current node */
-   int bestcandheight;              /* The height of the best candidate according to SCIP */
+   unsigned int bestcandheight;     /* The height of the best candidate according to SCIP */
    char scoringfunction;            /* Scoring function to use (based on the estimated tree height) */
    char filtersetting;              /* Whether we should apply filtering of dominated variables */
    int c;                           /* Loop counter for branching candidates */
@@ -854,7 +854,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    /* Compute an estimate of the height of the current node using the bestcand variable */
    if( !SCIPisInfinity(scip, localabsgap) && SCIPisGT(scip, mingains[*bestcand], 0.0)
        && SCIPisLT(scip, localabsgap/mingains[*bestcand], 1.0 * INT_MAX))
-      bestcandheight = (int)(localabsgap/mingains[*bestcand]);
+      bestcandheight = (unsigned int)(localabsgap/mingains[*bestcand]);
    else
       bestcandheight = INT_MAX;
 
