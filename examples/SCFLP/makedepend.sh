@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This scripts generates the dependencies for the CAP example
+# This scripts generates the dependencies for the SCFLP example
 #
 
 OPTS=(opt dbg opt-gccold)

@@ -13,18 +13,24 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   probdata_cap.c
+/**@file   probdata_scflp.c
  * @brief  Problem data for Stochastic Capacitated Facility Location problem
  * @author Stephen J. Maher
  *
- * This file handles the main problem data used in that project. For more details see \ref CAP_PROBLEMDATA page.
+ * This file handles the main problem data used in that project. For more details see \ref SCFLP_PROBLEMDATA page.
  *
- * @page CAP_PROBLEMDATA Main problem data
+ * @page SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP - with and without Benders' decomposition"
  *
- * The problem data is accessible in all plugins. The function SCIPgetProbData() returns the pointer to that
- * structure. We use this data structure to store all the information of the cap problem. Since this structure is
- * not visible in the other plugins, we implemented setter and getter functions to access this data. The problem data
- * structure SCIP_ProbData is shown below.
+ * The probdata_scflp.c is used to store the global problem data and build the monolithic MIP and decomposed problems.
+ * First, the structure of the problem data is describe. This is followed by a description of how to solve the problem
+ * directly using SCIP or using Benders' decomposition.
+ *
+ * @section SCFLP_PROBLEMDATA The global problem data
+ *
+ * The problem data is accessible in all plugins. The function SCIPgetProbData() returns the pointer to that structure.
+ * We use this data structure to store all the information of the SCFLP. Since this structure is not visible in the
+ * other plugins, we implemented setter and getter functions to access this data. The problem data structure
+ * SCIP_ProbData is shown below.
  *
  * \code
  *  ** @brief Problem data which is accessible in all places
@@ -35,7 +41,7 @@
  *  *
  * struct SCIP_ProbData
  * {
- *    SCIP**                subproblems;        **< the Benders' decomposition subproblems *
+ *    SCIP**                subproblems;        **< the Benders' decomposition subproblems * SCIP_VAR**
  *    SCIP_VAR**            facilityvars;       **< all variables representing facilities *
  *    SCIP_VAR***           subfacilityvars;    **< duplicates of the facility variables in the subproblems *
  *    SCIP_VAR****          customervars;       **< all variables representing the satisfaction of demand per scenario *
@@ -53,29 +59,67 @@
  * };
  * \endcode
  *
- * The function SCIPprobdataCreate() manages the creation of the CAP instance in SCIP. There are two types of
- * formulations that can be produced in this example. The first is the compact formulation. The second is the
- * reformulated problem that decomposes the stochastic problem by scenarios. This alternative formulations is solved
- * using Benders' decomposition.
+ * The function SCIPprobdataCreate() manages the creation of the SCFLP instance in SCIP. There are two types of
+ * formulations that can be produced in this example. The first is the monolithic deterministic equivalent. The second
+ * is the reformulated problem that decomposes the stochastic problem by scenarios. This alternative formulations is
+ * solved using Benders' decomposition. Depending on the solution method, some members of SCIP_ProbData will be unused.
+ * For example, subproblems and subfacilityvars are only used when Benders' decomposition is applied to solve the SCFLP.
  *
- * Benders' decomposition is invoked by calling the interface function SCIPcreateBendersDefault(). The parameters for
- * this function are a SCIP instance for the master problem, an array of SCIP instances for the subproblems and an
- * array of weights (or probabilities) for the scenarios. The scenario subproblems must be created with variables that
- * correspond to a master problem equivalent. These corresponding variables must have the same variable name as the
- * counterpart in the master problem. This is important for creating the variable mapping between the master and
- * subproblems for setting up the subproblem and generating Benders' cuts. The master problem variable copies that are
- * added to the subproblems must have an objective coefficient of 0.0. This is inline with the classical application of
- * Benders' decomposition.
+ * The probdata_scflp.c also provide interface methods to the global problem data. A list of all interface methods can be
+ * found in probdata_scflp.h.
  *
+ * @section SCFLP_DETEQUIV Directly solving the deterministic equivalent using SCIP
  *
- * A list of all interface methods can be found in probdata_cap.h.
+ * Within probdata_scflp.c, both the monolithic determinstic equivalent or the decomposed problem can be built within
+ * SCIP. The monolithic deterministic equivalent involve a since SCIP instances that is solved directly as a MIP. The
+ * problem that is build in SCIP is given in \ref SCFLP_DETEQUIVMODEL.
+ *
+ * @section SCFLP_BENDERS Solving the SCFLP using Benders' decomposition
+ *
+ * The model that is used to build the decomposed problem is given in \ref SCFLP_BENDERSMODEL. In this example, the
+ * default Benders' decomposition plugin is used to employ the Benders' decomposition framework, see
+ * src/scip/benders_default.h. Before calling SCIPcreateBendersDefault() to invoke the Benders' decomposition framework,
+ * the SCIP instances for the master problem and the subproblems must be created.
+ *
+ * The SCIP instance for the master problem includes only the first stage variables (the facility variables \f$x_{i}\f$)
+ * and the first stage constraints. Note, the auxiliary variables are not added to the master problem by the user, nor
+ * are any Benders' decomposition cuts.
+ *
+ * For each subproblem \f$s\f$, the SCIP instance is formulated with the second stage variables (the customer variables
+ * \f$y^{s}_{ij}\f$) and the second stage constraints. Also, the first stage variables are created for each scenario.
+ * These variables are copies of the master variables from the master SCIP instances and must be created by calling
+ * SCIPcreateVarBasic() or SCIPcreateVar(). The master problem variable copies that are created in the subproblem SCIP
+ * instances must have an objective coefficient of 0.0. This is inline with the classical application of Benders'
+ * decomposition.
+ *
+ * IMPORTANT: the master variables that are created for the subproblem SCIP instances must have the same name as the
+ * corresponding master variables in the master problem SCIP instance. This is because the mapping between the master
+ * and subproblem variables relies on the variable names. This mapping is used for setting up the subproblems to
+ * evaluate solutions from the master problem and generating Benders' cuts.
+ *
+ * Once the master and subproblem SCIP instances are created, the Benders' decomposition is invoked by calling the
+ * interface function SCIPcreateBendersDefault(). The parameters for this function are a SCIP instance for the master
+ * problem, an array of SCIP instances for the subproblems and the number of subproblems.
+ *
+ * The Benders' decomposition framework involves the use of constraint handlers within SCIP, src/scip/cons_benders.h and
+ * src/scip/cons_benderslp.h. In order to solve the master problem by adding Benders' cuts, src/scip/cons_benders.h and
+ * src/scip/cons_benderslp.h must be activated. This is done by setting the parameter "constraints/benders/active" and
+ * "constraints/benderslp/active" to TRUE.
+ *
+ * NOTE: it is not necessary to activate src/scip/cons_benderslp.h. The purpose of this constraint handler is to
+ * generate Benders' decomposition cut from solutions to the LP relaxation in the root node. These solutions are
+ * fractional, since the enforcement priority of benderslp is higher than the integer constraint handler. The benderslp
+ * constraint handler allows the user to employ the multi-phase algorithm of McDaniel and Devine (1977).
+ *
+ * McDaniel D, Devine M. A modified Benders’ partitioning algorithm for mixed integer programming. Management Science
+ * 1977;24(2):312–9
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
 
-#include "probdata_cap.h"
+#include "probdata_scflp.h"
 
 #include "scip/cons_linear.h"
 #include "scip/benders_default.h"
@@ -84,8 +128,7 @@
 
 /** @brief Problem data which is accessible in all places
  *
- * This problem data is used to store the input of the cap, all variables which are created, and all
- * constrsaints.
+ * This problem data is used to store the input of the SCFLP, all variables which are created, and all constraints.
  */
 struct SCIP_ProbData
 {
@@ -611,7 +654,7 @@ SCIP_RETCODE probdataFree(
 
 /** frees user data of original problem (called when the original problem is freed) */
 static
-SCIP_DECL_PROBDELORIG(probdelorigCap)
+SCIP_DECL_PROBDELORIG(probdelorigScflp)
 {
    assert(scip != NULL);
    assert(probdata != NULL);
@@ -626,7 +669,7 @@ SCIP_DECL_PROBDELORIG(probdelorigCap)
 /** creates user data of transformed problem by transforming the original user problem data
  *  (called after problem was transformed) */
 static
-SCIP_DECL_PROBTRANS(probtransCap)
+SCIP_DECL_PROBTRANS(probtransScflp)
 {
    SCIPdebugMsg(scip, "transforming problem data\n");
 
@@ -635,7 +678,7 @@ SCIP_DECL_PROBTRANS(probtransCap)
 
 /** frees user data of transformed problem (called when the transformed problem is freed) */
 static
-SCIP_DECL_PROBDELTRANS(probdeltransCap)
+SCIP_DECL_PROBDELTRANS(probdeltransScflp)
 {
    SCIPdebugMsg(scip, "free transformed problem data\n");
 
@@ -680,9 +723,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* create problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
 
-   SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigCap) );
-   SCIP_CALL( SCIPsetProbTrans(scip, probtransCap) );
-   SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransCap) );
+   SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigScflp) );
+   SCIP_CALL( SCIPsetProbTrans(scip, probtransScflp) );
+   SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransScflp) );
 
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benders_default.h
- * @ingroup BENDERS
+ * @ingroup BENDERSDECOMPOSITION
  * @brief  default Benders' decomposition plugin
  * @author Stephen J. Maher
  */
@@ -43,6 +43,11 @@ SCIP_RETCODE SCIPincludeBendersDefault(
    );
 
 
+/**@addtogroup BENDERS
+ *
+ * @{
+ */
+
 /** Creates a default Benders' decomposition algorithm and activates it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPcreateBendersDefault(
@@ -50,6 +55,8 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    SCIP**                subproblems,        /**< the Benders' decomposition subproblems */
    int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -24,6 +24,7 @@ features:
   participates in are now compared to the number of calls of the particular presolving method, not the number of
   presolving rounds in general, anymore
 - new price-and-branch application for the ringpacking problem
+- new stochastic capacitated facility location example demonstrating the use of the Benders' decomposition framework
 
 deleted and modified API functions:
 - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between

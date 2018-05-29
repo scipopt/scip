@@ -3,7 +3,7 @@
 # stop on error
 set -e
 
-EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens TSP VRP)
+EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens SCFLP TSP VRP)
 
 for EXAMPLE in ${EXAMPLES[@]}
 do
