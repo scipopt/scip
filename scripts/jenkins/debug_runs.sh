@@ -150,6 +150,8 @@ done
 ### Compilation ###
 ###################
 
+make solchecker
+
 BUILD_DIR=""
 # build with soplex only if today we have some soplex runs scheduled
 # that is the case if $LPSVERSIONS contains 'scipdbgspx'
