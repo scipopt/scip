@@ -36,7 +36,6 @@
 #include "scip/stat.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "scip/type_lp.h"
 #include "scip/var.h"
 #include "scip/visual.h"
 

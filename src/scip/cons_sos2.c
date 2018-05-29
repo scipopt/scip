@@ -90,15 +90,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
-#include "scip/type_event.h"
-#include "scip/type_history.h"
-#include "scip/type_lp.h"
-#include "scip/type_message.h"
-#include "scip/type_misc.h"
-#include "scip/type_result.h"
-#include "scip/type_sol.h"
-#include "scip/type_timing.h"
-#include "scip/type_tree.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>

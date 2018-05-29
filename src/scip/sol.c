@@ -42,7 +42,6 @@
 #include "scip/struct_stat.h"
 #include "scip/struct_var.h"
 #include "scip/tree.h"
-#include "scip/type_result.h"
 #include "scip/var.h"
 
 

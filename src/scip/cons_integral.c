@@ -32,13 +32,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
-#include "scip/type_cons.h"
-#include "scip/type_heur.h"
-#include "scip/type_history.h"
-#include "scip/type_lp.h"
-#include "scip/type_result.h"
-#include "scip/type_sol.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

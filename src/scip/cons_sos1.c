@@ -102,16 +102,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/type_event.h"
-#include "scip/type_heur.h"
-#include "scip/type_history.h"
-#include "scip/type_lp.h"
-#include "scip/type_message.h"
-#include "scip/type_prob.h"
-#include "scip/type_result.h"
-#include "scip/type_set.h"
-#include "scip/type_timing.h"
-#include "scip/type_tree.h"
 #include "tclique/tclique.h"
 #include <ctype.h>
 #include <stdlib.h>

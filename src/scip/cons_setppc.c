@@ -49,15 +49,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
-#include "scip/type_conflict.h"
-#include "scip/type_event.h"
-#include "scip/type_message.h"
-#include "scip/type_misc.h"
-#include "scip/type_result.h"
-#include "scip/type_set.h"
-#include "scip/type_sol.h"
-#include "scip/type_timing.h"
-#include "scip/type_tree.h"
 #include <ctype.h>
 #include <string.h>
 

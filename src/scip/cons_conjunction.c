@@ -31,11 +31,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
-#include "scip/type_misc.h"
-#include "scip/type_result.h"
-#include "scip/type_sol.h"
-#include "scip/type_timing.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

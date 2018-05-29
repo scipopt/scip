@@ -52,16 +52,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/type_cons.h"
-#include "scip/type_message.h"
-#include "scip/type_misc.h"
-#include "scip/type_paramset.h"
-#include "scip/type_result.h"
-#include "scip/type_set.h"
-#include "scip/type_sol.h"
-#include "scip/type_stat.h"
-#include "scip/type_timing.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 #define CONSHDLR_NAME          "components"

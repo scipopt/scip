@@ -52,8 +52,6 @@
 /* to get value of parameter "nlp/solver" and nlpis array and to get access to set->lp for releasing a variable */
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "scip/type_misc.h"
-#include "scip/type_scip.h"
 #include "scip/var.h"
 #include <string.h>
 

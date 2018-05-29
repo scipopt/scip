@@ -66,11 +66,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
-#include "scip/type_conflict.h"
-#include "scip/type_lp.h"
-#include "scip/type_result.h"
-#include "scip/type_sol.h"
-#include "scip/type_timing.h"
 #include <string.h>
 
 /* constraint handler properties */

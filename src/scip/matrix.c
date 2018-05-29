@@ -43,10 +43,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
 #include "scip/struct_matrix.h"
-#include "scip/type_cons.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 /*

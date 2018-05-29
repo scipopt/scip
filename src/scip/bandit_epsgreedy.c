@@ -26,7 +26,6 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/scip_bandit.h"
-#include "scip/type_misc.h"
 
 #define BANDIT_NAME           "eps-greedy"
 #define EPSGREEDY_SMALL       1e-6

@@ -28,7 +28,6 @@
 #include "scip/dialog_default.h"
 #include "nlpi/nlpi.h"
 #include "scip/pub_cons.h"
-#include "scip/type_cons.h"
 #include "scip/cons_linear.h"
 
 

@@ -36,13 +36,6 @@
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
-#include "scip/type_misc.h"
-#include "scip/type_result.h"
-#include "scip/type_set.h"
-#include "scip/type_sol.h"
-#include "scip/type_timing.h"
-#include "scip/type_tree.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

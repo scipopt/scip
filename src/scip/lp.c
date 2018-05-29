@@ -54,8 +54,6 @@
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_var.h"
-#include "scip/type_cons.h"
-#include "scip/type_sepa.h"
 #include "scip/var.h"
 #include <string.h>
 

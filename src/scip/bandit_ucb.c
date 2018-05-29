@@ -27,7 +27,6 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/scip_bandit.h"
-#include "scip/type_misc.h"
 
 
 

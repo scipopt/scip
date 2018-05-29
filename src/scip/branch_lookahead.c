@@ -69,14 +69,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/type_branch.h"
-#include "scip/type_cons.h"
-#include "scip/type_history.h"
-#include "scip/type_lp.h"
-#include "scip/type_result.h"
-#include "scip/type_sol.h"
-#include "scip/type_tree.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME            "lookahead"

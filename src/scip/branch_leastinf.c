@@ -29,10 +29,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_var.h"
-#include "scip/type_branch.h"
-#include "scip/type_result.h"
-#include "scip/type_tree.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME          "leastinf"

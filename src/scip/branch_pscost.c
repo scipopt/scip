@@ -38,9 +38,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/type_branch.h"
-#include "scip/type_misc.h"
-#include "scip/type_result.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME          "pscost"
