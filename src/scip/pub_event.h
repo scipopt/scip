@@ -26,11 +26,11 @@
 
 
 #include "scip/def.h"
-#include "scip/type_retcode.h"
 #include "scip/type_event.h"
-#include "scip/type_var.h"
+#include "scip/type_lp.h"
 #include "scip/type_sol.h"
 #include "scip/type_tree.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

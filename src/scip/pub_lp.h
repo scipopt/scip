@@ -25,18 +25,13 @@
 #define __SCIP_PUB_LP_H__
 
 
-#include <stdio.h>
-
-#include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/type_set.h"
-#include "scip/type_stat.h"
-#include "scip/type_lp.h"
-#include "scip/type_var.h"
-#include "scip/type_sol.h"
-#include "scip/type_sepa.h"
-#include "scip/type_misc.h"
 #include "lpi/type_lpi.h"
+#include "scip/def.h"
+#include "scip/type_cons.h"
+#include "scip/type_lp.h"
+#include "scip/type_sepa.h"
+#include "scip/type_var.h"
+#include "scip/type_misc.h"
 
 #ifdef NDEBUG
 #include "scip/struct_lp.h"
