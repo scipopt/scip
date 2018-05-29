@@ -61,6 +61,8 @@ if __name__ == "__main__":
         headerfile = sys.argv[1][:-1] + 'h'
         if os.path.isfile(headerfile):
             headerinclset = get_headerset(headerfile)
+        else:
+            headerinclset = set()
 
         for p in includedirs:
             headerfile = remove_prefix(p, headerfile)

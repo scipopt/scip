@@ -31,25 +31,33 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#include <assert.h>
-#include <math.h>
-#include <limits.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
-#include "scip/intervalarith.h"
+#include "lpi/lpi.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
+#include "scip/cons.h"
+#include "scip/event.h"
+#include "scip/intervalarith.h"
 #include "scip/lp.h"
-#include "scip/var.h"
+#include "scip/misc.h"
 #include "scip/prob.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/solve.h"
-#include "scip/event.h"
-#include "scip/pub_message.h"
-#include "lpi/lpi.h"
+#include "scip/stat.h"
+#include "scip/struct_event.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_var.h"
+#include "scip/type_cons.h"
+#include "scip/type_sepa.h"
+#include "scip/var.h"
+#include <string.h>
 
 
 

@@ -20,19 +20,20 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/lp.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/tree.h"
 #include "scip/pricestore.h"
+#include "scip/pub_lp.h"
 #include "scip/pub_message.h"
-
+#include "scip/pub_var.h"
+#include "scip/set.h"
+#include "scip/struct_lp.h"
 #include "scip/struct_pricestore.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_var.h"
+#include "scip/tree.h"
+#include "scip/var.h"
 
 
 

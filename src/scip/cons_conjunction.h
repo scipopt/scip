@@ -26,7 +26,10 @@
 #define __SCIP_CONS_CONJUNCTION_H__
 
 
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_cons.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -25,8 +25,14 @@
 #ifndef __SCIP_CONS_SOC_H__
 #define __SCIP_CONS_SOC_H__
 
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_cons.h"
+#include "scip/type_misc.h"
+#include "scip/type_nlp.h"
 #include "nlpi/type_nlpi.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

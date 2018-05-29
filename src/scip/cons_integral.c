@@ -20,11 +20,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-
 #include "scip/cons_integral.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/type_cons.h"
+#include "scip/type_heur.h"
+#include "scip/type_history.h"
+#include "scip/type_lp.h"
+#include "scip/type_result.h"
+#include "scip/type_sol.h"
+#include "scip/type_var.h"
+#include <string.h>
 
 
 #define CONSHDLR_NAME          "integral"

@@ -21,11 +21,29 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_disjunction.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/type_misc.h"
+#include "scip/type_result.h"
+#include "scip/type_set.h"
+#include "scip/type_sol.h"
+#include "scip/type_timing.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
+#include <string.h>
 
 
 /* constraint handler properties */

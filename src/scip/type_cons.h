@@ -32,6 +32,7 @@
 #define __SCIP_TYPE_CONS_H__
 
 #include "scip/def.h"
+#include "scip/type_lp.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_var.h"

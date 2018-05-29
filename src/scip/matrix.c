@@ -24,18 +24,30 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/struct_matrix.h"
-#include "scip/pub_matrix.h"
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/pub_matrix.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_var.h"
+#include "scip/struct_matrix.h"
+#include "scip/type_cons.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
+#include <string.h>
 
 /*
  * private functions
