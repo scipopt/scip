@@ -489,8 +489,8 @@ void** SCIPpqueueElems(
 INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
-   int exp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)(uint16_t)exp;
+   int theexp;
+   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &theexp), 15))<<16) | (uint32_t)(uint16_t)theexp;
 }
 
 /** creates a hash table */
