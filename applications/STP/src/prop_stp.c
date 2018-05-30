@@ -328,10 +328,6 @@ SCIP_RETCODE dualcostVarfixing(
 
    for( int k = 0; k < nnodes; k++ )
    {
-#if 0
-      if( Is_term(graph->term[k]) && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) )
-            continue;
-#endif
       if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
       {
          for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )

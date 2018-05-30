@@ -498,15 +498,6 @@ SCIP_RETCODE pairheapCombineSiblings(
    assert(size > nsiblings);
    treearray[nsiblings] = NULL;
 
-#if 0
-   /*combine the subtrees (simple) */
-   for(i = 1; i < nsiblings; i++)
-      treearray[i] = SCIPpairheapMergeheaps(scip, treearray[i-1], treearray[i]);
-
-
-   return treearray[nsiblings-1];
-#endif
-
    /* combine the subtrees (two at a time) */
    for( i = 0; i < nsiblings - 1; i += 2 )
    {

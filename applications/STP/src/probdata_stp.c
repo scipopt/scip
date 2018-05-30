@@ -707,20 +707,6 @@ SCIP_RETCODE createPrizeConstraints(
       }
    }
 
-#if 0
-   r = 0;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizecyclecons), realnterms) );
-   for( r = 0; r < realnterms; r++ )
-   {
-      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeLPConstraint%d", r);
-      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecyclecons[r]), consname, 0, NULL, NULL,
-            -SCIPinfinity(scip), 0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, probdata->prizecyclecons[r]) );
-   }
-   assert(r == realnterms);
-#endif
-
-
    return SCIP_OKAY;
 }
 

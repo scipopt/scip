@@ -653,7 +653,7 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
          {
             if( Is_pterm(graph->term[vert]) )
             {
-               int todo; // fix arc vars
+               // todo fix arc vars
                graph_pc_deleteTerm(scip, graph, vert);
             }
             graph_knot_del(scip, graph, vert, deletehistory);

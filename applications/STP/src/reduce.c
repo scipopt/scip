@@ -1143,18 +1143,6 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
-#if 0
-   if( tryrmw )
-   {
-      SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-            state, nodearrchar, &daelims, TRUE, FALSE, TRUE, userec, FALSE, randnumgen, prizesum) );
-
-      SCIP_CALL( reduce_npv(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
-      reduce_ans(scip, g, nodearrint2, &anselims);
-      reduce_ansAdv(scip, g, nodearrint2, &ansadelims, FALSE);
-   }
-#endif
-
    /* go back to the extended graph */
    graph_pc_2trans(g);
 

@@ -357,10 +357,7 @@ static int key_cmp(
    assert(key                                != NULL);
    assert(elem                               != NULL);
    assert(((const struct key*)elem)->keyword != NULL);
-#if 0
-   (void)fprintf(stderr, "key [%s] elem [%s]\n",
-      (const char*)key, ((const struct key*)elem)->keyword);
-#endif
+
    return(strcmp((const char*)key, ((const struct key*)elem)->keyword));
 }
 
@@ -644,10 +641,6 @@ static int start_section(
          message(MSG_FATAL, curf, err_badsect_s, sectname);
       else
       {
-#if 0
-         if( temp.section->mark & SECTION_EXISTEND )
-            message(MSG_FATAL, curf, err_duplicate_s, sectname);
-#endif
          /* Is this section in a separate file ?
           */
          if( tokens == 1 || (tokens == 2 && strcmp(strlower(sectname),"tree") == 0) )

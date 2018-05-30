@@ -493,12 +493,12 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    SCIP_CALL( level0(scip, newgraph) );
 
-#if 0
+#ifdef DEBUG_ASCENDPRUNE
    for( int k = 0; k < nnodes && !pcmw; k++ )
    {
       if( Is_term(g->term[k]) )
       {
-         int i = nodechild[k];
+         const int i = nodechild[k];
          if( i < 0 )
          {
             printf("k %d root %d \n", k, root);
@@ -520,7 +520,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    /* get solution on new graph by PRUNE heuristic */
    SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
 
-#if 0
+#ifdef DEBUG_ASCENDPRUNE
    for( int k = 0; k < newgraph->knots; ++k )
    {
       if( Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != newgraph->source )

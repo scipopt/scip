@@ -2122,49 +2122,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( v == min )
       return SCIP_OKAY;
 
-#if 0
-      FILE *fptr;
-#if 0
-      fptr=fopen("redMW.txt","a");
-
-      fprintf(fptr," &   %d    &   %d   &   %d   &   %d   &    &    \n", graph->norgmodelknots, graph->norgmodeledges / 2, (graph->knots - graph->terms), ((graph->edges) / 2 - 3 * (graph->terms - 1)));
-      fclose(fptr);
-#endif
-
-#if 1
-      fptr=fopen("redStats.txt","a");
-
-      if( graph->stp_type == STP_RPCSPG )
-      {
-         fprintf(fptr,"%d       %d      %d      %d     %f  \n", (graph->knots - graph->terms + 1), graph->norgmodelknots, ((graph->edges) / 2 - 2 * (graph->terms - 1)),
-            graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
-      }
-      else if(  graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
-      {
-           fprintf(fptr,"%d       %d      %d      %d     %f  \n", (graph->knots - graph->terms), graph->norgmodelknots, ((graph->edges) / 2 - 3 * (graph->terms - 1)),
-             graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
-      }
-      else
-      {
-         fprintf(fptr,"%d  %d  %d  %d  %f\n", (graph->knots), graph->orgknots, ((graph->edges) / 2 ), graph->orgedges / 2, SCIPgetReadingTime(scip));
-      }
-      fclose(fptr);
-
-
-#endif
-      fclose(fptr);
-
-      return SCIP_ERROR;
-#if 0
-      FILE *fptr;
-      dummy = 1;
-      fptr=fopen("redtime.txt","a");
-
-      fprintf(fptr,"%f\n",(SCIPgetReadingTime(scip)));
-      fclose(fptr);
-#endif
-#endif
-
    newsol = sols[v];
    lastsolindices[v] = SCIPsolGetIndex(newsol);
 
