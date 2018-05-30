@@ -49,8 +49,6 @@
 #include "probdata_stp.h"
 #include "prop_stp.h"
 
-#define STP_PRINT_STATS
-
 
 /** print reduction information */
 static
