@@ -66,7 +66,8 @@ if __name__ == "__main__":
             headerfile = remove_prefix(p, headerfile)
 
         for f in headerinclset:
-            inclset.remove(f)
+            if f in inclset:
+                inclset.remove(f)
 
         inclset.add(headerfile)
     else:

@@ -24,8 +24,10 @@
 #ifndef __SCIP_DIALOG_DEFAULT_H__
 #define __SCIP_DIALOG_DEFAULT_H__
 
-
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_dialog.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 #ifdef __cplusplus
 extern "C" {

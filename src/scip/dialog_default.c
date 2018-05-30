@@ -22,14 +22,61 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/dialog_default.h"
+#include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
-#include "scip/pub_cons.h"
 #include "scip/cons_linear.h"
-
+#include "scip/dialog_default.h"
+#include "scip/pub_benders.h"
+#include "scip/pub_branch.h"
+#include "scip/pub_compr.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_dialog.h"
+#include "scip/pub_disp.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nodesel.h"
+#include "scip/pub_paramset.h"
+#include "scip/pub_presol.h"
+#include "scip/pub_pricer.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_relax.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_benders.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_compr.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_dialog.h"
+#include "scip/scip_disp.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_relax.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_validation.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
 
 
 /** executes a menu dialog */

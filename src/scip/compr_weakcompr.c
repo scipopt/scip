@@ -20,14 +20,23 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/mem.h"
-#include "scip/misc.h"
+#include "blockmemshell/memory.h"
 #include "scip/compr_weakcompr.h"
-#include "scip/compr.h"
+#include "scip/pub_compr.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc_sort.h"
 #include "scip/pub_reopt.h"
+#include "scip/pub_tree.h"
+#include "scip/scip_compr.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reopt.h"
+#include "scip/scip_tree.h"
+#include <string.h>
 
 #define COMPR_NAME             "weakcompr"
 #define COMPR_DESC             "reduce the search frontier to k+1 or max{2, |C|+1} nodes."

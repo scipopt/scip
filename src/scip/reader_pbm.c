@@ -21,17 +21,24 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-
-#include "scip/reader_pbm.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
-#include "scip/pub_misc.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_pbm.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_param.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define READER_NAME             "pbmreader"
 #define READER_DESC             "file writer for portable bitmap file format (PBM), open with common graphic viewer programs (e.g. xview)"

@@ -24,10 +24,12 @@
 #ifndef __SCIP_PUB_BENDERSCUT_H__
 #define __SCIP_PUB_BENDERSCUT_H__
 
-
 #include "scip/def.h"
-#include "scip/type_misc.h"
 #include "scip/type_benderscut.h"
+#include "scip/type_cons.h"
+#include "scip/type_lp.h"
+#include "scip/type_misc.h"
+#include "scip/type_retcode.h"
 
 #ifdef __cplusplus
 extern "C" {

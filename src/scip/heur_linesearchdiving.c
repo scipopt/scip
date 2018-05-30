@@ -20,10 +20,16 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "scip/heuristics.h"
 #include "scip/heur_linesearchdiving.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_sol.h"
+#include <string.h>
 
 #define HEUR_NAME             "linesearchdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings following the line from root solution to current solution"
