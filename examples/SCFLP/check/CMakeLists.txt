@@ -14,14 +14,14 @@ set(instances
     #"cap64\;+1.17209372125000e+06"
 )
 
-add_test(NAME examples-cap-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target cap
+add_test(NAME examples-scflp-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scflp
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
 # note that this ressource lock name is not the actual libscip target
 #
-set_tests_properties(examples-cap-build
+set_tests_properties(examples-scflp-build
                     PROPERTIES
                         RESOURCE_LOCK libscip
                     )
@@ -33,26 +33,26 @@ foreach(instance ${instances})
     list(GET instance 0 basename)
     list(GET instance 1 optval)
     #
-    # call the CAP binary and validate the solve with the given objective value
+    # call the SCFLP binary and validate the solve with the given objective value
     #
-    add_test(NAME "examples-cap-${basename}"
-            COMMAND $<TARGET_FILE:cap> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/nobenders.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+    add_test(NAME "examples-scflp-${basename}"
+            COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/nobenders.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
             )
-    set_tests_properties("examples-cap-${basename}"
+    set_tests_properties("examples-scflp-${basename}"
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-                            DEPENDS examples-cap-build
+                            DEPENDS examples-scflp-build
                         )
 
     #
-    # call the CAP binary and validate the solve with the given objective value
+    # call the SCFLP binary and validate the solve with the given objective value
     #
-    add_test(NAME "examples-capbenders-${basename}"
-            COMMAND $<TARGET_FILE:cap> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/benders.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+    add_test(NAME "examples-scflpbenders-${basename}"
+            COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/benders.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
             )
-    set_tests_properties("examples-capbenders-${basename}"
+    set_tests_properties("examples-scflpbenders-${basename}"
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-                            DEPENDS examples-cap-build
+                            DEPENDS examples-scflp-build
                         )
 endforeach()

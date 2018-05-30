@@ -33,10 +33,10 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	cap
+MAINNAME	=	scflp
 CMAINOBJ	=	cmain.o \
-				probdata_cap.o \
-				reader_cap.o
+				probdata_scflp.o \
+				reader_scflp.o
 
 CXXMAINOBJ	=
 
@@ -111,7 +111,7 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh configuration_tmpfile_setup_cap.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh configuration_tmpfile_setup_scflp.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \

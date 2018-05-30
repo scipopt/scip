@@ -34,14 +34,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/prop.h"
-#include "scip/relax.h"
-#include "scip/var.h"
 #include "scip/cons.h"
 #include "scip/event.h"
 #include "scip/history.h"
@@ -49,16 +41,28 @@
 #include "scip/lp.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_history.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_var.h"
+#include "scip/relax.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/stat.h"
+#include "scip/struct_event.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_var.h"
 #include "scip/tree.h"
-#include "scip/reopt.h"
-
-#include "scip/debug.h"
-
-#include "scip/pub_message.h"
-#include "scip/pub_history.h"
+#include "scip/var.h"
+#include <string.h>
 
 #define MAXIMPLSCLOSURE 100  /**< maximal number of descendants of implied variable for building closure
                               *   in implication graph */

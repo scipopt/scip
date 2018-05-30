@@ -40,8 +40,8 @@ namespace scip
  *  are pure virtual functions (these have to be implemented). These functions are: benders_exec(), benders_createsub(),
  *  benders_getvar().
  *
- *  - \ref BENDERS "Instructions for implementing a Benders' decomposition plugin"
- *  - \ref BENDERSDECOMP "List of available Benders' decomposition plugins"
+ *  - \ref BENDER "Instructions for implementing a Benders' decomposition plugin"
+ *  - \ref BENDERS "List of available Benders' decomposition plugins"
  *  - \ref type_benders.h "Corresponding C interface"
  */
 class ObjBenders : public ObjCloneable

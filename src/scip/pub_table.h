@@ -25,10 +25,8 @@
 #define __SCIP_PUB_TABLE_H__
 
 
-#include <stdio.h>
-
 #include "scip/def.h"
-#include "scip/type_retcode.h"
+#include "scip/type_set.h"
 #include "scip/type_table.h"
 
 #ifdef __cplusplus

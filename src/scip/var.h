@@ -39,6 +39,7 @@
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
 #include "scip/type_reopt.h"
+#include "scip/type_relax.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
 #include "scip/pub_var.h"
@@ -48,6 +49,7 @@
 #include "scip/struct_var.h"
 #else
 #include "scip/event.h"
+#include "scip/pub_history.h"
 #endif
 
 #ifdef __cplusplus
