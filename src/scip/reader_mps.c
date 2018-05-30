@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1645,7 +1645,6 @@ SCIP_RETCODE readBounds(
    }
    mpsinputSyntaxerror(mpsi);
 
-
  READBOUNDS_FINISH:
    if( nsemicont > 0 )
    {
@@ -2493,6 +2492,7 @@ SCIP_RETCODE readIndicators(
       SCIPdebugMsg(scip, "created indicator constraint <%s>", mpsinputField2(mpsi));
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
    }
 
    return SCIP_OKAY;
@@ -4864,6 +4864,10 @@ SCIP_RETCODE SCIPwriteMps(
          binvar = SCIPgetBinaryVarIndicator(cons);
          lincons = SCIPgetLinearConsIndicator(cons);
          slackvar = SCIPgetSlackVarIndicator(cons);
+
+         /* linvars always contains slack variable, thus nlinvars >= 1 */
+         if( SCIPgetNVarsLinear(scip, lincons) <= 1 || SCIPconsIsDeleted(lincons) )
+            continue;
 
          /* create variable and value strings */
          if( SCIPvarIsNegated(binvar) )

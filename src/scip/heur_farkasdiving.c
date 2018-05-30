@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -42,7 +42,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
-#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
 
 
 /*
@@ -66,22 +66,189 @@
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_RANDSEED            151 /**< initial seed for random number generation */
 
-#define DEFAULT_DIFFOBJFAC         0.15
-#define DEFAULT_CHECKOBJ          FALSE
-#define DEFAULT_CHECKOBJGLB        TRUE
-#define DEFAULT_SCALESCORE         TRUE
+#define DEFAULT_MAXOBJOCC           1.0 /**< maximal occurance factor of an objective coefficient */
+#define DEFAULT_OBJDYN              0.0 /**< minimal objective dynamism (log) */
+#define DEFAULT_CHECKCANDS        FALSE /**< should diving candidates be checked before running? */
+#define DEFAULT_SCALESCORE         TRUE /**< should the score be scaled? */
+#define DEFAULT_ROOTSUCCESS       FALSE /**< should the heuristic only run within the tree if at least one solution
+                                         *   was found at the root node? */
+#define DEFAULT_SCALETYPE           'f' /**< scale score by [f]ractionality or [i]mpact on farkasproof */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_Real             diffobjfac;         /**< fraction of different objective coefficients in absolute value */
+   SCIP_Real             maxobjocc;          /**< maximal occurance factor of an objective coefficient */
+   SCIP_Real             objdynamism;        /**< minimal objective dynamism (log) */
    SCIP_Bool             disabled;           /**< remember if the heuristic should not run at all */
-   SCIP_Bool             checkobj;           /**< should objective function be checked before running? */
-   SCIP_Bool             checkobjglb;        /**< check objective function only once w.r.t the global problem (only if checkobj=TRUE) */
-   SCIP_Bool             objchecked;         /**< remember whether objection function was already checked */
+   SCIP_Bool             glbchecked;         /**< remember whether one global check was performed */
+   SCIP_Bool             checkcands;         /**< should diving candidates be checked before running? */
    SCIP_Bool             scalescore;         /**< should score be scaled by fractionality */
+   SCIP_Bool             rootsuccess;        /**< run if successfull at root */
+   SCIP_Bool             foundrootsol;       /**< was a solution found at the root node? */
+   char                  scaletype;          /**< scale score by [f]ractionality or [i]mpact on farkasproof */
 };
+
+
+/** check whether the diving candidates fulfill requirements */
+static
+SCIP_RETCODE checkDivingCandidates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_VAR**            divecandvars,       /**< diving candidates to check */
+   int                   ndivecands,         /**< number of diving candidates */
+   SCIP_Bool*            success             /**< pointer to store whether the check was successfull */
+   )
+{
+   SCIP_Real* objcoefs;
+   SCIP_Real lastobjcoef;
+   SCIP_Real objdynamism;
+   int maxfreq;
+   int nnzobjcoefs;
+#ifdef SCIP_DEBUG
+   int ndiffnnzobjs;
+#endif
+   int i;
+
+   *success = TRUE;
+
+   assert(heurdata != NULL);
+   assert(divecandvars != NULL);
+   assert(ndivecands >= 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &objcoefs, ndivecands) );
+
+   /* collect all absolute values of objective coefficients and count binary, integer,
+    * and implicit integer in the objective function
+    */
+   nnzobjcoefs = 0;
+
+   if( SCIPgetNObjVars(scip) > 0 )
+   {
+      for( i = 0; i < ndivecands; i++ )
+      {
+         SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
+
+         if( SCIPisZero(scip, obj) )
+            continue;
+
+         objcoefs[nnzobjcoefs] = REALABS(obj);
+         ++nnzobjcoefs;
+      }
+   }
+
+   if( nnzobjcoefs == 0 )
+   {
+      *success = FALSE;
+      goto TERMINATE;
+   }
+   assert(nnzobjcoefs > 0);
+
+   /* skip here if we are cheching the global properties and want to check the local candidates, too */
+   if( !heurdata->glbchecked && heurdata->checkcands )
+      goto TERMINATE;
+
+   /* sort in increasing order */
+   SCIPsortReal(objcoefs, nnzobjcoefs);
+   assert(!SCIPisZero(scip, objcoefs[0]));
+
+   lastobjcoef = objcoefs[0];
+#ifdef SCIP_DEBUG
+   ndiffnnzobjs = 1;
+#endif
+
+   objdynamism = log10(objcoefs[nnzobjcoefs-1] / objcoefs[0]);
+
+   SCIPdebugMsg(scip, "minabscoef: %g, maxabscoef: %g, objdym: %g\n", objcoefs[0], objcoefs[nnzobjcoefs-1], objdynamism);
+
+   /* CHECK#2: check objective dynamism */
+   if( objdynamism < heurdata->objdynamism )
+   {
+      SCIPdebugMsg(scip, " ---> disable farkasdiving at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+
+      *success = FALSE;
+      goto TERMINATE;
+   }
+
+   /* CHECK#4: the check would be always fulfilled for heurdata->maxobjocc = 1.0 */
+   if( heurdata->maxobjocc < 1.0 )
+   {
+      int tmpmaxfreq;
+
+      tmpmaxfreq = 0;
+      maxfreq = 0;
+
+      /* count number of different absolute objective values */
+      for( i = 1; i < nnzobjcoefs; i++ )
+      {
+         if( SCIPisGT(scip, objcoefs[i], lastobjcoef) )
+         {
+            if( tmpmaxfreq > maxfreq )
+               maxfreq = tmpmaxfreq;
+            tmpmaxfreq = 0;
+
+            lastobjcoef = objcoefs[i];
+#ifdef SCIP_DEBUG
+            ++ndiffnnzobjs;
+#endif
+         }
+         else
+         {
+            ++tmpmaxfreq;
+         }
+      }
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "%d divecands; %d nnzobjs; %d diffnnzobjs; %d maxfreq\n", ndivecands, nnzobjcoefs, ndiffnnzobjs,
+         maxfreq, heurdata->maxobjocc * nnzobjcoefs);
+#endif
+
+      if( maxfreq > heurdata->maxobjocc * nnzobjcoefs )
+      {
+         SCIPdebugMsg(scip, " ---> disable farkasdiving at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+
+         *success = FALSE;
+      }
+   }
+
+  TERMINATE:
+   SCIPfreeBufferArray(scip, &objcoefs);
+
+   return SCIP_OKAY;
+}
+
+
+/** check whether the objective functions has nonzero coefficients corresponding to binary and integer variables */
+static
+SCIP_RETCODE checkGlobalProperties(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Bool success;
+   int nbinvars;
+   int nintvars;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+
+   vars = SCIPgetVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
+
+   SCIP_CALL( checkDivingCandidates(scip, heurdata, vars, nbinvars+nintvars, &success) );
+
+   if( !success )
+   {
+      SCIPdebugMsg(scip, " ---> disable farkasdiving (at least one global property is violated)\n");
+      heurdata->disabled = TRUE;
+   }
+
+   heurdata->glbchecked = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods
@@ -139,7 +306,7 @@ SCIP_DECL_HEURINIT(heurInitFarkasdiving)
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    heurdata->disabled = FALSE;
-   heurdata->objchecked = FALSE;
+   heurdata->glbchecked = FALSE;
 
    return SCIP_OKAY;
 }
@@ -177,8 +344,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolFarkasdiving)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   heurdata->glbchecked = FALSE;
    heurdata->disabled = FALSE;
-   heurdata->objchecked = FALSE;
+   heurdata->foundrootsol = FALSE;
 
    return SCIP_OKAY;
 }
@@ -189,7 +357,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
-   int nnzobjvars;
+   SCIP_Bool success;
 
    heurdata = SCIPheurGetData(heur);
    assert(SCIPheurGetNDivesets(heur) > 0);
@@ -200,120 +368,50 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* check some simple global properties that are needed to run this heuristic */
+   if( !heurdata->glbchecked )
+   {
+      SCIP_CALL( checkGlobalProperties(scip, heurdata) );
+   }
+
    /* terminate if the heuristic has been disabled */
    if( heurdata->disabled )
       return SCIP_OKAY;
 
-   /* terminate if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
-      return SCIP_OKAY;
-
-   nnzobjvars = SCIPgetNObjVars(scip);
-
-   /* don't run if all variables have objective coefficient zero */
-   if( nnzobjvars == 0 )
+   if( heurdata->rootsuccess && !heurdata->foundrootsol && SCIPgetDepth(scip) > 0 )
    {
       heurdata->disabled = TRUE;
       return SCIP_OKAY;
    }
 
-   /* initialize the hashing of all objective coefficients */
-   if( heurdata->checkobj )
+   success = TRUE;
+
+   /* check diving candidates in detail */
+   if( heurdata->checkcands )
    {
       SCIP_VAR** divecandvars;
-      SCIP_Real* objcoefs;
-      SCIP_Real lastobjcoef;
-      int nnzobjcoefs;
-      int ndiffnnzobjs;
       int ndivecands;
-      int i;
 
-      divecandvars = NULL;
-      ndivecands = -1;
-
-      /* check w.r.t. all variables and decide whether we want to run or not */
-      if( heurdata->checkobjglb )
+      /* we can only access the branching candidates if the LP is solved to optimality */
+      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
-         if( !heurdata->objchecked )
-         {
-            divecandvars = SCIPgetVars(scip);
-            ndivecands = SCIPgetNVars(scip);
-         }
-         else
-         {
-            goto PERFORMDIVING;
-         }
+         SCIP_CALL( SCIPgetLPBranchCands(scip, &divecandvars, NULL, NULL, &ndivecands, NULL, NULL) );
+
+         SCIP_CALL( checkDivingCandidates(scip, heurdata, divecandvars, ndivecands, &success) );
       }
       else
       {
-         /* we can only access the branching candidates if the LP is solved to optimality */
-         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
-         {
-            SCIP_CALL( SCIPgetLPBranchCands(scip, &divecandvars, NULL, NULL, &ndivecands, NULL, NULL) );
-         }
-         else
-         {
-            return SCIP_OKAY;
-         }
-      }
-
-      assert(divecandvars != NULL);
-      assert(ndivecands >= 0);
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &objcoefs, ndivecands) );
-
-      /* collect all absolute values of objective coefficients */
-      nnzobjcoefs = 0;
-      for( i = 0; i < ndivecands; i++ )
-      {
-         SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
-
-         if( SCIPisZero(scip, obj) )
-            continue;
-
-         objcoefs[nnzobjcoefs] = REALABS(obj);
-         ++nnzobjcoefs;
-      }
-
-      /* sort in increasing order */
-      SCIPsortReal(objcoefs, nnzobjcoefs);
-      assert(!SCIPisZero(scip, objcoefs[0]));
-
-      lastobjcoef = objcoefs[0];
-      ndiffnnzobjs = 1;
-
-      /* count number of different absolute objective values */
-      for( i = 1; i < nnzobjcoefs; i++ )
-      {
-         if( SCIPisGT(scip, objcoefs[i], lastobjcoef) )
-         {
-            lastobjcoef = objcoefs[i];
-            ++ndiffnnzobjs;
-         }
-      }
-
-      SCIPfreeBufferArray(scip, &objcoefs);
-
-      SCIPdebugMsg(scip, "%d divecands; %d nnzobjs; %d diffnnzobjs\n", ndivecands, nnzobjcoefs, ndiffnnzobjs);
-
-      if( nnzobjcoefs == 0 || nnzobjcoefs < heurdata->diffobjfac * (SCIP_Real)ndivecands )
-      {
-         SCIPdebugMsg(scip, " ---> disable farkasdiving%s\n", heurdata->checkobjglb ? "" : " locally");
-
-         /* disable the heuristic if we want to check the objective only once */
-         if( heurdata->checkobjglb )
-            heurdata->disabled = TRUE;
-
-         return SCIP_OKAY;
-      }
-      else
-      {
-         heurdata->objchecked = TRUE;
+         success = FALSE;
       }
    }
 
-  PERFORMDIVING:
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   if( success )
+   {
+      SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+
+      if( heurdata->rootsuccess && SCIPgetDepth(scip) == 0 && SCIPdivesetGetNSols(diveset) > 0 )
+         heurdata->foundrootsol = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -365,10 +463,22 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
 
    if( heurdata->scalescore )
    {
-      if( *roundup )
-         *score *= (1.0 - candsfrac);
+      if( heurdata->scaletype == 'f' )
+      {
+         if( *roundup )
+            *score *= (1.0 - candsfrac);
+         else
+            *score *= candsfrac;
+      }
       else
-         *score *= candsfrac;
+      {
+         assert(heurdata->scaletype == 'i');
+
+         if( *roundup )
+            *score *= (SCIPceil(scip, candsol) - SCIPvarGetLbLocal(cand));
+         else
+            *score *= (SCIPvarGetUbLocal(cand) - SCIPfloor(scip, candsol));
+      }
    }
 
    /* prefer decisions on binary variables */
@@ -413,21 +523,30 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreFarkasdiving) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkobj",
-         "should objective function be check before running?",
-         &heurdata->checkobj, TRUE, DEFAULT_CHECKOBJ, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkobjglb",
-         "should objective function be check globally (only if checkobj=TRUE)?",
-         &heurdata->checkobjglb, TRUE, DEFAULT_CHECKOBJGLB, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkcands",
+         "should diving candidates be checked before running?",
+         &heurdata->checkcands, TRUE, DEFAULT_CHECKCANDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scalescore",
-         "should score be scaled by fractionality?",
+         "should the score be scaled?",
          &heurdata->scalescore, TRUE, DEFAULT_SCALESCORE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/diffobjfac",
-         "fraction of different objective coefficients in absolute value",
-         &heurdata->diffobjfac, TRUE, DEFAULT_DIFFOBJFAC, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/rootsuccess",
+         "should the heuristic only run within the tree if at least one solution was found at the root node?",
+         &heurdata->rootsuccess, TRUE, DEFAULT_ROOTSUCCESS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxobjocc",
+         "maximal occurance factor of an objective coefficient",
+         &heurdata->maxobjocc, TRUE, DEFAULT_MAXOBJOCC, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/objdynamism",
+         "minimal objective dynamism (log) to run",
+         &heurdata->objdynamism, TRUE, DEFAULT_OBJDYN, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scaletype",
+         "scale score by [f]ractionality or [i]mpact on farkasproof",
+         &heurdata->scaletype, TRUE, DEFAULT_SCALETYPE, "fi", NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

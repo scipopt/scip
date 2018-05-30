@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2104,7 +2104,7 @@ void printRow(
    )
 {
    int v;
-   char linebuffer[PIP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[PIP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -2236,7 +2236,7 @@ void printRowNl(
    int v;
    int c;
    int e;
-   char linebuffer[PIP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[PIP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -2963,7 +2963,7 @@ SCIP_RETCODE SCIPwritePip(
    int e;
 
    int linecnt;
-   char linebuffer[PIP_MAX_PRINTLEN];
+   char linebuffer[PIP_MAX_PRINTLEN+1];
 
    char varname[PIP_MAX_NAMELEN];
    char buffer[PIP_MAX_PRINTLEN];

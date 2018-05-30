@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -89,7 +89,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkpporbisack;    /**< whether we allow upgrading to packing/partitioning orbisacks */
    SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
    int                   maxnrows;           /**< maximal number of rows in an orbisack constraint */
-
 };
 
 /** constraint data for orbisack constraints */
@@ -1909,7 +1908,6 @@ SCIP_RETCODE SCIPseparateCoversOrbisack(
    SCIPfreeBufferArray(scip, &coeff1);
 
    return SCIP_OKAY;
-
 }
 
 

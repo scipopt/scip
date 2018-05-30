@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -472,7 +472,6 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -544,7 +543,6 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
    SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->resvar)) );
-
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
@@ -2115,7 +2113,6 @@ SCIP_RETCODE dualPresolve(
                if( fixed )
                   ++(*nfixedvars);
 
-
                for( v = nvars - 1; v >= 0 && !(*cutoff); --v )
                {
                   SCIP_CALL( SCIPfixVar(scip, vars[v], 1.0, &infeasible, &fixed) );
@@ -2796,7 +2793,6 @@ SCIP_RETCODE cliquePresolve(
 	    *cutoff = *cutoff || infeasible;
 	    if( fixed )
 	       ++(*nfixedvars);
-
 
 	    /* create clique constraint which lead to the last fixing */
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq", SCIPconsGetName(cons), v2);
@@ -3946,7 +3942,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                      !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-
                /* add constraint */
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -4646,7 +4641,6 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 static
 SCIP_DECL_CONSPRINT(consPrintAnd)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

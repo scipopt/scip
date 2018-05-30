@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -707,7 +707,6 @@ SCIP_RETCODE applyRepair(
 #endif
       }
 
-
 #ifdef SCIP_STATISTIC
       if( SCIPisFeasLT(scip, value, lb) || SCIPisFeasGT(scip, value, ub) )
       {
@@ -819,7 +818,6 @@ SCIP_RETCODE applyRepair(
             nviolatedrows[pos]++;
          }
       }
-
 
       /* create a new linear constraint, representing the old one */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &subcons[i], SCIProwGetName(rows[i]),
@@ -1037,7 +1035,6 @@ SCIP_DECL_HEURFREE(heurFreeRepair)
 static
 SCIP_DECL_HEURINIT(heurInitRepair)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
@@ -1339,7 +1336,6 @@ SCIP_RETCODE SCIPincludeHeurRepair(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
-
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
          "minimum percentage of integer variables that have to be fixed",

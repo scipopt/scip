@@ -812,8 +812,11 @@ INPUT                  = . \
                          ../examples/GMI/doc/xternal_gmi.c \
                          ../examples/Relaxator/src/ \
                          ../examples/Relaxator/doc/xternal_relaxator.c \
+                         ../examples/SCFLP/src/ \
+                         ../examples/SCFLP/doc/xternal_scflp.c \
                          ../examples/TSP/src/ \
-                         ../examples/TSP/doc/xternal_tsp.c
+                         ../examples/TSP/doc/xternal_tsp.c \
+                         ../examples/VRP/src/ ../examples/VRP/doc/xternal_vrp.c
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -841,9 +844,7 @@ INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.h \
                          *.cpp \
-                         *.hpp \
-                         interfaces.dxy \
-                         howtoadd.dxy
+                         *.hpp
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -994,9 +995,11 @@ EXCLUDE_SYMBOLS        = Ipopt \
 
 EXAMPLE_PATH           = inc/ \
                          ../ \
+                         ../INSTALL \
                          ../release-notes/ \
                          ../src \
-                         ../check/instances/Stochastic/pltexpA2_6.smps
+                         ../check/instances/Stochastic/pltexpA2_6.smps \
+                         inc/simpleinstance/simple.lp inc/simpleinstance/output.log
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and
@@ -1536,7 +1539,7 @@ ECLIPSE_DOC_ID         = org.doxygen.Project
 # The default value is: NO.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-DISABLE_INDEX          = NO
+DISABLE_INDEX          = YES
 
 # The GENERATE_TREEVIEW tag is used to specify whether a tree-like index
 # structure should be generated to display hierarchical information. If the tag
@@ -1553,7 +1556,7 @@ DISABLE_INDEX          = NO
 # The default value is: NO.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-GENERATE_TREEVIEW      = NO
+GENERATE_TREEVIEW      = YES
 
 # The ENUM_VALUES_PER_LINE tag can be used to set the number of enum values that
 # doxygen will group on one line in the generated HTML documentation.

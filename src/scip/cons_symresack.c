@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1338,7 +1338,6 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -1648,7 +1647,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
       assert( consdata->nvars <= maxnvars );
       SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, vals) );
       SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
-
 
       if ( infeasible )
       {
@@ -2167,7 +2165,6 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 static
 SCIP_DECL_CONSPRINT(consPrintSymresack)
 {  /*lint --e{715}*/
-
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_Bool* covered;

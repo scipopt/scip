@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,10 +20,13 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include "blockmemshell/memory.h"
+#include "scip/bandit.h"
 #include "scip/bandit_epsgreedy.h"
-#include "scip/scip.h"
+#include "scip/pub_bandit.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/scip_bandit.h"
+#include "scip/type_misc.h"
 
 #define BANDIT_NAME           "eps-greedy"
 #define EPSGREEDY_SMALL       1e-6
@@ -53,7 +56,6 @@ struct SCIP_BanditData
 /** callback to free bandit specific data structures */
 SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    int nactions;
 
@@ -77,7 +79,6 @@ SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy)
 /** selection callback for bandit algorithm */
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    SCIP_Real randnr;
    SCIP_Real curreps;

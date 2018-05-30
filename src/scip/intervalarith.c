@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3518,6 +3518,38 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       return;
    }
 
+   if( ybnds.inf <= -infinity || ybnds.sup >= infinity )
+   {
+      /* the code below is buggy if y is unbounded, see #2250
+       * fall back to univariate case by solving a_x x^2 + b_x x + a_y y^2 + (a_xy xbnds + b_y) y in rhs
+       */
+      SCIP_INTERVAL ax_;
+      SCIP_INTERVAL bx_;
+      SCIP_INTERVAL ycoef;
+      SCIP_INTERVAL ytermbounds;
+
+      *resultant = xbnds;
+
+      /* nothing we can do here if x is unbounded (we have a_xy != 0 here) */
+      if( xbnds.inf <= -infinity && xbnds.sup >= infinity )
+         return;
+
+      /* ycoef = axy xbnds + by */
+      SCIPintervalMulScalar(infinity, &ycoef, xbnds, axy);
+      SCIPintervalAddScalar(infinity, &ycoef, ycoef, by);
+
+      /* get bounds on ay y^2 + (axy xbnds + by) y */
+      SCIPintervalQuad(infinity, &ytermbounds, ay, ycoef, ybnds);
+
+      /* now solve ax x^2 + bx x in rhs - ytermbounds */
+      SCIPintervalSet(&ax_, ax);
+      SCIPintervalSet(&bx_, bx);
+      SCIPintervalSub(infinity, &rhs, rhs, ytermbounds);
+      SCIPintervalSolveUnivariateQuadExpression(infinity, resultant, ax_, bx_, rhs, xbnds);
+
+      return;
+   }
+
    if( ax < 0.0 )
    {
       SCIP_Real tmp;
@@ -3866,7 +3898,6 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                   }
                }
             }
-
          }
          else if( REALABS(2.0 * ay * bx - axy * by) > 1e-9 )
          {

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -185,7 +185,7 @@ SCIP_RETCODE probdataCreate(
    }
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &(*probdata)->randnumgen, 0) );
+   SCIP_CALL( SCIPcreateRandom(scip, &(*probdata)->randnumgen, 0, TRUE) );
 
    (*probdata)->ntypes = ntypes;
    (*probdata)->width = width;

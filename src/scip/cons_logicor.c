@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -129,7 +129,6 @@ struct SCIP_ConsData
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
    unsigned int          validsignature:1;   /**< is the signature valid */
-
 };
 
 
@@ -3639,7 +3638,6 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          SCIP_CONS* newcons;
          SCIP_VAR* vars[2];
 
-
          /* get correct variables */
          SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[0], &vars[0]) );
          SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[1], &vars[1]) );
@@ -4743,7 +4741,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 static
 SCIP_DECL_CONSPRINT(consPrintLogicor)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

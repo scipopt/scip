@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -619,7 +619,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -706,7 +706,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    SCIP* probingscip;         /* copied SCIP structure, used for round-and-propagate loop of feasibility pump 2.0 */
    SCIP_HASHMAP* varmapfw;    /* mapping of SCIP variables to sub-SCIP variables */
-
 
    SCIP_VAR** vars;
    SCIP_VAR** pseudocands;
@@ -1062,7 +1061,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* check whether the variable is one of the most fractionals and label if so */
          if( SCIPisFeasPositive(scip, frac) )
             insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
-
       }
 
       if( heurdata->usefp20 )

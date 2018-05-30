@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -34,14 +34,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/prop.h"
-#include "scip/relax.h"
-#include "scip/var.h"
 #include "scip/cons.h"
 #include "scip/event.h"
 #include "scip/history.h"
@@ -49,16 +41,28 @@
 #include "scip/lp.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_history.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_var.h"
+#include "scip/relax.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/stat.h"
+#include "scip/struct_event.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_var.h"
 #include "scip/tree.h"
-#include "scip/reopt.h"
-
-#include "scip/debug.h"
-
-#include "scip/pub_message.h"
-#include "scip/pub_history.h"
+#include "scip/var.h"
+#include <string.h>
 
 #define MAXIMPLSCLOSURE 100  /**< maximal number of descendants of implied variable for building closure
                               *   in implication graph */
@@ -951,7 +955,6 @@ SCIP_RETCODE boundchgReleaseData(
    /* release variable */
    assert(boundchg->var != NULL);
    SCIP_CALL( SCIPvarRelease(&boundchg->var, blkmem, set, eventqueue, lp) );
-
 
    return SCIP_OKAY;
 }
@@ -3062,7 +3065,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    SCIP_VAR* lockvar;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
    assert(var->nlocksup[locktype] >= 0);
    assert(var->nlocksdown[locktype] >= 0);
    assert(var->scip == set->scip);
@@ -3178,7 +3181,7 @@ int SCIPvarGetNLocksDownType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
    assert(var->nlocksdown[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -3235,7 +3238,7 @@ int SCIPvarGetNLocksUpType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype <= (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
    assert(var->nlocksup[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -3391,7 +3394,6 @@ SCIP_RETCODE SCIPvarTransform(
          assert((*transvar)->nlocksdown[i] >= 0);
          assert((*transvar)->nlocksup[i] >= 0);
       }
-
 
       /* copy doNotMultiaggr status */
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
@@ -3931,7 +3933,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    for( v = 1; v < ntmpvars; ++v )
       assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
 #endif
-
 
    /* collect for each variable the representation in active variables */
    while( ntmpvars >= 1 )
@@ -10269,7 +10270,6 @@ SCIP_RETCODE SCIPvarAddVub(
                if( !SCIPsetIsInfinity(set, -zlb) )
                   maxvub = vubcoef * zlb + vubconstant;
             }
-
          }
          if( minvub > maxvub )
             minvub = maxvub;
@@ -10284,6 +10284,7 @@ SCIP_RETCODE SCIPvarAddVub(
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
+
          /* improve global upper bound of variable */
          if( SCIPsetIsFeasLT(set, maxvub, xub) )
          {
@@ -14153,7 +14154,6 @@ SCIP_Real SCIPvarGetMinPseudocostScore(
    solvaldeltaup = SCIPsetCeil(set, solval) - solval;
    solvaldeltadown = SCIPsetFloor(set, solval) - solval;
 
-
    upscore = SCIPvarGetPseudocost(var, stat, solvaldeltaup);
    downscore = SCIPvarGetPseudocost(var, stat, solvaldeltadown);
 
@@ -14350,7 +14350,6 @@ SCIP_Bool SCIPvarSignificantPscostDifference(
    SCIP_Real county;
    SCIP_Real tresult;
    SCIP_Real realdirection;
-
 
    if( varx == vary )
       return FALSE;

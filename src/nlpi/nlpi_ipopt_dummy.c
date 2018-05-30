@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -149,7 +149,7 @@ SCIP_RETCODE SCIPsolveLinearProb3(
 
       if( ABS(LU[ ENTRY(pivot[p],k) ]) < 1e-08 )
       {
-         SCIPerrorMessage("Error in nlpi_ipopt_dummy - matrix is singular!\n");
+         /* SCIPerrorMessage("Error in nlpi_ipopt_dummy - matrix is singular!\n"); */
          *success = FALSE;
          return SCIP_OKAY;
       }
@@ -270,7 +270,7 @@ SCIP_RETCODE SCIPsolveLinearProb(
 
       if( ABS(LU[ ENTRY(pivot[p],k) ]) < 1e-08 )
       {
-         SCIPerrorMessage("Error in nlpi_ipopt_dummy - matrix is singular!\n");
+         /* SCIPerrorMessage("Error in nlpi_ipopt_dummy - matrix is singular!\n"); */
          *success = FALSE;
          goto TERMINATE;
       }

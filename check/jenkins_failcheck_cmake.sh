@@ -173,7 +173,8 @@ EOF
 # End of AWK Scripts            #
 #################################
 
-SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1`
+# EXECUTABLE has form 'scipoptspx_bugfix_20180401/bin/scip', we only want 'scipoptspx'
+SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1|cut -d '_' -f 1`
 
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
 if [ "${PERFORMANCE}" == "performance" ]; then

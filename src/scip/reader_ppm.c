@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -461,7 +461,6 @@ SCIP_DECL_READERFREE(readerFreePpm)
 static
 SCIP_DECL_READERWRITE(readerWritePpm)
 {  /*lint --e{715}*/
-
    SCIP_READERDATA* readerdata;
 
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);

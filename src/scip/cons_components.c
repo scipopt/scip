@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2554,7 +2554,6 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          "constraints/" CONSHDLR_NAME "/feastolfactor",
          "factor to increase the feasibility tolerance of the main SCIP in all sub-SCIPs, default value 1.0",
          &conshdlrdata->feastolfactor, TRUE, DEFAULT_FEASTOLFACTOR, 0.0, 1000000.0, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

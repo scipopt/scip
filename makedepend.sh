@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This scripts generates the dependences for SCIP
+# This scripts generates the dependencies for SCIP
 #
 
 LPSS=(cpx spx spx1 xprs msk clp grb qso none)

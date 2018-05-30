@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1488,7 +1488,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       return SCIP_OKAY;
 
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
-   if( set->nactivepricers != 0 )
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 )
       return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
@@ -1601,7 +1601,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    assert(set != NULL);
 
    /* do not change objective if there are pricers involved */
-   if( set->nactivepricers != 0 )
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
       return SCIP_OKAY;
 
    nints = transprob->nvars - transprob->ncontvars;

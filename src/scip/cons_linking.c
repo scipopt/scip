@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1749,7 +1749,6 @@ SCIP_RETCODE separateCons(
       else
          addcut = !checkCons(scip, cons, sol);
 
-
       if( !addcut )
       {
          /* constraint was feasible -> increase age */
@@ -2694,7 +2693,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 static
 SCIP_DECL_CONSRESPROP(consRespropLinking)
 {  /*lint --e{715}*/
-
    SCIP_CONSDATA* consdata;
    SCIP_VAR* intvar;
    int v;
@@ -2759,7 +2757,6 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5); /*@repair: neu*/
       assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)) );
       assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)) );
-
 
       SCIP_CALL( SCIPaddConflictLb( scip, intvar, bdchgidx) );
    }
@@ -3430,7 +3427,6 @@ SCIP_VAR* SCIPgetIntvarLinking(
    assert(consdata != NULL);
 
    return consdata->intvar;
-
 }
 
 /** returns the binary variables of the linking constraint */

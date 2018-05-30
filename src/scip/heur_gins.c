@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -223,7 +223,6 @@ SCIP_RETCODE rollingHorizonFree(
    ROLLINGHORIZON**      rollinghorizon      /**< pointer to rolling horizon data structure */
    )
 {
-
    assert(scip != NULL);
    assert(rollinghorizon != NULL);
    assert(*rollinghorizon != NULL);
@@ -751,8 +750,8 @@ SCIP_RETCODE selectNextVariable(
          rollinghorizon->nused++;
          *selvar = NULL;
       }
-
-   } while( rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*selvar == NULL || *selvarmaxdistance == 0) );
+   }
+   while( rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*selvar == NULL || *selvarmaxdistance == 0) );
 
    /* breadth-first search determines the distances of all variables
     * that are no more than maxdistance away from the start variable
@@ -1195,7 +1194,7 @@ SCIP_DECL_HEURINIT(heurInitGins)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
    heurdata->sumdiscneighborhoodvars = heurdata->sumneighborhoodvars = 0;
    heurdata->nneighborhoods = 0;
    heurdata->maxseendistance = 0;
@@ -1244,7 +1243,6 @@ SCIP_DECL_HEUREXIT(heurExitGins)
 static
 SCIP_DECL_HEUREXEC(heurExecGins)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;                  /* heuristic's data */
    SCIP* subscip;                            /* the subproblem created by gins */
    SCIP_VAR** vars;                          /* original problem's variables */
@@ -1402,8 +1400,8 @@ SCIP_DECL_HEUREXEC(heurExecGins)
          SCIP_CALL( determineLimits(scip, heur, &solvelimits, &runagain ) );
          runagain = runagain && rollingHorizonRunAgain(scip, rollinghorizon, heurdata);
       }
-
-   } while( runagain );
+   }
+   while( runagain );
 
    /* delay the heuristic in case it was not successful */
    if( *result != SCIP_FOUNDSOL )

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1146,6 +1146,5 @@ SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP_CALL( consdataAddCons(scip, consdata, addcons) );
 
    return SCIP_OKAY;
-
 }
 

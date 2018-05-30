@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -93,7 +93,6 @@ SCIP_RETCODE smpsinputCreate(
    (*smpsi)->buf     [0] = '\0';
    (*smpsi)->f0          = NULL;
    (*smpsi)->f1          = NULL;
-
 
    return SCIP_OKAY;
 }
@@ -388,7 +387,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
             {
                SCIPinfoMessage(scip, NULL, "deterministic equivalent problem ");
             }
-
 
             SCIPinfoMessage(scip, NULL,
                "has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",

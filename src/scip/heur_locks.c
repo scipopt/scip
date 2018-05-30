@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -168,7 +168,7 @@ SCIP_DECL_HEURINIT(heurInitLocks) /*lint --e{715}*/
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -267,7 +267,6 @@ SCIP_RETCODE SCIPapplyLockFixings(
       maxproprounds = heurdata->maxproprounds;
 
    roundupprobability = heurdata->roundupprobability;
-
 
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
@@ -1041,7 +1040,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );
    }
-
 
  TERMINATE:
    /* exit probing mode */

@@ -23,8 +23,6 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/cons_linear.h"
 #include "scip/heur_mutation.h"
 #include "scip/pub_misc.h"
 
@@ -449,7 +447,7 @@ SCIP_DECL_HEURINIT(heurInitMutation)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -656,7 +654,6 @@ SCIP_RETCODE SCIPincludeHeurMutation(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
          "should uct node selection be used at the beginning of the search?",
          &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

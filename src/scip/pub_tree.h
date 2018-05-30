@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -26,9 +26,12 @@
 
 
 #include "scip/def.h"
-#include "scip/type_misc.h"
-#include "scip/type_tree.h"
+#include "scip/type_cons.h"
+#include "scip/type_lp.h"
 #include "scip/type_reopt.h"
+#include "scip/type_retcode.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
 
 #ifdef NDEBUG
 #include "scip/struct_tree.h"

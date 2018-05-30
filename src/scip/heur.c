@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1522,7 +1522,6 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    assert(distances != NULL);
    assert(maxdistance >= 0);
 
-
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    nbinintvars = nbinvars + nintvars;
@@ -1638,7 +1637,6 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
 
          /* mark the constraint as visited */
          SCIP_CALL( SCIPhashtableInsert(vargraph->visitedconss, (void *)cons) );
-
       } /* end constraint loop */
 
       queue[currlvlidx] = -1;

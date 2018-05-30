@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -285,7 +285,6 @@ SCIP_RETCODE printActiveVariables(
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
 
-
    if( *linecnt == 0 )
       /* we start a new line; therefore we tab this line */
       appendLine(scip, file, linebuffer, linecnt, "     ");
@@ -424,7 +423,7 @@ SCIP_RETCODE printLinearRow(
    )
 {
    int v;
-   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -601,7 +600,7 @@ SCIP_RETCODE printQuadraticRow(
    )
 {
    int t;
-   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -837,7 +836,7 @@ SCIP_RETCODE printSOCCons(
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
-   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    char consname[GMS_MAX_NAMELEN + 3]; /* four extra characters for ' ..' */
@@ -922,7 +921,7 @@ SCIP_RETCODE printIndicatorCons(
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
-   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
    SCIP_Real coef;
    char indicatorform;
@@ -1050,7 +1049,7 @@ SCIP_RETCODE printSOSCons(
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
-   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
    SCIP_Real coef;
    int v;
@@ -1114,7 +1113,7 @@ SCIP_RETCODE printSignpowerRow(
    SCIP_Bool*            nsmooth             /**< buffer to store whether we printed a nonsmooth function */
    )
 {
-   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
    SCIP_Bool nisoddint;
    SCIP_Bool fixedsign;
@@ -1767,7 +1766,7 @@ SCIP_RETCODE printNonlinearRow(
    SCIP_Bool*            nsmooth             /**< buffer to store whether we printed a nonsmooth function */
    )
 {
-   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    char consname[GMS_MAX_NAMELEN + 3]; /* four extra characters for ' ..' */
@@ -2240,7 +2239,7 @@ SCIP_RETCODE SCIPwriteGms(
    int c;
    int v;
    int linecnt;
-   char linebuffer[GMS_MAX_PRINTLEN];
+   char linebuffer[GMS_MAX_PRINTLEN+1];
 
    char varname[GMS_MAX_NAMELEN];
    char buffer[GMS_MAX_PRINTLEN];
@@ -2471,7 +2470,7 @@ SCIP_RETCODE SCIPwriteGms(
             if( !SCIPisInfinity(scip, ub) )
                SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfeasFloor(scip, ub));
             else
-               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPinfinity(scip)); /* sorry, +inf not allowed in gams file here (unless pf4=0) */
+               SCIPinfoMessage(scip, file, " %s.up = +inf;\n", varname);
             nondefbounds = TRUE;
          }
       }

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -356,7 +356,6 @@ SCIP_RETCODE createKKTComplementarityBinary(
    /* release slack variable */
    SCIP_CALL( SCIPreleaseVar(scip, &slackbin1) );
 
-
    /* create second slack variable associated to binary constraint; domain [0, inf] */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_slackbin2", SCIPvarGetName(var));
    SCIP_CALL( SCIPcreateVarBasic(scip, &slackbin2, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -499,7 +498,6 @@ SCIP_RETCODE createKKTDualCons(
       /* add dual constraint to array for later use */
       dualconss[(*ndualconss)++] = *dualcons;
 
-
       /* add dual variables to dual constraints and create complementarity constraints; binary variables have to be
        * treated in a different way */
       if( SCIPvarIsBinary(var) )
@@ -639,7 +637,6 @@ SCIP_RETCODE presolveAddKKTLinearCons(
          }
       }
       assert( duallin != NULL );
-
 
       /* loop through variables of linear constraint */
       for( j = 0; j < nvars; ++j )
@@ -1726,7 +1723,6 @@ SCIP_RETCODE checkConsQuadraticProblem(
          return SCIP_OKAY;
    }
 
-
    *isqp = TRUE;
 
    return SCIP_OKAY;
@@ -1922,7 +1918,6 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
       }
    }
 
-
    /* add KKT constraints */
 
    /* set up hash map */
@@ -1985,7 +1980,6 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    /* handle linear terms of quadratic constraint */
    SCIP_CALL( presolveAddKKTQuadLinearTerms(scip, objcons, lintermvars, lintermcoefs, nlintermvars, quadterms, nquadterms,
         varhash, objvar, scale, dualconss, &ndualconss, naddconss) );
-
 
    /* add/release objective constraint */
    SCIP_CALL( SCIPaddCons(scip, objcons) );

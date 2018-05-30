@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2537,8 +2537,6 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    conshdlr = SCIPfindConshdlr(scip, "quadratic");
    if( conshdlr != NULL )
    {
-
-      /*SCIPdebugMsg(scip, "cons_quadratic is there!\n");*/
       nconss = SCIPconshdlrGetNActiveConss(conshdlr);
       conss = SCIPconshdlrGetConss(conshdlr);
 
@@ -2789,7 +2787,6 @@ SCIP_RETCODE initBounds(
       bilinidx = 0;
       nbilinterms = 0;
 
-
       /* allocate memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &x, nbilins) );
       SCIP_CALL( SCIPallocBufferArray(scip, &y, nbilins) );
@@ -2933,7 +2930,7 @@ SCIP_DECL_PROPINITSOL(propInitsolObbt)
    SCIPdebugMsg(scip, "creating genvbounds: %s\n", propdata->genvboundprop != NULL ? "true" : "false");
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

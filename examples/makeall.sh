@@ -3,7 +3,7 @@
 # stop on error
 set -e
 
-EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens Relaxator TSP VRP)
+EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens Relaxator SCFLP TSP VRP)
 LPSOLVERS=(spx2 cpx none)
 OPTS=(opt dbg)
 LIBTYPE=(static shared)
