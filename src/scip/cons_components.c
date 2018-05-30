@@ -26,6 +26,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_components.h"
+#include "scip/debug.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"

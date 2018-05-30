@@ -39,6 +39,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
+#include "scip/debug.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_lp.h"
