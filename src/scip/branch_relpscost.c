@@ -114,6 +114,8 @@ struct SCIP_BranchruleData
  * local methods
  */
 
+/**! [SnippetCodeStyleStaticAsserts] */
+
 /** return probindex of variable or corresponding active variable (if negated or aggregated) or -1 (if multiaggregated) */
 static
 SCIP_RETCODE binvarGetActiveProbindex(
@@ -126,6 +128,8 @@ SCIP_RETCODE binvarGetActiveProbindex(
    assert(var != NULL);
    assert(SCIPvarIsBinary(var));
    assert(probindex != NULL);
+
+/**! [SnippetCodeStyleStaticAsserts] */
 
    *probindex = SCIPvarGetProbindex(var);
 
@@ -148,6 +152,8 @@ SCIP_RETCODE binvarGetActiveProbindex(
    return SCIP_OKAY;
 }
 
+/**! [SnippetCodeStyleDeclaration] */
+
 /** counts number of nonlinear constraints in which each variable appears */
 static
 SCIP_RETCODE countNonlinearities(
@@ -161,6 +167,8 @@ SCIP_RETCODE countNonlinearities(
    SCIP_VAR** vars;
    int nvars;
    int i;
+
+/**! [SnippetCodeStyleDeclaration] */
 
    assert(scip != NULL);
    assert(nlcount != NULL);
@@ -202,6 +210,9 @@ SCIP_RETCODE countNonlinearities(
          andres = SCIPgetResultantAnd(scip, andcons);
 
          probindex = -1;
+
+         /**! [SnippetCodeStyleIfFor] */
+
          for( v = 0; v < nandvars; v++ )
          {
             /* don't rely on the and conshdlr removing fixed variables
@@ -214,6 +225,8 @@ SCIP_RETCODE countNonlinearities(
                   nlcount[probindex]++;
             }
          }
+
+         /**! [SnippetCodeStyleIfFor] */
 
          SCIP_CALL( binvarGetActiveProbindex(scip, andres, &probindex) );
          if( probindex >= 0 )
@@ -1655,10 +1668,14 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/higherrortol", "high relative error tolerance for reliability",
          &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
+/**! [SnippetCodeStyleParenIndent] */
+
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/storesemiinitcosts",
          "should strong branching result be considered for pseudo costs if the other direction was infeasible?",
          &branchruledata->storesemiinitcosts, TRUE, DEFAULT_STORESEMIINITCOSTS,
          NULL, NULL) );
+
+/**! [SnippetCodeStyleParenIndent] */
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usesblocalinfo",
          "should the scoring function use only local cutoff and inference information obtained for strong branching candidates?",
