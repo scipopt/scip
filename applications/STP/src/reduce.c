@@ -1333,6 +1333,8 @@ SCIP_RETCODE redLoopPc(
 
       if( da || (dualascent && extensive) )
       {
+         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+
          if( rpc )
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE) );
