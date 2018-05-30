@@ -36,10 +36,19 @@ git ls-files -c | xargs tar --transform "s|^|${NAME}/|" -chf $NAME.tar \
 --exclude="makepictures.sh" \
 --exclude="suppressions.*" \
 --exclude="tex/*" \
+--exclude="check/check_*" \
+--exclude="check/*cluster*" \
+--exclude="check/checkcuts.py" \
+--exclude="check/evalcheck_*" \
+--exclude="check/schulz.sh" \
 --exclude="check/testset/*"
 
 # append additional files that were excluded before
 tar --transform "s|^|${NAME}/|" -rf $NAME.tar \
+check/check_count.awk \
+check/check_count.sh \
+check/check_coverage.sh \
+check/evalcheck_count.sh \
 check/testset/short.test \
 check/testset/short.solu \
 check/testset/coverage.test \
