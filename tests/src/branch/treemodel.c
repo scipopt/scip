@@ -25,10 +25,12 @@
 #include <scip/treemodel.h>
 
 #include <scip/struct_scip.h>
+#include <scip/struct_set.h>
 #include <scip/struct_primal.h>
 #include <scip/struct_tree.h>
 #include <scip/struct_var.h>
 #include <scip/struct_history.h>
+#include <scip/type_set.h>
 
 #include "include/scip_test.h"
 
