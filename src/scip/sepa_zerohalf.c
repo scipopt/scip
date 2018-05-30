@@ -651,7 +651,7 @@ SCIP_RETCODE mod2MatrixTransformContRows(
 
       lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
       rhs = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
-      activity = SCIPgetRowLPActivity(scip, rows[i]) - SCIProwGetConstant(rows[i]);
+      activity = SCIPgetRowSolActivity(scip, rows[i], sol) - SCIProwGetConstant(rows[i]);
 
       /* compute lhsslack: activity - lhs */
       if( SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) )
