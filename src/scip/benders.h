@@ -408,21 +408,6 @@ SCIP_Bool SCIPbendersSubproblemIsSetup(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** sets the independent subproblem flag */
-extern
-void SCIPbendersSetSubproblemIsIndependent(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool             isindep             /**< flag to indicate whether the subproblem is independent */
-   );
-
-/** returns whether the subproblem is independent */
-extern
-SCIP_Bool SCIPbendersSubproblemIsIndependent(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber          /**< the subproblem number */
-   );
-
 /** Sets whether the subproblem is enabled or disabled. A subproblem is disabled if it has been merged into the master
  *  problem.
  */
