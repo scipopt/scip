@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,10 +21,28 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/branch_fullstrong.h"
+#include "scip/pub_branch.h"
+#include "scip/pub_message.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include "scip/type_branch.h"
+#include "scip/type_lp.h"
+#include "scip/type_message.h"
+#include "scip/type_tree.h"
+#include <string.h>
 
 
 #define BRANCHRULE_NAME          "fullstrong"
@@ -260,7 +278,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    propagate = (maxproprounds != 0);
 
    /* if we don't do propagation, we cannot identify valid bounds in a probing-like fashion */
-   if( !propagate )
+   if( !propagate && maxproprounds > -3 )
       probingbounds = FALSE;
 
    /* create arrays for probing-like bound tightening */
@@ -363,6 +381,16 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
+         /* update pseudo cost values */
+         if( !downinf && downvalid )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
+         }
+         if( !upinf && upvalid )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+         }
+
          /* check if there are infeasible roundings */
          if( downinf || upinf )
          {
@@ -461,12 +489,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                }
             }
          }
-
-         /* update pseudo cost values */
-         assert(!downinf); /* otherwise, we would have terminated the initialization loop */
-         assert(!upinf);
-         SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
-         SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
       }
 
       /* check for a better score, if we are within the maximum priority candidates */
@@ -663,7 +685,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/fullstrong/maxproprounds",
          "maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)",
-         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
+         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -3, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/fullstrong/probingbounds",
          "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",

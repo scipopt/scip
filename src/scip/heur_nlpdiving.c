@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -441,7 +441,7 @@ SCIP_RETCODE chooseVeclenVar(
 
       /* check whether the variable is roundable */
       *bestcandmayround = *bestcandmayround && (SCIPvarMayRoundDown(var) || SCIPvarMayRoundUp(var));
-      nlocks = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var);
+      nlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 
       /* smaller score is better */
       score = (objdelta + SCIPsumepsilon(scip))/((SCIP_Real)nlocks+1.0);
@@ -558,10 +558,10 @@ SCIP_RETCODE chooseCoefVar(
             if( roundup )
             {
                frac = 1.0 - frac;
-               nviolrows = SCIPvarGetNLocksUp(var);
+               nviolrows = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
             }
             else
-               nviolrows = SCIPvarGetNLocksDown(var);
+               nviolrows = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
 
             /* penalize too small fractions */
             if( SCIPisEQ(scip, frac, 0.01) )
@@ -599,8 +599,8 @@ SCIP_RETCODE chooseCoefVar(
       else
       {
          /* the candidate may not be rounded */
-         nlocksdown = SCIPvarGetNLocksDown(var);
-         nlocksup = SCIPvarGetNLocksUp(var);
+         nlocksdown = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
+         nlocksup = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
 
          roundup = (nlocksdown > nlocksup);
          if( !roundup )
@@ -1110,12 +1110,12 @@ SCIP_RETCODE chooseDoubleVar(
       nlpsolceil =  SCIPfeasCeil(scip, nlpsol);
       floorval = MIN(lpsolfloor,nlpsolfloor);
       ceilval =  MAX(lpsolceil,nlpsolceil);
+
       /* if both values are in the same interval, find out which integer is (in sum) the closer one, this will be the
        * new bound. The minima and maxima are necessary since one or both values with be integer
        */
       if( SCIPvarIsBinary(var) || ceilval-floorval < 1.5 )
       {
-
          frac = 0.33*(lpsol-floorval) + 0.67*(nlpsol-floorval);
          if( frac < 0.5 )
          {
@@ -1383,9 +1383,7 @@ SCIP_RETCODE solveSubMIP(
    )
 {
    SCIP* subscip;
-
    SCIP_RETCODE retcode;
-
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
@@ -1527,7 +1525,7 @@ SCIP_DECL_HEURINIT(heurInitNlpdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    /* initialize data */
    heurdata->nnlpiterations = 0;
@@ -2304,7 +2302,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                      nlpsolval = SCIPvarGetNLPSol(covervars[c]);
                      nlpsolval = MIN(nlpsolval,ub);
                      nlpsolval = MAX(nlpsolval,lb);
-                     assert(SCIPvarGetType(covervars[c]) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, nlpsolval));
+                     assert(SCIPvarGetType(covervars[c]) >= SCIP_VARTYPE_IMPLINT || SCIPisFeasIntegral(scip, nlpsolval));
 
                      /* open a new probing node if this will not exceed the maximal tree depth,
                       * otherwise fix all the remaining variables at the same probing node
@@ -2324,6 +2322,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                      if( SCIPisLbBetter(scip, nlpsolval, lb, ub) )
                      {
                         SCIP_CALL( SCIPchgVarLbProbing(scip, covervars[c], nlpsolval) );
+                        /* if covervar was implicit integer and fractional, then nlpsolval may be below lower bound now, so adjust to new bound */
+                        nlpsolval = MAX(nlpsolval, SCIPvarGetLbLocal(covervars[c])); /*lint !e666*/
                      }
                      if( SCIPisUbBetter(scip, nlpsolval, lb, ub) )
                      {

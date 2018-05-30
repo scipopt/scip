@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -159,7 +159,7 @@ SCIP_RETCODE checkVariable(
    if( SCIPvarGetUbLocal(var) < 0.5 )
       return SCIP_OKAY;
 
-   /* check if the packing which corresponds to the variable feasible for this constraint */
+   /* check if the packing which corresponds to the variable is feasible for this constraint */
    vardata = SCIPvarGetData(var);
 
    nconsids = SCIPvardataGetNConsids(vardata);
@@ -258,7 +258,7 @@ SCIP_Bool consdataCheck(
       var = vars[v];
 
       /* if variables is locally fixed to zero continue */
-      if( SCIPvarGetLbLocal(var) < 0.5 )
+      if( SCIPvarGetUbLocal(var) < 0.5 )
          continue;
 
       /* check if the packing which corresponds to the variable is feasible for this constraint */
@@ -391,6 +391,9 @@ SCIP_DECL_CONSPROP(consPropSamediff)
    {
       consdata = SCIPconsGetData(conss[c]);
 
+      /* check if all previously generated variables are valid for this constraint */
+      assert( consdataCheck(scip, probdata, consdata, TRUE) );
+
 #ifndef NDEBUG
       {
          /* check if there are no equal consdatas */
@@ -465,9 +468,6 @@ SCIP_DECL_CONSACTIVE(consActiveSamediff)
       consdata->propagated = FALSE;
       SCIP_CALL( SCIPrepropagateNode(scip, consdata->node) );
    }
-
-   /* check if all previously generated variables are valid for this constraint */
-   assert( consdataCheck(scip, probdata, consdata, TRUE) );
 
    return SCIP_OKAY;
 }

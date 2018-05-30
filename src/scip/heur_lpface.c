@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -173,7 +173,6 @@ SCIP_RETCODE fixVariables(
             if( SCIPvarIsIntegral(var) )
                ++fixingcounter;
          }
-
       }
    }
 
@@ -502,7 +501,6 @@ SCIP_RETCODE setSubscipParameters(
    SCIP*                 subscip             /**< data structure of the sub-problem */
    )
 {
-
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
@@ -794,6 +792,7 @@ SCIP_RETCODE setupSubscipLpface(
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
 
+      /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
    }
    else
@@ -813,8 +812,8 @@ SCIP_RETCODE setupSubscipLpface(
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
       SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
-
    }
+
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
 
@@ -1080,7 +1079,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolLpface)
    {
       /* free kept data structures first */
       SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
-
    }
 
    /* free the sub-SCIP data structure */
@@ -1259,7 +1257,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
       SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
    }
-
 
    /* retrieve the sub-SCIP from the heuristic data structure */
    if( heurdata->subscipdata->subscip != NULL )

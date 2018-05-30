@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -26,12 +26,15 @@
 #include <signal.h>
 
 #include "scip/def.h"
+#include "scip/pub_message.h"
 #include "blockmemshell/memory.h"
 #include "scip/interrupt.h"
 
 
 static volatile
 int                      ninterrupts = 0;    /**< static variable counting the number of CTRL-C interrupts */
+static volatile
+int                      nterms = 0;         /**< static variable counting the number of times that the process received a SIGTERM signal */
 
 
 #ifdef NO_SIGACTION
@@ -59,7 +62,7 @@ static
 void interruptHandler(
    int                   signum              /**< interrupt signal number */
    )
-{  /*lint --e{715}*/
+{ /*lint --e{715}*/
    ninterrupts++;
    if( ninterrupts >= 5 )
    {
@@ -120,6 +123,7 @@ void SCIPinterruptCapture(
 #endif
 
       ninterrupts = 0;
+      nterms = 0;
    }
    interrupt->nuses++;
 }
@@ -151,11 +155,28 @@ SCIP_Bool SCIPinterrupted(
    return (ninterrupts > 0);
 }
 
+/** returns whether a process termination signal was received */
+SCIP_Bool SCIPterminated(
+   void
+   )
+{
+   return (nterms > 0);
+}
+
+/** send a termination signal to the process so that SCIP tries to terminate as soon as possible */
+void SCIPtryTerminate(
+   void
+   )
+{
+   nterms++;
+}
+
 /** resets the number of interrupts to 0 */
 void SCIPresetInterrupted(
    void
    )
 {
    ninterrupts = 0;
+   nterms = 0;
 }
 

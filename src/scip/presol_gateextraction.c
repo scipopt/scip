@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -850,24 +850,24 @@ SCIP_RETCODE extractGates(
       {
          assert(SCIPvarIsActive(SCIPvarGetNegatedVar(activevars[d])));
 
-         if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) >= nlogicorvars - 1 )
+         if( SCIPvarGetNLocksDownType(SCIPvarGetNegatedVar(activevars[d]), SCIP_LOCKTYPE_MODEL) >= nlogicorvars - 1 )
          {
             posresultants[nposresultants] = activevars[d];
             ++nposresultants;
          }
-         else if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) == 0 )
+         else if( SCIPvarGetNLocksDownType(SCIPvarGetNegatedVar(activevars[d]), SCIP_LOCKTYPE_MODEL) == 0 )
             return SCIP_OKAY;
       }
       else
       {
          assert(SCIPvarIsActive(activevars[d]));
 
-         if( SCIPvarGetNLocksUp(activevars[d]) >= nlogicorvars - 1 )
+         if( SCIPvarGetNLocksUpType(activevars[d], SCIP_LOCKTYPE_MODEL) >= nlogicorvars - 1 )
          {
             posresultants[nposresultants] = activevars[d];
             ++nposresultants;
          }
-         else if( SCIPvarGetNLocksUp(activevars[d]) == 0 )
+         else if( SCIPvarGetNLocksUpType(activevars[d], SCIP_LOCKTYPE_MODEL) == 0 )
             return SCIP_OKAY;
       }
    }
@@ -1183,7 +1183,6 @@ SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
          /* remove constraint from setppc-hashtable */
          assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons));
          SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons) );
-
 
          /* remove hashdata entry from hashtable */
          SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[c]) );

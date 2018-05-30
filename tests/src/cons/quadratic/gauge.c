@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -36,11 +36,18 @@ static SCIP_NLPI* nlpi;
 static
 void setup(void)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include quadratic conshdlr (need to include nonlinear) */
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
    SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
+
+   /* activate gauge cuts */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME); /* we are including cons_quadraitc */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   conshdlrdata->gaugecuts = TRUE;
 
    /* include NLPI's */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );

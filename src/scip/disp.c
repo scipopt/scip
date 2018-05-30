@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -69,8 +69,9 @@ SCIP_RETCODE SCIPdispCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a display column */
-SCIP_RETCODE SCIPdispCreate(
+/** internal method for creating a display column */
+static
+SCIP_RETCODE doDispCreate(
    SCIP_DISP**           disp,               /**< pointer to store display column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -104,6 +105,8 @@ SCIP_RETCODE SCIPdispCreate(
    assert(width >= 0);
 
    SCIP_ALLOC( BMSallocMemory(disp) );
+   BMSclearMemory(*disp);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*disp)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*disp)->desc, desc, strlen(desc)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*disp)->header, header, strlen(header)+1) );
@@ -133,6 +136,44 @@ SCIP_RETCODE SCIPdispCreate(
    return SCIP_OKAY;
 }
 
+/** creates a display column */
+SCIP_RETCODE SCIPdispCreate(
+   SCIP_DISP**           disp,               /**< pointer to store display column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of display column */
+   const char*           desc,               /**< description of display column */
+   const char*           header,             /**< head line of display column */
+   SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
+   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
+   SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
+   SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
+   SCIP_DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
+   SCIP_DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
+   SCIP_DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
+   SCIP_DISPDATA*        dispdata,           /**< display column data */
+   int                   width,              /**< width of display column (no. of chars used) */
+   int                   priority,           /**< priority of display column */
+   int                   position,           /**< relative position of display column */
+   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbor? */
+   )
+{
+   assert(disp != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(header != NULL);
+   assert(dispoutput != NULL);
+   assert(width >= 0);
+
+   SCIP_CALL_FINALLY( doDispCreate(disp, set, messagehdlr, blkmem, name, desc, header, dispstatus, dispcopy,
+      dispfree, dispinit, dispexit, dispinitsol, dispexitsol, dispoutput, dispdata, width, priority, position,
+      stripline), (void) SCIPdispFree(disp, set) );
+
+   return SCIP_OKAY;
+}
+
 /** frees memory of display column */
 SCIP_RETCODE SCIPdispFree(
    SCIP_DISP**           disp,               /**< pointer to display column data structure */
@@ -140,7 +181,8 @@ SCIP_RETCODE SCIPdispFree(
    )
 {
    assert(disp != NULL);
-   assert(*disp != NULL);
+   if( *disp == NULL )
+      return SCIP_OKAY;
    assert(!(*disp)->initialized);
    assert(set != NULL);
 
@@ -150,9 +192,9 @@ SCIP_RETCODE SCIPdispFree(
       SCIP_CALL( (*disp)->dispfree(set->scip, *disp) );
    }
 
-   BMSfreeMemoryArray(&(*disp)->name);
-   BMSfreeMemoryArray(&(*disp)->desc);
-   BMSfreeMemoryArray(&(*disp)->header);
+   BMSfreeMemoryArrayNull(&(*disp)->name);
+   BMSfreeMemoryArrayNull(&(*disp)->desc);
+   BMSfreeMemoryArrayNull(&(*disp)->header);
    BMSfreeMemory(disp);
 
    return SCIP_OKAY;

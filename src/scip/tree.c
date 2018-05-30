@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2316,20 +2316,24 @@ void SCIPnodeUpdateLowerbound(
       oldbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
+
       if( node->depth == 0 )
       {
          stat->rootlowerbound = newbound;
          if( set->misc_calcintegral )
             SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), newbound);
+         SCIPvisualLowerbound(stat->visual, set, stat, newbound);
       }
-      else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
+      else if ( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
       {
          SCIP_Real lowerbound;
+
          lowerbound = SCIPtreeGetLowerbound(tree, set);
          assert(newbound >= lowerbound);
+         SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
 
          /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
-         if( lowerbound > stat->lastlowerbound )
+         if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) && lowerbound > stat->lastlowerbound )
             SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
       }
    }
@@ -4137,7 +4141,6 @@ SCIP_RETCODE focusnodeToSubroot(
    assert(lp->flushed);
    assert(lp->solved);
 
-
    /* create subroot data */
    SCIP_CALL( subrootCreate(&subroot, blkmem, set, transprob, tree, lp) );
 
@@ -4273,8 +4276,6 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(*node == NULL || !(*node)->active);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert(!postponed || *node == NULL);
-   assert(!postponed || tree->focusnode != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
    assert(cutoff != NULL);
@@ -4391,6 +4392,10 @@ SCIP_RETCODE SCIPnodeFocus(
     * if the node was postponed, make it a leaf.
     */
    childrenlpstatefork = tree->focuslpstatefork;
+
+   assert(!postponed || *node == NULL);
+   assert(!postponed || tree->focusnode != NULL);
+
    if( postponed )
    {
       assert(tree->nchildren == 0);
@@ -5665,7 +5670,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
          *upchild = node;
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -6885,7 +6889,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occured an error
     * during resolving right above
     */
-   assert(!tree->probinglpwassolved || lp->solved || lp->resolvelperror);
+   assert(!tree->probinglpwassolved || !tree->probinglpwasflushed || lp->solved || lp->resolvelperror);
 
    /* if the LP was not solved before probing it should be marked unsolved now; this can occur if a probing LP was
     * solved in between

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1073,7 +1073,6 @@ SCIP_RETCODE dfs(
             /* restart while loop, get next index from stack */
             continue;
          }
-
       }
    REMOVE:
       /* the current node was completely handled, remove it from stack */
@@ -1293,7 +1292,6 @@ SCIP_RETCODE initData(
             SCIPdebugMsg(scip, "varbound <%s> %s %g * <%s> + %g added to propagator data\n",
                SCIPvarGetName(var), (lower ? ">=" : "<="), coef,
                SCIPvarGetName(vbvar), constant);
-
          }
       }
    }
@@ -2542,7 +2540,6 @@ SCIP_RETCODE tarjan(
 #ifdef DEBUG_TARJAN
                SCIPdebugMsg(scip, "remove %s(%s) from stack[%d]\n", indexGetBoundString(dfsstack[stacksize]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize])]), stacksize);
 #endif
-
             }
             while( idx != curridx );
             SCIPdebugMsgPrint(scip, "\n");
@@ -2749,7 +2746,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    if( presoltiming == SCIP_PRESOLTIMING_MEDIUM && ncliques > propdata->maxcliquesmedium * SCIPgetNBinVars(scip) )
       return SCIP_OKAY;
 
-   /* too many cliques for medium presolving */
+   /* too many cliques for exhaustive presolving */
    if( ncliques > propdata->maxcliquesexhaustive * SCIPgetNBinVars(scip) )
       return SCIP_OKAY;
 
@@ -2919,7 +2916,6 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
 static
 SCIP_DECL_PROPEXEC(propExecVbounds)
 {  /*lint --e{715}*/
-
    *result = SCIP_DIDNOTRUN;
 
    /* perform variable lower and upper bound propagation */

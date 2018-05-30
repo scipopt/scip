@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -416,7 +416,7 @@ SCIP_RETCODE checkCands(
          {
             SCIP_Real roundedvalue;
 
-            if( SCIPvarGetNLocksUp(vars[i]) > SCIPvarGetNLocksDown(vars[i]) )
+            if( SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) )
             {
                roundedvalue = SCIPceil(scip, value - 1.0);
             }
@@ -620,7 +620,6 @@ SCIP_RETCODE applyRepair(
       {
          lb = value;
          varslack = lborig - value;
-         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
       }
       else
       {
@@ -632,7 +631,6 @@ SCIP_RETCODE applyRepair(
       {
          ub = value;
          varslack = uborig - value;
-         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
       }
       else
       {
@@ -657,7 +655,6 @@ SCIP_RETCODE applyRepair(
       if( !SCIPisFeasZero(scip, varslack) && SCIP_VARTYPE_BINARY == vartype )
       {
          vartype = SCIP_VARTYPE_INTEGER;
-         SCIP_CALL( SCIPchgVarType(subscip, subvars[i], vartype, &success) );
       }
 
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "sub_%s", SCIPvarGetName(vars[i]));
@@ -709,7 +706,6 @@ SCIP_RETCODE applyRepair(
          heurdata->nviolatedvars++;
 #endif
       }
-
 
 #ifdef SCIP_STATISTIC
       if( SCIPisFeasLT(scip, value, lb) || SCIPisFeasGT(scip, value, ub) )
@@ -822,7 +818,6 @@ SCIP_RETCODE applyRepair(
             nviolatedrows[pos]++;
          }
       }
-
 
       /* create a new linear constraint, representing the old one */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &subcons[i], SCIProwGetName(rows[i]),
@@ -1040,7 +1035,6 @@ SCIP_DECL_HEURFREE(heurFreeRepair)
 static
 SCIP_DECL_HEURINIT(heurInitRepair)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
@@ -1219,7 +1213,6 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    {
       error = FALSE;
       retcode = SCIPreadSolFile(scip, heurdata->filename, heurdata->infsol, FALSE, NULL, &error);
-      assert(error || SCIP_OKAY == retcode);
    }
 
    if( SCIP_NOFILE == retcode )
@@ -1343,7 +1336,6 @@ SCIP_RETCODE SCIPincludeHeurRepair(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
-
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
          "minimum percentage of integer variables that have to be fixed",

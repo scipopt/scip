@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -64,6 +64,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lexduallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->barrierlptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->resolveinstablelptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -123,6 +124,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->duallptime);
    SCIPclockFree(&(*stat)->lexduallptime);
    SCIPclockFree(&(*stat)->barrierlptime);
+   SCIPclockFree(&(*stat)->resolveinstablelptime);
    SCIPclockFree(&(*stat)->divinglptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
    SCIPclockFree(&(*stat)->conflictlptime);
@@ -198,6 +200,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->duallptime);
    SCIPclockReset(stat->lexduallptime);
    SCIPclockReset(stat->barrierlptime);
+   SCIPclockReset(stat->resolveinstablelptime);
    SCIPclockReset(stat->divinglptime);
    SCIPclockReset(stat->strongbranchtime);
    SCIPclockReset(stat->conflictlptime);
@@ -233,6 +236,8 @@ void SCIPstatReset(
    stat->nsbtimesiterlimhit = 0L;
    stat->nrootsblpiterations = 0;
    stat->nconflictlpiterations = 0;
+   stat->nresolveinstablelps = 0;
+   stat->nresolveinstablelpiters = 0;
    stat->ntotalnodes = 0;
    stat->ntotalinternalnodes = 0;
    stat->ntotalnodesmerged = 0;
@@ -555,7 +560,6 @@ void SCIPstatResetCurrentRun(
    else
       stat->referencebound = SCIPsetInfinity(set);
 
-
    if( !solved )
       stat->status = SCIP_STATUS_UNKNOWN;
 
@@ -602,7 +606,7 @@ void SCIPstatUpdateMemsaveMode(
    {
       SCIP_Longint memused;
 
-      memused = SCIPmemGetUsed(mem);
+      memused = SCIPmemGetTotal(mem);
       if( !stat->memsavemode && memused >= set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to memory saving mode */
@@ -652,6 +656,7 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->duallptime, enable);
    SCIPclockEnableOrDisable(stat->lexduallptime, enable);
    SCIPclockEnableOrDisable(stat->barrierlptime, enable);
+   SCIPclockEnableOrDisable(stat->resolveinstablelptime, enable);
    SCIPclockEnableOrDisable(stat->divinglptime, enable);
    SCIPclockEnableOrDisable(stat->strongbranchtime, enable);
    SCIPclockEnableOrDisable(stat->conflictlptime, enable);

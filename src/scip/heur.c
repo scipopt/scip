@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -103,6 +103,7 @@ SCIP_RETCODE SCIPdivesetReset(
    diveset->nlps = 0;
    diveset->nsolsfound = 0;
    diveset->nbestsolsfound = 0;
+   diveset->nconflictsfound = 0;
    diveset->ncalls = 0;
    diveset->nsolcalls = 0;
 
@@ -121,6 +122,7 @@ void SCIPdivesetUpdateStats(
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
    SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
    SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
    SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    )
 {
@@ -144,6 +146,7 @@ void SCIPdivesetUpdateStats(
 
    diveset->nsolsfound += nsolsfound;
    diveset->nbestsolsfound += nbestsolsfound;
+   diveset->nconflictsfound += nconflictsfound;
 
    stat->totaldivesetdepth += depth;
    stat->ndivesetcalls++;
@@ -491,6 +494,16 @@ SCIP_Longint SCIPdivesetGetNBacktracks(
    return diveset->totalnbacktracks;
 }
 
+/** get the total number of conflicts found by this dive set */
+SCIP_Longint SCIPdivesetGetNConflicts(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->nconflictsfound;
+}
+
 /** get the total number of solutions (leaf and rounded solutions) found by the dive set */
 SCIP_Longint SCIPdivesetGetNSols(
    SCIP_DIVESET*         diveset             /**< diving settings */
@@ -688,8 +701,9 @@ SCIP_RETCODE SCIPheurCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a primal heuristic */
-SCIP_RETCODE SCIPheurCreate(
+/** internal method for creating a primal heuristic */
+static
+SCIP_RETCODE doHeurCreate(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -724,6 +738,8 @@ SCIP_RETCODE SCIPheurCreate(
    assert(heurexec != NULL);
 
    SCIP_ALLOC( BMSallocMemory(heur) );
+   BMSclearMemory(*heur);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*heur)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*heur)->desc, desc, strlen(desc)+1) );
    (*heur)->dispchar = dispchar;
@@ -773,6 +789,45 @@ SCIP_RETCODE SCIPheurCreate(
    return SCIP_OKAY;
 }
 
+/** creates a primal heuristic */
+SCIP_RETCODE SCIPheurCreate(
+   SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of primal heuristic */
+   const char*           desc,               /**< description of primal heuristic */
+   char                  dispchar,           /**< display character of primal heuristic */
+   int                   priority,           /**< priority of the primal heuristic */
+   int                   freq,               /**< frequency for calling primal heuristic */
+   int                   freqofs,            /**< frequency offset for calling primal heuristic */
+   int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
+   SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
+   )
+{
+   assert(heur != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(freq >= -1);
+   assert(freqofs >= 0);
+   assert(heurexec != NULL);
+
+   SCIP_CALL_FINALLY( doHeurCreate(heur, set, messagehdlr, blkmem, name, desc, dispchar, priority, freq, freqofs,
+      maxdepth, timingmask, usessubscip, heurcopy, heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec,
+      heurdata), (void) SCIPheurFree(heur, set, blkmem) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of primal heuristic */
 SCIP_RETCODE SCIPheurFree(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
@@ -782,7 +837,8 @@ SCIP_RETCODE SCIPheurFree(
 {
    int d;
    assert(heur != NULL);
-   assert(*heur != NULL);
+   if( *heur == NULL )
+      return SCIP_OKAY;
    assert(!(*heur)->initialized);
    assert(set != NULL);
    assert((*heur)->divesets != NULL || (*heur)->ndivesets == 0);
@@ -801,8 +857,8 @@ SCIP_RETCODE SCIPheurFree(
    BMSfreeMemoryArrayNull(&(*heur)->divesets);
    SCIPclockFree(&(*heur)->heurclock);
    SCIPclockFree(&(*heur)->setuptime);
-   BMSfreeMemoryArray(&(*heur)->name);
-   BMSfreeMemoryArray(&(*heur)->desc);
+   BMSfreeMemoryArrayNull(&(*heur)->name);
+   BMSfreeMemoryArrayNull(&(*heur)->desc);
    BMSfreeMemory(heur);
 
    return SCIP_OKAY;
@@ -1466,7 +1522,6 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    assert(distances != NULL);
    assert(maxdistance >= 0);
 
-
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    nbinintvars = nbinvars + nintvars;
@@ -1582,7 +1637,6 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
 
          /* mark the constraint as visited */
          SCIP_CALL( SCIPhashtableInsert(vargraph->visitedconss, (void *)cons) );
-
       } /* end constraint loop */
 
       queue[currlvlidx] = -1;

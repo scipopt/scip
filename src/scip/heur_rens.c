@@ -25,8 +25,6 @@
 #include <stdio.h>
 #include "scip/scip.h"
 #include "scip/heur_rens.h"
-#include "scip/scipdefplugins.h"       /* needed for the secondary SCIP instance */
-#include "scip/cons_linear.h"          /* needed if the LP relaxation gets copied into linear constraints */
 #include "scip/pub_misc.h"
 
 /* default values for standard parameters that every primal heuristic has in SCIP */
@@ -385,7 +383,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
    SCIP_Bool success;
    int i;
-   int nvars;              /**< number of original problem's variables */
+   int nvars;              /* number of original problem's variables */
    SCIP_RETCODE retcode;
 
    assert(scip != NULL);
@@ -777,7 +775,6 @@ SCIP_DECL_HEURINIT(heurInitRens)
 static
 SCIP_DECL_HEUREXEC(heurExecRens)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
 

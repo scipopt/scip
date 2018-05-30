@@ -5,14 +5,17 @@ $(LIBOBJDIR)/objscip/objbranchrule.o: src/objscip/objbranchrule.cpp \
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -22,10 +25,12 @@ $(LIBOBJDIR)/objscip/objbranchrule.o: src/objscip/objbranchrule.cpp \
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objconshdlr.h \
@@ -35,14 +40,17 @@ $(LIBOBJDIR)/objscip/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objc
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -52,10 +60,12 @@ $(LIBOBJDIR)/objscip/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objc
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objprobcloneable.h \
  src/objscip/type_objprobcloneable.h
 $(LIBOBJDIR)/objscip/objdialog.o: src/objscip/objdialog.cpp src/objscip/objdialog.h \
@@ -65,14 +75,17 @@ $(LIBOBJDIR)/objscip/objdialog.o: src/objscip/objdialog.cpp src/objscip/objdialo
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -82,10 +95,12 @@ $(LIBOBJDIR)/objscip/objdialog.o: src/objscip/objdialog.cpp src/objscip/objdialo
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objdisp.o: src/objscip/objdisp.cpp src/objscip/objdisp.h src/scip/scip.h \
@@ -95,14 +110,16 @@ $(LIBOBJDIR)/objscip/objdisp.o: src/objscip/objdisp.cpp src/objscip/objdisp.h sr
  src/scip/type_timing.h src/scip/type_scip.h src/scip/type_paramset.h \
  src/scip/type_event.h src/scip/type_lp.h src/scip/type_nlp.h \
  src/scip/type_var.h src/scip/type_prob.h src/scip/type_tree.h \
- src/scip/type_branch.h src/scip/type_conflict.h src/scip/type_cons.h \
- src/scip/type_sol.h src/scip/type_heur.h src/scip/type_dialog.h \
- src/scip/type_disp.h src/scip/type_compr.h src/scip/type_history.h \
- src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
- src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
- src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
- src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_bandit.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
+ src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
+ src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
+ src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
+ src/scip/type_sepa.h src/scip/type_table.h src/scip/type_prop.h \
+ src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/type_concsolver.h \
+ src/scip/type_stat.h src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -112,10 +129,12 @@ $(LIBOBJDIR)/objscip/objdisp.o: src/objscip/objdisp.cpp src/objscip/objdisp.h sr
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objeventhdlr.o: src/objscip/objeventhdlr.cpp src/objscip/objeventhdlr.h \
@@ -125,14 +144,17 @@ $(LIBOBJDIR)/objscip/objeventhdlr.o: src/objscip/objeventhdlr.cpp src/objscip/ob
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -142,10 +164,12 @@ $(LIBOBJDIR)/objscip/objeventhdlr.o: src/objscip/objeventhdlr.cpp src/objscip/ob
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h src/scip/scip.h \
@@ -155,14 +179,16 @@ $(LIBOBJDIR)/objscip/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h sr
  src/scip/type_timing.h src/scip/type_scip.h src/scip/type_paramset.h \
  src/scip/type_event.h src/scip/type_lp.h src/scip/type_nlp.h \
  src/scip/type_var.h src/scip/type_prob.h src/scip/type_tree.h \
- src/scip/type_branch.h src/scip/type_conflict.h src/scip/type_cons.h \
- src/scip/type_sol.h src/scip/type_heur.h src/scip/type_dialog.h \
- src/scip/type_disp.h src/scip/type_compr.h src/scip/type_history.h \
- src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
- src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
- src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
- src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_bandit.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
+ src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
+ src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
+ src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
+ src/scip/type_sepa.h src/scip/type_table.h src/scip/type_prop.h \
+ src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/type_concsolver.h \
+ src/scip/type_stat.h src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -172,10 +198,12 @@ $(LIBOBJDIR)/objscip/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h sr
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objmessagehdlr.o: src/objscip/objmessagehdlr.cpp \
@@ -185,14 +213,17 @@ $(LIBOBJDIR)/objscip/objmessagehdlr.o: src/objscip/objmessagehdlr.cpp \
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -202,10 +233,12 @@ $(LIBOBJDIR)/objscip/objmessagehdlr.o: src/objscip/objmessagehdlr.cpp \
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h
 $(LIBOBJDIR)/objscip/objnodesel.o: src/objscip/objnodesel.cpp src/objscip/objnodesel.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -214,14 +247,17 @@ $(LIBOBJDIR)/objscip/objnodesel.o: src/objscip/objnodesel.cpp src/objscip/objnod
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -231,10 +267,12 @@ $(LIBOBJDIR)/objscip/objnodesel.o: src/objscip/objnodesel.cpp src/objscip/objnod
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objpresol.o: src/objscip/objpresol.cpp src/objscip/objpresol.h \
@@ -244,14 +282,17 @@ $(LIBOBJDIR)/objscip/objpresol.o: src/objscip/objpresol.cpp src/objscip/objpreso
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -261,10 +302,12 @@ $(LIBOBJDIR)/objscip/objpresol.o: src/objscip/objpresol.cpp src/objscip/objpreso
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objpricer.o: src/objscip/objpricer.cpp src/objscip/objpricer.h \
@@ -274,14 +317,17 @@ $(LIBOBJDIR)/objscip/objpricer.o: src/objscip/objpricer.cpp src/objscip/objprice
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -291,10 +337,12 @@ $(LIBOBJDIR)/objscip/objpricer.o: src/objscip/objpricer.cpp src/objscip/objprice
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objprobcloneable.h \
  src/objscip/type_objprobcloneable.h
 $(LIBOBJDIR)/objscip/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objprobdata.h \
@@ -304,14 +352,17 @@ $(LIBOBJDIR)/objscip/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objp
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -321,10 +372,12 @@ $(LIBOBJDIR)/objscip/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objp
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objprop.o: src/objscip/objprop.cpp src/objscip/objprop.h src/scip/scip.h \
@@ -334,14 +387,16 @@ $(LIBOBJDIR)/objscip/objprop.o: src/objscip/objprop.cpp src/objscip/objprop.h sr
  src/scip/type_timing.h src/scip/type_scip.h src/scip/type_paramset.h \
  src/scip/type_event.h src/scip/type_lp.h src/scip/type_nlp.h \
  src/scip/type_var.h src/scip/type_prob.h src/scip/type_tree.h \
- src/scip/type_branch.h src/scip/type_conflict.h src/scip/type_cons.h \
- src/scip/type_sol.h src/scip/type_heur.h src/scip/type_dialog.h \
- src/scip/type_disp.h src/scip/type_compr.h src/scip/type_history.h \
- src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
- src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
- src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
- src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_bandit.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
+ src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
+ src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
+ src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
+ src/scip/type_sepa.h src/scip/type_table.h src/scip/type_prop.h \
+ src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/type_concsolver.h \
+ src/scip/type_stat.h src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -351,10 +406,12 @@ $(LIBOBJDIR)/objscip/objprop.o: src/objscip/objprop.cpp src/objscip/objprop.h sr
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objreader.o: src/objscip/objreader.cpp src/objscip/objreader.h \
@@ -364,14 +421,17 @@ $(LIBOBJDIR)/objscip/objreader.o: src/objscip/objreader.cpp src/objscip/objreade
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -381,10 +441,12 @@ $(LIBOBJDIR)/objscip/objreader.o: src/objscip/objreader.cpp src/objscip/objreade
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objrelax.o: src/objscip/objrelax.cpp src/objscip/objrelax.h \
@@ -394,14 +456,17 @@ $(LIBOBJDIR)/objscip/objrelax.o: src/objscip/objrelax.cpp src/objscip/objrelax.h
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -411,10 +476,12 @@ $(LIBOBJDIR)/objscip/objrelax.o: src/objscip/objrelax.cpp src/objscip/objrelax.h
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objsepa.o: src/objscip/objsepa.cpp src/objscip/objsepa.h src/scip/scip.h \
@@ -424,14 +491,16 @@ $(LIBOBJDIR)/objscip/objsepa.o: src/objscip/objsepa.cpp src/objscip/objsepa.h sr
  src/scip/type_timing.h src/scip/type_scip.h src/scip/type_paramset.h \
  src/scip/type_event.h src/scip/type_lp.h src/scip/type_nlp.h \
  src/scip/type_var.h src/scip/type_prob.h src/scip/type_tree.h \
- src/scip/type_branch.h src/scip/type_conflict.h src/scip/type_cons.h \
- src/scip/type_sol.h src/scip/type_heur.h src/scip/type_dialog.h \
- src/scip/type_disp.h src/scip/type_compr.h src/scip/type_history.h \
- src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
- src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
- src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
- src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_bandit.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
+ src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
+ src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
+ src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
+ src/scip/type_sepa.h src/scip/type_table.h src/scip/type_prop.h \
+ src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/type_concsolver.h \
+ src/scip/type_stat.h src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -441,10 +510,47 @@ $(LIBOBJDIR)/objscip/objsepa.o: src/objscip/objsepa.cpp src/objscip/objsepa.h sr
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
+ src/scip/heuristics.h src/objscip/objcloneable.h \
+ src/objscip/type_objcloneable.h
+$(LIBOBJDIR)/objscip/objtable.o: src/objscip/objtable.cpp src/objscip/objtable.h \
+ src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/pub_message.h src/scip/type_message.h \
+ src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
+ src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
+ src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
+ src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
+ src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
+ src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
+ src/scip/pub_history.h src/scip/pub_implics.h src/scip/type_implics.h \
+ src/scip/pub_lp.h src/scip/type_set.h src/lpi/type_lpi.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_misc_select.h \
+ src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
+ src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+ src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objvardata.o: src/objscip/objvardata.cpp src/objscip/objvardata.h \
@@ -454,14 +560,17 @@ $(LIBOBJDIR)/objscip/objvardata.o: src/objscip/objvardata.cpp src/objscip/objvar
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
  src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_heur.h \
- src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_compr.h \
- src/scip/type_history.h src/scip/type_nodesel.h src/scip/type_presol.h \
- src/scip/type_pricer.h src/scip/type_reader.h src/scip/type_relax.h \
- src/scip/type_sepa.h src/scip/type_prop.h src/nlpi/type_nlpi.h \
- src/nlpi/type_expr.h src/scip/type_concsolver.h src/scip/type_stat.h \
- src/scip/type_syncstore.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+ src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
@@ -471,9 +580,11 @@ $(LIBOBJDIR)/objscip/objvardata.o: src/objscip/objvardata.cpp src/objscip/objvar
  src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
  src/scip/heuristics.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h

@@ -211,7 +211,7 @@ ctestrunner: 	$(UNITTESTSBIN)
 
 .PHONY: clean
 clean:
-		@echo "-> remove main objective files"
+		@echo "-> remove main object files"
 		$(foreach dir, $(OBJDIRS) $(OBJDIR), \
 			@-rm -f $(dir)/*.o)
 		@echo "-> remove binaries"

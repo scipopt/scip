@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="5.0.1"
+VERSION="6.0.0"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -109,6 +109,12 @@ $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
 $NAME/applications/PolySCIP/src/CMakeLists.txt \
 $NAME/applications/PolySCIP/CMakeLists.txt     \
 $NAME/applications/PolySCIP/cmake/PolySCIPConfig.h.in \
+$NAME/applications/Ringpacking/* $NAME/applications/Ringpacking/doc/* $NAME/applications/Ringpacking/doc/pics/* $NAME/applications/Ringpacking/data/* \
+$NAME/applications/Ringpacking/check/CMakeLists.txt \
+$NAME/applications/Ringpacking/check/testset/short.test $NAME/applications/Ringpacking/check/testset/short.solu \
+$NAME/applications/Ringpacking/src/*.c $NAME/applications/Ringpacking/src/*.h \
+$NAME/applications/Ringpacking/tests/CMakeLists.txt \
+$NAME/applications/Ringpacking/tests/src/ringpacking/*.c \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
@@ -164,6 +170,17 @@ $NAME/examples/Relaxator/check/testset/short.test \
 $NAME/examples/Relaxator/doc/xternal_relaxator.c \
 $NAME/examples/Relaxator/makedepend.sh \
 $NAME/examples/Relaxator/src/* \
+$NAME/examples/SCFLP/INSTALL \
+$NAME/examples/SCFLP/Makefile \
+$NAME/examples/SCFLP/CMakeLists.txt \
+$NAME/examples/SCFLP/check/CMakeLists.txt \
+$NAME/examples/SCFLP/check/testset/cap.test \
+$NAME/examples/SCFLP/check/testset/cap-all.test \
+$NAME/examples/SCFLP/doc/xternal_scflp.c \
+$NAME/examples/SCFLP/makedepend.sh \
+$NAME/examples/SCFLP/src/* \
+$NAME/examples/SCFLP/settings/*.set \
+$NAME/examples/SCFLP/data/*.cap \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/CMakeLists.txt \

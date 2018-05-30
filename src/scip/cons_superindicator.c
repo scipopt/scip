@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1056,7 +1056,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
    SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
 #endif
 
-
    /* check all the useful constraint */
    for( c = 0; c < nusefulconss && *result != SCIP_CUTOFF; ++c )
    {
@@ -1220,7 +1219,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
       else if( *result == SCIP_FEASIBLE || *result == SCIP_DIDNOTRUN )
       {
          SCIP_CALL( consdataCheckSuperindicator(scip, consdata, NULL, TRUE, FALSE, FALSE, &locresult) );
-
       }
 
       /* evaluate result value */
@@ -1549,6 +1547,7 @@ SCIP_DECL_CONSLOCK(consLockSuperindicator)
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    SCIPdebugMsg(scip, "locking variables for constraint <%s>\n", SCIPconsGetName(cons));
 
@@ -1556,10 +1555,10 @@ SCIP_DECL_CONSLOCK(consLockSuperindicator)
    assert(consdata != NULL);
 
    /* lock binvar up */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, nlocksneg, nlockspos) );
+   SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, locktype, nlocksneg, nlockspos) );
 
    /* call lock method for the slack constraint */
-   SCIP_CALL( SCIPaddConsLocks(scip, consdata->slackcons, nlockspos, nlocksneg) );
+   SCIP_CALL( SCIPaddConsLocksType(scip, consdata->slackcons, locktype, nlockspos, nlocksneg) );
 
    return SCIP_OKAY;
 }

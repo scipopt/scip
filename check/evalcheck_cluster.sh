@@ -97,7 +97,10 @@ do
                 rm -f $FILE
             fi
         else
-            echo Missing $i
+            echo Missing $FILE --
+
+            echo @01 $FILE ==MISSING==  >> $OUTFILE
+            echo                        >> $OUTFILE
         fi
 
         FILE=$i.err
@@ -108,6 +111,11 @@ do
             then
                 rm -f $FILE
             fi
+        else
+            echo Missing $FILE --
+
+            echo @01 $FILE ==MISSING==  >> $ERRFILE
+            echo                        >> $ERRFILE
         fi
 
         FILE=$i.set

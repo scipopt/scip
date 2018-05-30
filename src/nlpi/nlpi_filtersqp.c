@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,6 +35,7 @@
 #endif
 
 #include "scip/misc.h"
+#include "scip/pub_message.h"
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"

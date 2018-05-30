@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,13 +20,13 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include "scip/scip.h"
-#include "scip/set.h"
 #include "scip/bandit.h"
-#include "scip/struct_set.h"
+#include "scip/pub_message.h"
+#include "scip/scip_bandit.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_var.h"
+#include "scip/set.h"
 #include "scip/struct_scip.h"
-#include "scip/mem.h"
 
 /** includes a bandit algorithm virtual function table  */
 SCIP_RETCODE SCIPincludeBanditvtable(
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPresetBandit(
    assert(scip != NULL);
    assert(bandit != NULL);
 
-   SCIP_CALL( SCIPbanditReset(SCIPbuffer(scip), bandit, priorities, SCIPinitializeRandomSeed(scip, (int)(seed % INT_MAX))) );
+   SCIP_CALL( SCIPbanditReset(SCIPbuffer(scip), bandit, priorities, SCIPinitializeRandomSeed(scip, seed)) );
 
    return SCIP_OKAY;
 }

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -346,6 +346,7 @@ SCIP_RETCODE unlockLinearVariable(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
    assert(var != NULL);
    assert(coef != 0.0);
 
@@ -815,7 +816,7 @@ SCIP_DECL_EXPRGRAPHVARADDED( exprgraphVarAdded )
       );
    SCIPexprgraphSetVarNodeBounds(exprgraph, varnode, varbounds);
 
-   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, 1, 1) );
+   SCIP_CALL( SCIPaddVarLocksType(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, 1, 1) );
    SCIPdebugMessage("increased up- and downlocks of variable <%s>\n", SCIPvarGetName(var_));
 
    SCIP_CALL( SCIPcaptureVar(conshdlrdata->scip, var_) );
@@ -847,7 +848,7 @@ SCIP_DECL_EXPRGRAPHVARREMOVE( exprgraphVarRemove )
    SCIP_CALL( SCIPdropVarEvent(conshdlrdata->scip, var_, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, conshdlrdata->nonlinvareventhdlr, (SCIP_EVENTDATA*)varnode, -1) );
    SCIPdebugMessage("drop boundchange events on expression graph variable <%s>\n", SCIPvarGetName(var_));
 
-   SCIP_CALL( SCIPaddVarLocks(conshdlrdata->scip, var_, -1, -1) );
+   SCIP_CALL( SCIPaddVarLocksType(conshdlrdata->scip, var_, SCIP_LOCKTYPE_MODEL, -1, -1) );
    SCIPdebugMessage("decreased up- and downlocks of variable <%s>\n", SCIPvarGetName(var_));
 
    SCIPdebugMessage("release variable <%s>\n", SCIPvarGetName(var_));
@@ -1781,21 +1782,6 @@ SCIP_RETCODE splitOffLinearPart(
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->exprgraph != NULL);
 
-   if( SCIPexprgraphGetNodeOperator(consdata->exprgraphnode) == SCIP_EXPR_SUM && SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode) == 1 )
-   {
-      /* it can happen that simplifies leaves a node that is an identity w.r.t only child, if that node is the root of an expression, used by a constraint
-       * replace exprgraphnode by its child then
-       */
-      SCIP_EXPRGRAPHNODE* child;
-
-      child = SCIPexprgraphGetNodeChildren(consdata->exprgraphnode)[0];
-      assert(child != NULL);
-
-      SCIPexprgraphCaptureNode(child);
-      SCIP_CALL( SCIPexprgraphReleaseNode(conshdlrdata->exprgraph, &consdata->exprgraphnode) );
-      consdata->exprgraphnode = child;
-   }
-
    /* number of children of expression graph node is a good upper estimate on number of linear variables */
    linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);  /*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &linvars,  linvarssize) );
@@ -2628,7 +2614,7 @@ SCIP_RETCODE reformMonomial(
       productnode = NULL;
       for( p = 0; p < SCIPexprgraphGetNodeNParents(leftright[0]); ++p)
       {
-         parent = SCIPexprgraphGetNodeParents(factors[0])[p];
+         parent = SCIPexprgraphGetNodeParents(leftright[0])[p];
          if( SCIPexprgraphGetNodeOperator(parent) != SCIP_EXPR_MUL )
             continue;
 
@@ -2840,7 +2826,6 @@ SCIP_RETCODE reformulate(
          }
 #endif
 
-
          switch( SCIPexprgraphGetNodeOperator(node) )
          {
          case SCIP_EXPR_VARIDX:
@@ -2885,7 +2870,7 @@ SCIP_RETCODE reformulate(
                child = SCIPexprgraphGetNodeChildren(node)[c];
                assert(child != NULL);
 
-               if( SCIPexprgraphGetNodeCurvature(child) != SCIP_EXPRCURV_LINEAR || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_USER )
+               if( SCIPexprgraphGetNodeCurvature(child) != SCIP_EXPRCURV_LINEAR || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_USER || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_ABS )
                {
                   SCIPdebugMessage("add auxiliary variable for child %p(%d,%d) with curvature %s operator %s\n",
                      (void*)child, SCIPexprgraphGetNodeDepth(child), SCIPexprgraphGetNodePosition(child), SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(child)), SCIPexpropGetName(SCIPexprgraphGetNodeOperator(child)) );
@@ -3015,7 +3000,6 @@ SCIP_RETCODE reformulate(
             assert(SCIPexprgraphGetNodeCurvature(node) & SCIP_EXPRCURV_CONVEX);
             ++i;
             break;
-
          }
 
          case SCIP_EXPR_INTPOWER:
@@ -3807,7 +3791,8 @@ SCIP_RETCODE computeViolation(
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
          }
 
-         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+         /* coverity[callee_ptr_arith] */
+         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) );
       }
       else
       {
@@ -4230,7 +4215,8 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    assert(SCIPisLE(scip, xlb, xub));
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+   /* coverity[callee_ptr_arith] */
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
    if( !SCIPisFinite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
@@ -4238,7 +4224,8 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    vallb *= treecoef;
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+   /* coverity[callee_ptr_arith] */
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
    if( !SCIPisFinite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in upper bound\n", exprtreeidx, SCIPconsGetName(cons));
@@ -4473,9 +4460,9 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
          SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1], p3val,
                &alpha, &beta, &gamma_, &delta) );
 
-         assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-         assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-         assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
+         assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+         assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+         assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
 
          /* if hyperplane through p1,p2,p3 does not overestimate f(p4), then it must be the other variant */
          if( alpha * p4[0] + beta * p4[1] + gamma_ * p4val > delta )
@@ -4487,9 +4474,9 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
             SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1],
                   p4val, &alpha, &beta, &gamma_, &delta) );
 
-            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
 
             /* if hyperplane through p1,p3,p4 does not overestimate f(p2), then it must be the other variant */
             if( alpha * p2[0] + beta * p2[1] + gamma_ * p2val > delta )
@@ -4501,9 +4488,9 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
          SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
 
-         assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-         assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-         assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+         assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+         assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+         assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
 
          /* if hyperplane through p1,p3,p4 does not overestimate f(p2), then it must be the other variant */
          if( alpha * p2[0] + beta * p2[1] + gamma_ * p2val > delta )
@@ -4515,9 +4502,9 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
             SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1],
                   p3val, &alpha, &beta, &gamma_, &delta) );
 
-            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
+            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
 
             /* if hyperplane through p1,p2,p3 does not overestimate f(p4), then it must be the other variant */
             if( alpha * p4[0] + beta * p4[1] + gamma_ * p4val > delta )
@@ -4533,10 +4520,10 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
                   p4val, &alpha, &beta, &gamma_, &delta) );
 
             /* hyperplane should be above (p3,f(p3)) and other points should lie on hyperplane */
-            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-            assert(SCIPisRelLE(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+            assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+            assert(SCIPisRelLE(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
 
             if( (!SCIPisZero(scip, alpha) && SCIPisZero(scip, alpha/gamma_)) ||
                ( !SCIPisZero(scip, beta)  && SCIPisZero(scip, beta /gamma_)) )
@@ -4546,10 +4533,10 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
                      p4val, &alpha, &beta, &gamma_, &delta) );
 
                /* hyperplane should be above (p1,f(p1)) and other points should lie on hyperplane */
-               assert(SCIPisRelLE(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+               assert(SCIPisRelLE(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+               assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+               assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+               assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
             }
          }
          else
@@ -4558,10 +4545,10 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
                   p4val, &alpha, &beta, &gamma_, &delta) );
 
             /* hyperplane should be above (p1,f(p1)) and other points should lie on hyperplane */
-            assert(SCIPisRelLE(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+            assert(SCIPisRelLE(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+            assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+            assert(SCIPisRelEQ(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+            assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
 
             if( (!SCIPisZero(scip, alpha) && SCIPisZero(scip, alpha/gamma_)) ||
                ( !SCIPisZero(scip, beta)  && SCIPisZero(scip, beta /gamma_)) )
@@ -4571,10 +4558,10 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
                      p4val, &alpha, &beta, &gamma_, &delta) );
 
                /* hyperplane should be above (p3,f(p3)) and other points should lie on hyperplane */
-               assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] + gamma_ * p2val, delta));
-               assert(SCIPisRelLE(scip, alpha * p3[0] + beta * p3[1] + gamma_ * p3val, delta));
-               assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] + gamma_ * p4val, delta));
+               assert(SCIPisRelEQ(scip, alpha * p1[0] + beta * p1[1] - delta, -gamma_ * p1val));
+               assert(SCIPisRelEQ(scip, alpha * p2[0] + beta * p2[1] - delta, -gamma_ * p2val));
+               assert(SCIPisRelLE(scip, alpha * p3[0] + beta * p3[1] - delta, -gamma_ * p3val));
+               assert(SCIPisRelEQ(scip, alpha * p4[0] + beta * p4[1] - delta, -gamma_ * p4val));
             }
          }
       }
@@ -6747,7 +6734,7 @@ void consdataFindUnlockedLinearVar(
          neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
       }
 
-      if( SCIPvarGetNLocksDown(consdata->linvars[i]) - neglock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - neglock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -6756,7 +6743,7 @@ void consdataFindUnlockedLinearVar(
             consdata->linvar_maydecrease = i;
       }
 
-      if( SCIPvarGetNLocksDown(consdata->linvars[i]) - poslock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - poslock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -8038,11 +8025,11 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
             SCIPinfoMessage(scip, NULL, ";\n");
             if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
-               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhsviol);
             }
             if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
             {
-               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
          }
 
@@ -8352,6 +8339,7 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    /* variable locking for nonlinear part is done w.r.t. variables in the expression graph
     * since only active constraints have their nonlinear part in the expression graph, we can lock only active constraints
@@ -8370,22 +8358,22 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
       {
          if( havelhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
          if( haverhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
       }
       else
       {
          if( havelhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlocksneg, nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlocksneg, nlockspos) );
          }
          if( haverhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->linvars[i], nlockspos, nlocksneg) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, consdata->linvars[i], locktype, nlockspos, nlocksneg) );
          }
       }
    }
@@ -9966,15 +9954,23 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    *gamma_ = -a2*b1 + a1*b2 + a2*c1 - b2*c1 - a1*c2 + b1*c2;
    *delta  = -a3*b2*c1 + a2*b3*c1 + a3*b1*c2 - a1*b3*c2 - a2*b1*c3 + a1*b2*c3;
 
+   /* SCIPdebugMsg(scip, "alpha: %g beta: %g gamma: %g delta: %g\n", *alpha, *beta, *gamma_, *delta); */
+
    /* check if hyperplane contains all three points (necessary because of numerical troubles) */
-   if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 + *gamma_ * a3, *delta) ||
-      !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 + *gamma_ * b3, *delta) ||
-      !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 + *gamma_ * c3, *delta) )
+   if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3) ||
+      !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3) ||
+      !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3) )
    {
       SCIP_Real m[9];
       SCIP_Real rhs[3];
       SCIP_Real x[3];
       SCIP_Bool success;
+
+      /*
+      SCIPdebugMsg(scip, "a = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", a1, a2, a3, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3, SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3));
+      SCIPdebugMsg(scip, "b = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", b1, b2, b3, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3, SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3));
+      SCIPdebugMsg(scip, "c = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", c1, c2, c3, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3, SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3));
+      */
 
       /* initialize matrix column-wise */
       m[0] = a1;
@@ -9995,6 +9991,7 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
 
       /* solve the linear problem */
       SCIP_CALL( SCIPsolveLinearProb(3, m, rhs, x, &success) );
+      assert(success);
 
       *delta  = rhs[0];
       *alpha  = x[0];
@@ -10004,9 +10001,9 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
       /* set all coefficients to zero if one of the points is not contained in the hyperplane; this ensures that we do
        * not add a cut to SCIP and that all assertions are trivially fulfilled
        */
-      if( !success || !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 + *gamma_ * a3, *delta) ||
-         !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 + *gamma_ * b3, *delta) ||
-         !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 + *gamma_ * c3, *delta) )
+      if( !success || !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3) ||
+         !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3) ||
+         !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3) ) /*lint !e774*/
       {
          SCIPdebugMsg(scip, "could not resolve numerical difficulties\n");
          *delta  = 0.0;

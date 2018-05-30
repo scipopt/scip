@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -487,7 +487,6 @@ SCIP_RETCODE setupAndSolveSubscipLocalbranching(
    SCIPdebugMsg(scip, "solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
       heurdata->curneighborhoodsize, nsubnodes);
 
-
    /* Errors in solving the subproblem should not kill the overall solving process
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
@@ -566,6 +565,7 @@ SCIP_RETCODE setupAndSolveSubscipLocalbranching(
 
    case SCIP_STATUS_UNKNOWN:
    case SCIP_STATUS_USERINTERRUPT:
+   case SCIP_STATUS_TERMINATE:
    case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:

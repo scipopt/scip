@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -17,6 +17,7 @@
  * @ingroup INTERNALAPI
  * @brief  datastructures for storing separated cuts
  * @author Tobias Achterberg
+ * @author Robert Lion Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,7 +39,7 @@ extern "C" {
 struct SCIP_SepaStore
 {
    SCIP_ROW**            cuts;               /**< array with separated cuts sorted by score */
-   SCIP_Real*            scores;             /**< score for each separated cut: weighted sum of efficacy and objective parallelism and integral support */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator used for tie breaking */
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
    int                   nforcedcuts;        /**< number of forced separated cuts (first positions in cuts array) */

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2474,6 +2474,9 @@ SCIP_RETCODE updateImplicationGraphSOS1(
 
             newbound = implbound / coef;
 
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
+
             /* check if an implication can be added/updated or assumption x_v != 0 is infeasible */
             if ( lower )
             {
@@ -2926,7 +2929,6 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          }
       }
 
-
       /* try to tighten lower bounds */
 
       /* sort each cliquecover array in ascending order of the lower bounds of a_i * x_i; fill vector varincover */
@@ -3059,6 +3061,9 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                newbound = MIN(0, newboundnonzero);
             newbound /= linval;
 
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
+
             /* check if new bound is tighter than the old one or problem is infeasible */
             if ( SCIPisFeasPositive(scip, linval) && SCIPisFeasLT(scip, lb, newbound) )
             {
@@ -3125,7 +3130,6 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          SCIPfreeBufferArrayNull(scip, &trafolinvars);
          break;
       }
-
 
       /* try to tighten upper bounds */
 
@@ -3244,7 +3248,6 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          }
          assert( ninftynonzero == 0 || inftynores );
 
-
          /* if computed bound is not infinity and variable is contained in linear constraint */
          if ( ninftynonzero == 0 && v < ntrafolinvars )
          {
@@ -3259,6 +3262,9 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             else
                newbound = MAX(0, newboundnonzero);
             newbound /= linval;
+
+            if ( SCIPisInfinity(scip, newbound) )
+               continue;
 
             /* check if new bound is tighter than the old one or problem is infeasible */
             if ( SCIPisFeasPositive(scip, linval) && SCIPisFeasGT(scip, ub, newbound) )
@@ -3680,7 +3686,6 @@ SCIP_RETCODE propVariableNonzero(
          assert( success || SCIPvarGetStatus(succvar) == SCIP_VARSTATUS_MULTAGGR );
       }
    }
-
 
    /* apply implication graph propagation */
    if ( implprop && implgraph != NULL )
@@ -5200,7 +5205,6 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                         SCIP_CALL( SCIPreleaseCons(scip, &conssos1) );
                      }
 
-
                      /* add bound inequality*/
                      if ( ! SCIPisFeasZero(scip, solval1) && ! SCIPisFeasZero(scip, solval2) )
                      {
@@ -5486,7 +5490,6 @@ SCIP_RETCODE enforceConflictgraph(
       return SCIP_OKAY;
    }
 
-
    /* detect fixed variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &verticesarefixed, nsos1vars) );
    for (j = 0; j < nsos1vars; ++j)
@@ -5523,14 +5526,12 @@ SCIP_RETCODE enforceConflictgraph(
       nstrongrounds = MIN(nsos1vars, nstrongrounds);
    }
 
-
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &fixingsnode1, nsos1vars) );
    if ( bipbranch )
       SCIP_CALL( SCIPallocBufferArray(scip, &fixingsnode2, nsos1vars) );
    else
       SCIP_CALL( SCIPallocBufferArray(scip, &fixingsnode2, 1) );
-
 
    /* if strongbranching is turned off: use most infeasible branching */
    if ( nstrongrounds == 0 )
@@ -5704,7 +5705,6 @@ SCIP_RETCODE enforceConflictgraph(
       SCIP_CALL( fixVariableZeroNode(scip, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]), node2, &infeasible) );
       assert( ! infeasible );
    }
-
 
    /* add complementarity constraints to the branching nodes */
    if ( conshdlrdata->addcomps && ( conshdlrdata->addcompsdepth == -1 || conshdlrdata->addcompsdepth >= SCIPgetDepth(scip) ) )
@@ -6135,9 +6135,9 @@ SCIP_RETCODE initTCliquegraph(
          }
       }
    }
+
    if ( ! tcliqueFlush(conshdlrdata->tcliquegraph) )
       return SCIP_NOMEMORY;
-
 
    /* allocate clique data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata->tcliquedata) );
@@ -6448,7 +6448,6 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          }
       }
    }
-
 
    /* take care of lower bounds */
    if ( rowlb != NULL )
@@ -7232,9 +7231,9 @@ SCIP_RETCODE separateSOS1(
    /* get node depth */
    depth = SCIPgetDepth(scip);
 
-
    /* separate bound (clique) inequalities */
-   if ( conshdlrdata->boundcutsfreq >= 0 && ( (conshdlrdata->boundcutsfreq == 0 && depth == 0) || (conshdlrdata->boundcutsfreq > 0 && depth % conshdlrdata->boundcutsfreq == 0)) )
+   if ( conshdlrdata->boundcutsfreq >= 0 &&
+      ( (conshdlrdata->boundcutsfreq == 0 && depth == 0) || (conshdlrdata->boundcutsfreq > 0 && depth % conshdlrdata->boundcutsfreq == 0)) )
    {
       int maxboundcuts;
       int ngen = 0;
@@ -7279,9 +7278,9 @@ SCIP_RETCODE separateSOS1(
       SCIPdebugMsg(scip, "Separated %d bound (clique) inequalities.\n", ngen);
    }
 
-
    /* separate implied bound inequalities */
-   if ( conshdlrdata->implcutsfreq >= 0 && ( (conshdlrdata->implcutsfreq == 0 && depth == 0) || (conshdlrdata->implcutsfreq > 0 && depth % conshdlrdata->implcutsfreq == 0)) )
+   if ( conshdlrdata->implcutsfreq >= 0 &&
+      ( (conshdlrdata->implcutsfreq == 0 && depth == 0) || (conshdlrdata->implcutsfreq > 0 && depth % conshdlrdata->implcutsfreq == 0)) )
    {
       int maximplcuts;
       int ngen = 0;
@@ -7950,16 +7949,16 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
          else
             bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
-         /* bound may have changed in propagation; ensure that fracval <= 1 */
-         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-            bound = solval;
-
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
          fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
          assert( ! SCIPisInfinity(scip, bound) );
          assert( ! SCIPisInfinity(scip, fracval) );
          assert( SCIPisPositive(scip, bound) );
+
+         /* bound may have changed in propagation; ensure that fracval <= 1 */
+         if ( SCIPisFeasLT(scip, bound, fracval) )
+            bound = fracval;
 
          /* get fractionality of candidate */
          fracval /= (bound + SCIPsumepsilon(scip));
@@ -9741,6 +9740,8 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
    assert( conshdlr != NULL );
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
@@ -9758,13 +9759,13 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
       /* if lower bound is negative, rounding down may violate constraint */
       if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
       if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, var, nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
    }
 

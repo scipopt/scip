@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -112,10 +112,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem? */
    SCIP_Bool             uselockfixings;     /**< should more variables be fixed based on variable locks if
-                                              *   the fixing rate was not reached?
-                                              */
-
-
+                                              *   the fixing rate was not reached? */
 };
 
 /**@name Heuristic defines
@@ -411,7 +408,6 @@ SCIP_RETCODE topologicalSort(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &cliqueexit, SCIPgetNCliques(scip)) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nbounds) );
 
-
    /* while there are unvisited nodes, run dfs on the inverse graph starting from one of these nodes; the dfs orders are
     * stored in the topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which
     * gives us a topological order
@@ -564,7 +560,6 @@ SCIP_RETCODE applyVboundsFixings(
       /* skip variables which are already fixed */
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
          continue;
-
 
       /* there are two cases for tighten:
        * 1) tighten == TRUE:  we go through the list of variables and fix variables to force propagation;

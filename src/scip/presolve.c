@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -331,7 +331,6 @@ void collectNonBinaryVBoundData(
                   }
                   else
                      lastbounds[*nimplidx] = SCIP_INVALID;
-
 
                   *foundnonbin = MIN(*foundnonbin, idx);
 
@@ -1391,7 +1390,6 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       while( --ncountnonzeros >= 0 )
          counts[countnonzeros[ncountnonzeros]] = 0;
    }
-
 
    SCIPfreeBufferArray(scip, &countnonzeros);
    SCIPfreeBufferArray(scip, &implidx);

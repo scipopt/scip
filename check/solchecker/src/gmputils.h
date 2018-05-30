@@ -17,7 +17,7 @@
  * Btw, official C++ wrappers are not built by default and we want an easy installation
  * process (and as few dependencies as possible).
  */
- 
+
 class Rational
 {
 public:
@@ -41,44 +41,47 @@ public:
 
    /** Copy Constructor */
    Rational(const Rational& rhs);
-   
+
    /** Destructor */
    ~Rational();
    // \}
-   
+
    Rational& operator=(const Rational& rhs);
-   
+
    /**
     * Convert to a double, truncating if necessary
     * @return the rational number as a float
     */
    double toDouble() const;
-   
+
    /** @name comparison operators */
    // \{
-   
-   /** equal operator */ 
+
+   /** equal operator */
    bool operator==(const Rational& rhs) const;
-   
-   /** not-equal operator */ 
+
+   /** not-equal operator */
    bool operator!=(const Rational& rhs) const;
-   
-   /** greater-than operator */ 
+
+   /** greater-than operator */
    bool operator>(const Rational& rhs) const;
-   
+
    /** less-than operator */
    bool operator<(const Rational& rhs) const;
    // \}
-   
+
    /** @name arithmetic operators */
    // \{
-      
+
    /** compound plus operator: self = self + op */
    Rational& operator+=(const Rational& op);
-   
+
    /** compound minus operator: self = self - op */
    Rational& operator-=(const Rational& op);
-   
+
+   /** compound multiplication operator: self = self * op */
+   Rational& operator*=(const Rational& op);
+
    /**
     * Add to the current value the product op1 * op2.
     * This is the equivalent of the operation self += op1*op2
@@ -88,65 +91,65 @@ public:
     * @param op2 second operand of the product
     */
    void addProduct(const Rational& op1, const Rational& op2);
-   
+
    /**
     * Replaces the current value with its absolute value (inline operator)
     */
    void abs();
-   
+
    /**
     * Calculate the integrality violation of a given number
     */
    void integralityViolation(Rational& violation) const;
-   
+
    /**
     * Zero out number (i.e. set it to zero)
     */
     void toZero();
-   
+
    // \}
-   
+
    /** @name arithmetic global functions */
    // \{
-   
+
    /** Addition: res = op1 + op2 */
    friend void add(Rational& res, const Rational& op1, const Rational& op2);
-   
+
    /** Subtraction: res = op1 - op2 */
    friend void sub(Rational& res, const Rational& op1, const Rational& op2);
-   
+
    /** Multiplication: res = op1 * op2 */
    friend void mult(Rational& res, const Rational& op1, const Rational& op2);
 
    /** Division: res = op1 / op2 */
    friend void div(Rational& res, const Rational& op1, const Rational& op2);
-   
+
    /** Min: res = min(op1, op2) */
    friend void min(Rational& res, const Rational& op1, const Rational& op2);
-   
+
    /** Max: res = max(op1, op2) */
    friend void max(Rational& res, const Rational& op1, const Rational& op2);
    // \}
-   
+
    /** @name test operators */
    // \{
-   
+
    /** Test if a number is integer (up to a given tolerance)  */
    bool isInteger(const Rational& tolerance) const;
-   
+
    /** Test if a number is positive (exact, no tolerances) */
    bool isPositive() const;
-   
+
    /** Test if a number is negative (exact, no tolerances) */
    bool isNegative() const;
-   
+
    /** Test if a number is zero (exact, no tolerances) */
    bool isZero() const;
    // \}
-   
+
    /** @name I/O functions */
    // \{
-      
+
    /**
     * Read a rational number from a string representation.
     * This functions essentially parses a number of the form
@@ -154,7 +157,7 @@ public:
     * and generates the corresponding fraction.
     */
    void fromString(const char* str);
-   
+
    /**
     * Convert a rational number to a string representation.
     * Note that the format is [+|-]?[0-9]+/[0-9]+.

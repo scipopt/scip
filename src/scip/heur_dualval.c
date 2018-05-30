@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1222,8 +1222,8 @@ SCIP_RETCODE createSubSCIP(
                         indicatorcopy = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, indicatorbinvar);
                      else
                      {
-                        negatedvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, negatedvar);
-                        SCIP_CALL( SCIPgetNegatedVar(heurdata->subscip, negatedvar, &indicatorcopy) );
+                        indicatorcopy = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, negatedvar);
+                        SCIP_CALL( SCIPgetNegatedVar(heurdata->subscip, indicatorcopy, &indicatorcopy) );
                      }
                   }
 
@@ -1749,7 +1749,6 @@ SCIP_RETCODE computeRanks(
 
             assert(dualvalue != NULL);
             ranks[j] = (*dualvalue);
-
          }
          else /* if we have an indicator variable */
          {

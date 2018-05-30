@@ -21,7 +21,7 @@ class Model;
  * @brief Exception class to store syntax error information
  */
 
-class SyntaxError : public std::exception 
+class SyntaxError : public std::exception
 {
 public:
    /**
@@ -70,9 +70,10 @@ protected:
       MPS_RANGES,
       MPS_BOUNDS,
       MPS_SOS,
+      MPS_INDICATORS,
       MPS_ENDATA
    };
-   
+
    /** @name data */
    // *{
    MpsSection    section; //< current section of the MPS section
@@ -105,6 +106,7 @@ protected:
    void readRhs();
    void readRanges();
    void readBounds();
+   void readIndicators();
    void readSOS();
    // *}
 };

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -79,13 +79,13 @@ SCIP_RETCODE SCIPseparateCoversOrbisack(
 /** checks whether a given binary solution is feasible for the orbisack */
 EXTERN
 SCIP_RETCODE SCIPcheckSolutionOrbisack(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_SOL*          sol,                /**< solution to check for feasibility */
-   SCIP_VAR**         vars1,              /**< variables of first column */
-   SCIP_VAR**         vars2,              /**< variables of second column */
-   int                nrows,              /**< number of rows */
-   SCIP_Bool          printreason,        /**< whether reason for infeasibility should be printed */
-   SCIP_Bool*         feasible            /**< memory address to store whether sol is feasible */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to check for feasibility */
+   SCIP_VAR**            vars1,              /**< variables of first column */
+   SCIP_VAR**            vars2,              /**< variables of second column */
+   int                   nrows,              /**< number of rows */
+   SCIP_Bool             printreason,        /**< whether reason for infeasibility should be printed */
+   SCIP_Bool*            feasible            /**< memory address to store whether sol is feasible */
    );
 
 /** creates and captures a orbisack constraint

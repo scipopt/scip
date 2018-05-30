@@ -1,4 +1,4 @@
-Nodes-M610=\
+Nodes-M640=\
 optc-01-01\
 optc-01-02\
 optc-01-03\
@@ -137,7 +137,7 @@ optc-08-14\
 optc-08-15\
 optc-08-16
 
-all = $(Nodes-M610) $(Nodes-M620) $(Nodes-M620v2) $(Nodes-M620v3) $(Nodes-M630) $(Nodes-M630v2)
+all = $(Nodes-M620) $(Nodes-M620v2) $(Nodes-M620v3) $(Nodes-M630) $(Nodes-M630v2) $(Nodes-M640)
 
 
 $(all):
@@ -150,12 +150,12 @@ $(all):
         fi
 
 
-wake_M610: $(Nodes-M610)
 wake_M620: $(Nodes-M620)
 wake_M620v2: $(Nodes-M620v2)
 wake_M620v3: $(Nodes-M620v3)
 wake_M620v4: $(Nodes-M620v4)
 wake_M630: $(Nodes-M630)
 wake_M630v2: $(Nodes-M630v2)
+wake_M640: $(Nodes-M640)
 
-wake_opt: $(Nodes-M610) $(Nodes-M620) $(Nodes-M620v2) $(Nodes-M620v3) $(Nodes-M630) $(Nodes-M630v2)
+wake_opt: $(Nodes-M620) $(Nodes-M620v2) $(Nodes-M620v3) $(Nodes-M630) $(Nodes-M630v2) $(Nodes-M640)

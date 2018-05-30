@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2887,7 +2887,6 @@ SCIP_RETCODE disaggregate(
     */
    if( !SCIPisZero(scip, consdata->constant) )
    {
-
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%s", SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateVar(scip, &disvars[ndisvars], name, 0.0, SCIPinfinity(scip), 0.0,
             SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
@@ -3223,7 +3222,6 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
       }
    }
-
 
    quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
    assert( quadterms != NULL );
@@ -3643,7 +3641,6 @@ GENERALUPG:
 
    assert(rhsissoc != lhsissoc);
 
-
    if( lhsissoc )
    {
       /* lhs is potentially SOC, change signs */
@@ -3804,6 +3801,7 @@ GENERALUPG:
             for( j = 0; j <= lhsnvars; ++j )
                SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[j]) );
 
+            *nupgdconss = 0;
             goto cleanup;
          }
          lhsnvars++;
@@ -3828,6 +3826,7 @@ GENERALUPG:
             SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[j]) );
          }
 
+         *nupgdconss = 0;
          goto cleanup;
       }
 
@@ -4471,14 +4470,8 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       if( printreason )
       {
-         SCIP_Real unscaledviol;
-
-         unscaledviol  = consdata->lhsval;
-         if( !SCIPisInfinity(scip, unscaledviol) )
-            unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
-
          SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
-         SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
+         SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g\n", consdata->violation);
       }
 
       /* if we do linear feasibility shifting, then try to adjust solution */
@@ -4669,10 +4662,12 @@ SCIP_DECL_CONSLOCK(consLockSOC)
    SCIP_CONSDATA* consdata;
    int            i;
 
-   assert(scip     != NULL);
+   assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(cons     != NULL);
+   assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4681,13 +4676,13 @@ SCIP_DECL_CONSLOCK(consLockSOC)
    /* Changing variables x_i, i <= n, in both directions can lead to an infeasible solution. */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    /* Rounding x_{n+1} up will not violate a solution. */
    if( consdata->rhsvar != NULL )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->rhsvar, consdata->rhscoeff > 0.0 ? nlockspos : nlocksneg, consdata->rhscoeff > 0.0 ? nlocksneg : nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->rhsvar, locktype, consdata->rhscoeff > 0.0 ? nlockspos : nlocksneg, consdata->rhscoeff > 0.0 ? nlocksneg : nlockspos) );
    }
 
    return SCIP_OKAY;

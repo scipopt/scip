@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -977,7 +977,7 @@ SCIP_RETCODE SCIPprobAddVar(
       /* set varlocks to ensure that no dual reduction can be performed */
       if( set->reopt_enable || !set->misc_allowdualreds )
       {
-         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, 1, 1) );
+         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_MODEL, 1, 1) );
       }
 
       /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all
@@ -1321,7 +1321,7 @@ SCIP_RETCODE SCIPprobAddCons(
       /* if constraint is a check-constraint, lock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
       {
-         SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
+         SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, +1, 0) );
       }
    }
 
@@ -1355,7 +1355,7 @@ SCIP_RETCODE SCIPprobDelCons(
       /* if constraint is a check-constraint, unlock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
       {
-         SCIP_CALL( SCIPconsAddLocks(cons, set, -1, 0) );
+         SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, -1, 0) );
       }
 
       /* deactivate constraint, if it is currently active */
@@ -1488,7 +1488,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       return SCIP_OKAY;
 
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
-   if( set->nactivepricers != 0 )
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 )
       return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
@@ -1601,7 +1601,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    assert(set != NULL);
 
    /* do not change objective if there are pricers involved */
-   if( set->nactivepricers != 0 )
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
       return SCIP_OKAY;
 
    nints = transprob->nvars - transprob->ncontvars;

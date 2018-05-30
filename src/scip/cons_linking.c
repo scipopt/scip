@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -430,6 +430,8 @@ SCIP_RETCODE consdataCreateBinvars(
 
    /* allocate block memory for the binary variables */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->binvars, nbinvars) );
+   /* allocate block memory for the binary variables */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals, nbinvars) );
    consdata->sizebinvars = nbinvars;
 
    /* check if the integer variable is fixed */
@@ -1747,7 +1749,6 @@ SCIP_RETCODE separateCons(
       else
          addcut = !checkCons(scip, cons, sol);
 
-
       if( !addcut )
       {
          /* constraint was feasible -> increase age */
@@ -2300,7 +2301,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                /* check that at least one binary variable is fixed */
                if( pos == -1 )
                {
-                  SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one");
+                  SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one\n");
                }
                else if( !SCIPisFeasEQ(scip, (SCIP_Real) (consdata->vals[pos]), SCIPgetSolVal(scip, sol, consdata->intvar)) )
                {
@@ -2692,7 +2693,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 static
 SCIP_DECL_CONSRESPROP(consRespropLinking)
 {  /*lint --e{715}*/
-
    SCIP_CONSDATA* consdata;
    SCIP_VAR* intvar;
    int v;
@@ -2757,7 +2757,6 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5); /*@repair: neu*/
       assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)) );
       assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)) );
-
 
       SCIP_CALL( SCIPaddConflictLb( scip, intvar, bdchgidx) );
    }
@@ -2871,16 +2870,18 @@ SCIP_DECL_CONSLOCK(consLockLinking)
    SCIP_CONSDATA* consdata;
    int b;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* look integer variable in both directions */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocksType(scip, consdata->intvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* look binary variables in both directions */
    for( b = 0; b < consdata->nbinvars; ++b )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[b], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvars[b], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -3329,6 +3330,12 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
+   /* create binary variables for the integer domain */
+   if( nbinvars == 0 )
+   {
+      SCIP_CALL( consdataCreateBinvars(scip, *cons, consdata, conshdlrdata->eventhdlr, conshdlrdata->linearize) );
+   }
+
    /* insert linking constraint into the hash map */
    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varmap, getHashmapKey(intvar), *cons) );
    assert(SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey(intvar)));
@@ -3420,7 +3427,6 @@ SCIP_VAR* SCIPgetIntvarLinking(
    assert(consdata != NULL);
 
    return consdata->intvar;
-
 }
 
 /** returns the binary variables of the linking constraint */

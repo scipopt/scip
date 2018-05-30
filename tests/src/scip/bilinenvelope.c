@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,7 +31,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0, TRUE) );
 }
 
 static

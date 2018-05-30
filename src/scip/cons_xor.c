@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -151,6 +151,8 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
+
    /* rounding in both directions may violate the constraint */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
 
@@ -165,6 +167,8 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
+
    /* rounding in both directions may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
 
@@ -2460,7 +2464,6 @@ SCIP_RETCODE checkSystemGF2(
             b[nconssmat] = ! b[nconssmat];
          }
 
-
          /* replace aggregated variables */
          while( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
          {
@@ -4243,7 +4246,6 @@ SCIP_RETCODE preprocessConstraintPairs(
       if( *cutoff )
          return SCIP_OKAY;
 #endif
-
       }
    }
 
@@ -4391,7 +4393,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
             assert(cnt == nvars - 1);
 
             /* check whether parity variable is present only in this constraint */
-            if ( SCIPvarGetNLocksDown(parityvar) <= 1 && SCIPvarGetNLocksUp(parityvar) <= 1 )
+            if ( SCIPvarGetNLocksDownType(parityvar, SCIP_LOCKTYPE_MODEL) <= 1
+               && SCIPvarGetNLocksUpType(parityvar, SCIP_LOCKTYPE_MODEL) <= 1 )
             {
                SCIP_VAR* intvar;
                SCIP_Bool rhsparity;
@@ -5185,19 +5188,21 @@ SCIP_DECL_CONSLOCK(consLockXor)
    SCIP_CONSDATA* consdata;
    int i;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* external variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    /* internal variable */
    if( consdata->intvar != NULL )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->intvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

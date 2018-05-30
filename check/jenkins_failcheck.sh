@@ -6,6 +6,8 @@
 # Note: TESTSET, GITHASH, etc are read from the environment, see
 # jenkins_check_results.sh
 
+echo "This is jenkins_failcheck.sh running."
+
 sleep 5
 
 #################################
@@ -155,6 +157,11 @@ BEGIN{printLines=0;}
 
 /^SCIP version/ {printLines=1;}
 printLines > 0 && /^$/ {printLines+=1;}
+
+# UG does not have blank lines after the header.
+printLines > 0 && /^Default LC presolving/ {exit 0;}
+
+# the third blank line marks the end of the header
 printLines > 0 {print $0}
 {
     if ( printLines == 3 ){
@@ -381,7 +388,6 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   URLSTR=`echo ${IDSTR} | sed 's/,/?compare=/'`
 
   PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}
-
 "`
 
   PERM=0
@@ -390,8 +396,8 @@ if [ "${PERFORMANCE}" == "performance" ]; then
     THISWEEK=`grep -e ${NEWTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2`
     if [ "${LASTWEEK}" != "" ]; then
       if [ "${THISWEEK}" != "" ]; then
-        PERF_MAIL="${PERF_MAIL}Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISWEEK}
-"
+        PERF_MAIL="${PERF_MAIL}
+Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISWEEK}"
       fi
     fi
     PERM=$((PERM + 1))

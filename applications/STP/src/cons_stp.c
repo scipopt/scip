@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1485,7 +1485,7 @@ SCIP_DECL_CONSLOCK(consLockStp)
    nvars = SCIPprobdataGetNVars(scip);
 
    for( v = 0; v < nvars; ++v )
-      SCIP_CALL( SCIPaddVarLocks(scip, vars[v], 1, 1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, 1, 1) );
 
    return SCIP_OKAY;
 }

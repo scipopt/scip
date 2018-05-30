@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -33,7 +33,7 @@
 #define HEUR_DESC             "primal heuristic trying to complete given partial solutions"
 #define HEUR_DISPCHAR         'h'
 #define HEUR_PRIORITY         0
-#define HEUR_FREQ             1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
@@ -1005,8 +1005,6 @@ SCIP_RETCODE applyCompletesol(
    SCIPfreeBufferArray(scip, &tightened);
    SCIP_CALL( SCIPendProbing(scip) );
 
-
-
    return SCIP_OKAY;
 }
 
@@ -1088,11 +1086,12 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
       return SCIP_OKAY;
 
    /* check whether we want to run before presolving */
-   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL && !heurdata->beforepresol )
+   if( (heurtiming & SCIP_HEURTIMING_BEFOREPRESOL) && !heurdata->beforepresol )
       return SCIP_OKAY;
 
    /* only run before root node */
-   if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPgetCurrentNode(scip) != SCIPgetRootNode(scip) )
+   if( (heurtiming & SCIP_HEURTIMING_BEFORENODE)
+      && (heurdata->beforepresol || SCIPgetCurrentNode(scip) != SCIPgetRootNode(scip)) )
       return SCIP_OKAY;
 
    /* get variable data and return of no variables are left in the problem */
@@ -1174,22 +1173,20 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
        */
       if( nunknown == 0 && nfracints == 0 && SCIPgetNContVars(scip) == 0 && SCIPgetNImplVars(scip) == 0 )
       {
-         SCIP_VAR** origvars;
          SCIP_SOL* newsol;
          SCIP_Bool stored;
-         int norigvars;
 
-         origvars = SCIPgetOrigVars(scip);
-         norigvars = SCIPgetNOrigVars(scip);
+         assert(vars != NULL);
+         assert(nvars >= 0);
 
-         SCIP_CALL( SCIPcreateOrigSol(scip, &newsol, heur) );
+         SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
-         for( v = 0; v < norigvars; v++ )
+         for( v = 0; v < nvars; v++ )
          {
-            solval = SCIPgetSolVal(scip, sol, origvars[v]);
+            solval = SCIPgetSolVal(scip, sol, vars[v]);
             assert(solval != SCIP_UNKNOWN); /*lint !e777*/
 
-            SCIP_CALL( SCIPsetSolVal(scip, newsol, origvars[v], solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], solval) );
          }
 
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
@@ -1299,7 +1296,6 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcontvars",
          "maximal number of continuous variables after presolving",
          &heurdata->maxcontvars, FALSE, DEFAULT_MAXCONTVARS, -1, INT_MAX, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

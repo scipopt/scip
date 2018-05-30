@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -290,6 +290,12 @@ SCIP_Longint SCIPdivesetGetNProbingNodes(
 /** get the total number of backtracks performed by this dive set */
 EXTERN
 SCIP_Longint SCIPdivesetGetNBacktracks(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of conflicts found by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNConflicts(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 

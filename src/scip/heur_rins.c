@@ -23,8 +23,6 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/cons_linear.h"
 #include "scip/heur_rins.h"
 #include "scip/pub_misc.h"
 
@@ -689,7 +687,6 @@ SCIP_RETCODE SCIPincludeHeurRins(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
          "should uct node selection be used at the beginning of the search?",
          &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

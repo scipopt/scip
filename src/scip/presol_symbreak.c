@@ -38,13 +38,13 @@
 
 #include <scip/cons_linear.h>
 #include <scip/cons_orbitope.h>
-#include <scip/cons_setppc.h>
 #include <scip/cons_symresack.h>
 #include <scip/misc.h>
-#include <scip/prop_probing.h>
 #include <scip/presol_symbreak.h>
 #include <scip/presol_symmetry.h>
 #include <symmetry/type_symmetry.h>
+
+#include <string.h>
 
 /* presolver properties */
 #define PRESOL_NAME            "symbreak"
@@ -57,7 +57,8 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_COMPUTEORBITS       FALSE    /**< Should the orbits of the symmetry group be computed? */
-#define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+#define DEFAULT_DETECTORBITOPES     FALSE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+#define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 /*
  * Data structures
@@ -70,13 +71,14 @@ struct SCIP_PresolData
    int                   nperms;             /**< number of permutations in perms */
    int                   npermvars;          /**< number of variables affected by permutations */
    SCIP_Real             log10groupsize;     /**< log10 of group size */
+   SCIP_Bool             binvaraffected;     /**< whether binary variables are affected */
    SCIP_VAR**            permvars;           /**< array of variables on which permutations act */
    SCIP_Bool             addedconss;         /**< whether we already added symmetry breaking constraints */
    SCIP_Bool             computedsymmetry;   /**< whether symmetry has been computed already */
    SCIP_Bool             conssaddlp;         /**< Should the symmetry breaking constraints be added to the LP? */
    SCIP_Bool             addsymresacks;      /**< Add symresack constraints for each generator? */
    SCIP_Bool             enabled;            /**< run presolver? */
-   SCIP_Bool             early;              /**< run presolver as early as possible if symmetry has been detected in initpre() */
+   int                   addconsstiming;     /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
    SCIP_CONS**           genconss;           /**< list of generated constraints */
    int                   ngenconss;          /**< number of generated constraints */
    int                   nsymresacks;        /**< number of symresack constraints */
@@ -447,7 +449,6 @@ SCIP_RETCODE extendSubOrbitope(
                *infeasible = TRUE;
                break;
             }
-
          }
       }
    }
@@ -628,7 +629,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_Bool* usedperm;
       int** orbitopevaridx;
       int* columnorder;
-      int ntwocyclescomp = -1;
+      int ntwocyclescomp = INT_MAX;
       int nfilledcols;
       int nusedperms;
       int* nusedelems;
@@ -648,7 +649,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
          /* if we are checking the first permutation */
-         if ( ntwocyclescomp == - 1 )
+         if ( ntwocyclescomp == INT_MAX )
             ntwocyclescomp = ntwocyclesperm;
 
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
@@ -663,6 +664,7 @@ SCIP_RETCODE detectOrbitopes(
       if ( ! isorbitope )
          continue;
       assert( ntwocyclescomp > 0 );
+      assert( ntwocyclescomp < INT_MAX );
 
       /* iterate over permutations and check whether for each permutation there exists
        * another permutation whose 2-cycles intersect pairwise in exactly one element */
@@ -813,6 +815,7 @@ SCIP_RETCODE detectOrbitopes(
          ++presoldata->ngenconss;
          ++presoldata->norbitopes;
          presoldata->componentblocked[i] = TRUE;
+         presoldata->addedconss = TRUE;
       }
 
       /* free data structures */
@@ -923,6 +926,9 @@ SCIP_RETCODE addSymresackConss(
       }
    }
 
+   if ( nsymresackcons > 0 )
+      presoldata->addedconss = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -943,13 +949,95 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
    assert( presoldata != NULL );
 
    /* exit if no or only trivial symmetry group is available */
-   if ( presoldata->nperms < 1 )
+   if ( presoldata->nperms < 1 || ! presoldata->binvaraffected )
       return SCIP_OKAY;
 
    if ( presoldata->addsymresacks )
    {
       SCIP_CALL( addSymresackConss(scip, presol) );
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** find problem symmetries */
+static
+SCIP_RETCODE tryAddSymmetryHandlingConss(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PRESOL*          presol              /**< data of presolver */
+   )
+{
+   SCIP_PRESOLDATA* presoldata;
+
+   assert( presol != NULL );
+   assert( scip != NULL );
+
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
+
+   /* symmetries have already been computed */
+   if ( presoldata->addedconss )
+   {
+      assert( presoldata->nperms > 0 );
+
+      return SCIP_OKAY;
+   }
+
+   /* get symmetry information, if not already computed */
+   if ( ! presoldata->computedsymmetry )
+   {
+      SCIPdebugMsg(scip, "Symmetry breaking presolver: computing symmetry ...\n");
+      assert( presoldata->nperms < 0 );
+
+      /* get symmetries */
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE,
+            &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
+            &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
+
+      presoldata->computedsymmetry = TRUE;
+
+      if ( presoldata->nperms <= 0 || ! presoldata->binvaraffected )
+      {
+         SCIPdebugMsg(scip, "Symmetry breaking presolver: no symmetry on binary variables has been found, turning presolver off.\n");
+         presoldata->enabled = FALSE;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         assert( presoldata->nperms > 0 );
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
+
+         if ( presoldata->computeorbits )
+         {
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
+
+            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
+                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
+         }
+
+         if ( presoldata->detectorbitopes )
+         {
+            SCIP_CALL( detectOrbitopes(scip, presoldata) );
+         }
+      }
+   }
+   else if ( presoldata->nperms <= 0 || ! presoldata->binvaraffected )
+      return SCIP_OKAY;
+
+   /* at this point, the symmetry group should be computed and nontrivial */
+   assert( presoldata->nperms > 0 );
+
+   /* possibly stop */
+   if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* add symmetry breaking constraints */
+   assert( ! presoldata->addedconss || presoldata->norbitopes > 0 );
+
+   SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
 
    return SCIP_OKAY;
 }
@@ -1000,12 +1088,6 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
    else
    {
       presoldata->enabled = FALSE;
-   }
-
-   if ( presoldata->enabled )
-   {
-      /* register presolver for symmetry information */
-      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
    }
 
    return SCIP_OKAY;
@@ -1077,9 +1159,9 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    presoldata->addedconss = FALSE;
    presoldata->computedsymmetry = FALSE;
    presoldata->enabled = TRUE;
-   presoldata->early = FALSE;
    presoldata->nperms = -1;
    presoldata->log10groupsize = -1.0;
+   presoldata->binvaraffected = FALSE;
    presoldata->norbitopes = 0;
    presoldata->nsymresacks = 0;
 
@@ -1100,10 +1182,6 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
-   /* check whether we have to run the presolver at the beginning of presolving */
-   SCIP_CALL( SCIPgetTimingSymmetry(scip, &presoldata->early) );
-   presoldata->early = ! presoldata->early;
-
    /* check whether we should run */
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
    if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK )
@@ -1114,17 +1192,37 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
       presoldata->enabled = FALSE;
    }
 
-   if ( presoldata->enabled )
+   /* add symmetry handling constraints if required  */
+   if ( presoldata->enabled && presoldata->addconsstiming == 0 )
    {
-      /* register presolver for symmetry information */
-      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+      SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
+
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
    }
 
-   if ( presoldata->early && presoldata->enabled )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Executing presolver <%s> early, since symmetries are computed early.\n\n", SCIPpresolGetName(presol));
+   return SCIP_OKAY;
+}
 
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/" PRESOL_NAME "/priority", 90000000) );
+
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
+static
+SCIP_DECL_PRESOLEXITPRE(presolExitpreSymbreak)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   assert( scip != NULL );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
+
+   SCIPdebugMsg(scip, "Exitpre method of symbreak presolver ...\n");
+
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
+
+   /* guarantee that symmetries are computed (and handled) even if presolving is disabled */
+   if ( presoldata->enabled && ! presoldata->addedconss )
+   {
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
    }
 
    return SCIP_OKAY;
@@ -1136,10 +1234,7 @@ static
 SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
-   int noldfixedvars = *nfixedvars;
-   int noldaggrvars = *naggrvars;
-   int noldbdchgs = *nchgbds;
-   int noldaddconss = *naddconss;
+   int noldngenconns;
    int i;
 
    assert( scip != NULL );
@@ -1153,104 +1248,51 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
    assert( presoldata != NULL );
 
    /* possibly skip presolver */
-   if ( ! presoldata->enabled )
+   if ( ! presoldata->enabled || presoldata->addedconss )
       return SCIP_OKAY;
 
-   /* skip presolving if we are not at the end */
-   if ( ! presoldata->early && ! SCIPisPresolveFinished(scip) )
+   /* skip presolving if we are not at the end if addconsstiming == 2 */
+   if ( presoldata->addconsstiming > 1 && ! SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
 
    /* possibly stop */
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMsg(scip, "Presolving method of symmetry breaking presolver ...\n");
+   noldngenconns = presoldata->ngenconss;
 
-   /* get symmetry information, if not already computed */
-   if ( ! presoldata->computedsymmetry )
-   {
-      SCIPdebugMsg(scip, "Symmetry breaking presolver: computing symmetry ...\n");
-      assert( presoldata->nperms < 0 );
+   SCIP_CALL( tryAddSymmetryHandlingConss(scip, presol) );
 
-      /* get symmetries */
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(presoldata->npermvars), &(presoldata->permvars),
-            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize)) );
-
-      presoldata->computedsymmetry = TRUE;
-
-      if ( presoldata->nperms <= 0 )
-      {
-         SCIPdebugMsg(scip, "Symmetry breaking presolver: no symmetry has been found, turning presolver off.\n");
-         presoldata->enabled = FALSE;
-         return SCIP_OKAY;
-      }
-      else
-      {
-         assert( presoldata->nperms > 0 );
-
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
-
-         if ( presoldata->computeorbits )
-         {
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
-
-            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
-                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
-         }
-
-         if ( presoldata->detectorbitopes )
-         {
-            SCIP_CALL( detectOrbitopes(scip, presoldata) );
-         }
-      }
-   }
-   else if ( presoldata->nperms <= 0 )
+   /* terminate if symmetry handling constraints have already been added */
+   if ( ! presoldata->addedconss )
       return SCIP_OKAY;
 
    /* at this point, the symmetry group should be computed and nontrivial */
    assert( presoldata->nperms > 0 );
+   assert( presoldata->ngenconss > 0 );
+
    *result = SCIP_DIDNOTFIND;
 
-   /* deactivate presolvers that may conflict with symmetry handling routines */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
+   *naddconss += presoldata->ngenconss - noldngenconns;
+   SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", presoldata->ngenconss - noldngenconns);
 
-   /* possibly stop */
-   if ( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   /* if not already done, add symmetry breaking constraints */
-   if ( ! presoldata->addedconss )
+   /* if constraints have been added, loop through generated constraints and presolve each */
+   for (i = 0; i < presoldata->ngenconss; ++i)
    {
-      /* add symmetry breaking constraints */
-      int noldngenconns = presoldata->ngenconss;
+      SCIP_CALL( SCIPpresolCons(scip, presoldata->genconss[i], nrounds, SCIP_PRESOLTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
+            nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
+            nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
-      SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
-
-      presoldata->addedconss = TRUE;
-      *naddconss += presoldata->ngenconss - noldngenconns;
-      SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", presoldata->ngenconss - noldngenconns);
-
-      /* if constraints have been added, loop through generated constraints and presolve each */
-      for (i = 0; i < presoldata->ngenconss; ++i)
+      /* exit if cutoff or unboundedness has been detected */
+      if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
       {
-         SCIP_CALL( SCIPpresolCons(scip, presoldata->genconss[i], nrounds, SCIP_PRESOLTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
-               nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
-               nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
-
-         /* exit if cutoff has been detected */
-         if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
-         {
-            SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(presoldata->genconss[i]));
-            return SCIP_OKAY;
-         }
+         SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(presoldata->genconss[i]));
+         return SCIP_OKAY;
       }
-      SCIPdebugMsg(scip, "Presolved %d constraints generated by symbreak.\n", presoldata->ngenconss);
    }
+   SCIPdebugMsg(scip, "Presolved %d constraints generated by symbreak.\n", presoldata->ngenconss);
 
-   /* determine success */
-   if ( *naddconss + *nchgbds + *naggrvars + *nfixedvars > noldaddconss + noldbdchgs + noldaggrvars + noldfixedvars )
-      *result = SCIP_SUCCESS;
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
@@ -1275,13 +1317,13 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->addedconss = FALSE;
    presoldata->computedsymmetry = FALSE;
    presoldata->enabled = TRUE;
-   presoldata->early = FALSE;
    presoldata->nsymresacks = 0;
    presoldata->norbitopes = 0;
    presoldata->ngenconss = 0;
    presoldata->genconss = NULL;
    presoldata->nperms = -1;
    presoldata->log10groupsize = -1.0;
+   presoldata->binvaraffected = FALSE;
    presoldata->norbits = -1;
    presoldata->orbits = NULL;
    presoldata->orbitbegins = NULL;
@@ -1299,6 +1341,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSymbreak) );
    SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitSymbreak) );
    SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreSymbreak) );
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreSymbreak) );
 
    /* add symmetry breaking presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -1320,6 +1363,11 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
          "presolving/" PRESOL_NAME "/detectorbitopes",
          "Should we check whether the components of the symmetry group can be handled by orbitopes?",
          &presoldata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/" PRESOL_NAME "/addconsstiming",
+         "timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving)",
+         &presoldata->addconsstiming, TRUE, DEFAULT_ADDCONSSTIMING, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }

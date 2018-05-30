@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -483,8 +483,8 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
       if( SCIPsetIsFeasIntegral(set, solval) || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
          continue;
 
-      nuplocks = SCIPvarGetNLocksUp(var);
-      ndownlocks = SCIPvarGetNLocksDown(var);
+      nuplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+      ndownlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
       obj = SCIPvarGetUnchangedObj(var);
 
       roundup = FALSE;
@@ -1094,7 +1094,6 @@ SCIP_RETCODE SCIPsolSetVal(
             }
 
             solStamp(sol, stat, tree, FALSE);
-
          }
          return SCIP_OKAY;
       }
@@ -1342,7 +1341,12 @@ SCIP_Real SCIPsolGetVal(
          return 0.0;
       }
       assert(!SCIPvarIsTransformed(origvar));
-      return scalar * SCIPsolGetVal(sol, set, stat, origvar) + constant;
+
+      solval = SCIPsolGetVal(sol, set, stat, origvar);
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+         return SCIP_UNKNOWN;
+      else
+         return scalar * solval + constant;
    }
 
    /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
@@ -1706,7 +1710,6 @@ SCIP_RETCODE SCIPsolCheck(
       }
 #endif
    }
-
 
    return SCIP_OKAY;
 }

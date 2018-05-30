@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -198,7 +198,6 @@ void writeLPs(
             fprintf(filemin, "\t%s <= %.24f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])), upperbds[othernonoverlapidx[i]]);
          }
       }
-
 
       fprintf(filemax, "end\n");
       fprintf(filemin, "end\n");
@@ -454,7 +453,6 @@ void getActivities(
             minlhs -= coefotheroverlap[minsortedidx[i]] * tmpupperbds[minsortedidx[i]];
          }
       }
-
 
       /*
        * solve maximization LP

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -305,10 +305,6 @@ SCIP_RETCODE createSubSCIP(
     * keep normal presolving, but disable components presolver
     * heuristics and separators were not copied into subscip, so should not need to switch off
     */
-   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
-   {
-      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
-   }
    if( !SCIPisParamFixed(heurdata->subscip, "constraints/components/maxprerounds") )
    {
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "constraints/components/maxprerounds", 0) );
@@ -1005,7 +1001,7 @@ SCIP_RETCODE solveSubNLP(
    /* presolve sub-SCIP
     *  set scip timelimit in case presolve is unexpectedly expensive
     *  set node limit to 1 so that presolve can go
-    *  reset maxpresolverounds, in case user changed
+    *  reset maxpresolverounds, in case user changed or we reset presolving settings
     */
    SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
@@ -1281,7 +1277,6 @@ SCIP_RETCODE solveSubNLP(
    /* set verbosity of NLP solver */
    SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
 
-
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT " and timelimit %g\n", itercontingent, timelimit);
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
@@ -1485,12 +1480,18 @@ SCIP_RETCODE solveSubNLP(
       {
          SCIP_Real sumepsilon;
 
-         /* reset feasibility tolerance of sub-SCIP and reset to normal presolve */
+         /* reset feasibility tolerance of sub-SCIP */
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/epsilon", SCIPepsilon(scip)) );
          SCIP_CALL( SCIPgetRealParam(scip, "numerics/sumepsilon", &sumepsilon) );
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/sumepsilon", sumepsilon) );
+
+         /* reset presolve to subnlp defaults (see createSubSCIP) */
          SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
+         if( !SCIPisParamFixed(heurdata->subscip, "constraints/components/maxprerounds") )
+         {
+            SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "constraints/components/maxprerounds", 0) );
+         }
          SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
       }
    }

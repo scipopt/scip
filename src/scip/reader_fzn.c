@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1480,7 +1480,6 @@ SCIP_RETCODE parseList(
    {
       SCIPdebugMsg(scip, "list is empty\n");
    }
-
 
    /* push back ']' which closes the list */
    pushToken(fzninput);
@@ -2964,7 +2963,6 @@ CREATE_CONSTRAINT(createLogicalOpCons)
             }
          }
 
-
          if( equalTokens(scip, ftokens[1], "ne" ) || equalTokens(scip, ftokens[1], "not") )
          {
             SCIP_Real vals[] = {1.0, 1.0};
@@ -3016,7 +3014,6 @@ CREATE_CONSTRAINT(createLogicalOpCons)
 
       /* free elements array */
       freeStringBufferArray(scip, elements, nelements);
-
    }
    else if(equalTokens(scip, ftokens[1], "bool") && nftokens == 3 )
    {
@@ -3962,8 +3959,8 @@ SCIP_RETCODE appendBuffer(
       SCIP_CALL( SCIPreallocBufferArray(scip, buffer, (*bufferlen)));
    }
 
-   /* append extension to linebuffer */
-   (void)strncpy((*buffer)+(*bufferpos), extension, (size_t)strlen(extension));
+   /* append extension to linebuffer - safe to use strcpy */
+   (void)strcpy((*buffer) + (*bufferpos), extension);
    *bufferpos = newpos;
 
    return SCIP_OKAY;
@@ -3981,7 +3978,6 @@ void flattenFloat(
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.1f", SCIPround(scip, val));
    else
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%+.15g", val);
-
 }
 
 /* print row in FZN format to file stream */
@@ -4191,7 +4187,6 @@ SCIP_RETCODE printLinearCons(
          }
       }
    }
-
 
    if( SCIPisEQ(scip, lhs, rhs) )
    {
@@ -4763,7 +4758,6 @@ SCIP_DECL_READERFREE(readerFreeFzn)
 static
 SCIP_DECL_READERREAD(readerReadFzn)
 {  /*lint --e{715}*/
-
    FZNINPUT fzninput;
    int i;
 
@@ -4995,7 +4989,6 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
       }
       else
       {
-
          SCIPinfoMessage(scip, file, "%s = array%dd(", vararray->name, info->ndims);
 
          for( v = 0; v < info->ndims; ++v )

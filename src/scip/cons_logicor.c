@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -129,7 +129,6 @@ struct SCIP_ConsData
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
    unsigned int          validsignature:1;   /**< is the signature valid */
-
 };
 
 
@@ -145,7 +144,6 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   /* rounding down may violate the constraint */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
 
    return SCIP_OKAY;
@@ -159,7 +157,6 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   /* rounding down may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
 
    return SCIP_OKAY;
@@ -681,7 +678,8 @@ SCIP_RETCODE dualPresolving(
       }
 
       /* remember best variable with no uplocks, this variable dominates all other with exactly one downlock */
-      if( SCIPvarGetNLocksDown(var) > 1 && SCIPvarGetNLocksUp(var) == 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 )
       {
          SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
 
@@ -696,7 +694,8 @@ SCIP_RETCODE dualPresolving(
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > 0 )
          continue;
 
       ++nfixables;
@@ -732,7 +731,8 @@ SCIP_RETCODE dualPresolving(
          assert(var != NULL);
 
          /* check if a variable only appearing in this constraint is dominated by another */
-         if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 0 )
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 )
          {
             assert(idxnouplocks != v);
 
@@ -774,7 +774,8 @@ SCIP_RETCODE dualPresolving(
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > 0 )
          continue;
 
       if( v == idx )
@@ -2359,8 +2360,8 @@ SCIP_RETCODE addConsToOccurList(
          assert(occurlistsizes[pos] == 0);
 
          /* allocate memory */
-         assert(SCIPvarGetNLocksDown(var) > 0 || !SCIPconsIsChecked(cons));
-         occurlistsizes[pos] = SCIPvarGetNLocksDown(var) + 1;
+         assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 0 || !SCIPconsIsChecked(cons));
+         occurlistsizes[pos] = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) + 1;
          SCIP_CALL( SCIPallocBufferArray(scip, &(occurlist[pos]), occurlistsizes[pos]) ); /*lint !e866*/
 
          /* put constraint in list of current variable */
@@ -3637,7 +3638,6 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          SCIP_CONS* newcons;
          SCIP_VAR* vars[2];
 
-
          /* get correct variables */
          SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[0], &vars[0]) );
          SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[1], &vars[1]) );
@@ -4650,7 +4650,7 @@ SCIP_DECL_CONSLOCK(consLockLogicor)
    /* lock every single coefficient */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -4741,7 +4741,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 static
 SCIP_DECL_CONSPRINT(consPrintLogicor)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

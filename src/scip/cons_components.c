@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -368,6 +368,7 @@ SCIP_RETCODE componentSetupWorkingSol(
 
    /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugSolIsEnabled(component->problem->scip) )
    {
       PROBLEM* problem;
       SCIP* scip;
@@ -1136,6 +1137,7 @@ SCIP_RETCODE solveComponent(
    case SCIP_STATUS_USERINTERRUPT:
       SCIP_CALL( SCIPinterruptSolve(scip) );
       break;
+   case SCIP_STATUS_TERMINATE:
    case SCIP_STATUS_UNKNOWN:
    case SCIP_STATUS_NODELIMIT:
    case SCIP_STATUS_TOTALNODELIMIT:
@@ -1905,7 +1907,8 @@ SCIP_RETCODE findComponents(
          {
             assert(nunfixedvars <= v);
             sortedvars[nunfixedvars] = vars[v];
-            varlocks[nunfixedvars] = 4 * (SCIPvarGetNLocksDown(vars[v]) + SCIPvarGetNLocksUp(vars[v]));
+            varlocks[nunfixedvars] = 4 * (SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL)
+               + SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL));
             unfixedvarpos[v] = nunfixedvars;
             ++nunfixedvars;
          }
@@ -2375,6 +2378,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
             /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
+         if( SCIPdebugSolIsEnabled(scip) )
          {
             SCIP_SOL* debugsol;
             SCIP_Real val;
@@ -2550,7 +2554,6 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          "constraints/" CONSHDLR_NAME "/feastolfactor",
          "factor to increase the feasibility tolerance of the main SCIP in all sub-SCIPs, default value 1.0",
          &conshdlrdata->feastolfactor, TRUE, DEFAULT_FEASTOLFACTOR, 0.0, 1000000.0, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }
