@@ -282,6 +282,7 @@ int SCIPbendersGetNTransferredCuts(
 /** updates the lower bound for the subproblem. If the lower bound is not greater than the previously stored lowerbound,
  * then no update occurs.
  */
+EXTERN
 void SCIPbendersUpdateSubproblemLowerbound(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -289,13 +290,29 @@ void SCIPbendersUpdateSubproblemLowerbound(
    );
 
 /** returns the stored lower bound for the given subproblem */
+EXTERN
 SCIP_Real SCIPbendersGetSubproblemLowerbound(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
+/** sets the independent subproblem flag */
+EXTERN
+void SCIPbendersSetSubproblemIsIndependent(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             isindep             /**< flag to indicate whether the subproblem is independent */
+   );
+
+/** returns whether the subproblem is independent */
+EXTERN
+SCIP_Bool SCIPbendersSubproblemIsIndependent(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /** returns whether the subproblem is enabled, i.e. the subproblem is still solved in the solving loop. */
-extern
+EXTERN
 SCIP_Bool SCIPbendersSubproblemIsEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
