@@ -20,10 +20,27 @@ Var::Var(const char* _name, VarType _type, const Rational& _lb, const Rational& 
 
 bool Var::checkBounds(const Rational& boundTolerance) const
 {
+   // compute lb tolerance
+   Rational absx(value);
+   absx.abs();
+   Rational abslb(lb);
+   abslb.abs();
+   Rational lbtol(1);
+   max(lbtol, lbtol, abslb);
+   max(lbtol, lbtol, absx);
+   lbtol *= boundTolerance;
+   // compute ub tolerance
+   Rational absub(ub);
+   absub.abs();
+   Rational ubtol(1);
+   max(ubtol, ubtol, absub);
+   max(ubtol, ubtol, absx);
+   ubtol *= boundTolerance;
+   // compute relaxed bounds
    Rational relaxedLb(lb);
-   relaxedLb -= boundTolerance; 
+   relaxedLb -= lbtol;
    Rational relaxedUb(ub);
-   relaxedUb += boundTolerance; 
+   relaxedUb += ubtol;
    if( (value < relaxedLb) || (value > relaxedUb) )
    {
       std::cerr << "Failed bound check: ";
@@ -63,7 +80,7 @@ void Var::integralityViolation(Rational& intViol) const
    if( type == CONTINUOUS ) return;
    value.integralityViolation(intViol);
 }
-  
+
 void Var::print(std::ostream& out) const
 {
    out << name << " [" << lb.toString() << "," << ub.toString() << "] ";
@@ -81,7 +98,7 @@ void Var::print(std::ostream& out) const
       default:
          out << "(unknown)";
    }
-   out << ". Value: " << value.toString(); 
+   out << ". Value: " << value.toString();
 }
 
 Constraint::Constraint(const char* _name, bool _redundant)
@@ -101,20 +118,47 @@ void LinearConstraint::push(Var* v, const Rational& c)
 
 bool LinearConstraint::check(const Rational& tolerance) const
 {
-   // compute row activity
-   Rational relaxedLhs(lhs);
-   relaxedLhs -= tolerance; 
-   Rational relaxedRhs(rhs);
-   relaxedRhs += tolerance;
-   Rational activity;
+   // compute row activity (with its positive and negative parts)
+   Rational posact;
+   Rational negact;
    for( unsigned int i = 0; i < vars.size(); ++i )
-      activity.addProduct(coefs[i], vars[i]->value);
+   {
+      Rational prod;
+      mult(prod, coefs[i], vars[i]->value);
+      if (prod.isPositive()) posact += prod;
+      else                   negact += prod;
+   }
+   Rational activity;
+   activity += posact;
+   activity += negact;
+   // check lhs
+   // tolerance is: tolerance * max {pospart, negpart, |lhs|, 1}
+   Rational abslhs(lhs);
+   abslhs.abs();
+   Rational lhstol(1);
+   max(lhstol, lhstol, posact);
+   max(lhstol, lhstol, negact);
+   max(lhstol, lhstol, abslhs);
+   lhstol *= tolerance;
+   Rational relaxedLhs(lhs);
+   relaxedLhs -= lhstol;
+   // check rhs
+   // tolerance is: tolerance * max {pospart, negpart, |rhs|, 1}
+   Rational absrhs(rhs);
+   absrhs.abs();
+   Rational rhstol(1);
+   max(rhstol, rhstol, posact);
+   max(rhstol, rhstol, negact);
+   max(rhstol, rhstol, absrhs);
+   rhstol *= tolerance;
+   Rational relaxedRhs(rhs);
+   relaxedRhs += rhstol;
    // check lhs and rhs
    if (activity < relaxedLhs || activity > relaxedRhs)
    {
       std::cerr << std::setprecision(16) << "Failed check for cons " << name << ": "
-                << activity.toDouble() << " not in [" << relaxedLhs.toDouble() << "," << relaxedRhs.toDouble() << "] -- Exact wrt linear tol: " 
-                << activity.toString() << " not in [" << relaxedLhs.toString() << "," << relaxedRhs.toString() << "]" 
+                << activity.toDouble() << " not in [" << relaxedLhs.toDouble() << "," << relaxedRhs.toDouble() << "] -- Exact wrt linear tol: "
+                << activity.toString() << " not in [" << relaxedLhs.toString() << "," << relaxedRhs.toString() << "]"
                 << std::endl;
       return false;
    }
@@ -233,6 +277,43 @@ bool SOSConstraint::checkType2(const Rational& tolerance) const
    return false;
 }
 
+IndicatorConstraint::IndicatorConstraint(const char* _name, Var* _ifvar, bool _ifvalue, Constraint* _thencons, bool _redundant)
+   : Constraint(_name, _redundant), ifvar(_ifvar), ifvalue(_ifvalue), thencons(_thencons)
+{
+   type = "<IND>";
+}
+
+IndicatorConstraint::~IndicatorConstraint()
+{
+   // an indicator constraint owns thencons
+   delete thencons;
+}
+
+bool IndicatorConstraint::check(const Rational& tolerance) const
+{
+   Rational half(1,2);
+   if (ifvar->value > half && !ifvalue) return true;
+   if (ifvar->value < half && ifvalue) return true;
+   // thencons must be satisifed
+   return thencons->check(tolerance);
+}
+
+void IndicatorConstraint::violation(Rational& viol) const
+{
+   viol.toZero();
+   Rational half(1,2);
+   if (ifvar->value > half && !ifvalue) return;
+   if (ifvar->value < half && ifvalue) return;
+   // return violation of thencons
+   thencons->violation(viol);
+}
+
+void IndicatorConstraint::print(std::ostream& out) const
+{
+   out << name << " " << type << ifvar->name << " == " << ifvalue << " -> ";
+   thencons->print(out);
+}
+
 Model::Model() : objSense(MINIMIZE), hasObjectiveValue(false) {}
 
 Model::~Model()
@@ -246,7 +327,7 @@ Model::~Model()
       ++citr;
    }
    conss.clear();
-   
+
    // delete vars
    std::map<std::string, Var*>::iterator vitr = vars.begin();
    std::map<std::string, Var*>::iterator vend = vars.end();
@@ -284,28 +365,33 @@ void Model::pushCons(Constraint* cons)
    conss[cons->name] = cons;
 }
 
+void Model::removeCons(const char* name)
+{
+   conss.erase(name);
+}
+
 unsigned int Model::numVars() const
 {
    return vars.size();
 }
-   
+
 unsigned int Model::numConss() const
 {
    return conss.size();
 }
-   
+
 bool Model::readSol(const char* filename)
 {
    assert( filename != NULL );
    char buf[SOL_MAX_LINELEN];
-   
+
    FILE* fp = fopen(filename, "r");
    if( fp == NULL )
    {
       std::cerr << "cannot open file <" << filename << "> for reading" << std::endl;
       return false;
    }
-   
+
    hasObjectiveValue = false;
    bool hasVarValue = false;
    bool isSolFeas = true;
@@ -316,13 +402,13 @@ bool Model::readSol(const char* filename)
       memset((void*)buf, 0, SOL_MAX_LINELEN);
       if (NULL == fgets(buf, sizeof(buf), fp))
          break;
-      
+
       // Normalize white spaces in line
       unsigned int len = strlen(buf);
       for( unsigned int i = 0; i < len; i++ )
          if( (buf[i] == '\t') || (buf[i] == '\n') || (buf[i] == '\r') )
             buf[i] = BLANK;
-      
+
       // tokenize
       char* nexttok;
       const char* varname = strtok_r(&buf[0], " ", &nexttok);
@@ -342,7 +428,7 @@ bool Model::readSol(const char* filename)
       {
          // read objective value
          hasObjectiveValue = true;
-         objectiveValue.fromString(valuep); 
+         objectiveValue.fromString(valuep);
       }
       else
       {
@@ -357,7 +443,7 @@ bool Model::readSol(const char* filename)
       }
    }
    isSolFeas = isSolFeas && hasVarValue;
-   
+
    fclose(fp);
    fp = NULL;
 
@@ -382,7 +468,7 @@ void Model::check(
       intFeasible &= vitr->second->checkIntegrality(intTolerance);
       ++vitr;
    }
-   
+
    // then check constraints
    std::map<std::string, Constraint*>::const_iterator citr = conss.begin();
    std::map<std::string, Constraint*>::const_iterator cend = conss.end();
@@ -396,44 +482,49 @@ void Model::check(
    // then check objective function
    if( hasObjectiveValue )
    {
-      Rational objVal;
-      bool isMIP = false;
-      
+      Rational objValPlus;
+      Rational objvalMinus;
+
       vitr = vars.begin();
       while( vitr != vend )
       {
-         objVal.addProduct(vitr->second->objCoef, vitr->second->value);
-         if( vitr->second->type == Var::CONTINUOUS ) isMIP = true;
+         Rational prod;
+
+         mult(prod, vitr->second->objCoef, vitr->second->value);
+         if (prod.isPositive()) objValPlus += prod;
+         else                   objvalMinus += prod;
+
          ++vitr;
       }
+
+      Rational objVal;
+      objVal += objValPlus;
+      objVal += objvalMinus;
+
+
+      Rational absobj(objectiveValue);
+      absobj.abs();
+      Rational objtol(1);
+      max(objtol, objtol, objValPlus);
+      max(objtol, objtol, objvalMinus);
+      max(objtol, objtol, absobj);
+      objtol *= linearTolerance;
+
       Rational diff;
       sub(diff, objVal, objectiveValue);
       diff.abs();
-      if( diff > linearTolerance )
+      if (diff > objtol)
       {
-         // try a relative error of 10^-7
-         Rational one(1, 1);
-         Rational relTol(1, 10000000);
-         Rational magnitude(objVal);
-         Rational relErr;
-         magnitude.abs();
-         max(magnitude, one, magnitude);
-         div(relErr, diff, magnitude);
-         if( relErr > relTol )
-         {
-            correctObj = false;
-            
-            std::cerr << std::setprecision(16) << "Failed objective value check: " 
-                      << objectiveValue.toDouble() << " != " << objVal.toDouble() << " -- Exact absolute diff: "  
-                      << diff.toString() << " > " << linearTolerance.toString() << ", exact relative diff " << relErr.toString() << " > " << relTol.toString()
-                      << std::endl;
-         }
-         else correctObj = true;
+         correctObj = false;
+         std::cerr << std::setprecision(16) << "Failed objective value check: "
+                   << objectiveValue.toDouble() << " != " << objVal.toDouble() << " -- Exact absolute diff: "
+                   << diff.toString() << " > " << objtol.toString()
+                   << std::endl;
       }
    }
    else
    {
-      std::cerr << "Failed objective value check: No objective value given" 
+      std::cerr << "Failed objective value check: No objective value given"
                 << std::endl;
       correctObj = false;
    }
@@ -507,7 +598,7 @@ void Model::checkWrtExact(
    {
       Rational objVal;
       bool isMIP = false;
-      
+
       std::map<std::string, Var*>::const_iterator vitr = vars.begin();
       std::map<std::string, Var*>::const_iterator vend = vars.end();
       while( vitr != vend )
@@ -540,15 +631,15 @@ void Model::checkWrtExact(
       }
       if( !objective )
       {
-         std::cerr << std::setprecision(16) << "Failed objective value check: " 
-                   << objectiveValue.toDouble() << " != " << exactObjVal.toDouble() << " -- Exact absolute diff: "  
-                   << diff.toString() << " > " << linearTolerance.toString() 
+         std::cerr << std::setprecision(16) << "Failed objective value check: "
+                   << objectiveValue.toDouble() << " != " << exactObjVal.toDouble() << " -- Exact absolute diff: "
+                   << diff.toString() << " > " << linearTolerance.toString()
                    << std::endl;
       }
    }
    else
    {
-      std::cerr << "Failed objective value check: No objective value given" 
+      std::cerr << "Failed objective value check: No objective value given"
                 << std::endl;
       objective = false;
    }
@@ -561,7 +652,7 @@ void Model::print(std::ostream& out) const
       out << "Minimize ";
    else if( objSense == MAXIMIZE )
       out << "Maximize ";
-      
+
    out << objName << ": ";
    std::map<std::string, Var*>::const_iterator vitr = vars.begin();
    std::map<std::string, Var*>::const_iterator vend = vars.end();
@@ -571,7 +662,7 @@ void Model::print(std::ostream& out) const
       ++vitr;
    }
    out << std::endl;
-   
+
    out << "s.t." << std::endl;
    std::map<std::string, Constraint*>::const_iterator citr = conss.begin();
    std::map<std::string, Constraint*>::const_iterator cend = conss.end();
@@ -581,7 +672,7 @@ void Model::print(std::ostream& out) const
       out << std::endl;
       ++citr;
    }
-   
+
    out << "Vars:" << std::endl;
    vitr = vars.begin();
    vend = vars.end();

@@ -43,9 +43,21 @@
  *
  * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
  *
- * @version 6.0.0
  *
- * \image html scippy.png
+ * @section TABLEOFCONTENTS Structure of this manual
+ *
+ * This manual gives an accessible introduction to the functionality of the SCIP code in the following chapters
+ *
+ *  - @subpage GETTINGSTARTED      Installation and license information and an interactive shell tutorial
+ *  - @subpage EXAMPLES            Coding examples in C and C++ in the source code distribution
+ *  - @subpage APPLICATIONS        Extensions of SCIP for specific applications
+ *  - @subpage PARAMETERS          List of all SCIP parameters
+ *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
+ *  - @subpage HOWTOADD            Detailed guides for adding user plugins
+ *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
+ *  - @subpage FAQ                 Frequently asked questions (FAQ)
+ *  - @subpage FURTHERINFO         Changes between SCIP versions
+ *
  *
  * @section QUICKSTART Quickstart
  *
@@ -63,13 +75,9 @@
  *
  * \verbinclude output.log
  *
- *  - @subpage GETTINGSTARTED
- *  - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
- *  - @subpage FURTHERINFORMATION
- *  - @subpage PROGRAMMING
- *  - @subpage HOWTOADD
- *  - @subpage HOWTOUSESECTION
- *  - @subpage FURTHERINFO
+ * @version 6.0.0
+ *
+ * \image html scippy.png
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -145,28 +153,34 @@
  * 
  * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  * 
- * - @subpage CMAKE   "Installation information using CMake"
- * - @subpage MAKE    "Installation information using Makefiles"
  * - @subpage LICENSE "License"
- *
+ * - @subpage INSTALL "Installation"
  * - @subpage SHELL       "Tutorial: the interactive shell"
  * - @subpage FILEREADERS "Readable file formats"
  * - @subpage INTERFACES "Interfaces"
  * - @subpage START       "How to start a new project"
- * - @subpage EXAMPLES    "Examples"
- * - @subpage LPI         "Available LP solver interfaces"
+ * - @subpage DOC         "How to search the documentation for interface methods"
+ */
+
+/**@page INSTALL Installing SCIP
+ *
+ * This chapter is a detailed guide to the installation procedure of SCIP.
+ *
+ * SCIP lets you freely choose between its own, manually maintained Makefile system
+ * or the CMake cross platform build system generator. For new users, we strongly
+ * recommend to use CMake, if available on their targeted platform.
+ *
+ * Please note that there are differences between both systems, most notably, the generated
+ * library libscip will not be compatible between the versions. For more information, we
+ * refer to the INSTALL file of the SCIP source code distribution.
+ *
+ * - @subpage CMAKE   "Installation information using CMake (recommended for new users)"
+ * - @subpage MAKE    "Installation information using Makefiles"
+ * - @subpage LPI         "Available implementations of the LP solver interface"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
  */
 
-/**@page FURTHERINFORMATION References
- *
- * - @subpage PUBLICAPI "List of callable functions"
- * - @subpage PARAMETERS "List of all SCIP parameters"
- *
- * - @subpage DOC     "How to search the documentation for interface methods"
- * - @subpage FAQ     "Frequently asked questions (FAQ)"
- */
- /**@page PROGRAMMING Programming with SCIP
+/**@page PROGRAMMING Programming with SCIP
  *
  * - @subpage CODE    "Coding style guidelines"
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"

@@ -19,7 +19,6 @@
       <tab type="namespaces" visible="no" title=""/>
       <tab type="namespacemembers" visible="no" title=""/>
     </tab>
-    <tab type="user" url="@ref FAQ" title="FAQ"/>
   </navindex>
 
   <!-- Layout definition for a class page -->
