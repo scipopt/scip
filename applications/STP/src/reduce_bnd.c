@@ -2993,7 +2993,6 @@ SCIP_RETCODE reduce_da(
    {
       cost[e] = graph->cost[e];
       costrev[e] = graph->cost[flipedge(e)];
-
       result[e] = UNKNOWN;
    }
 
@@ -3043,7 +3042,7 @@ SCIP_RETCODE reduce_da(
       /* main reduction loop */
       for( int run = 0; run < nruns; run++ )
       {
-         int root;
+         int root = graph->source;
          SCIP_Bool apsol = FALSE;
          SCIP_Bool usesol = (run > 1);
 
@@ -3072,8 +3071,10 @@ SCIP_RETCODE reduce_da(
             }
             else
             {
-               SCIPdebugMessage("reroot solution and run guided dual-ascent \n");
-               SCIP_CALL(graph_sol_reroot(scip, graph, result, root));
+               if( !rpc )
+               {
+                  SCIPdebugMessage("reroot solution and run guided dual-ascent \n");
+                  SCIP_CALL(graph_sol_reroot(scip, graph, result, root));
 #ifndef NDEBUG
                {
                   const int realroot = graph->source;
@@ -3082,6 +3083,8 @@ SCIP_RETCODE reduce_da(
                   graph->source = realroot;
                }
 #endif
+               }
+
                SCIP_CALL(
                      SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, FALSE, damaxdeviation, nodearrchar));
             }
@@ -3104,7 +3107,7 @@ SCIP_RETCODE reduce_da(
 
             ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
-            if( userec )
+            if( userec && !rpc )
             {
                SCIPdebugMessage("obj before local %f \n", ubnew);
 
@@ -3180,7 +3183,7 @@ SCIP_RETCODE reduce_da(
             costrev[e] = FARAWAY;
 
          /* build Voronoi diagram */
-         if( directed )
+         if( directed || rpc )
             graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, state);
          else
          {
@@ -3202,7 +3205,7 @@ SCIP_RETCODE reduce_da(
 
          nfixed += reduceSPG(scip, graph, offset, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, root, apsol);
 
-         if( !directed )
+         if( !directed && !rpc )
          {
             if( !SCIPisZero(scip, minpathcost) )
             {
@@ -3237,7 +3240,7 @@ SCIP_RETCODE reduce_da(
          }
       } /* root loop */
 
-      if( !directed && !SCIPisZero(scip, minpathcost) )
+      if( !directed && !rpc && !SCIPisZero(scip, minpathcost) )
            nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
 
       if( nfixed == 0 || !userec )
