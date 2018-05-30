@@ -135,6 +135,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/coefdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/feaspump/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/fracdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/farkasdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/guideddiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/linesearchdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/nlpdiving/freq", -1) );
