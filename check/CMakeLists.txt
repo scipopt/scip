@@ -64,6 +64,9 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
+    "treemodel-ratio"
+    "treemodel-sampling"
+    "treemodel-svts"
 )
 #
 # settings to run a reduced MIP test

@@ -1446,16 +1446,16 @@ SCIP_RETCODE execRelpscost(
       if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && SCIPtreemodelIsEnabled(scip, branchruledata->treemodel) )
       {
          SCIP_CALL( SCIPtreemodelSelectCandidate(
-            scip,                        /**< SCIP data structure */
-            branchruledata->treemodel,   /**< branching rule */
-            branchcands,                 /**< branching candidate storage */
-            mingains,                    /**< minimum gain of rounding downwards or upwards */
-            maxgains,                    /**< maximum gain of rounding downwards or upwards */
-            scoresfrompc,                /**< pseudocost scores of branching candidates */
-            scoresfromothers,            /**< scores from other branching methods */
-            avgpscostscore,              /**< average pseudocost score of branching candidates */
-            nbranchcands,                /**< the number of branching candidates */
-            &bestcand                    /**< the best branching candidate found by SCIP */
+               scip,                        /* SCIP data structure */
+               branchruledata->treemodel,   /* branching rule */
+               branchcands,                 /* branching candidate storage */
+               mingains,                    /* minimum gain of rounding downwards or upwards */
+               maxgains,                    /* maximum gain of rounding downwards or upwards */
+               scoresfrompc,                /* pseudocost scores of branching candidates */
+               scoresfromothers,            /* scores from other branching methods */
+               avgpscostscore,              /* average pseudocost score of branching candidates */
+               nbranchcands,                /* the number of branching candidates */
+               &bestcand                    /* the best branching candidate found by SCIP */
          ) );
       }
 
@@ -1809,7 +1809,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
 
-   /** Initialise the Treemodel branching rules */
+   /* initialise the Treemodel parameters */
    SCIP_CALL( SCIPtreemodelInit(scip, &branchruledata->treemodel) );
 
    return SCIP_OKAY;
