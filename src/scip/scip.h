@@ -22863,8 +22863,6 @@ void SCIPprintMemoryDiagnostic(
  * @{
  */
 
-/**! [SnippetCodeStyleComment] */
-
 /** creates a dynamic array of real values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -22875,8 +22873,6 @@ SCIP_RETCODE SCIPcreateRealarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY**      realarray           /**< pointer to store the real array */
    );
-
-/**! [SnippetCodeStyleComment] */
 
 /** frees a dynamic array of real values
  *
@@ -23283,6 +23279,8 @@ SCIP_RETCODE SCIPcreateDigraph(
    int                   nnodes              /**< number of nodes */
    );
 
+/**! [SnippetCodeStyleComment] */
+
 /** copies directed graph structure
  *
  *  The copying procedure uses the memory of the passed SCIP instance. The user must ensure that the digraph lives
@@ -23297,6 +23295,7 @@ SCIP_RETCODE SCIPcopyDigraph(
    SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
    );
 
+/**! [SnippetCodeStyleComment] */
 /**@} */
 
 /**@defgroup PublicValidationMethods Validation
