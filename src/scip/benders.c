@@ -2105,7 +2105,21 @@ SCIP_RETCODE solveBendersSubproblems(
              */
             SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
 
-            (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
+            /* if the subproblem is in SCIP_STAGE_PROBLEM, then it is not possible to set the OPTIMAL status. The status
+             * is set to UNKNOWN.
+             */
+            if( SCIPgetStage(SCIPbendersSubproblem(benders, i)) == SCIP_STAGE_PROBLEM )
+            {
+               (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
+               (*optimal) = FALSE;
+               SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
+            }
+            else
+            {
+               (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
+               SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
+            }
+
             (*subprobsolved)[i] = TRUE;
 
             /* the nverified counter is only increased in the convex solving loop */
