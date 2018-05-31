@@ -2103,21 +2103,26 @@ SCIP_RETCODE solveBendersSubproblems(
             /* NOTE: There is no need to update the optimal flag. This is because optimal is always TRUE until a
              * non-optimal subproblem is found.
              */
-            SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
-
-            /* if the subproblem is in SCIP_STAGE_PROBLEM, then it is not possible to set the OPTIMAL status. The status
-             * is set to UNKNOWN.
-             */
-            if( SCIPgetStage(SCIPbendersSubproblem(benders, i)) == SCIP_STAGE_PROBLEM )
+            /* if the auxiliary variable value is infinity, then the subproblem has not been solved yet. Currently the
+             * subproblem statue is unknown. */
+            if( SCIPsetIsInfinity(set, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
+               || SCIPsetIsInfinity(set, -SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i)) )
             {
                (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
                (*optimal) = FALSE;
                SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
+
+               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, but has not been solved."
+                 " setting status to UNKNOWN\n", i);
             }
             else
             {
                (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
                SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
+
+               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n",
+                  i);
+
             }
 
             (*subprobsolved)[i] = TRUE;
