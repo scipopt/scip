@@ -4316,7 +4316,7 @@ SCIP_RETCODE normalizeCons(
    {
       if( SCIPvarGetType(vars[nvars - 1]) != SCIP_VARTYPE_CONTINUOUS )
       {
-         maxmult = (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0)));
+         maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0))));
       }
    }
    else
@@ -4336,7 +4336,7 @@ SCIP_RETCODE normalizeCons(
 
       if( !foundcont )
       {
-         maxmult = (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0)));
+         maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0))));
       }
    }
 
