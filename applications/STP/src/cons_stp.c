@@ -1080,6 +1080,7 @@ static
 SCIP_RETCODE dualascent_init(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
+   const int* RESTRICT   start,              /**< CSR start array [0,...,nnodes] */
    const int* RESTRICT   edgearr,            /**< CSR ancestor edge array */
    int                   root,               /**< the root */
    SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
@@ -1088,10 +1089,14 @@ SCIP_RETCODE dualascent_init(
    int* RESTRICT         active,             /**< active vertices mark */
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
    GNODE**               gnodearr,           /**< array containing terminal nodes*/
-   SCIP_Real* RESTRICT   rescap              /**< residual capacity */
+   SCIP_Real* RESTRICT   rescap,             /**< residual capacity */
+   SCIP_Real*            dualobj,            /**< dual objective */
+   int*                  augmentingcomponent /**< augmenting component */
 )
 {
    const int nnodes = g->knots;
+   *dualobj = 0.0;
+   *augmentingcomponent = -1;
 
    for( int i = 0; i < ncsredges; i++ )
       rescap[i] = g->cost[edgearr[i]];
@@ -1105,6 +1110,7 @@ SCIP_RETCODE dualascent_init(
          assert(g->grad[i] > 0);
          if( i != root )
          {
+            SCIP_Real warmstart = FALSE;
             gnodearr[k]->number = i;
             gnodearr[k]->dist = g->grad[i];
 
@@ -1124,16 +1130,56 @@ SCIP_RETCODE dualascent_init(
 
                   if( is_pseudoroot )
                   {
+                     SCIP_Bool zeroedge = FALSE;
                      for( a = g->inpbeg[tail]; a != EAT_LAST; a = g->ieat[a] )
                         if( g->cost[a] == 0.0 )
+                        {
+                           zeroedge = TRUE;
                            gnodearr[k]->dist += g->grad[g->tail[a]] - 1;
+                        }
+
+                     /* warmstart possible? */
+                     if( !zeroedge )
+                     {
+                        int j;
+                        int end;
+                        int prizearc;
+                        SCIP_Real prize;
+
+                        if( rescap[start[i]] == 0.0 )
+                           prizearc = start[i] + 1;
+                        else
+                           prizearc = start[i];
+
+                        prize = rescap[prizearc];
+                        assert(prize > 0.0);
+
+                        for( j = start[tail], end = start[tail + 1]; j != end; j++ )
+                           if( rescap[j] < prize )
+                              break;
+
+                        if( j == end )
+                        {
+                           warmstart = TRUE;
+                           *dualobj += prize;
+                           rescap[prizearc] = 0.0;
+                           for( j = start[tail], end = start[tail + 1]; j != end; j++ )
+                              rescap[j] -= prize;
+                        }
+                     }
                   }
                }
 
                assert(gnodearr[k]->dist > 0);
             }
-
-            SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[k++]));
+            if( !warmstart )
+               SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[k]));
+            else if( *augmentingcomponent == -1 )
+            {
+               SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[k]));
+               *augmentingcomponent = i;
+            }
+            k++;
          }
       }
       else
@@ -1676,7 +1722,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    int ncsredges;
    int norgcutverts;
    int stacklength;
-   int augmentingcomponent = -1;
+   int augmentingcomponent;
    const SCIP_Bool addconss = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
 
    /* should currently not  be activated */
@@ -1706,8 +1752,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    {
       vars = NULL;
    }
-
-   dualobj = 0.0;
 
    /* if specified root is not a terminal, take default root */
    if( !Is_term(g->term[root]) )
@@ -1761,7 +1805,8 @@ SCIP_RETCODE SCIPStpDualAscent(
    graph_get_csr(g, edgearr, tailarr, start, &ncsredges);
 
    /* initialize priority queue and res. capacity */
-   SCIP_CALL( dualascent_init(scip, g, edgearr, root, is_pseudoroot, ncsredges, gmark, active, pqueue, gnodearr, rescap) );
+   SCIP_CALL( dualascent_init(scip, g, start, edgearr, root, is_pseudoroot, ncsredges, gmark, active, pqueue,
+         gnodearr, rescap, &dualobj, &augmentingcomponent) );
 
    /* mark whether an arc is satisfied (has capacity 0) */
    for( int i = 0; i < ncsredges; i++ )

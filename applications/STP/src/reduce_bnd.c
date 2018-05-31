@@ -3956,7 +3956,7 @@ SCIP_RETCODE reduce_daPcMw(
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
 
    /* rerun dual ascent? */
-   if( solbasedda && graph->terms > 2 )
+   if( solbasedda && graph->terms > 2 && SCIPisGT(scip, minpathcost, 0.0) )
    {
       const SCIP_Real oldupperbound = upperbound;
 
