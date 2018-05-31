@@ -67,12 +67,12 @@
 #define DEFAULT_RANDSEED            151 /**< initial seed for random number generation */
 
 #define DEFAULT_MAXOBJOCC           1.0 /**< maximal occurance factor of an objective coefficient */
-#define DEFAULT_OBJDYN              0.0 /**< minimal objective dynamism (log) */
+#define DEFAULT_OBJDYN           0.0001 /**< minimal objective dynamism (log) */
 #define DEFAULT_CHECKCANDS        FALSE /**< should diving candidates be checked before running? */
 #define DEFAULT_SCALESCORE         TRUE /**< should the score be scaled? */
-#define DEFAULT_ROOTSUCCESS       FALSE /**< should the heuristic only run within the tree if at least one solution
+#define DEFAULT_ROOTSUCCESS        TRUE /**< should the heuristic only run within the tree if at least one solution
                                          *   was found at the root node? */
-#define DEFAULT_SCALETYPE           'f' /**< scale score by [f]ractionality or [i]mpact on farkasproof */
+#define DEFAULT_SCALETYPE           'i' /**< scale score by [f]ractionality or [i]mpact on farkasproof */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
