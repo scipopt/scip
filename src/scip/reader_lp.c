@@ -1691,7 +1691,6 @@ SCIP_RETCODE readConstraints(
          /* reset the lpinput for further usage as we have no indicator constraint */
          lpinput->linepos = linepos;
          (void) SCIPsnprintf(lpinput->token, 2, "<");
-         strcpy(lpinput->token, "<");
       }
 
       /* check for "->" */

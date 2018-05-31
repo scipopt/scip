@@ -1643,7 +1643,7 @@ SCIP_RETCODE parseName(
    }
 
    /* copy identifier name */
-   (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, (const char*)fzninput->token);
+   (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, "%s", (const char*)fzninput->token);
 
    /* search for an assignment; therefore, skip annotations */
    do
