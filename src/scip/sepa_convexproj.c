@@ -50,13 +50,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/sepa_convexproj.h"
-#include "scip/type_lp.h"
-#include "scip/type_misc.h"
-#include "scip/type_nlp.h"
-#include "scip/type_result.h"
-#include "scip/type_sepa.h"
-#include "scip/type_sol.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

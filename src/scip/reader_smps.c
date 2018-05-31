@@ -21,23 +21,29 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
+#include "blockmemshell/memory.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_reader.h"
+#include "scip/reader_cor.h"
+#include "scip/reader_smps.h"
+#include "scip/reader_sto.h"
+#include "scip/reader_tim.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
-
-#include "scip/reader_smps.h"
 
 /*
  * The SMPS reader coordinates the reading of the cor, tim and sto files. The public reading methods from the cor, tim
  * and sto readers are called from the SMPS reader. So, the header files for the cor, tim and sto readers are required.
  */
-#include "scip/reader_cor.h"
-#include "scip/reader_tim.h"
-#include "scip/reader_sto.h"
 
 #define READER_NAME             "smpsreader"
 #define READER_DESC             "file reader for core problem of stochastic programs in the SMPS file format"

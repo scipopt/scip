@@ -20,13 +20,30 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/disp_default.h"
+#include "lpi/lpi.h"
+#include "lpi/type_lpi.h"
 #include "scip/concurrent.h"
+#include "scip/disp_default.h"
+#include "scip/pub_disp.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_sol.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_concurrent.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_disp.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
 #include "scip/syncstore.h"
-
+#include <string.h>
 
 #define DISP_NAME_SOLFOUND      "solfound"
 #define DISP_DESC_SOLFOUND      "letter that indicates the heuristic which found the solution"

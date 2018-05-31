@@ -24,7 +24,7 @@
 #include "scip/pub_message.h"
 #include "scip/scip_bandit.h"
 #include "scip/scip_mem.h"
-#include "scip/scip_var.h"
+#include "scip/scip_randnumgen.h"
 #include "scip/set.h"
 #include "scip/struct_scip.h"
 

@@ -26,7 +26,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "scip/type_message.h"
 #include "scip/struct_message.h"
 #include "scip/pub_message.h"
 #include "scip/def.h"

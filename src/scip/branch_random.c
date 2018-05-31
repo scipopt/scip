@@ -34,11 +34,6 @@
 #include "scip/scip_param.h"
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_tree.h"
-#include "scip/type_branch.h"
-#include "scip/type_misc.h"
-#include "scip/type_result.h"
-#include "scip/type_tree.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

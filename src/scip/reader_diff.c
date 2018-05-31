@@ -20,16 +20,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <ctype.h>
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_diff.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_solve.h"
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
-#include <ctype.h>
-
-#include "scip/reader_diff.h"
 
 #define READER_NAME             "diffreader"
 #define READER_DESC             "file reader for changes in the LP file"

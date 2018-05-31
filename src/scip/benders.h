@@ -24,18 +24,19 @@
 #ifndef __SCIP_BENDERS_H__
 #define __SCIP_BENDERS_H__
 
-
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_set.h"
-#include "scip/type_lp.h"
-#include "scip/type_prob.h"
-#include "scip/type_pricestore.h"
+#include "scip/def.h"
 #include "scip/type_benders.h"
 #include "scip/type_benderscut.h"
-#include "scip/pub_benders.h"
+#include "scip/type_message.h"
+#include "scip/type_misc.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_set.h"
+#include "scip/type_sol.h"
+#include "scip/type_stat.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -403,21 +404,6 @@ void SCIPbendersSetSubproblemIsSetup(
 /** returns the subproblem setup flag */
 extern
 SCIP_Bool SCIPbendersSubproblemIsSetup(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber          /**< the subproblem number */
-   );
-
-/** sets the independent subproblem flag */
-extern
-void SCIPbendersSetSubproblemIsIndependent(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool             isindep             /**< flag to indicate whether the subproblem is independent */
-   );
-
-/** returns whether the subproblem is independent */
-extern
-SCIP_Bool SCIPbendersSubproblemIsIndependent(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );

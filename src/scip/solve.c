@@ -76,9 +76,6 @@
 #include "scip/struct_var.h"
 #include "scip/syncstore.h"
 #include "scip/tree.h"
-#include "scip/type_implics.h"
-#include "scip/type_result.h"
-#include "scip/type_timing.h"
 #include "scip/var.h"
 #include "scip/visual.h"
 

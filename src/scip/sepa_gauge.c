@@ -52,8 +52,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
 #include "scip/sepa_gauge.h"
-#include "scip/type_sepa.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 
