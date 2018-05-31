@@ -96,6 +96,7 @@ typedef struct
    int* RESTRICT         head;               /**< Array [0..edges-1] of node-number of head of edge [i]                     */
    int* RESTRICT         orgtail;            /**< Array [0..edges-1] of node-number of tail of edge [i] prior to reduction  */
    int* RESTRICT         orghead;            /**< Array [0..edges-1] of node-number of head of edge [i] prior to reduction  */
+   int* RESTRICT         rootedgeprevs;      /**< Array [0..edges-1] for PC and MW problems */
 
    /* Nodes/Edges */
    int* RESTRICT         ieat;               /**< Array [0..edges-1], incoming edge allocation table          */
@@ -204,6 +205,7 @@ extern void   graph_pc_2trans(GRAPH*);
 extern void   graph_pc_2orgcheck(GRAPH*);
 extern void   graph_pc_2transcheck(GRAPH*);
 extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);
+extern void   graph_pc_presolExit(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_init(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
@@ -234,6 +236,7 @@ extern SCIP_RETCODE   graph_get_edgeConflicts(SCIP*, const GRAPH*);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_pc_presolInit(SCIP*, GRAPH*);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool);
 extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int);
 extern SCIP_Bool graph_valid(const GRAPH*);

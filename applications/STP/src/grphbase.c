@@ -106,8 +106,16 @@ void removeEdge(
       g->inpbeg[head] = g->ieat[e];
    else
    {
-      for( i = g->inpbeg[head]; g->ieat[i] != e; i = g->ieat[i] )
-         assert(i >= 0);
+      if( g->rootedgeprevs != NULL && head == g->source )
+      {
+         i = g->rootedgeprevs[e];
+         assert(g->ieat[i] == e);
+         if( g->ieat[e] >= 0 )
+            g->rootedgeprevs[g->ieat[e]] = i;
+      }
+      else
+         for( i = g->inpbeg[head]; g->ieat[i] != e; i = g->ieat[i] )
+            assert(i >= 0);
 
       g->ieat[i] = g->ieat[e];
    }
@@ -115,8 +123,16 @@ void removeEdge(
       g->outbeg[tail] = g->oeat[e];
    else
    {
-      for( i = g->outbeg[tail]; g->oeat[i] != e; i = g->oeat[i] )
-         assert(i >= 0);
+      if( g->rootedgeprevs != NULL && tail == g->source )
+      {
+         i = g->rootedgeprevs[e];
+         assert(g->oeat[i] == e);
+         if( g->oeat[e] >= 0 )
+            g->rootedgeprevs[g->oeat[e]] = i;
+      }
+      else
+         for( i = g->outbeg[tail]; g->oeat[i] != e; i = g->oeat[i] )
+            assert(i >= 0);
 
       g->oeat[i] = g->oeat[e];
    }
@@ -772,6 +788,64 @@ SCIP_RETCODE graph_pc_init(
    }
 
    return SCIP_OKAY;
+}
+
+/** changes graph of PC and MW problems needed for presolving routines */
+SCIP_RETCODE graph_pc_presolInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   int prev;
+   const int root = g->source;
+   const int nedges = g->edges;
+
+   assert(scip != NULL && g != NULL);
+   assert(g->rootedgeprevs == NULL);
+   assert(nedges > 0 && g->grad[root] > 0);
+
+   graph_pc_2org(g);
+
+   assert(graph_pc_term2edgeConsistent(g));
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g->rootedgeprevs), nedges) );
+
+   for( int e = 0; e < nedges; e++ )
+      g->rootedgeprevs[e] = -1;
+
+   prev = g->outbeg[root];
+   assert(prev != EAT_LAST);
+
+   for( int e = g->oeat[prev]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      g->rootedgeprevs[e] = prev;
+      prev = e;
+   }
+
+   prev = g->inpbeg[root];
+   assert(prev != EAT_LAST);
+
+   for( int e = g->ieat[prev]; e != EAT_LAST; e = g->ieat[e] )
+   {
+      g->rootedgeprevs[e] = prev;
+      prev = e;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes graph of PC and MW problems needed after exiting presolving routines */
+void graph_pc_presolExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   assert(scip != NULL && g != NULL);
+   assert(g->rootedgeprevs != NULL);
+   assert(graph_pc_term2edgeConsistent(g));
+
+   graph_pc_2trans(g);
+   SCIPfreeMemoryArray(scip, &(g->rootedgeprevs));
 }
 
 /** checks consistency of term2edge array ONLY for non-extended graphs! */
@@ -3431,6 +3505,7 @@ SCIP_RETCODE graph_init(
    p->pcancestors = NULL;
    p->orgtail = NULL;
    p->orghead = NULL;
+   p->rootedgeprevs = NULL;
    p->norgmodelknots = 0;
    p->norgmodeledges = 0;
    p->ksize  = ksize;
@@ -3641,6 +3716,7 @@ void graph_free(
    SCIPfreeMemoryArray(scip, &(p->grad));
    SCIPfreeMemoryArray(scip, &(p->mark));
    SCIPfreeMemoryArray(scip, &(p->term));
+   SCIPfreeMemoryArrayNull(scip, &(p->rootedgeprevs));
 
    SCIPfreeMemory(scip, graph);
 }

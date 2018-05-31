@@ -1203,6 +1203,9 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real prizesum;
    SCIP_RANDNUMGEN* randnumgen;
 
+   if( g->grad[g->source] == 0 )
+      return SCIP_OKAY;
+
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
@@ -1215,9 +1218,7 @@ SCIP_RETCODE redLoopPc(
    ub = -1.0;
    fix = 0.0;
 
-   graph_pc_2org(g);
-
-   assert(graph_pc_term2edgeConsistent(g));
+   SCIP_CALL( graph_pc_presolInit(scip, g) );
 
    SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
 
@@ -1385,13 +1386,10 @@ SCIP_RETCODE redLoopPc(
    }
    SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
 
-   assert(graph_pc_term2edgeConsistent(g));
-
-
    if( rpc )
       g->prize[g->source] = rootprize;
 
-   graph_pc_2trans(g);
+   graph_pc_presolExit(scip, g);
 
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
