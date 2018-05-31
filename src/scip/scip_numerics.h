@@ -836,10 +836,6 @@ SCIP_Bool SCIPisUpdateUnreliable(
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
 
-#define SCIPmarkConsPropagate(scip, cons)         SCIPconsMarkPropagate(cons, (scip)->set)
-#define SCIPgetStage(scip)                        (((scip)->set)->stage)
-#define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
-#define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */

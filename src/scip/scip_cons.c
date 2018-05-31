@@ -125,6 +125,14 @@
 #include "scip/struct_scip.h"
 #endif
 
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPmarkConsPropagate
+
 /** creates a constraint handler and includes it in SCIP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
