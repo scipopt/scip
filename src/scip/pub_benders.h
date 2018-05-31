@@ -258,6 +258,7 @@ int SCIPbendersGetNConvexSubproblems(
  */
 EXTERN
 SCIP_RETCODE SCIPbendersSolveSubproblemLP(
+   SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
@@ -266,6 +267,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 /** solves the Benders' decomposition subproblem */
 EXTERN
 SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
+   SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
