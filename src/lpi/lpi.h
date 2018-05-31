@@ -26,11 +26,11 @@
 #ifndef __SCIP_LPI_H__
 #define __SCIP_LPI_H__
 
-
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
 #include "lpi/type_lpi.h"
+#include "scip/def.h"
+#include "scip/type_message.h"
+#include "scip/type_retcode.h"
 
 #ifdef __cplusplus
 extern "C" {

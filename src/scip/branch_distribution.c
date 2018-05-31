@@ -74,12 +74,6 @@
 #include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
-#include "scip/type_branch.h"
-#include "scip/type_event.h"
-#include "scip/type_history.h"
-#include "scip/type_result.h"
-#include "scip/type_set.h"
-#include "scip/type_tree.h"
 #include <string.h>
 
 

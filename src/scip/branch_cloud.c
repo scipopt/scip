@@ -49,13 +49,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/type_branch.h"
-#include "scip/type_clock.h"
-#include "scip/type_lp.h"
-#include "scip/type_result.h"
-#include "scip/type_sol.h"
-#include "scip/type_tree.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

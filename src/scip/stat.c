@@ -25,19 +25,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
-#include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/set.h"
-#include "scip/prob.h"
-#include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/visual.h"
-#include "scip/mem.h"
-#include "scip/var.h"
 #include "scip/history.h"
-#include "scip/concsolver.h"
+#include "scip/mem.h"
+#include "scip/prob.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/var.h"
+#include "scip/visual.h"
 
 
 

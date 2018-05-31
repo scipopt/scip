@@ -41,12 +41,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/sepa_clique.h"
-#include "scip/type_implics.h"
-#include "scip/type_lp.h"
-#include "scip/type_result.h"
-#include "scip/type_sepa.h"
-#include "scip/type_sol.h"
-#include "scip/type_var.h"
 #include "tclique/tclique.h"
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)

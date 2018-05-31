@@ -45,12 +45,30 @@
 /* #define TIEBREAKING */
 #define BETTERWEIGHTFORDEMANDNODES
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/sepa_mcf.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
+#include "scip/cuts.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/sepa_mcf.h"
+#include <string.h>
 
 
 #define SEPA_NAME                        "mcf"

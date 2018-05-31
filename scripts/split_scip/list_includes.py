@@ -33,8 +33,6 @@ def get_headerset(file):
                 referenced = thetype.get_declaration()
         elif c.kind == CursorKind.FUNCTION_DECL:
             thetype = c.result_type
-            if c.spelling == "SCIProwGetOriginCons":
-                print("{}: {}".format(thetype.kind, thetype.spelling))
             while thetype == TypeKind.POINTER:
                 thetype = thetype.get_pointee()
             if thetype.kind == TypeKind.TYPEDEF:
@@ -61,12 +59,15 @@ if __name__ == "__main__":
         headerfile = sys.argv[1][:-1] + 'h'
         if os.path.isfile(headerfile):
             headerinclset = get_headerset(headerfile)
+        else:
+            headerinclset = set()
 
         for p in includedirs:
             headerfile = remove_prefix(p, headerfile)
 
         for f in headerinclset:
-            inclset.remove(f)
+            if f in inclset:
+                inclset.remove(f)
 
         inclset.add(headerfile)
     else:
@@ -80,9 +81,7 @@ if __name__ == "__main__":
                 h = "math.h"
             else:
                 h = remove_prefix("/usr/include/", h)
-            if h == "string.h":
-                includelist.append('#include <string.h>\n#if defined(_WIN32) || defined(_WIN64)\n#else\n#include <strings.h> /*lint --e{766}*/\n#endif')
-            elif h not in ["stdio.h", "stdint.h", "math.h", "limits.h", "float.h", "assert.h"]:
+            if h not in ["stdio.h", "stdint.h", "math.h", "limits.h", "float.h", "assert.h"]:
                 includelist.append("#include <{}>".format(remove_prefix("/usr/include/", h)))
         else:
             includelist.append('#include "{}"'.format(h))

@@ -95,6 +95,14 @@ void SCIPsetRandomSeed(
    unsigned int          seed                /**< new random seed */
    );
 
+
+/** modifies an initial seed value with the global shift of random seeds */
+EXTERN
+unsigned int SCIPinitializeRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
+   );
+
 /**@} */
 
 #ifdef __cplusplus

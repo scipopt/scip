@@ -51,11 +51,6 @@
 #include "scip/scip_tree.h"
 #include "scip/set.h"
 #include "scip/struct_scip.h"
-#include "scip/type_branch.h"
-#include "scip/type_cons.h"
-#include "scip/type_lp.h"
-#include "scip/type_result.h"
-#include "scip/type_tree.h"
 #include "scip/var.h"
 #include <string.h>
 

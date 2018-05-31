@@ -25,8 +25,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_table.h"
 #include "scip/table_default.h"
-#include "scip/type_set.h"
-#include "scip/type_table.h"
 
 
 #define TABLE_NAME_STATUS                "status"

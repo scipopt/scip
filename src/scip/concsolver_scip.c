@@ -21,13 +21,34 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/concsolver_scip.h"
-#include "scip/concsolver.h"
-#include "scip/concurrent.h"
-#include "scip/syncstore.h"
+#include "blockmemshell/memory.h"
 #include "scip/boundstore.h"
+#include "scip/concsolver.h"
+#include "scip/concsolver_scip.h"
+#include "scip/concurrent.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_paramset.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_concurrent.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/syncstore.h"
 #include <string.h>
-
 
 /* event handler for synchronization */
 

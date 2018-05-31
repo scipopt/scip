@@ -26,7 +26,8 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/scip_bandit.h"
-#include "scip/type_misc.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_randnumgen.h"
 
 #define BANDIT_NAME "exp3"
 #define NUMTOL 1e-6

@@ -23,8 +23,36 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
+#include "blockmemshell/memory.h"
+#include "nlpi/pub_expr.h"
+#include "scip/cons_abspower.h"
+#include "scip/cons_bivariate.h"
+#include "scip/cons_indicator.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_soc.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
+#include "scip/cons_varbound.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_gms.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_var.h"
 #include <string.h>
 
 #ifdef WITH_GAMS
@@ -36,21 +64,6 @@
 #include "reader_gmo.h"
 #endif
 
-#include "scip/reader_gms.h"
-#include "scip/cons_knapsack.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_logicor.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_soc.h"
-#include "scip/cons_sos1.h"
-#include "scip/cons_sos2.h"
-#include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_indicator.h"
-#include "scip/cons_abspower.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_bivariate.h"
-#include "scip/pub_misc.h"
 
 #define READER_NAME             "gmsreader"
 #ifdef WITH_GAMS

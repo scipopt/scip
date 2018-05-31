@@ -32,6 +32,7 @@
 #define __SCIP_SCIP_PROBING_H__
 
 
+#include "lpi/type_lpi.h"
 #include "scip/def.h"
 #include "scip/type_heur.h"
 #include "scip/type_history.h"
