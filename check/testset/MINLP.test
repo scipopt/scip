@@ -958,6 +958,13 @@ MINLP/instances/minlplib/osil/qp4.osil.gz
 MINLP/instances/minlplib/osil/ramsey.osil.gz
 MINLP/instances/minlplib/osil/ravempb.osil.gz
 MINLP/instances/minlplib/osil/rbrock.osil.gz
+MINLP/instances/minlplib/osil/ringpack_10_1.osil.gz
+MINLP/instances/minlplib/osil/ringpack_10_2.osil.gz
+MINLP/instances/minlplib/osil/ringpack_20_1.osil.gz
+MINLP/instances/minlplib/osil/ringpack_20_2.osil.gz
+MINLP/instances/minlplib/osil/ringpack_20_3.osil.gz
+MINLP/instances/minlplib/osil/ringpack_30_1.osil.gz
+MINLP/instances/minlplib/osil/ringpack_30_2.osil.gz
 MINLP/instances/minlplib/osil/risk2bpb.osil.gz
 #MINLP/instances/minlplib/osil/robot100.osil.gz
 #MINLP/instances/minlplib/osil/robot200.osil.gz
