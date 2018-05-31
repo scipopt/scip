@@ -1218,10 +1218,12 @@ SCIP_RETCODE redLoopPc(
    ub = -1.0;
    fix = 0.0;
 
+   graph_pc_2org(g);
+   assert(graph_pc_term2edgeConsistent(g));
+
    SCIP_CALL( graph_pc_presolInit(scip, g) );
 
    SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
-
    assert(graph_pc_term2edgeConsistent(g));
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
@@ -1388,6 +1390,9 @@ SCIP_RETCODE redLoopPc(
 
    if( rpc )
       g->prize[g->source] = rootprize;
+
+   assert(graph_pc_term2edgeConsistent(g));
+   graph_pc_2trans(g);
 
    graph_pc_presolExit(scip, g);
 

@@ -804,10 +804,6 @@ SCIP_RETCODE graph_pc_presolInit(
    assert(g->rootedgeprevs == NULL);
    assert(nedges > 0 && g->grad[root] > 0);
 
-   graph_pc_2org(g);
-
-   assert(graph_pc_term2edgeConsistent(g));
-
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g->rootedgeprevs), nedges) );
 
    for( int e = 0; e < nedges; e++ )
@@ -842,9 +838,7 @@ void graph_pc_presolExit(
 {
    assert(scip != NULL && g != NULL);
    assert(g->rootedgeprevs != NULL);
-   assert(graph_pc_term2edgeConsistent(g));
 
-   graph_pc_2trans(g);
    SCIPfreeMemoryArray(scip, &(g->rootedgeprevs));
 }
 
@@ -1132,6 +1126,8 @@ SCIP_RETCODE graph_pc_getSap(
    prizesum -= max;
    *offset -= prizesum;
 
+   SCIP_CALL( graph_pc_presolInit(scip, *newgraph) );
+
    e = (*newgraph)->outbeg[root];
 
    while( e != EAT_LAST )
@@ -1152,6 +1148,8 @@ SCIP_RETCODE graph_pc_getSap(
 
       e = enext;
    }
+
+   graph_pc_presolExit(scip, *newgraph);
 
    for( k = 0; k < nnodes; k++ )
    {
@@ -1410,6 +1408,7 @@ SCIP_RETCODE graph_pc_getRsap(
    }
 
    assert(aterm != -1);
+   SCIP_CALL( graph_pc_presolInit(scip, p) );
 
    for( e = graph->outbeg[proot]; e != EAT_LAST; e = graph->oeat[e] )
    {
@@ -1434,6 +1433,8 @@ SCIP_RETCODE graph_pc_getRsap(
          graph_edge_del(scip, p, e, FALSE);
       }
    }
+
+   graph_pc_presolExit(scip, p);
 
    assert(p->grad[aterm] == 0);
 
@@ -1463,6 +1464,7 @@ SCIP_RETCODE graph_pc_getRsap(
 
    if( nrootcands > 0 )
    {
+      SCIP_CALL( graph_pc_presolInit(scip, p) );
       for( k = 0; k < nrootcands; k++ )
       {
          aterm = rootcands[k];
@@ -1492,6 +1494,7 @@ SCIP_RETCODE graph_pc_getRsap(
          assert(e != EAT_LAST);
          graph_knot_chg(p, aterm, 0);
       }
+      graph_pc_presolExit(scip, p);
    }
 
    graph_knot_chg(p, proot, -1);
