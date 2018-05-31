@@ -27,8 +27,10 @@
 #ifndef __SCIP_EVENT_GLOBALBND_H__
 #define __SCIP_EVENT_GLOBALBND_H__
 
-
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_event.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 #include "scip/type_syncstore.h"
 
 #ifdef __cplusplus

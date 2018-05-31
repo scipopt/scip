@@ -20,10 +20,13 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
-
-#include "scip/reader_mps.h"
+#include "scip/pub_message.h"
+#include "scip/pub_reader.h"
 #include "scip/reader_cor.h"
+#include "scip/reader_mps.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_reader.h"
+#include <string.h>
 
 #define READER_NAME             "correader"
 #define READER_DESC             "file reader for CORE problem of stochastic programs in the SMPS file format"

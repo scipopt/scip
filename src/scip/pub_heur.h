@@ -24,10 +24,14 @@
 #ifndef __SCIP_PUB_HEUR_H__
 #define __SCIP_PUB_HEUR_H__
 
-
 #include "scip/def.h"
-#include "scip/type_misc.h"
 #include "scip/type_heur.h"
+#include "scip/type_misc.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_sol.h"
+#include "scip/type_timing.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

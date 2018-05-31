@@ -27,24 +27,51 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
-
-#include <assert.h>
-#include <string.h>
-#include <math.h>
-#include <ctype.h>
-
 #define SCIP_PRIVATE_ROWPREP
 
-#include "scip/cons_soc.h"
-#include "scip/cons_quadratic.h"
+#include "blockmemshell/memory.h"
+#include <ctype.h>
+#include "nlpi/exprinterpret.h"
+#include "nlpi/nlpi.h"
+#include "nlpi/nlpi_ipopt.h"
+#include "nlpi/pub_expr.h"
+#include "nlpi/type_expr.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/cons_soc.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "scip/intervalarith.h"
-#include "nlpi/nlpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi_ipopt.h"
-
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "soc"

@@ -30,7 +30,10 @@
 #ifndef __SCIP_HEUR_UNDERCOVER_H__
 #define __SCIP_HEUR_UNDERCOVER_H__
 
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

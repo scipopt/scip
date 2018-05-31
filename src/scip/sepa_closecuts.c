@@ -68,11 +68,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/sepa_closecuts.h"
-#include "scip/type_lp.h"
-#include "scip/type_message.h"
-#include "scip/type_result.h"
-#include "scip/type_sepa.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

@@ -22,21 +22,30 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #define _USE_MATH_DEFINES   /* to get M_PI and M_E on Windows */  /*lint !750 */
-
-#include <assert.h>
-#include <string.h>
-#include <math.h>
-
-#include "scip/reader_osil.h"
-#include "scip/scip.h"
+#include "blockmemshell/memory.h"
+#include "nlpi/pub_expr.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_var.h"
+#include "scip/reader_osil.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
 #include "xml/xml.h"
-
 
 #define READER_NAME             "osilreader"
 #define READER_DESC             "file reader for OS instance language (OSiL) format"

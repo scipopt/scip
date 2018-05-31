@@ -25,8 +25,13 @@
 #define __SCIP_CONS_BENDERS_H__
 
 
-#include "scip/scip.h"
-#include "scip/benders.h"
+#include "scip/def.h"
+#include "scip/type_benders.h"
+#include "scip/type_cons.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_sol.h"
 
 #ifdef __cplusplus
 extern "C" {

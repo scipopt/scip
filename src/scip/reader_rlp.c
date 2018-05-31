@@ -20,10 +20,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
-
+#include "scip/pub_message.h"
+#include "scip/pub_reader.h"
 #include "scip/reader_lp.h"
 #include "scip/reader_rlp.h"
+#include "scip/scip_message.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_solvingstats.h"
+#include <string.h>
 
 #define READER_NAME             "rlpreader"
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's RLP file format"

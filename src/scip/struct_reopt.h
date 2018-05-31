@@ -24,10 +24,15 @@
 #ifndef __SCIP_STRUCT_REOPT_H__
 #define __SCIP_STRUCT_REOPT_H__
 
-
 #include "scip/def.h"
-#include "scip/type_reopt.h"
+#include "scip/type_clock.h"
+#include "scip/type_cons.h"
+#include "scip/type_history.h"
+#include "scip/type_lp.h"
 #include "scip/type_misc.h"
+#include "scip/type_reopt.h"
+#include "scip/type_sol.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {
