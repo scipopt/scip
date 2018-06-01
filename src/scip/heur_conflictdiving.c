@@ -234,10 +234,8 @@ SCIP_RETCODE getScoreLikeCoefdiving(
        * - if variable may be rounded in both directions, round corresponding to the fractionality
        * - otherwise, round in the infeasible direction
        */
-      if( mayrounddown && mayroundup )
+      if( mayrounddown && mayroundup && divetype != SCIP_DIVETYPE_SOS1VARIABLE )
       {
-         assert( divetype != SCIP_DIVETYPE_SOS1VARIABLE );
-
          /* try to avoid variability; decide randomly if the LP solution can contain some noise */
          if( SCIPisEQ(scip, candsfrac, 0.5) )
             *roundup = (SCIPrandomGetInt(rng, 0, 1) == 0);
@@ -261,7 +259,7 @@ SCIP_RETCODE getScoreLikeCoefdiving(
             candsfrac = 1.0 - candsfrac;
             break;
          case SCIP_DIVETYPE_SOS1VARIABLE:
-            if ( SCIPisFeasPositive(scip, candsol) )
+            if( SCIPisFeasPositive(scip, candsol) )
                candsfrac = 1.0 - candsfrac;
             break;
          default:
@@ -275,7 +273,7 @@ SCIP_RETCODE getScoreLikeCoefdiving(
    }
    else
    {
-      if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
+      if( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
 
       /* add some noise to avoid ties */
@@ -357,10 +355,8 @@ SCIP_RETCODE getScore(
        * - if variable may be rounded in both directions, round corresponding to the fractionality
        * - otherwise, round in the feasible direction
        */
-      if( mayrounddown && mayroundup )
+      if( mayrounddown && mayroundup && divetype != SCIP_DIVETYPE_SOS1VARIABLE )
       {
-         assert( divetype != SCIP_DIVETYPE_SOS1VARIABLE );
-
          /* try to avoid variability; decide randomly if the LP solution can contain some noise */
          if( SCIPisEQ(scip, candsfrac, 0.5) )
             *roundup = (SCIPrandomGetInt(rng, 0, 1) == 0);
@@ -399,7 +395,7 @@ SCIP_RETCODE getScore(
             candsfrac = 1.0 - candsfrac;
             break;
          case SCIP_DIVETYPE_SOS1VARIABLE:
-            if ( SCIPisFeasPositive(scip, candsol) )
+            if( SCIPisFeasPositive(scip, candsol) )
                candsfrac = 1.0 - candsfrac;
             break;
          default:
@@ -413,7 +409,7 @@ SCIP_RETCODE getScore(
    }
    else
    {
-      if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
+      if( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
 
       /* add some noise to avoid ties */
