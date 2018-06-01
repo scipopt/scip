@@ -33,7 +33,37 @@
 extern "C" {
 #endif
 
-/** creates the multi-aggregated branching rule and includes it in SCIP */
+#define BRANCH_STP_VERTEX_KILLED      -1
+#define BRANCH_STP_VERTEX_NONTERM      0
+#define BRANCH_STP_VERTEX_TERM         1
+
+
+/** parse constraint name and apply changes to graph or array */
+EXTERN
+SCIP_RETCODE STPStpBranchruleParseConsname(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  vertexchgs,         /**< array to store changes or NULL */
+   GRAPH*                graph,              /**< graph to modify or NULL */
+   const char*           consname,           /**< constraint name */
+   SCIP_Bool             deletehistory       /**< delete history of graph? */
+   );
+
+/** applies vertex changes caused by this branching rule, either on a graph or on an array */
+EXTERN
+SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  vertexchgs,         /**< array to store changes or NULL */
+   GRAPH*                graph               /**< graph to apply changes on or NULL */
+   );
+
+/** applies vertex changes caused by this branching rule, either on a graph or on an array */
+EXTERN
+void SCIPStpBranchruleInitNodeState(
+   const GRAPH*          g,                  /**< graph data structure */
+   int*                  nodestate           /**< node state array */
+   );
+
+/** creates the stp branching rule and includes it to SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP*                 scip                /**< SCIP data structure */

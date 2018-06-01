@@ -50,7 +50,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    GRAPH*                g,                  /**< the graph */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
    SCIP_Bool*            success,            /**< feasible solution found? */
-   SCIP_Bool             reducegraph         /**< try to reduce graph initially? */
+   SCIP_Bool             reducegraph,        /**< try to reduce graph initially? */
+   SCIP_Bool             fullreduce          /**< use full reduction techniques? */
    );
 
 /** execute MWCSP slack-and-prune heuristic on given graph */

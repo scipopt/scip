@@ -117,6 +117,8 @@ struct SCIP_Benders
  *  and reset after the solving loop. */
 struct SCIP_SubproblemParams
 {
+   SCIP_Real limits_memory;
+   SCIP_Real limits_time;
    int cons_linear_propfreq;
    int lp_disablecutoff;
    int lp_scaling;

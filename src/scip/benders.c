@@ -1057,6 +1057,7 @@ SCIP_RETCODE SCIPbendersFree(
 static
 SCIP_RETCODE initialiseSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
    int                   probnumber          /**< the subproblem number */
    )
 {
@@ -1071,7 +1072,8 @@ SCIP_RETCODE initialiseSubproblem(
    assert(subproblem != NULL);
 
    /* Getting the problem into the right SCIP stage for solving */
-   SCIP_CALL( SCIPbendersSolveSubproblemCIP(benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP, FALSE) );
+   SCIP_CALL( SCIPbendersSolveSubproblemCIP(set->scip, benders, probnumber, &infeasible, SCIP_BENDERSENFOTYPE_LP,
+         FALSE) );
 
    assert(SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING);
 
@@ -1088,6 +1090,7 @@ SCIP_RETCODE initialiseSubproblem(
 static
 SCIP_RETCODE initialiseLPSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
    int                   probnumber          /**< the subproblem number */
    )
 {
@@ -1115,7 +1118,7 @@ SCIP_RETCODE initialiseLPSubproblem(
    assert(eventhdlr != NULL);
 
    /* calling an initial solve to put the problem into probing mode */
-   SCIP_CALL( initialiseSubproblem(benders, probnumber) );
+   SCIP_CALL( initialiseSubproblem(benders, set, probnumber) );
 
    return SCIP_OKAY;
 }
@@ -1214,7 +1217,7 @@ SCIP_RETCODE createSubproblems(
          if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
             && SCIPgetStage(subproblem) <= SCIP_STAGE_PROBLEM )
          {
-            SCIP_CALL( initialiseLPSubproblem(benders, i) );
+            SCIP_CALL( initialiseLPSubproblem(benders, set, i) );
          }
       }
       else
@@ -2103,9 +2106,28 @@ SCIP_RETCODE solveBendersSubproblems(
             /* NOTE: There is no need to update the optimal flag. This is because optimal is always TRUE until a
              * non-optimal subproblem is found.
              */
-            SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
+            /* if the auxiliary variable value is infinity, then the subproblem has not been solved yet. Currently the
+             * subproblem statue is unknown. */
+            if( SCIPsetIsInfinity(set, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
+               || SCIPsetIsInfinity(set, -SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i)) )
+            {
+               (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
+               (*optimal) = FALSE;
+               SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
 
-            (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
+               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, but has not been solved."
+                 " setting status to UNKNOWN\n", i);
+            }
+            else
+            {
+               (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
+               SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
+
+               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n",
+                  i);
+
+            }
+
             (*subprobsolved)[i] = TRUE;
 
             /* the nverified counter is only increased in the convex solving loop */
@@ -2917,7 +2939,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
        * In the second solve loop, the MIP problem is solved */
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || SCIPbendersSubproblemIsConvex(benders, probnumber) )
       {
-         SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
+         SCIP_CALL( SCIPbendersSolveSubproblemLP(set->scip, benders, probnumber, infeasible) );
 
          /* if the LP was solved without error, then the subproblem is labelled as solved */
          if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL
@@ -2926,7 +2948,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       }
       else
       {
-         SCIP_CALL( SCIPbendersSolveSubproblemCIP(benders, probnumber, infeasible, type, FALSE) );
+         SCIP_CALL( SCIPbendersSolveSubproblemCIP(set->scip, benders, probnumber, infeasible, type, FALSE) );
 
          /* if the generic subproblem solving methods are used, then the CIP subproblems are always solved. */
          (*solved) = TRUE;
@@ -3047,7 +3069,7 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    }
    else
    {
-      SCIP_CALL( initialiseSubproblem(benders, probnumber) );
+      SCIP_CALL( initialiseSubproblem(benders, set, probnumber) );
    }
 
    vars = SCIPgetVars(subproblem);
@@ -3151,7 +3173,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
       /* solving the subproblem */
       if( solvecip && !SCIPbendersSubproblemIsConvex(benders, probnumber) )
       {
-         SCIP_CALL( SCIPbendersSolveSubproblemCIP(benders, probnumber, infeasible, type, solvecip) );
+         SCIP_CALL( SCIPbendersSolveSubproblemCIP(set->scip, benders, probnumber, infeasible, type, solvecip) );
 
          if( objective != NULL )
             (*objective) = SCIPgetSolOrigObj(subproblem, SCIPgetBestSol(subproblem));
@@ -3170,10 +3192,10 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
          }
          else
          {
-            SCIP_CALL( initialiseSubproblem(benders, probnumber) );
+            SCIP_CALL( initialiseSubproblem(benders, set, probnumber) );
          }
 
-         SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
+         SCIP_CALL( SCIPbendersSolveSubproblemLP(set->scip, benders, probnumber, infeasible) );
 
          if( objective != NULL )
             (*objective) = SCIPgetSolOrigObj(subproblem, NULL);
@@ -3183,27 +3205,62 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    return SCIP_OKAY;
 }
 
+/** copies the time and memory limit from the master problem to the subproblem */
+static
+SCIP_RETCODE copyMemoryAndTimeLimits(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subproblem          /**< the Benders' decomposition subproblem */
+   )
+{
+   SCIP_Real mastertimelimit;
+   SCIP_Real subtimelimit;
+   SCIP_Real maxsubtimelimit;
+   SCIP_Real mastermemorylimit;
+   SCIP_Real submemorylimit;
+   SCIP_Real maxsubmemorylimit;
+
+   assert(scip != NULL);
+
+   /* setting the time limit for the Benders' decomposition subproblems. It is set to 102% of the remaining time. */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &mastertimelimit) );
+   maxsubtimelimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/time"));
+   subtimelimit = (mastertimelimit - SCIPgetSolvingTime(scip)) * 1.02;
+   subtimelimit = MIN(subtimelimit, maxsubtimelimit);
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", subtimelimit) );
+
+   /* setting the memory limit for the Benders' decomposition subproblems. */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &mastermemorylimit) );
+   maxsubmemorylimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/memory"));
+   submemorylimit = mastermemorylimit - (SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0;
+   submemorylimit = MIN(submemorylimit, maxsubmemorylimit);
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/memory", submemorylimit) );
+
+   return SCIP_OKAY;
+}
+
 /** stores the original parameters from the subproblem */
 static
 SCIP_RETCODE storeOrigSubproblemParams(
-   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subproblem,         /**< the SCIP data structure */
    SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
    )
 {
-   assert(scip != NULL);
+   assert(subproblem != NULL);
    assert(origparams != NULL);
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &origparams->conflict_enable) );
-   SCIP_CALL( SCIPgetIntParam(scip, "lp/disablecutoff", &origparams->lp_disablecutoff) );
-   SCIP_CALL( SCIPgetIntParam(scip, "lp/scaling", &origparams->lp_scaling) );
-   SCIP_CALL( SCIPgetCharParam(scip, "lp/initalgorithm", &origparams->lp_initalg) );
-   SCIP_CALL( SCIPgetCharParam(scip, "lp/resolvealgorithm", &origparams->lp_resolvealg) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "lp/alwaysgetduals", &origparams->lp_alwaysgetduals) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/scaleobj", &origparams->misc_scaleobj) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/catchctrlc", &origparams->misc_catchctrlc) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxrounds", &origparams->prop_maxrounds) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/maxroundsroot", &origparams->prop_maxroundsroot) );
-   SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/propfreq", &origparams->cons_linear_propfreq) );
+   SCIP_CALL( SCIPgetRealParam(subproblem, "limits/memory", &origparams->limits_memory) );
+   SCIP_CALL( SCIPgetRealParam(subproblem, "limits/time", &origparams->limits_time) );
+   SCIP_CALL( SCIPgetBoolParam(subproblem, "conflict/enable", &origparams->conflict_enable) );
+   SCIP_CALL( SCIPgetIntParam(subproblem, "lp/disablecutoff", &origparams->lp_disablecutoff) );
+   SCIP_CALL( SCIPgetIntParam(subproblem, "lp/scaling", &origparams->lp_scaling) );
+   SCIP_CALL( SCIPgetCharParam(subproblem, "lp/initalgorithm", &origparams->lp_initalg) );
+   SCIP_CALL( SCIPgetCharParam(subproblem, "lp/resolvealgorithm", &origparams->lp_resolvealg) );
+   SCIP_CALL( SCIPgetBoolParam(subproblem, "lp/alwaysgetduals", &origparams->lp_alwaysgetduals) );
+   SCIP_CALL( SCIPgetBoolParam(subproblem, "misc/scaleobj", &origparams->misc_scaleobj) );
+   SCIP_CALL( SCIPgetBoolParam(subproblem, "misc/catchctrlc", &origparams->misc_catchctrlc) );
+   SCIP_CALL( SCIPgetIntParam(subproblem, "propagating/maxrounds", &origparams->prop_maxrounds) );
+   SCIP_CALL( SCIPgetIntParam(subproblem, "propagating/maxroundsroot", &origparams->prop_maxroundsroot) );
+   SCIP_CALL( SCIPgetIntParam(subproblem, "constraints/linear/propfreq", &origparams->cons_linear_propfreq) );
 
    return SCIP_OKAY;
 }
@@ -3211,38 +3268,43 @@ SCIP_RETCODE storeOrigSubproblemParams(
 /** sets the parameters for the subproblem */
 static
 SCIP_RETCODE setSubproblemParams(
-   SCIP*                 scip                /**< the SCIP data structure */
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subproblem          /**< the subproblem SCIP instance */
    )
 {
    assert(scip != NULL);
+   assert(subproblem != NULL);
+
+   /* copying memory and time limits */
+   SCIP_CALL( copyMemoryAndTimeLimits(scip, subproblem) );
 
    /* Do we have to disable presolving? If yes, we have to store all presolving parameters. */
-   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(subproblem, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* Disabling heuristics so that the problem is not trivially solved */
-   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetHeuristics(subproblem, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* store parameters that are changed for the generation of the subproblem cuts */
-   SCIP_CALL( SCIPsetParam(scip, "conflict/enable", FALSE) );
+   SCIP_CALL( SCIPsetParam(subproblem, "conflict/enable", FALSE) );
 
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", 1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", 0) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", 1) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/scaling", 0) );
 
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", 'd') );
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
+   SCIP_CALL( SCIPsetCharParam(subproblem, "lp/initalgorithm", 'd') );
+   SCIP_CALL( SCIPsetCharParam(subproblem, "lp/resolvealgorithm", 'd') );
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "lp/alwaysgetduals", TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "lp/alwaysgetduals", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/scaleobj", FALSE) );
 
    /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/catchctrlc", FALSE) );
 
-   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxroundsroot", 0) );
 
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "constraints/linear/propfreq", -1) );
 
    return SCIP_OKAY;
 }
@@ -3250,24 +3312,26 @@ SCIP_RETCODE setSubproblemParams(
 /** resets the original parameters from the subproblem */
 static
 SCIP_RETCODE resetOrigSubproblemParams(
-   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subproblem,               /**< the SCIP data structure */
    SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
    )
 {
-   assert(scip != NULL);
+   assert(subproblem != NULL);
    assert(origparams != NULL);
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", origparams->conflict_enable) );
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", origparams->lp_disablecutoff) );
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/scaling", origparams->lp_scaling) );
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/initalgorithm", origparams->lp_initalg) );
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", origparams->lp_resolvealg) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "lp/alwaysgetduals", origparams->lp_alwaysgetduals) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", origparams->misc_scaleobj) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/catchctrlc", origparams->misc_catchctrlc) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", origparams->prop_maxrounds) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", origparams->prop_maxroundsroot) );
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", origparams->cons_linear_propfreq) );
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/memory", origparams->limits_memory) );
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", origparams->limits_time) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "conflict/enable", origparams->conflict_enable) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", origparams->lp_disablecutoff) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/scaling", origparams->lp_scaling) );
+   SCIP_CALL( SCIPsetCharParam(subproblem, "lp/initalgorithm", origparams->lp_initalg) );
+   SCIP_CALL( SCIPsetCharParam(subproblem, "lp/resolvealgorithm", origparams->lp_resolvealg) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "lp/alwaysgetduals", origparams->lp_alwaysgetduals) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/scaleobj", origparams->misc_scaleobj) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/catchctrlc", origparams->misc_catchctrlc) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxrounds", origparams->prop_maxrounds) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxroundsroot", origparams->prop_maxroundsroot) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "constraints/linear/propfreq", origparams->cons_linear_propfreq) );
 
    return SCIP_OKAY;
 }
@@ -3277,6 +3341,7 @@ SCIP_RETCODE resetOrigSubproblemParams(
  *  This requires that the subproblem is in probing mode.
  */
 SCIP_RETCODE SCIPbendersSolveSubproblemLP(
+   SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
@@ -3307,7 +3372,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP_CALL( storeOrigSubproblemParams(subproblem, origparams) );
 
    /* setting the subproblem parameters */
-   SCIP_CALL( setSubproblemParams(subproblem) );
+   SCIP_CALL( setSubproblemParams(scip, subproblem) );
 
    SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
 
@@ -3334,6 +3399,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
 /** solves the Benders' decomposition subproblem */
 SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
+   SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
@@ -3399,7 +3465,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
        * modify the structure of the problem need to be deactivated */
 
       /* setting the subproblem parameters */
-      SCIP_CALL( setSubproblemParams(subproblem) );
+      SCIP_CALL( setSubproblemParams(scip, subproblem) );
 
 #ifdef SCIP_MOREDEBUG
       SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
@@ -3542,6 +3608,8 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    )
 {
    SCIP* subproblem;
+   SCIP_Real memorylimit;
+   SCIP_Real timelimit;
    SCIP_Longint totalnodes;
    int disablecutoff;
    int verblevel;
@@ -3562,6 +3630,14 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+#ifdef SCIP_MOREDEBUG
+   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_HIGH) );
+#endif
+
+   /* copying memory and time limits */
+   SCIP_CALL( SCIPgetRealParam(subproblem, "limits/time", &timelimit) );
+   SCIP_CALL( SCIPgetRealParam(subproblem, "limits/memory", &memorylimit) );
+   SCIP_CALL( copyMemoryAndTimeLimits(set->scip, subproblem) );
 
    /* if the subproblem is independent, then the default SCIP settings are used. Otherwise, only the root node is solved
     * to compute a lower bound on the subproblem
@@ -3613,6 +3689,8 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
       SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", disablecutoff) );
    }
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", verblevel) );
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/memory", memorylimit) );
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", timelimit) );
 
    /* the subproblem must be freed so that it is reset for the subsequent Benders' decomposition solves. If the
     * subproblems are independent, they are not freed. SCIPfreeBendersSubproblem must still be called, but in this
@@ -4366,7 +4444,7 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
        * case, the subproblem is initialised and then put into probing mode */
       if( chgvarscount > 0 && chgvarscount == origintvars )
       {
-         SCIP_CALL( initialiseLPSubproblem(benders, probnumber) );
+         SCIP_CALL( initialiseLPSubproblem(benders, set, probnumber) );
          SCIPbendersSetSubproblemIsConvex(benders, probnumber, TRUE);
       }
 

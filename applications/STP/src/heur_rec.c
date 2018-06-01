@@ -52,7 +52,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           (SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
-#define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance?                                 */
+#define HEUR_USESSUBSCIP      FALSE           /**< does the heuristic use a secondary SCIP instance?                                 */
 
 #define DEFAULT_MAXFREQREC     FALSE         /**< executions of the rec heuristic at maximum frequency?                             */
 #define DEFAULT_MAXNSOLS       15            /**< default maximum number of (good) solutions be regarded in the subproblem          */
@@ -1305,15 +1305,14 @@ SCIP_RETCODE SCIPStpHeurRecRun(
              *  2. compute solution
              */
 
-            // todo: run prune heuristic with changed weights! costrev not needed!
+            // todo: run prune heuristic with changed weights!
 
             /* run TM heuristic */
             SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, solgraph, NULL, &best_start, soledges, heurdata->ntmruns,
                   solgraph->source, cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
 
-
-            assert(success);
-            assert(graph_sol_valid(scip, solgraph, soledges));
+            assert(SCIPisStopped(scip) || success);
+            assert(SCIPisStopped(scip) || graph_sol_valid(scip, solgraph, soledges));
 
             /* reset vertex weights */
             if( pcmw )
@@ -1332,7 +1331,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             assert(graph_valid(solgraph));
 
             /* run local heuristic (with original costs) */
-            if( probtype != STP_DHCSTP && probtype != STP_DCSTP
+            if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
                   && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP )
             {
                SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, solgraph->cost, soledges) );
@@ -1408,7 +1407,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                   }
                }
             }
-         }
+         } /* if( solgraph->terms > 1 ) */
 
          /* retransform edges fixed during graph reduction */
          if( probtype != STP_DCSTP )
@@ -1445,28 +1444,30 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          if( pcmw )
          {
-            for( int k = 0; k < solgraph->orgknots; k++ )
-            {
-               if( solnodes[k] )
+            STP_Bool* pcancestoredges;
+            SCIP_CALL( SCIPallocBufferArray(scip, &pcancestoredges, solgraph->orgedges) );
+
+            for( int k = 0; k < solgraph->orgedges; k++ )
+               pcancestoredges[k] = FALSE;
+
+            SCIP_CALL( graph_sol_markPcancestors(scip, solgraph->pcancestors, solgraph->orgtail, solgraph->orghead, solgraph->orgknots,
+                  solnodes, pcancestoredges, NULL, NULL, NULL ) );
+
+            for( int k = 0; k < solgraph->orgedges; k++ )
+               if( pcancestoredges[k] )
                {
-                  curr = solgraph->pcancestors[k];
-                  while( curr != NULL )
-                  {
-                     const int i = edgeancestor[curr->index];
-
-                     stnodes[graph->tail[i]] = TRUE;
-                     stnodes[graph->head[i]] = TRUE;
-
-                     curr = curr->parent;
-                  }
+                  const int i = edgeancestor[k];
+                  stnodes[graph->tail[i]] = TRUE;
+                  stnodes[graph->head[i]] = TRUE;
                }
-            }
+
+            SCIPfreeBufferArray(scip, &pcancestoredges);
             SCIPfreeBufferArray(scip, &solnodes);
          }
 
          SCIPfreeMemoryArray(scip, &edgeancestor);
 
-         graph_free(scip, solgraph, TRUE);
+         graph_free(scip, &solgraph, TRUE);
 
          /* prune solution (in the original graph) */
          if( pcmw )
@@ -1482,7 +1483,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          SCIPdebugMessage("REC: new obj: %f \n", pobj);
 
          /* improved incumbent solution? */
-         if( SCIPisLT(scip, pobj, incumentobj) )
+         if( !SCIPisStopped(scip) && SCIPisLT(scip, pobj, incumentobj) )
          {
             SCIPdebugMessage("...is better! \n");
             incumentobj = pobj;
@@ -1590,33 +1591,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    return SCIP_OKAY;
 }
 
-/** initialize heurdata */
-SCIP_RETCODE SCIPStpHeurRecInit(
-    SCIP_HEUR*            heur                /**< rec heuristic */
-)
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-
-   /* get data of heuristic */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* initialize data */
-   heurdata->nselectedsols = 0;
-   heurdata->ncalls = 0;
-   heurdata->nlastsols = 0;
-   heurdata->lastsolindex = -1;
-   heurdata->bestsolindex = -1;
-   heurdata->nfailures = 0;
-   heurdata->nusedsols = DEFAULT_NUSEDSOLS;
-   heurdata->randseed = DEFAULT_RANDSEED;
-
-   return SCIP_OKAY;
-}
-
-
 /** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
 SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1630,8 +1604,9 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 {
    SCIP_HEURDATA* tmheurdata;
    GRAPH* newgraph;
-   SCIP_Real dummy;
    int* unodemap;
+   STP_Bool* solnodes;
+   SCIP_Real dummy;
    int j;
    int nsolterms;
    int nsoledges;
@@ -1777,7 +1752,8 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    /* compute Steiner tree to obtain upper bound */
    best_start = newgraph->source;
-   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost, newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost,
+         newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
 
    graph_path_exit(scip, newgraph);
 
@@ -1800,6 +1776,26 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    for( int k = 0; k < nsolnodes; k++ )
       if( stvertex[unodemap[k]] )
          marksolverts(newgraph, newgraph->pcancestors[k], unodemap, stvertex);
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &solnodes, nsolnodes));
+
+   for( int k = 0; k < nsolnodes; k++ )
+      solnodes[k] = FALSE;
+
+   for( int k = 0; k < nnodes; k++ )
+      if( stvertex[k] )
+      {
+         assert(dnodemap[k] < nsolnodes);
+         solnodes[dnodemap[k]] = TRUE;
+      }
+
+   SCIP_CALL( graph_sol_markPcancestors(scip, newgraph->pcancestors, newgraph->orgtail, newgraph->orghead, nsolnodes, solnodes, NULL, NULL, NULL, NULL ) );
+
+   for( int k = 0; k < nsolnodes; k++ )
+      if( solnodes[k] )
+         stvertex[unodemap[k]] = TRUE;
+
+   SCIPfreeBufferArray(scip, &solnodes);
 
    for( int e = 0; e < nedges; e++ )
       newresult[e] = UNKNOWN;
@@ -1826,7 +1822,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
       *success = FALSE;
 
    SCIPfreeBufferArray(scip, &unodemap);
-   graph_free(scip, newgraph, TRUE);
+   graph_free(scip, &newgraph, TRUE);
 
    return SCIP_OKAY;
 }
@@ -1897,7 +1893,40 @@ SCIP_DECL_HEURINIT(heurInitRec)
    assert(heur != NULL);
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPStpHeurRecInit(heur) );
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolRec)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+   heurdata->nselectedsols = 0;
+   heurdata->nusedsols = DEFAULT_NUSEDSOLS;
+   heurdata->randseed = DEFAULT_RANDSEED;
+   heurdata->nselectedsols = 0;
+   heurdata->ncalls = 0;
+   heurdata->nlastsols = 0;
+   heurdata->lastsolindex = -1;
+   heurdata->bestsolindex = -1;
+   heurdata->nfailures = 0;
+
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolRec)
+{  /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
@@ -2094,6 +2123,8 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRec) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRec) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitRec) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolRec) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolRec) );
 
    /* add rec primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nwaitingsols",
@@ -2116,8 +2147,6 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
          "should the heuristic be executed at maximum frequeny?",
          &heurdata->maxfreq, FALSE, DEFAULT_MAXFREQREC, NULL, NULL) );
 
-   /* initialize data */
-   heurdata->nselectedsols = 0;
    heurdata->nusedsols = DEFAULT_NUSEDSOLS;
    heurdata->randseed = DEFAULT_RANDSEED;
 

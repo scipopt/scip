@@ -49,6 +49,7 @@ check/check_count.awk \
 check/check_count.sh \
 check/check_coverage.sh \
 check/evalcheck_count.sh \
+check/evalcheck_cluster.sh \
 check/testset/short.test \
 check/testset/short.solu \
 check/testset/coverage.test \
