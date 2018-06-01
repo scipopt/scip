@@ -2362,7 +2362,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    )
 {
    SCIP_VAR** vars;
-   SCIP_SOL* sol;
    SCIP_HEURDATA* heurdata;
    SCIP_Real* xval;
    SCIP_Real* nodepriority = NULL;
@@ -2387,11 +2386,11 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    /* LP was not solved */
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      sol = NULL;
       xval = NULL;
    }
    else
    {
+      SCIP_SOL* sol = NULL;
       SCIP_CALL(SCIPcreateSol(scip, &sol, heur));
 
       /* copy the current LP solution to the working solution */
@@ -2712,7 +2711,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_VAR** vars;
    SCIP_PROBDATA* probdata;
    SCIP_HEURDATA* heurdata;
-   SCIP_SOL* sol;
    GRAPH* graph;
    SCIP_Real* cost;
    SCIP_Real* costrev;
@@ -2805,6 +2803,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &success) );
       if( success )
       {
+         SCIP_SOL* sol = NULL;
          SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 
          if( success )
