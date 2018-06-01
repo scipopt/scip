@@ -355,6 +355,17 @@ void SCIPprintExternalCodes(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+#ifdef NDEBUG
+
+#define SCIPgetStage(scip)                        (((scip)->set)->stage)
+#define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
+#define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
+
+#endif
+
 /* @} */
 
 #ifdef __cplusplus

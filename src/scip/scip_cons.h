@@ -1766,6 +1766,15 @@ SCIP_RETCODE SCIPgetConsNVars(
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
    );
 
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPmarkConsPropagate(scip, cons)         SCIPconsMarkPropagate(cons, (scip)->set)
+#endif
+
 /**@} */
 
 #ifdef __cplusplus

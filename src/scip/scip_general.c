@@ -129,6 +129,17 @@
 #include "scip/struct_scip.h"
 #endif
 
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPgetStage
+#undef SCIPhasPerformedPresolve
+#undef SCIPisStopped
+
 /** returns complete SCIP version number in the format "major . minor tech"
  *
  *  @return complete SCIP version
