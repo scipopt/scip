@@ -40,7 +40,7 @@
 #include "branch_stp.h"
 #include "prop_stp.h"
 #include "probdata_stp.h"
-#include "scip/tree.h"
+#include "scip/pub_tree.h"
 
 #define BRANCHRULE_NAME            "stp"
 #define BRANCHRULE_DESC            "stp branching on vertices"
