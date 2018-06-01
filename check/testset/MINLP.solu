@@ -2929,37 +2929,6 @@
 =opt= 72bar                 75.9048516
 =opt= 90bar                 97.537389
 
-
-
-
-
-
-=opt= sssd-8-4-3        197181.071
-=opt= sssd-10-4-3       152709.944
-=opt= sssd-12-5-3       261142.543
-=opt= sssd-15-6-3       440748.198
-=opt= sssd-16-8-3       615763.366
-=opt= sssd-18-8-3       524062.788
-=opt= sssd-20-9-3       478093.435
-=opt= sssd-22-8-3       595970.689
-
-=opt= uflquad-15-60       1063.1931
-=opt= uflquad-15-80       1217.98941
-=opt= uflquad-20-40        860.960565
-=opt= uflquad-20-50        375.91869
-=opt= uflquad-20-150       550.112295
-=opt= uflquad-25-25        673.696888
-=opt= uflquad-25-30        669.839561
-=opt= uflquad-25-40        828.164519
-=opt= uflquad-30-100       361.916808
-=opt= uflquad-40-80        347.488613
-
-=opt= nd-10                 52.4610818
-=opt= nd-12                 56.6696206
-=opt= nd-13                 63.0050503
-=opt= nd-15                 74.1920708
-=opt= nd-16                 97.9792235
-
 =opt= bip_cross_min.10.10.10.1 1
 =opt= bip_cross_min.10.10.20.1 11
 =opt= bip_cross_min.10.10.30.1 52
@@ -2979,7 +2948,3 @@
 =opt= small-investor-MVO-SNP100-return_0.0030-budget_1000-1100      0.084068386
 =opt= small-investor-MVO-SNP100-return_0.0035-budget_2000-2200      0.263234059
 
-=opt= water0202                   125.195615
-=opt= water0202r                  97.90444
-=opt= water0303                  207.98667
-=opt= water0303r                 424.54353
