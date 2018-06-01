@@ -3240,13 +3240,16 @@ SCIP_RETCODE setSubproblemParams(
 {
    SCIP_Real mastertimelimit;
    SCIP_Real subtimelimit;
+   SCIP_Real maxsubtimelimit;
 
    assert(scip != NULL);
    assert(subproblem != NULL);
 
    /* setting the time limit for the Benders' decomposition subproblems. It is set to 102% of the remaining time. */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &mastertimelimit) );
+   maxsubtimelimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/time"));
    subtimelimit = (mastertimelimit - SCIPgetSolvingTime(scip)) * 1.02;
+   subtimelimit = MIN(subtimelimit, maxsubtimelimit);
    SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", subtimelimit) );
 
    /* Do we have to disable presolving? If yes, we have to store all presolving parameters. */
@@ -3581,6 +3584,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    SCIP_Real timelimit;
    SCIP_Real mastertimelimit;
    SCIP_Real subtimelimit;
+   SCIP_Real maxsubtimelimit;
    SCIP_Longint totalnodes;
    int disablecutoff;
    int verblevel;
@@ -3608,7 +3612,9 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    /* setting the time limit for the Benders' decomposition subproblems. It is set to 102% of the remaining time. */
    SCIP_CALL( SCIPgetRealParam(subproblem, "limits/time", &timelimit) );
    SCIP_CALL( SCIPgetRealParam(set->scip, "limits/time", &mastertimelimit) );
+   maxsubtimelimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/time"));
    subtimelimit = (mastertimelimit - SCIPgetSolvingTime(set->scip)) * 1.02;
+   subtimelimit = MIN(subtimelimit, maxsubtimelimit);
    SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", subtimelimit) );
 
    /* if the subproblem is independent, then the default SCIP settings are used. Otherwise, only the root node is solved
