@@ -3224,7 +3224,7 @@ SCIP_RETCODE copyMemoryAndTimeLimits(
    /* setting the time limit for the Benders' decomposition subproblems. It is set to 102% of the remaining time. */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &mastertimelimit) );
    maxsubtimelimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/time"));
-   subtimelimit = (mastertimelimit - SCIPgetSolvingTime(scip));
+   subtimelimit = (mastertimelimit - SCIPgetSolvingTime(scip)) * 1.02;
    subtimelimit = MIN(subtimelimit, maxsubtimelimit);
    SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", subtimelimit) );
 
