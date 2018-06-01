@@ -28,8 +28,10 @@
 #ifndef __READER_FZN_H__
 #define __READER_FZN_H__
 
-
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_sol.h"
 
 #ifdef __cplusplus
 extern "C" {

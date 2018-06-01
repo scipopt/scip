@@ -26,14 +26,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
+#include "blockmemshell/memory.h"
 #include <ctype.h>
-
-#ifdef ALLDIFFERENT
-#include "scip/cons_alldifferent.h"
-#endif
 #include "scip/cons_and.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_knapsack.h"
@@ -44,8 +38,30 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
 #include "scip/reader_fzn.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef ALLDIFFERENT
+#include "scip/cons_alldifferent.h"
+#endif
 
 #define READER_NAME             "fznreader"
 #define READER_DESC             "file reader for FlatZinc format"
@@ -1627,7 +1643,7 @@ SCIP_RETCODE parseName(
    }
 
    /* copy identifier name */
-   (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, (const char*)fzninput->token);
+   (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, "%s", (const char*)fzninput->token);
 
    /* search for an assignment; therefore, skip annotations */
    do

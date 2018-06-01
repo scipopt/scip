@@ -26,8 +26,12 @@
 #ifndef __SCIP_READER_CCG_H__
 #define __SCIP_READER_CCG_H__
 
-
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_cons.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -31,8 +31,9 @@
 #ifndef __SCIP_HEUR_ACTCONSDIVING_H__
 #define __SCIP_HEUR_ACTCONSDIVING_H__
 
-
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 #ifdef __cplusplus
 extern "C" {

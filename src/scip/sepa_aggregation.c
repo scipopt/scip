@@ -60,11 +60,6 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/sepa_aggregation.h"
-#include "scip/type_lp.h"
-#include "scip/type_result.h"
-#include "scip/type_sepa.h"
-#include "scip/type_sol.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

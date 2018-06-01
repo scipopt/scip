@@ -704,6 +704,8 @@ SCIP_Bool SCIPisSumRelGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/**! [SnippetCodeStyleNaming] */
+
 /** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
 EXTERN
 SCIP_Bool SCIPisSumRelGE(
@@ -720,6 +722,8 @@ int SCIPconvertRealToInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             real                /**< double bound to convert */
    );
+
+/**! [SnippetCodeStyleNaming] */
 
 /** converts the given real number representing an integer to a long integer; in optimized mode the function gets inlined for
  *  performance; in debug mode we check some additional conditions
@@ -832,10 +836,6 @@ SCIP_Bool SCIPisUpdateUnreliable(
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
 
-#define SCIPmarkConsPropagate(scip, cons)         SCIPconsMarkPropagate(cons, (scip)->set)
-#define SCIPgetStage(scip)                        (((scip)->set)->stage)
-#define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
-#define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */

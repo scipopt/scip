@@ -20,11 +20,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_conjunction.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include <string.h>
+
 
 
 /* constraint handler properties */

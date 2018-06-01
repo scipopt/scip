@@ -28,10 +28,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/heur_farkasdiving.h"
+#include "scip/heuristics.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include <string.h>
 
 #define HEUR_NAME             "farkasdiving"
 #define HEUR_DESC             "LP diving heuristic that tries to construct a Farkas-proof"
@@ -67,12 +83,12 @@
 #define DEFAULT_RANDSEED            151 /**< initial seed for random number generation */
 
 #define DEFAULT_MAXOBJOCC           1.0 /**< maximal occurance factor of an objective coefficient */
-#define DEFAULT_OBJDYN              0.0 /**< minimal objective dynamism (log) */
+#define DEFAULT_OBJDYN           0.0001 /**< minimal objective dynamism (log) */
 #define DEFAULT_CHECKCANDS        FALSE /**< should diving candidates be checked before running? */
 #define DEFAULT_SCALESCORE         TRUE /**< should the score be scaled? */
-#define DEFAULT_ROOTSUCCESS       FALSE /**< should the heuristic only run within the tree if at least one solution
+#define DEFAULT_ROOTSUCCESS        TRUE /**< should the heuristic only run within the tree if at least one solution
                                          *   was found at the root node? */
-#define DEFAULT_SCALETYPE           'f' /**< scale score by [f]ractionality or [i]mpact on farkasproof */
+#define DEFAULT_SCALETYPE           'i' /**< scale score by [f]ractionality or [i]mpact on farkasproof */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData

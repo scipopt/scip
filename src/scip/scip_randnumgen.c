@@ -180,3 +180,14 @@ void SCIPsetRandomSeed(
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
 }
+
+/** modifies an initial seed value with the global shift of random seeds */
+unsigned int SCIPinitializeRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
+}

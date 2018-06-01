@@ -33,11 +33,6 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_var.h"
-#include "scip/type_branch.h"
-#include "scip/type_history.h"
-#include "scip/type_result.h"
-#include "scip/type_tree.h"
-#include "scip/type_var.h"
 #include <string.h>
 
 

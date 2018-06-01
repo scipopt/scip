@@ -27,7 +27,12 @@
 #define __SCIP_CONS_SUPERINDICATOR_H__
 
 
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_cons.h"
+#include "scip/type_dialog.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

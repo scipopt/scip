@@ -148,7 +148,6 @@
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
 #include "scip/tree.h"
-#include "scip/type_paramset.h"
 #include "scip/var.h"
 #include "scip/visual.h"
 #include <string.h>

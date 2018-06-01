@@ -25,6 +25,8 @@
 #ifndef __SCIP_TYPE_EXPRESSION_H__
 #define __SCIP_TYPE_EXPRESSION_H__
 
+#include "scip/def.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

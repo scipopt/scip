@@ -36,6 +36,7 @@
 #include "scip/reopt.h"
 #include "scip/disp.h"
 #include "scip/pub_message.h"
+#include "scip/pub_var.h"
 
 
 /*

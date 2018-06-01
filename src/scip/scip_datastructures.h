@@ -481,6 +481,8 @@ SCIP_RETCODE SCIPcreateDigraph(
    int                   nnodes              /**< number of nodes */
    );
 
+/**! [SnippetCodeStyleComment] */
+
 /** copies directed graph structure
  *
  *  The copying procedure uses the memory of the passed SCIP instance. The user must ensure that the digraph lives
@@ -495,6 +497,7 @@ SCIP_RETCODE SCIPcopyDigraph(
    SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
    );
 
+/**! [SnippetCodeStyleComment] */
 /**@} */
 
 #ifdef __cplusplus

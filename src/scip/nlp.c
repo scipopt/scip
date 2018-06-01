@@ -29,30 +29,31 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
-#include "scip/intervalarith.h"
-#include "scip/clock.h"
-#include "scip/nlp.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/sol.h"
-#include "scip/event.h"
-#include "scip/pub_lp.h"
-#include "scip/pub_message.h"
-#include "scip/pub_misc.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/pub_expr.h"
 #include "nlpi/struct_expr.h"
+#include "scip/clock.h"
+#include "scip/event.h"
+#include "scip/intervalarith.h"
+#include "scip/nlp.h"
+#include "scip/primal.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
+#include "scip/sol.h"
 #include "scip/struct_nlp.h"
-/* to get value of parameter "nlp/solver" and nlpis array and to get access to set->lp for releasing a variable */
-#include "scip/struct_set.h"
 /* to get nlp, set, ... in event handling */
 #include "scip/struct_scip.h"
+/* to get value of parameter "nlp/solver" and nlpis array and to get access to set->lp for releasing a variable */
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/var.h"
+#include <string.h>
 
 /* defines */
 

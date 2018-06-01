@@ -24,10 +24,10 @@
 #ifndef __SCIP_PUB_PRESOL_H__
 #define __SCIP_PUB_PRESOL_H__
 
-
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_presol.h"
+#include "scip/type_timing.h"
 
 #ifdef __cplusplus
 extern "C" {

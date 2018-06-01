@@ -32,24 +32,39 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
+#include "blockmemshell/memory.h"
 #include <ctype.h>
-
-#include "scip/reader_mps.h"
-#include "scip/cons_knapsack.h"
+#include "scip/cons_and.h"
+#include "scip/cons_bounddisjunction.h"
 #include "scip/cons_indicator.h"
+#include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_and.h"
+#include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_soc.h"
-#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_varbound.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_mps.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
 
 #define READER_NAME             "mpsreader"
 #define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
@@ -1841,6 +1856,13 @@ SCIP_RETCODE readSOS(
          else
          {
             /* get weight */
+            if( NULL == mpsinputField2(mpsi)  )
+            {
+               SCIPerrorMessage("weight for variable <%s> not specified.\n", mpsinputField1(mpsi));
+               mpsinputSyntaxerror(mpsi);
+               return SCIP_OKAY;
+            }
+
             weight = strtod(mpsinputField2(mpsi), &endptr);
             if( endptr == mpsinputField2(mpsi) || *endptr != '\0' )
             {
@@ -1978,6 +2000,16 @@ SCIP_RETCODE readQMatrix(
 
                /* get coefficient */
                field = (k == 1 ? mpsinputField3(mpsi) :  mpsinputField5(mpsi));
+               if( NULL == field )
+               {
+                  SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
+                  mpsinputSyntaxerror(mpsi);
+                  SCIPfreeBufferArray(scip, &quadvars1);
+                  SCIPfreeBufferArray(scip, &quadvars2);
+                  SCIPfreeBufferArray(scip, &quadcoefs);
+                  return SCIP_OKAY;
+               }
+
                coef = strtod(field, &endptr);
                if( endptr == field || *endptr != '\0' )
                {
@@ -2190,6 +2222,14 @@ SCIP_RETCODE readQCMatrix(
          else
          {
             char* endptr;
+            if( mpsinputField3(mpsi) ==  NULL )
+            {
+               SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", mpsinputField1(mpsi), mpsinputField2(mpsi));
+               mpsinputSyntaxerror(mpsi);
+
+               goto TERMINATE;
+            }
+
             /* get coefficient */
             coef = strtod(mpsinputField3(mpsi), &endptr);
             if( endptr == mpsinputField3(mpsi) || *endptr != '\0' )
