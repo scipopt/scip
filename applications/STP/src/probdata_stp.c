@@ -3617,7 +3617,6 @@ void initReceivedSubproblem(
    GRAPH* graph;
    int* nodestate;
    int nnodes;
-   SCIP_Real lpobjval;
 
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
@@ -3680,21 +3679,6 @@ void initReceivedSubproblem(
    SCIP_CALL_ABORT( graph_init_history(scip, graph) );
    SCIP_CALL_ABORT( graph_path_init(scip, graph) );
    SCIP_CALL_ABORT( graph_mincut_init(scip, graph) );
-
-   if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
-   {
-      SCIP_CALL_ABORT( SCIPStpDualAscentPcMw(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
-   }
-   else if( 0 )
-   {
-      if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
-      {
-         //SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, -1.0, NULL) );}
-}else
-      {
-         SCIP_CALL_ABORT( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, FALSE, TRUE, NULL, NULL, NULL, NULL, graph->source, -1.0, NULL) );
-      }
-   }
 
 #else
    assert(0 && "only call me when using UG");

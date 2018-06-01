@@ -800,6 +800,9 @@ SCIP_RETCODE graph_pc_presolInit(
    const int root = g->source;
    const int nedges = g->edges;
 
+   if( g->stp_type == STP_RPCSPG )
+      return SCIP_OKAY;
+
    assert(scip != NULL && g != NULL);
    assert(g->rootedgeprevs == NULL);
    assert(nedges > 0 && g->grad[root] > 0);
@@ -837,6 +840,10 @@ void graph_pc_presolExit(
    )
 {
    assert(scip != NULL && g != NULL);
+
+   if( g->stp_type == STP_RPCSPG )
+      return;
+
    assert(g->rootedgeprevs != NULL);
 
    SCIPfreeMemoryArray(scip, &(g->rootedgeprevs));
