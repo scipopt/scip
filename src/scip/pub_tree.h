@@ -216,6 +216,21 @@ SCIP_NODE* SCIPnodeGetParent(
    SCIP_NODE*            node                /**< node */
    );
 
+/** returns all constraints added to a given node */
+EXTERN
+void SCIPnodeGetAddedConss(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_CONS**           addedconss,         /**< array to store the constraints */
+   int*                  naddedconss,        /**< number of added constraints */
+   int                   addedconsssize      /**< size of the constraint array */
+   );
+
+/** returns the number of added constraints to the given node */
+EXTERN
+int SCIPnodeGetNAddedConss(
+   SCIP_NODE*           node
+   );
+
 /** returns whether node is in the path to the current node */
 EXTERN
 SCIP_Bool SCIPnodeIsActive(

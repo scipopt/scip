@@ -55,6 +55,12 @@ SCIP_RETCODE SCIPcreateConsStp(
    GRAPH*                graph               /**< graph data structure */
    );
 
+/** sets graph */
+void SCIPStpConshdlrSetGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< graph data structure */
+   );
+
 /** dual ascent heuristic */
 extern
 SCIP_RETCODE SCIPStpDualAscent(
@@ -70,7 +76,8 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
-   int                   nruns,              /**< number of dual ascent runs */
+   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
+   SCIP_Real             damaxdeviation,     /**< number of dual ascent runs */
    STP_Bool* RESTRICT    nodearrchar         /**< char vertices array for internal computations or NULL */
    );
 

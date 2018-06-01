@@ -27,6 +27,8 @@
 #ifndef __SCIP_PROP_STP_H__
 #define __SCIP_PROP_STP_H__
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "scip/scip.h"
 #include "grph.h"
 #include "probdata_stp.h"
@@ -36,13 +38,13 @@ extern "C" {
 #endif
 
 /** creates the stp propagator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePropStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** fix a variable (corresponding to an edge) to zero */
-extern
+EXTERN
 SCIP_RETCODE fixedgevar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             edgevar,            /**< the variable to be fixed */
@@ -50,9 +52,17 @@ SCIP_RETCODE fixedgevar(
    );
 
 /** return total number of arcs fixed by 'fixedgevar' method of this propagator */
-extern
-int SCIPstpNfixedEdges(
+EXTERN
+int SCIPStpNfixedEdges(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets propagator graph  */
+EXTERN
+void SCIPStpPropGetGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH**               graph,              /**< graph data */
+   SCIP_Longint*         graphnodenumber     /**< pointer to b&b node for which graph is valid */
    );
 
 #ifdef __cplusplus

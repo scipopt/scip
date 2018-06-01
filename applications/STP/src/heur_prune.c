@@ -120,7 +120,7 @@ void setNodeSolArray(
    }
 
    if( uborg != NULL)
-      *uborg += ub;
+      *uborg = ub;
 }
 
 /** computes new solution during execution of prune and updates best global one if possible */
@@ -280,9 +280,18 @@ SCIP_DECL_HEURFREE(heurFreePrune)
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
-
 static
 SCIP_DECL_HEURINIT(heurInitPrune)
+{  /*lint --e{715}*/
+
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolPrune)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -301,6 +310,16 @@ SCIP_DECL_HEURINIT(heurInitPrune)
 
    return SCIP_OKAY;
 }
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolPrune)
+{  /*lint --e{715}*/
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of primal heuristic */
 static
@@ -410,9 +429,9 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
             nval[e] = 0.0;
          }
       }
-#ifdef SCIP_DEBUG
-      printf("prune, best: old %f, new %f \n  \n",  SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj);
-#endif
+
+      SCIPdebugMessage("prune, best: old %f, new %f \n  \n",  SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj);
+
       /* try to add new solution to pool */
       sol = NULL;
       SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
@@ -420,9 +439,8 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
       /* has solution been added? */
       if( success )
       {
-#ifdef SCIP_DEBUG
-         printf("solution added by PRUNE \n  \n");
-#endif
+         SCIPdebugMessage("solution added by PRUNE \n  \n");
+
          *result = SCIP_FOUNDSOL;
 
          assert(graph_sol_valid(scip, graph, soledge));
@@ -477,7 +495,6 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    )
 {
-   IDX** ancestors;
    SCIP_Real objnew;
    int* const pmark = prunegraph->mark;
    const int nnodes = g->knots;
@@ -534,43 +551,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
     * retransform new solution and compare with best global one
     */
 
-   ancestors = prunegraph->ancestors;
-
-   for( int k = 0; k < nnodes; k++ )
-      nodearrchar[k] = FALSE;
-
-   for( int e = 0; e < nedges; e++ )
-      if( soledge[e] == CONNECT )
-         graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
-
-   /* retransform edges fixed during graph reduction */
-   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
-
-   if( pcmw )
-   {
-      for( int k = 0; k < nnodes; k++ )
-         if( nodearrchar[k] )
-         {
-            IDX* curr = prunegraph->pcancestors[k];
-            while( curr != NULL )
-            {
-               const int idx = curr->index;
-               nodearrchar[g->tail[idx]] = TRUE;
-               nodearrchar[g->head[idx]] = TRUE;
-
-               curr = curr->parent;
-            }
-         }
-   }
-
-   for( int e = 0; e < nedges; e++ )
-      edgearrint[e] = UNKNOWN;
-
-   /* prune solution (in original graph) */
-   if( pcmw )
-      SCIP_CALL(SCIPStpHeurTMPrunePc(scip, g, g->cost, edgearrint, nodearrchar));
-   else
-      SCIP_CALL(SCIPStpHeurTMPrune(scip, g, g->cost, 0, edgearrint, nodearrchar));
+   SCIP_CALL( graph_sol_getOrg(scip, prunegraph, g, soledge, edgearrint) );
 
    assert(graph_sol_valid(scip, g, edgearrint));
 
@@ -770,7 +751,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                vbase, nodearrint, edgearrint, nodearrint2, heap, NULL, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
       else
          SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-               vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, NULL, FALSE) );
+               vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE, FALSE) );
    }
 
    /* get number of remaining nodes, edges and terminals */
@@ -864,7 +845,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                   vbase, nodearrint, edgearrint, nodearrint2, heap, solnode, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
          else
             SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state, vbase, nodearrint, edgearrint,
-                  nodearrint2, solnode, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, NULL, FALSE));
+                  nodearrint2, solnode, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE, FALSE));
 
          /* delete all vertices not reachable from the root */
          SCIP_CALL( level0(scip, prunegraph) );
@@ -902,7 +883,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 #endif
 
    /* free memory */
-   graph_free(scip, prunegraph, TRUE);
+   graph_free(scip, &prunegraph, TRUE);
 
    SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);
@@ -945,7 +926,8 @@ SCIP_RETCODE SCIPStpIncludeHeurPrune(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyPrune) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreePrune) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitPrune) );
-
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolPrune) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolPrune) );
 
    /* add prune primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/maxfreq",
