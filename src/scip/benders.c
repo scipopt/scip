@@ -3205,6 +3205,39 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    return SCIP_OKAY;
 }
 
+/** copies the time and memory limit from the master problem to the subproblem */
+static
+SCIP_RETCODE copyMemoryAndTimeLimits(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subproblem          /**< the Benders' decomposition subproblem */
+   )
+{
+   SCIP_Real mastertimelimit;
+   SCIP_Real subtimelimit;
+   SCIP_Real maxsubtimelimit;
+   SCIP_Real mastermemorylimit;
+   SCIP_Real submemorylimit;
+   SCIP_Real maxsubmemorylimit;
+
+   assert(scip != NULL);
+
+   /* setting the time limit for the Benders' decomposition subproblems. It is set to 102% of the remaining time. */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &mastertimelimit) );
+   maxsubtimelimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/time"));
+   subtimelimit = (mastertimelimit - SCIPgetSolvingTime(scip));
+   subtimelimit = MIN(subtimelimit, maxsubtimelimit);
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", subtimelimit) );
+
+   /* setting the memory limit for the Benders' decomposition subproblems. */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &mastermemorylimit) );
+   maxsubmemorylimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/memory"));
+   submemorylimit = mastermemorylimit - (SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0;
+   submemorylimit = MIN(submemorylimit, maxsubmemorylimit);
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/memory", submemorylimit) );
+
+   return SCIP_OKAY;
+}
+
 /** stores the original parameters from the subproblem */
 static
 SCIP_RETCODE storeOrigSubproblemParams(
@@ -3215,6 +3248,7 @@ SCIP_RETCODE storeOrigSubproblemParams(
    assert(subproblem != NULL);
    assert(origparams != NULL);
 
+   SCIP_CALL( SCIPgetRealParam(subproblem, "limits/memory", &origparams->limits_memory) );
    SCIP_CALL( SCIPgetRealParam(subproblem, "limits/time", &origparams->limits_time) );
    SCIP_CALL( SCIPgetBoolParam(subproblem, "conflict/enable", &origparams->conflict_enable) );
    SCIP_CALL( SCIPgetIntParam(subproblem, "lp/disablecutoff", &origparams->lp_disablecutoff) );
@@ -3238,16 +3272,11 @@ SCIP_RETCODE setSubproblemParams(
    SCIP*                 subproblem          /**< the subproblem SCIP instance */
    )
 {
-   SCIP_Real mastertimelimit;
-   SCIP_Real subtimelimit;
-
    assert(scip != NULL);
    assert(subproblem != NULL);
 
-   /* setting the time limit for the Benders' decomposition subproblems. It is set to 102% of the remaining time. */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &mastertimelimit) );
-   subtimelimit = (mastertimelimit - SCIPgetSolvingTime(scip)) * 1.02;
-   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", subtimelimit) );
+   /* copying memory and time limits */
+   SCIP_CALL( copyMemoryAndTimeLimits(scip, subproblem) );
 
    /* Do we have to disable presolving? If yes, we have to store all presolving parameters. */
    SCIP_CALL( SCIPsetPresolving(subproblem, SCIP_PARAMSETTING_OFF, TRUE) );
@@ -3290,6 +3319,7 @@ SCIP_RETCODE resetOrigSubproblemParams(
    assert(subproblem != NULL);
    assert(origparams != NULL);
 
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/memory", origparams->limits_memory) );
    SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", origparams->limits_time) );
    SCIP_CALL( SCIPsetBoolParam(subproblem, "conflict/enable", origparams->conflict_enable) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", origparams->lp_disablecutoff) );
@@ -3578,9 +3608,8 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    )
 {
    SCIP* subproblem;
+   SCIP_Real memorylimit;
    SCIP_Real timelimit;
-   SCIP_Real mastertimelimit;
-   SCIP_Real subtimelimit;
    SCIP_Longint totalnodes;
    int disablecutoff;
    int verblevel;
@@ -3605,11 +3634,10 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_HIGH) );
 #endif
 
-   /* setting the time limit for the Benders' decomposition subproblems. It is set to 102% of the remaining time. */
+   /* copying memory and time limits */
    SCIP_CALL( SCIPgetRealParam(subproblem, "limits/time", &timelimit) );
-   SCIP_CALL( SCIPgetRealParam(set->scip, "limits/time", &mastertimelimit) );
-   subtimelimit = (mastertimelimit - SCIPgetSolvingTime(set->scip)) * 1.02;
-   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", subtimelimit) );
+   SCIP_CALL( SCIPgetRealParam(subproblem, "limits/memory", &memorylimit) );
+   SCIP_CALL( copyMemoryAndTimeLimits(set->scip, subproblem) );
 
    /* if the subproblem is independent, then the default SCIP settings are used. Otherwise, only the root node is solved
     * to compute a lower bound on the subproblem
@@ -3661,6 +3689,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
       SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", disablecutoff) );
    }
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", verblevel) );
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/memory", memorylimit) );
    SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", timelimit) );
 
    /* the subproblem must be freed so that it is reset for the subsequent Benders' decomposition solves. If the
