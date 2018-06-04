@@ -954,10 +954,18 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
       SCIP_CALL( separatePointSum(scip, conshdlr, expr, i == 0, &rowprep) );
       assert(rowprep != NULL);
 
-      /* clean-up rowprep */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
+      /* frist try scale-up rowprep to try to get rid of within-epsilon of integer coefficients */
+      SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, &success) );
 
-      /* try to create a SCIP_ROW and add it to the initial LP */
+      if( !success )
+      {
+         /* if scale-up is not sufficient, then do clean-up
+          * this might relax the row, so we only get a bounding cut
+          */
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
+      }
+
+      /* create a SCIP_ROW and add it to the initial LP */
       if( success )
       {
          SCIP_ROW* row;
@@ -996,11 +1004,21 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    SCIP_CALL( separatePointSum(scip, conshdlr, expr, overestimate, &rowprep) );
    assert(rowprep != NULL);
 
-   /* clean-up rowprep */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &viol,
-      &success) );
+   /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients */
+   SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, &success) );
 
-   /* try to create a SCIP_ROW and add it to the initial LP */
+   if( !success )
+   {
+      /* if scale-up is not sufficient, then do clean-up, which could relax the row */
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &viol,
+         &success) );
+   }
+   else
+   {
+      viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
+   }
+
+   /* create a SCIP_ROW and add it to the initial LP */
    if( success && viol >= mincutviolation )
    {
       SCIP_ROW* row;
