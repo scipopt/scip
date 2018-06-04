@@ -863,6 +863,9 @@ SCIP_RETCODE SCIPlpiCreate(
 
    invalidateSolution(*lpi);
 
+   MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_LOG, MSK_OFF) );
+   MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_LOG_SIM, MSK_OFF) );
+
    return SCIP_OKAY;
 }
 
