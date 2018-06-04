@@ -2109,19 +2109,33 @@ SCIP_RETCODE solveBendersSubproblems(
             /* if the auxiliary variable value is infinity, then the subproblem has not been solved yet. Currently the
              * subproblem statue is unknown. */
             if( SCIPsetIsInfinity(set, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
-               || SCIPsetIsInfinity(set, -SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i)) )
+               || SCIPsetIsInfinity(set, -SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
+               || SCIPsetIsInfinity(set, -SCIPbendersGetSubproblemLowerbound(benders, i)) )
             {
+               SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
                (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
                (*optimal) = FALSE;
-               SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
 
                SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, but has not been solved."
                  " setting status to UNKNOWN\n", i);
             }
             else
             {
-               (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
-               SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
+               SCIP_Real soltol;
+
+               SCIP_CALL( SCIPsetGetRealParam(set, "benders/solutiontol", &soltol) );
+
+               if( SCIPrelDiff(SCIPbendersGetSubproblemLowerbound(benders, i),
+                     SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i)) < soltol )
+               {
+                  SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
+                  (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
+               }
+               else
+               {
+                  SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetSubproblemLowerbound(benders, i));
+                  (*substatus)[i] = SCIP_BENDERSSUBSTATUS_AUXVIOL;
+               }
 
                SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n",
                   i);
