@@ -877,7 +877,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
 static
 SCIP_RETCODE separatePointSum(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROWPREP**        rowprep             /**< pointer to store the row preparation */
@@ -888,8 +887,6 @@ SCIP_RETCODE separatePointSum(
    int c;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(rowprep != NULL);
@@ -916,7 +913,7 @@ SCIP_RETCODE separatePointSum(
       assert(child != NULL);
 
       /* value expressions should have been removed during simplification */
-      assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "value") != 0);
 
       var = SCIPgetConsExprExprAuxVar(child);
       assert(var != NULL);
@@ -951,7 +948,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
          continue;
 
       /* create rowprep */
-      SCIP_CALL( separatePointSum(scip, conshdlr, expr, i == 0, &rowprep) );
+      SCIP_CALL( separatePointSum(scip, expr, i == 0, &rowprep) );
       assert(rowprep != NULL);
 
       /* frist try scale-up rowprep to try to get rid of within-epsilon of integer coefficients */
@@ -1001,7 +998,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    *result = SCIP_DIDNOTFIND;
 
    /* create rowprep */
-   SCIP_CALL( separatePointSum(scip, conshdlr, expr, overestimate, &rowprep) );
+   SCIP_CALL( separatePointSum(scip, expr, overestimate, &rowprep) );
    assert(rowprep != NULL);
 
    /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients */
@@ -1039,6 +1036,55 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
    /* free rowprep */
    SCIPfreeRowprep(scip, &rowprep);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
+{
+   SCIP_ROWPREP* rowprep;
+   SCIP_Real violation;
+   SCIP_VAR* auxvar;
+   int pos;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   /* reproduce the separation that seems to have failed */
+   assert(auxvalue != SCIP_INVALID);
+   violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
+   assert(violation != 0.0);
+
+   /* create rowprep */
+   SCIP_CALL( separatePointSum(scip, expr, violation > 0.0, &rowprep) );
+   assert(rowprep != NULL);
+
+   /* clean-up rowprep and remember where modifications happened */
+   rowprep->recordmodifications = TRUE;
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPfeastol(scip), NULL, NULL) );
+
+   SCIPdebugMsg(scip, "cleanupRowprep modified %d coefficents and %smodified side\n", rowprep->nmodifiedvars, rowprep->modifiedside ? "" : "not ");
+
+   /* separation must have failed because we had to relax the row (?) */
+   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside);
+
+   /* sort modified variables to make lookup below faster */
+   SCIPsortPtr((void**)rowprep->modifiedvars, SCIPvarComp, rowprep->nmodifiedvars);
+
+   /* add each child which auxvar is found in modifiedvars to branching candidates */
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+   {
+      auxvar = SCIPgetConsExprExprAuxVar(expr);
+      assert(auxvar != NULL);
+
+      if( SCIPsortedvecFindPtr((void**)rowprep->modifiedvars, SCIPvarComp, auxvar, rowprep->nmodifiedvars, &pos) )
+      {
+         assert(rowprep->modifiedvars[pos] == auxvar);
+         SCIPaddConsExprExprBranchScore(scip, expr, brscoretag, REALABS(violation));
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1199,6 +1245,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSum) );

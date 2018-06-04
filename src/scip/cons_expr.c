@@ -7608,13 +7608,7 @@ SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
 }
 
 /** calls the expression branching score callback */
-SCIP_RETCODE SCIPbranchscoreConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_SOL*                  sol,          /**< solution (NULL for the LP solution) */
-   unsigned int               brscoretag,   /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
-   SCIP_Bool*                 success       /**< buffer to store whether the branching score callback was successful */
-   )
+SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr)
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -7624,7 +7618,7 @@ SCIP_RETCODE SCIPbranchscoreConsExprExprHdlr(
 
    if( SCIPhasConsExprExprHdlrBranchingScore(expr->exprhdlr) )
    {
-      SCIP_CALL( expr->exprhdlr->brscore(scip, expr, sol, brscoretag, success) );
+      SCIP_CALL( expr->exprhdlr->brscore(scip, expr, sol, auxvalue, brscoretag, success) );
 
       if( *success )
          SCIPincrementConsExprExprHdlrNBranchScore(expr->exprhdlr);
