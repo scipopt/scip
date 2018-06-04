@@ -1013,6 +1013,13 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    else
    {
       viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
+
+      if( viol < mincutviolation )
+      {
+         /* TODO just call SCIPscaleRowprep() ? */
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &viol,
+            &success) );
+      }
    }
 
    SCIPdebugMsg(scip, "sepasum sol %p viol %g minviol %g\n", sol, viol, mincutviolation);
