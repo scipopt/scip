@@ -315,7 +315,7 @@ SCIP_RETCODE computeBranchingVariables(
       {
          /* get bound change info */
          boundchg = SCIPdomchgGetBoundchg(domchg, i);
-         assert( boundchg != 0 );
+         assert( boundchg != NULL );
 
          /* branching decisions have to be in the beginning of the bound change array */
          if ( SCIPboundchgGetBoundchgtype(boundchg) != SCIP_BOUNDCHGTYPE_BRANCHING )
@@ -437,6 +437,15 @@ SCIP_RETCODE propagateOrbitalFixing(
 
             /* we are moving a variable branched to 1 to another variable */
             if ( b1[v] && ! b1[img] )
+               break;
+
+            /* Global variable fixings during the solving process might arise because parts of the tree are
+             * pruned. Since these fixings might be caused by orbital fixing, they can be in conflict with
+             * the symmetry handling decisions of orbital fixing in the part of the tree that is not pruned.
+             * Thus, we have to take global fixings into account when filtering out symmetries.
+             */
+            if ( (SCIPvarGetLbGlobal(permvars[v]) > 0.5 && SCIPvarGetLbGlobal(permvars[img]) < 0.5) ||
+               (SCIPvarGetLbGlobal(permvars[v]) < 0.5 && SCIPvarGetLbGlobal(permvars[img]) > 0.5) )
                break;
          }
       }
@@ -594,7 +603,7 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    /* possibly get symmetries */
    if ( propdata->npermvars < 0 )
    {
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL) );
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL, NULL) );
 
       if ( propdata->nperms <= 0 )
       {

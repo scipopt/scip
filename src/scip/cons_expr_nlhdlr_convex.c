@@ -140,21 +140,21 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    curvature = SCIPgetConsExprExprCurvature(expr);
 
    /* check whether expression is nonlinear, convex or concave, and is not handled by another nonlinear handler */
-   if( curvature == SCIP_EXPRCURV_CONVEX && !*enforcedabove )
-   {
-      *enforcedabove = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-      *success = TRUE;
-
-      SCIPdebugMsg(scip, "detected convexity of %p\n", (void*)expr);
-   }
-   else if( curvature == SCIP_EXPRCURV_CONCAVE && !*enforcedbelow )
+   if( curvature == SCIP_EXPRCURV_CONVEX && !*enforcedbelow )
    {
       *enforcedbelow = TRUE;
       *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
       *success = TRUE;
 
-      SCIPdebugMsg(scip, "detected concavity of %p\n", (void*)expr);
+      SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
+   }
+   else if( curvature == SCIP_EXPRCURV_CONCAVE && !*enforcedabove )
+   {
+      *enforcedabove = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+      *success = TRUE;
+
+      SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
    }
 
    /* store variable expressions into the expression data of the nonlinear handler */
@@ -166,6 +166,22 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    return SCIP_OKAY;
 }
 
+/** auxiliary evaluation callback */
+static
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
+{ /*lint --e{715}*/
+   assert(auxvalue != NULL);
+   assert(expr != NULL);
+
+   /* currently this nlhdlr does not introduce auxiliary variables,
+    * so we can return the value of the expression in the original variables
+    */
+   *auxvalue = SCIPgetConsExprExprValue(expr);
+
+   return SCIP_OKAY;
+}
+
+/** separation callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
 { /*lint --e{715}*/
@@ -201,6 +217,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
 
    /* compute g(x*) */
    constant = SCIPgetConsExprExprValue(expr);
+   assert(auxvalue == constant); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value */  /*lint !e777*/
 
    /* evaluation error or a too large constant -> skip */
    if( SCIPisInfinity(scip, REALABS(constant)) )
@@ -216,7 +233,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - constant;
 
    /* expression is not violated -> skip */
-   if( violation < minviolation )
+   if( violation < mincutviolation )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "violation of %p = %.12f\n", (void*)expr, violation);
@@ -274,7 +291,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
       if( !success )
          goto CLEANUP;
@@ -293,6 +310,53 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
 
 CLEANUP:
    SCIPfreeRowprep(scip, &rowprep);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
+{ /*lint --e{715}*/
+   SCIP_Real violation;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
+   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+   assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->varexprs != NULL);
+   assert(nlhdlrexprdata->nvarexprs > 0);
+   assert(success != NULL);
+
+   /* we separate only convex functions here, so there should be little use for branching
+    * if violations are small or there are numerical issues, then we will not have generated a cut, though
+    * in that case, we will still branch, that is, register branchscores for all depending var exprs
+    */
+
+   /* compute violation */
+   if( auxvalue == SCIP_INVALID ) /*lint !e777*/
+      violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
+   else if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX  )
+      violation = auxvalue - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+   else
+      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
+
+   /* if violation is not on the side that we need to enforce, then no need for branching */
+   if( violation <= 0.0 )
+      return SCIP_OKAY;
+
+   /* TODO try to figure out which variables appear linear and skip them here */
+   for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
+   {
+      assert(nlhdlrexprdata->varexprs[i] != NULL);
+      assert(SCIPisConsExprExprVar(nlhdlrexprdata->varexprs[i]));
+
+      SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->varexprs[i], brscoretag, violation);
+   }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -321,12 +385,13 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, NULL) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvex, NULL) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvex);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaConvex, NULL);
+   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreConvex);
 
    return SCIP_OKAY;
 }

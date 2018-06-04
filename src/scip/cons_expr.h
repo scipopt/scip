@@ -100,19 +100,19 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
 /** set the parse callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
-            SCIP*                      scip,          /**< SCIP data structure */
-            SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-            SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-            SCIP_DECL_CONSEXPR_EXPRPARSE((*parse))    /**< parse callback (can be NULL) */
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRPARSE((*parse))    /**< parse callback (can be NULL) */
 );
 
 /** set the derivative evaluation callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
-            SCIP*                      scip,          /**< SCIP data structure */
-            SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-            SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-            SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
 );
 
 /** set the interval evaluation callback of an expression handler */
@@ -205,6 +205,48 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
 );
 
+/** returns whether expression handler implements the simplification callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the initialization callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrInitSepa(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the deinitialization callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the separation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrSepa(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the interval evaluation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the reverse propagation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the branching score callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrBranchingScore(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -277,6 +319,94 @@ EXTERN
 SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr      /**< expression handler */
 );
+
+/** calls the simplification method of an expression handler */
+extern
+SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_CONSEXPR_EXPR**       simplifiedexpr/**< pointer to store the simplified expression */
+   );
+
+/** calls the evaluation callback of an expression handler
+ *
+ * further, allows to evaluate w.r.t. given children values
+ */
+extern
+SCIP_RETCODE SCIPevalConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 val,          /**< buffer store value of expression */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*                  sol           /**< solution that is evaluated (used by the var-expression) */
+);
+
+/** calls the separation initialization method of an expression handler */
+extern
+SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Bool                  overestimate, /**< should the expression be overestimated? */
+   SCIP_Bool                  underestimate,/**< should the expression be underestimated? */
+   SCIP_Bool*                 infeasible    /**< pointer to store whether the problem is infeasible */
+   );
+
+/** calls the separation deinitialization method of an expression handler */
+extern
+SCIP_RETCODE SCIPexitsepaConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr          /**< expression */
+   );
+
+/** calls separator method of expression handler to separate LP solution */
+extern
+SCIP_RETCODE SCIPsepaConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_SOL*                  sol,          /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Bool                  overestimate, /**< should the expression be over- or underestimated? */
+   SCIP_Real                  minviol,      /**< minimal violation of a cut if it should be added to the LP */
+   SCIP_RESULT*               result,       /**< pointer to store the result */
+   int*                       ncuts         /**< pointer to store the number of added cuts */
+   );
+
+/** calls the expression interval evaluation callback */
+extern
+SCIP_RETCODE SCIPintevalConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_INTERVAL*             interval,     /**< buffer to store the interval */
+   SCIP_Real                  varboundrelax /**< a suggested amount by which to relax variable bounds */
+   );
+
+/** calls the expression callback for reverse propagation */
+extern
+SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_QUEUE*                reversepropqueue, /**< expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval */
+   SCIP_Bool*                 infeasible,   /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   int*                       nreductions,  /**< buffer to store the number of interval reductions of all children */
+   SCIP_Bool                  force         /**< force tightening even if it is below the bound strengthening tolerance */
+   );
+
+/** calls the expression branching score callback */
+extern
+SCIP_RETCODE SCIPbranchscoreConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_SOL*                  sol,          /**< solution (NULL for the LP solution) */
+   unsigned int               brscoretag,   /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
+   SCIP_Bool*                 success       /**< buffer to store whether the branching score callback was successful */
+   );
+
+/** increments the branching score count of an expression handler */
+extern
+void SCIPincrementConsExprExprHdlrNBranchScore(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr
+   );
 
 /** @} */
 
@@ -503,7 +633,6 @@ EXTERN
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
-   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_Real               varboundrelax     /**< amount by which variable bounds should be relaxed (at most) */
    );
@@ -1054,6 +1183,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
    unsigned int                priority,     /**< priority of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
    );
 
@@ -1141,6 +1271,107 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
+/** returns whether nonlinear handler implements the separation initialization callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrInitSepa(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
+/** returns whether nonlinear handler implements the separation deinitialization callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
+/** returns whether nonlinear handler implements the separation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrSepa(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
+/** returns whether nonlinear handler implements the interval evaluation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrInteval(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
+/** returns whether nonlinear handler implements the reverse propagation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
+/** call the detect callback of a nonlinear handler */
+EXTERN
+SCIP_RETCODE SCIPdetectConsExprNlhdlr(
+   SCIP*                          scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                 conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR*          nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*            expr,             /**< expression to analyze */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods,   /**< enforcement methods that are provided (to be updated by this call) */
+   SCIP_Bool*                     enforcedbelow,    /**< indicates whether an enforcement method for expr <= auxvar exists (to be updated by this call) or is not necessary */
+   SCIP_Bool*                     enforcedabove,    /**< indicates whether an enforcement method for expr >= auxvar exists (to be updated by this call) or is not necessary */
+   SCIP_Bool*                     success,          /**< buffer to store whether the nonlinear handler should be called for this expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata    /**< nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE */
+);
+
+/** call the auxiliary evaluation callback of a nonlinear handler */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(SCIPevalauxConsExprNlhdlr);
+
+/** calls the separation initialization callback of a nonlinear handler */
+EXTERN
+SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_Bool                     overestimate,     /**< whether the expression needs to be overestimated */
+   SCIP_Bool                     underestimate,    /**< whether the expression needs to be underestimated */
+   SCIP_Bool*                    infeasible        /**< pointer to store whether an infeasibility was detected */
+);
+
+/** calls the separation deinitialization callback of a nonlinear handler */
+EXTERN
+SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata    /**< expression data of nonlinear handler */
+);
+
+/** calls the separation callback of a nonlinear handler */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr);
+
+/** calls the interval evaluation callback of a nonlinear handler */
+EXTERN
+SCIP_RETCODE SCIPintevalConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_INTERVAL*                interval,         /**< buffer where to store interval (on input: current interval for expr, on output: computed interval for expr) */
+   SCIP_Real                     varboundrelax     /**< a suggested amount by which to relax variable bounds */
+);
+
+/** calls the reverse propagation callback of a nonlinear handler */
+EXTERN
+SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
+   SCIP_QUEUE*                   reversepropqueue, /**< expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval */
+   SCIP_Bool*                    infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   int*                          nreductions,      /**< buffer to store the number of interval reductions of all children */
+   SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
+);
+
+/** calls the nonlinear handler branching score callback */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
 
 #ifdef __cplusplus
 }

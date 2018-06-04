@@ -1098,7 +1098,7 @@ SCIP_RETCODE separatePointProduct(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Real             minviolation,       /**< minimal cut violation to be achieved */
+   SCIP_Real             mincutviolation,    /**< minimal cut violation to be achieved */
    SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
@@ -1161,6 +1161,7 @@ SCIP_RETCODE separatePointProduct(
       SCIP_Real linconstant;
       SCIP_Real refpointx;
       SCIP_Real refpointy;
+      SCIP_Real violation;
 
       /* collect first variable */
       child = SCIPgetConsExprExprChildren(expr)[0];
@@ -1201,9 +1202,9 @@ SCIP_RETCODE separatePointProduct(
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, y, lincoefy) );
 
       /* take care of cut numerics */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &violation, &success) );
 
-      if( success )
+      if( success && violation >= mincutviolation )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "mccormick");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
@@ -1315,9 +1316,9 @@ SCIP_RETCODE separatePointProduct(
       SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nvars, vars, facet) );
 
       /* take care of cut numerics */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, minviolation, NULL, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &violation, &success) );
 
-      if( success )
+      if( success && violation >= mincutviolation )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "multilinear");  /* @todo make cutname unique, e.g., add LP number */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
@@ -1818,29 +1819,31 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    *ncuts = 0;
 
    /* try to find a cut */
-   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, minviolation, overestimate, &cut) );
+   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, mincutviolation, overestimate, &cut) );
 
    if( cut == NULL )
       return SCIP_OKAY;
 
-   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
-
-   /* add cut */
-   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
-   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-   *ncuts += 1;
+   /* it might happen that the violation is not reliable and thus we check it here again */
+   if( SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, cut, sol), mincutviolation) )
+   {
+      /* add cut */
+      SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
+      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+      *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   if( *result == SCIP_CUTOFF )
-   {
-      SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "add cut with violation %e\n", -SCIPgetRowSolFeasibility(scip, cut, sol));
-   }
-   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+      if( *result == SCIP_CUTOFF )
+      {
+         SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "add cut with violation %e\n", -SCIPgetRowSolFeasibility(scip, cut, sol));
+      }
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
+   }
 
    /* release cut */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -1854,6 +1857,8 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL childbounds;
+   SCIP_INTERVAL otherfactor;
+   SCIP_INTERVAL zero;
    int i;
    int j;
 
@@ -1866,7 +1871,9 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    *nreductions = 0;
    *infeasible = FALSE;
 
-   /* too expensive (runtime here is quadratic in number of children) */
+   /* too expensive (runtime here is quadratic in number of children)
+    * TODO implement something faster for larger numbers of factors, e.g., split product into smaller products
+    */
    if( SCIPgetConsExprExprNChildren(expr) > 10 )
       return SCIP_OKAY;
 
@@ -1877,10 +1884,12 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   /* f = const * prod_k c_k => c_i = f / (const * prod_{j:j!=i} c_j ) */
+   SCIPintervalSet(&zero, 0.0);
+
+   /* f = const * prod_k c_k => c_i solves c_i * (const * prod_{j:j!=i} c_j) = f */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && !(*infeasible); ++i )
    {
-      SCIPintervalSet(&childbounds, exprdata->coefficient);
+      SCIPintervalSet(&otherfactor, exprdata->coefficient);
 
       /* compute prod_{j:j!=i} c_j */
       for( j = 0; j < SCIPgetConsExprExprNChildren(expr); ++j )
@@ -1888,24 +1897,17 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
          if( i == j )
             continue;
 
-         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &childbounds, childbounds,
+         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &otherfactor, otherfactor,
                SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]));
-
-         /* if there is 0.0 in the product, then later division will hardly give useful bounds, so give up for this i */
-         if( childbounds.inf <= 0.0 && childbounds.sup >= 0.0 )
-            break;
       }
 
-      /* if the previous for finish, not because of the break */
-      if( j == SCIPgetConsExprExprNChildren(expr) )
-      {
-         /* f / (const * prod_{j:j!=i} c_j) */
-         SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
+      /* solve x*otherfactor = f for x in c_i */
+      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor,
+         SCIPgetConsExprExprInterval(expr), SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]));
 
-         /* try to tighten the bounds of the expression */
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
-               infeasible, nreductions) );
-      }
+      /* try to tighten the bounds of the expression */
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
+         infeasible, nreductions) );
    }
 
    return SCIP_OKAY;
@@ -1931,9 +1933,8 @@ static
 SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
 {  /*lint --e{715}*/
    SCIP_Real coef;
-   SCIP_Bool allpos;
-   SCIP_Bool allneg;
    int i;
+   int nneg;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1942,11 +1943,10 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
    assert(childidx >= 0 && childidx < SCIPgetConsExprExprNChildren(expr));
 
    coef = SCIPgetConsExprExprProductCoef(expr);
-   allpos = TRUE;
-   allneg = TRUE;
 
-   /* check whether all children (except for childidx) intervals are positive or negative */
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && (allpos || allneg); ++i )
+   /* count the number of negative children (except for childidx); if some children changes sign -> monotonicity unknown */
+   nneg = 0;
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
    {
       SCIP_INTERVAL interval;
 
@@ -1956,22 +1956,20 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
       assert(SCIPgetConsExprExprChildren(expr)[i] != NULL);
       interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]);
 
-      if( SCIPintervalGetInf(interval) < 0.0 )
-         allpos = FALSE;
-      if( SCIPintervalGetSup(interval) > 0.0 )
-         allneg = FALSE;
+      if( SCIPintervalGetSup(interval) <= 0.0 )
+         nneg++;
+      else if( SCIPintervalGetInf(interval) < 0.0 )
+      {
+         *result = SCIP_MONOTONE_UNKNOWN;
+         return SCIP_OKAY;
+      }
    }
 
    /* note that the monotonicity depends on the sign of the coefficient */
-   if( !allpos && !allneg )
-      *result = SCIP_MONOTONE_UNKNOWN;
-   else if( allpos )
+   if( nneg % 2 == 0 )
       *result = (coef >= 0.0) ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
    else
-   {
-      assert(allneg);
       *result = (coef >= 0.0) ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
-   }
 
    return SCIP_OKAY;
 }

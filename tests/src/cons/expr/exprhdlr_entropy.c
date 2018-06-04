@@ -206,14 +206,14 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, FALSE, 0, 0.0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, 0, 0.0) );
 
       intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, detresub[i]));
 
       intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, FALSE, 0, 0.0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, 0, 0.0) );
       cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
       cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
    }
@@ -223,14 +223,14 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, FALSE, 0, 0.0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, 0, 0.0) );
 
       intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, rndresub[i]));
 
       intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, FALSE, 0, 0.0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, 0, 0.0) );
       cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
       cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
    }

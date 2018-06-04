@@ -1,5 +1,10 @@
 read ${CMAKE_CURRENT_SOURCE_DIR}/${path}
 read ${CMAKE_CURRENT_SOURCE_DIR}/mipstarts/${basename}.mst
+presolve
+validatesolve ${optval} ${optval}
+read ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+read ${CMAKE_CURRENT_SOURCE_DIR}/mipstarts/${basename}.mst
+set heuristics completesol beforepresol FALSE
 optimize
 validatesolve ${optval} ${optval}
 quit

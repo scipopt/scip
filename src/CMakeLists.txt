@@ -100,6 +100,7 @@ set(scipsources
     scip/heur_dins.c
     scip/heur_distributiondiving.c
     scip/heur_dualval.c
+    scip/heur_farkasdiving.c
     scip/heur_feaspump.c
     scip/heur_fixandinfer.c
     scip/heur_fracdiving.c
@@ -159,7 +160,6 @@ set(scipsources
     scip/presol_dualcomp.c
     scip/presol_dualinfer.c
     scip/presol_gateextraction.c
-    scip/presol_implfree.c
     scip/presol_implics.c
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
@@ -471,6 +471,7 @@ set(scipheaders
     scip/heur_dins.h
     scip/heur_distributiondiving.h
     scip/heur_dualval.h
+    scip/heur_farkasdiving.h
     scip/heur_feaspump.h
     scip/heur_fixandinfer.h
     scip/heur_fracdiving.h
@@ -544,7 +545,6 @@ set(scipheaders
     scip/presol_dualinfer.h
     scip/presol_gateextraction.h
     scip/presol.h
-    scip/presol_implfree.h
     scip/presol_implics.h
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
@@ -719,6 +719,7 @@ set(scipheaders
     scip/type_conflict.h
     scip/type_conflictstore.h
     scip/type_cons.h
+    scip/type_cons_expr.h
     scip/type_cutpool.h
     scip/type_cuts.h
     scip/type_dialog.h
