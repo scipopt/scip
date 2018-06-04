@@ -1015,6 +1015,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
    }
 
+   SCIPdebugMsg(scip, "sepasum sol %p viol %g minviol %g\n", sol, viol, mincutviolation);
+
    /* create a SCIP_ROW and add it to the initial LP */
    if( success && viol >= mincutviolation )
    {
@@ -1022,16 +1024,18 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       SCIP_Bool infeasible;
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "add cut with violation %e\n", viol);
+      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+#endif
+
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
       *ncuts += 1;
 
-#ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "add cut with violation %e\n", violation);
-      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
    }
 
    /* free rowprep */
@@ -1051,11 +1055,16 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 
    assert(scip != NULL);
    assert(expr != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
 
    /* reproduce the separation that seems to have failed */
    assert(auxvalue != SCIP_INVALID);
    violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
    assert(violation != 0.0);
+
+   SCIPdebugMsg(scip, "branchscoresum sol %p viol %g\n", sol, violation);
 
    /* create rowprep */
    SCIP_CALL( separatePointSum(scip, expr, violation > 0.0, &rowprep) );
@@ -1073,6 +1082,10 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
    /* sort modified variables to make lookup below faster */
    SCIPsortPtr((void**)rowprep->modifiedvars, SCIPvarComp, rowprep->nmodifiedvars);
 
+   /* if no modifications in coefficients, then we cannot point to any branching candidates */
+   if( rowprep->nmodifiedvars == 0 )
+      return SCIP_OKAY;
+
    /* add each child which auxvar is found in modifiedvars to branching candidates */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
    {
@@ -1083,6 +1096,8 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
       {
          assert(rowprep->modifiedvars[pos] == auxvar);
          SCIPaddConsExprExprBranchScore(scip, expr, brscoretag, REALABS(violation));
+
+         *success = TRUE;
       }
    }
 
