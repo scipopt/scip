@@ -2153,11 +2153,18 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->stp_type = graph->stp_type;
 
 #ifdef WITH_UG
+   if( graph != NULL )
    {
       GRAPH* newgraph;
       graph_copy(scip, graph, &(newgraph));
       probdata->orggraph = graph;
       graph = newgraph;
+     // SCIP_CALL( graph_init_history(scip, graph) );
+   }
+   else
+   {
+      probdata->orggraph = NULL;
+      graph = NULL;
    }
 #endif
 
@@ -3627,6 +3634,8 @@ void initReceivedSubproblem(
 
    graph_mincut_exit(scip, graph);
    graph_path_exit(scip, graph);
+   assert(graph->ancestors == NULL && graph->fixedges == NULL);
+
    graph_free(scip, &graph, TRUE);
    graph_copy(scip, probdata->orggraph, &graph);
 
@@ -3676,7 +3685,7 @@ void initReceivedSubproblem(
 
    SCIPfreeBufferArray(scip, &nodestate);
 
-   SCIP_CALL_ABORT( graph_init_history(scip, graph) );
+  // SCIP_CALL_ABORT( graph_init_history(scip, graph) );
    SCIP_CALL_ABORT( graph_path_init(scip, graph) );
    SCIP_CALL_ABORT( graph_mincut_init(scip, graph) );
 
