@@ -224,7 +224,8 @@ SCIP_RETCODE writeBoundsFocusNode(
 	 /* solve only root node */
 	 SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
 
-#if 0
+#ifdef SCIP_DISABLED_CODE /* We could evaluate the pure impact of (node) presolve and nd run this event handler in subMIPs,
+    * the following code block can be enabled. */
 	 /* disable heuristics in subscip */
 	 SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
 #endif
@@ -436,7 +437,9 @@ SCIP_DECL_EVENTCOPY(eventCopyBoundwriting)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* call inclusion method of event handler */
-#if 0
+#ifdef SCIP_DISABLED_CODE /* We could evaluate the pure impact of (node) presolve and
+   * cuts on the dual bound for the current node by disabling all heuristics and therefore
+   * disregarding any sideeffects that are introduced due to new solutions and their subsequent reductions. */
    SCIP_CALL( SCIPincludeEventHdlrBoundwriting(scip) );
 #endif
 
