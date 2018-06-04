@@ -4280,7 +4280,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
 {
    BRSCORE_DATA* brscoredata;
    SCIP_Real auxvarvalue;
-   SCIP_Real violation;
+   SCIP_Bool overestimate;
+   SCIP_Bool underestimate;
 
    assert(expr != NULL);
    assert(result != NULL);
@@ -4308,23 +4309,25 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
    auxvarvalue = SCIPgetSolVal(scip, brscoredata->sol, expr->auxvar);
 
    /* compute violation w.r.t. original variables */
-   if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
-      violation = SCIPinfinity(scip);
-   else
+   if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
    {
-      violation = 0.0;
+      /* the expression could be evaluated, then look on which side it is violated */
 
       /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
-      if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > 0.0 )
-         violation = auxvarvalue - expr->evalvalue;
+      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > brscoredata->minviolation;
 
       /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
-      if( SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > 0.0 )
-         violation = expr->evalvalue - auxvarvalue;
+      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > brscoredata->minviolation;
+   }
+   else
+   {
+      /* if expression could not be evaluated, then both under- and overestimate should be considered */
+      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
    }
 
    /* if there is violation, then consider branching */
-   if( violation > brscoredata->minviolation )
+   if( overestimate || underestimate )
    {
       /* SCIP_Bool success = FALSE; */
       SCIP_Bool nlhdlrsuccess;
@@ -4349,8 +4352,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
           * and whether that corresponds to the relation that the nlhdlr tries to enforce
           */
          if( expr->enfos[e]->auxvalue == SCIP_INVALID ||  /*lint !e777*/
-            (SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
-            (SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
+            (overestimate && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
+            (underestimate && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
          {
             SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &nlhdlrsuccess) );
             SCIPdebugMsg(scip, "branchscore of nlhdlr %s for expr %p (%s) with auxviolation %g: success = %d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), nlhdlrsuccess);
@@ -5084,14 +5087,17 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             *result = SCIP_CONSEXPREXPRWALK_ABORT;
             break;
          }
-
-         if( separesult == SCIP_SEPARATED )
+         else if( separesult == SCIP_SEPARATED )
          {
             assert(ncuts > 0);
             SCIPdebugMsg(scip, "found %d cuts by nlhdlr <%s> separating the current solution\n", ncuts, nlhdlr->name);
             sepadata->result = SCIP_SEPARATED;
             separated = TRUE;
             /* TODO or should we always just stop here? */
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "nlhdlr <%s> was not successful\n", nlhdlr->name);
          }
       }
    }
@@ -5396,6 +5402,8 @@ SCIP_RETCODE enforceConstraints(
    minviolation = SCIPfeastol(scip);
    do
    {
+      SCIPdebugMsg(scip, "enforce by separation for minviolation %g\n", minviolation);
+
       /* try to separate the LP solution */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, minviolation, SCIPfeastol(scip), result, &maxauxviolation) );
 
