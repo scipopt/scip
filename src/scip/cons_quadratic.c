@@ -16650,7 +16650,7 @@ void rowprepCleanupSide(
    /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
     * we thus relax the side here so that it will either be 0 now or will not be rounded to 0 later
     */
-   if( !SCIPisZero(scip, rowprep->side) )
+   if( rowprep->side == 0.0 || !SCIPisZero(scip, rowprep->side) )
       return;
 
    if( rowprep->side > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
