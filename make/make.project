@@ -360,9 +360,10 @@ endif
 #-------------------------------------------------------
 # define flags for XPRESS
 ifeq ($(LPS),xprs)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
-LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR) $(LINKCC_l)xprs.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX) \
+                        -Wl,-rpath,$(dir $(realpath $(LIBDIR)/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)))
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
 #-------------------------------------------------------
