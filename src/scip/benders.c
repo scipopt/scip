@@ -1824,6 +1824,7 @@ SCIP_RETCODE SCIPbendersActivate(
       set->benderssorted = FALSE;
 
       benders->nsubproblems = nsubproblems;
+      benders->nactivesubprobs = nsubproblems;
 
       /* allocating memory for the subproblems arrays */
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblems, benders->nsubproblems) );
@@ -2109,19 +2110,33 @@ SCIP_RETCODE solveBendersSubproblems(
             /* if the auxiliary variable value is infinity, then the subproblem has not been solved yet. Currently the
              * subproblem statue is unknown. */
             if( SCIPsetIsInfinity(set, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
-               || SCIPsetIsInfinity(set, -SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i)) )
+               || SCIPsetIsInfinity(set, -SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
+               || SCIPsetIsInfinity(set, -SCIPbendersGetSubproblemLowerbound(benders, i)) )
             {
+               SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
                (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
                (*optimal) = FALSE;
-               SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
 
                SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, but has not been solved."
                  " setting status to UNKNOWN\n", i);
             }
             else
             {
-               (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
-               SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
+               SCIP_Real soltol;
+
+               SCIP_CALL( SCIPsetGetRealParam(set, "benders/solutiontol", &soltol) );
+
+               if( SCIPrelDiff(SCIPbendersGetSubproblemLowerbound(benders, i),
+                     SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i)) < soltol )
+               {
+                  SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
+                  (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
+               }
+               else
+               {
+                  SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetSubproblemLowerbound(benders, i));
+                  (*substatus)[i] = SCIP_BENDERSSUBSTATUS_AUXVIOL;
+               }
 
                SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n",
                   i);
@@ -4501,7 +4516,22 @@ void SCIPbendersSetSubproblemIsIndependent(
       SCIPABORT();
    }
    else
+   {
+      SCIP_Bool activesubprob;
+
+      /* if the active status of the subproblem changes, then we must update the activesubprobs counter */
+      activesubprob = subproblemIsActive(benders, probnumber);
+
       benders->indepsubprob[probnumber] = isindep;
+
+      /* updating the activesubprobs counter */
+      if( activesubprob && !subproblemIsActive(benders, probnumber) )
+         benders->nactivesubprobs--;
+      else if( !activesubprob && subproblemIsActive(benders, probnumber) )
+         benders->nactivesubprobs++;
+
+      assert(benders->nactivesubprobs >= 0 && benders->nactivesubprobs <= SCIPbendersGetNSubproblems(benders));
+   }
 }
 
 /** returns whether the subproblem is independent */
@@ -4525,10 +4555,23 @@ void SCIPbendersSetSubproblemEnabled(
    SCIP_Bool             enabled             /**< flag to indicate whether the subproblem is enabled */
    )
 {
+   SCIP_Bool activesubprob;
+
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
+   /* if the active status of the subproblem changes, then we must update the activesubprobs counter */
+   activesubprob = subproblemIsActive(benders, probnumber);
+
    benders->subprobenabled[probnumber] = enabled;
+
+   /* updating the activesubprobs counter */
+   if( activesubprob && !subproblemIsActive(benders, probnumber) )
+      benders->nactivesubprobs--;
+   else if( !activesubprob && subproblemIsActive(benders, probnumber) )
+      benders->nactivesubprobs++;
+
+   assert(benders->nactivesubprobs >= 0 && benders->nactivesubprobs <= SCIPbendersGetNSubproblems(benders));
 }
 
 /** returns whether the subproblem is enabled, i.e. the subproblem is still solved in the solving loop. */
