@@ -362,7 +362,7 @@ endif
 ifeq ($(LPS),xprs)
 LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR) $(LINKCC_l)xprs.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX) \
-                        -Wl,-rpath,$(dir $(realpath $(LIBDIR)/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)))
+                        -Wl,-rpath,$(dir $(realpath $(SCIPREALPATH)/$(LIBDIR)/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)))
 LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
