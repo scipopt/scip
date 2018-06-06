@@ -12312,10 +12312,12 @@ SCIP_RETCODE simplifyInequalities(
 
       gcd = -1;
 
-      /* calculate greatest common divisor over all integer variables */
+      /* calculate greatest common divisor over all integer variables; note that the onlybin flag needs to be recomputed
+       * because coefficients of non-binary variables might have changed to zero */
       if( !onlybin )
       {
          foundbin = -1;
+         onlybin = TRUE;
 
          for( v = nvars - 1; v >= 0; --v )
          {
@@ -12328,6 +12330,8 @@ SCIP_RETCODE simplifyInequalities(
                   foundbin = v;
                continue;
             }
+            else
+               onlybin = FALSE;
 
             absval = REALABS(vals[v]);
             /* arithmetic precision can lead to the absolute value only being integral up to feasibility tolerance,
