@@ -813,11 +813,6 @@ SCIP_RETCODE SCIPsolveSlack(
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "solving the realaxed original problem with original objective function\n");
 
-      /**@todo if moved to scip.c need to use the SCIPchgIntParam() instead of the current function */
-#if 0
-      SCIP_CALL( SCIPsetIntParam(scip, "limits/maxorigsol", 10) );
-#endif
-
       /* adding the last set of solutions */
       for(c = 0; c < nsols; ++c)
       {

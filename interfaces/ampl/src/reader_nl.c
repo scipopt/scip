@@ -1481,7 +1481,7 @@ SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
  * Callback methods of reader
  */
 
-#if 0 /* TODO: implement, if one finds use for it */
+#if SCIP_DISABLED_CODE /* TODO: implement, if one finds use for it */
 /** copy method for reader plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_READERCOPY(readerCopyNl)

@@ -6685,12 +6685,12 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
          scale += SQR(lp->soldirection[k]);
       }
 
-      assert(scale > 0.0);
-      scale = 1.0 / SQRT(scale);
-
-      for( k = 0; k < lp->ncols; ++k )
+      if( scale > 0.0 )
       {
-         lp->soldirection[k] *= scale;
+         scale = 1.0 / SQRT(scale);
+
+         for( k = 0; k < lp->ncols; ++k )
+            lp->soldirection[k] *= scale;
       }
    }
 
