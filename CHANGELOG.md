@@ -60,21 +60,21 @@ SCIP 6.0.0
 - Deleted and changed API methods
 
   + Symmetry:
-    - removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
+    * removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
       of other components anymore
-    - additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
+    * additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
 
   + Random generators:
-    - the seed of SCIPinitializeRandomSeed() is now an unsigned int
-    - the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
-    - new parameter for SCIPcreateRandom() to specify whether the global random seed shift should be used in the creation of
+    * the seed of SCIPinitializeRandomSeed() is now an unsigned int
+    * the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
+    * new parameter for SCIPcreateRandom() to specify whether the global random seed shift should be used in the creation of
       the random number generator
 
   + Misc:
-    - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
+    * additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
       weights that are simple averages or higher weights for more recent observations (the previous default).
       The last two parameters are used for a finer control of the exponential decay.
-    - functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+    * functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
       SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
       existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
 
