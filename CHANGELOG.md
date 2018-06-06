@@ -9,10 +9,7 @@ TODO: Brief introductory paragraph. Maybe explain semantic versioning?
 SCIP 6.0.0
 ==========
 
-Overview
---------
-
-TODO: Maybe summarize most important changes. Add link to release report.
+TODO: Summarize most important changes. Add link to release report.
 
 Features
 --------
