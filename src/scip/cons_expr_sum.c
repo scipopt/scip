@@ -1085,15 +1085,19 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 
    /* separation must have failed because we had to relax the row (?)
     * or the minimal cut violation was too large during separation
+    * or the LP could not be solved (enfops)
     */
-   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip));
+   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL);
 
    /* sort modified variables to make lookup below faster */
    SCIPsortPtr((void**)rowprep->modifiedvars, SCIPvarComp, rowprep->nmodifiedvars);
 
    /* if no modifications in coefficients, then we cannot point to any branching candidates */
    if( rowprep->nmodifiedvars == 0 )
+   {
+      SCIPfreeRowprep(scip, &rowprep);
       return SCIP_OKAY;
+   }
 
    /* add each child which auxvar is found in modifiedvars to branching candidates */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
@@ -1109,6 +1113,8 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
          *success = TRUE;
       }
    }
+
+   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }

@@ -5052,6 +5052,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          else if( underestimate && expr->enfos[e]->auxvalue - auxvarvalue > sepadata->maxauxviolation )
             sepadata->maxauxviolation = expr->enfos[e]->auxvalue - auxvarvalue;
 
+         SCIPdebugMsg(scip, "sepa of nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), REALABS(expr->evalvalue - auxvarvalue), underestimate, overestimate);
+
          /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
          if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > sepadata->minviolation) )  /*lint !e777*/
          {
