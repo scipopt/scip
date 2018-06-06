@@ -53,61 +53,64 @@ SCIP 6.0.0
 
 ### Interface changes
 
-- New and changed callbacks
+#### New and changed callbacks
 
-  + added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
+- added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
 
-- Deleted and changed API methods
+#### Deleted and changed API methods
 
-  + Symmetry:
-    * removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
-      of other components anymore
-    * additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
-
-  + Random generators:
-    * the seed of SCIPinitializeRandomSeed() is now an unsigned int
-    * the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
-    * new parameter for SCIPcreateRandom() to specify whether the global random seed shift should be used in the creation of
-      the random number generator
-
-  + Misc:
-    * additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
-      weights that are simple averages or higher weights for more recent observations (the previous default).
-      The last two parameters are used for a finer control of the exponential decay.
-    * functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
-      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
-      existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
-
-- New API functions
-  + added function SCIPintervalSolveUnivariateQuadExpressionNegative()
-  + new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model (check) constraints (SCIP_LOCKYPE_MODEL)
-    and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
-  + new functions SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
-  + new function SCIPaddConsLocksType()
-  + new functions SCIPconsIsLockedTypePos(), SCIPconsIsLockedTypeNeg(), SCIPconsIsLockedType(),
-    SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
-  + added SCIPstrncpy(), a safe version of strncpy()
-
-- Changed parameters
-  + removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
-    directly by the target node limit within the heuristic
-  + removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
+- Symmetry:
+  + removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
     of other components anymore
+  + additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
 
-- New parameters
-  + "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
-  + "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
-  + "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
-  + "lp/alwaysgetduals" ensure that the dual solutions are always computed from the recent LP solve
-  + "display/relevantstats" indicates whether the small relevant statistics are displayed at the end of solving
-  + "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
-  + "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
-  + "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts
-  + "benders/*" new submenu for Benders' decomposition related settings. This includes the settings related to the
-    included Benders' decompositions and the general Benders' decomposition settings.
-  + "benders/<decompname>/benderscuts/*" submenu within each included Benders' decomposition to control the Benders'
-    decomposition cuts. The cuts are added to each decomposition separately, so the setting are unique to each
-    decomposition.
+- Random generators:
+  + the seed of SCIPinitializeRandomSeed() is now an unsigned int
+  + the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
+  + new parameter for SCIPcreateRandom() to specify whether the global random seed shift should be used in the creation of
+    the random number generator
+
+- Misc:
+  + additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
+    weights that are simple averages or higher weights for more recent observations (the previous default).
+    The last two parameters are used for a finer control of the exponential decay.
+  + functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+    SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
+    existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+
+#### New API functions
+
+- added function SCIPintervalSolveUnivariateQuadExpressionNegative()
+- new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model (check) constraints (SCIP_LOCKYPE_MODEL)
+  and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
+- new functions SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
+- new function SCIPaddConsLocksType()
+- new functions SCIPconsIsLockedTypePos(), SCIPconsIsLockedTypeNeg(), SCIPconsIsLockedType(),
+  SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
+- added SCIPstrncpy(), a safe version of strncpy()
+
+#### Changed parameters
+
+- removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  directly by the target node limit within the heuristic
+- removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
+  of other components anymore
+
+#### New parameters
+
+- "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
+- "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
+- "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
+- "lp/alwaysgetduals" ensure that the dual solutions are always computed from the recent LP solve
+- "display/relevantstats" indicates whether the small relevant statistics are displayed at the end of solving
+- "propagating/orbitalfixing/performpresolving" that enables orbital fixing in presolving
+- "presolving/symbreak/addconsstiming" to change the timining of symmetry computation for symmetry handling inequalities
+- "propagating/orbitalfixing/enabledafterrestarts" to control whether orbital fixing is enabled after restarts
+- "benders/*" new submenu for Benders' decomposition related settings. This includes the settings related to the
+  included Benders' decompositions and the general Benders' decomposition settings.
+- "benders/<decompname>/benderscuts/*" submenu within each included Benders' decomposition to control the Benders'
+  decomposition cuts. The cuts are added to each decomposition separately, so the setting are unique to each
+  decomposition.
 
 ### Deleted files
 
