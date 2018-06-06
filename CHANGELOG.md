@@ -6,18 +6,16 @@ Release Notes
 TODO: Brief introductory paragraph. Maybe explain semantic versioning?
 
 
-Release notes for SCIP 6.0
-==========================
+SCIP 6.0.0
+==========
 
 Overview
 --------
 
 TODO: Maybe summarize most important changes. Add link to release report.
 
-SCIP 6.0.0
-----------
-
-### Features
+Features
+--------
 
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
@@ -31,7 +29,8 @@ SCIP 6.0.0
   decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
   integer optimality cuts and no-good cuts.
 
-### Performance improvements
+Performance improvements
+------------------------
 
 - cuts generated from certain quadratic constraints with convex feasible region are now global
 - performance improvements for Adaptive Large Neighborhood Search heur_alns.c:
@@ -42,7 +41,8 @@ SCIP 6.0.0
 - constraint handler checking order for original solutions has been modified to check those with negative check priority
   that don't need constraints after all other constraint handlers and constraints have been checked
 
-### Examples and applications
+Examples and applications
+-------------------------
 
 - new example "brachistochrone" in CallableLibrary examples collection; this example implements a discretized model to
   obtain the trajectory associated with the shortest time to go from point A to B for a particle under gravity only
@@ -51,13 +51,14 @@ SCIP 6.0.0
 - new price-and-branch application for the ringpacking problem
 - new stochastic capacitated facility location example demonstrating the use of the Benders' decomposition framework
 
-### Interface changes
+Interface changes
+-----------------
 
-New and changed callbacks
+### New and changed callbacks
 
 - added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
 
-Deleted and changed API methods
+### Deleted and changed API methods
 
 - Symmetry
   + removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
@@ -78,7 +79,7 @@ Deleted and changed API methods
     SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
     existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
 
-New API functions
+### New API functions
 
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
 - new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model (check) constraints (SCIP_LOCKYPE_MODEL)
@@ -89,14 +90,14 @@ New API functions
   SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
 - added SCIPstrncpy(), a safe version of strncpy()
 
-Changed parameters
+### Changed parameters
 
 - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
   directly by the target node limit within the heuristic
 - removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
   of other components anymore
 
-New parameters
+### New parameters
 
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
@@ -113,10 +114,12 @@ New parameters
   decomposition.
 
 Deleted files
+-------------
 
 - removed presolving plugin presol_implfree
 
-### Miscellaneous
+Miscellaneous
+-------------
 
 - updated CppAD to version 20180000.0
 - add statistic that presents the number of resolves for instable LPs
