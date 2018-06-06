@@ -114,6 +114,7 @@ Deleted files
 -------------
 
 - removed presolving plugin presol_implfree
+- TODO: add scip.c removal/split
 
 Miscellaneous
 -------------
