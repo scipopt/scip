@@ -1083,8 +1083,10 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 
    SCIPdebugMsg(scip, "cleanupRowprep modified %d coefficents and %smodified side\n", rowprep->nmodifiedvars, rowprep->modifiedside ? "" : "not ");
 
-   /* separation must have failed because we had to relax the row (?) */
-   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside);
+   /* separation must have failed because we had to relax the row (?)
+    * or the minimal cut violation was too large during separation
+    */
+   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip));
 
    /* sort modified variables to make lookup below faster */
    SCIPsortPtr((void**)rowprep->modifiedvars, SCIPvarComp, rowprep->nmodifiedvars);
