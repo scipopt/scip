@@ -11,4 +11,3 @@ visual/realtime = FALSE
 # should the node where solutions are found be visualized?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
 visual/dispsols = TRUE
-

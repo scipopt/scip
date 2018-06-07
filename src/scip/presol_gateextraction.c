@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,14 +20,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/presol_gateextraction.h"
-#include "scip/cons_setppc.h"
-#include "scip/cons_logicor.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_and.h"
-
+#include "scip/cons_logicor.h"
+#include "scip/cons_setppc.h"
+#include "scip/presol_gateextraction.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_presol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_param.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PRESOL_NAME            "gateextraction"
 #define PRESOL_DESC            "presolver extracting gate(and)-constraints"
@@ -850,24 +862,24 @@ SCIP_RETCODE extractGates(
       {
          assert(SCIPvarIsActive(SCIPvarGetNegatedVar(activevars[d])));
 
-         if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) >= nlogicorvars - 1 )
+         if( SCIPvarGetNLocksDownType(SCIPvarGetNegatedVar(activevars[d]), SCIP_LOCKTYPE_MODEL) >= nlogicorvars - 1 )
          {
             posresultants[nposresultants] = activevars[d];
             ++nposresultants;
          }
-         else if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) == 0 )
+         else if( SCIPvarGetNLocksDownType(SCIPvarGetNegatedVar(activevars[d]), SCIP_LOCKTYPE_MODEL) == 0 )
             return SCIP_OKAY;
       }
       else
       {
          assert(SCIPvarIsActive(activevars[d]));
 
-         if( SCIPvarGetNLocksUp(activevars[d]) >= nlogicorvars - 1 )
+         if( SCIPvarGetNLocksUpType(activevars[d], SCIP_LOCKTYPE_MODEL) >= nlogicorvars - 1 )
          {
             posresultants[nposresultants] = activevars[d];
             ++nposresultants;
          }
-         else if( SCIPvarGetNLocksUp(activevars[d]) == 0 )
+         else if( SCIPvarGetNLocksUpType(activevars[d], SCIP_LOCKTYPE_MODEL) == 0 )
             return SCIP_OKAY;
       }
    }
@@ -1183,7 +1195,6 @@ SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
          /* remove constraint from setppc-hashtable */
          assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons));
          SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons) );
-
 
          /* remove hashdata entry from hashtable */
          SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[c]) );

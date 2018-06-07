@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,27 +20,29 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
-#include "scip/lp.h"
-#include "scip/nlp.h"
-#include "scip/relax.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/sol.h"
-#include "scip/primal.h"
-#include "scip/tree.h"
 #include "scip/cons.h"
+#include "scip/lp.h"
+#include "scip/misc.h"
+#include "scip/nlp.h"
+#include "scip/primal.h"
+#include "scip/prob.h"
+#include "scip/pub_lp.h"
 #include "scip/pub_message.h"
-
-#ifndef NDEBUG
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/relax.h"
+#include "scip/set.h"
+#include "scip/sol.h"
+#include "scip/stat.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
 #include "scip/struct_sol.h"
-#endif
+#include "scip/struct_stat.h"
+#include "scip/struct_var.h"
+#include "scip/tree.h"
+#include "scip/var.h"
 
 
 
@@ -483,8 +485,8 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
       if( SCIPsetIsFeasIntegral(set, solval) || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
          continue;
 
-      nuplocks = SCIPvarGetNLocksUp(var);
-      ndownlocks = SCIPvarGetNLocksDown(var);
+      nuplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+      ndownlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
       obj = SCIPvarGetUnchangedObj(var);
 
       roundup = FALSE;
@@ -1094,7 +1096,6 @@ SCIP_RETCODE SCIPsolSetVal(
             }
 
             solStamp(sol, stat, tree, FALSE);
-
          }
          return SCIP_OKAY;
       }
@@ -1342,7 +1343,12 @@ SCIP_Real SCIPsolGetVal(
          return 0.0;
       }
       assert(!SCIPvarIsTransformed(origvar));
-      return scalar * SCIPsolGetVal(sol, set, stat, origvar) + constant;
+
+      solval = SCIPsolGetVal(sol, set, stat, origvar);
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+         return SCIP_UNKNOWN;
+      else
+         return scalar * solval + constant;
    }
 
    /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
@@ -1706,7 +1712,6 @@ SCIP_RETCODE SCIPsolCheck(
       }
 #endif
    }
-
 
    return SCIP_OKAY;
 }

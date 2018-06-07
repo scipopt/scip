@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,12 +22,30 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/prop_probing.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PROP_NAME               "probing"
 #define PROP_DESC               "probing propagator on binary variables"
@@ -222,8 +240,8 @@ SCIP_RETCODE sortVariables(
 
       if( SCIPvarIsActive(var) )
       {
-         nlocksdown = SCIPvarGetNLocksDown(var);
-         nlocksup = SCIPvarGetNLocksUp(var);
+         nlocksdown = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
+         nlocksup = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
          nimplzero = SCIPvarGetNImpls(var, FALSE);
          nimplone = SCIPvarGetNImpls(var, TRUE);
          nclqzero = SCIPvarGetNCliques(var, FALSE);
@@ -272,8 +290,8 @@ SCIP_RETCODE sortVariables(
       if( SCIPvarIsActive(var) )
       {
          SCIP_Real randomoffset;
-         nlocksdown = SCIPvarGetNLocksDown(var);
-         nlocksup = SCIPvarGetNLocksUp(var);
+         nlocksdown = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
+         nlocksup = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
          nimplzero = SCIPvarGetNImpls(var, FALSE);
          nimplone = SCIPvarGetNImpls(var, TRUE);
          nclqzero = SCIPvarGetNCliques(var, FALSE);
@@ -456,7 +474,7 @@ SCIP_RETCODE applyProbing(
 
          /* determine whether one probing should happen */
          probingone = TRUE;
-         if( SCIPvarGetNLocksUp(vars[i]) == 0 )
+         if( SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) == 0 )
             probingone = FALSE;
 
          if( probingone )
@@ -483,7 +501,8 @@ SCIP_RETCODE applyProbing(
                if( fixed )
                {
                   SCIPdebugMsg(scip, "fixed probing variable <%s> to 0.0, nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL),
+                     SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL));
                   (*nfixedvars)++;
                   propdata->nfixings++;
                   propdata->nuseless = 0;
@@ -507,7 +526,7 @@ SCIP_RETCODE applyProbing(
 
          /* determine whether zero probing should happen */
          probingzero = TRUE;
-         if( SCIPvarGetNLocksDown(vars[i]) == 0 )
+         if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) == 0 )
             probingzero = FALSE;
 
          if( probingzero )
@@ -533,7 +552,8 @@ SCIP_RETCODE applyProbing(
                if( fixed )
                {
                   SCIPdebugMsg(scip, "fixed probing variable <%s> to 1.0, nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL),
+                     SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL));
                   (*nfixedvars)++;
                   propdata->nfixings++;
                   propdata->nuseless = 0;
@@ -676,7 +696,6 @@ SCIP_RETCODE applyProbing(
             propdata->lastsortstartidx = 0;
          }
       }
-
    }
    while( i == 0 && !(*cutoff) && !(*delay) && !aborted );
 
@@ -729,7 +748,6 @@ SCIP_DECL_PROPFREE(propFreeProbing)
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
 
-
    SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
@@ -750,8 +768,7 @@ SCIP_DECL_PROPINIT(propInitProbing)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
-      DEFAULT_RANDSEED) );
-
+      DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1198,7 +1215,8 @@ SCIP_RETCODE SCIPapplyProbingVar(
 
    SCIPdebugMsg(scip, "applying probing on variable <%s> %s %g (nlocks=%d/%d, impls=%d/%d, clqs=%d/%d)\n",
       SCIPvarGetName(vars[probingpos]), boundtype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", bound,
-      SCIPvarGetNLocksDown(vars[probingpos]), SCIPvarGetNLocksUp(vars[probingpos]),
+      SCIPvarGetNLocksDownType(vars[probingpos], SCIP_LOCKTYPE_MODEL),
+      SCIPvarGetNLocksUpType(vars[probingpos], SCIP_LOCKTYPE_MODEL),
       SCIPvarGetNImpls(vars[probingpos], FALSE), SCIPvarGetNImpls(vars[probingpos], TRUE),
       SCIPvarGetNCliques(vars[probingpos], FALSE), SCIPvarGetNCliques(vars[probingpos], TRUE));
 
@@ -1426,7 +1444,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
          {
             SCIPdebugMsg(scip, "fixed variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
                SCIPvarGetName(var), fixval,
-               SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
+               SCIPvarGetName(probingvar), SCIPvarGetNLocksDownType(probingvar, SCIP_LOCKTYPE_MODEL),
+               SCIPvarGetNLocksUpType(probingvar, SCIP_LOCKTYPE_MODEL));
             (*nfixedvars)++;
          }
          else if( *cutoff )
@@ -1471,7 +1490,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
             {
                SCIPdebugMsg(scip, "tightened lower bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
                   SCIPvarGetName(var), oldlb, oldub, newlb,
-                  SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
+                  SCIPvarGetName(probingvar), SCIPvarGetNLocksDownType(probingvar, SCIP_LOCKTYPE_MODEL),
+                  SCIPvarGetNLocksUpType(probingvar, SCIP_LOCKTYPE_MODEL));
                (*nchgbds)++;
             }
             else if( *cutoff )
@@ -1489,7 +1509,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
             {
                SCIPdebugMsg(scip, "tightened upper bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
                   SCIPvarGetName(var), oldlb, oldub, newub,
-                  SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
+                  SCIPvarGetName(probingvar), SCIPvarGetNLocksDownType(probingvar, SCIP_LOCKTYPE_MODEL),
+                  SCIPvarGetNLocksUpType(probingvar, SCIP_LOCKTYPE_MODEL));
                (*nchgbds)++;
             }
             else if( *cutoff )
@@ -1539,7 +1560,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                   rightlb - leftub, SCIPvarGetName(var),
                   rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
                   leftproplbs[j] * rightlb - rightproplbs[j] * leftub,
-                  SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(probingvar));
+                  SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL),
+                  SCIPvarGetNLocksUpType(probingvar, SCIP_LOCKTYPE_MODEL));
                (*naggrvars)++;
             }
             if( *cutoff )

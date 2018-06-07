@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # This script uploads and checks for fails in a SCIP run.
 # Sends an email if errors are detected. Is not meant to be use directly,
@@ -7,26 +7,35 @@
 # jenkins_check_results_benchmark.sh
 # Careful: WE ARE IN check/ !
 
-sleep 5
+echo "This is jenkins_failcheck_benchmark.sh running."
 
+sleep 5
 
 # evaluate the run and upload it to rubberband
 echo "Evaluating the runs and uploading them to rubberband."
 
 # SCIP check files are check.clusterbench.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
-EVALFILES=`ls results/clusterbench/*.eval`
+EVALFILES=`ls ${OUTPUTDIR}*.eval`
 OUTPUT="clusterbenchmark_output.tmp"
+
+# declare the array
+declare -A RBIDS
 
 # evaluate with evalcheck_cluster.sh, that also uploads to rubberband, and collect rubberbandids
 i=0
 for EVALFILE in ${EVALFILES};
 do
-    ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
-    cat ${OUTPUT}
-    RBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+  ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
+  cat ${OUTPUT}
+  RBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+
+  # save the rubberbandid only if RBID is not empty
+  if [ "${RBID}" != "" ]; then
     RBIDS[$i]=${RBID}
     ((i++))
+  fi
 done
+
 rm ${OUTPUT}
 
 # last benchmarkrun is in database

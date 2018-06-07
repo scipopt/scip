@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -68,6 +68,8 @@ struct SCIP_Stat
    SCIP_Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
+   SCIP_Longint          nresolveinstablelps;       /**< number of simplex resolves of instable LPs */
+   SCIP_Longint          nresolveinstablelpiters;   /**< number of simplex iterations used for resolving instable LPs */
    SCIP_Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
    SCIP_Longint          ninternalnodes;     /**< number of nodes processed in current run where a branching was performed */
    SCIP_Longint          nobjleaves;         /**< number of leaf nodes processed that reached the cutoff bound */
@@ -147,6 +149,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           duallptime;         /**< dual LP solution time */
    SCIP_CLOCK*           lexduallptime;      /**< lexicographic dual LP solution time */
    SCIP_CLOCK*           barrierlptime;      /**< barrier LP solution time */
+   SCIP_CLOCK*           resolveinstablelptime;/**< LP solution time for taking care of instable LPs */
    SCIP_CLOCK*           divinglptime;       /**< diving and probing LP solution time */
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */

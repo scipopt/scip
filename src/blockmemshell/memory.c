@@ -3015,16 +3015,15 @@ void BMSfreeBufferMemory_work(
    }
 #endif
 
-#ifdef CHECKMEM
+#ifndef NDEBUG
    /* check that the memory is cleared */
    if( buffer->clean )
    {
-      char* tmpptr = (char*)(buffer->data[bufnum]);
-      unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
-      tmpptr += inc;
+      size_t i;
+      uint8_t* tmpptr = (uint8_t*)(buffer->data[bufnum]);
 
-      while( --tmpptr >= (char*)(buffer->data[bufnum]) )
-         assert(*tmpptr == '\0');
+      for( i = 0; i < buffer->size[bufnum]; ++i )
+         assert(tmpptr[i] == 0);
    }
 #endif
 

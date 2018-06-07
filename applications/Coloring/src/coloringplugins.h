@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -44,6 +44,8 @@
 
 #include "scip/dialog_default.h"
 #include "scip/disp_default.h"
+
+#include "scip/table_default.h"
 
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_coefdiving.h"

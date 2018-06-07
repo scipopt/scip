@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,9 +27,14 @@
 #define __SCIP_CUTS_H__
 
 #include "scip/def.h"
-#include "scip/set.h"
-#include "scip/type_cuts.h"
 #include "scip/struct_cuts.h"
+#include "scip/type_cuts.h"
+#include "scip/type_lp.h"
+#include "scip/type_misc.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_sol.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -264,7 +269,31 @@ SCIP_Real SCIPaggrRowGetRhs(
 /** gets the number of row aggregations */
 EXTERN
 int SCIPaggrRowGetNRows(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
+   );
+
+/** perform a cut selection algorithm for the given array of cuts; the array is partitioned
+ *  so that the selected cuts come first and the remaining ones are at the end of the array
+ */
+EXTERN
+SCIP_RETCODE SCIPselectCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
+   SCIP_Real             goodscorefac,       /**< factor of best score among the given cuts to consider a cut good
+                                              *   and filter with less strict settings of the maximum parallelism */
+   SCIP_Real             badscorefac,        /**< factor of best score among the given cuts to consider a cut bad
+                                              *   and discard it regardless of its parallelism to other cuts */
+   SCIP_Real             goodmaxparall,      /**< maximum parallelism for good cuts */
+   SCIP_Real             maxparall,          /**< maximum parallelism for non-good cuts */
+   SCIP_Real             dircutoffdistweight,/**< weight of directed cutoff distance in score calculation */
+   SCIP_Real             efficacyweight,     /**< weight of efficacy (shortest cutoff distance) in score calculation */
+   SCIP_Real             objparalweight,     /**< weight of objective parallelism in score calculation */
+   SCIP_Real             intsupportweight,   /**< weight of integral support in score calculation */
+   int                   ncuts,              /**< number of cuts in given array */
+   int                   nforcedcuts,        /**< number of forced cuts at start of given array */
+   int                   maxselectedcuts,    /**< maximal number of cuts to select */
+   int*                  nselectedcuts       /**< pointer to return number of selected cuts */
    );
 
 /** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the

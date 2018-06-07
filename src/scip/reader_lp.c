@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,29 +27,42 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
+#include "blockmemshell/memory.h"
 #include <ctype.h>
-
-#include "scip/reader_lp.h"
+#include "scip/cons_and.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_and.h"
+#include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/cons_indicator.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_soc.h"
-#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_varbound.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_lp.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
+
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
+#endif
+
 
 #define READER_NAME             "lpreader"
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
@@ -1678,7 +1691,6 @@ SCIP_RETCODE readConstraints(
          /* reset the lpinput for further usage as we have no indicator constraint */
          lpinput->linepos = linepos;
          (void) SCIPsnprintf(lpinput->token, 2, "<");
-         strcpy(lpinput->token, "<");
       }
 
       /* check for "->" */
@@ -2631,7 +2643,7 @@ void printRow(
    )
 {
    int v;
-   char linebuffer[LP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -2860,7 +2872,7 @@ void printSosCons(
 {
    int v;
 
-   char linebuffer[LP_MAX_PRINTLEN];
+   char linebuffer[LP_MAX_PRINTLEN+1];
    int linecnt;
    char buffer[LP_MAX_PRINTLEN];
    char varname[LP_MAX_NAMELEN];
@@ -2915,7 +2927,7 @@ SCIP_RETCODE printSOCCons(
    )
 {
    int v;
-   char linebuffer[LP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
    SCIP_VAR* var;
    SCIP_Real coef;
@@ -3552,7 +3564,7 @@ SCIP_RETCODE SCIPwriteLp(
    int v;
 
    int linecnt;
-   char linebuffer[LP_MAX_PRINTLEN];
+   char linebuffer[LP_MAX_PRINTLEN+1];
 
    char varname[LP_MAX_NAMELEN];
    char buffer[LP_MAX_PRINTLEN];

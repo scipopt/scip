@@ -141,9 +141,9 @@ FLAGS		+=	-I$(LIBDIR)/include/xprsinc
 LPILIBOBJ	=	lpi/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/xprsinc
-SOFTLINKS	+=	$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"xprsinc\" is the path to the XPRESS \"include\" directory, e.g., \"<XPRESS-path>/include\".\n"
-LPIINSTMSG	+=	" -> \"libxpress.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxprs.so\""
+LPIINSTMSG	+=	" -> \"libxprs.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxprs.so\""
 endif
 
 # mosek only supports shared libraries
@@ -164,10 +164,6 @@ LPSOPTIONS	+=	spx1
 ifeq ($(LPS),spx1)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
-ifeq ($(SPX_LEGACY),true)
-CFLAGS		+= 	-DSOPLEX_LEGACY
-CXXFLAGS	+= 	-DSOPLEX_LEGACY
-endif
 LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx1.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
@@ -336,7 +332,7 @@ SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-LPIINSTMSG	+=	"  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
 endif
@@ -498,12 +494,18 @@ endif
 
 SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
-SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
+SCIPPLUGINLIBOBJ=	scip/benders_default.o \
+			scip/benderscut_feas.o \
+			scip/benderscut_int.o \
+			scip/benderscut_nogood.o \
+			scip/benderscut_opt.o \
+			scip/branch_allfullstrong.o \
 			scip/branch_cloud.o \
 			scip/branch_distribution.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
+			scip/branch_lookahead.o \
 			scip/branch_mostinf.o \
 			scip/branch_multaggr.o \
 			scip/branch_nodereopt.o \
@@ -515,6 +517,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/compr_weakcompr.o \
 			scip/concsolver_scip.o \
 			scip/cons_and.o \
+			scip/cons_benders.o \
+			scip/cons_benderslp.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_cardinality.o \
@@ -555,10 +559,12 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_completesol.o \
+			scip/heur_conflictdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
+			scip/heur_farkasdiving.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
@@ -617,7 +623,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_dualcomp.o\
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
-			scip/presol_implfree.o\
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_qpkktref.o \
@@ -642,6 +647,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
+			scip/reader_cor.o \
 			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
@@ -655,7 +661,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_pbm.o \
 			scip/reader_ppm.o \
 			scip/reader_rlp.o \
+			scip/reader_smps.o \
 			scip/reader_sol.o \
+			scip/reader_sto.o \
+			scip/reader_tim.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
 			scip/sepa_cgmip.o \
@@ -674,7 +683,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
-			scip/table_default.o \
+			scip/table_default.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
@@ -682,6 +691,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/bandit_epsgreedy.o \
 			scip/bandit_exp3.o \
 			scip/bandit_ucb.o \
+			scip/benders.o \
+			scip/benderscut.o \
+			scip/bendersdefcuts.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
@@ -706,6 +718,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
+			scip/misc_linear.o \
 			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
@@ -720,7 +733,48 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/relax.o \
 			scip/reopt.o \
 			scip/retcode.o \
-			scip/scip.o \
+			scip/scip_benders.o \
+			scip/scip_branch.o \
+			scip/scip_compr.o \
+			scip/scip_concurrent.o \
+			scip/scip_conflict.o \
+			scip/scip_cons.o \
+			scip/scip_copy.o \
+			scip/scip_cut.o \
+			scip/scip_datastructures.o\
+			scip/scip_debug.o \
+			scip/scip_dialog.o \
+			scip/scip_disp.o \
+			scip/scip_event.o \
+			scip/scip_expr.o \
+			scip/scip_general.o \
+			scip/scip_heur.o \
+			scip/scip_lp.o \
+			scip/scip_mem.o \
+			scip/scip_message.o \
+			scip/scip_nlp.o \
+			scip/scip_nodesel.o \
+			scip/scip_nonlinear.o \
+			scip/scip_numerics.o \
+			scip/scip_param.o \
+			scip/scip_presol.o \
+			scip/scip_pricer.o \
+			scip/scip_prob.o \
+			scip/scip_probing.o \
+			scip/scip_prop.o \
+			scip/scip_randnumgen.o \
+			scip/scip_reader.o \
+			scip/scip_relax.o \
+			scip/scip_reopt.o \
+			scip/scip_sepa.o \
+			scip/scip_sol.o \
+			scip/scip_solve.o \
+			scip/scip_solvingstats.o \
+			scip/scip_table.o \
+			scip/scip_timing.o \
+			scip/scip_tree.o \
+			scip/scip_validation.o \
+			scip/scip_var.o \
 			scip/scip_bandit.o \
 			scip/scipbuildflags.o \
 			scip/scipcoreplugins.o \
@@ -778,7 +832,9 @@ SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
 
 OBJSCIPLIBSHORTNAME=	objscip
 OBJSCIPLIBNAME	=	$(OBJSCIPLIBSHORTNAME)-$(VERSION)
-OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
+OBJSCIPLIBOBJ	=	objscip/objbenders.o \
+			objscip/objbenderscut.o \
+			objscip/objbranchrule.o \
 			objscip/objconshdlr.o \
 			objscip/objdialog.o \
 			objscip/objdisp.o \
@@ -1522,7 +1578,7 @@ endif
 endif
 ifneq ($(WORHP),true)
 ifneq ($(WORHP),false)
-		$(error invalid WORHP flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+		$(error invalid WORHP flag selected: WORHP=$(WORHP). Possible options are: true false)
 endif
 endif
 ifneq ($(READLINE),true)

@@ -78,7 +78,7 @@ CLUSTERNODES    =       all
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	5.0.1
+SCIP_VERSION	=	6.0.0
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -134,7 +134,6 @@ IPOPTOPT	=	opt
 WORHPOPT	=	opt
 LPSCHECK        =	false
 GAMS		=	false
-SPX_LEGACY  	=	false
 
 # compiler and linker parameters
 CC		=	gcc
@@ -320,7 +319,9 @@ endif
 ifeq ($(PARASCIP),false)
 FLAGS		+=	-DNPARASCIP
 else
+ifeq ($(FILTERSQP),true)
 LDFLAGS 	+=	-lpthread
+endif
 endif
 
 #-----------------------------------------------------------------------------
@@ -359,9 +360,12 @@ endif
 #-------------------------------------------------------
 # define flags for XPRESS
 ifeq ($(LPS),xprs)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR) $(LINKCC_l)xprs.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
-LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+ifneq ($(LINKRPATH),)
+LPSLDFLAGS	+=	$(LINKRPATH)$(dir $(realpath $(SCIPREALPATH)/$(LIBDIR)/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)))
+endif
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
 #-------------------------------------------------------

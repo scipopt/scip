@@ -6,6 +6,8 @@
 # Note: TESTSET, GITHASH, etc are read from the environment, see
 # jenkins_check_results.sh
 
+echo "This is jenkins_failcheck.sh running."
+
 sleep 5
 
 #################################
@@ -155,6 +157,11 @@ BEGIN{printLines=0;}
 
 /^SCIP version/ {printLines=1;}
 printLines > 0 && /^$/ {printLines+=1;}
+
+# UG does not have blank lines after the header.
+printLines > 0 && /^Default LC presolving/ {exit 0;}
+
+# the third blank line marks the end of the header
 printLines > 0 {print $0}
 {
     if ( printLines == 3 ){

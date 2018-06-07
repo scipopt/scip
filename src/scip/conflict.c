@@ -9,10 +9,9 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
@@ -113,34 +112,51 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
+#include "lpi/lpi.h"
 #include "scip/clock.h"
-#include "scip/visual.h"
-#include "scip/history.h"
-#include "scip/paramset.h"
-#include "scip/lp.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/tree.h"
-#include "scip/sol.h"
-#include "scip/scip.h"
 #include "scip/conflict.h"
+#include "scip/conflictstore.h"
 #include "scip/cons.h"
-#include "scip/prop.h"
+#include "scip/cons_linear.h"
+#include "scip/cuts.h"
+#include "scip/history.h"
+#include "scip/lp.h"
 #include "scip/presolve.h"
-#include "scip/debug.h"
+#include "scip/prob.h"
+#include "scip/prop.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/cuts.h"
-#include "lpi/lpi.h"
-
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_paramset.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_var.h"
+#include "scip/set.h"
+#include "scip/sol.h"
 #include "scip/struct_conflict.h"
-#include "scip/cons_linear.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_tree.h"
+#include "scip/struct_var.h"
+#include "scip/tree.h"
+#include "scip/var.h"
+#include "scip/visual.h"
+#include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h> /*lint --e{766}*/
+#endif
+
+
 
 #define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
 #define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
@@ -260,7 +276,6 @@ void confgraphAddBdchg(
    char depth[SCIP_MAXSTRLEN];
    int col;
 
-
    switch( SCIPbdchginfoGetChgtype(bdchginfo) )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
@@ -378,8 +393,9 @@ SCIP_RETCODE SCIPconflicthdlrCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a conflict handler */
-SCIP_RETCODE SCIPconflicthdlrCreate(
+/** internal method for creating a conflict handler */
+static
+SCIP_RETCODE doConflicthdlrCreate(
    SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -405,6 +421,8 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    assert(desc != NULL);
 
    SCIP_ALLOC( BMSallocMemory(conflicthdlr) );
+   BMSclearMemory(*conflicthdlr);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conflicthdlr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conflicthdlr)->desc, desc, strlen(desc)+1) );
    (*conflicthdlr)->priority = priority;
@@ -430,6 +448,37 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    return SCIP_OKAY;
 }
 
+/** creates a conflict handler */
+SCIP_RETCODE SCIPconflicthdlrCreate(
+   SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of conflict handler */
+   const char*           desc,               /**< description of conflict handler */
+   int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to
+                                              *   copy your plugin into sub-SCIPs */
+   SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol)),/**< solving process initialization method of conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol)),/**< solving process deinitialization method of conflict handler */
+   SCIP_DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+
+   SCIP_CALL_FINALLY( doConflicthdlrCreate(conflicthdlr, set, messagehdlr, blkmem, name, desc, priority,
+      conflictcopy, conflictfree, conflictinit, conflictexit, conflictinitsol, conflictexitsol, conflictexec,
+      conflicthdlrdata), (void) SCIPconflicthdlrFree(conflicthdlr, set) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of conflict handler */
 SCIP_RETCODE SCIPconflicthdlrFree(
    SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
@@ -437,7 +486,8 @@ SCIP_RETCODE SCIPconflicthdlrFree(
    )
 {
    assert(conflicthdlr != NULL);
-   assert(*conflicthdlr != NULL);
+   if( *conflicthdlr == NULL )
+      return SCIP_OKAY;
    assert(!(*conflicthdlr)->initialized);
    assert(set != NULL);
 
@@ -450,8 +500,8 @@ SCIP_RETCODE SCIPconflicthdlrFree(
    SCIPclockFree(&(*conflicthdlr)->conflicttime);
    SCIPclockFree(&(*conflicthdlr)->setuptime);
 
-   BMSfreeMemoryArray(&(*conflicthdlr)->name);
-   BMSfreeMemoryArray(&(*conflicthdlr)->desc);
+   BMSfreeMemoryArrayNull(&(*conflicthdlr)->name);
+   BMSfreeMemoryArrayNull(&(*conflicthdlr)->desc);
    BMSfreeMemory(conflicthdlr);
 
    return SCIP_OKAY;
@@ -588,7 +638,6 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-
    assert(conflicthdlr != NULL);
    assert(set != NULL);
    assert(bdchginfos != NULL || nbdchginfos == 0);
@@ -1359,16 +1408,18 @@ SCIP_Real calcBdchgScore(
    if( proofcoef > 0.0 )
    {
       if( col != NULL && SCIPcolGetNNonz(col) > 0 )
-         score += set->conf_uplockscorefac * (SCIP_Real)(SCIPvarGetNLocksUp(var))/(SCIP_Real)(SCIPcolGetNNonz(col));
+         score += set->conf_uplockscorefac
+            * (SCIP_Real)(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL))/(SCIP_Real)(SCIPcolGetNNonz(col));
       else
-         score += set->conf_uplockscorefac * SCIPvarGetNLocksUp(var);
+         score += set->conf_uplockscorefac * SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
    }
    else
    {
       if( col != NULL && SCIPcolGetNNonz(col) > 0 )
-         score += set->conf_downlockscorefac * (SCIP_Real)(SCIPvarGetNLocksDown(var))/(SCIP_Real)(SCIPcolGetNNonz(col));
+         score += set->conf_downlockscorefac
+            * (SCIP_Real)(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL))/(SCIP_Real)(SCIPcolGetNNonz(col));
       else
-         score += set->conf_downlockscorefac * SCIPvarGetNLocksDown(var);
+         score += set->conf_downlockscorefac * SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
    }
 
    return score;
@@ -1958,7 +2009,6 @@ SCIP_RETCODE conflictInsertConflictset(
       }
 
       /**@todo like in sepastore.c: calculate overlap between conflictsets -> large overlap reduces score */
-
    }
 
    /* insert conflictset into the sorted conflictsets array */
@@ -5087,7 +5137,6 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
    conflict->conflictset->conflicttype = conftype;
    conflict->conflictset->usescutoffbound = usescutoffbound;
 
-
    return SCIP_OKAY;
 }
 
@@ -5114,6 +5163,7 @@ SCIP_RETCODE conflictAnalyze(
 {
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_BDCHGINFO** firstuips;
+   SCIP_CONFTYPE conftype;
    int nfirstuips;
    int focusdepth;
    int currentdepth;
@@ -5366,8 +5416,14 @@ SCIP_RETCODE conflictAnalyze(
    /* free the temporary memory */
    SCIPsetFreeBufferArray(set, &firstuips);
 
+   /* store last conflict type */
+   conftype = conflict->conflictset->conflicttype;
+
    /* clear the conflict candidate queue and the conflict set */
    conflictClear(conflict);
+
+   /* restore last conflict type */
+   conflict->conflictset->conflicttype = conftype;
 
    return SCIP_OKAY;
 }
@@ -5838,7 +5894,6 @@ SCIP_RETCODE addCand(
    /* calculate the increase in the proof's activity */
    proofactdelta = (newbound - oldbound)*proofcoef;
    assert(proofactdelta > 0.0);
-
 
    /* calculate score for undoing the bound change */
    score = calcBdchgScore(prooflhs, proofact, proofactdelta, proofcoef, depth, currentdepth, var, set);
@@ -6960,7 +7015,6 @@ SCIP_RETCODE tightenDualproof(
    else
    {
       SCIP_CALL( proofsetCreate(&proofset, blkmem) );
-      SCIP_CALL( conflictInsertProofset(conflict, set, proofset) );
    }
 
    /* start with a proofset containing all variables with a non-zero coefficient in the dual proof */
@@ -7038,14 +7092,29 @@ SCIP_RETCODE tightenDualproof(
       SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
       assert(proofset->rhs - getMaxActivity(transprob, proofset->vals, proofset->inds, proofset->nnz, NULL, NULL) < eps);
 #endif
-      proofsetClear(proofset);
+      if( initialproof )
+      {
+         proofsetClear(proofset);
+      }
+      else
+      {
+         proofsetFree(&proofset, blkmem);
+      }
    }
-   else if( nchgcoefs > 0 )
+   else
    {
-      if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
-         proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
-      else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
-         proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+      if( !initialproof )
+      {
+         SCIP_CALL( conflictInsertProofset(conflict, set, proofset) );
+      }
+
+      if( nchgcoefs > 0 )
+      {
+         if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+            proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
+         else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+            proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+      }
    }
 
    return SCIP_OKAY;
@@ -7670,7 +7739,6 @@ SCIP_RETCODE conflictAnalyzeLP(
     */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &curvarlbs, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &curvarubs, nvars) );
-
 
    /* get current bounds and current positions in lb/ubchginfos arrays of variables */
    valid = TRUE;

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -83,8 +83,9 @@ SCIP_RETCODE SCIPsepaCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a separator */
-SCIP_RETCODE SCIPsepaCreate(
+/** internal method for creating a separator */
+static
+SCIP_RETCODE doSepaCreate(
    SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -119,6 +120,8 @@ SCIP_RETCODE SCIPsepaCreate(
    assert(sepaexeclp != NULL || sepaexecsol != NULL);
 
    SCIP_ALLOC( BMSallocMemory(sepa) );
+   BMSclearMemory(*sepa);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*sepa)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*sepa)->desc, desc, strlen(desc)+1) );
    (*sepa)->priority = priority;
@@ -180,6 +183,45 @@ SCIP_RETCODE SCIPsepaCreate(
    return SCIP_OKAY;
 }
 
+/** creates a separator */
+SCIP_RETCODE SCIPsepaCreate(
+   SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of separator */
+   const char*           desc,               /**< description of separator */
+   int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling separator */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
+   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
+   SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
+   SCIP_SEPADATA*        sepadata            /**< separator data */
+   )
+{
+   assert(sepa != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(freq >= -1);
+   assert(0.0 <= maxbounddist && maxbounddist <= 1.0);
+   assert(sepaexeclp != NULL || sepaexecsol != NULL);
+
+   SCIP_CALL_FINALLY( doSepaCreate(sepa, set, messagehdlr, blkmem, name, desc, priority, freq, maxbounddist,
+      usessubscip, delay, sepacopy, sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp,
+      sepaexecsol, sepadata), (void) SCIPsepaFree(sepa, set) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of separator */
 SCIP_RETCODE SCIPsepaFree(
    SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
@@ -187,7 +229,8 @@ SCIP_RETCODE SCIPsepaFree(
    )
 {
    assert(sepa != NULL);
-   assert(*sepa != NULL);
+   if( *sepa == NULL )
+      return SCIP_OKAY;
    assert(!(*sepa)->initialized);
    assert(set != NULL);
 
@@ -199,8 +242,8 @@ SCIP_RETCODE SCIPsepaFree(
 
    SCIPclockFree(&(*sepa)->sepaclock);
    SCIPclockFree(&(*sepa)->setuptime);
-   BMSfreeMemoryArray(&(*sepa)->name);
-   BMSfreeMemoryArray(&(*sepa)->desc);
+   BMSfreeMemoryArrayNull(&(*sepa)->name);
+   BMSfreeMemoryArrayNull(&(*sepa)->desc);
    BMSfreeMemory(sepa);
 
    return SCIP_OKAY;

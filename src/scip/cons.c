@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1983,8 +1983,9 @@ SCIP_RETCODE SCIPconshdlrCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a constraint handler */
-SCIP_RETCODE SCIPconshdlrCreate(
+/** internal method for creating a constraint handler */
+static
+SCIP_RETCODE doConshdlrCreate(
    SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -2065,6 +2066,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    assert((consgetvars != NULL) == (consgetnvars != NULL));
 
    SCIP_ALLOC( BMSallocMemory(conshdlr) );
+   BMSclearMemory(*conshdlr);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conshdlr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conshdlr)->desc, desc, strlen(desc)+1) );
    (*conshdlr)->sepapriority = sepapriority;
@@ -2106,7 +2109,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consgetvars = consgetvars;
    (*conshdlr)->consgetnvars = consgetnvars;
    (*conshdlr)->conshdlrdata = conshdlrdata;
-   (*conshdlr)->consgetdivebdchgs = NULL;
+   (*conshdlr)->consgetdivebdchgs = consgetdivebdchgs;
    (*conshdlr)->conss = NULL;
    (*conshdlr)->consssize = 0;
    (*conshdlr)->nconss = 0;
@@ -2257,6 +2260,81 @@ SCIP_RETCODE SCIPconshdlrCreate(
          (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740 !e713*/
 
    return SCIP_OKAY;
+}
+
+/** creates a constraint handler */
+SCIP_RETCODE SCIPconshdlrCreate(
+   SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of constraint handler */
+   const char*           desc,               /**< description of constraint handler */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility (and propagation) */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+   SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the constraint handler's presolving method */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
+   SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
+   SCIP_DECL_CONSINITPRE ((*consinitpre)),   /**< presolving initialization method of constraint handler */
+   SCIP_DECL_CONSEXITPRE ((*consexitpre)),   /**< presolving deinitialization method of constraint handler */
+   SCIP_DECL_CONSINITSOL ((*consinitsol)),   /**< solving process initialization method of constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
+   SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
+   SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
+   SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
+   SCIP_DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
+   SCIP_DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   SCIP_DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
+   SCIP_DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
+   SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
+   SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars)),   /**< variable deletion method */
+   SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
+   SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
+   SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(conssepalp != NULL || conssepasol != NULL || sepafreq == -1);
+   assert(consprop != NULL || propfreq == -1);
+   assert(eagerfreq >= -1);
+   assert(!needscons || ((conshdlrcopy == NULL) == (conscopy == NULL)));
+
+   SCIP_CALL_FINALLY( doConshdlrCreate(conshdlr, set, messagehdlr, blkmem, name, desc, sepapriority, enfopriority,
+      checkpriority, sepafreq, propfreq, eagerfreq, maxprerounds, delaysepa, delayprop, needscons, proptiming,
+      presoltiming, conshdlrcopy, consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
+      consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck,
+      consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars,
+      consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
+      (void) SCIPconshdlrFree(conshdlr, set) );
+
+   return SCIP_OKAY;
 } /*lint !e715*/
 
 /** calls destructor and frees memory of constraint handler */
@@ -2266,7 +2344,8 @@ SCIP_RETCODE SCIPconshdlrFree(
    )
 {
    assert(conshdlr != NULL);
-   assert(*conshdlr != NULL);
+   if( *conshdlr == NULL )
+      return SCIP_OKAY;
    assert(!(*conshdlr)->initialized);
    assert((*conshdlr)->nconss == 0);
    assert(set != NULL);
@@ -2288,8 +2367,8 @@ SCIP_RETCODE SCIPconshdlrFree(
    SCIPclockFree(&(*conshdlr)->presoltime);
    SCIPclockFree(&(*conshdlr)->setuptime);
 
-   BMSfreeMemoryArray(&(*conshdlr)->name);
-   BMSfreeMemoryArray(&(*conshdlr)->desc);
+   BMSfreeMemoryArrayNull(&(*conshdlr)->name);
+   BMSfreeMemoryArrayNull(&(*conshdlr)->desc);
    BMSfreeMemoryArrayNull(&(*conshdlr)->conss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->initconss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->sepaconss);
@@ -2531,7 +2610,6 @@ SCIP_RETCODE SCIPconshdlrInitpre(
 
       for( c = 0; c < conshdlr->nconss; ++c )
       {
-
          /**@todo should only active constraints be added to the initconss array? at least cons->active is asserted in
           *       conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c])
           */
@@ -3946,7 +4024,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
 
    if( conshdlr->conspresol != NULL
       && (!conshdlr->needscons || conshdlr->nactiveconss > 0)
-      && (conshdlr->maxprerounds == -1 || nrounds < conshdlr->maxprerounds ) )
+      && (conshdlr->maxprerounds == -1 || conshdlr->npresolcalls < conshdlr->maxprerounds ) )
    {
       SCIPsetDebugMsg(set, "presolving %d constraints of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
 
@@ -4087,7 +4165,7 @@ SCIP_RETCODE SCIPconshdlrLockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
-   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, +1, 0) );
+   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, SCIP_LOCKTYPE_MODEL, +1, 0) );
 
    return SCIP_OKAY;
 }
@@ -4102,7 +4180,7 @@ SCIP_RETCODE SCIPconshdlrUnlockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
-   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, -1, 0) );
+   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, SCIP_LOCKTYPE_MODEL, -1, 0) );
 
    return SCIP_OKAY;
 }
@@ -5755,6 +5833,8 @@ SCIP_RETCODE SCIPconsCreate(
    SCIP_Bool             deleteconsdata      /**< has the constraint data to be deleted if constraint is freed? */
    )
 {
+   int i;
+
    assert(cons != NULL);
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -5782,8 +5862,6 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->activedepth = -2;
    (*cons)->validdepth = (local ? -1 : 0);
    (*cons)->age = 0.0;
-   (*cons)->nlockspos = 0;
-   (*cons)->nlocksneg = 0;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
@@ -5821,6 +5899,12 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updateunmarkpropagate = FALSE;
    (*cons)->updatefree = FALSE;
    (*cons)->updateactfocus = FALSE;
+
+   for( i = 0; i < NLOCKTYPES; i++ )
+   {
+      (*cons)->nlockspos[i] = 0;
+      (*cons)->nlocksneg[i] = 0;
+   }
 
    /* capture constraint */
    SCIPconsCapture(*cons);
@@ -6489,11 +6573,11 @@ SCIP_RETCODE SCIPconsSetChecked(
          {
             if( cons->check )
             {
-               SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
+               SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, +1, 0) );
             }
             else
             {
-               SCIP_CALL( SCIPconsAddLocks(cons, set, -1, 0) );
+               SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_MODEL, -1, 0) );
             }
          }
 
@@ -6962,7 +7046,6 @@ SCIP_RETCODE SCIPconsUnmarkPropagate(
    }
 
    return SCIP_OKAY;
-
 }
 
 /** adds given value to age of constraint, but age can never become negative;
@@ -7153,10 +7236,11 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    return SCIP_OKAY;
 }
 
-/** adds given values to lock status of the constraint and updates the rounding locks of the involved variables */
+/** adds given values to lock status of the constraint and updates the locks of the given locktype of the involved variables */
 SCIP_RETCODE SCIPconsAddLocks(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LOCKTYPE         locktype,           /**< type of variable locks */
    int                   nlockspos,          /**< increase in number of rounding locks for constraint */
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
@@ -7169,29 +7253,30 @@ SCIP_RETCODE SCIPconsAddLocks(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert(cons->nlockspos >= 0);
-   assert(cons->nlocksneg >= 0);
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert(cons->nlockspos[locktype] >= 0);
+   assert(cons->nlocksneg[locktype] >= 0);
    assert(-2 <= nlockspos && nlockspos <= 2);
    assert(-2 <= nlocksneg && nlocksneg <= 2);
    assert(set != NULL);
    assert(cons->scip == set->scip);
 
    /* update the rounding locks */
-   oldnlockspos = cons->nlockspos;
-   oldnlocksneg = cons->nlocksneg;
-   cons->nlockspos += nlockspos;
-   cons->nlocksneg += nlocksneg;
-   assert(cons->nlockspos >= 0);
-   assert(cons->nlocksneg >= 0);
+   oldnlockspos = cons->nlockspos[locktype];
+   oldnlocksneg = cons->nlocksneg[locktype];
+   cons->nlockspos[locktype] += nlockspos;
+   cons->nlocksneg[locktype] += nlocksneg;
+   assert(cons->nlockspos[locktype] >= 0);
+   assert(cons->nlocksneg[locktype] >= 0);
 
    /* check, if the constraint switched from unlocked to locked, or from locked to unlocked */
-   updlockpos = (int)(cons->nlockspos > 0) - (int)(oldnlockspos > 0);
-   updlockneg = (int)(cons->nlocksneg > 0) - (int)(oldnlocksneg > 0);
+   updlockpos = (int)(cons->nlockspos[locktype] > 0) - (int)(oldnlockspos > 0);
+   updlockneg = (int)(cons->nlocksneg[locktype] > 0) - (int)(oldnlocksneg > 0);
 
    /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked */
    if( updlockpos != 0 || updlockneg != 0 )
    {
-      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, updlockpos, updlockneg) );
+      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, locktype, updlockpos, updlockneg) );
    }
 
    return SCIP_OKAY;
@@ -7974,6 +8059,11 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsLocked
 #undef SCIPconsGetNLocksPos
 #undef SCIPconsGetNLocksNeg
+#undef SCIPconsIsLockedTypePos
+#undef SCIPconsIsLockedTypeNeg
+#undef SCIPconsIsLockedType
+#undef SCIPconsGetNLocksTypePos
+#undef SCIPconsGetNLocksTypeNeg
 #undef SCIPconsIsAdded
 #undef SCIPconsGetNUpgradeLocks
 
@@ -8306,7 +8396,7 @@ SCIP_Bool SCIPconsIsLockedPos(
 {
    assert(cons != NULL);
 
-   return (cons->nlockspos > 0);
+   return (cons->nlockspos[SCIP_LOCKTYPE_MODEL] > 0);
 }
 
 /** returns TRUE iff roundings for variables in constraint's negation are locked */
@@ -8316,7 +8406,7 @@ SCIP_Bool SCIPconsIsLockedNeg(
 {
    assert(cons != NULL);
 
-   return (cons->nlocksneg > 0);
+   return (cons->nlocksneg[SCIP_LOCKTYPE_MODEL] > 0);
 }
 
 /** returns TRUE iff roundings for variables in constraint or in constraint's negation are locked */
@@ -8326,7 +8416,7 @@ SCIP_Bool SCIPconsIsLocked(
 {
    assert(cons != NULL);
 
-   return (cons->nlockspos > 0 || cons->nlocksneg > 0);
+   return (cons->nlockspos[SCIP_LOCKTYPE_MODEL] > 0 || cons->nlocksneg[SCIP_LOCKTYPE_MODEL] > 0);
 }
 
 /** get number of times the roundings for variables in constraint are locked */
@@ -8336,7 +8426,7 @@ int SCIPconsGetNLocksPos(
 {
    assert(cons != NULL);
 
-   return cons->nlockspos;
+   return cons->nlockspos[SCIP_LOCKTYPE_MODEL];
 }
 
 /** get number of times the roundings for variables in constraint's negation are locked */
@@ -8346,7 +8436,67 @@ int SCIPconsGetNLocksNeg(
 {
    assert(cons != NULL);
 
-   return cons->nlocksneg;
+   return cons->nlocksneg[SCIP_LOCKTYPE_MODEL];
+}
+
+/** returns TRUE iff roundings of the given locktype for variables in constraint are locked */
+SCIP_Bool SCIPconsIsLockedTypePos(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+
+   return (cons->nlockspos[locktype] > 0);
+}
+
+/** returns TRUE iff roundings of the given locktype for variables in constraint are locked */
+SCIP_Bool SCIPconsIsLockedTypeNeg(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+
+   return (cons->nlocksneg[locktype] > 0);
+}
+
+/** returns TRUE iff roundings of given locktype for variables in constraint or in constraint's negation are locked */
+SCIP_Bool SCIPconsIsLockedType(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+
+   return (cons->nlockspos[locktype] > 0 || cons->nlocksneg[locktype] > 0);
+}
+
+/** get number of times the roundings of given locktype for variables in constraint are locked */
+int SCIPconsGetNLocksTypePos(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+
+   return cons->nlockspos[locktype];
+}
+
+/** get number of times the roundings of given locktype for variables in constraint's negation are locked */
+int SCIPconsGetNLocksTypeNeg(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   )
+{
+   assert(cons != NULL);
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+
+   return cons->nlocksneg[locktype];
 }
 
 /** returns if the constraint was already added to a SCIP instance */

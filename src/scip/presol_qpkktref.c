@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -76,19 +76,29 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-
-#include "scip/presol_qpkktref.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_linear.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
+#include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
 #include "scip/cons_sos1.h"
-
+#include "scip/cons_varbound.h"
+#include "scip/presol_qpkktref.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_presol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PRESOL_NAME            "qpkktref"
 #define PRESOL_DESC            "adds KKT conditions to (mixed-binary) quadratic programs"
@@ -356,7 +366,6 @@ SCIP_RETCODE createKKTComplementarityBinary(
    /* release slack variable */
    SCIP_CALL( SCIPreleaseVar(scip, &slackbin1) );
 
-
    /* create second slack variable associated to binary constraint; domain [0, inf] */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_slackbin2", SCIPvarGetName(var));
    SCIP_CALL( SCIPcreateVarBasic(scip, &slackbin2, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -499,7 +508,6 @@ SCIP_RETCODE createKKTDualCons(
       /* add dual constraint to array for later use */
       dualconss[(*ndualconss)++] = *dualcons;
 
-
       /* add dual variables to dual constraints and create complementarity constraints; binary variables have to be
        * treated in a different way */
       if( SCIPvarIsBinary(var) )
@@ -639,7 +647,6 @@ SCIP_RETCODE presolveAddKKTLinearCons(
          }
       }
       assert( duallin != NULL );
-
 
       /* loop through variables of linear constraint */
       for( j = 0; j < nvars; ++j )
@@ -1540,6 +1547,12 @@ SCIP_RETCODE checkConsQuadraticProblem(
    int maydecrease;
    int objind = -1;
 
+   SCIP_VAR* origObjVar;
+   SCIP_Real origObjConstant = 0.0;
+   SCIP_Real origObjScalar = 1.0;
+   SCIP_Real origObjUb;
+   SCIP_Real origObjLb;
+
    *objrhs = 0.0;
    *scale = 0.0;
    *isqp = FALSE;
@@ -1643,15 +1656,19 @@ SCIP_RETCODE checkConsQuadraticProblem(
                || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
              )
       )
-      *scale = -1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
-                           * has coefficient -1 */
+   {
+      *scale = -coef; /* value by which we have to scale the quadratic constraint such that the objective variable
+                       * has coefficient -1 */
+   }
    else if( SCIPisFeasNegative(scip, obj)
              && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
                   || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
                 )
            )
-      *scale = 1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
-                          * has coefficient 1 */
+   {
+      *scale = coef; /* value by which we have to scale the quadratic constraint such that the objective variable
+                      * has coefficient 1 */
+   }
    else
       return SCIP_OKAY;
    assert( *objvar != NULL && ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
@@ -1664,15 +1681,55 @@ SCIP_RETCODE checkConsQuadraticProblem(
     * whether 'objvar' is part of a linear constraint can be deduced from the variable locks */
    if( SCIPisFeasEQ(scip, quadlhs, quadrhs) )
    {
-      if( SCIPvarGetNLocksDown(*objvar) != 1 || SCIPvarGetNLocksUp(*objvar) != 1 )
+      if( SCIPvarGetNLocksDownType(*objvar, SCIP_LOCKTYPE_MODEL) != 1
+         || SCIPvarGetNLocksUpType(*objvar, SCIP_LOCKTYPE_MODEL) != 1 )
          return SCIP_OKAY;
    }
    else
    {
       assert( SCIPisInfinity(scip, -quadlhs) || SCIPisInfinity(scip, quadrhs) );
 
-      if( ( SCIPvarGetNLocksDown(*objvar) != 1 || SCIPvarGetNLocksUp(*objvar) != 0 )
-           && ( SCIPvarGetNLocksDown(*objvar) != 0 || SCIPvarGetNLocksUp(*objvar) != 1 ) )
+      if( ( SCIPvarGetNLocksDownType(*objvar, SCIP_LOCKTYPE_MODEL) != 1
+            || SCIPvarGetNLocksUpType(*objvar, SCIP_LOCKTYPE_MODEL) != 0 )
+         && ( SCIPvarGetNLocksDownType(*objvar, SCIP_LOCKTYPE_MODEL) != 0
+            || SCIPvarGetNLocksUpType(*objvar, SCIP_LOCKTYPE_MODEL) != 1 ) )
+         return SCIP_OKAY;
+   }
+
+   /* check bounds of original objective variable */
+   origObjVar = lintermvars[objind];
+   SCIP_CALL( SCIPvarGetOrigvarSum(&origObjVar, &origObjScalar, &origObjConstant) );
+   if (origObjVar == NULL)
+      return SCIP_OKAY;
+
+   if (SCIPisFeasPositive(scip, origObjScalar))
+   {
+	   origObjUb = SCIPvarGetUbOriginal(origObjVar);
+	   origObjLb = SCIPvarGetLbOriginal(origObjVar);
+   }
+   else
+   {
+	   origObjUb = -SCIPvarGetLbOriginal(origObjVar);
+	   origObjLb = -SCIPvarGetUbOriginal(origObjVar);
+       origObjScalar *= -1;
+       origObjConstant *= -1;
+   }
+
+   /* not every optimal solution of the problem is a KKT point if the objective variable is bounded */
+   if( SCIPisFeasPositive(scip, obj))
+   {
+	  if ( !SCIPisInfinity(scip, -origObjLb))
+	     return SCIP_OKAY;
+	  if ( !SCIPisInfinity(scip, origObjUb)
+		  && !SCIPisFeasLE(scip, quadrhs/coef, (origObjUb-origObjConstant)/origObjScalar) )
+	     return SCIP_OKAY;
+   }
+   else
+   {
+      if ( !SCIPisInfinity(scip, origObjUb) )
+         return SCIP_OKAY;
+      if ( !SCIPisInfinity(scip, -origObjLb)
+            && !SCIPisFeasGE(scip, quadlhs/coef, (origObjLb-origObjConstant)/origObjScalar) )
          return SCIP_OKAY;
    }
 
@@ -1871,7 +1928,6 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
       }
    }
 
-
    /* add KKT constraints */
 
    /* set up hash map */
@@ -1935,7 +1991,6 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    SCIP_CALL( presolveAddKKTQuadLinearTerms(scip, objcons, lintermvars, lintermcoefs, nlintermvars, quadterms, nquadterms,
         varhash, objvar, scale, dualconss, &ndualconss, naddconss) );
 
-
    /* add/release objective constraint */
    SCIP_CALL( SCIPaddCons(scip, objcons) );
    SCIP_CALL( SCIPreleaseCons(scip, &objcons) );
@@ -1961,7 +2016,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    else
       SCIPdebugMsg(scip, "added the KKT conditions to the quadratic program\n");
 
-   /*SCIP_CALL( SCIPwriteTransProblem(scip, "trafoQP.lp", NULL, FALSE ) );*/
+   /* SCIP_CALL( SCIPwriteTransProblem(scip, "trafoQP.lp", NULL, FALSE ) ); */
 
    return SCIP_OKAY;
 }

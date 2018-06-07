@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -29,30 +29,31 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
-#include "scip/intervalarith.h"
-#include "scip/clock.h"
-#include "scip/nlp.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/sol.h"
-#include "scip/event.h"
-#include "scip/pub_lp.h"
-#include "scip/pub_message.h"
-#include "scip/pub_misc.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/pub_expr.h"
 #include "nlpi/struct_expr.h"
+#include "scip/clock.h"
+#include "scip/event.h"
+#include "scip/intervalarith.h"
+#include "scip/nlp.h"
+#include "scip/primal.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
+#include "scip/sol.h"
 #include "scip/struct_nlp.h"
-/* to get value of parameter "nlp/solver" and nlpis array and to get access to set->lp for releasing a variable */
-#include "scip/struct_set.h"
 /* to get nlp, set, ... in event handling */
 #include "scip/struct_scip.h"
+/* to get value of parameter "nlp/solver" and nlpis array and to get access to set->lp for releasing a variable */
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/var.h"
+#include <string.h>
 
 /* defines */
 
@@ -4773,8 +4774,10 @@ SCIP_RETCODE nlpSolve(
             SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
 
             /* do a quick assert that variable bounds are satisfied, if feasibility is claimed */
-            assert(SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
-            assert(SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
+            assert(SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(nlp->vars[i])) ||
+               SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
+            assert(SCIPsetIsInfinity(set, SCIPvarGetUbLocal(nlp->vars[i])) ||
+               SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
 
             SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
             nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solval;  /*lint !e613 */
@@ -5049,7 +5052,7 @@ SCIP_RETCODE SCIPnlpInclude(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, set, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecNlp, NULL) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, eventhdlr) );
 

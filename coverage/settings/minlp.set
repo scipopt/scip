@@ -1,0 +1,9 @@
+# SCIP version 5.0.0
+
+# feasibility tolerance factor; for checking the feasibility of the best solution
+# [type: real, advanced: FALSE, range: [0,1.79769313486232e+308], default: 1]
+numerics/checkfeastolfac = 10
+
+# primal feasibility tolerance of LP solver
+# [type: real, advanced: FALSE, range: [1e-17,0.001], default: 1e-06]
+numerics/lpfeastol = 1e-08

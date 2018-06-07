@@ -24,18 +24,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/struct_matrix.h"
-#include "scip/pub_matrix.h"
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/pub_matrix.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_var.h"
+#include "scip/struct_matrix.h"
+#include <string.h>
 
 /*
  * private functions
@@ -416,7 +424,6 @@ SCIP_RETCODE calcActivityBounds(
 
       if( matrix->minactivityneginf[row] + matrix->minactivityposinf[row] > 0 )
          matrix->minactivity[row] = -SCIPinfinity(scip);
-
    }
 
    return SCIP_OKAY;
@@ -488,7 +495,14 @@ SCIP_RETCODE SCIPmatrixCreate(
             /* increment number of supported constraints */
             nconss += nconshdlrconss;
          }
-
+/* disabled because some of the presolvers can currently only handle 1-1 row-cons relationships */
+#ifdef SCIP_DISABLED_CODE
+         else if( strcmp(conshdlrname, "linking") == 0 )
+         {
+            /* the linear representation of linking constraints involves two linear constraints */
+            nconss += 2* nconshdlrconss;
+         }
+#endif
          /* increment number of supported and unsupported constraints */
          nconssall += nconshdlrconss;
       }
@@ -525,8 +539,8 @@ SCIP_RETCODE SCIPmatrixCreate(
     */
    for( i = nvars - 1; i >= 0; --i )
    {
-      nnonzstmp += SCIPvarGetNLocksDown(vars[i]);
-      nnonzstmp += SCIPvarGetNLocksUp(vars[i]);
+      nnonzstmp += SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
+      nnonzstmp += SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
    }
 
    /* do nothing if we have no entries */
@@ -758,6 +772,74 @@ SCIP_RETCODE SCIPmatrixCreate(
             SCIPfreeBufferArray(scip, &consvars);
          }
       }
+/* the code below is correct. However, it needs to be disabled
+ * because some of the presolvers can currently only handle 1-1 row-cons relationships,
+ * while the linking constraint handler requires a representation as 2 linear constraints.
+ */
+#ifdef SCIP_DISABLED_CODE
+      else if( strcmp(conshdlrname, "linking") == 0 )
+      {
+         if( nconshdlrconss > 0 )
+         {
+            SCIP_VAR** consvars;
+            SCIP_VAR** curconsvars;
+            SCIP_Real* consvals;
+            int* curconsvals;
+            int valssize;
+            int nconsvars;
+            int j;
+
+            valssize = 100;
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, valssize) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, valssize) );
+
+            for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
+            {
+               cons = conshdlrconss[c];
+               assert(SCIPconsIsTransformed(cons));
+
+               /* get constraint variables and their amount */
+               SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
+               curconsvals = SCIPgetValsLinking(scip, cons);
+
+               /* SCIPgetBinVarsLinking returns the number of binary variables, but we also need the integer variable */
+               nconsvars++;
+
+               if( nconsvars > valssize )
+               {
+                  valssize = (int) (1.5 * nconsvars);
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, valssize) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, valssize) );
+               }
+
+               /* copy vars and vals for binary variables */
+               for( j = 0; j < nconsvars - 1; j++ )
+               {
+                  consvars[j] = curconsvars[j];
+                  consvals[j] = (SCIP_Real) curconsvals[j];
+               }
+
+               /* set final entry of vars and vals to the linking variable and its coefficient, respectively */
+               consvars[nconsvars - 1] = SCIPgetIntvarLinking(scip, cons);
+               consvals[nconsvars - 1] = -1;
+
+               SCIP_CALL( addConstraint(scip, matrix, consvars, consvals, nconsvars, 0.0, 0.0, nnonzstmp, &rowadded) );
+               SCIP_CALL( addConstraint(scip, matrix, consvars, NULL, nconsvars - 1, 1.0, 1.0, nnonzstmp, &rowadded) );
+
+               if(rowadded)
+               {
+                  assert(cnt < nconss);
+                  matrix->cons[cnt] = cons;
+                  matrix->cons[cnt + 1] = cons;
+                  cnt += 2;
+               }
+            }
+
+            SCIPfreeBufferArray(scip, &consvals);
+            SCIPfreeBufferArray(scip, &consvars);
+         }
+      }
+#endif
    }
    assert(matrix->nrows == cnt);
    assert(matrix->nrows <= nconss);
@@ -1542,7 +1624,7 @@ SCIP_Bool SCIPmatrixUplockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksUp(matrix->vars[col]) == matrix->nuplocks[col]);
+   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->nuplocks[col]);
 }
 
 /** get if conflicting downlocks of a specific variable present */
@@ -1554,5 +1636,5 @@ SCIP_Bool SCIPmatrixDownlockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksDown(matrix->vars[col]) == matrix->ndownlocks[col]);
+   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->ndownlocks[col]);
 }

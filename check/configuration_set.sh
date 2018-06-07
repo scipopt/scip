@@ -21,10 +21,12 @@
 # new environment variables defined by this script:
 #    SCIPPATH - absolute path to invocation working directory
 #    SETTINGSLIST - array of setting file basenames. script will abort if any of them doesn't exist
-#    SETCUTOFF - should optimal solution value (from solu file) be passed as objective limit?
 #    SOLUFILE - .solu file for this test set, for parsing optimal solution values
+#    HARDMEMLIMIT - hard memory limit for the optimization call, that is given to slurm or the shell
 #    DEBUGTOOLCMD - a debug tool command to use
 #    INSTANCELIST - list of all instances with complete path
+#    TIMELIMLIST - list of time limits for the individual instances
+#    TIMELIMLIST - list of hard time limits for the individual instances, that are given to slurm
 
 # function to capitalize a whole string
 function capitalize {
@@ -110,7 +112,7 @@ do
 done
 
 # if cutoff should be passed, solu file must exist
-if test $SETCUTOFF = 1
+if test $SETCUTOFF = 1 || test $SETCUTOFF = true
 then
     if test $SOLUFILE = ""
     then

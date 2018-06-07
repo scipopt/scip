@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -72,8 +72,17 @@
 #undef SCIP_DEBUG
 #endif
 
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+ * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
+ */
+#ifdef __GNUC__
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
 /* include SoPlex solver */
-#include "spxsolver.h"
+#include "soplex.h"
 
 /* define subversion for versions <= 1.5.0.1 */
 #ifndef SOPLEX_SUBVERSION
@@ -91,10 +100,15 @@
 
 /* get githash of SoPlex */
 #if (SOPLEX_VERSION >= 160)
+#if (SOPLEX_APIVERSION <= 5)
 #include "spxgithash.h"
 #endif
+#endif
 
+#define WITH_BOUNDFLIPPING
+#if (SOPLEX_APIVERSION <= 5)
 /* include SoPlex components */
+#include "spxsolver.h"
 #include "slufactor.h"
 #include "spxsteeppr.h"
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
@@ -106,9 +120,9 @@
 #include "spxmainsm.h"
 #include "spxequilisc.h"
 
-#define WITH_BOUNDFLIPPING
 #ifdef WITH_BOUNDFLIPPING
 #include "spxboundflippingrt.h"
+#endif
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
@@ -507,15 +521,15 @@ public:
 
    void setProbname(const char* probname)
    {
-      int len;
+      size_t len;
 
       assert(probname != NULL);
       if( m_probname != NULL )
          spx_free(m_probname);
-      len = (int) strlen(probname);
+
+      len = strlen(probname);
       spx_alloc(m_probname, len + 1);
-      strncpy(m_probname, probname, len); /*lint !e732*/
-      m_probname[len] = '\0';
+      memcpy(m_probname, probname, len + 1);
    }
 
    Real getObjLoLimit() const
@@ -1673,6 +1687,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 #endif
+}
+
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return FALSE;
 }
 
 /**@} */
@@ -3121,7 +3159,6 @@ SCIP_RETCODE lpiStrongbranch(
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n", itlim - spx->iterations());
             spx->setIterationLimit(itlim - spx->iterations());
-            assert( ! spx->hasPreStrongbranchingBasis() );
             spx->restorePreStrongbranchingBasis();
             fromparentbasis = true;
             error = false;
@@ -3195,10 +3232,9 @@ SCIP_RETCODE lpiStrongbranch(
 #else
             /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
              * pre-strong-branching basis and try again with reduced iteration limit */
-            else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
+            if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
             {
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->iterations());
-               assert( ! spx->hasPreStrongbranchingBasis() );
                spx->restorePreStrongbranchingBasis();
                spx->setIterationLimit(itlim - spx->iterations());
                error = false;
@@ -3405,11 +3441,20 @@ SCIP_Bool SCIPlpiWasSolved(
    return lpi->solved;
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSolFeasibility()\n");
@@ -3606,7 +3651,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->spx->basis().status() == SPxBasis::OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -3729,7 +3780,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
@@ -4080,19 +4135,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    )
 {
    int i;
-   int nCols;
-   int nRows;
+   int ncols;
+   int nrows;
 
    SCIPdebugMessage("calling SCIPlpiSetBase()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   nCols = lpi->spx->nCols();
-   nRows = lpi->spx->nRows();
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
 
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
@@ -4100,10 +4155,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    DataArray<SPxSolver::VarStatus>& m_colstat = lpi->spx->colStat();
    DataArray<SPxSolver::VarStatus>& m_rowstat = lpi->spx->rowStat();
 
-   m_colstat.reSize(nCols);
-   m_rowstat.reSize(nRows);
+   m_colstat.reSize(ncols);
+   m_rowstat.reSize(nrows);
 
-   for( i = 0; i < nRows; ++i )
+   for( i = 0; i < nrows; ++i )
    {
       assert( rstat != 0 ); /* for lint */
       switch( rstat[i] )
@@ -4127,7 +4182,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   for( i = 0; i < nCols; ++i )
+   for( i = 0; i < ncols; ++i )
    {
       assert( cstat != 0 ); /* for lint */
       switch( cstat[i] )
@@ -5327,7 +5382,6 @@ SCIP_Real SCIPlpiInfinity(
    SCIP_LPI*             /*lpi*/             /**< LP interface structure */
    )
 {
-   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiInfinity()\n");
 
    return soplex::infinity;
@@ -5339,7 +5393,6 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val
    )
 {
-   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
 
    return (val >= soplex::infinity);

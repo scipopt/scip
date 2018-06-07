@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,14 +20,38 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <stdio.h>
-#include "scip/scip.h"
-#include "scip/scipdefplugins.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/scipdefplugins.h"
 #include "scip/heur_lpface.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME             "lpface"
 #define HEUR_DESC             "LNS heuristic that searches the optimal LP face inside a sub-MIP"
@@ -173,7 +197,6 @@ SCIP_RETCODE fixVariables(
             if( SCIPvarIsIntegral(var) )
                ++fixingcounter;
          }
-
       }
    }
 
@@ -502,7 +525,6 @@ SCIP_RETCODE setSubscipParameters(
    SCIP*                 subscip             /**< data structure of the sub-problem */
    )
 {
-
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
@@ -794,6 +816,7 @@ SCIP_RETCODE setupSubscipLpface(
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
 
+      /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
    }
    else
@@ -813,8 +836,8 @@ SCIP_RETCODE setupSubscipLpface(
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
       SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
-
    }
+
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
 
@@ -1080,7 +1103,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolLpface)
    {
       /* free kept data structures first */
       SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
-
    }
 
    /* free the sub-SCIP data structure */
@@ -1259,7 +1281,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
       SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
    }
-
 
    /* retrieve the sub-SCIP from the heuristic data structure */
    if( heurdata->subscipdata->subscip != NULL )

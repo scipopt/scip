@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1071,8 +1071,8 @@ SCIP_RETCODE createCipFormulation(
 
          if( !dualreduction )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, binvars[i][nvars], 1, 1) );
-            SCIP_CALL( SCIPaddVarLocks(scip, vars[i][nvars], 1, 1) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, binvars[i][nvars], SCIP_LOCKTYPE_MODEL, 1, 1) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, vars[i][nvars], SCIP_LOCKTYPE_MODEL, 1, 1) );
          }
 
          /* add choice variable to set partitioning constraint */
@@ -1216,7 +1216,7 @@ SCIP_RETCODE readFile(
          /* get job cost */
          if( !getNextToken(cmininput) )
          {
-            syntaxError(scip, cmininput, "missing job duration\n");
+            syntaxError(scip, cmininput, "missing job cost\n");
             break;
          }
          assert(cmininput->haserror == FALSE);

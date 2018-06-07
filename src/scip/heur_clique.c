@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,15 +32,35 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/scip.h"
-#include "scip/pub_implics.h"
+#include "blockmemshell/memory.h"
+#include "scip/cons_logicor.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_locks.h"
-#include "scip/cons_logicor.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 
 #define HEUR_NAME             "clique"
@@ -143,6 +163,7 @@ static
 SCIP_RETCODE applyCliqueFixings(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< structure containing heurdata */
+   SCIP_Bool             enabledconflicts,   /**< was conflict analysis enabled before the heuristic call? */
    SCIP_VAR**            onefixvars,         /**< array to store all variables which are fixed to one in the cliques */
    SCIP_Shortbool*       onefixvals,         /**< array to store the values of all variables fixed to one in the cliques */
    int*                  nonefixvars,        /**< pointer to store the number of variables fixed to one */
@@ -396,7 +417,6 @@ SCIP_RETCODE applyCliqueFixings(
             {
                if( probingdepthofonefix > 0 )
                {
-
                   SCIP_CALL( SCIPbacktrackProbing(scip, probingdepthofonefix - 1) );
                   probingdepthofonefix = 0;
                   ++nbacktracks;
@@ -424,31 +444,32 @@ SCIP_RETCODE applyCliqueFixings(
                }
                if( *cutoff )
                {
-#ifndef NOCONFLICT
-                  SCIP_CONS* conflictcons;
-                  char consname[SCIP_MAXSTRLEN];
-
-                  /* create own conflict */
-                  (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%" SCIP_LONGINT_FORMAT "", SCIPgetNNodes(scip));
-
-                  /* get variables for the conflict */
-                  for( i = 0; i < *nonefixvars; ++i )
-                  {
-                     /* if the variable was fixed to 1 by the heuristic, get its negated variable */
-                     if( onefixvals[i] )
-                     {
-                        SCIP_CALL( SCIPgetNegatedVar(scip, onefixvars[i], &onefixvars[i]) );
-                     }
-                  }
-
                   SCIPdebugMsg(scip, "probing was infeasible after %d backtracks\n", nbacktracks);
+#ifndef NOCONFLICT
+                  if( enabledconflicts )
+                  {
+                     SCIP_CONS* conflictcons;
+                     char consname[SCIP_MAXSTRLEN];
 
-                  /* create conflict constraint */
-                  SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, *nonefixvars, onefixvars,
-                        FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-                  SCIP_CALL( SCIPaddConsNode(scip, SCIPgetFocusNode(scip), conflictcons, NULL) );
-                  SCIPdebugPrintCons(scip, conflictcons, NULL);
-                  SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
+                     /* create own conflict */
+                     (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%" SCIP_LONGINT_FORMAT "", SCIPgetNNodes(scip));
+
+                     /* get variables for the conflict */
+                     for( i = 0; i < *nonefixvars; ++i )
+                     {
+                        /* if the variable was fixed to 1 by the heuristic, get its negated variable */
+                        if( onefixvals[i] )
+                        {
+                           SCIP_CALL( SCIPgetNegatedVar(scip, onefixvars[i], &onefixvars[i]) );
+                        }
+                     }
+
+                     /* create conflict constraint */
+                     SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, *nonefixvars, onefixvars,
+                           FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+                     SCIP_CALL( SCIPaddConflict(scip, SCIPgetFocusNode(scip), conflictcons, NULL, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+                     SCIPdebugPrintCons(scip, conflictcons, NULL);
+                  }
 #endif
                   break;
                }
@@ -697,7 +718,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    nonefixvars = 0;
 
    /* apply fixings due to clique information */
-   SCIP_CALL( applyCliqueFixings(scip, heurdata, onefixvars, onefixvals, &nonefixvars, &cutoff) );
+   SCIP_CALL( applyCliqueFixings(scip, heurdata, enabledconflicts, onefixvars, onefixvals, &nonefixvars, &cutoff) );
 
    if( cutoff || SCIPisStopped(scip) )
       goto TERMINATE;
@@ -819,9 +840,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
    /*************************** END Probing LP Solving ***************************/
 
-
    /*************************** Create Conflict ***************************/
-   if( SCIPallColsInLP(scip) && (lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT) )
+   if( enabledconflicts && SCIPallColsInLP(scip) &&
+      (lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT) )
    {
 #ifndef NOCONFLICT
       /* create own conflict */
@@ -840,9 +861,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create conflict constraint */
       SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, nonefixvars, onefixvars,
             FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, SCIPgetFocusNode(scip), conflictcons, NULL) );
+      SCIP_CALL( SCIPaddConflict(scip, SCIPgetFocusNode(scip), conflictcons, NULL, SCIP_CONFTYPE_INFEASLP, FALSE) );
       SCIPdebugPrintCons(scip, conflictcons, NULL);
-      SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
 #endif
       goto TERMINATE;
    }

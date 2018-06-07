@@ -44,7 +44,6 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/clock.h"
-#include "scip/heur_reoptsols.h"
 #include "scip/history.h"
 #include "blockmemshell/memory.h"
 
@@ -1314,7 +1313,6 @@ SCIP_RETCODE checkMemGlbCons(
 
          for( c = 0; c < reopt->allocmemglbconss; c++ )
             reopt->glbconss[c] = NULL;
-
       }
       else if( reopt->allocmemglbconss < mem )
       {
@@ -1343,7 +1341,10 @@ SCIP_RETCODE cleanActiveConss(
    int i;
 
    assert(reopt != NULL);
-   assert(reopt->activeconss != NULL);
+
+   /* the hashmap need not to be exist, e.g., if the problem was solved during presolving */
+   if( reopt->activeconss == NULL )
+      return SCIP_OKAY;
 
    nentries = SCIPhashmapGetNEntries(reopt->activeconss);
 
@@ -5100,10 +5101,36 @@ SCIP_RETCODE SCIPreoptCreate(
    eventhdlr = NULL;
 
    /* include event handler into SCIP */
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL, eventInitsolReopt,
-         eventExitsolReopt, NULL, eventExecReopt, NULL) );
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, set, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL,
+      eventInitsolReopt, eventExitsolReopt, NULL, eventExecReopt, NULL) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, eventhdlr) );
    assert(eventhdlr != NULL);
+
+   return SCIP_OKAY;
+}
+
+/* release all variables and constraints captured during reoptimization */
+SCIP_RETCODE SCIPreoptReleaseData(
+   SCIP_REOPT*           reopt,              /**< pointer to reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   /* release all added constraints and free the data */
+   if( reopt->addedconss != NULL )
+   {
+      int c;
+      for( c = 0; c < reopt->naddedconss; c++)
+      {
+         assert(reopt->addedconss[c] != NULL);
+
+         SCIP_CALL( SCIPconsRelease(&reopt->addedconss[c], blkmem, set) );
+      }
+
+      BMSfreeBlockMemoryArray(blkmem, &reopt->addedconss, reopt->addedconsssize);
+   }
+
+   SCIP_CALL( cleanActiveConss(reopt, set) );
 
    return SCIP_OKAY;
 }
@@ -5191,7 +5218,6 @@ SCIP_RETCODE SCIPreoptFree(
             BMSfreeBlockMemory(blkmem, &(*reopt)->glbconss[c]); /*lint !e866*/
             --(*reopt)->nglbconss;
          }
-
       }
       assert((*reopt)->nglbconss == 0);
 
@@ -5202,23 +5228,12 @@ SCIP_RETCODE SCIPreoptFree(
    /* clocks */
    SCIPclockFree(&(*reopt)->savingtime);
 
-   /* clean addedconss array */
-   if( (*reopt)->addedconss != NULL )
+   /* the hashmap need not to be exist, e.g., if the problem was solved during presolving */
+   if( (*reopt)->activeconss != NULL )
    {
-      int c;
-      for( c = 0; c < (*reopt)->naddedconss; c++)
-      {
-         assert((*reopt)->addedconss[c] != NULL);
-
-         SCIP_CALL( SCIPconsRelease(&(*reopt)->addedconss[c], blkmem, set) );
-      }
-
-      BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
+      SCIPhashmapFree(&(*reopt)->activeconss);
+      (*reopt)->activeconss = NULL;
    }
-
-   SCIP_CALL( cleanActiveConss((*reopt), set) );
-   SCIPhashmapFree(&(*reopt)->activeconss);
-   (*reopt)->activeconss = NULL;
 
    if( (*reopt)->glblb != NULL )
    {
@@ -6149,7 +6164,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
          /* if the node was created by branch_nodereopt, nothing happens */
          SCIP_CALL( addNode(reopt, set, lp, blkmem, node, SCIP_REOPTTYPE_PRUNED, FALSE, isrootnode, lowerbound) );
-
       }
       break;
 

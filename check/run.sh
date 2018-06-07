@@ -29,6 +29,7 @@ fi
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
+DATFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.dat
 TMPFILE=$SOLVERPATH/$OUTPUTDIR/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
@@ -102,6 +103,7 @@ then
     # indicate that an instance is infeasible.
     sed ' /solution status:/d;
             s/objective value:/=obj=/g;
+            s/infinity/1e+20/g;
             s/no solution available//g' $SOLFILE > $TMPFILE
     mv $TMPFILE $SOLFILE
     
@@ -124,6 +126,12 @@ echo =ready=                        >> $OUTFILE
 
 mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
+
+# move a possible data file
+if [ -f "${DATFILE}" ] ;
+then
+    mv $DATFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.dat
+fi
 
 rm -f $TMPFILE
 rm -f $SOLFILE

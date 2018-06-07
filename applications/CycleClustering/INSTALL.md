@@ -94,8 +94,8 @@ as LP solver, you would have the following names:
 Here is what you have to do to get the cycleclustering example project
 using SCIP as a library running:
 
-1. Install and compile SCIP as described in the INSTALL file of SCIP's main 
-   directory, and make sure to create the necessary softlinks in SCIP's lib 
+1. Install and compile SCIP as described in the INSTALL file of SCIP's main
+   directory, and make sure to create the necessary softlinks in SCIP's lib
    directory
 
 2. In the directory CycleClustering edit the variable SCIPDIR if necessary - it should

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -48,6 +48,7 @@
 #include "scip/type_var.h"
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
+#include "scip/pub_misc_linear.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -488,8 +489,8 @@ void** SCIPpqueueElems(
 INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
-   int exp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)(uint16_t)exp;
+   int theexp;
+   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &theexp), 15))<<16) | (uint32_t)(uint16_t)theexp;
 }
 
 /** creates a hash table */
@@ -2077,6 +2078,20 @@ int SCIPsnprintf(
    int                   len,                /**< length of the string to copy */
    const char*           s,                  /**< source string */
    ...                                       /**< further parameters */
+   );
+
+/** safe version of strncpy
+ *
+ *  Copies string in s to t using at most @a size-1 nonzero characters (strncpy copies size characters). It always adds
+ *  a terminating zero char. Does not pad the remaining string with zero characters (unlike strncpy). Returns the number
+ *  of copied nonzero characters, if the length of s is at most size - 1, and returns size otherwise. Thus, the original
+ *  string was truncated if the return value is size.
+ */
+EXTERN
+int SCIPstrncpy(
+   char*                 t,                  /**< target string */
+   const char*           s,                  /**< source string */
+   int                   size                /**< maximal size of t */
    );
 
 /** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str

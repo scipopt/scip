@@ -15,8 +15,8 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 # absolut tolerance for checking linear constraints and objective value
-LINTOL=1e-04 
-# absolut tolerance for checking integrality constraints 
+LINTOL=1e-04
+# absolut tolerance for checking integrality constraints
 INTTOL=1e-04
 
 # check if tmp-path exists
@@ -112,7 +112,7 @@ echo                                >> $OUTFILE
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
 # eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
-echo $EXECNAME  $SETFILE $FILENAME -sth $THREADS -fsol $SOLFILE -sr $SCIPSETFILE -s $SCIPSETFILE 
+echo $EXECNAME  $SETFILE $FILENAME -sth $THREADS -fsol $SOLFILE -sr $SCIPSETFILE -s $SCIPSETFILE
 eval $EXECNAME  $SETFILE $FILENAME -sth $THREADS -fsol $SOLFILE -sr $SCIPSETFILE -s $SCIPSETFILE 2>>$ERRFILE  | tee -a $OUTFILE
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
@@ -138,9 +138,9 @@ then
          s/objective value:/=obj=/g;
          s/No Solution//g' $SOLFILE > $TMPFILE
     mv $TMPFILE $SOLFILE
-    
+
     # check if the link to the solution checker exists
-    if test -f "$CHECKERPATH/bin/solchecker" 
+    if test -f "$CHECKERPATH/bin/solchecker"
     then
       echo
       $SHELL -c " $CHECKERPATH/bin/solchecker $FILENAME $SOLFILE $LINTOL $INTTOL" 2>>$ERRFILE | tee -a $OUTFILE

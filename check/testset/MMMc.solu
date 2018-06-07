@@ -115,12 +115,12 @@
 =best= nag                           1740
 =opt= neos-1053234            0.593889097
 =opt= neos-1053591             -3662.9144
-=best= neos-1056905                    15
+=opt= neos-1056905                    14
 =opt= neos-1058477             0.54673164
 =opt= neos-1061020              -142745.3
 =opt= neos-1062641        -1.15926468e-09
 =best= neos-1067731               1025569
-=best= neos-1096528                    388
+=opt= neos-1096528                    388
 =opt=  neos-1109824                    378.000000000
 =best= neos-1112782        5.72148826e+11
 =best= neos-1112787  5.65037620162588e+11
@@ -147,7 +147,7 @@
 =opt= neos-1281048                    601
 =best= neos-1311124                   -181
 =best= neos-1324574                      8
-=best= neos-1330346                      8
+=opt= neos-1330346                      8
 =opt= neos-1330635                25.8781
 =opt=  neos-1337307                 -202319.00000000
 =opt= neos-1337489                    -77
@@ -190,7 +190,7 @@
 =opt= neos-1445755                 -17227
 =opt= neos-1445765                 -17783
 =best= neos-1451294                     8
-=best= neos-1456979                   176
+=opt= neos-1456979                   176
 =best= neos-1460246                   2606
 =opt= neos-1460265                  13400
 =best= neos-1460543                  14600
@@ -205,7 +205,7 @@
 =opt= neos-1516309                  35954
 =opt= neos-1582420                     91
 =best= neos-1593097                  23136
-=best= neos-1595230                      9
+=opt= neos-1595230                      9
 =opt= neos-1597104                    -30
 =opt= neos-1599274                32075.6
 =opt=  neos-1601936                      3.000000000
@@ -456,8 +456,8 @@
 =opt=  qnet1_o                      1.6029692681e+04
 =opt=  rail507                         174.000000000
 =best= ramos3                          203
-=best= ran14x18.disj-8    	     3712
-=best= ran14x18_1                    3712
+=opt=  ran14x18.disj-8    	     3712
+=opt=  ran14x18_1                    3712
 =opt=  ran16x16                       3823.000000000
 =opt=  rd-rplusc-21                 1.6539527530e+05
 =opt=  reblock67                 -34630648.438331999

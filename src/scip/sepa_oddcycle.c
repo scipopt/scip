@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -33,10 +33,32 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/sepa_oddcycle.h"
-#include "scip/pub_misc.h"
+#include "blockmemshell/memory.h"
 #include "dijkstra/dijkstra.h"
-
+#include "scip/pub_implics.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include "scip/sepa_oddcycle.h"
+#include <string.h>
 
 #define SEPA_NAME              "oddcycle"
 #define SEPA_DESC              "odd cycle separator"
@@ -1255,7 +1277,6 @@ SCIP_RETCODE checkArraySizesHeur(
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
-
 
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
@@ -2744,7 +2765,6 @@ SCIP_RETCODE checkArraySizesGLS(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
    {
@@ -2767,7 +2787,6 @@ SCIP_RETCODE checkArraySizesGLS(
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
-
 
    if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
@@ -3463,6 +3482,135 @@ SCIP_RETCODE separateGLS(
 }
 
 
+/** separation method */
+static
+SCIP_RETCODE separateOddCycles(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SOL*             sol,                /**< given primal solution */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{
+   SCIP_SEPADATA* sepadata;
+   int depth;
+   int ncalls;
+   /* cppcheck-suppress unassignedVariable */
+   int oldnliftedcuts;
+   int nfrac = 0;
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   depth = SCIPgetDepth(scip);
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+
+   /* only call separator a given number of rounds at each b&b node */
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* only call separator if enough binary variables are present */
+   if( SCIPgetNBinVars(scip) < 3 || (! sepadata->includetriangles && SCIPgetNBinVars(scip) < 5) )
+   {
+      SCIPdebugMsg(scip, "skipping separator: not enough binary variables\n");
+      return SCIP_OKAY;
+   }
+
+   /* only call separator if enough fractional variables are present */
+   if ( sol != NULL )
+   {
+      SCIP_VAR** vars;
+      SCIP_Real solval;
+      int nvars;
+      int v;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+      /* first compute fractional variables */
+      for( v = 0; v < nvars; ++v )
+      {
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         if ( ! SCIPisFeasIntegral(scip, solval) )
+            ++nfrac;
+      }
+   }
+   else
+      nfrac = SCIPgetNLPBranchCands(scip);
+
+   if( nfrac < 3 || (! sepadata->includetriangles && nfrac < 5) )
+   {
+      SCIPdebugMsg(scip, "skipping separator: not enough fractional variables\n");
+      return SCIP_OKAY;
+   }
+
+   /* only call separator if enough implications and cliques are present */
+   if( SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
+   {
+      SCIPdebugMsg(scip, "skipping separator: not enough implications present\n");
+      return SCIP_OKAY;
+   }
+
+   /* only run if number of cuts already found is small enough */
+   if ( sepadata->cutthreshold >= 0 && SCIPgetNCutsFoundRound(scip) >= sepadata->cutthreshold )
+      return SCIP_OKAY;
+
+   /* store node number and reset number of unsuccessful calls */
+   if ( sepadata->lastnode != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
+   {
+      sepadata->nunsucessfull = 0;
+      sepadata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   }
+   else
+   {
+      if ( sepadata->nunsucessfull > sepadata->maxunsucessfull )
+      {
+         SCIPdebugMsg(scip, "skipping separator: number of unsucessfull calls = %d.\n", sepadata->nunsucessfull);
+         return SCIP_OKAY;
+      }
+   }
+
+   *result = SCIP_DIDNOTFIND;
+   sepadata->oldncuts = sepadata->ncuts;
+   SCIPdebug( oldnliftedcuts = sepadata->nliftedcuts; )
+
+   if( depth == 0 )
+      sepadata->maxsepacutsround = sepadata->maxsepacutsroot;
+   else
+      sepadata->maxsepacutsround = sepadata->maxsepacuts;
+
+   /* perform the actual separation routines */
+   if( sepadata->usegls )
+   {
+      SCIPdebugMsg(scip, "using GLS method for finding odd cycles\n");
+      SCIP_CALL( separateGLS(scip, sepa, sepadata, sol, result) );
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "using level graph heuristic for finding odd cycles\n");
+      SCIP_CALL( separateHeur(scip, sepa, sepadata, sol, result) );
+   }
+
+   if( sepadata->ncuts - sepadata->oldncuts > 0 )
+   {
+      SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
+         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts);
+      sepadata->nunsucessfull = 0;
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "no cuts added (%d allowed)\n", sepadata->maxsepacutsround);
+      ++sepadata->nunsucessfull;
+   }
+   SCIPdebugMsg(scip, "total sepatime: %.2f - total number of added cuts: %u\n", SCIPsepaGetTime(sepa), sepadata->ncuts);
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of separator
  */
@@ -3538,99 +3686,26 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
 {  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-   int depth;
-   int ncalls;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnliftedcuts;
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   SCIP_CALL( separateOddCycles(scip, sepa, NULL, result) );
 
-   /* get separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
+   return SCIP_OKAY;
+}
 
-   depth = SCIPgetDepth(scip);
-   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+/** arbitrary primal solution separation method of separator */
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolOddcycle)
+{  /*lint --e{715}*/
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
 
-   /* only call separator a given number of rounds at each b&b node */
-   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
-      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
-      return SCIP_OKAY;
-
-   /* only call separator if enough binary variables are present */
-   if( SCIPgetNBinVars(scip) < 3 || (!(sepadata->includetriangles) && SCIPgetNBinVars(scip) < 5))
-   {
-      SCIPdebugMsg(scip, "skipping separator: not enough binary variables\n");
-      return SCIP_OKAY;
-   }
-
-   /* only call separator if enough fractional variables are present */
-   if( SCIPgetNLPBranchCands(scip) < 3 || (!(sepadata->includetriangles) && SCIPgetNLPBranchCands(scip) < 5))
-   {
-      SCIPdebugMsg(scip, "skipping separator: not enough fractional variables\n");
-      return SCIP_OKAY;
-   }
-
-   /* only call separator if enough implications and cliques are present */
-   if( SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
-   {
-      SCIPdebugMsg(scip, "skipping separator: not enough implications present\n");
-      return SCIP_OKAY;
-   }
-
-   /* only run if number of cuts already found is small enough */
-   if ( sepadata->cutthreshold >= 0 && SCIPgetNCutsFoundRound(scip) >= sepadata->cutthreshold )
-      return SCIP_OKAY;
-
-   /* store node number and reset number of unsuccessful calls */
-   if ( sepadata->lastnode != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
-   {
-      sepadata->nunsucessfull = 0;
-      sepadata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-   }
-   else
-   {
-      if ( sepadata->nunsucessfull > sepadata->maxunsucessfull )
-      {
-         SCIPdebugMsg(scip, "skipping separator: number of unsucessfull calls = %d.\n", sepadata->nunsucessfull);
-         return SCIP_OKAY;
-      }
-   }
-
-   *result = SCIP_DIDNOTFIND;
-   sepadata->oldncuts = sepadata->ncuts;
-   SCIPdebug( oldnliftedcuts = sepadata->nliftedcuts; )
-
-   if( depth == 0 )
-      sepadata->maxsepacutsround = sepadata->maxsepacutsroot;
-   else
-      sepadata->maxsepacutsround = sepadata->maxsepacuts;
-
-   /* perform the actual separation routines */
-   if( sepadata->usegls )
-   {
-      SCIPdebugMsg(scip, "using GLS method for finding odd cycles\n");
-      SCIP_CALL( separateGLS(scip, sepa, sepadata, NULL, result) );
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "using level graph heuristic for finding odd cycles\n");
-      SCIP_CALL( separateHeur(scip, sepa, sepadata, NULL, result) );
-   }
-
-   if( sepadata->ncuts - sepadata->oldncuts > 0 )
-   {
-      SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
-         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts);
-      sepadata->nunsucessfull = 0;
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "no cuts added (%d allowed)\n", sepadata->maxsepacutsround);
-      ++sepadata->nunsucessfull;
-   }
-   SCIPdebugMsg(scip, "total sepatime: %.2f - total number of added cuts: %u\n", SCIPsepaGetTime(sepa), sepadata->ncuts);
+   SCIP_CALL( separateOddCycles(scip, sepa, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -3656,7 +3731,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpOddcycle, NULL,
+         sepaExeclpOddcycle, sepaExecsolOddcycle,
          sepadata) );
 
    assert(sepa != NULL);
@@ -3668,84 +3743,108 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolOddcycle) );
 
    /* add oddcycle separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/usegls",
-         "should the search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/usegls",
+         "Should the search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.",
          &sepadata->usegls, FALSE, DEFAULT_USEGLS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/liftoddcycles",
-         "should odd cycle cuts be lifted?",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/liftoddcycles",
+         "Should odd cycle cuts be lifted?",
          &sepadata->liftoddcycles, FALSE, DEFAULT_LIFTODDCYCLES, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxsepacuts",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxsepacuts",
          "maximal number of oddcycle cuts separated per separation round",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxsepacutsroot",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxsepacutsroot",
          "maximal number of oddcycle cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
    /* add advanced parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxrounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxrounds",
          "maximal number of oddcycle separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxroundsroot",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxroundsroot",
          "maximal number of oddcycle separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/scalingfactor",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/scalingfactor",
          "factor for scaling of the arc-weights",
          &sepadata->scale, TRUE, DEFAULT_SCALEFACTOR, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/addselfarcs",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/addselfarcs",
          "add links between a variable and its negated",
          &sepadata->addselfarcs, TRUE, DEFAULT_ADDSELFARCS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/repaircycles",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/repaircycles",
          "try to repair violated cycles with double appearance of a variable",
          &sepadata->repaircycles, TRUE, DEFAULT_REPAIRCYCLES, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/includetriangles",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/includetriangles",
          "separate triangles found as 3-cycles or repaired larger cycles",
          &sepadata->includetriangles, TRUE, DEFAULT_INCLUDETRIANGLES, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/multiplecuts",
-         "even if a variable is already covered by a cut, still try it as start node for a cycle search",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/multiplecuts",
+         "Even if a variable is already covered by a cut, still try it as start node for a cycle search?",
          &sepadata->multiplecuts, TRUE, DEFAULT_MULTIPLECUTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/allowmultiplecuts",
-         "even if a variable is already covered by a cut, still allow another cut to cover it too",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/allowmultiplecuts",
+         "Even if a variable is already covered by a cut, still allow another cut to cover it too?",
          &sepadata->allowmultiplecuts, TRUE, DEFAULT_ALLOWMULTIPLECUTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/lpliftcoef",
-         "choose lifting candidate by coef*lpvalue or only by coef",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/lpliftcoef",
+         "Choose lifting candidate by coef*lpvalue or only by coef?",
          &sepadata->lpliftcoef, TRUE, DEFAULT_LPLIFTCOEF, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/recalcliftcoef",
-         "calculate lifting coefficient of every candidate in every step (or only if its chosen)",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/recalcliftcoef",
+         "Calculate lifting coefficient of every candidate in every step (or only if its chosen)?",
          &sepadata->recalcliftcoef, TRUE, DEFAULT_RECALCLIFTCOEF, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/sortswitch",
-         "use sorted variable array (unsorted(0),maxlp(1),minlp(2),maxfrac(3),minfrac(4))",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/sortswitch",
+         "use sorted variable array (unsorted(0), maxlp(1), minlp(2), maxfrac(3), minfrac(4))",
          (int*) &sepadata->sortswitch, TRUE, DEFAULT_SORTSWITCH, 0, 4, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/sortrootneighbors",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/sortrootneighbors",
          "sort level of the root neighbors by fractionality (maxfrac)",
          &sepadata->sortrootneighbors, TRUE, DEFAULT_SORTROOTNEIGHBORS, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/percenttestvars",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/percenttestvars",
          "percentage of variables to try the chosen method on [0-100]",
          &sepadata->percenttestvars, TRUE, DEFAULT_PERCENTTESTVARS, 0, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/offsettestvars",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/offsettestvars",
          "offset of variables to try the chosen method on (additional to the percentage of testvars)",
          &sepadata->offsettestvars, TRUE, DEFAULT_OFFSETTESTVARS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxpernodeslevel",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxpernodeslevel",
          "percentage of nodes allowed in the same level of the level graph [0-100]",
          &sepadata->maxpernodeslevel, TRUE, DEFAULT_MAXPERNODESLEVEL, 0, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/offsetnodeslevel",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/offsetnodeslevel",
          "offset of nodes allowed in the same level of the level graph (additional to the percentage of levelnodes)",
          &sepadata->offsetnodeslevel, TRUE, DEFAULT_OFFSETNODESLEVEL, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxnlevels",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnlevels",
          "maximal number of levels in level graph",
          &sepadata->maxnlevels, TRUE, DEFAULT_MAXNLEVELS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxcutsroot",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxcutsroot",
          "maximal number of oddcycle cuts generated per chosen variable as root of the level graph",
          &sepadata->maxcutsroot, TRUE, DEFAULT_MAXCUTSROOT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxcutslevel",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxcutslevel",
          "maximal number of oddcycle cuts generated in every level of the level graph",
          &sepadata->maxcutslevel, TRUE, DEFAULT_MAXCUTSLEVEL, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxreference",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxreference",
          "minimal weight on an edge (in level graph or bipartite graph)",
          &sepadata->maxreference, TRUE, DEFAULT_MAXREFERENCE, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxunsucessfull",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxunsucessfull",
          "number of unsuccessful calls at current node",
          &sepadata->maxunsucessfull, TRUE, DEFAULT_MAXUNSUCESSFULL, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/cutthreshold",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/cutthreshold",
          "maximal number of other cuts s.t. separation is applied (-1 for direct call)",
          &sepadata->cutthreshold, TRUE, DEFAULT_CUTTHRESHOLD, -1, INT_MAX, NULL, NULL) );
 

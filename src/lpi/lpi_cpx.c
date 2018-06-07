@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1044,6 +1044,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
 {  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
+}
+
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
 }
 
 /**@} */
@@ -2969,11 +2993,20 @@ SCIP_Bool SCIPlpiWasSolved(
    return (lpi->solstat != -1);
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    int pfeas;
@@ -3183,7 +3216,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->solstat == CPX_STAT_OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -3331,7 +3370,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
@@ -3524,13 +3567,18 @@ SCIP_RETCODE SCIPlpiSetBase(
 {
    int i;
    int nrows;
+   int ncols;
    char sense;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+
+   assert(cstat != NULL || ncols == 0);
+   assert(rstat != NULL || nrows == 0);
 
    SCIPdebugMessage("loading basis %p/%p into CPLEX\n", (void *) cstat, (void *) rstat);
 
@@ -3544,18 +3592,17 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    /* Copy rstat to internal structure and correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that
     * the slack is 0, i.e., the upper bound is tight. */
-   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
    for (i = 0; i < nrows; ++i)
    {
-      if ( rstat[i] == (int) SCIP_BASESTAT_UPPER )
+      if ( rstat[i] == (int) SCIP_BASESTAT_UPPER ) /*lint !e613*/
       {
          CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
          if ( sense == 'L' )
             lpi->rstat[i] = CPX_AT_LOWER;
       }
       else
-         lpi->rstat[i] = rstat[i];
+         lpi->rstat[i] = rstat[i]; /*lint !e613*/
    }
 
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, lpi->rstat) );

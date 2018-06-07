@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -82,30 +82,33 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    assert(binvars != NULL);
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering , nbins) );
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &binsincluster, ncluster) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &clustering , nbins) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &binsincluster, ncluster) );
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &clustering[i], ncluster) ); /*lint !e866*/
    }
 
    /* for each bin, set the assignment with the highest lp-value to 1, the rest to 0 */
    for( i = 0; i < nbins; ++i )
    {
+      assert(NULL != binvars[i]);
+
       maxlpval = 0;
       maxcluster = -1;
 
       for (k = 0; k < ncluster; ++k)
       {
-         assert( NULL != binvars[i][k]);
+         assert(NULL != binvars[i][k]);
          if( SCIPisGT(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) )
          {
             maxlpval = SCIPvarGetLPSol(binvars[i][k]);
             maxcluster = k;
             binsincluster[k]++;
          }
-         else if( SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) && maxcluster != -1 && binsincluster[maxcluster] > binsincluster[k] )
+         else if( SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) && maxcluster != -1
+            && binsincluster[maxcluster] > binsincluster[k] )
          {
             binsincluster[maxcluster]--;
             binsincluster[k]++;
@@ -132,10 +135,10 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    /* free allocated memory */
    for( i = 0; i < nbins; ++i )
    {
-      SCIPfreeMemoryArray(scip, &clustering[i]);
+      SCIPfreeBufferArray(scip, &clustering[i]);
    }
-   SCIPfreeMemoryArray(scip, &clustering);
-   SCIPfreeMemoryArray(scip, &binsincluster);
+   SCIPfreeBufferArray(scip, &clustering);
+   SCIPfreeBufferArray(scip, &binsincluster);
 
    return SCIP_OKAY;
 }

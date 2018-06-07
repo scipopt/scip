@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -17,6 +17,7 @@
  * @ingroup BRANCHINGRULES
  * @brief  all variables full strong LP branching rule
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  *
  * The all variables full strong branching rule applies strong branching to every non-fixed variable
  * at the current node of the branch-and-bound search. The rule selects the candidate
@@ -42,7 +43,11 @@
 #define __SCIP_BRANCH_ALLFULLSTRONG_H__
 
 
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

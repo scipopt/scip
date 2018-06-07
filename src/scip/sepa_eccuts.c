@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1298,6 +1298,7 @@ SCIP_RETCODE doSeachEcAggr(
    SCIP_VAR** quadvars;
    SCIP_Real* nodeweights;
    SCIP_Real timelimit;
+   SCIP_RETCODE retcode;
    int nunsucces = 0;
    int nedges = 0;
    int nquadelems;
@@ -1312,6 +1313,7 @@ SCIP_RETCODE doSeachEcAggr(
    nquadvars = SCIPnlrowGetNQuadVars(nlrow);
    nquadelems = SCIPnlrowGetNQuadElems(nlrow);
 
+   retcode = SCIP_OKAY;
    *nfound = 0;
 
    /* arrays to store all arc variables of the MIP model; note that we introduce variables even for loops in the graph
@@ -1389,8 +1391,7 @@ SCIP_RETCODE doSeachEcAggr(
          /* create graph if necessary */
          if( graph == NULL )
          {
-            SCIP_CALL( createTcliqueGraph(scip, nlrow, &graph, nodeweights) );
-            assert(graph != NULL);
+            SCIP_CALL_TERMINATE( retcode, createTcliqueGraph(scip, nlrow, &graph, nodeweights), TERMINATE );
          }
 
          /* 2.a - search and store a single edge-concave aggregation by computing a clique with a good cycle */
@@ -1451,7 +1452,7 @@ TERMINATE:
    SCIPfreeBufferArray(scip, &forwardarcs);
    SCIPfreeBufferArray(scip, &nodeweights);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** computes a partitioning into edge-concave aggregations for a given (quadratic) nonlinear row; each aggregation has
@@ -1743,7 +1744,6 @@ SCIP_Bool checkRikun(
          val += facet[pos] * (SCIPvarGetUbLocal(ecaggr->vars[pos]) - SCIPvarGetLbLocal(ecaggr->vars[pos]));
       else
          val -= facet[pos] * (SCIPvarGetUbLocal(ecaggr->vars[pos]) - SCIPvarGetLbLocal(ecaggr->vars[pos]));
-
 
       /* update  maximum violation */
       maxviolation = MAX(val - fvals[gray], maxviolation);
