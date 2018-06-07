@@ -60,7 +60,6 @@
 /** Benders' decomposition cuts data */
 struct SCIP_BenderscutData
 {
-   SCIP_Real             soltol;             /**< the tolerance for the check between the auxiliary var and subprob */
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
 };
 
@@ -590,7 +589,6 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
 
    /* create opt Benders' decomposition cuts data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
-   benderscutdata->soltol = 1e-04;
 
    benderscut = NULL;
 
@@ -604,12 +602,6 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
    SCIP_CALL( SCIPsetBenderscutFree(scip, benderscut, benderscutFreeOpt) );
 
    /* add opt Benders' decomposition cuts parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/solutiontol",
-      SCIPbendersGetName(benders), BENDERSCUT_NAME);
-   SCIP_CALL( SCIPaddRealParam(scip, paramname,
-         "the tolerance used for the comparison between the auxiliary variable and the subproblem objective.",
-         &benderscutdata->soltol, FALSE, SCIP_DEFAULT_SOLTOL, 0.0, 1.0, NULL, NULL) );
-
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/addcuts",
       SCIPbendersGetName(benders), BENDERSCUT_NAME);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname,

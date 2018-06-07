@@ -63,7 +63,6 @@ struct SCIP_BenderscutData
    SCIP_BENDERS*         benders;            /**< the Benders' decomposition data structure */
    SCIP_Real             cutconstant;        /**< the constant for computing the integer cuts */
    SCIP_Real*            subprobconstant;    /**< the constant for each subproblem used for computing the integer cuts */
-   SCIP_Real             soltol;             /**< the tolerance for the check between the auxiliary var and subprob */
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
    SCIP_Bool*            firstcut;           /**< flag to indicate that the first cut needs to be generated. */
    int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
@@ -588,7 +587,6 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
 
    /* create int Benders' decomposition cuts data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
-   benderscutdata->soltol = 1e-04;
    benderscutdata->benders = benders;
 
    benderscut = NULL;
@@ -611,12 +609,6 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
          "the constant term of the integer Benders' cuts.",
          &benderscutdata->cutconstant, FALSE, SCIP_DEFAULT_CUTCONSTANT, -SCIPinfinity(scip), SCIPinfinity(scip),
          paramChgdBenderscutintConstant, (SCIP_PARAMDATA*)benderscutdata) );
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/solutiontol",
-      SCIPbendersGetName(benders), BENDERSCUT_NAME);
-   SCIP_CALL( SCIPaddRealParam(scip, paramname,
-         "the tolerance used for the comparison between the auxiliary variable and the subproblem objective.",
-         &benderscutdata->soltol, FALSE, SCIP_DEFAULT_SOLTOL, 0.0, 1.0, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/addcuts",
       SCIPbendersGetName(benders), BENDERSCUT_NAME);
