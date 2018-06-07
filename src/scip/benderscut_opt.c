@@ -48,9 +48,6 @@
 #define BENDERSCUT_PRIORITY      5000
 #define BENDERSCUT_LPCUT            TRUE
 
-
-
-#define SCIP_DEFAULT_SOLTOL               1e-2  /** The tolerance used to determine optimality of the solution */
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
 
 /*
