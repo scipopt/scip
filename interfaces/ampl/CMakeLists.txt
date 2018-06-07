@@ -4,6 +4,9 @@ project(SCIPampl)
 
 find_package(SCIP REQUIRED)
 find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
 
 include_directories(${SCIP_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/solvers)
 
