@@ -235,7 +235,8 @@
  */
 
 /**@page CHG Changes between different versions of SCIP
- * - \subpage CHANGELOG    "Change log"
+ * - \subpage CHANGELOG_600    "Change log 6"
+ * - \subpage CHANGELOG_old    "Change log old"
  * - \subpage RELEASENOTES "Release notes"
  * - \subpage CHG11        "Interface changes between version 5.0 and 5.1"
  * - \subpage CHG10        "Interface changes between version 4.0 and 5.0"
@@ -8547,13 +8548,6 @@
  *
  * \verbinclude SCIP-release-notes-1.1
  */
-
-/**@page CHANGELOG CHANGELOG
- *
- * \verbinclude CHANGELOG
- *
- */
-
 
 
 /**@page PARAMETERS List of all SCIP parameters

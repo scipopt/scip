@@ -1,13 +1,13 @@
-[TOC]
+/**
 
+<!--
 Release Notes
 =============
 
 TODO: Brief introductory paragraph. Maybe explain semantic versioning?
+-->
 
-
-SCIP 6.0.0
-==========
+@page CHANGELOG_600 SCIP 6.0.0
 
 TODO: Summarize most important changes. Add link to release report.
 
@@ -123,6 +123,7 @@ Miscellaneous
 - add statistic that presents the number of resolves for instable LPs
 - remove LEGACY mode, compiler needs to be C++11-compliant
 
+@page CHANGELOG_old SCIP < 6
 
 SCIP version 5.0.2
 ==================
@@ -4864,3 +4865,5 @@ known bugs (still not fixed):
 SCIP version 0.75
 =================
 - started change log
+
+*/
