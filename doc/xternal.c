@@ -56,7 +56,8 @@
  *  - @subpage HOWTOADD            Detailed guides for adding user plugins
  *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
  *  - @subpage FAQ                 Frequently asked questions (FAQ)
- *  - @subpage FURTHERINFO         Changes between SCIP versions
+ *  - @subpage CHG                 Release notes and changes between different versions of SCIP
+ *  - @subpage AUTHORS             SCIP Authors
  *
  *
  * @section QUICKSTART Quickstart
@@ -222,21 +223,21 @@
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  */
 
-/**@page FURTHERINFO Further information
- *
- * - @subpage CHG Changes between different versions of SCIP
- * - @subpage AUTHORS SCIP Authors
- *
- */
-
 /**@page AUTHORS SCIP Authors
  * <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
  */
 
-/**@page CHG Changes between different versions of SCIP
- * - \subpage CHANGELOG_600    "Change log 6"
- * - \subpage CHANGELOG_old    "Change log old"
+/**@page CHG Release notes and changes between different versions of SCIP
+ *
+ * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
+ * release notes:
+ *
+ * - \subpage RN60         "SCIP 6.0"
+ * - \subpage RNold        "SCIP < 6"
+ *
+ * TODO: integrate the old release notes and interface changes into the new CHANGELOG
+ *
  * - \subpage RELEASENOTES "Release notes"
  * - \subpage CHG11        "Interface changes between version 5.0 and 5.1"
  * - \subpage CHG10        "Interface changes between version 4.0 and 5.0"

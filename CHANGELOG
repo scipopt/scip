@@ -1,48 +1,79 @@
-SCIP version NEXT
-=================
+/**
 
-performance improvements:
-- cuts generated from certain quadratic constraints with convex feasible region are now global
-- performance improvements for Adaptive Large Neighborhood Search heur_alns.c:
-    - all neighborhoods now start conservatively from maximum fixing rate
-    - new default parameter settings for bandit selection parameters
-    - no adjustment of minimum improvement by default
-- improved bound tightening for some quadratic equations
-- constraint handler checking order for original solutions has been modified to check those with negative check priority
-  that don't need constraints after all other constraint handlers and constraints have been checked
+@page RN60 Release notes for SCIP 6.0
 
-features:
+@section RN600 SCIP 6.0.0
+*************************
+
+TODO: Summarize most important changes. Add link to release report.
+
+Features
+--------
+
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
-- new example "brachistochrone" in CallableLibrary examples collection; this example implements a discretized model to
-  obtain the trajectory associated with the shortest time to go from point A to B for a particle under gravity only
-- new example "circlepacking" in CallableLibrary examples collection; this example models two problems about packing
-  circles of given radii into a rectangle
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
 - "lp/checkstability" is properly implemented for SoPlex LPI (spx2)
 - new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
 - limits on the number of presolving rounds a presolver (maxrounds) or propagator/constraint handler (maxprerounds)
   participates in are now compared to the number of calls of the particular presolving method, not the number of
   presolving rounds in general, anymore
+- new miscellaneous methods for constraints that have a one-row linear representation in pub_misc_linear.h
+- a Benders' decomposition framework has been added. This framework provides the functionality for a user to solve a
+  decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
+  integer optimality cuts and no-good cuts.
+
+Performance improvements
+------------------------
+
+- cuts generated from certain quadratic constraints with convex feasible region are now global
+- performance improvements for Adaptive Large Neighborhood Search heur_alns.c:
+  + all neighborhoods now start conservatively from maximum fixing rate
+  + new default parameter settings for bandit selection parameters
+  + no adjustment of minimum improvement by default
+- improved bound tightening for some quadratic equations
+- constraint handler checking order for original solutions has been modified to check those with negative check priority
+  that don't need constraints after all other constraint handlers and constraints have been checked
+
+Examples and applications
+-------------------------
+
+- new example "brachistochrone" in CallableLibrary examples collection; this example implements a discretized model to
+  obtain the trajectory associated with the shortest time to go from point A to B for a particle under gravity only
+- new example "circlepacking" in CallableLibrary examples collection; this example models two problems about packing
+  circles of given radii into a rectangle
 - new price-and-branch application for the ringpacking problem
 - new stochastic capacitated facility location example demonstrating the use of the Benders' decomposition framework
 
-deleted and modified API functions:
-- additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
-  weights that are simple averages or higher weights for more recent observations (the previous default).
-  The last two parameters are used for a finer control of the exponential decay.
-- functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
-  SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
-  existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
-- removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
-  of other components anymore
-- additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
-- the seed of SCIPinitializeRandomSeed() is now an unsigned int
-- the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
-- added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
-- new parameter for SCIPcreateRandom() to specify whether the global random seed shift should be used in the creation of
-  the random number generator
+Interface changes
+-----------------
 
-new API functions:
+### New and changed callbacks
+
+- added parameter locktype to SCIP_DECL_CONSLOCK callback to indicate the type of variable locks
+
+### Deleted and changed API methods
+
+- Symmetry
+  + removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
+    of other components anymore
+  + additional argument "recompute" to SCIPgetGeneratorsSymmetyr() to allow recomputation of symmetries
+
+- Random generators
+  + the seed of SCIPinitializeRandomSeed() is now an unsigned int
+  + the seed of SCIPsetInitializeRandomSeed() is now an unsigned int and it returns an unsigned int
+  + new parameter for SCIPcreateRandom() to specify whether the global random seed shift should be used in the creation of
+    the random number generator
+
+- Miscellaneous
+  + additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
+    weights that are simple averages or higher weights for more recent observations (the previous default).
+    The last two parameters are used for a finer control of the exponential decay.
+  + functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
+    SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
+    existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
+
+### New API functions
+
 - added function SCIPintervalSolveUnivariateQuadExpressionNegative()
 - new enum SCIP_LOCKTYPE to distinguish between variable locks implied by model (check) constraints (SCIP_LOCKYPE_MODEL)
   and variable locks implied by conflict constraints (SCIP_LOCKYPE_CONFLICT)
@@ -52,13 +83,15 @@ new API functions:
   SCIPconsGetNLocksTypePos(), and SCIPconsGetNLocksTypeNeg()
 - added SCIPstrncpy(), a safe version of strncpy()
 
-features:
-- new miscellaneous methods for constraints that have a one-row linear representation in pub_misc_linear.h
-- a Benders' decomposition framework has been added. This framework provides the functionality for a user to solve a
-  decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
-  integer optimality cuts and no-good cuts.
+### Changed parameters
 
-new parameters:
+- removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
+  directly by the target node limit within the heuristic
+- removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
+  of other components anymore
+
+### New parameters
+
 - "lp/checkfarkas" that enables the check of infeasibility proofs from the LP
 - "heuristics/alns/unfixtol" to specify tolerance to exceed the target fixing rate before unfixing variables, (default: 0.1)
 - "propagating/orbitalfixing/symcomptiming" to change the timining of symmetry computation for orbital fixing
@@ -73,23 +106,23 @@ new parameters:
   decomposition cuts. The cuts are added to each decomposition separately, so the setting are unique to each
   decomposition.
 
-deleted and modified parameters:
-- removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
-  directly by the target node limit within the heuristic
-- removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
-  of other components anymore
+Deleted files
+-------------
 
-deleted files:
-- presol_implfree removed
+- removed presolving plugin presol_implfree
+- TODO: add scip.c removal/split
 
-misc:
+Miscellaneous
+-------------
+
 - updated CppAD to version 20180000.0
 - add statistic that presents the number of resolves for instable LPs
 - remove LEGACY mode, compiler needs to be C++11-compliant
 
+@page RNold Release notes for SCIP < 6
 
 SCIP version 5.0.2
-=================
+==================
 
 performance improvements:
 - deactivate gauge cuts
@@ -4828,3 +4861,5 @@ known bugs (still not fixed):
 SCIP version 0.75
 =================
 - started change log
+
+*/
