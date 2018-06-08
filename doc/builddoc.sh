@@ -7,6 +7,9 @@
 # Optionally, a custom .dxy file can be passed for the doxygen configuration
 #
 
+# stop on error
+set -e
+
 if [ "$1" != "" ]
 then
     DOXYFILE=$1
