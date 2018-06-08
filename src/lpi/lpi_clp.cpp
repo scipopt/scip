@@ -1092,7 +1092,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    ClpSimplex* clp = lpi->clp;
 
-#if 0
+#if SCIP_DISABLED_CODE
    /* The following bugfix was necessary some time ago to avoid an error in Clp and can currently be disabled: the
     * solution vector is modified to be set to the corresponding bounds. Remove if Clp versions have stabilized. */
    double* sol = lpi->clp->primalColumnSolution();
@@ -1115,7 +1115,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
       clp->setColumnBounds(ind[j], lb[j], ub[j]);
 
-#if 0
+#if SCIP_DISABLED_CODE
       /* Old bugfix, not currently needed - see above */
       if ( sol != 0 )
       {
