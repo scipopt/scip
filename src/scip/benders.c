@@ -2072,7 +2072,7 @@ SCIP_RETCODE solveBendersSubproblems(
        */
       i = benders->firstchecked;
       /*for( i = 0; i < nsubproblems; i++ )*/
-      while( subproblemcount < nsubproblems && numnotopt < numtocheck )
+      while( subproblemcount < nsubproblems && numnotopt < numtocheck && !SCIPisStopped(set->scip) )
       {
          SCIP_Bool subinfeas = FALSE;
          SCIP_Bool convexsub = SCIPbendersSubproblemIsConvex(benders, i);
@@ -2633,6 +2633,10 @@ SCIP_RETCODE SCIPbendersExec(
       SCIP_CALL( solveBendersSubproblems(benders, set, sol, type, solveloop, checkint, &nchecked, &nverified,
             &subprobsolved, &substatus, infeasible, &optimal) );
 
+      /* if the solving has been stopped, then the subproblem solving and cut generation must terminate */
+      if( SCIPgetStatus(set->scip) != SCIP_STATUS_UNKNOWN )
+         goto TERMINATE;
+
       /* Generating cuts for the subproblems. Cuts are only generated when the solution is from primal heuristics,
        * relaxations or the LP
        */
@@ -2726,7 +2730,7 @@ SCIP_RETCODE SCIPbendersExec(
        */
       success = FALSE;
 
-      goto TERMINATE;
+      goto POSTSOLVE;
    }
 
    if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
@@ -2763,7 +2767,7 @@ SCIP_RETCODE SCIPbendersExec(
       }
    }
 
-TERMINATE:
+POSTSOLVE:
    /* calling the post-solve call back for the Benders' decomposition algorithm. This allows the user to work directly
     * with the solved subproblems and the master problem */
    if( benders->benderspostsolve != NULL )
@@ -2791,6 +2795,7 @@ TERMINATE:
       }
    }
 
+TERMINATE:
    /* freeing the subproblems after the cuts are generated */
    i = benders->firstchecked;
    subproblemcount = 0;
