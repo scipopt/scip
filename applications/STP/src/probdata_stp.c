@@ -2159,7 +2159,6 @@ SCIP_RETCODE SCIPprobdataCreate(
       graph_copy(scip, graph, &(newgraph));
       probdata->orggraph = graph;
       graph = newgraph;
-     // SCIP_CALL( graph_init_history(scip, graph) );
    }
    else
    {
@@ -2181,12 +2180,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 #endif
 
    SCIP_CALL(SCIPsetIntParam(scip, "separating/clique/freq", -1));
-
-   if( mw )
-   {
-      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
-      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/trivial/freq", -1));
-   }
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
 
    if( pc )
@@ -2212,6 +2205,8 @@ SCIP_RETCODE SCIPprobdataCreate(
          SCIPdebugMessage("USE SYM CONS: %d \n", graph->terms);
       else
          SCIPdebugMessage("NO SYM CONS: \n");
+
+      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/trivial/freq", -1));
    }
 
    /* create model */
@@ -3685,7 +3680,6 @@ void initReceivedSubproblem(
 
    SCIPfreeBufferArray(scip, &nodestate);
 
-  // SCIP_CALL_ABORT( graph_init_history(scip, graph) );
    SCIP_CALL_ABORT( graph_path_init(scip, graph) );
    SCIP_CALL_ABORT( graph_mincut_init(scip, graph) );
 
