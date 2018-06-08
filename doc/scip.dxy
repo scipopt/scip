@@ -845,7 +845,7 @@ INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.h \
                          *.cpp \
-                         *CHANGELOG \
+                         CHANGELOG \
                          *.hpp
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
@@ -1057,7 +1057,7 @@ INPUT_FILTER           = "sed 's/^EXTERN\([ ]*\)$/extern/g; /^SCIP_DEPRECATED/d'
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by doxygen.
 
-FILTER_PATTERNS        =
+FILTER_PATTERNS        = "*/CHANGELOG=sed -e '1i/**' -e '$ a*/' -e 's#/\*#/`\*`#g'"
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for
