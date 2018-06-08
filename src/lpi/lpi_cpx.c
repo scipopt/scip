@@ -4308,33 +4308,6 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing; /* store pricing method in LPI struct */
       break;
-#if 0
-   case SCIP_LPPAR_PRICING:
-      switch( getIntParam(lpi, CPX_PARAM_PPRIIND) )
-      {
-      case CPX_PPRIIND_FULL:
-         *ival = (int)SCIP_PRICING_FULL;
-         break;
-      case CPX_PPRIIND_PARTIAL:
-         *ival = (int)SCIP_PRICING_PARTIAL;
-         break;
-      case CPX_PPRIIND_STEEP:
-         *ival = (int)SCIP_PRICING_STEEP;
-         break;
-      case CPX_PPRIIND_STEEPQSTART:
-         *ival = (int)SCIP_PRICING_STEEPQSTART;
-         break;
-#if (CPX_VERSION >= 900)
-      case CPX_PPRIIND_DEVEX:
-         *ival = (int)SCIP_PRICING_DEVEX;
-         break;
-#endif
-      default:
-         *ival = (int)SCIP_PRICING_AUTO;
-         break;
-      }
-      break;
-#endif
    case SCIP_LPPAR_LPINFO:
       *ival = (getIntParam(lpi, CPX_PARAM_SCRIND) == CPX_ON);
       break;
