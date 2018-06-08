@@ -8516,7 +8516,7 @@
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
- * \htmlinclude faq.inc
+ * \htmlinclude faq/faq.inc
  */
 
 /**@page RELEASENOTES Release notes
