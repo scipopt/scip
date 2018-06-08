@@ -1,22 +1,22 @@
-Building and installing the STP application               {#INSTALL}
+Building and installing the STP application (SCIP-Jack)               {#INSTALL}
 ===========================================
 
-The STP application may be built in two ways, either by using Cmake
-or by using SCIP's own Makefile system. The choice of the
+SCIP-Jack may be built in two ways, either by using Cmake
+or by using SCIPs own Makefile system. The choice of the
 build system depends on the desired target platform and the availability
 of those tools there, as well as your personal preferences.
-For most users, we recommend to use the CMake system, especially on
-non Unix platforms.
+For most users we recommend to use the CMake system, especially on
+non-Unix platforms.
 
 
 Installation information using CMake
 ------------------------------------
 
 Please compile SCIP first,
-see the INSTALL_CMAKE in the main SCIP directory for instructions,
+see the INSTALL in the main SCIP directory for instructions,
 or refer to the online documentation of SCIP.
-The STP application can be compiled within the same build directory
-as SCIP. Assuming that the build directory of SCIP was named "build",
+SCIP-Jack can be compiled within the same build directory
+as SCIP. If the build directory of SCIP is named "build",
 simply execute
 
 ```
@@ -31,7 +31,7 @@ applications at once, use
 make applications
 ```
 
-It is also possible to build the STP application in a stand-alone
+It is also possible to build SCIP-Jack in a stand-alone
 build directory. Therefore, it is necessary to create the
 stand-alone build directory first and generate the Makefile using
 CMake. It might be necessary to specify the SCIP build directory
@@ -50,7 +50,7 @@ configuration options for this application, and available tests.
 
 
 
-Installation information for SCIP's custom Makefile system on Linux
+Installation information for SCIPs custom Makefile system on Linux
 -------------------------------------------------------------------
 
 In the following, some of the names depend on your machine and your
@@ -91,7 +91,7 @@ as LP solver, you would have the following names:
 - "OPT"    = dbg
 - "LPS"    = spx
 
-Here is what you have to do to get the stp example project
+Here is what you have to do to get SCIP-Jack
 using SCIP as a library running:
 
 1. Install and compile SCIP as described in the INSTALL file of SCIP's main 
