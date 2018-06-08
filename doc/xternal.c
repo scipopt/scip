@@ -151,9 +151,9 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page GETTINGSTARTED Getting started
- * 
+ *
  * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
- * 
+ *
  * - @subpage LICENSE "License"
  * - @subpage INSTALL "Installation"
  * - @subpage SHELL       "Tutorial: the interactive shell"
@@ -234,7 +234,19 @@
  * release notes:
  *
  * - \subpage RN60         "SCIP 6.0"
- * - \subpage RNold        "SCIP < 6"
+ * - \subpage RN50         "SCIP 5.0"
+ * - \subpage RN40         "SCIP 4.0"
+ * - \subpage RN32         "SCIP 3.2"
+ * - \subpage RN31         "SCIP 3.1"
+ * - \subpage RN30         "SCIP 3.0"
+ * - \subpage RN21         "SCIP 2.1"
+ * - \subpage RN20         "SCIP 2.0"
+ * - \subpage RN12         "SCIP 1.2"
+ * - \subpage RN11         "SCIP 1.1"
+ * - \subpage RN10         "SCIP 1.0"
+ * - \subpage RN09         "SCIP 0.9"
+ * - \subpage RN08         "SCIP 0.8"
+ * - \subpage RN07         "SCIP 0.7"
  *
  * TODO: integrate the old release notes and interface changes into the new CHANGELOG
  *
@@ -1059,7 +1071,7 @@
  */
 
 /**@page BRANCHANDPRICE Branch-and-price
- * 
+ *
  * <table>
  *  <tr>
  *  <td>
@@ -1080,7 +1092,7 @@
  *  </td>
  *  </tr>
  *  </table>
- * 
+ *
  */
 
 /**@page BENDERSDECOMP Benders' decomposition
@@ -1119,7 +1131,7 @@
  *  </td>
  *  </tr>
  *  </table>
- * 
+ *
  */
 
 /**@page CALLABLELIBRARY Callable library
