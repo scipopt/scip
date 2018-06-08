@@ -2991,7 +2991,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
             SCIPABORT();
          }
          else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_ERROR
-            || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_NOTSOLVED )
+            || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_NOTSOLVED
+            || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_TIMELIMIT )
          {
             SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "   Benders' decomposition: Error solving LP "
                "relaxation of subproblem %d. No cut will be generated for this subproblem.\n", probnumber);
@@ -3013,6 +3014,13 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
             SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPsetInfinity(set));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_USERINTERRUPT || SCIPgetStatus(subproblem) == SCIP_STATUS_BESTSOLLIMIT )
             SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, bestsol));
+         else if( SCIPgetStatus(subproblem) == SCIP_STATUS_MEMLIMIT
+            || SCIPgetStatus(subproblem) == SCIP_STATUS_TIMELIMIT )
+         {
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "   Benders' decomposition: Error solving CIP "
+               "of subproblem %d. No cut will be generated for this subproblem.\n", probnumber);
+            SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPsetInfinity(set));
+         }
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_UNBOUNDED )
          {
             SCIPerrorMessage("The Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
@@ -3241,14 +3249,14 @@ SCIP_RETCODE copyMemoryAndTimeLimits(
    maxsubtimelimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/time"));
    subtimelimit = (mastertimelimit - SCIPgetSolvingTime(scip)) * 1.02;
    subtimelimit = MIN(subtimelimit, maxsubtimelimit);
-   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", subtimelimit) );
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/time", MAX(0.0, subtimelimit)) );
 
    /* setting the memory limit for the Benders' decomposition subproblems. */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &mastermemorylimit) );
    maxsubmemorylimit = SCIPparamGetRealMax(SCIPgetParam(subproblem, "limits/memory"));
    submemorylimit = mastermemorylimit - (SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0;
    submemorylimit = MIN(submemorylimit, maxsubmemorylimit);
-   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/memory", submemorylimit) );
+   SCIP_CALL( SCIPsetRealParam(subproblem, "limits/memory", MAX(0.0, submemorylimit)) );
 
    return SCIP_OKAY;
 }
@@ -3396,7 +3404,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    else if( SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_OPTIMAL
       && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
       && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_NOTSOLVED
-      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_ERROR )
+      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_ERROR
+      && SCIPgetLPSolstat(subproblem) != SCIP_LPSOLSTAT_TIMELIMIT )
    {
       SCIPerrorMessage("Invalid status: %d. Solving the LP relaxation of Benders' decomposition subproblem %d.\n",
          SCIPgetLPSolstat(subproblem), probnumber);
@@ -3497,7 +3506,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
       (*infeasible) = TRUE;
    else if( SCIPgetStatus(subproblem) != SCIP_STATUS_OPTIMAL && SCIPgetStatus(subproblem) != SCIP_STATUS_UNBOUNDED
       && SCIPgetStatus(subproblem) != SCIP_STATUS_USERINTERRUPT && SCIPgetStatus(subproblem) != SCIP_STATUS_BESTSOLLIMIT
-      && SCIPgetStatus(subproblem) != SCIP_STATUS_TIMELIMIT )
+      && SCIPgetStatus(subproblem) != SCIP_STATUS_TIMELIMIT && SCIPgetStatus(subproblem) != SCIP_STATUS_MEMLIMIT )
    {
       SCIPerrorMessage("Invalid status: %d. Solving the CIP of Benders' decomposition subproblem %d.\n",
          SCIPgetLPSolstat(subproblem), probnumber);
