@@ -63,8 +63,10 @@ and the desired location for the build. Available options are listed and can
 be modified to suit your needs. After the configuration step is done, open
 the generated Visual Studio solution file and compile it.
 
-Alternatively you may use the command line to build SCIP in an already-generated
-configuration directory: "cmake --build <path>"
+Alternatively, you may use the command line to configure and build SCIP:
+
+  1) create a "build" directory:    "cmake -H. -Bbuild"
+  2) build a configuration:         "cmake --build build --config Release [Debug]"
 
 
 Installation description with Makefile
