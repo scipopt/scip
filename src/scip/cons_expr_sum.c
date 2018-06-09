@@ -1098,7 +1098,7 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
    *success = FALSE;
 
    /* reproduce the separation that seems to have failed */
-   assert(auxvalue != SCIP_INVALID);
+   assert(auxvalue != SCIP_INVALID); /*lint !e777*/
    violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
    assert(violation != 0.0);
 

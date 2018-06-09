@@ -7638,7 +7638,6 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr)
 }
 
 /** increments the branching score count of an expression handler */
-extern
 void SCIPincrementConsExprExprHdlrNBranchScore(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr
    )
