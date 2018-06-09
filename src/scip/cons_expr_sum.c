@@ -952,7 +952,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
       assert(rowprep != NULL);
 
       /* frist try scale-up rowprep to try to get rid of within-epsilon of integer coefficients */
-      SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, &success) );
+      SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, 1.0, &success) );
 
       if( !success )
       {
@@ -1001,10 +1001,12 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    SCIP_CALL( separatePointSum(scip, expr, overestimate, &rowprep) );
    assert(rowprep != NULL);
 
-#ifdef SCIP_DEBUG
    viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
-#endif
+
    SCIPdebugMsg(scip, "sepaSum %d children sol %p: rowprep viol %g (min: %g)\n", SCIPgetConsExprExprNChildren(expr), sol, viol, mincutviolation);
+   if( SCIPisZero(scip, viol) )
+      return SCIP_OKAY;
+
 #if 0
    for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
    {
@@ -1014,37 +1016,29 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients */
-   SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, &success) );
+   /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients and get above minviolation */
+   SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, mincutviolation / viol, &success) );
 
    if( !success )
    {
-      /* if scale-up is not sufficient, then do clean-up, which could relax the row */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &viol,
-         &success) );
-   }
-   else
-   {
-      viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
+      SCIPdebugMsg(scip, "scaleup not sufficient, doing cleanup\n");
 
-      if( viol < mincutviolation )
-      {
-         /* TODO just call SCIPscaleRowprep() ? */
-         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &viol,
-            &success) );
-      }
+      /* if scale-up is not sufficient, then do clean-up, which could relax the row */
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
    }
 
    /* create a SCIP_ROW and add it to the initial LP */
-   if( success && viol >= mincutviolation )
+   if( success )
    {
       SCIP_ROW* row;
       SCIP_Bool infeasible;
 
+      assert(SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation);
+
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "add %s cut with violation %g\n", viol, rowprep->local ? "local" : "global");
+      SCIPdebugMsg(scip, "add %s cut with violation %g\n", rowprep->local ? "local" : "global", SCIPgetRowprepViolation(scip, rowprep, sol, NULL));
       SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
 

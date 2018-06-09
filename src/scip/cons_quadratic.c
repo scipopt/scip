@@ -16857,6 +16857,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
 SCIP_RETCODE SCIPscaleupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
+   SCIP_Real             minscaleup,         /**< minimal factor by which to scale up row, or <= 1.0 if to be ignored */
    SCIP_Bool*            success             /**< buffer to store whether rowprep could be turned into SCIP_ROW without loss, or NULL if not of interest */
 )
 {
@@ -16893,6 +16894,9 @@ SCIP_RETCODE SCIPscaleupRowprep(
 
       factor = 1.1 * SCIPepsilon(scip) / minfrac;
 
+      if( factor < minscaleup )
+         factor = minscaleup;
+
       if( !SCIPisHugeValue(scip, factor * maxval) )
       {
 #ifdef SCIP_DEBUG
@@ -16904,7 +16908,7 @@ SCIP_RETCODE SCIPscaleupRowprep(
 
 #ifdef SCIP_DEBUG
          maxval *= factor;
-         SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g to move close-to-integral coefs/side away from integrality, maxval is now %g\n", maxval);
+         SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g to move close-to-integral coefs/side away from integrality, maxval is now %g\n", factor, maxval);
          SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
@@ -16913,6 +16917,24 @@ SCIP_RETCODE SCIPscaleupRowprep(
 
       } else if( success != NULL )
          *success = FALSE;
+   }
+   else if( minscaleup > 1.0 && !SCIPisHugeValue(scip, minscaleup * maxval) )
+   {
+#ifdef SCIP_DEBUG
+      minscaleup =
+#else
+         (void)
+#endif
+         SCIPscaleRowprep(rowprep, minscaleup);
+
+#ifdef SCIP_DEBUG
+      maxval *= minscaleup;
+      SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g to increase violation, maxval is now %g\n", minscaleup, maxval);
+      SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+
+      if( success != NULL )
+         *success = TRUE;
    }
    else if( success != NULL )
       *success = !SCIPisInfinity(scip, maxval);
