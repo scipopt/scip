@@ -1780,10 +1780,27 @@ SCIP_RETCODE SCIPbendersExitsol(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int nsubproblems;
    int i;
 
    assert(benders != NULL);
    assert(set != NULL);
+
+   nsubproblems = SCIPbendersGetNSubproblems(benders);
+   /* freeing all subproblems that are independent, this is because they have not bee freed during the subproblem
+    * solving loop.
+    */
+   for( i = 0; i < nsubproblems; i++ )
+   {
+      if( SCIPbendersSubproblemIsIndependent(benders, i) )
+      {
+         /* disabling the independence of the subproblem so that it can be freed */
+         SCIPbendersSetSubproblemIsIndependent(benders, i, FALSE);
+
+         /* freeing the independent subproblem */
+         SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, i) );
+      }
+   }
 
    /* call solving process deinitialization method of Benders' decomposition */
    if( benders->bendersexitsol != NULL )
@@ -2835,7 +2852,8 @@ TERMINATE:
 
 #ifndef NDEBUG
    for( i = 0; i < nsubproblems; i++ )
-      assert(SCIPgetStage(SCIPbendersSubproblem(benders, i)) < SCIP_STAGE_TRANSFORMED || !SCIPinProbing(SCIPbendersSubproblem(benders, i)));
+      assert(SCIPgetStage(SCIPbendersSubproblem(benders, i)) < SCIP_STAGE_TRANSFORMED
+         || !SCIPinProbing(SCIPbendersSubproblem(benders, i)) || !subproblemIsActive(benders, i));
 #endif
 
    /* increment the number of calls to the Benders' decomposition subproblem solve */
