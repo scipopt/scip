@@ -3615,7 +3615,10 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
          if( SCIPbendersSubproblemIsConvex(benders, probnumber) )
          {
             /* ending probing mode to reset the current node. The probing mode will be restarted at the next solve */
-            SCIP_CALL( SCIPendProbing(subproblem) );
+            if( SCIPinProbing(subproblem) )
+            {
+               SCIP_CALL( SCIPendProbing(subproblem) );
+            }
          }
          else
          {
