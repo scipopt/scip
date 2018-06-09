@@ -11942,8 +11942,9 @@ SCIP_RETCODE lpSolve(
    else if( SCIPlpiExistsPrimalRay(lp->lpi) )
    {
       /* because of numerical instability lpalgo != lp->lastlpalgo might happen - hence, we have to check both */
-      if( needprimalray && !SCIPlpiHasPrimalRay(lp->lpi) && !solvedprimal && lpalgo != SCIP_LPALGO_PRIMALSIMPLEX )
+      if( needprimalray && !SCIPlpiIsPrimalUnbounded(lp->lpi) && !solvedprimal && lpalgo != SCIP_LPALGO_PRIMALSIMPLEX )
       {
+         /* unboundedness includes that the primal is feasible: ensure a primal solution here */
          assert(lp->lastlpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
          lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
          goto SOLVEAGAIN;
