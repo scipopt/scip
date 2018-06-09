@@ -2341,23 +2341,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    }
 
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
-    * also for some pathological cases of infeasibility, e.g., contradictory bounds
-    */
-   if( lpi->solstat == CPX_STAT_OPTIMAL )
-   {
-#ifdef NDEBUG
-      lpi->solisbasic = TRUE;
-#else
-      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-      assert(lpi->solisbasic);
-#endif
-   }
-   else
-   {
-      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-   }
+    * also for some pathological cases of infeasibility, e.g., contradictory bounds */
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+   lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+   assert( lpi->solisbasic || lpi->solstat != CPX_STAT_OPTIMAL );
 
    return SCIP_OKAY;
 }
@@ -2406,8 +2393,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
    default:
       return SCIP_LPERROR;
    }
-
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
@@ -2468,21 +2453,9 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
     * also for some pathological cases of infeasibility, e.g., contradictory bounds
     */
-   if( lpi->solstat == CPX_STAT_OPTIMAL )
-   {
-#ifdef NDEBUG
-      lpi->solisbasic = TRUE;
-#else
-      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-      assert(lpi->solisbasic);
-#endif
-   }
-   else
-   {
-      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-   }
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+   lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+   assert( lpi->solisbasic || lpi->solstat != CPX_STAT_OPTIMAL );
 
 #if 0
    /* this fixes the strange behavior of CPLEX, that in case of the objective limit exceedance, it returns the
