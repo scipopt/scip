@@ -1099,9 +1099,6 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
     */
    assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL);
 
-   /* sort modified variables to make lookup below faster */
-   SCIPsortPtr((void**)rowprep->modifiedvars, SCIPvarComp, rowprep->nmodifiedvars);
-
    /* if no modifications in coefficients, then we cannot point to any branching candidates */
    if( rowprep->nmodifiedvars == 0 )
    {
@@ -1109,10 +1106,13 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
       return SCIP_OKAY;
    }
 
+   /* sort modified variables to make lookup below faster */
+   SCIPsortPtr((void**)rowprep->modifiedvars, SCIPvarComp, rowprep->nmodifiedvars);
+
    /* add each child which auxvar is found in modifiedvars to branching candidates */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
    {
-      auxvar = SCIPgetConsExprExprAuxVar(expr);
+      auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
       assert(auxvar != NULL);
 
       if( SCIPsortedvecFindPtr((void**)rowprep->modifiedvars, SCIPvarComp, auxvar, rowprep->nmodifiedvars, &pos) )
@@ -1121,8 +1121,11 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
          SCIPaddConsExprExprBranchScore(scip, expr, brscoretag, REALABS(violation));
 
          *success = TRUE;
+
+         SCIPdebugMsg(scip, "added branchingscore for expr %p with auxvar <%s> (coef %g)\n", SCIPgetConsExprExprChildren(expr)[i], SCIPvarGetName(auxvar), SCIPgetConsExprExprData(expr)->coefficients[i]);
       }
    }
+   assert(*success); /* for all of the modified variables, a branching score should have been added */
 
    SCIPfreeRowprep(scip, &rowprep);
 
