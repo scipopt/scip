@@ -42,7 +42,7 @@ Test(separation, sum, .init = setup, .fini = teardown,
 
    /* compute rowprep */
    rowprep = NULL;
-   SCIP_CALL( separatePointSum(scip, conshdlr, expr, TRUE, &rowprep) );
+   SCIP_CALL( separatePointSum(scip, expr, TRUE, &rowprep) );
    cr_assert(rowprep != NULL);
 
    /* compute cut */
