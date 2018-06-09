@@ -2004,7 +2004,7 @@ SCIP_RETCODE SCIPlpiClear(
       SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols-1) );
    }
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
    /* the following seems to be slower */
    CHECK_ZERO( lpi->messagehdlr, GRBfreemodel(lpi->grbmodel) );
    CHECK_ZERO( lpi->messagehdlr, GRBnewmodel(lpi->grbenv, &(lpi->grbmodel), "", 0, NULL, NULL, NULL, NULL, NULL) );
