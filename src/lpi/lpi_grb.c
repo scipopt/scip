@@ -5363,7 +5363,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
     * this can happen if flushing an LP did not change anything and
     * therefore no basis was set, as a result Gurobi has no extra user
     * warmstart information and cannot set norms */
-#if SCIP_DEBUG
+#ifdef SCIP_DEBUG
    if( error )
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual variable norms failed with Gurobi error %d\n", error);
 #endif
@@ -5373,7 +5373,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
     * this can happen if flushing an LP did not change anything and
     * therefore no basis was set, as a result Gurobi has no extra user
     * warmstart information and cannot set norms */
-#if SCIP_DEBUG
+#ifdef SCIP_DEBUG
    if( error )
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
 #endif
