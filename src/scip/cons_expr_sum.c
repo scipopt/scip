@@ -951,8 +951,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
       SCIP_CALL( separatePointSum(scip, expr, i == 0, &rowprep) );
       assert(rowprep != NULL);
 
-      /* frist try scale-up rowprep to try to get rid of within-epsilon of integer coefficients */
-      SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, 1.0, &success) );
+      /* first try scale-up rowprep to try to get rid of within-epsilon of integer coefficients */
+      (void) SCIPscaleupRowprep(scip, rowprep, 1.0, &success);
 
       if( !success )
       {
@@ -1017,7 +1017,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 #endif
 
    /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients and get above minviolation */
-   SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, mincutviolation / viol, &success) );
+   (void) SCIPscaleupRowprep(scip, rowprep, mincutviolation / viol, &success);
 
    if( !success )
    {

@@ -833,9 +833,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
  * *success is set to TRUE if the resulting rowprep can be turned into a SCIP_ROW, that is,
  * all coefs and the side is below SCIPinfinity and fractionalities are above epsilon.
  * If *success is set to FALSE, then the rowprep will not have been modified.
+ *
+ * @return The applied scaling factor, if *success is set to TRUE.
  */
 EXTERN
-SCIP_RETCODE SCIPscaleupRowprep(
+SCIP_Real SCIPscaleupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_Real             minscaleup,         /**< minimal factor by which to scale up row, or <= 1.0 if to be ignored */

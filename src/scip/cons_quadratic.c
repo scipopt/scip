@@ -16853,8 +16853,10 @@ SCIP_RETCODE SCIPcleanupRowprep(
  * *success is set to TRUE if the resulting rowprep can be turned into a SCIP_ROW, that is,
  * all coefs and the side is below SCIPinfinity and fractionalities are above epsilon.
  * If *success is set to FALSE, then the rowprep will not have been modified.
+ *
+ * @return The applied scaling factor, if *success is set to TRUE.
  */
-SCIP_RETCODE SCIPscaleupRowprep(
+SCIP_Real SCIPscaleupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_Real             minscaleup,         /**< minimal factor by which to scale up row, or <= 1.0 if to be ignored */
@@ -16864,6 +16866,7 @@ SCIP_RETCODE SCIPscaleupRowprep(
    SCIP_Real minfrac = 0.5;
    SCIP_Real frac;
    SCIP_Real maxval;
+   SCIP_Real factor = 1.0;
    int i;
 
    /* find the smallest fractionality in rowprep sides and coefficients and the largest absolute coefficient/side */
@@ -16890,56 +16893,41 @@ SCIP_RETCODE SCIPscaleupRowprep(
     */
    if( minfrac <= SCIPepsilon(scip) )
    {
-      SCIP_Real factor;
-
       factor = 1.1 * SCIPepsilon(scip) / minfrac;
 
       if( factor < minscaleup )
          factor = minscaleup;
-
-      if( !SCIPisHugeValue(scip, factor * maxval) )
-      {
-#ifdef SCIP_DEBUG
-         factor =
-#else
-         (void)
-#endif
-            SCIPscaleRowprep(rowprep, factor);
-
-#ifdef SCIP_DEBUG
-         maxval *= factor;
-         SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g to move close-to-integral coefs/side away from integrality, maxval is now %g\n", factor, maxval);
-         SCIPprintRowprep(scip, rowprep, NULL);
-#endif
-
-         if( success != NULL )
-            *success = TRUE;
-
-      } else if( success != NULL )
-         *success = FALSE;
    }
-   else if( minscaleup > 1.0 && !SCIPisHugeValue(scip, minscaleup * maxval) )
+   else if( minscaleup > 1.0 )
    {
-#ifdef SCIP_DEBUG
-      minscaleup =
-#else
-         (void)
-#endif
-         SCIPscaleRowprep(rowprep, minscaleup);
+      factor = minscaleup;
+   }
+   else
+   {
+      /* do not scale up, only check whether maxval is already below infinity */
+      if( success != NULL )
+         *success = !SCIPisInfinity(scip, maxval);
+
+      return 1.0;
+   }
+
+   if( !SCIPisHugeValue(scip, factor * maxval) )
+   {
+      factor = SCIPscaleRowprep(rowprep, factor);
 
 #ifdef SCIP_DEBUG
-      maxval *= minscaleup;
-      SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g to increase violation, maxval is now %g\n", minscaleup, maxval);
+      maxval *= factor;
+      SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g (minfrac=%g, minscaleup=%g), maxval is now %g\n", factor, minfrac, minscaleup, maxval);
       SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
       if( success != NULL )
          *success = TRUE;
-   }
-   else if( success != NULL )
-      *success = !SCIPisInfinity(scip, maxval);
 
-   return SCIP_OKAY;
+   } else if( success != NULL )
+      *success = FALSE;
+
+   return factor;
 }
 
 /** scales a rowprep
