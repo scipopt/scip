@@ -16860,21 +16860,21 @@ SCIP_RETCODE SCIPscaleupRowprep(
    SCIP_Bool*            success             /**< buffer to store whether rowprep could be turned into SCIP_ROW without loss, or NULL if not of interest */
 )
 {
-   SCIP_Real minfrac = 1.0;
+   SCIP_Real minfrac = 0.5;
    SCIP_Real frac;
    SCIP_Real maxval;
    int i;
 
    /* find the smallest fractionality in rowprep sides and coefficients and the largest absolute coefficient/side */
-   frac = REALABS(ceil(rowprep->side + 0.5) - rowprep->side);
-   if( frac != 0.0 && frac > minfrac )
+   frac = REALABS(floor(rowprep->side + 0.5) - rowprep->side);
+   if( frac != 0.0 && frac < minfrac )
       minfrac = frac;
    maxval = REALABS(rowprep->side);
 
    for( i = 0; i < rowprep->nvars; ++i )
    {
-      frac = REALABS(ceil(rowprep->coefs[i] + 0.5) - rowprep->coefs[i]);
-      if( frac != 0.0 && frac > minfrac )
+      frac = REALABS(floor(rowprep->coefs[i] + 0.5) - rowprep->coefs[i]);
+      if( frac != 0.0 && frac < minfrac )
          minfrac = frac;
       if( REALABS(rowprep->coefs[i]) > maxval )
          maxval = REALABS(rowprep->coefs[i]);
