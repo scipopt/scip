@@ -1001,6 +1001,19 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    SCIP_CALL( separatePointSum(scip, expr, overestimate, &rowprep) );
    assert(rowprep != NULL);
 
+#ifdef SCIP_DEBUG
+   viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
+#endif
+   SCIPdebugMsg(scip, "sepaSum %d children sol %p: rowprep viol %g (min: %g)\n", SCIPgetConsExprExprNChildren(expr), sol, viol, mincutviolation);
+#if 0
+   for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+   {
+      SCIP_VAR* auxvarchild = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
+      printf("%g %s[%g,%g] %g\n", SCIPgetConsExprExprData(expr)->coefficients[i], SCIPvarGetName(auxvarchild), SCIPgetSolVal(scip, sol, auxvarchild), SCIPvarGetLbGlobal(auxvarchild), SCIPvarGetUbGlobal(auxvarchild));
+   }
+   SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+
    /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients */
    SCIP_CALL( SCIPscaleupRowprep(scip, rowprep, &success) );
 
@@ -1022,8 +1035,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       }
    }
 
-   SCIPdebugMsg(scip, "sepasum sol %p viol %g minviol %g\n", sol, viol, mincutviolation);
-
    /* create a SCIP_ROW and add it to the initial LP */
    if( success && viol >= mincutviolation )
    {
@@ -1033,7 +1044,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "add cut with violation %e\n", viol);
+      SCIPdebugMsg(scip, "add %s cut with violation %g\n", viol, rowprep->local ? "local" : "global");
       SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
 
@@ -1042,7 +1053,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
       *ncuts += 1;
-
    }
 
    /* free rowprep */
