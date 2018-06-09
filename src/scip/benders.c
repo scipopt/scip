@@ -2039,7 +2039,8 @@ SCIP_RETCODE solveBendersSubproblems(
    SCIP_Bool**           subprobsolved,      /**< an array indicating the subproblems that were solved in this loop. */
    SCIP_BENDERSSUBSTATUS** substatus,        /**< array to store the status of the subsystem */
    SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
-   SCIP_Bool*            optimal             /**< is the current solution optimal? */
+   SCIP_Bool*            optimal,            /**< is the current solution optimal? */
+   SCIP_Bool*            stopped             /**< was the solving process stopped? */
    )
 {
    SCIP_Bool onlyconvexcheck;
@@ -2051,6 +2052,8 @@ SCIP_RETCODE solveBendersSubproblems(
 
    assert(benders != NULL);
    assert(set != NULL);
+
+   (*stopped) = FALSE;
 
    /* getting the number of subproblems in the Benders' decompsition */
    nsubproblems = SCIPbendersGetNSubproblems(benders);
@@ -2083,7 +2086,7 @@ SCIP_RETCODE solveBendersSubproblems(
        */
       i = benders->firstchecked;
       /*for( i = 0; i < nsubproblems; i++ )*/
-      while( subproblemcount < nsubproblems && numnotopt < numtocheck && !SCIPisStopped(set->scip) )
+      while( subproblemcount < nsubproblems && numnotopt < numtocheck && !(*stopped) )
       {
          SCIP_Bool subinfeas = FALSE;
          SCIP_Bool convexsub = SCIPbendersSubproblemIsConvex(benders, i);
@@ -2262,6 +2265,9 @@ SCIP_RETCODE solveBendersSubproblems(
          if( i >= nsubproblems )
             i = 0;
          benders->lastchecked = i;
+
+         /* checking whether the limits have been exceeded in the master problem */
+         (*stopped) = SCIPisStopped(set->scip);
       }
    }
 
@@ -2509,10 +2515,12 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_Bool optimal;
    SCIP_Bool allverified;
    SCIP_Bool success;
+   SCIP_Bool stopped;
    int i;
    int l;
 
    success = TRUE;
+   stopped = FALSE;
 
    SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
 
@@ -2642,10 +2650,10 @@ SCIP_RETCODE SCIPbendersExec(
 
       /* solving the subproblems for this round of enforcement/checking. */
       SCIP_CALL( solveBendersSubproblems(benders, set, sol, type, solveloop, checkint, &nchecked, &nverified,
-            &subprobsolved, &substatus, infeasible, &optimal) );
+            &subprobsolved, &substatus, infeasible, &optimal, &stopped) );
 
       /* if the solving has been stopped, then the subproblem solving and cut generation must terminate */
-      if( SCIPisStopped(set->scip) )
+      if( stopped )
          goto TERMINATE;
 
       /* Generating cuts for the subproblems. Cuts are only generated when the solution is from primal heuristics,
@@ -2810,6 +2818,11 @@ TERMINATE:
    /* freeing the subproblems after the cuts are generated */
    i = benders->firstchecked;
    subproblemcount = 0;
+
+   /* if the solving process has stopped, then all subproblems need to be freed */
+   if( stopped )
+      nchecked = nsubproblems;
+
    while( subproblemcount < nchecked )
    {
       SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, i) );
@@ -2819,6 +2832,11 @@ TERMINATE:
       if( i >= nsubproblems )
          i = 0;
    }
+
+#ifndef NDEBUG
+   for( i = 0; i < nsubproblems; i++ )
+      assert(SCIPgetStage(SCIPbendersSubproblem(benders, i)) < SCIP_STAGE_TRANSFORMED || !SCIPinProbing(SCIPbendersSubproblem(benders, i)));
+#endif
 
    /* increment the number of calls to the Benders' decomposition subproblem solve */
    benders->ncalls++;
@@ -3603,8 +3621,7 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
          {
             /* if the subproblems were solved as part of an enforcement stage, then they will still be in probing mode. The
              * probing mode must first be finished and then the problem can be freed */
-            /* if( SCIPgetStage(subproblem) >= SCIP_STAGE_TRANSFORMED && SCIPinProbing(subproblem) ) */
-            if( SCIPinProbing(subproblem) )
+            if( SCIPgetStage(subproblem) >= SCIP_STAGE_TRANSFORMED && SCIPinProbing(subproblem) )
             {
                SCIP_CALL( SCIPendProbing(subproblem) );
             }
