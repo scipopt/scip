@@ -939,7 +939,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
    *infeasible = FALSE;
 
    /* i = 0 for overestimation; i = 1 for underestimation */
-   for( i = 0; i < 2; ++i )
+   for( i = 0; i < 2 && !*infeasible; ++i )
    {
       SCIP_ROWPREP* rowprep;
       SCIP_Bool success;
@@ -953,6 +953,33 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 
       /* first try scale-up rowprep to try to get rid of within-epsilon of integer coefficients */
       (void) SCIPscaleupRowprep(scip, rowprep, 1.0, &success);
+
+      if( success && underestimate && overestimate )
+      {
+         SCIP_ROW* row;
+
+         assert(i == 0);
+
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+
+         /* since we did not relax the overestimator (i=0), we can turn the row into an equality if we need an underestimator, too */
+         if( rowprep->sidetype == SCIP_SIDETYPE_LEFT )
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, row, rowprep->side) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, row, rowprep->side) );
+         }
+
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+         /* free rowprep */
+         SCIPfreeRowprep(scip, &rowprep);
+
+         break;
+      }
 
       if( !success )
       {
